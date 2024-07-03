@@ -12,7 +12,11 @@ defmodule Lightning.Runs.PromExPlugin do
   alias Lightning.Repo
   alias Lightning.Run
 
+  require Run
+
+  @available_count_event [:lightning, :run, :queue, :available]
   @average_claim_event [:lightning, :run, :queue, :claim]
+  @finalised_count_event [:lightning, :run, :queue, :finalised]
   @stalled_event [:lightning, :run, :queue, :stalled]
 
   @impl true
@@ -26,7 +30,18 @@ defmodule Lightning.Runs.PromExPlugin do
           measurement: :delay,
           description: "Queue delay for runs",
           reporter_options: [
-            buckets: exponential!(100, 2, 10)
+            buckets: [
+              100,
+              200,
+              400,
+              800,
+              1_500,
+              5_000,
+              15_000,
+              30_000,
+              50_000,
+              100_000
+            ]
           ],
           tags: [],
           unit: :millisecond
@@ -43,16 +58,25 @@ defmodule Lightning.Runs.PromExPlugin do
     {:ok, run_performance_age_seconds} =
       opts |> Keyword.fetch(:run_performance_age_seconds)
 
+    {:ok, run_queue_metrics_period_seconds} =
+      opts |> Keyword.fetch(:run_queue_metrics_period_seconds)
+
     [
-      stalled_run_metrics(stalled_run_threshold_seconds),
-      run_performance_metrics(run_performance_age_seconds)
+      stalled_run_metrics(
+        stalled_run_threshold_seconds,
+        run_queue_metrics_period_seconds
+      ),
+      run_performance_metrics(
+        run_performance_age_seconds,
+        run_queue_metrics_period_seconds
+      )
     ]
   end
 
-  defp stalled_run_metrics(threshold_seconds) do
+  defp stalled_run_metrics(threshold_seconds, period_in_seconds) do
     Polling.build(
       :lightning_stalled_run_metrics,
-      5000,
+      period_in_seconds * 1000,
       {__MODULE__, :stalled_run_count, [threshold_seconds]},
       [
         last_value(
@@ -91,11 +115,11 @@ defmodule Lightning.Runs.PromExPlugin do
     :telemetry.execute(@stalled_event, %{count: count}, %{})
   end
 
-  defp run_performance_metrics(run_age_seconds) do
+  defp run_performance_metrics(run_age_seconds, period_in_seconds) do
     Polling.build(
       :lightning_run_queue_metrics,
-      5000,
-      {__MODULE__, :run_claim_duration, [run_age_seconds]},
+      period_in_seconds * 1000,
+      {__MODULE__, :run_queue_metrics, [run_age_seconds, period_in_seconds]},
       [
         last_value(
           [
@@ -110,22 +134,39 @@ defmodule Lightning.Runs.PromExPlugin do
           description: "The average time taken before a run is claimed",
           measurement: :average_duration,
           unit: :millisecond
+        ),
+        last_value(
+          [:lightning, :run, :queue, :available, :count],
+          event_name: @available_count_event,
+          description: "The number of available runs in the queue",
+          measurement: :count
+        ),
+        last_value(
+          [:lightning, :run, :queue, :finalised, :count],
+          event_name: @finalised_count_event,
+          description:
+            "The number of runs finalised during the consideration window",
+          measurement: :count
         )
       ]
     )
   end
 
-  def run_claim_duration(run_age_seconds) do
-    trigger_run_claim_duration(Process.whereis(Repo), run_age_seconds)
+  def run_queue_metrics(run_age_seconds, consideration_window_seconds) do
+    if repo_pid = Process.whereis(Repo) do
+      check_repo_state(repo_pid)
+
+      trigger_run_claim_duration(run_age_seconds)
+      trigger_available_runs_count()
+
+      trigger_finalised_runs_count(
+        DateTime.utc_now()
+        |> DateTime.add(-consideration_window_seconds)
+      )
+    end
   end
 
-  defp trigger_run_claim_duration(nil, _run_age_seconds) do
-    nil
-  end
-
-  defp trigger_run_claim_duration(repo_pid, run_age_seconds) do
-    check_repo_state(repo_pid)
-
+  defp trigger_run_claim_duration(run_age_seconds) do
     average_duration =
       calculate_average_claim_duration(DateTime.utc_now(), run_age_seconds)
 
@@ -174,5 +215,36 @@ defmodule Lightning.Runs.PromExPlugin do
     # the Repo GenServer is available.
 
     :sys.get_state(repo_pid)
+  end
+
+  defp trigger_available_runs_count do
+    query = from r in Run, where: r.state == :available
+
+    :telemetry.execute(
+      @available_count_event,
+      %{count: Repo.aggregate(query, :count)},
+      %{}
+    )
+  end
+
+  defp trigger_finalised_runs_count(threshold_time) do
+    count = count_finalised_runs(threshold_time)
+
+    :telemetry.execute(
+      @finalised_count_event,
+      %{count: count},
+      %{}
+    )
+  end
+
+  def count_finalised_runs(threshold_time) do
+    final_states = Run.final_states()
+
+    query =
+      from r in Run,
+        where: r.state in ^final_states,
+        where: r.finished_at > ^threshold_time
+
+    query |> Repo.aggregate(:count)
   end
 end

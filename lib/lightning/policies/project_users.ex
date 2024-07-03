@@ -15,6 +15,8 @@ defmodule Lightning.Policies.ProjectUsers do
           | :access_project
           | :edit_project
           | :delete_project
+          | :add_project_user
+          | :remove_project_user
           | :delete_workflow
           | :create_workflow
           | :edit_digest_alerts
@@ -51,6 +53,11 @@ defmodule Lightning.Policies.ProjectUsers do
   def authorize(:delete_project, %User{} = user, %Project{} = project),
     do: Projects.get_project_user_role(user, project) == :owner
 
+  def authorize(action, %User{} = user, %Project{} = project) do
+    project_user = Projects.get_project_user(project, user)
+    authorize(action, user, project_user)
+  end
+
   def authorize(action, %User{id: id}, %ProjectUser{user_id: user_id})
       when action in [
              :edit_digest_alerts,
@@ -58,25 +65,14 @@ defmodule Lightning.Policies.ProjectUsers do
            ],
       do: id == user_id
 
-  def authorize(action, %User{} = user, %Project{} = project)
-      when action in [
-             :edit_project
-           ],
-      do: Projects.get_project_user_role(user, project) in [:owner, :admin]
-
-  def authorize(action, %User{} = user, %Project{} = project) do
-    project_user = Projects.get_project_user(project, user)
-    authorize(action, user, project_user)
-  end
-
-  def authorize(:edit_data_retention, _user, %ProjectUser{role: role}) do
-    role in [:owner, :admin]
-  end
-
   def authorize(action, %User{}, %ProjectUser{} = project_user)
       when action in [
              :write_webhook_auth_method,
-             :write_github_connection
+             :write_github_connection,
+             :edit_project,
+             :edit_data_retention,
+             :add_project_user,
+             :remove_project_user
            ],
       do: project_user.role in [:owner, :admin]
 

@@ -2,7 +2,6 @@ defmodule Lightning.Accounts do
   @moduledoc """
   The Accounts context.
   """
-
   use Oban.Worker,
     queue: :background,
     max_attempts: 1
@@ -10,6 +9,7 @@ defmodule Lightning.Accounts do
   import Ecto.Query, warn: false
 
   alias Ecto.Multi
+  alias Lightning.Accounts.Events
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserBackupCode
   alias Lightning.Accounts.UserNotifier
@@ -17,8 +17,11 @@ defmodule Lightning.Accounts do
   alias Lightning.Accounts.UserTOTP
   alias Lightning.Credentials
   alias Lightning.Repo
+  alias Lightning.Services.AccountHook
 
   require Logger
+
+  defdelegate subscribe(), to: Events
 
   def has_activity_in_projects?(%User{id: id} = _user) do
     count =
@@ -44,7 +47,7 @@ defmodule Lightning.Accounts do
 
     # Delete the credentials of the user.
     # Note that there's a nilify constraint that set all project_credentials associated to this user to nil
-    Credentials.list_credentials_for_user(id)
+    Credentials.list_credentials(%User{id: id})
     |> Enum.each(&Credentials.delete_credential/1)
 
     Repo.get(User, id) |> delete_user()
@@ -85,9 +88,9 @@ defmodule Lightning.Accounts do
   end
 
   def create_user(attrs) do
-    %User{}
-    |> User.changeset(attrs)
-    |> Repo.insert()
+    Repo.transact(fn ->
+      AccountHook.handle_create_user(attrs)
+    end)
   end
 
   @doc """
@@ -101,6 +104,14 @@ defmodule Lightning.Accounts do
   """
   def list_users do
     Repo.all(User)
+  end
+
+  @doc """
+  Returns the list of users with the given emails
+  """
+  def list_users_by_emails(emails) do
+    query = from u in User, where: u.email in ^emails
+    Repo.all(query)
   end
 
   @doc """
@@ -309,15 +320,9 @@ defmodule Lightning.Accounts do
   """
 
   def register_superuser(attrs) do
-    User.superuser_registration_changeset(attrs)
-    |> Ecto.Changeset.apply_action(:insert)
-    |> case do
-      {:ok, data} ->
-        struct(User, data) |> Repo.insert()
-
-      {:error, changeset} ->
-        {:error, changeset}
-    end
+    Repo.transact(fn ->
+      AccountHook.handle_register_superuser(attrs)
+    end)
   end
 
   @doc """
@@ -351,15 +356,15 @@ defmodule Lightning.Accounts do
 
   """
   def register_user(attrs) do
-    User.user_registration_changeset(attrs)
-    |> Ecto.Changeset.apply_action(:insert)
-    |> case do
-      {:ok, data} ->
-        struct(User, data) |> Repo.insert()
-
-      {:error, changeset} ->
-        {:error, changeset}
-    end
+    Repo.transact(fn ->
+      AccountHook.handle_register_user(attrs)
+    end)
+    |> tap(fn result ->
+      with {:ok, user} <- result do
+        Events.user_registered(user)
+        deliver_user_confirmation_instructions(user)
+      end
+    end)
   end
 
   @doc """
@@ -491,12 +496,12 @@ defmodule Lightning.Accounts do
     Repo.insert!(user_token)
 
     UserNotifier.deliver_update_email_warning(
-      user.email,
+      user,
       current_email
     )
 
     UserNotifier.deliver_update_email_instructions(
-      current_email,
+      user,
       update_email_url_fun.(encoded_token)
     )
   end
@@ -606,7 +611,7 @@ defmodule Lightning.Accounts do
   """
   def schedule_user_deletion(user, email) do
     date =
-      case Application.get_env(:lightning, :purge_deleted_after_days) do
+      case Lightning.Config.purge_deleted_after_days() do
         nil -> DateTime.utc_now()
         integer -> DateTime.utc_now() |> Timex.shift(days: integer)
       end
@@ -787,45 +792,35 @@ defmodule Lightning.Accounts do
 
   ## Examples
 
-      iex> deliver_user_confirmation_instructions(user, &Routes.user_confirmation_url(conn, :edit, &1))
+      iex> deliver_user_confirmation_instructions(user)
       {:ok, %{to: ..., body: ...}}
 
-      iex> deliver_user_confirmation_instructions(confirmed_user, &Routes.user_confirmation_url(conn, :edit, &1))
+      iex> deliver_user_confirmation_instructions(confirmed_user)
       {:error, :already_confirmed}
 
   """
-  def deliver_user_confirmation_instructions(
-        %User{} = user,
-        confirmation_url_fun
-      )
-      when is_function(confirmation_url_fun, 1) do
+  def deliver_user_confirmation_instructions(%User{} = user) do
     if user.confirmed_at do
       {:error, :already_confirmed}
     else
-      encoded_token = build_email_token(user)
-
       UserNotifier.deliver_confirmation_instructions(
         user,
-        confirmation_url_fun.(encoded_token)
+        build_email_token(user)
       )
     end
   end
 
   def deliver_user_confirmation_instructions(
         %User{} = registerer,
-        %User{} = user,
-        confirmation_url_fun
-      )
-      when is_function(confirmation_url_fun, 1) do
+        %User{} = user
+      ) do
     if user.confirmed_at do
       {:error, :already_confirmed}
     else
-      encoded_token = build_email_token(user)
-
       UserNotifier.deliver_confirmation_instructions(
         registerer,
         user,
-        confirmation_url_fun.(encoded_token)
+        build_email_token(user)
       )
     end
   end
@@ -837,9 +832,11 @@ defmodule Lightning.Accounts do
   and the token is deleted.
   """
   def confirm_user(token) do
-    with {:ok, query} <- UserToken.verify_email_token_query(token, "confirm"),
+    with {:ok, query} <-
+           UserToken.verify_email_token_query(token, "confirm"),
          %User{} = user <- Repo.one(query),
-         {:ok, %{user: user}} <- Repo.transaction(confirm_user_multi(user)) do
+         {:ok, %{user: user}} <-
+           Repo.transaction(confirm_user_multi(user)) do
       {:ok, user}
     else
       _ -> :error

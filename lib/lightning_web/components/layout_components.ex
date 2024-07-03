@@ -5,98 +5,43 @@ defmodule LightningWeb.LayoutComponents do
   import PetalComponents.Dropdown
   import PetalComponents.Avatar
 
+  alias LightningWeb.Components.Menu
+
   def menu_items(assigns) do
+    assigns =
+      assign(assigns,
+        custom_menu_items: Application.get_env(:lightning, :menu_items)
+      )
+
     ~H"""
-    <%= if assigns[:project] do %>
-      <div class="p-2 mb-4 mt-4 text-center text-primary-300 bg-primary-800">
-        <%= if Enum.count(@projects) > 1 do %>
-          <.dropdown placement="right" label={@project.name} js_lib="live_view_js">
-            <%= for project <- @projects do %>
-              <%= unless project.id == @project.id do %>
-                <.dropdown_menu_item
-                  link_type="live_redirect"
-                  to={~p"/projects/#{project.id}/w"}
-                  label={project.name}
-                />
-              <% end %>
-            <% end %>
-          </.dropdown>
-        <% else %>
-          <span class="inline-block align-middle"><%= @project.name %></span>
-        <% end %>
-      </div>
+    <%= if @custom_menu_items do %>
+      <%= Phoenix.LiveView.TagEngine.component(
+        @custom_menu_items.component,
+        Map.take(assigns, @custom_menu_items.assigns_keys),
+        {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
+      ) %>
     <% else %>
       <%= if assigns[:projects] do %>
-        <div class="p-2 mb-4 mt-4 text-center text-primary-300 bg-primary-800">
-          <%= if Enum.count(@projects) >= 1 do %>
-            <.dropdown placement="right" label="Go to project" js_lib="live_view_js">
-              <%= for project <- @projects do %>
-                <.dropdown_menu_item
-                  link_type="live_redirect"
-                  to={~p"/projects/#{project.id}/w"}
-                  label={project.name}
-                />
-              <% end %>
-            </.dropdown>
-          <% else %>
-            <span class="inline-block align-middle text-sm">
-              You don't have access to any projects
-            </span>
-          <% end %>
-        </div>
+        <Menu.projects_dropdown
+          projects={assigns[:projects]}
+          selected_project={assigns[:project]}
+        />
       <% else %>
-        <div class="mb-4" />
+        <div class="p-2 mb-4 mt-4 text-center text-primary-300 bg-primary-800">
+          <span class="inline-block align-middle text-sm">
+            You don't have access to any projects
+          </span>
+        </div>
       <% end %>
-    <% end %>
 
-    <%= if assigns[:project] do %>
-      <Settings.menu_item
-        to={~p"/projects/#{@project.id}/w"}
-        active={@active_menu_item == :overview}
-      >
-        <Icon.workflows class="h-5 w-5 inline-block mr-2 align-middle" />
-        <span class="inline-block align-middle">Workflows</span>
-      </Settings.menu_item>
-
-      <Settings.menu_item
-        to={Routes.project_run_index_path(@socket, :index, @project.id)}
-        active={@active_menu_item == :runs}
-      >
-        <Icon.runs class="h-5 w-5 inline-block mr-2" />
-        <span class="inline-block align-middle">History</span>
-      </Settings.menu_item>
-
-      <Settings.menu_item
-        to={Routes.project_project_settings_path(@socket, :index, @project.id)}
-        active={@active_menu_item == :settings}
-      >
-        <Icon.settings class="h-5 w-5 inline-block mr-2" />
-        <span class="inline-block align-middle">Settings</span>
-      </Settings.menu_item>
-      <!-- # Commented out until new dataclips/globals list is fully functional. -->
-    <!-- <Settings.menu_item
-      to={Routes.project_dataclip_index_path(@socket, :index, @project.id)}
-      active={@active_menu_item == :dataclips}
-    >
-      <Icon.dataclips class="h-5 w-5 inline-block mr-2" />
-      <span class="inline-block align-middle">Dataclips</span>
-    </Settings.menu_item> -->
-    <% else %>
-      <Settings.menu_item to={~p"/profile"} active={@active_menu_item == :profile}>
-        <Heroicons.user_circle class="h-5 w-5 inline-block mr-2" /> User Profile
-      </Settings.menu_item>
-      <Settings.menu_item
-        to={~p"/credentials"}
-        active={@active_menu_item == :credentials}
-      >
-        <Heroicons.key class="h-5 w-5 inline-block mr-2" /> Credentials
-      </Settings.menu_item>
-      <Settings.menu_item
-        to={~p"/profile/tokens"}
-        active={@active_menu_item == :tokens}
-      >
-        <Heroicons.command_line class="h-5 w-5 inline-block mr-2" /> API Tokens
-      </Settings.menu_item>
+      <%= if assigns[:project] do %>
+        <Menu.project_items
+          project_id={@project.id}
+          active_menu_item={@active_menu_item}
+        />
+      <% else %>
+        <Menu.profile_items active_menu_item={@active_menu_item} />
+      <% end %>
     <% end %>
     """
   end
@@ -123,12 +68,27 @@ defmodule LightningWeb.LayoutComponents do
   attr :socket, Phoenix.LiveView.Socket
   slot :title
   slot :period
+  slot :description
   slot :inner_block
 
   def header(assigns) do
+    title_height =
+      if Enum.any?(assigns[:description]) do
+        "mt-4 h-10"
+      else
+        "h-20"
+      end
+
+    # description has the same title class except for height and font
+    assigns =
+      assign(assigns,
+        title_class: "max-w-7xl mx-auto sm:px-6 lg:px-8",
+        title_height: "py-6 flex items-center " <> title_height
+      )
+
     ~H"""
     <div class="flex-none bg-white shadow-sm">
-      <div class="max-w-7xl mx-auto h-20 sm:px-6 lg:px-8 flex items-center">
+      <div class={[@title_class, @title_height]}>
         <h1 class="text-3xl font-bold text-secondary-900 flex items-center">
           <%= if assigns[:title], do: render_slot(@title) %>
         </h1>
@@ -177,6 +137,11 @@ defmodule LightningWeb.LayoutComponents do
           </.dropdown>
         <% end %>
       </div>
+      <%= if Enum.any?(assigns[:description]) do %>
+        <div class={[@title_class, "h-6 text-sm"]}>
+          <%= render_slot(@description) %>
+        </div>
+      <% end %>
     </div>
     """
   end

@@ -11,8 +11,7 @@ defmodule Lightning.AuthProviders.Common do
     Defines a schema for OAuth token information.
     """
 
-    use Ecto.Schema
-    import Ecto.Changeset
+    use Lightning.Schema
 
     @primary_key false
     embedded_schema do
@@ -21,6 +20,8 @@ defmodule Lightning.AuthProviders.Common do
       field :expires_at, :integer
       field :scope, :string
       field :instance_url, :string
+      field :sandbox, :boolean, default: false
+      field :apiVersion, :string, default: nil
     end
 
     @doc """
@@ -34,16 +35,11 @@ defmodule Lightning.AuthProviders.Common do
     Converts an OAuth2 token to a TokenBody struct.
     """
     def from_oauth2_token(token) do
-      token_params =
-        Map.from_struct(token)
-
-      extra_params =
-        token.other_params
-        |> Enum.map(fn {key, value} -> {String.to_existing_atom(key), value} end)
-        |> Map.new()
-
-      token_params
-      |> Map.merge(extra_params)
+      Map.from_struct(token)
+      |> Map.merge(token.other_params)
+      |> Enum.into(%{}, fn {key, value} ->
+        {key |> to_string(), value}
+      end)
       |> new()
     end
 
@@ -55,7 +51,9 @@ defmodule Lightning.AuthProviders.Common do
         :refresh_token,
         :expires_at,
         :scope,
-        :instance_url
+        :instance_url,
+        :sandbox,
+        :apiVersion
       ])
       |> validate_required([:access_token, :refresh_token])
     end
@@ -89,8 +87,8 @@ defmodule Lightning.AuthProviders.Common do
   @doc """
   Retrieves user information from the OAuth provider.
   """
-  def get_userinfo(client, token, provider) do
-    {:ok, wellknown} = get_wellknown(provider)
+  def get_userinfo(client, token, wellknown_url) do
+    {:ok, wellknown} = get_wellknown(wellknown_url)
 
     OAuth2.Client.get(%{client | token: token}, wellknown.userinfo_endpoint)
   end
@@ -98,24 +96,24 @@ defmodule Lightning.AuthProviders.Common do
   @doc """
   Fetches the well-known configuration from the OAuth provider.
   """
-  def get_wellknown(provider) do
-    config = get_config(provider)
-    wellknown_url = config[:wellknown_url]
-
+  def get_wellknown(wellknown_url) do
     case Tesla.get(wellknown_url) do
       {:ok, %{status: status, body: body}} when status in 200..202 ->
         {:ok, Jason.decode!(body) |> WellKnown.new()}
 
       {:ok, %{status: status}} when status >= 500 ->
         {:error, "Received #{status} from #{wellknown_url}"}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
   @doc """
   Fetches the well-known configuration from the OAuth provider and raises an error if not successful.
   """
-  def get_wellknown!(provider) do
-    get_wellknown(provider)
+  def get_wellknown!(wellknown_url) do
+    get_wellknown(wellknown_url)
     |> case do
       {:ok, wellknown} ->
         wellknown
@@ -128,8 +126,8 @@ defmodule Lightning.AuthProviders.Common do
   @doc """
   Builds a new OAuth client with the specified configuration, authorization URL, token URL, and options.
   """
-  def build_client(provider, opts \\ []) do
-    config = get_config(provider)
+  def build_client(provider, wellknown_url, opts \\ []) do
+    config = Lightning.Config.oauth_provider(provider)
 
     if is_nil(config) or is_nil(config[:client_id]) or
          is_nil(config[:client_secret]) do
@@ -139,20 +137,24 @@ defmodule Lightning.AuthProviders.Common do
 
       {:error, :invalid_config}
     else
-      {:ok, wellknown} = get_wellknown(provider)
+      case get_wellknown(wellknown_url) do
+        {:ok, wellknown} ->
+          client =
+            OAuth2.Client.new(strategy: OAuth2.Strategy.AuthCode)
+            |> OAuth2.Client.put_serializer("application/json", Jason)
+            |> Map.merge(%{
+              authorize_url: wellknown.authorization_endpoint,
+              token_url: wellknown.token_endpoint,
+              client_id: config[:client_id],
+              client_secret: config[:client_secret],
+              redirect_uri: opts[:callback_url]
+            })
 
-      client =
-        OAuth2.Client.new(strategy: OAuth2.Strategy.AuthCode)
-        |> OAuth2.Client.put_serializer("application/json", Jason)
-        |> Map.merge(%{
-          authorize_url: wellknown.authorization_endpoint,
-          token_url: wellknown.token_endpoint,
-          client_id: config[:client_id],
-          client_secret: config[:client_secret],
-          redirect_uri: opts[:callback_url]
-        })
+          {:ok, client}
 
-      {:ok, client}
+        {:error, reason} ->
+          {:error, reason}
+      end
     end
   end
 
@@ -160,13 +162,11 @@ defmodule Lightning.AuthProviders.Common do
   Constructs the authorization URL with the given client, state, scopes, and options.
   """
   def authorize_url(client, state, scopes, opts \\ []) do
-    scope = scopes |> Enum.join(" ")
-
     OAuth2.Client.authorize_url!(
       client,
       opts ++
         [
-          scope: scope,
+          scope: Enum.join(scopes, " "),
           state: state,
           access_type: "offline",
           prompt: "consent"
@@ -176,10 +176,11 @@ defmodule Lightning.AuthProviders.Common do
 
   def introspect(
         {:ok, %OAuth2.AccessToken{access_token: access_token} = token},
-        provider
+        provider,
+        wellknown_url
       ) do
-    {:ok, wellknown} = get_wellknown(provider)
-    config = get_config(provider)
+    {:ok, wellknown} = get_wellknown(wellknown_url)
+    config = Lightning.Config.oauth_provider(provider)
 
     Tesla.post(
       wellknown.introspection_endpoint,
@@ -192,7 +193,7 @@ defmodule Lightning.AuthProviders.Common do
     |> handle_introspection_result(token)
   end
 
-  def introspect(result, _provider), do: result
+  def introspect(result, _provider, _wellknow_url), do: result
 
   defp handle_introspection_result({:ok, %{status: status, body: body}}, token)
        when status in 200..202 do
@@ -204,6 +205,8 @@ defmodule Lightning.AuthProviders.Common do
   defp handle_introspection_result({:ok, %{status: status}}, _token)
        when status not in 200..202,
        do: {:error, nil}
+
+  defp handle_introspection_result({:error, _reason}, _token), do: {:error, nil}
 
   @doc """
   Checks if a token is still valid or must be refreshed. If expires_at is nil,
@@ -229,13 +232,5 @@ defmodule Lightning.AuthProviders.Common do
     expiration_time = DateTime.from_unix!(expires_at)
     time_remaining = DateTime.diff(expiration_time, current_time, time_unit)
     time_remaining >= threshold
-  end
-
-  @doc """
-  Retrieves the configuration for a specified OAuth provider.
-  """
-  def get_config(provider) do
-    Application.get_env(:lightning, :oauth_clients)
-    |> Keyword.get(provider)
   end
 end

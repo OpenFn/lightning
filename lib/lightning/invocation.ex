@@ -61,7 +61,7 @@ defmodule Lightning.Invocation do
           Dataclip.t() | nil
   def get_dataclip_for_run(run_id) do
     query =
-      from d in Query.dataclip_with_body(),
+      from d in Dataclip,
         join: a in Lightning.Run,
         on: a.dataclip_id == d.id and a.id == ^run_id
 
@@ -75,7 +75,7 @@ defmodule Lightning.Invocation do
           Dataclip.t() | nil
   def get_dataclip_for_run_and_job(run_id, job_id) do
     query =
-      from d in Query.dataclip_with_body(),
+      from d in Dataclip,
         join: s in Lightning.Invocation.Step,
         on: s.input_dataclip_id == d.id and s.job_id == ^job_id,
         join: a in assoc(s, :runs),
@@ -94,7 +94,8 @@ defmodule Lightning.Invocation do
       from s in Lightning.Invocation.Step,
         join: a in assoc(s, :runs),
         on: a.id == ^run_id,
-        where: s.job_id == ^job_id
+        where: s.job_id == ^job_id,
+        preload: [snapshot: [triggers: :webhook_auth_methods]]
 
     Repo.one(query)
   end
@@ -295,24 +296,6 @@ defmodule Lightning.Invocation do
     do: from(s in Step, where: s.id == ^id, preload: :job) |> Repo.one!()
 
   @doc """
-  Creates a step.
-
-  ## Examples
-
-      iex> create_step(%{field: value})
-      {:ok, %Step{}}
-
-      iex> create_step(%{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-
-  """
-  def create_step(attrs \\ %{}) do
-    %Step{}
-    |> Step.changeset(attrs)
-    |> Repo.insert()
-  end
-
-  @doc """
   Returns an `%Ecto.Changeset{}` for tracking step changes.
 
   ## Examples
@@ -343,8 +326,13 @@ defmodule Lightning.Invocation do
     search_workorders(project, search_params, %{})
   end
 
+  @spec search_workorders(
+          Lightning.Projects.Project.t(),
+          SearchParams.t(),
+          keyword | map
+        ) :: Scrivener.Page.t(WorkOrder.t())
   def search_workorders(
-        %Project{} = project,
+        %Project{id: project_id},
         %SearchParams{search_term: search_term} = search_params,
         params \\ %{}
       ) do
@@ -365,15 +353,34 @@ defmodule Lightning.Invocation do
         end
       )
 
-    project
+    project_id
+    |> base_query()
     |> search_workorders_query(search_params)
     |> Repo.paginate(params)
   end
 
-  def search_workorders_query(
+  def search_workorders_for_retry(
         %Project{id: project_id},
-        %SearchParams{status: status_list} = search_params
+        search_params
       ) do
+    project_id
+    |> base_query_without_preload()
+    |> search_workorders_query(search_params)
+    |> exclude_wiped_dataclips()
+    |> Repo.all()
+  end
+
+  def count_workorders(%Project{id: project_id}, search_params) do
+    project_id
+    |> base_query_without_preload()
+    |> search_workorders_query(search_params)
+    |> Repo.aggregate(:count)
+  end
+
+  defp search_workorders_query(
+         query,
+         %SearchParams{status: status_list} = search_params
+       ) do
     status_filter =
       if SearchParams.all_statuses_set?(search_params) do
         []
@@ -381,7 +388,7 @@ defmodule Lightning.Invocation do
         status_list
       end
 
-    base_query(project_id)
+    query
     |> filter_by_workorder_id(search_params.workorder_id)
     |> filter_by_workflow_id(search_params.workflow_id)
     |> filter_by_statuses(status_filter)
@@ -395,7 +402,7 @@ defmodule Lightning.Invocation do
     )
   end
 
-  def exclude_wiped_dataclips(work_order_query) do
+  defp exclude_wiped_dataclips(work_order_query) do
     work_order_query
     |> join(:inner, [workorder: wo], assoc(wo, :dataclip), as: :dataclip)
     |> where([dataclip: d], is_nil(d.wiped_at))
@@ -410,10 +417,30 @@ defmodule Lightning.Invocation do
       where: workflow.project_id == ^project_id,
       select: workorder,
       preload: [
+        :dataclip,
         workflow: workflow,
-        runs: [steps: [:job, :input_dataclip]],
-        dataclip: []
+        runs: [
+          steps: [
+            :job,
+            :input_dataclip,
+            snapshot: [triggers: :webhook_auth_methods]
+          ]
+        ],
+        snapshot: [triggers: :webhook_auth_methods]
       ],
+      order_by: [desc_nulls_first: workorder.last_activity],
+      distinct: true
+    )
+  end
+
+  defp base_query_without_preload(project_id) do
+    from(
+      workorder in WorkOrder,
+      as: :workorder,
+      join: workflow in assoc(workorder, :workflow),
+      as: :workflow,
+      where: workflow.project_id == ^project_id,
+      select: workorder,
       order_by: [desc_nulls_first: workorder.last_activity],
       distinct: true
     )
@@ -479,11 +506,18 @@ defmodule Lightning.Invocation do
   end
 
   defp build_search_fields_where(search_fields, search_term) do
+    ts_query = for_tsquery_partial_match(search_term)
+
     Enum.reduce(search_fields, dynamic(false), fn
       :body, dynamic ->
         dynamic(
           [input_dataclip: dataclip],
-          ^dynamic or ilike(type(dataclip.body, :string), ^"%#{search_term}%")
+          ^dynamic or
+            fragment(
+              "? @@ to_tsquery('english_nostop', ?)",
+              dataclip.search_vector,
+              ^ts_query
+            )
         )
 
       :id, dynamic ->
@@ -498,9 +532,17 @@ defmodule Lightning.Invocation do
         dynamic(
           [log_lines: log_line],
           ^dynamic or
-            ilike(type(log_line.message, :string), ^"%#{search_term}%")
+            fragment(
+              "? @@ to_tsquery('english_nostop', ?)",
+              log_line.search_vector,
+              ^ts_query
+            )
         )
     end)
+  end
+
+  defp for_tsquery_partial_match(string) do
+    "'" <> String.replace(string, "'", " ", global: true) <> "':*"
   end
 
   defp build_search_fields_query(base_query, search_fields) do

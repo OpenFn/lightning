@@ -2,6 +2,7 @@ defmodule Lightning.VersionControl.GithubError do
   @moduledoc """
   GitHub Error exception
   """
+  @type t :: %__MODULE__{}
   defexception [:code, :message, :meta]
 
   def new(code, msg, meta) when is_binary(msg) do
@@ -18,5 +19,17 @@ defmodule Lightning.VersionControl.GithubError do
 
   def invalid_certificate(msg, meta \\ %{}) do
     new(:invalid_certificate, msg, meta)
+  end
+
+  def invalid_oauth_token(msg, meta \\ %{}) do
+    new(:invalid_oauth_token, msg, meta)
+  end
+
+  def file_not_found(msg, meta \\ %{}) do
+    new(:file_not_found, msg, meta)
+  end
+
+  def repo_secret_not_found(msg, meta \\ %{}) do
+    new(:repo_secret_not_found, msg, meta)
   end
 end

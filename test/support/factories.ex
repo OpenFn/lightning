@@ -14,10 +14,10 @@ defmodule Lightning.Factories do
   def project_repo_connection_factory do
     %Lightning.VersionControl.ProjectRepoConnection{
       project: build(:project),
-      user: build(:user),
       repo: "some/repo",
       branch: "branch",
-      github_installation_id: "some-id"
+      github_installation_id: "some-id",
+      access_token: sequence(:token, &"prc_sometoken#{&1}")
     }
   end
 
@@ -56,7 +56,11 @@ defmodule Lightning.Factories do
   end
 
   def edge_factory do
-    %Lightning.Workflows.Edge{workflow: build(:workflow)}
+    %Lightning.Workflows.Edge{
+      id: fn -> Ecto.UUID.generate() end,
+      workflow: build(:workflow),
+      condition_type: :always
+    }
   end
 
   def dataclip_factory do
@@ -80,7 +84,61 @@ defmodule Lightning.Factories do
     %Lightning.Invocation.Step{
       id: fn -> Ecto.UUID.generate() end,
       job: build(:job),
-      input_dataclip: build(:dataclip)
+      input_dataclip: build(:dataclip),
+      snapshot: build(:snapshot)
+    }
+  end
+
+  def snapshot_factory do
+    %Lightning.Workflows.Snapshot{
+      name: sequence(:name, &"snapshot-#{&1}"),
+      lock_version: 1,
+      workflow: build(:workflow),
+      jobs: build_list(3, :snapshot_job),
+      triggers: build_list(2, :snapshot_trigger),
+      edges: build_list(2, :snapshot_edge)
+    }
+  end
+
+  def snapshot_job_factory do
+    %Lightning.Workflows.Snapshot.Job{
+      id: Ecto.UUID.generate(),
+      name: sequence(:job_name, &"job-#{&1}"),
+      body: "console.log('hello!');",
+      adaptor: "some_adaptor",
+      project_credential_id: Ecto.UUID.generate(),
+      inserted_at: DateTime.utc_now(),
+      updated_at: DateTime.utc_now()
+    }
+  end
+
+  def snapshot_trigger_factory do
+    %Lightning.Workflows.Snapshot.Trigger{
+      id: Ecto.UUID.generate(),
+      comment: "A sample trigger",
+      custom_path: "some/path",
+      cron_expression: "* * * * *",
+      enabled: true,
+      type: :webhook,
+      has_auth_method: false,
+      webhook_auth_methods: build_list(1, :webhook_auth_method),
+      inserted_at: DateTime.utc_now(),
+      updated_at: DateTime.utc_now()
+    }
+  end
+
+  def snapshot_edge_factory do
+    %Lightning.Workflows.Snapshot.Edge{
+      id: Ecto.UUID.generate(),
+      source_job_id: Ecto.UUID.generate(),
+      source_trigger_id: Ecto.UUID.generate(),
+      target_job_id: Ecto.UUID.generate(),
+      condition_type: :always,
+      condition_expression: "true",
+      condition_label: "Always",
+      enabled: true,
+      inserted_at: DateTime.utc_now(),
+      updated_at: DateTime.utc_now()
     }
   end
 
@@ -94,7 +152,9 @@ defmodule Lightning.Factories do
 
   def run_factory do
     %Lightning.Run{
-      id: fn -> Ecto.UUID.generate() end
+      id: fn -> Ecto.UUID.generate() end,
+      snapshot: build(:snapshot),
+      options: %Lightning.Runs.RunOptions{}
     }
   end
 
@@ -119,10 +179,34 @@ defmodule Lightning.Factories do
     }
   end
 
+  def oauth_client_factory do
+    %Lightning.Credentials.OauthClient{
+      name: sequence(:oauth_client_name, &"oauth-client#{&1}"),
+      client_id: sequence(:client_id, &"client-id-#{&1}"),
+      client_secret: sequence(:client_secret, &"client-secret-#{&1}"),
+      authorization_endpoint: "http://example.com/oauth2/authorize",
+      token_endpoint: "http://example.com/oauth2/token",
+      userinfo_endpoint: "http://example.com/oauth2/userinfo",
+      global: false,
+      mandatory_scopes: "scope_1,scope_2",
+      optional_scopes: "scope_3,scope_4",
+      scopes_doc_url: "http://example.com/scopes/doc",
+      user: build(:user)
+    }
+  end
+
+  def project_oauth_client_factory do
+    %Lightning.Projects.ProjectOauthClient{
+      project: build(:project),
+      oauth_client: build(:oauth_client)
+    }
+  end
+
   def workorder_factory do
     %Lightning.WorkOrder{
       id: fn -> Ecto.UUID.generate() end,
-      workflow: build(:workflow)
+      workflow: build(:workflow),
+      snapshot: build(:snapshot)
     }
   end
 
@@ -131,6 +215,7 @@ defmodule Lightning.Factories do
       email: sequence(:email, &"email-#{&1}@example.com"),
       password: "hello world!",
       first_name: "anna",
+      last_name: sequence(:name, &"last-name-#{&1}"),
       hashed_password: Bcrypt.hash_pwd_salt("hello world!")
     }
   end
@@ -141,9 +226,30 @@ defmodule Lightning.Factories do
     }
   end
 
+  def user_token_factory do
+    %Lightning.Accounts.UserToken{
+      token: fn -> Ecto.UUID.generate() end
+    }
+  end
+
   def backup_code_factory do
     %Lightning.Accounts.UserBackupCode{
       code: Lightning.Accounts.UserBackupCode.generate_backup_code()
+    }
+  end
+
+  def usage_tracking_daily_report_configuration_factory do
+    %Lightning.UsageTracking.DailyReportConfiguration{}
+  end
+
+  def usage_tracking_report_factory do
+    now = DateTime.utc_now()
+
+    %Lightning.UsageTracking.Report{
+      data: %{},
+      submitted: true,
+      submitted_at: now,
+      report_date: DateTime.to_date(now)
     }
   end
 
@@ -251,18 +357,19 @@ defmodule Lightning.Factories do
         {%Lightning.Workflows.Job{} = source_job, target_job},
         extra
       ) do
-    %{
-      workflow
-      | edges:
-          merge_assoc(
-            workflow.edges,
-            Enum.into(extra, %{
-              id: Ecto.UUID.generate(),
-              source_job_id: source_job.id,
-              target_job_id: target_job.id
-            })
-          )
-    }
+    edge_params =
+      params_for(
+        :edge,
+        %{
+          id: Ecto.UUID.generate(),
+          source_job_id: source_job.id,
+          target_job_id: target_job.id,
+          condition_type: :always
+        }
+        |> Map.merge(extra |> Enum.into(%{}))
+      )
+
+    %{workflow | edges: merge_assoc(workflow.edges, edge_params)}
   end
 
   def with_edge(
@@ -278,7 +385,8 @@ defmodule Lightning.Factories do
             Enum.into(extra, %{
               id: Ecto.UUID.generate(),
               source_trigger_id: trigger.id,
-              target_job_id: job.id
+              target_job_id: job.id,
+              condition_type: :always
             })
           )
     }
@@ -288,8 +396,7 @@ defmodule Lightning.Factories do
     trigger =
       build(:trigger,
         type: :webhook,
-        enabled: true,
-        cron_expression: "* * * * *"
+        enabled: true
       )
 
     job =
@@ -359,16 +466,28 @@ defmodule Lightning.Factories do
       end)
     end)
     |> with_edge({trigger, jobs |> Enum.at(0)}, condition_type: :always)
-    |> with_edge({jobs |> Enum.at(0), jobs |> Enum.at(1)})
-    |> with_edge({jobs |> Enum.at(1), jobs |> Enum.at(2)})
-    |> with_edge({jobs |> Enum.at(2), jobs |> Enum.at(3)})
-    |> with_edge({jobs |> Enum.at(0), jobs |> Enum.at(4)})
-    |> with_edge({jobs |> Enum.at(4), jobs |> Enum.at(5)})
-    |> with_edge({jobs |> Enum.at(5), jobs |> Enum.at(6)})
+    |> with_edge({jobs |> Enum.at(0), jobs |> Enum.at(1)},
+      condition_type: :on_job_success
+    )
+    |> with_edge({jobs |> Enum.at(1), jobs |> Enum.at(2)},
+      condition_type: :always
+    )
+    |> with_edge({jobs |> Enum.at(2), jobs |> Enum.at(3)},
+      condition_type: :always
+    )
+    |> with_edge({jobs |> Enum.at(0), jobs |> Enum.at(4)},
+      condition_type: :on_job_failure
+    )
+    |> with_edge({jobs |> Enum.at(4), jobs |> Enum.at(5)},
+      condition_type: :always
+    )
+    |> with_edge({jobs |> Enum.at(5), jobs |> Enum.at(6)},
+      condition_type: :always
+    )
   end
 
   def work_order_for(trigger_or_job, attrs) do
-    Lightning.WorkOrders.build_for(trigger_or_job, attrs)
+    Lightning.WorkOrders.build_for(trigger_or_job, Map.new(attrs))
     |> Ecto.Changeset.apply_changes()
   end
 

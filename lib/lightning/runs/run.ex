@@ -4,16 +4,18 @@ defmodule Lightning.Run do
 
 
   """
-  use Ecto.Schema
+  use Lightning.Schema
 
-  import Ecto.Changeset
   import Lightning.Validators
 
   alias Lightning.Accounts.User
+  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Invocation.LogLine
   alias Lightning.Invocation.Step
   alias Lightning.RunStep
+  alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.WorkOrder
 
@@ -42,8 +44,6 @@ defmodule Lightning.Run do
           work_order: WorkOrder.t() | Ecto.Association.NotLoaded.t()
         }
 
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
   schema "runs" do
     belongs_to :work_order, WorkOrder
 
@@ -53,12 +53,15 @@ defmodule Lightning.Run do
     belongs_to :dataclip, Lightning.Invocation.Dataclip
 
     has_one :workflow, through: [:work_order, :workflow]
+    belongs_to :snapshot, Snapshot
 
     has_many :log_lines, LogLine
 
     many_to_many :steps, Step,
       join_through: RunStep,
       preload_order: [asc: :started_at]
+
+    embeds_one :options, Lightning.Runs.RunOptions
 
     field :state, Ecto.Enum,
       values:
@@ -90,19 +93,25 @@ defmodule Lightning.Run do
     |> change()
     |> put_assoc(:starting_trigger, trigger)
     |> put_assoc(:dataclip, attrs[:dataclip])
+    |> put_assoc(:snapshot, attrs[:snapshot])
+    |> add_options(attrs.dataclip.project_id)
     |> validate_required_assoc(:dataclip)
+    |> validate_required_assoc(:snapshot)
     |> validate_required_assoc(:starting_trigger)
   end
 
   def for(%Job{} = job, attrs) do
-    %__MODULE__{}
+    %__MODULE__{priority: attrs[:priority]}
     |> change()
-    |> put_assoc(:starting_job, job)
     |> put_assoc(:created_by, attrs[:created_by])
     |> put_assoc(:dataclip, attrs[:dataclip])
-    |> validate_required_assoc(:dataclip)
-    |> validate_required_assoc(:starting_job)
+    |> put_assoc(:snapshot, attrs[:snapshot])
+    |> put_assoc(:starting_job, job)
+    |> add_options(attrs.dataclip.project_id)
     |> validate_required_assoc(:created_by)
+    |> validate_required_assoc(:dataclip)
+    |> validate_required_assoc(:snapshot)
+    |> validate_required_assoc(:starting_job)
   end
 
   def new(attrs \\ %{}) do
@@ -114,11 +123,24 @@ defmodule Lightning.Run do
   @doc false
   def changeset(run, attrs) do
     run
-    |> cast(attrs, [:work_order_id, :priority])
+    |> cast(attrs, [:work_order_id, :snapshot_id, :priority])
     |> cast_assoc(:steps, required: false)
-    |> validate_required([:work_order_id])
+    |> validate_required([:work_order_id, :snapshot_id])
     |> assoc_constraint(:work_order)
     |> validate()
+  end
+
+  @doc """
+  Adds options (project-level logging options, resource limits such as timeout
+  and memory usage, etc.) to the run before storing in the DB.
+  """
+  def add_options(changeset, project_id) do
+    put_change(
+      changeset,
+      :options,
+      UsageLimiter.get_run_options(%Context{project_id: project_id})
+      |> Enum.into(%{})
+    )
   end
 
   def start(run) do
@@ -177,6 +199,7 @@ defmodule Lightning.Run do
   defp validate(changeset) do
     changeset
     |> assoc_constraint(:work_order)
+    |> assoc_constraint(:snapshot)
     |> check_constraint(:job, name: "validate_job_or_trigger")
   end
 end

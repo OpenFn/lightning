@@ -1,6 +1,6 @@
 defmodule LightningWeb.PlugConfigs do
   @moduledoc """
-  Dinamically initialize Plugs that don't accept dynamic configs in :prod ENV.
+  Dynamically initialize Plugs that don't accept dynamic configs in :prod ENV.
   """
 
   @spec plug_parsers() :: Keyword.t()

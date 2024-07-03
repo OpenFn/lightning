@@ -10,21 +10,20 @@ module.exports = {
   darkMode: 'class',
   content: [
     './js/**/*.{js,jsx,ts,tsx}',
-    './node_modules/@openfn/**/*.{js,jsx,ts,tsx,css}',
     '../lib/*_web.ex',
     '../lib/*_web/**/*.*ex',
     '../deps/petal_components/**/*.*ex',
   ],
   theme: {
     minWidth: {
-      '0': '0',
+      0: '0',
       '1/4': '25%',
       '1/3': '33%',
       '1/2': '50%',
       '3/4': '75%',
-      'full': '100%',
-      'min': 'min-content',
-      'max': 'max-content'
+      full: '100%',
+      min: 'min-content',
+      max: 'max-content',
     },
     extend: {
       colors: {
@@ -93,7 +92,7 @@ module.exports = {
     // Embeds Heroicons (https://heroicons.com) into your app.css bundle
     // See your `CoreComponents.icon/1` for more information.
     //
-    plugin(function({ matchComponents, theme }) {
+    plugin(function ({ matchComponents, theme }) {
       let iconsDir = path.join(__dirname, './vendor/heroicons/optimized');
       let values = {};
       let icons = [

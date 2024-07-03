@@ -1,12 +1,12 @@
 defmodule Lightning.Workflows.EdgeTest do
-  use Lightning.DataCase
+  use Lightning.DataCase, async: true
 
   alias Lightning.Workflows.Edge
 
   describe "changeset/2" do
     test "valid changeset" do
       changeset =
-        Edge.changeset(%Edge{}, %{
+        Edge.changeset(%Edge{source_job_id: Ecto.UUID.generate()}, %{
           workflow_id: Ecto.UUID.generate(),
           condition_type: :on_job_success
         })
@@ -15,12 +15,31 @@ defmodule Lightning.Workflows.EdgeTest do
     end
 
     test "edges must have a condition" do
-      changeset = Edge.changeset(%Edge{}, %{workflow_id: Ecto.UUID.generate()})
+      changeset =
+        Edge.changeset(%Edge{}, %{
+          workflow_id: Ecto.UUID.generate(),
+          source_job_id: Ecto.UUID.generate()
+        })
 
       refute changeset.valid?
 
       assert changeset.errors == [
                condition_type: {"can't be blank", [validation: :required]}
+             ]
+    end
+
+    test "edges must have at least one source" do
+      changeset =
+        Edge.changeset(%Edge{}, %{
+          workflow_id: Ecto.UUID.generate(),
+          condition_type: :on_job_success
+        })
+
+      refute changeset.valid?
+
+      assert changeset.errors == [
+               source_job_id:
+                 {"source_job_id or source_trigger_id must be present", []}
              ]
     end
 
@@ -124,6 +143,7 @@ defmodule Lightning.Workflows.EdgeTest do
         Edge.changeset(%Edge{}, %{
           workflow_id: workflow.id,
           condition_type: :on_job_success,
+          source_job_id: insert(:job, workflow: workflow).id,
           target_job_id: job.id
         })
 
@@ -175,6 +195,7 @@ defmodule Lightning.Workflows.EdgeTest do
       changeset =
         Edge.changeset(%Edge{}, %{
           workflow_id: Ecto.UUID.generate(),
+          source_job_id: Ecto.UUID.generate(),
           target_job_id: Ecto.UUID.generate(),
           condition_type: :on_job_success
         })

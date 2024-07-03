@@ -45,9 +45,25 @@ defmodule Lightning.Helpers do
     |> Timex.Format.Duration.Formatters.Humanized.format()
   end
 
-  def indefinite_article(noun) do
-    first_letter = String.first(noun) |> String.downcase()
-    if Enum.member?(["a", "e", "i", "o", "u"], first_letter), do: "an", else: "a"
+  def actual_deletion_date(
+        grace_period,
+        cron_expression \\ "4 2 * * *",
+        unit \\ :days
+      ) do
+    now = Timex.now()
+
+    due_date =
+      if grace_period,
+        do: now |> Timex.shift([{unit, grace_period}]) |> DateTime.to_naive(),
+        else: now |> DateTime.to_naive()
+
+    {:ok, cron_expression} = Crontab.CronExpression.Parser.parse(cron_expression)
+
+    Crontab.Scheduler.get_next_run_date!(cron_expression, due_date)
+  end
+
+  def format_date(date, formatter \\ "%a %d/%m/%Y at %H:%M:%S") do
+    Timex.Format.DateTime.Formatters.Strftime.format!(date, formatter)
   end
 
   @doc """

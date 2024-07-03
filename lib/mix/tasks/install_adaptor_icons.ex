@@ -13,7 +13,8 @@ defmodule Mix.Tasks.Lightning.InstallAdaptorIcons do
 
   @impl true
   def run(_) do
-    Application.ensure_all_started(:hackney)
+    Application.ensure_all_started(:telemetry)
+    Finch.start_link(name: Lightning.Finch)
 
     File.mkdir_p(@target_dir)
     |> case do

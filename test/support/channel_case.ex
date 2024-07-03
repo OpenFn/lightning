@@ -33,10 +33,17 @@ defmodule LightningWeb.ChannelCase do
   end
 
   setup tags do
-    # Mox.stub_with(Lightning.Config.Mock, Lightning.Config.Stub)
-    # Application.put_env(:lightning, Lightning.Config, Lightning.Config.Mock)
-    Mox.stub_with(Lightning.Mock, Lightning.Stub)
-    # Application.put_env(:lightning, Lightning, Lightning.Mock)
+    Mox.stub_with(Lightning.MockConfig, Lightning.Config.API)
+
+    Mox.stub_with(LightningMock, Lightning.Stub)
+
+    # Default to Hackney adapter so that Bypass dependent tests continue working
+    Mox.stub_with(Lightning.Tesla.Mock, Tesla.Adapter.Hackney)
+
+    Mox.stub_with(
+      Lightning.Extensions.MockUsageLimiter,
+      Lightning.Extensions.UsageLimiter
+    )
 
     pid =
       Ecto.Adapters.SQL.Sandbox.start_owner!(Lightning.Repo,

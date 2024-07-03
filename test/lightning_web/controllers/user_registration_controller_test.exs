@@ -2,6 +2,18 @@ defmodule LightningWeb.UserRegistrationControllerTest do
   use LightningWeb.ConnCase, async: true
 
   import Lightning.AccountsFixtures
+  import Mox
+
+  setup do
+    verify_on_exit!()
+
+    Mox.stub(Lightning.MockConfig, :check_flag?, fn
+      :allow_signup -> true
+      :init_project_for_new_user -> false
+    end)
+
+    :ok
+  end
 
   describe "GET /users/register" do
     test "renders registration page", %{conn: conn} do
@@ -49,13 +61,10 @@ defmodule LightningWeb.UserRegistrationControllerTest do
       conn: conn
     } do
       # Modify the env so that we created new projects for new users
-      Application.put_env(:lightning, :init_project_for_new_user, true)
+      Lightning.MockConfig
+      |> expect(:check_flag?, fn :allow_signup -> true end)
+      |> expect(:check_flag?, fn :init_project_for_new_user -> true end)
 
-      # conn
-      # |> post(~p"/users/confirm",
-      #   user: valid_user_attributes(first_name: "Emory")
-      # )
-      # |> get("/")
       conn =
         conn
         |> post(~p"/users/register",
@@ -73,7 +82,7 @@ defmodule LightningWeb.UserRegistrationControllerTest do
 
       assert project
              |> Lightning.Projects.project_workorders_query()
-             |> Lightning.Repo.aggregate(:count, :id) == 1
+             |> Lightning.Repo.aggregate(:count, :id) == 0
 
       project
       |> Lightning.Projects.project_steps_query()
@@ -81,10 +90,7 @@ defmodule LightningWeb.UserRegistrationControllerTest do
 
       assert project
              |> Lightning.Projects.project_steps_query()
-             |> Lightning.Repo.aggregate(:count, :id) == 2
-
-      # Set this back to the default "false" before finishing the test
-      Application.put_env(:lightning, :init_project_for_new_user, false)
+             |> Lightning.Repo.aggregate(:count, :id) == 0
     end
 
     test "render errors for invalid data", %{conn: conn} do

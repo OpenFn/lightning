@@ -3,15 +3,11 @@ defmodule Lightning.Accounts.UserBackupCode do
   User backup codes schema
   """
 
-  use Ecto.Schema
-  import Ecto.Changeset
+  use Lightning.Schema
 
   @type t :: %__MODULE__{
           id: Ecto.UUID.t() | nil
         }
-
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
 
   schema "user_backup_codes" do
     field :code, Lightning.Encrypted.Binary,

@@ -105,6 +105,7 @@ type JobEditorProps = {
   adaptor: string;
   source: string;
   disabled?: boolean;
+  disabledMessage?: string;
   metadata?: object | true;
   onSourceChanged?: (src: string) => void;
 };
@@ -113,6 +114,7 @@ export default ({
   adaptor,
   source,
   disabled,
+  disabledMessage,
   metadata,
   onSourceChanged,
 }: JobEditorProps) => {
@@ -126,14 +128,12 @@ export default ({
 
   const toggleOrientiation = useCallback(() => {
     setVertical(!vertical);
-    resize();
     settings[SettingsKeys.ORIENTATION] = vertical ? 'h' : 'v';
     persistSettings();
   }, [vertical]);
 
   const toggleShowPanel = useCallback(() => {
     setShowPanel(!showPanel);
-    resize();
     settings[SettingsKeys.SHOW_PANEL] = !showPanel;
     persistSettings();
   }, [showPanel]);
@@ -143,13 +143,6 @@ export default ({
     if (!showPanel) {
       toggleShowPanel();
     }
-  };
-
-  // Force monaco editor to re-layout
-  const resize = () => {
-    setTimeout(() => {
-      document.dispatchEvent(new Event('update-layout'));
-    }, 2);
   };
 
   const CollapseIcon = useMemo(() => {
@@ -164,19 +157,20 @@ export default ({
     <>
       <div className="cursor-pointer"></div>
       <div className={`flex h-full flex-${vertical ? 'col' : 'row'}`}>
-        <div className="flex-1 rounded-md border border-secondary-300 shadow-sm bg-vs-dark">
+        <div className="flex-1 rounded-md overflow-hidden">
           <Editor
             source={source}
             adaptor={adaptor}
             metadata={metadata === true ? undefined : metadata}
             disabled={disabled}
+            disabledMessage={disabledMessage}
             onChange={onSourceChanged}
           />
         </div>
         <div
           className={`${
-            showPanel ? 'flex flex-1 flex-col z-10 overflow-auto' : ''
-          } bg-white`}
+            showPanel ? 'flex flex-1 flex-col z-10 overflow-hidden' : ''
+          } ${vertical ? 'pt-2' : 'pl-2'} bg-white`}
         >
           <div
             className={[
@@ -187,7 +181,6 @@ export default ({
               'w-full',
               'justify-items-end',
               'sticky',
-              vertical ? 'pt-2' : 'pl-2',
             ].join(' ')}
           >
             <Tabs
@@ -201,7 +194,7 @@ export default ({
             />
             <div
               className={`flex select-none flex-1 text-right py-2 ${
-                !showPanel && !vertical ? 'px-2 flex-col-reverse' : 'flex-row'
+                !showPanel && !vertical ? 'flex-col-reverse' : 'flex-row'
               }`}
             >
               <ViewColumnsIcon
@@ -220,7 +213,7 @@ export default ({
             <div
               className={`flex flex-1 ${
                 vertical ? 'overflow-auto' : 'overflow-hidden'
-              } px-2`}
+              }`}
             >
               {selectedTab === 'docs' && <Docs adaptor={adaptor} />}
               {selectedTab === 'metadata' && (

@@ -2,53 +2,62 @@ defmodule LightningWeb.Components.Common do
   @moduledoc false
   use LightningWeb, :component
 
+  import LightningWeb.Components.Icons
+
   alias Phoenix.LiveView.JS
 
-  def version_chip(assigns) do
-    image_info = Application.get_env(:lightning, :image_info)
-    image = image_info[:image_tag]
-    branch = image_info[:branch]
-    commit = image_info[:commit]
-    vsn = "v#{Application.spec(:lightning, :vsn)}"
+  attr :id, :string, required: true
+  attr :version, :string, required: true
+  attr :tooltip, :string, required: false
 
+  def snapshot_version_chip(assigns) do
+    styles =
+      if assigns.version == "latest",
+        do: "bg-blue-100 text-blue-800",
+        else: "bg-yellow-100 text-yellow-800"
+
+    has_tooltip? = Map.has_key?(assigns, :tooltip)
+
+    assigns = assign(assigns, has_tooltip?: has_tooltip?, styles: styles)
+
+    ~H"""
+    <div id={"#{@id}-container"} class="flex items-baseline text-sm font-normal">
+      <span
+        id={@id}
+        {if @has_tooltip?, do: ["phx-hook": "Tooltip", "data-placement": "bottom", "aria-label": @tooltip], else: []}
+        class={"inline-flex items-center rounded-md px-2 py-1 text-xs font-medium #{@styles}"}
+      >
+        <%= @version %>
+      </span>
+    </div>
+    """
+  end
+
+  attr :icon_classes, :string, default: "h-4 w-4 inline-block mr-1"
+
+  def version_chip(assigns) do
     {display, message, type} =
-      cond do
-        # If running in docker on edge, display commit SHA.
-        image == "edge" ->
-          {commit,
-           "Docker image tag found: '#{image}' unreleased build from #{commit} on #{branch}",
+      Lightning.release()
+      |> case do
+        %{image_tag: "edge"} = info ->
+          {info.commit,
+           "Docker image tag found: '#{info.image_tag}' unreleased build from #{info.commit} on #{info.branch}",
            :edge}
 
-        # If running in docker and tag matches :vsn, display :vsn and standard message.
-        image == vsn ->
-          {vsn,
-           "Docker image tag found: '#{image}' tagged release build from #{commit}",
+        %{image_tag: image} = info when not is_nil(image) ->
+          {info.label,
+           "Docker image tag found: '#{info.image_tag}' tagged release build from #{info.commit}",
            :release}
 
-        # If running in docker and tag doesn't match :vsn, display image tag.
-        image != nil and image != vsn and image != "edge" ->
-          {image,
-           "Detected image tag that does not match application version #{vsn}; image tag '#{image}' built from #{commit}",
-           :warn}
-
-        # If running in docker and tag doesn't match :vsn, display commit.
-        image != nil and image != vsn ->
-          {commit,
-           "Detected image tag that does not match application version #{vsn}; image tag '#{image}' built from #{commit}",
-           :warn}
-
-        true ->
-          {vsn, "Lightning #{vsn}", :no_docker}
+        info ->
+          {info.label, "Lightning #{info.vsn}", :no_docker}
       end
-
-    icon_classes = "h-4 w-4 inline-block mr-1"
 
     assigns =
       assign(assigns,
         display: display,
         message: message,
-        type: type,
-        icon_classes: icon_classes
+        type: type
       )
 
     ~H"""
@@ -77,20 +86,35 @@ defmodule LightningWeb.Components.Common do
   attr :id, :string, required: true
   attr :title, :string, required: true
   attr :class, :string, default: ""
+  attr :icon, :string, default: "hero-information-circle-solid"
+  attr :icon_class, :string, default: "w-4 h-4 text-primary-600 opacity-50"
 
   def tooltip(assigns) do
-    classes = ~w"
-      relative ml-1 cursor-pointer
-    "
+    classes = ~w"relative ml-1 cursor-pointer"
 
     assigns = assign(assigns, class: classes ++ List.wrap(assigns.class))
 
     ~H"""
     <span class={@class} id={@id} aria-label={@title} phx-hook="Tooltip">
-      <Heroicons.information_circle
-        solid
-        class="w-4 h-4 text-primary-600 opacity-50"
-      />
+      <.icon name={@icon} class={@icon_class} />
+    </span>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :tooltip, :string, default: nil
+  slot :inner_block, required: true
+
+  def wrapper_tooltip(%{tooltip: tooltip} = assigns)
+      when not is_nil(tooltip) do
+    ~H"""
+    <span
+      id={"#{@id}-tooltip"}
+      phx-hook="Tooltip"
+      aria-label={@tooltip}
+      data-allow-html="true"
+    >
+      <%= render_slot(@inner_block) %>
     </span>
     """
   end
@@ -194,23 +218,6 @@ defmodule LightningWeb.Components.Common do
     end
   end
 
-  def item_bar(assigns) do
-    base_classes = ~w[
-      w-full rounded-md drop-shadow-sm
-      outline-2 outline-blue-300
-      bg-white flex mb-4
-      hover:outline hover:drop-shadow-none
-    ]
-
-    assigns = Map.merge(%{id: nil, class: base_classes}, assigns)
-
-    ~H"""
-    <div class={@class} id={@id}>
-      <%= render_slot(@inner_block) %>
-    </div>
-    """
-  end
-
   def flash(%{kind: :error} = assigns) do
     ~H"""
     <div
@@ -302,7 +309,7 @@ defmodule LightningWeb.Components.Common do
           :http_request -> ~w[bg-green-500 text-green-900]
           :global -> ~w[bg-blue-500 text-blue-900]
           :saved_input -> ~w[bg-yellow-500 text-yellow-900]
-          _ -> []
+          _other -> []
         end
 
     assigns = assign(assigns, class: class)
@@ -312,133 +319,5 @@ defmodule LightningWeb.Components.Common do
       <%= @type %>
     </div>
     """
-  end
-
-  attr :id, :string, required: true
-  attr :default_hash, :string, required: true
-  attr :orientation, :string, required: true, values: ["horizontal", "vertical"]
-  slot :inner_block, required: true
-
-  def tab_bar(assigns) do
-    assigns =
-      assigns
-      |> assign(
-        class:
-          case assigns[:orientation] do
-            "horizontal" ->
-              ~w[border-b border-gray-200 dark:border-gray-600 flex flex-initial gap-x-4 gap-y-2]
-
-            "vertical" ->
-              ~w[flex flex-col flex-wrap gap-y-2 list-none mr-4 nav nav-tabs]
-          end
-      )
-
-    ~H"""
-    <div
-      id={"tab-bar-#{@id}"}
-      class={@class}
-      data-active-classes="border-b-2 border-primary-500 text-primary-600"
-      data-inactive-classes="border-b-2 border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-600 hover:border-gray-300"
-      data-disabled-classes="border-b-2 border-transparent text-gray-500 hover:cursor-not-allowed"
-      data-default-hash={@default_hash}
-      phx-hook="TabSelector"
-    >
-      <%= render_slot(@inner_block) %>
-    </div>
-    """
-  end
-
-  attr :for_hash, :string, required: true
-  attr :class, :string, default: "flex"
-  slot :inner_block, required: true
-
-  def panel_content(assigns) do
-    ~H"""
-    <div
-      class={@class}
-      data-panel-hash={@for_hash}
-      style="display: none;"
-      lv-keep-style
-    >
-      <%= render_slot(@inner_block) %>
-    </div>
-    """
-  end
-
-  attr :hash, :string, required: true
-  attr :orientation, :string, required: true, values: ["horizontal", "vertical"]
-  attr :disabled, :boolean, default: false
-  attr :disabled_msg, :string, default: "Unavailable"
-  slot :inner_block, required: true
-
-  def tab_item(assigns) do
-    assigns =
-      assigns
-      |> assign(
-        base_classes: ~w[
-          border-b-2
-          border-transparent
-          font-medium
-          text-gray-500
-          text-sm
-        ],
-        orientation_classes:
-          case assigns[:orientation] do
-            "horizontal" -> ~w[
-              px-2
-              py-2
-            ]
-            "vertical" -> ~w[
-              flex
-              items-center
-              px-3
-              py-3
-              whitespace-nowrap
-            ]
-          end,
-        disabled_classes: ~w[hover:cursor-not-allowed],
-        enabled_classes: ~w[
-          hover:border-gray-300
-          hover:border-gray-300
-          hover:text-gray-600
-        ]
-      )
-
-    ~H"""
-    <%= if @disabled do %>
-      <span
-        id={"tab-item-#{@hash}"}
-        aria-label={@disabled_msg}
-        phx-hook="Tooltip"
-        data-placement="bottom"
-        class={[@base_classes, @orientation_classes, @disabled_classes]}
-        data-disabled
-        data-hash={@hash}
-        lv-keep-class
-      >
-        <%= render_slot(@inner_block) %>
-      </span>
-    <% else %>
-      <a
-        id={"tab-item-#{@hash}"}
-        class={[@base_classes, @orientation_classes, @enabled_classes]}
-        data-hash={@hash}
-        lv-keep-class
-        phx-click={switch_tabs(@hash)}
-        href={"##{@hash}"}
-      >
-        <%= render_slot(@inner_block) %>
-      </a>
-    <% end %>
-    """
-  end
-
-  defp switch_tabs(hash) do
-    JS.hide(to: "[data-panel-hash]:not([data-panel-hash=#{hash}])")
-    |> JS.show(
-      to: "[data-panel-hash=#{hash}]",
-      transition: {"ease-in duration-150 delay-50", "opacity-0", "opacity-100"},
-      time: 200
-    )
   end
 end

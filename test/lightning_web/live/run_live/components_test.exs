@@ -3,6 +3,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
 
   import Phoenix.LiveViewTest
 
+  alias Lightning.Workflows
   alias LightningWeb.RunLive.Components
   alias LightningWeb.RunLive.Index
 
@@ -48,6 +49,8 @@ defmodule LightningWeb.RunLive.ComponentsTest do
     %{triggers: [trigger], jobs: jobs} =
       workflow = insert(:complex_workflow)
 
+    {:ok, snapshot} = Workflows.Snapshot.create(workflow)
+
     [job_1, job_2, job_3 | _] = jobs
 
     dataclip = insert(:dataclip)
@@ -58,25 +61,30 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         workflow: workflow,
         trigger: trigger,
         dataclip: dataclip,
+        snapshot: snapshot,
         runs: [
           %{
             state: :failed,
             dataclip: dataclip,
             starting_trigger: trigger,
+            snapshot: snapshot,
             steps: [
               insert(:step,
                 job: job_1,
+                snapshot: snapshot,
                 input_dataclip: dataclip,
                 output_dataclip: output_dataclip,
                 exit_reason: nil
               ),
               insert(:step,
                 job: job_2,
+                snapshot: snapshot,
                 input_dataclip: output_dataclip,
                 exit_reason: "success"
               ),
               insert(:step,
                 job: job_3,
+                snapshot: snapshot,
                 exit_reason: "fail",
                 finished_at: build(:timestamp)
               )
@@ -93,6 +101,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       render_component(&Components.step_list_item/1,
         step: first_step,
         run: run,
+        workflow_version: workflow.lock_version,
         project_id: project_id,
         can_run_workflow: true,
         can_edit_data_retention: true
@@ -111,6 +120,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       render_component(&Components.step_list_item/1,
         step: second_step,
         run: run,
+        workflow_version: workflow.lock_version,
         project_id: project_id,
         can_run_workflow: true,
         can_edit_data_retention: true
@@ -129,6 +139,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       render_component(&Components.step_list_item/1,
         step: third_step,
         run: run,
+        workflow_version: workflow.lock_version,
         project_id: project_id,
         can_run_workflow: true,
         can_edit_data_retention: true
@@ -149,6 +160,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
     run2 =
       insert(:run,
         state: :started,
+        snapshot: snapshot,
         work_order_id: run.work_order_id,
         dataclip: dataclip,
         starting_job: last_step.job,
@@ -159,6 +171,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       insert(:step,
         runs: [run2],
         job: job_3,
+        snapshot: snapshot,
         exit_reason: nil,
         finished_at: nil
       )
@@ -169,6 +182,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       render_component(&Components.step_list_item/1,
         step: first_step,
         run: run2,
+        workflow_version: workflow.lock_version,
         project_id: project_id,
         can_run_workflow: true,
         can_edit_data_retention: true
@@ -185,6 +199,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       render_component(&Components.step_list_item/1,
         step: run2_last_step,
         run: run2,
+        workflow_version: workflow.lock_version,
         project_id: project_id,
         can_run_workflow: true,
         can_edit_data_retention: true
@@ -199,7 +214,10 @@ defmodule LightningWeb.RunLive.ComponentsTest do
   end
 
   test "no rerun button is displayed when user can't rerun a job" do
-    %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+    %{triggers: [trigger], jobs: [job | _rest]} =
+      workflow = insert(:simple_workflow)
+
+    {:ok, snapshot} = Workflows.Snapshot.create(workflow)
 
     dataclip = insert(:dataclip)
 
@@ -208,26 +226,34 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         workflow: workflow,
         trigger: trigger,
         dataclip: dataclip,
-        state: :failed
+        state: :failed,
+        snapshot: snapshot
       )
       |> with_run(
         state: :failed,
         dataclip: dataclip,
         starting_trigger: trigger,
         finished_at: build(:timestamp),
+        snapshot: snapshot,
         steps: [
-          build(:step, finished_at: DateTime.utc_now(), exit_reason: "success")
+          build(:step,
+            finished_at: DateTime.utc_now(),
+            exit_reason: "success",
+            job: job,
+            snapshot: snapshot
+          )
         ]
       )
 
     step = List.first(run.steps)
 
-    project_id = step.job.workflow.project_id
+    project_id = workflow.project_id
 
     html =
       render_component(&Components.step_list_item/1,
         step: step,
         run: run,
+        workflow_version: workflow.lock_version,
         project_id: project_id,
         can_run_workflow: true,
         can_edit_data_retention: true
@@ -235,13 +261,16 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       |> Floki.parse_fragment!()
 
     assert html
-           |> Floki.find(~s{span[title="Rerun workflow from here"]})
+           |> Floki.find(
+             ~s{span[aria-label="Rerun from this step with the latest version of this workflow"]}
+           )
            |> Enum.any?()
 
     html =
       render_component(&Components.step_list_item/1,
         step: step,
         run: run,
+        workflow_version: workflow.lock_version,
         project_id: project_id,
         can_run_workflow: false,
         can_edit_data_retention: true
@@ -249,13 +278,17 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       |> Floki.parse_fragment!()
 
     refute html
-           |> Floki.find(~s{span[title="Rerun workflow from here"]})
+           |> Floki.find(
+             ~s{span[aria-label="Rerun from this step with the latest version of this workflow"]}
+           )
            |> Enum.any?()
   end
 
   test "rerun button is disabled when the step dataclip is not saved" do
     %{triggers: [trigger], jobs: [job | _rest]} =
       workflow = insert(:simple_workflow)
+
+    {:ok, snapshot} = Workflows.Snapshot.create(workflow)
 
     dataclip = insert(:dataclip, body: nil, wiped_at: DateTime.utc_now())
 
@@ -264,20 +297,23 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         workflow: workflow,
         trigger: trigger,
         dataclip: dataclip,
-        state: :failed
+        state: :failed,
+        snapshot: snapshot
       )
       |> with_run(
         state: :failed,
         dataclip: dataclip,
         starting_trigger: trigger,
         finished_at: build(:timestamp),
+        snapshot: snapshot,
         steps: [
           build(:step,
             finished_at: DateTime.utc_now(),
             job: job,
             exit_reason: "success",
             input_dataclip: nil,
-            output_dataclip: nil
+            output_dataclip: nil,
+            snapshot: snapshot
           )
         ]
       )
@@ -291,6 +327,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         step: step,
         run: run,
         project_id: project_id,
+        workflow_version: workflow.lock_version,
         can_run_workflow: true,
         can_edit_data_retention: true
       )
@@ -320,6 +357,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       render_component(&Components.step_list_item/1,
         step: step,
         run: run,
+        workflow_version: workflow.lock_version,
         project_id: project_id,
         can_run_workflow: true,
         can_edit_data_retention: false
@@ -351,6 +389,8 @@ defmodule LightningWeb.RunLive.ComponentsTest do
     %{triggers: [trigger], jobs: [job | _rest]} =
       workflow = insert(:simple_workflow)
 
+    {:ok, snapshot} = Workflows.Snapshot.create(workflow)
+
     dataclip = insert(:dataclip, body: nil, wiped_at: DateTime.utc_now())
 
     %{runs: [run]} =
@@ -358,17 +398,20 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         workflow: workflow,
         trigger: trigger,
         dataclip: dataclip,
-        state: :failed
+        state: :failed,
+        snapshot: snapshot
       )
       |> with_run(
         state: :failed,
         dataclip: dataclip,
         starting_trigger: trigger,
         finished_at: build(:timestamp),
+        snapshot: snapshot,
         steps: [
           build(:step,
             finished_at: DateTime.utc_now(),
             job: job,
+            snapshot: snapshot,
             exit_reason: "success",
             input_dataclip: dataclip,
             output_dataclip: nil
@@ -384,6 +427,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       render_component(&Components.step_list_item/1,
         step: step,
         run: run,
+        workflow_version: workflow.lock_version,
         project_id: project_id,
         can_run_workflow: true,
         can_edit_data_retention: true
@@ -414,6 +458,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       render_component(&Components.step_list_item/1,
         step: step,
         run: run,
+        workflow_version: workflow.lock_version,
         project_id: project_id,
         can_run_workflow: true,
         can_edit_data_retention: false
@@ -439,38 +484,6 @@ defmodule LightningWeb.RunLive.ComponentsTest do
            "User does not see link to go to settings"
 
     assert html =~ "contact one of your project admins"
-  end
-
-  describe "log_view component" do
-    test "with no log lines" do
-      html =
-        render_component(&Components.log_view/1, log: [])
-        |> Floki.parse_fragment!()
-
-      assert html |> Floki.find("div[data-line-number]") |> length() == 0
-    end
-
-    test "with log lines" do
-      log_lines = ["First line", "Second line"]
-
-      html =
-        render_component(&Components.log_view/1, log: log_lines)
-        |> Floki.parse_fragment!()
-
-      assert html |> Floki.find("div[data-line-number]") |> length() ==
-               length(log_lines)
-
-      # Check that the log lines are present.
-      # Replace the resulting utf-8 &nbsp; back into a regular space.
-      assert log_lines_from_html(html) == log_lines |> Enum.join("\n")
-    end
-  end
-
-  defp log_lines_from_html(html) do
-    html
-    |> Floki.find("div[data-log-line]")
-    |> Floki.text(sep: "\n")
-    |> String.replace(<<160::utf8>>, " ")
   end
 
   defp has_run_step_link?(html, project, run, step) do

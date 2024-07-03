@@ -5,14 +5,21 @@ defmodule Lightning.Workflows do
 
   import Ecto.Query
 
+  alias Ecto.Multi
+
   alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Workflows.Edge
+  alias Lightning.Workflows.Events
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Query
+  alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
+
+  defdelegate subscribe(project_id), to: Events
+  require Logger
 
   @doc """
   Returns the list of workflows.
@@ -45,41 +52,108 @@ defmodule Lightning.Workflows do
 
   def get_workflow(id), do: Repo.get(Workflow, id)
 
-  @doc """
-  Creates a workflow.
+  @spec save_workflow(Ecto.Changeset.t(Workflow.t()) | map()) ::
+          {:ok, Workflow.t()} | {:error, Ecto.Changeset.t(Workflow.t())}
+  def save_workflow(%Ecto.Changeset{data: %Workflow{}} = changeset) do
+    Multi.new()
+    |> Multi.insert_or_update(:workflow, changeset)
+    |> then(fn multi ->
+      if changeset.changes == %{} do
+        multi
+      else
+        multi |> capture_snapshot()
+      end
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{workflow: workflow}} ->
+        Events.workflow_updated(workflow)
 
-  ## Examples
+        {:ok, workflow}
 
-      iex> create_workflow(%{field: value})
-      {:ok, %Workflow{}}
+      {:error, :workflow, changeset, _changes} ->
+        {:error, changeset}
 
-      iex> create_workflow(%{field: bad_value})
-      {:error, %Ecto.Changeset{}}
+      {:error, :snapshot, snapshot_changeset, %{workflow: workflow}} ->
+        Logger.warning(fn ->
+          """
+          Failed to save snapshot for workflow: #{workflow.id}
+          #{inspect(snapshot_changeset.errors)}
+          """
+        end)
 
-  """
-  def create_workflow(attrs \\ %{}) do
-    %Workflow{}
-    |> Workflow.changeset(attrs)
-    |> Repo.insert()
+        {:error, false}
+    end
+  end
+
+  def save_workflow(%{} = attrs) do
+    Workflow.changeset(%Workflow{}, attrs)
+    |> save_workflow()
   end
 
   @doc """
-  Updates a workflow.
+  Creates a snapshot from a multi.
 
-  ## Examples
+  When the multi already has a `:workflow` change, it is assumed to be changed
+  or inserted and will attempt to build and insert a new snapshot.
 
-      iex> update_workflow(workflow, %{field: new_value})
-      {:ok, %Workflow{}}
+  When there isn't a `:workflow` change, it tries to find a dependant model
+  like a Job, Trigger or Edge and uses the workflow associated with that
+  model.
 
-      iex> update_workflow(workflow, %{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-
+  In this case we assume that the workflow wasn't actually updated,
+  `Workflow.touch()` is called to bump the `updated_at` and the `lock_version`
+  of the workflow before a snapshot is captured.
   """
-  def update_workflow(%Workflow{} = workflow, attrs) do
-    workflow
-    |> maybe_preload([:jobs, :triggers, :edges], attrs)
-    |> Workflow.changeset(attrs)
-    |> Repo.update()
+  def capture_snapshot(%Multi{} = multi) do
+    multi
+    |> Multi.merge(fn changes ->
+      if changes[:workflow] do
+        # TODO: can we tell if `optimistic_lock` was used?
+        # if we can, then we can use `touch` here as well, filling in a few
+        # gaps where we want to capture a snapshot because the workflow
+        # doesn't have one yet.
+        Multi.new()
+      else
+        dependent_change = find_dependent_change(multi)
+
+        Multi.new()
+        |> Multi.run(:workflow, fn repo, _changes ->
+          workflow =
+            changes[dependent_change]
+            |> Ecto.assoc(:workflow)
+            |> repo.one!()
+            |> Workflow.touch()
+            |> repo.update!()
+
+          {:ok, workflow}
+        end)
+      end
+    end)
+    |> insert_snapshot()
+  end
+
+  defp find_dependent_change(multi) do
+    multi
+    |> Multi.to_list()
+    |> Enum.find_value(fn {key, {_action, changeset_or_struct, _}} ->
+      case changeset_or_struct do
+        %{data: %{__struct__: model}} when model in [Job, Edge, Trigger] ->
+          key
+
+        _other ->
+          false
+      end
+    end)
+  end
+
+  defp insert_snapshot(multi) do
+    multi
+    |> Multi.insert(
+      :snapshot,
+      &(Map.get(&1, :workflow) |> Snapshot.build()),
+      returning: false
+    )
   end
 
   # Helper to preload associations only if they are present in the attributes
@@ -102,7 +176,9 @@ defmodule Lightning.Workflows do
 
   """
   def change_workflow(%Workflow{} = workflow, attrs \\ %{}) do
-    Workflow.changeset(workflow, attrs)
+    workflow
+    |> maybe_preload([:jobs, :triggers, :edges], attrs)
+    |> Workflow.changeset(attrs)
   end
 
   @doc """
@@ -111,7 +187,7 @@ defmodule Lightning.Workflows do
   @spec get_workflows_for(Project.t()) :: [Workflow.t()]
   def get_workflows_for(%Project{} = project) do
     from(w in Workflow,
-      preload: [:triggers, :edges, jobs: [:credential, :workflow]],
+      preload: [:triggers, :edges, jobs: [:workflow]],
       where: is_nil(w.deleted_at) and w.project_id == ^project.id,
       order_by: [asc: w.name]
     )
@@ -162,15 +238,30 @@ defmodule Lightning.Workflows do
 
       Repo.update_all(workflow_triggers_query, set: [enabled: false])
     end)
+    |> tap(fn result ->
+      with {:ok, _} <- result do
+        workflow
+        |> Repo.preload([:triggers], force: true)
+        |> Events.workflow_updated()
+      end
+    end)
   end
 
   @doc """
   Creates an edge
   """
   def create_edge(attrs) do
-    attrs
-    |> Edge.new()
-    |> Repo.insert()
+    Multi.new()
+    |> Multi.insert(:edge, Edge.new(attrs))
+    |> capture_snapshot()
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{edge: edge}} ->
+        {:ok, edge}
+
+      {:error, _run, changeset, _changes} ->
+        {:error, changeset}
+    end
   end
 
   @doc """
@@ -274,7 +365,7 @@ defmodule Lightning.Workflows do
          true <- Crontab.DateChecker.matches_date?(cron, datetime) do
       edge
     else
-      _ -> false
+      _other -> false
     end
   end
 

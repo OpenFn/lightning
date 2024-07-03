@@ -15,32 +15,45 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectUser
   alias Lightning.Repo
+  alias Lightning.VersionControl.ProjectRepoConnection
+  alias Lightning.VersionControl.VersionControlUsageLimiter
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.WorkflowUsageLimiter
 
   @doc """
   Import a project.
   """
-  @spec import_document(Project.t() | nil, User.t(), map()) ::
-          {:error, Ecto.Changeset.t(Project.t())}
+  @spec import_document(
+          Project.t() | nil,
+          User.t() | ProjectRepoConnection.t(),
+          map()
+        ) ::
+          {:error,
+           Ecto.Changeset.t(Project.t())
+           | Lightning.Extensions.UsageLimiting.message()}
           | {:ok, Project.t()}
-  def import_document(nil, %User{} = user, data),
-    do: import_document(%Project{}, user, data)
+  def import_document(nil, %User{} = user, data) do
+    import_document(%Project{}, user, data)
+  end
 
-  def import_document(project, %User{} = user, data) do
-    project
-    |> maybe_reload_project()
-    |> parse_document(data)
-    |> maybe_add_project_user(user)
-    |> Repo.insert_or_update()
-    |> case do
-      {:ok, %{id: id}} ->
-        {:ok, load_project(id)}
+  def import_document(project, user_or_repo_connection, data) do
+    with :ok <- VersionControlUsageLimiter.limit_github_sync(project.id) do
+      project
+      |> preload_dependencies()
+      |> parse_document(data)
+      |> maybe_add_project_user(user_or_repo_connection)
+      |> Repo.insert_or_update()
+      |> case do
+        {:ok, %{workflows: workflows} = project} ->
+          Enum.each(workflows, &Lightning.Workflows.Events.workflow_updated/1)
+          {:ok, preload_dependencies(project)}
 
-      {:error, changeset} ->
-        {:error, changeset}
+        {:error, error} ->
+          {:error, error}
+      end
     end
   end
 
@@ -49,11 +62,24 @@ defmodule Lightning.Projects.Provisioner do
     project
     |> project_changeset(data)
     |> cast_assoc(:workflows, with: &workflow_changeset/2)
+    |> then(fn changeset ->
+      case WorkflowUsageLimiter.limit_workflows_activation(
+             project,
+             get_assoc(changeset, :workflows)
+           ) do
+        :ok ->
+          changeset
+
+        {:error, _reason, %{text: message}} ->
+          add_error(changeset, :id, message)
+      end
+    end)
   end
 
-  defp maybe_add_project_user(changeset, user) do
-    if needs_initial_project_user?(changeset) do
-      changeset |> add_owner(user)
+  defp maybe_add_project_user(changeset, user_or_repo_connection) do
+    if is_struct(user_or_repo_connection, User) and
+         needs_initial_project_user?(changeset) do
+      changeset |> add_owner(user_or_repo_connection)
     else
       changeset
     end
@@ -74,26 +100,22 @@ defmodule Lightning.Projects.Provisioner do
   end
 
   @doc """
-  Load a project by ID, including all workflows and their associated jobs,
-  triggers and edges.
+  Preload all dependencies for a project.
 
-  Returns `nil` if the project does not exist.
+  Exclude deleted workflows.
   """
-  @spec load_project(Ecto.UUID.t()) :: Project.t() | nil
-  def load_project(id) do
-    from(p in Project,
-      where: p.id == ^id,
-      preload: [:project_users, workflows: [:jobs, :triggers, :edges]]
-    )
-    |> Repo.one()
-  end
+  @spec preload_dependencies(Project.t()) :: Project.t()
+  def preload_dependencies(project) do
+    w = from(w in Workflow, where: is_nil(w.deleted_at))
 
-  defp maybe_reload_project(project) do
-    if project.id do
-      load_project(project.id)
-    else
-      project
-    end
+    Repo.preload(
+      project,
+      [
+        :project_users,
+        workflows: {w, [:jobs, :triggers, :edges]}
+      ],
+      force: true
+    )
   end
 
   defp project_changeset(project, attrs) do

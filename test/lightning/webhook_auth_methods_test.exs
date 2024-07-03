@@ -420,7 +420,7 @@ defmodule Lightning.WebhookAuthMethodsTest do
 
     assert webhook_auth_method.scheduled_deletion == nil
 
-    days = Application.get_env(:lightning, :purge_deleted_after_days, 0)
+    days = Lightning.Config.purge_deleted_after_days()
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
     {:ok, changeset} =

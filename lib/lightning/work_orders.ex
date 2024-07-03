@@ -31,9 +31,13 @@ defmodule Lightning.WorkOrders do
   import Ecto.Changeset
   import Ecto.Query
   import Lightning.Validators
+  import Lightning.ChangesetUtils
 
   alias Ecto.Multi
   alias Lightning.Accounts.User
+  alias Lightning.Extensions.UsageLimiting
+  alias Lightning.Extensions.UsageLimiting.Action
+  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Graph
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
@@ -41,7 +45,9 @@ defmodule Lightning.WorkOrders do
   alias Lightning.Run
   alias Lightning.Runs
   alias Lightning.RunStep
+  alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
   alias Lightning.WorkOrder
@@ -53,6 +59,8 @@ defmodule Lightning.WorkOrders do
           {:workflow, Workflow.t()}
           | {:dataclip, Dataclip.t()}
           | {:created_by, User.t()}
+          | {:project_id, Ecto.UUID.t()}
+          | {:without_run, boolean()}
 
   @doc """
   Create a new Work Order.
@@ -69,64 +77,73 @@ defmodule Lightning.WorkOrders do
     Multi.new()
     |> Multi.put(:workflow, opts[:workflow])
     |> get_or_insert_dataclip(opts[:dataclip])
-    |> Multi.insert(:workorder, fn %{dataclip: dataclip} ->
-      build_for(trigger, Map.new(opts) |> Map.put(:dataclip, dataclip))
+    |> get_or_create_snapshot(opts[:workflow])
+    |> Multi.insert(:workorder, fn %{dataclip: dataclip, snapshot: snapshot} ->
+      {without_run?, opts} = Keyword.pop(opts, :without_run, false)
+
+      attrs =
+        opts
+        |> Map.new()
+        |> Map.merge(%{dataclip: dataclip, snapshot: snapshot})
+        |> then(fn attrs ->
+          if without_run? do
+            attrs |> Map.put(:state, :rejected)
+          else
+            attrs
+          end
+        end)
+
+      build_for(trigger, attrs)
     end)
-    |> broadcast_workorder_creation()
-    |> transact_and_return_work_order()
+    |> Runs.enqueue()
+    |> emit_and_return_work_order()
   end
 
   def create_for(%Job{} = job, opts) do
     Multi.new()
     |> Multi.put(:workflow, opts[:workflow])
+    |> get_or_create_snapshot()
     |> Multi.insert(:workorder, build_for(job, opts |> Map.new()))
-    |> broadcast_workorder_creation()
-    |> transact_and_return_work_order()
+    |> Runs.enqueue()
+    |> emit_and_return_work_order()
   end
 
   def create_for(%Manual{} = manual) do
     Multi.new()
     |> get_or_insert_dataclip(manual)
-    |> Multi.insert(:workorder, fn %{dataclip: dataclip} ->
+    |> Multi.put(:workflow, manual.workflow)
+    |> get_or_create_snapshot()
+    |> Multi.insert(:workorder, fn %{dataclip: dataclip, snapshot: snapshot} ->
       build_for(manual.job, %{
         workflow: manual.workflow,
         dataclip: dataclip,
-        created_by: manual.created_by
+        created_by: manual.created_by,
+        priority: :immediate,
+        snapshot: snapshot
       })
     end)
-    |> Multi.put(:workflow, manual.workflow)
-    |> broadcast_workorder_creation()
-    |> Multi.run(
-      :broadcast_run,
-      fn _repo, %{workorder: %{runs: [run], workflow: workflow}} ->
-        Events.run_created(workflow.project_id, run)
-        {:ok, nil}
-      end
-    )
-    |> transact_and_return_work_order()
+    |> Runs.enqueue()
+    |> emit_and_return_work_order()
   end
 
-  defp broadcast_workorder_creation(multi) do
-    multi
-    |> Multi.run(
-      :broadcast_workorder,
-      fn _repo, %{workorder: workorder, workflow: workflow} ->
-        Events.work_order_created(workflow.project_id, workorder)
-        {:ok, nil}
-      end
-    )
+  defp emit_and_return_work_order(
+         {:ok, %{workorder: workorder, workflow: workflow}}
+       ) do
+    Enum.each(workorder.runs, &Events.run_created(workflow.project_id, &1))
+    Events.work_order_created(workflow.project_id, workorder)
+    {:ok, workorder}
   end
 
-  defp transact_and_return_work_order(multi) do
-    multi
-    |> Repo.transaction()
-    |> case do
-      {:ok, %{workorder: workorder}} ->
-        {:ok, workorder}
+  defp emit_and_return_work_order({:error, _op, changeset, _changes}) do
+    {:error, changeset}
+  end
 
-      {:error, _op, changeset, _changes} ->
-        {:error, changeset}
-    end
+  defp get_or_create_snapshot(multi, workflow \\ nil) do
+    multi
+    |> Multi.merge(fn changes ->
+      workflow = workflow || changes[:workflow]
+      Multi.new() |> Snapshot.get_or_create_latest_for(workflow)
+    end)
   end
 
   defp get_or_insert_dataclip(multi, %Manual{} = manual) do
@@ -160,39 +177,83 @@ defmodule Lightning.WorkOrders do
     get_or_insert_dataclip(multi, Dataclip.new(params))
   end
 
+  defp try_put_snapshot(changeset, attrs) do
+    if snapshot = attrs |> Map.get(:snapshot) do
+      changeset |> put_assoc(:snapshot, snapshot)
+    else
+      Snapshot.get_or_create_latest_for(attrs[:workflow])
+      |> case do
+        {:ok, snapshot} ->
+          changeset |> put_assoc(:snapshot, snapshot)
+
+        {:error, _changeset} ->
+          changeset
+      end
+    end
+  end
+
+  def build(attrs) do
+    %WorkOrder{}
+    |> change()
+    |> put_if_provided(:state, attrs)
+    |> try_put_snapshot(attrs)
+    |> put_assoc(:workflow, attrs[:workflow])
+    |> put_assoc(:dataclip, attrs[:dataclip])
+  end
+
   @spec build_for(Trigger.t() | Job.t(), map()) ::
           Ecto.Changeset.t(WorkOrder.t())
   def build_for(%Trigger{} = trigger, attrs) do
-    %WorkOrder{}
-    |> change()
-    |> put_assoc(:workflow, attrs[:workflow])
+    build(attrs)
     |> put_assoc(:trigger, trigger)
-    |> put_assoc(:dataclip, attrs[:dataclip])
-    |> put_assoc(:runs, [
-      Run.for(trigger, %{dataclip: attrs[:dataclip]})
-    ])
+    |> then(fn changeset ->
+      changeset
+      |> fetch_change(:state)
+      |> case do
+        {:ok, :rejected} ->
+          changeset |> put_assoc(:runs, [])
+
+        _any ->
+          snapshot = changeset |> get_change(:snapshot)
+
+          changeset
+          |> put_assoc(:runs, [
+            Run.for(trigger, %{dataclip: attrs[:dataclip], snapshot: snapshot})
+          ])
+      end
+    end)
+    |> validate_required_assoc(:snapshot)
     |> validate_required_assoc(:workflow)
     |> validate_required_assoc(:trigger)
     |> validate_required_assoc(:dataclip)
     |> assoc_constraint(:trigger)
     |> assoc_constraint(:workflow)
+    |> assoc_constraint(:snapshot)
   end
 
   def build_for(%Job{} = job, attrs) do
-    %WorkOrder{}
-    |> change()
-    |> put_assoc(:workflow, attrs[:workflow])
-    |> put_assoc(:dataclip, attrs[:dataclip])
-    |> put_assoc(:runs, [
-      Run.for(job, %{
-        dataclip: attrs[:dataclip],
-        created_by: attrs[:created_by]
-      })
-    ])
+    build(attrs)
+    |> then(fn changeset ->
+      snapshot = changeset |> get_change(:snapshot)
+
+      runs =
+        attrs[:runs] ||
+          Run.for(job, %{
+            dataclip: attrs[:dataclip],
+            created_by: attrs[:created_by],
+            priority: attrs[:priority],
+            snapshot: snapshot
+          })
+          |> List.wrap()
+
+      put_assoc(changeset, :runs, runs)
+    end)
+    |> validate_required_assoc(:snapshot)
     |> validate_required_assoc(:workflow)
     |> validate_required_assoc(:dataclip)
     |> assoc_constraint(:trigger)
     |> assoc_constraint(:workflow)
+    |> assoc_constraint(:snapshot)
   end
 
   @doc """
@@ -222,17 +283,25 @@ defmodule Lightning.WorkOrders do
         where: a.id == ^run_id,
         join: s in assoc(a, :steps),
         where: s.id == ^step_id,
-        preload: [:steps, work_order: [workflow: :edges]]
+        preload: [
+          steps: [snapshot: [triggers: :webhook_auth_methods]],
+          work_order: [workflow: :edges]
+        ]
       )
       |> Repo.one()
 
     step =
       from(s in Ecto.assoc(run, :steps),
         where: s.id == ^step_id,
-        preload: [:job, :input_dataclip]
+        preload: [
+          :job,
+          :input_dataclip,
+          snapshot: [triggers: :webhook_auth_methods]
+        ]
       )
       |> Repo.one()
 
+    # TODO: #snapshots what if a node doesn't exist in the current snapshot?
     steps =
       run.work_order.workflow.edges
       |> Enum.reduce(Graph.new(), fn edge, graph ->
@@ -270,23 +339,48 @@ defmodule Lightning.WorkOrders do
          steps,
          creating_user
        ) do
-    changeset =
-      Run.new(%{priority: :immediate})
-      |> put_assoc(:work_order, workorder)
-      |> put_assoc(:dataclip, dataclip)
-      |> put_assoc(:starting_job, starting_job)
-      |> put_assoc(:steps, steps)
-      |> put_assoc(:created_by, creating_user)
-      |> validate_required_assoc(:dataclip)
-      |> validate_required_assoc(:work_order)
-      |> validate_required_assoc(:created_by)
-
-    Repo.transact(fn ->
-      with {:ok, run} <- Runs.enqueue(changeset),
-           {:ok, _workorder} <- update_state(run) do
-        {:ok, run}
+    Multi.new()
+    |> get_or_create_snapshot(%Workflow{id: workorder.workflow_id})
+    |> Multi.insert(
+      :run,
+      fn %{snapshot: snapshot} ->
+        Run.new(%{priority: :immediate})
+        |> put_assoc(:snapshot, snapshot)
+        |> put_assoc(:work_order, workorder)
+        |> put_assoc(:dataclip, dataclip)
+        |> put_assoc(:starting_job, starting_job)
+        |> put_assoc(:steps, steps)
+        |> put_assoc(:created_by, creating_user)
+        |> Run.add_options(dataclip.project_id)
+        |> validate_required_assoc(:snapshot)
+        |> validate_required_assoc(:dataclip)
+        |> validate_required_assoc(:work_order)
+        |> validate_required_assoc(:created_by)
       end
-    end)
+    )
+    |> Multi.update_all(
+      :workorder,
+      fn %{run: run} ->
+        update_workorder_query(run)
+      end,
+      [],
+      returning: true
+    )
+    |> Multi.one(
+      :workflow,
+      from(w in Workflow, where: w.id == ^workorder.workflow_id)
+    )
+    |> Runs.enqueue()
+    |> case do
+      {:ok, %{run: run, workflow: workflow}} ->
+        Events.work_order_updated(workflow.project_id, workorder)
+        Events.run_created(workflow.project_id, run)
+
+        {:ok, run}
+
+      {:error, _name, changeset, _changes} ->
+        {:error, changeset}
+    end
   end
 
   defp do_retry(_workorder, _wiped_dataclip, _starting_job, _steps, _user) do
@@ -308,12 +402,12 @@ defmodule Lightning.WorkOrders do
     orders_ids = Enum.map(workorders, & &1.id)
 
     last_runs_query =
-      from(att in Run,
-        where: att.work_order_id in ^orders_ids,
-        group_by: att.work_order_id,
+      from(r in Run,
+        where: r.work_order_id in ^orders_ids,
+        group_by: [r.work_order_id],
         select: %{
-          work_order_id: att.work_order_id,
-          last_inserted_at: max(att.inserted_at)
+          work_order_id: r.work_order_id,
+          last_inserted_at: max(r.inserted_at)
         }
       )
 
@@ -338,7 +432,7 @@ defmodule Lightning.WorkOrders do
   @spec retry_many(
           [WorkOrder.t(), ...] | [RunStep.t(), ...],
           [work_order_option(), ...]
-        ) :: {:ok, count :: integer()}
+        ) :: {:ok, count :: integer()} | UsageLimiting.error()
   def retry_many([%WorkOrder{} | _rest] = workorders, opts) do
     attrs = Map.new(opts)
     orders_ids = Enum.map(workorders, & &1.id)
@@ -374,35 +468,54 @@ defmodule Lightning.WorkOrders do
 
     runs = Repo.all(first_runs_query)
 
-    results =
-      Enum.map(runs, fn run ->
-        starting_job =
-          if job = run.starting_job do
-            job
-          else
-            [edge] = run.starting_trigger.edges
-            edge.target_job
-          end
+    with project_id <- Keyword.fetch!(opts, :project_id),
+         :ok <-
+           UsageLimiter.limit_action(
+             %Action{type: :new_run, amount: length(runs)},
+             %Context{
+               project_id: project_id
+             }
+           ) do
+      results =
+        Enum.map(runs, fn run ->
+          starting_job =
+            if job = run.starting_job do
+              job
+            else
+              [edge] = run.starting_trigger.edges
+              edge.target_job
+            end
 
-        do_retry(
-          run.work_order,
-          run.dataclip,
-          starting_job,
-          [],
-          attrs[:created_by]
-        )
-      end)
+          do_retry(
+            run.work_order,
+            run.dataclip,
+            starting_job,
+            [],
+            attrs[:created_by]
+          )
+        end)
 
-    {:ok, Enum.count(results, fn result -> match?({:ok, _}, result) end)}
+      {:ok, Enum.count(results, fn result -> match?({:ok, _}, result) end)}
+    end
   end
 
   def retry_many([%RunStep{} | _rest] = run_steps, opts) do
-    results =
-      Enum.map(run_steps, fn run_step ->
-        retry(run_step.run_id, run_step.step_id, opts)
-      end)
+    with project_id <- Keyword.fetch!(opts, :project_id),
+         runs <- Enum.uniq_by(run_steps, & &1.run_id),
+         :ok <-
+           UsageLimiter.limit_action(
+             %Action{type: :new_run, amount: length(runs)},
+             %Context{
+               project_id: project_id
+             }
+           ) do
+      results =
+        Enum.map(run_steps, fn run_step ->
+          retry(run_step.run_id, run_step.step_id, opts)
+        end)
 
-    {:ok, Enum.count(results, fn result -> match?({:ok, _}, result) end)}
+      {:ok, Enum.count(results, fn result -> match?({:ok, _}, result) end)}
+    end
   end
 
   def retry_many([], _opts) do
@@ -417,18 +530,10 @@ defmodule Lightning.WorkOrders do
 
   See `Lightning.WorkOrders.Query.state_for/1` for more details.
   """
-  @spec update_state(Run.t()) ::
-          {:ok, WorkOrder.t()}
+  @spec update_state(Run.t()) :: {:ok, WorkOrder.t()}
   def update_state(%Run{} = run) do
-    state_query = Query.state_for(run)
-
-    from(wo in WorkOrder,
-      where: wo.id == ^run.work_order_id,
-      join: s in subquery(state_query),
-      on: true,
-      select: wo,
-      update: [set: [state: s.state, last_activity: ^DateTime.utc_now()]]
-    )
+    run
+    |> update_workorder_query()
     |> Repo.update_all([], returning: true)
     |> then(fn {_, [wo]} ->
       updated_wo = Repo.preload(wo, :workflow)
@@ -456,4 +561,16 @@ defmodule Lightning.WorkOrders do
   end
 
   defdelegate subscribe(project_id), to: Events
+
+  defp update_workorder_query(run) do
+    state_query = Query.state_for(run)
+
+    from(wo in WorkOrder,
+      where: wo.id == ^run.work_order_id,
+      join: s in subquery(state_query),
+      on: true,
+      select: wo,
+      update: [set: [state: s.state, last_activity: ^DateTime.utc_now()]]
+    )
+  end
 end

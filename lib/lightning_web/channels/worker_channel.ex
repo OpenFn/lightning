@@ -4,7 +4,9 @@ defmodule LightningWeb.WorkerChannel do
   """
   use LightningWeb, :channel
 
+  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Runs
+  alias Lightning.Services.UsageLimiter
   alias Lightning.Workers
 
   @impl true
@@ -29,7 +31,10 @@ defmodule LightningWeb.WorkerChannel do
         runs =
           runs
           |> Enum.map(fn run ->
-            token = Lightning.Workers.generate_run_token(run)
+            opts = run_options(run)
+
+            token =
+              Lightning.Workers.generate_run_token(run, opts)
 
             %{
               "id" => run.id,
@@ -42,5 +47,13 @@ defmodule LightningWeb.WorkerChannel do
       {:error, changeset} ->
         {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
     end
+  end
+
+  defp run_options(run) do
+    Ecto.assoc(run, :workflow)
+    |> Lightning.Repo.one()
+    |> then(fn %{project_id: project_id} ->
+      UsageLimiter.get_run_options(%Context{project_id: project_id})
+    end)
   end
 end

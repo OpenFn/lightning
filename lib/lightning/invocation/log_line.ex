@@ -10,9 +10,7 @@ defmodule Lightning.Invocation.LogLine do
 
   See [`LogMessage`](`Lightning.LogMessage`) for more information.
   """
-  use Ecto.Schema
-
-  import Ecto.Changeset
+  use Lightning.Schema
 
   alias Lightning.Invocation.Step
   alias Lightning.LogMessage
@@ -29,8 +27,10 @@ defmodule Lightning.Invocation.LogLine do
           run: Run.t() | Ecto.Association.NotLoaded.t() | nil
         }
 
+  @derive {Jason.Encoder,
+           only: [:id, :source, :level, :message, :timestamp, :step_id, :run_id]}
+
   @primary_key false
-  @foreign_key_type :binary_id
   schema "log_lines" do
     field :id, Ecto.UUID
     field :source, :string

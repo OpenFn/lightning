@@ -24,28 +24,14 @@ defmodule LightningWeb.Components.Form do
       focus:ring-2
       focus:ring-offset-2
       focus:ring-primary-500
+      enabled:bg-primary-600
+      enabled:hover:bg-primary-700
+      disabled:bg-primary-300
     ]
-
-    inactive_classes = ~w[
-      bg-primary-300
-    ] ++ base_classes
-
-    active_classes = ~w[
-      bg-primary-600
-      hover:bg-primary-700
-    ] ++ base_classes
 
     assigns =
       assigns
-      |> assign_new(:class, fn -> "" end)
-      |> update(:class, fn class, %{rest: rest} ->
-        if rest[:disabled] do
-          inactive_classes
-        else
-          active_classes
-        end
-        |> Enum.concat(List.wrap(class))
-      end)
+      |> assign_new(:class, fn -> base_classes end)
 
     ~H"""
     <button type="submit" class={@class} {@rest}>
@@ -349,9 +335,7 @@ defmodule LightningWeb.Components.Form do
       <div class="ml-3 text-sm">
         <LightningWeb.CoreComponents.old_error field={@form[@field]} />
         <%= Phoenix.HTML.Form.label(@form, @label || @field, @label_opts) %>
-        <%= if assigns[:inner_block] do %>
-          <%= render_slot(@inner_block) %>
-        <% end %>
+        <%= render_slot(@inner_block) %>
       </div>
     </div>
     """
@@ -388,9 +372,7 @@ defmodule LightningWeb.Components.Form do
         <%= Phoenix.HTML.Form.label(@form, @field, @opts) do %>
           <div class="flex items-center">
             <%= @title %>
-            <%= if @logo do %>
-              <img src={@logo} class="w-3 h-3 ml-1" />
-            <% end %>
+            <img :if={@logo} src={@logo} class="w-3 h-3 ml-1" />
           </div>
         <% end %>
         <LightningWeb.Components.Common.tooltip
@@ -402,9 +384,7 @@ defmodule LightningWeb.Components.Form do
       <%= Phoenix.HTML.Form.label(@form, @field, @opts) do %>
         <div class="flex items-center">
           <%= @title %>
-          <%= if @logo do %>
-            <img src={@logo} class="w-3 h-3 ml-1" />
-          <% end %>
+          <img :if={@logo} src={@logo} class="w-3 h-3 ml-1" />
         </div>
       <% end %>
     <% end %>

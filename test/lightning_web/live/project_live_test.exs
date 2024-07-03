@@ -1,9 +1,6 @@
 defmodule LightningWeb.ProjectLiveTest do
   use LightningWeb.ConnCase, async: false
 
-  alias Lightning.Repo
-  alias Lightning.Name
-
   import Phoenix.LiveViewTest
   import Lightning.ProjectsFixtures
   import Lightning.AccountsFixtures
@@ -11,15 +8,19 @@ defmodule LightningWeb.ProjectLiveTest do
   import LightningWeb.CredentialLiveHelpers
 
   import Lightning.ApplicationHelpers,
-    only: [dynamically_absorb_delay: 1, put_temporary_env: 3]
+    only: [put_temporary_env: 3]
 
+  import Lightning.GithubHelpers
+  import Swoosh.TestAssertions
+
+  import Mox
+
+  alias Lightning.Name
   alias Lightning.Projects
+  alias Lightning.Repo
 
-  @cert """
-  -----BEGIN RSA PRIVATE KEY-----
-  MIICWwIBAAKBgQDdlatRjRjogo3WojgGHFHYLugdUWAY9iR3fy4arWNA1KoS8kVw33cJibXr8bvwUAUparCwlvdbH6dvEOfou0/gCFQsHUfQrSDv+MuSUMAe8jzKE4qW+jK+xQU9a03GUnKHkkle+Q0pX/g6jXZ7r1/xAK5Do2kQ+X5xK9cipRgEKwIDAQABAoGAD+onAtVye4ic7VR7V50DF9bOnwRwNXrARcDhq9LWNRrRGElESYYTQ6EbatXS3MCyjjX2eMhu/aF5YhXBwkppwxg+EOmXeh+MzL7Zh284OuPbkglAaGhV9bb6/5CpuGb1esyPbYW+Ty2PC0GSZfIXkXs76jXAu9TOBvD0ybc2YlkCQQDywg2R/7t3Q2OE2+yo382CLJdrlSLVROWKwb4tb2PjhY4XAwV8d1vy0RenxTB+K5Mu57uVSTHtrMK0GAtFr833AkEA6avx20OHo61Yela/4k5kQDtjEf1N0LfI+BcWZtxsS3jDM3i1Hp0KSu5rsCPb8acJo5RO26gGVrfAsDcIXKC+bQJAZZ2XIpsitLyPpuiMOvBbzPavd4gY6Z8KWrfYzJoI/Q9FuBo6rKwl4BFoToD7WIUS+hpkagwWiz+6zLoX1dbOZwJACmH5fSSjAkLRi54PKJ8TFUeOP15h9sQzydI8zJU+upvDEKZsZc/UhT/SySDOxQ4G/523Y0sz/OZtSWcol/UMgQJALesy++GdvoIDLfJX5GBQpuFgFenRiRDabxrE9MNUZ2aPFaFp+DyAe+b4nDwuJaW2LURbr8AEZga7oQj0uYxcYw==
-  -----END RSA PRIVATE KEY-----
-  """
+  setup :stub_usage_limiter_ok
+  setup :verify_on_exit!
 
   @create_attrs %{
     raw_name: "some name"
@@ -48,6 +49,22 @@ defmodule LightningWeb.ProjectLiveTest do
   describe "Index as a super user" do
     setup [:register_and_log_in_superuser, :create_project_for_current_user]
 
+    test "renders a banner when run limit has been reached", %{
+      conn: conn,
+      project: %{id: project_id}
+    } do
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :check_limits,
+        &Lightning.Extensions.StubUsageLimiter.check_limits/1
+      )
+
+      {:ok, _live, html} =
+        live(conn, ~p"/projects/#{project_id}/settings")
+
+      assert html =~ "Some banner text"
+    end
+
     test "lists all projects", %{conn: conn, project: project} do
       {:ok, _index_live, html} =
         live(conn, Routes.project_index_path(conn, :index))
@@ -56,7 +73,7 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ project.name
     end
 
-    test "saves new project with no members", %{conn: conn} do
+    test "fails to save a project with no members", %{conn: conn} do
       {:ok, index_live, _html} =
         live(conn, Routes.project_index_path(conn, :index))
 
@@ -65,20 +82,18 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert_patch(index_live, Routes.project_index_path(conn, :new))
 
-      index_live
-      |> form("#project-form", project: @create_attrs)
-      |> render_change()
+      html =
+        index_live
+        |> form("#project-form", project: @create_attrs)
+        |> render_submit()
 
-      index_live
-      |> form("#project-users-form")
-      |> render_submit()
-
-      assert_patch(index_live, Routes.project_index_path(conn, :index))
-      assert render(index_live) =~ "Project created successfully"
+      assert html =~
+               "Every project must have exactly one owner. Please specify one below."
     end
 
-    test "saves new project", %{conn: conn} do
-      user = insert(:user, first_name: "1st", last_name: "user")
+    test "saves new project with members", %{conn: conn} do
+      user_1 = insert(:user, first_name: "1st", last_name: "user")
+      user_2 = insert(:user, first_name: "another", last_name: "person")
 
       {:ok, index_live, _html} =
         live(conn, Routes.project_index_path(conn, :index))
@@ -87,29 +102,64 @@ defmodule LightningWeb.ProjectLiveTest do
                "Projects"
 
       assert_patch(index_live, Routes.project_index_path(conn, :new))
+
+      # error for no owner is not shown until you make a change
+      refute render(index_live) =~
+               "Every project must have exactly one owner. Please specify one below."
 
       assert index_live
              |> form("#project-form", project: @invalid_attrs)
              |> render_change() =~ "can&#39;t be blank"
 
+      assert render(index_live) =~
+               "Every project must have exactly one owner. Please specify one below."
+
+      user_1_index = find_user_index_in_list(index_live, user_1)
+      user_2_index = find_user_index_in_list(index_live, user_2)
+
+      # error for multiple owners is displayed
+      html =
+        index_live
+        |> form("#project-form",
+          project: %{
+            "project_users" => %{
+              user_1_index => %{"user_id" => user_1.id, "role" => "owner"},
+              user_2_index => %{"user_id" => user_2.id, "role" => "owner"}
+            }
+          }
+        )
+        |> render_change()
+
+      assert html =~ "A project can have only one owner."
+
       index_live
-      |> form("#project-form", project: @create_attrs)
+      |> form("#project-form",
+        project:
+          Map.merge(@create_attrs, %{
+            "project_users" => %{
+              user_1_index => %{"user_id" => user_1.id, "role" => "owner"},
+              user_2_index => %{"user_id" => user_2.id, "role" => "editor"}
+            }
+          })
+      )
       |> render_change()
 
-      user_index = find_user_index_in_list(index_live, user)
-
-      index_live
-      |> form("#project-users-form",
-        project: %{
-          "project_users" => %{
-            user_index => %{"user_id" => user.id, "role" => "editor"}
-          }
-        }
-      )
-      |> render_submit()
+      index_live |> form("#project-form") |> render_submit()
 
       assert_patch(index_live, Routes.project_index_path(conn, :index))
       assert render(index_live) =~ "Project created successfully"
+
+      project_name = String.replace(@create_attrs.raw_name, " ", "-")
+
+      assert_email_sent(
+        to: [{"", user_1.email}],
+        subject: "You now have access to \"#{project_name}\""
+      )
+
+      assert_email_sent(
+        to: [{"", user_2.email}],
+        subject: "You now have access to \"#{project_name}\""
+      )
     end
 
     test "project owners can delete a project from the settings page",
@@ -303,17 +353,19 @@ defmodule LightningWeb.ProjectLiveTest do
     test "Edits a project", %{conn: conn, user: superuser} do
       user1 = insert(:user, first_name: "2")
       user2 = insert(:user, first_name: "3")
-      project = insert(:project)
+
+      project =
+        insert(:project, project_users: [%{role: :owner, user_id: user1.id}])
 
       {:ok, view, _html} = live(conn, ~p"/settings/projects/#{project.id}")
 
       view
-      |> form("#project-users-form",
+      |> form("#project-form",
         project: %{
           "project_users" => %{
             find_user_index_in_list(view, user1) => %{
               "user_id" => user1.id,
-              "role" => "editor"
+              "role" => "owner"
             },
             find_user_index_in_list(view, user2) => %{
               "user_id" => user2.id,
@@ -436,7 +488,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/projects/#{project_1}/w")
 
-      refute view
+      assert view
              |> element(
                ~s{a[href="#{~p"/projects/#{project_1.id}/w"}"]},
                ~r/project-1/
@@ -492,35 +544,6 @@ defmodule LightningWeb.ProjectLiveTest do
     setup :register_and_log_in_user
     setup :create_project_for_current_user
 
-    setup do
-      Tesla.Mock.mock_global(fn env ->
-        case env.url do
-          "https://api.github.com/app/installations/bad-id/access_tokens" ->
-            %Tesla.Env{status: 404, body: %{}}
-
-          "https://api.github.com/app/installations/wrong-cert/access_tokens" ->
-            %Tesla.Env{status: 401, body: %{}}
-
-          "https://api.github.com/app/installations/some-id/access_tokens" ->
-            %Tesla.Env{status: 201, body: %{"token" => "some-token"}}
-
-          "https://api.github.com/installation/repositories" ->
-            %Tesla.Env{
-              status: 200,
-              body: %{"repositories" => [%{"full_name" => "org/repo"}]}
-            }
-
-          "https://api.github.com/repos/some/repo/branches" ->
-            %Tesla.Env{status: 200, body: [%{"name" => "master"}]}
-
-          "https://api.github.com/repos/some/repo/dispatches" ->
-            %Tesla.Env{status: 204}
-        end
-      end)
-
-      :ok
-    end
-
     test "access project settings page", %{conn: conn, project: project} do
       {:ok, _view, html} =
         live(
@@ -529,348 +552,6 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       assert html =~ "Project settings"
-    end
-
-    @tag role: :admin
-    test "project admin can view github sync page", %{
-      conn: conn,
-      project: project
-    } do
-      put_temporary_env(:lightning, :github_app,
-        cert: @cert,
-        app_id: "111111",
-        app_name: "test-github"
-      )
-
-      {:ok, _view, html} =
-        live(
-          conn,
-          Routes.project_project_settings_path(conn, :index, project.id)
-        )
-
-      assert html =~ "Connect this project to a GitHub repo"
-    end
-
-    @tag role: :admin
-    test "project admin can view github setup", %{
-      conn: conn,
-      project: project,
-      user: user
-    } do
-      put_temporary_env(:lightning, :github_app,
-        cert: @cert,
-        app_id: "111111",
-        app_name: "test-github"
-      )
-
-      insert(:project_repo_connection, %{
-        project: project,
-        user: user,
-        repo: nil,
-        branch: nil
-      })
-
-      {:ok, _view, html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#vcs"
-        )
-
-      assert html =~ "Repository"
-    end
-
-    test "button to install app is disabled if there's a pending installation in another project",
-         %{
-           conn: conn,
-           user: user
-         } do
-      put_temporary_env(:lightning, :github_app,
-        cert: @cert,
-        app_id: "111111",
-        app_name: "test-github"
-      )
-
-      project = insert(:project, project_users: [%{user: user, role: :admin}])
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#vcs"
-        )
-
-      assert view |> has_element?("button", "Connect to GitHub")
-      refute view |> has_element?("button:disabled", "Connect to GitHub")
-
-      # insert another project
-      project2 = insert(:project, project_users: [%{user: user, role: :admin}])
-
-      insert(:project_repo_connection, %{
-        project: project2,
-        user: user,
-        repo: nil,
-        branch: nil,
-        github_installation_id: nil
-      })
-
-      {:ok, view, html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#vcs"
-        )
-
-      assert view |> has_element?("button:disabled", "Connect to GitHub")
-      assert html =~ "You have a pending github installation in another project."
-
-      # another User can install github though
-      project_user2 =
-        insert(:project_user, user: build(:user), project: project, role: :admin)
-
-      conn = log_in_user(conn, project_user2.user)
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#vcs"
-        )
-
-      assert view |> has_element?("button", "Connect to GitHub")
-      refute view |> has_element?("button:disabled", "Connect to GitHub")
-    end
-
-    @tag role: :admin
-    test "Flashes an error when APP ID is wrong", %{
-      conn: conn,
-      project: project,
-      user: user
-    } do
-      put_temporary_env(:lightning, :github_app,
-        cert: @cert,
-        app_id: "111111",
-        app_name: "test-github"
-      )
-
-      insert(:project_repo_connection, %{
-        project: project,
-        user: user,
-        repo: nil,
-        branch: nil,
-        github_installation_id: "bad-id"
-      })
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#vcs"
-        )
-
-      dynamically_absorb_delay(fn ->
-        render(view) =~ "ID has not been properly"
-      end)
-
-      assert render(view) =~
-               "Sorry, it seems that the GitHub App ID has not been properly configured for this instance of Lightning. Please contact the instance administrator"
-    end
-
-    @tag role: :admin
-    test "Flashes an error when PEM CERT is corrupt", %{
-      conn: conn,
-      project: project,
-      user: user
-    } do
-      put_temporary_env(:lightning, :github_app,
-        cert: @cert,
-        app_id: "111111",
-        app_name: "test-github"
-      )
-
-      insert(:project_repo_connection, %{
-        project: project,
-        user: user,
-        repo: "some-repo",
-        branch: "some-branch",
-        github_installation_id: "wrong-cert"
-      })
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#vcs"
-        )
-
-      dynamically_absorb_delay(fn ->
-        render(view) =~ "cert has not been properly"
-      end)
-
-      assert render(view) =~
-               "Sorry, it seems that the GitHub cert has not been properly configured for this instance of Lightning. Please contact the instance administrator"
-    end
-
-    @tag role: :admin
-    test "can view github sync", %{
-      conn: conn,
-      project: project,
-      user: user
-    } do
-      put_temporary_env(:lightning, :github_app,
-        cert: @cert,
-        app_id: "111111",
-        app_name: "test-github"
-      )
-
-      repository = "some-repo"
-
-      insert(:project_repo_connection, %{
-        project: project,
-        user: user,
-        repo: repository,
-        branch: "some-branch"
-      })
-
-      {:ok, _view, html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#vcs"
-        )
-
-      assert html =~ repository
-    end
-
-    @tag role: :admin
-    test "can install github app", %{
-      conn: conn,
-      project: project
-    } do
-      put_temporary_env(:lightning, :github_app,
-        cert: @cert,
-        app_id: "111111",
-        app_name: "test-github"
-      )
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#vcs"
-        )
-
-      assert view |> render_click("install_app", %{})
-    end
-
-    @tag role: :admin
-    test "Flashes an error when APP Name is missing during installation", %{
-      conn: conn,
-      project: project
-    } do
-      put_temporary_env(:lightning, :github_app,
-        cert: @cert,
-        app_id: nil,
-        app_name: nil
-      )
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#vcs"
-        )
-
-      assert view |> render_click("install_app", %{}) =~
-               "Sorry, it seems that the GitHub App Name has not been properly configured for this instance of Lighting. Please contact the instance administrator"
-    end
-
-    @tag role: :admin
-    test "can reinstall github app", %{
-      conn: conn,
-      project: project
-    } do
-      put_temporary_env(:lightning, :github_app,
-        cert: @cert,
-        app_id: "111111",
-        app_name: "test-github"
-      )
-
-      insert(:project_repo_connection, %{project_id: project.id, project: nil})
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#vcs"
-        )
-
-      assert view |> render_click("reinstall_app", %{})
-    end
-
-    @tag role: :admin
-    test "Flashes an error when APP Name is missing during reinstallation", %{
-      conn: conn,
-      project: project
-    } do
-      put_temporary_env(:lightning, :github_app,
-        cert: @cert,
-        app_id: nil,
-        app_name: nil
-      )
-
-      insert(:project_repo_connection, %{project_id: project.id, project: nil})
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#vcs"
-        )
-
-      assert view |> render_click("reinstall_app", %{}) =~
-               "Sorry, it seems that the GitHub App Name has not been properly configured for this instance of Lighting. Please contact the instance administrator"
-    end
-
-    @tag role: :admin
-    test "can delete github repo connection", %{
-      conn: conn,
-      project: project
-    } do
-      put_temporary_env(:lightning, :github_app,
-        cert: @cert,
-        app_id: "111111",
-        app_name: "test-github"
-      )
-
-      insert(:project_repo_connection, %{project_id: project.id, project: nil})
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#vcs"
-        )
-
-      assert view |> render_click("delete_repo_connection", %{}) =~
-               "Connect to GitHub"
-    end
-
-    @tag role: :admin
-    test "can save github repo connection", %{
-      conn: conn,
-      project: project
-    } do
-      put_temporary_env(:lightning, :github_app,
-        cert: @cert,
-        app_id: "111111",
-        app_name: "test-github"
-      )
-
-      insert(:project_repo_connection, %{
-        project_id: project.id,
-        project: nil,
-        branch: nil,
-        repo: nil
-      })
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/settings#vcs"
-        )
-
-      assert view
-             |> render_click("save_repo", %{branch: "b", repo: "r"}) =~
-               "Repository:\n                            <a href=\"https://www.github.com/r\" target=\"_blank\" class=\"hover:underline text-primary-600\">\nr"
     end
 
     @tag role: :admin
@@ -907,11 +588,11 @@ defmodule LightningWeb.ProjectLiveTest do
            conn: conn,
            user: user
          } do
-      {:ok, project} =
-        Lightning.Projects.create_project(%{
+      project =
+        insert(:project,
           name: "project-1",
           project_users: [%{user_id: user.id, role: :admin}]
-        })
+        )
 
       {:ok, credential} =
         Lightning.Credentials.create_credential(%{
@@ -953,11 +634,11 @@ defmodule LightningWeb.ProjectLiveTest do
          } do
       [:admin, :editor]
       |> Enum.each(fn role ->
-        {:ok, project} =
-          Lightning.Projects.create_project(%{
+        project =
+          insert(:project,
             name: "project-1",
             project_users: [%{user_id: user.id, role: role}]
-          })
+          )
 
         {:ok, view, html} =
           live(
@@ -1000,11 +681,11 @@ defmodule LightningWeb.ProjectLiveTest do
            conn: conn,
            user: user
          } do
-      {:ok, project} =
-        Lightning.Projects.create_project(%{
+      project =
+        insert(:project,
           name: "project-1",
           project_users: [%{user_id: user.id, role: :viewer}]
-        })
+        )
 
       {:ok, view, html} =
         live(
@@ -1046,11 +727,11 @@ defmodule LightningWeb.ProjectLiveTest do
       conn: conn,
       user: user
     } do
-      {:ok, project} =
-        Lightning.Projects.create_project(%{
+      project =
+        insert(:project,
           name: "project-1",
           project_users: [%{user_id: user.id, role: :viewer}]
-        })
+        )
 
       credential_name = "My Credential"
 
@@ -1063,16 +744,9 @@ defmodule LightningWeb.ProjectLiveTest do
 
       refute html =~ credential_name
 
-      {:ok, _view, html} =
-        view
-        |> element("footer button", "Cancel")
-        |> render_click()
-        |> follow_redirect(
-          conn,
-          ~p"/projects/#{project}/settings#credentials"
-        )
-
-      refute html =~ credential_name
+      refute view
+             |> element("#cancel-credential-type-picker", "Cancel")
+             |> render_click() =~ credential_name
     end
 
     test "project admin can't edit project name and description with invalid data",
@@ -1080,11 +754,11 @@ defmodule LightningWeb.ProjectLiveTest do
            conn: conn,
            user: user
          } do
-      {:ok, project} =
-        Lightning.Projects.create_project(%{
+      project =
+        insert(:project,
           name: "project-1",
           project_users: [%{user_id: user.id, role: :admin}]
-        })
+        )
 
       {:ok, view, html} =
         live(
@@ -1124,11 +798,11 @@ defmodule LightningWeb.ProjectLiveTest do
            conn: conn,
            user: user
          } do
-      {:ok, project} =
-        Lightning.Projects.create_project(%{
+      project =
+        insert(:project,
           name: "project-1",
           project_users: [%{user_id: user.id, role: :admin}]
-        })
+        )
 
       {:ok, view, html} =
         live(
@@ -1152,11 +826,11 @@ defmodule LightningWeb.ProjectLiveTest do
       conn: conn,
       user: user
     } do
-      {:ok, project} =
-        Lightning.Projects.create_project(%{
+      project =
+        insert(:project,
           name: "project-1",
           project_users: [%{user_id: user.id, role: :viewer}]
-        })
+        )
 
       {:ok, view, html} =
         live(
@@ -1186,8 +860,8 @@ defmodule LightningWeb.ProjectLiveTest do
          %{conn: conn, user: authenticated_user} do
       unauthenticated_user = user_fixture(first_name: "Bob")
 
-      {:ok, project} =
-        Lightning.Projects.create_project(%{
+      project =
+        insert(:project,
           name: "project-1",
           project_users: [
             %{
@@ -1201,7 +875,7 @@ defmodule LightningWeb.ProjectLiveTest do
               failure_alert: true
             }
           ]
-        })
+        )
 
       {:ok, view, _html} =
         live(
@@ -1280,7 +954,7 @@ defmodule LightningWeb.ProjectLiveTest do
             Routes.project_project_settings_path(conn, :index, project.id)
           )
 
-        assert has_element?(view, "#tab-item-security")
+        assert has_element?(view, "#security-tab")
         assert html =~ "Multi-Factor Authentication"
       end)
     end
@@ -1996,7 +1670,7 @@ defmodule LightningWeb.ProjectLiveTest do
       conn: conn,
       project: project
     } do
-      {:ok, _view, html} =
+      {:ok, view, html} =
         live(
           conn,
           ~p"/projects/#{project.id}/settings#data-storage"
@@ -2004,6 +1678,17 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert html =~ "Input/Output Data Storage Policy"
       assert html =~ "You cannot modify this project&#39;s data storage"
+
+      html =
+        render_submit(view, "save_retention_settings", %{
+          project: %{
+            retention_policy: "retain_all",
+            history_retention_period: 14,
+            dataclip_retention_period: 7
+          }
+        })
+
+      assert html =~ "You are not authorized to perform this action."
     end
 
     @tag role: :viewer
@@ -2011,7 +1696,7 @@ defmodule LightningWeb.ProjectLiveTest do
       conn: conn,
       project: project
     } do
-      {:ok, _view, html} =
+      {:ok, view, html} =
         live(
           conn,
           ~p"/projects/#{project.id}/settings#data-storage"
@@ -2019,10 +1704,21 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert html =~ "Input/Output Data Storage Policy"
       assert html =~ "You cannot modify this project&#39;s data storage"
+
+      html =
+        render_submit(view, "save_retention_settings", %{
+          project: %{
+            retention_policy: "retain_all",
+            history_retention_period: 14,
+            dataclip_retention_period: 7
+          }
+        })
+
+      assert html =~ "You are not authorized to perform this action."
     end
 
     @tag role: :admin
-    test "project admin can change the retention policy", %{
+    test "project admin can change the Input/Output Data Storage Policy", %{
       conn: conn,
       project: project
     } do
@@ -2084,11 +1780,2658 @@ defmodule LightningWeb.ProjectLiveTest do
         end
       )
     end
+
+    @tag role: :admin
+    test "dataclip retention period is disabled if the history period has not been set",
+         %{
+           conn: conn,
+           project: project
+         } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#data-storage"
+        )
+
+      # dataclip retention period is disabled if the history period has not been set
+      assert is_nil(project.history_retention_period)
+
+      assert has_element?(
+               view,
+               "#retention-settings-form_dataclip_retention_period:disabled"
+             )
+
+      view
+      |> form("#retention-settings-form",
+        project: %{
+          history_retention_period: 7
+        }
+      )
+      |> render_change()
+
+      refute has_element?(
+               view,
+               "#retention-settings-form_dataclip_retention_period:disabled"
+             )
+
+      assert has_element?(
+               view,
+               "#retention-settings-form_dataclip_retention_period"
+             )
+    end
+
+    @tag role: :admin
+    test "dataclip retention period is disabled if the retention_policy has been set to erase_all",
+         %{
+           conn: conn,
+           project: project
+         } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#data-storage"
+        )
+
+      selected_dataclip_option =
+        element(
+          view,
+          "#retention-settings-form_dataclip_retention_period option[selected]"
+        )
+
+      # nothing has been selected for the dataclip period
+      refute has_element?(selected_dataclip_option)
+
+      # let us enable it first by setting the history retention period
+      view
+      |> form("#retention-settings-form")
+      |> render_change(%{
+        project: %{
+          history_retention_period: 14,
+          dataclip_retention_period: 7
+        }
+      })
+
+      refute has_element?(
+               view,
+               "#retention-settings-form_dataclip_retention_period:disabled"
+             )
+
+      # 7 Days has been selected for the dataclip period
+      assert render(selected_dataclip_option) =~ "7 Days"
+
+      # now let's set the retention policy to erase_all
+      view
+      |> form("#retention-settings-form",
+        project: %{
+          retention_policy: "erase_all"
+        }
+      )
+      |> render_change()
+
+      assert has_element?(
+               view,
+               "#retention-settings-form_dataclip_retention_period:disabled"
+             )
+
+      # 7 days gets cleared. Nothing is now selected
+      refute has_element?(selected_dataclip_option)
+    end
+
+    @tag role: :admin
+    test "project admin can change the retention periods", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#data-storage"
+        )
+
+      # let's first set the history retention period
+
+      view
+      |> form("#retention-settings-form",
+        project: %{
+          history_retention_period: 7
+        }
+      )
+      |> render_change()
+
+      # trying to set the dataclip retention period more than the history period shows error
+      refute render(view) =~
+               "must be less or equal to the history retention period"
+
+      html =
+        view
+        |> form("#retention-settings-form",
+          project: %{
+            dataclip_retention_period: 14
+          }
+        )
+        |> render_change()
+
+      assert html =~ "must be less or equal to the history retention period"
+
+      # the project gets updated successfully
+
+      html =
+        view
+        |> form("#retention-settings-form",
+          project: %{
+            dataclip_retention_period: 7
+          }
+        )
+        |> render_submit()
+
+      assert html =~ "Project updated successfully"
+    end
+  end
+
+  describe "projects settings:collaboration" do
+    setup :register_and_log_in_user
+
+    test "only authorized users can access the add collaborators modal", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      for {conn, _user} <- setup_project_users(conn, project, [:viewer, :editor]) do
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collaboration"
+          )
+
+        button = element(view, "#show_collaborators_modal_button")
+        assert has_element?(button)
+
+        # modal is not present
+        refute has_element?(view, "#add_collaborators_modal")
+
+        # try clicking the button
+        assert_raise ArgumentError, ~r/is disabled/, fn ->
+          render_click(button)
+        end
+
+        # send event either way
+        refute render_click(view, "toggle_collaborators_modal") =~
+                 "Enter the email address and role of new collaborator"
+
+        # modal is still not present
+        refute has_element?(view, "#add_collaborators_modal")
+      end
+
+      for {conn, _user} <- setup_project_users(conn, project, [:owner, :admin]) do
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collaboration"
+          )
+
+        button = element(view, "#show_collaborators_modal_button")
+        assert has_element?(button)
+
+        # modal is not present
+        refute has_element?(view, "#add_collaborators_modal")
+
+        # try clicking the button
+        assert render_click(button) =~
+                 "Enter the email address and role of new collaborator"
+
+        # modal is now present
+        assert has_element?(view, "#add_collaborators_modal")
+      end
+    end
+
+    test "user can add and remove inputs for adding collaborators", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      for {conn, _user} <- setup_project_users(conn, project, [:owner, :admin]) do
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collaboration"
+          )
+
+        # Open Modal
+        view
+        |> element("#show_collaborators_modal_button")
+        |> render_click()
+
+        modal = element(view, "#add_collaborators_modal")
+
+        html = modal |> render() |> Floki.parse_fragment!()
+
+        # we only have 1 email input by default
+        assert Floki.find(html, "[type='text'][name$='[email]']") |> Enum.count() ==
+                 1
+
+        # we dont have any button to remove the input
+        assert Floki.find(html, "button[name$='[collaborators_drop][]']")
+               |> Enum.count() == 0
+
+        # lets click to add another row
+        view
+        |> form("#add_collaborators_modal_form")
+        |> render_change(project: %{"collaborators_sort" => [0, "new"]})
+
+        html = modal |> render() |> Floki.parse_fragment!()
+
+        # we now have 2 email inputs and 2 buttons to remove the inputs
+        assert Floki.find(html, "[type='text'][name$='[email]']") |> Enum.count() ==
+                 2
+
+        assert Floki.find(html, "button[name$='[collaborators_drop][]']")
+               |> Enum.count() == 2
+
+        # lets click to remove the first row
+        view
+        |> form("#add_collaborators_modal_form")
+        |> render_change(project: %{"collaborators_drop" => [0]})
+
+        html = modal |> render() |> Floki.parse_fragment!()
+
+        # we now have 1 email input and we dont have any button to remove the input
+        assert Floki.find(html, "[type='text'][name$='[email]']") |> Enum.count() ==
+                 1
+
+        assert Floki.find(html, "button[name$='[collaborators_drop][]']")
+               |> Enum.count() == 0
+      end
+    end
+
+    test "adding a non existent user displays an appropriate error message", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      for {conn, _user} <- setup_project_users(conn, project, [:owner, :admin]) do
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collaboration"
+          )
+
+        # Open Modal
+        view
+        |> element("#show_collaborators_modal_button")
+        |> render_click()
+
+        modal = element(view, "#add_collaborators_modal")
+
+        refute render(modal) =~ "There is no account connected this email"
+        email = "nonexists@localtests.com"
+        refute Lightning.Accounts.get_user_by_email(email)
+
+        # lets submit the form
+
+        view
+        |> form("#add_collaborators_modal_form",
+          project: %{
+            "collaborators" => %{"0" => %{"email" => email, "role" => "editor"}}
+          }
+        )
+        |> render_submit()
+
+        assert render(modal) =~ "There is no account connected this email"
+      end
+    end
+
+    test "adding an existing project user displays an appropriate error message",
+         %{
+           conn: conn
+         } do
+      project = insert(:project)
+
+      for {conn, user} <- setup_project_users(conn, project, [:owner, :admin]) do
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collaboration"
+          )
+
+        # Open Modal
+        view
+        |> element("#show_collaborators_modal_button")
+        |> render_click()
+
+        modal = element(view, "#add_collaborators_modal")
+
+        refute render(modal) =~ "This account is already part of this project"
+
+        # lets submit the form
+
+        view
+        |> form("#add_collaborators_modal_form",
+          project: %{
+            "collaborators" => %{
+              "0" => %{"email" => user.email, "role" => "editor"}
+            }
+          }
+        )
+        |> render_submit()
+
+        assert render(modal) =~ "This account is already part of this project"
+      end
+    end
+
+    test "adding an owner project user is not allowed",
+         %{
+           conn: conn
+         } do
+      project = insert(:project)
+
+      for {conn, _user} <- setup_project_users(conn, project, [:owner, :admin]) do
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collaboration"
+          )
+
+        # Open Modal
+        view
+        |> element("#show_collaborators_modal_button")
+        |> render_click()
+
+        modal = element(view, "#add_collaborators_modal")
+
+        refute render(modal) =~ "is invalid"
+
+        # lets submit the form
+        view
+        |> form("#add_collaborators_modal_form")
+        |> render_submit(
+          project: %{
+            "collaborators" => %{
+              "0" => %{"email" => "dummy@email.com", "role" => "owner"}
+            }
+          }
+        )
+
+        assert render(modal) =~ "is invalid"
+      end
+    end
+
+    test "user can add collaborators successfully",
+         %{
+           conn: conn
+         } do
+      project = insert(:project)
+
+      for {conn, _user} <- setup_project_users(conn, project, [:owner, :admin]) do
+        {:ok, view, html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collaboration"
+          )
+
+        [admin, editor, viewer] = insert_list(3, :user)
+
+        # user is not shown in the page
+        for new_user <- [admin, editor, viewer] do
+          refute html =~ new_user.last_name
+        end
+
+        # Open Modal
+        view
+        |> element("#show_collaborators_modal_button")
+        |> render_click()
+
+        # lets click to add 2 more rows
+        view
+        |> form("#add_collaborators_modal_form")
+        |> render_change(project: %{"collaborators_sort" => [0, "new", "new"]})
+
+        # lets submit the form
+        view
+        |> form("#add_collaborators_modal_form",
+          project: %{
+            "collaborators" => %{
+              "0" => %{"email" => admin.email, "role" => "admin"},
+              "1" => %{"email" => editor.email, "role" => "editor"},
+              "2" => %{"email" => viewer.email, "role" => "viewer"}
+            }
+          }
+        )
+        |> render_submit()
+
+        flash =
+          assert_redirected(
+            view,
+            ~p"/projects/#{project}/settings#collaboration"
+          )
+
+        assert flash["info"] =~ "Collaborators updated successfully!"
+      end
+    end
+
+    test "add collaborators button is disabled if limit is reached", %{
+      conn: conn
+    } do
+      %{id: project_id} = project = insert(:project)
+
+      {conn, _user} = setup_project_user(conn, project, :admin)
+
+      error_msg = "some meaningful error message"
+
+      stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :new_user, amount: 1}, %{project_id: ^project_id} ->
+            {:error, :too_many_users, %{text: error_msg}}
+
+          _other_action, _context ->
+            :ok
+        end
+      )
+
+      {:ok, view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#collaboration"
+        )
+
+      assert html =~ error_msg
+
+      assert has_element?(view, "#show_collaborators_modal_button:disabled")
+    end
+
+    test "error message is displayed if the allowed limits are exceeded", %{
+      conn: conn
+    } do
+      %{id: project_id} = project = insert(:project)
+
+      {conn, _user} = setup_project_user(conn, project, :admin)
+
+      # users to add
+      [admin, editor, viewer] = insert_list(3, :user)
+
+      # return ok for enabling the add collaboratos button
+      stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :new_user, amount: 1}, %{project_id: ^project_id} ->
+            :ok
+
+          _action, _project ->
+            :ok
+        end
+      )
+
+      {:ok, view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#collaboration"
+        )
+
+      # user is not shown in the page
+      for new_user <- [admin, editor, viewer] do
+        refute html =~ new_user.last_name
+      end
+
+      # we only want to allow 3 users. We already 1, the one logged in
+      expected_error_msg = "You can only have 3 collaborators in this project"
+
+      # Open Modal
+      html =
+        view
+        |> element("#show_collaborators_modal_button")
+        |> render_click()
+
+      refute html =~ expected_error_msg,
+             "no error message is displayed when the modal is opened"
+
+      # lets click to add 1 more row
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :new_user, amount: 2}, %{project_id: ^project_id} ->
+          :ok
+        end
+      )
+
+      html =
+        view
+        |> form("#add_collaborators_modal_form")
+        |> render_change(project: %{"collaborators_sort" => [0, "new"]})
+
+      refute html =~ expected_error_msg,
+             "no error message is displayed when only 2 rows are present"
+
+      # lets click to add 1 more row. So we now have 3 rows
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :new_user, amount: 3}, %{project_id: ^project_id} ->
+          {:error, :too_many_users, %{text: expected_error_msg}}
+        end
+      )
+
+      html =
+        view
+        |> form("#add_collaborators_modal_form")
+        |> render_change(project: %{"collaborators_sort" => [0, 1, "new"]})
+
+      assert html =~ expected_error_msg,
+             "error message is displayed when we more than 2 rows are present"
+
+      # lets click to remove the first row
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :new_user, amount: 2}, %{project_id: ^project_id} ->
+          :ok
+        end
+      )
+
+      html =
+        view
+        |> form("#add_collaborators_modal_form")
+        |> render_change(project: %{"collaborators_drop" => [0]})
+
+      refute html =~ expected_error_msg,
+             "no error message is displayed when only 2 rows are present"
+
+      # lets submit the form with the 3 users anyway
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :new_user, amount: 3}, %{project_id: ^project_id} ->
+          {:error, :too_many_users, %{text: expected_error_msg}}
+        end
+      )
+
+      html =
+        view
+        |> form("#add_collaborators_modal_form")
+        |> render_submit(
+          project: %{
+            "collaborators" => %{
+              "0" => %{"email" => admin.email, "role" => "admin"},
+              "1" => %{"email" => editor.email, "role" => "editor"},
+              "2" => %{"email" => viewer.email, "role" => "viewer"}
+            }
+          }
+        )
+
+      assert html =~ expected_error_msg
+    end
+
+    test "only authorized users can remove a collaborator", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      for {conn, _user} <- setup_project_users(conn, project, [:viewer, :editor]) do
+        project_user =
+          insert(:project_user,
+            project: project,
+            user: build(:user),
+            role: :viewer
+          )
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collaboration"
+          )
+
+        tooltip =
+          element(view, "#remove_project_user_#{project_user.id}_button-tooltip")
+
+        assert has_element?(tooltip)
+        assert render(tooltip) =~ "You do not have permission to remove a user"
+
+        # modal is not present
+        refute has_element?(view, "#remove_#{project_user.id}_modal")
+
+        # try sending the event either way
+        html =
+          render_click(view, "remove_project_user", %{
+            "project_user_id" => project_user.id
+          })
+
+        assert html =~ "You are not authorized to perform this action"
+
+        # project user still exists
+        assert Repo.get(Lightning.Projects.ProjectUser, project_user.id)
+      end
+
+      for {conn, _user} <- setup_project_users(conn, project, [:owner, :admin]) do
+        project_user =
+          insert(:project_user,
+            project: project,
+            user: build(:user),
+            role: :viewer
+          )
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collaboration"
+          )
+
+        tooltip =
+          element(view, "#remove_project_user_#{project_user.id}_button-tooltip")
+
+        refute has_element?(tooltip)
+
+        # modal is present
+        assert has_element?(view, "#remove_#{project_user.id}_modal")
+
+        # try clicking the confirm button
+        view
+        |> element("#remove_#{project_user.id}_modal_confirm_button")
+        |> render_click()
+
+        flash =
+          assert_redirected(
+            view,
+            ~p"/projects/#{project}/settings#collaboration"
+          )
+
+        assert flash["info"] == "Collaborator removed successfully!"
+
+        # project user is removed
+        refute Repo.get(Lightning.Projects.ProjectUser, project_user.id)
+        # user is not deleted
+        assert Repo.get(Lightning.Accounts.User, project_user.user_id)
+      end
+    end
+
+    test "removing an owner project user is not allowed",
+         %{
+           conn: conn
+         } do
+      project = insert(:project)
+
+      {conn, _user} = setup_project_user(conn, project, :admin)
+
+      project_owner =
+        insert(:project_user,
+          project: project,
+          user: build(:user),
+          role: :owner
+        )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#collaboration"
+        )
+
+      tooltip =
+        element(view, "#remove_project_user_#{project_owner.id}_button-tooltip")
+
+      assert has_element?(tooltip)
+      assert render(tooltip) =~ "You cannot remove an owner"
+
+      # modal is not present
+      refute has_element?(view, "#remove_#{project_owner.id}_modal")
+
+      # try sending the event either way
+      html =
+        render_click(view, "remove_project_user", %{
+          "project_user_id" => project_owner.id
+        })
+
+      assert html =~ "You are not authorized to perform this action"
+
+      # project user still exists
+      assert Repo.get(Lightning.Projects.ProjectUser, project_owner.id)
+    end
+
+    test "users cannot remove themselves",
+         %{
+           conn: conn
+         } do
+      project = insert(:project)
+
+      for {conn, user} <- setup_project_users(conn, project, [:owner, :admin]) do
+        project_user =
+          Repo.get_by(Lightning.Projects.ProjectUser, user_id: user.id)
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collaboration"
+          )
+
+        tooltip =
+          element(view, "#remove_project_user_#{project_user.id}_button-tooltip")
+
+        assert has_element?(tooltip)
+        assert render(tooltip) =~ "You cannot remove yourself"
+
+        # modal is not present
+        refute has_element?(view, "#remove_#{project_user.id}_modal")
+
+        # try sending the event either way
+        html =
+          render_click(view, "remove_project_user", %{
+            "project_user_id" => project_user.id
+          })
+
+        assert html =~ "You are not authorized to perform this action"
+
+        # project user still exists
+        assert Repo.get(Lightning.Projects.ProjectUser, project_user.id)
+      end
+    end
+
+    test "users cant see form to toggle failure alerts if limiter returns error",
+         %{conn: conn} do
+      %{id: project_id} = project = insert(:project)
+      user = insert(:user)
+
+      project_user =
+        insert(:project_user, user: user, project: project, failure_alert: true)
+
+      conn = log_in_user(conn, user)
+
+      # let us first return :ok
+      stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :alert_failure}, %{project_id: ^project_id} ->
+            :ok
+
+          _other_action, _context ->
+            :ok
+        end
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#collaboration"
+        )
+
+      # form exists
+      form_id = "form#failure-alert-#{project_user.id}"
+      assert has_element?(view, form_id)
+
+      # status is displayed as enabled
+      assert view |> has_element?("#{form_id} option[selected]", "Enabled")
+
+      refute has_element?(view, "#failure-alert-status-#{project_user.id}")
+
+      # now let us return error
+      stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :alert_failure}, %{project_id: ^project_id} ->
+            {:error, :disabled, %{text: "some error message"}}
+
+          _other_action, _context ->
+            :ok
+        end
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#collaboration"
+        )
+
+      # form does not exist
+      refute has_element?(view, "form#failure-alert-#{project_user.id}")
+
+      # status is displayed as disabled even though it is enabled on the project user
+      assert view
+             |> element("#failure-alert-status-#{project_user.id}")
+             |> render() =~ "Disabled"
+    end
+  end
+
+  describe "project settings:version control" do
+    setup :verify_on_exit!
+
+    test "users see appropriate message if version control is not enabled", %{
+      conn: conn
+    } do
+      # Version control is disabled by NOT setting up config
+      put_temporary_env(:lightning, :github_app,
+        cert: nil,
+        app_id: nil,
+        app_name: nil,
+        client_id: nil,
+        client_secret: nil
+      )
+
+      project = insert(:project)
+
+      for {conn, _user} <-
+            setup_project_users(conn, project, [:viewer, :editor, :admin, :owner]) do
+        {:ok, _view, html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#vcs"
+          )
+
+        assert html =~
+                 "Version Control is not configured for this Lightning instance"
+      end
+    end
+
+    test "authorized users get option to connect their github account if they havent done so",
+         %{conn: conn} do
+      project = insert(:project)
+
+      # unauthorized users don't get any option at all
+      for {conn, _user} <-
+            setup_project_users(conn, project, [:viewer, :editor]) do
+        {:ok, view, html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#vcs"
+          )
+
+        refute html =~
+                 "Version Control is not configured for this Lightning instance"
+
+        refute html =~ "Connect your OpenFn account to GitHub"
+        refute has_element?(view, "#connect-github-link")
+      end
+
+      # authorized users
+      for {conn, _user} <-
+            setup_project_users(conn, project, [:admin, :owner]) do
+        {:ok, view, html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#vcs"
+          )
+
+        refute html =~
+                 "Version Control is not configured for this Lightning instance"
+
+        assert html =~ "Connect your OpenFn account to GitHub"
+        assert has_element?(view, "#connect-github-link")
+      end
+    end
+
+    test "authorized users see form to connect branch if they have already connected their github account",
+         %{conn: conn} do
+      project = insert(:project)
+
+      # unauthorized users don't see the form at all
+      for {conn, user} <-
+            setup_project_users(conn, project, [:viewer, :editor]) do
+        set_valid_github_oauth_token!(user)
+
+        {:ok, _view, html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#vcs"
+          )
+
+        refute html =~
+                 "Version Control is not configured for this Lightning instance"
+
+        refute html =~ "Create/update GitHub installations"
+      end
+
+      # authorized users
+      for {conn, user} <-
+            setup_project_users(conn, project, [:admin, :owner]) do
+        set_valid_github_oauth_token!(user)
+
+        {:ok, _view, html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#vcs"
+          )
+
+        refute html =~
+                 "Version Control is not configured for this Lightning instance"
+
+        refute html =~ "Connect your OpenFn account to GitHub"
+        assert html =~ "Create/update GitHub installations"
+      end
+    end
+
+    test "users get updated after successfully connecting to github", %{
+      conn: conn
+    } do
+      Mox.expect(Lightning.Tesla.Mock, :call, 2, fn
+        %{url: "https://github.com/login/oauth/access_token"}, _opts ->
+          {:ok, %Tesla.Env{body: %{"access_token" => "1234567"}}}
+
+        # gets called after successful installation
+        %{url: "https://api.github.com/user/installations"}, _opts ->
+          {:ok, %Tesla.Env{status: 200, body: %{"installations" => []}}}
+      end)
+
+      project = insert(:project)
+
+      {conn, _user} = setup_project_user(conn, project, :admin)
+
+      {:ok, view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      assert has_element?(view, "#connect-github-link")
+      refute html =~ "Create/update GitHub installations"
+
+      # mock redirect from github
+      get(conn, ~p"/oauth/github/callback?code=123456")
+
+      flash = assert_redirect(view, ~p"/projects/#{project.id}/settings#vcs")
+
+      assert flash["info"] == "Github account linked successfully"
+
+      {:ok, view, html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+
+      refute has_element?(view, "#connect-github-link")
+      assert html =~ "Create/update GitHub installations"
+    end
+
+    test "users get updated after failing to connect to github", %{
+      conn: conn
+    } do
+      expected_resp = %{"error" => "something happened"}
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn
+        %{url: "https://github.com/login/oauth/access_token"}, _opts ->
+          {:ok, %Tesla.Env{body: expected_resp}}
+      end)
+
+      project = insert(:project)
+
+      {conn, _user} = setup_project_user(conn, project, :admin)
+
+      {:ok, view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      assert has_element?(view, "#connect-github-link")
+      refute html =~ "Create/update GitHub installations"
+
+      # mock redirect from github
+      get(conn, ~p"/oauth/github/callback?code=123456")
+
+      :ok = refute_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+
+      assert render(view) =~
+               "Oops! Github account failed to link. Please try again"
+
+      # button to connect is still available
+      assert has_element?(view, "#connect-github-link")
+      refute render(view) =~ "Create/update GitHub installations"
+    end
+
+    test "github installations get listed properly when an error occurs", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_valid_github_oauth_token!(user)
+
+      expect_get_user_installations(400, %{"error" => "something terrible"})
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      # things dont crash
+      html = view |> element("#select-installations-input") |> render_async()
+
+      # we only have one option listed
+      floki_fragment = Floki.parse_fragment!(html)
+      options = Floki.find(floki_fragment, "#select-installations-input option")
+      assert Enum.count(options) == 1
+      options |> hd() |> Floki.raw_html() =~ "Select an installation"
+
+      # let us try refreshing the installation
+      expected_installation = %{
+        "id" => 1234,
+        "account" => %{
+          "type" => "User",
+          "login" => "username"
+        }
+      }
+
+      expect_get_user_installations(200, %{
+        "installations" => [expected_installation]
+      })
+
+      expect_create_installation_token(expected_installation["id"])
+      expect_get_installation_repos(200)
+
+      view |> element("#refresh-installation-button") |> render_click()
+
+      html = view |> element("#select-installations-input") |> render_async()
+
+      # we now have 2 options listed
+      floki_fragment = Floki.parse_fragment!(html)
+
+      [installations_input] =
+        Floki.find(floki_fragment, "#select-installations-input")
+
+      options = Floki.children(installations_input)
+      assert Enum.count(options) == 2
+      [default_option, installation_option] = options
+      Floki.raw_html(default_option) =~ "Select an installation"
+
+      Floki.raw_html(installation_option) =~
+        "#{expected_installation["account"]["type"]}: #{expected_installation["account"]["login"]}"
+    end
+
+    test "branches list can be refreshed successfully", %{
+      conn: conn
+    } do
+      expected_installation = %{
+        "id" => "1234",
+        "account" => %{
+          "type" => "User",
+          "login" => "username"
+        }
+      }
+
+      expected_repo = %{
+        "full_name" => "someaccount/somerepo",
+        "default_branch" => "main"
+      }
+
+      expected_branch = %{"name" => "somebranch"}
+
+      project = insert(:project)
+
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_valid_github_oauth_token!(user)
+
+      expect_get_user_installations(200, %{
+        "installations" => [expected_installation]
+      })
+
+      expect_create_installation_token(expected_installation["id"])
+      expect_get_installation_repos(200, %{"repositories" => [expected_repo]})
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      render_async(view)
+
+      # lets select the installation
+      view
+      |> form("#project-repo-connection-form",
+        connection: %{github_installation_id: expected_installation["id"]}
+      )
+      |> render_change()
+
+      selected_installation =
+        view
+        |> element("#select-installations-input")
+        |> render_async()
+        |> find_selected_option("#select-installations-input option")
+
+      assert selected_installation =~ expected_installation["id"]
+
+      # lets select the repo
+      expect_create_installation_token(expected_installation["id"])
+
+      expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
+
+      view
+      |> form("#project-repo-connection-form",
+        connection: %{
+          github_installation_id: expected_installation["id"],
+          repo: expected_repo["full_name"]
+        }
+      )
+      |> render_change()
+
+      selected_repo =
+        view
+        |> element("#select-repos-input")
+        |> render_async()
+        |> find_selected_option("#select-repos-input option")
+
+      assert selected_repo =~ expected_repo["full_name"]
+
+      # lets select the branch
+      view
+      |> form("#project-repo-connection-form",
+        connection: %{
+          github_installation_id: expected_installation["id"],
+          repo: expected_repo["full_name"],
+          branch: expected_branch["name"]
+        }
+      )
+      |> render_change()
+
+      selected_branch =
+        view
+        |> element("#select-branches-input")
+        |> render_async()
+        |> find_selected_option("#select-branches-input option")
+
+      assert selected_branch =~ expected_branch["name"]
+
+      # deselecting the installation deselects the repo and branch
+      view
+      |> form("#project-repo-connection-form",
+        connection: %{github_installation_id: ""}
+      )
+      |> render_change()
+
+      html = render_async(view)
+
+      refute find_selected_option(html, "#select-repos-input option")
+
+      refute find_selected_option(html, "#select-branches-input option")
+
+      # let us list the branches again by following the ritual again
+      view
+      |> form("#project-repo-connection-form",
+        connection: %{github_installation_id: expected_installation["id"]}
+      )
+      |> render_change()
+
+      expect_create_installation_token(expected_installation["id"])
+
+      expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
+
+      view
+      |> form("#project-repo-connection-form",
+        connection: %{
+          github_installation_id: expected_installation["id"],
+          repo: expected_repo["full_name"]
+        }
+      )
+      |> render_change()
+
+      # we should now have 2 options listed for the branches
+      # The default and the expected
+      options =
+        view
+        |> element("#select-branches-input")
+        |> render_async()
+        |> Floki.parse_fragment!()
+        |> Floki.find("#select-branches-input option")
+
+      assert Enum.count(options) == 2
+
+      # now let us refresh the branches
+      new_branch = %{"name" => "newbranch"}
+
+      expect_create_installation_token(expected_installation["id"])
+
+      expect_get_repo_branches(expected_repo["full_name"], 200, [
+        expected_branch,
+        new_branch
+      ])
+
+      view |> element("#refresh-branches-button") |> render_click()
+
+      # we should now have 3 options listed for the branches
+      # The default, the expected and the new branch
+      options =
+        view
+        |> element("#select-branches-input")
+        |> render_async()
+        |> Floki.parse_fragment!()
+        |> Floki.find("#select-branches-input option")
+
+      assert Enum.count(options) == 3
+    end
+
+    test "authorized users can save repo connection successfully without setting config path and initiate sync to github immediately",
+         %{
+           conn: conn
+         } do
+      expected_installation = %{
+        "id" => 1234,
+        "account" => %{
+          "type" => "User",
+          "login" => "username"
+        }
+      }
+
+      expected_repo = %{
+        "full_name" => "someaccount/somerepo",
+        "default_branch" => "main"
+      }
+
+      expected_branch = %{"name" => "somebranch"}
+
+      project = insert(:project)
+
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_valid_github_oauth_token!(user)
+
+      expect_get_user_installations(200, %{
+        "installations" => [expected_installation]
+      })
+
+      expect_create_installation_token(expected_installation["id"])
+      expect_get_installation_repos(200, %{"repositories" => [expected_repo]})
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      # we have 2 options listed for installations
+      floki_fragment = view |> render_async() |> Floki.parse_fragment!()
+
+      [installations_input] =
+        Floki.find(floki_fragment, "#select-installations-input")
+
+      options = Floki.children(installations_input)
+      assert Enum.count(options) == 2
+      [default_option, installation_option] = options
+      Floki.raw_html(default_option) =~ "Select an installation"
+
+      Floki.raw_html(installation_option) =~
+        "#{expected_installation["account"]["type"]}: #{expected_installation["account"]["login"]}"
+
+      # before selecting any installation the repos are not listed.
+      # We just have the default option
+      floki_fragment = view |> render_async() |> Floki.parse_fragment!()
+      [repos_input] = Floki.find(floki_fragment, "#select-repos-input")
+      options = Floki.children(repos_input)
+      assert Enum.count(options) == 1
+      options |> hd() |> Floki.raw_html() =~ "Select a repo"
+
+      # lets select the installation
+      view
+      |> form("#project-repo-connection-form",
+        connection: %{github_installation_id: expected_installation["id"]}
+      )
+      |> render_change()
+
+      # we should now have the repos listed
+      floki_fragment = view |> render_async() |> Floki.parse_fragment!()
+      [repos_input] = Floki.find(floki_fragment, "#select-repos-input")
+      options = Floki.children(repos_input)
+      assert Enum.count(options) == 2
+      [default_option, repo_option] = options
+      Floki.raw_html(default_option) =~ "Select a repo"
+      Floki.raw_html(repo_option) =~ expected_repo["full_name"]
+
+      # before selecting any repo, the branches are not listed.
+      # We just have the default option
+
+      floki_fragment = view |> render_async() |> Floki.parse_fragment!()
+      [branches_input] = Floki.find(floki_fragment, "#select-branches-input")
+      options = Floki.children(branches_input)
+      assert Enum.count(options) == 1
+      options |> hd() |> Floki.raw_html() =~ "Select a branch"
+
+      # lets select the repo
+      expect_create_installation_token(expected_installation["id"])
+
+      expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
+
+      view
+      |> form("#project-repo-connection-form",
+        connection: %{
+          github_installation_id: expected_installation["id"],
+          repo: expected_repo["full_name"]
+        }
+      )
+      |> render_change()
+
+      # we should now have the branches listed
+      floki_fragment = view |> render_async() |> Floki.parse_fragment!()
+      [branches_input] = Floki.find(floki_fragment, "#select-branches-input")
+      options = Floki.children(branches_input)
+      assert Enum.count(options) == 2
+      [default_option, branch_option] = options
+      Floki.raw_html(default_option) =~ "Select a branch"
+      Floki.raw_html(branch_option) =~ expected_branch["name"]
+
+      # try submitting without selecting branch
+      error_msg = "This field can&#39;t be blank"
+      refute render(view) =~ error_msg
+
+      html =
+        view
+        |> form("#project-repo-connection-form")
+        |> render_submit()
+
+      assert html =~ error_msg
+
+      # let us submit with the branch
+
+      # push pull.yml
+      expect_get_repo(expected_repo["full_name"], 200, expected_repo)
+      expect_create_blob(expected_repo["full_name"])
+
+      expect_get_commit(
+        expected_repo["full_name"],
+        expected_repo["default_branch"]
+      )
+
+      expect_create_tree(expected_repo["full_name"])
+      expect_create_commit(expected_repo["full_name"])
+
+      expect_update_ref(
+        expected_repo["full_name"],
+        expected_repo["default_branch"]
+      )
+
+      # push deploy.yml + config.json
+      # deploy.yml blob
+      expect_create_blob(expected_repo["full_name"])
+      # config.json blob
+      expect_create_blob(expected_repo["full_name"])
+      expect_get_commit(expected_repo["full_name"], expected_branch["name"])
+      expect_create_tree(expected_repo["full_name"])
+      expect_create_commit(expected_repo["full_name"])
+      expect_update_ref(expected_repo["full_name"], expected_branch["name"])
+
+      # write secret
+      expect_get_public_key(expected_repo["full_name"])
+      secret_name = "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
+      expect_create_repo_secret(expected_repo["full_name"], secret_name)
+
+      # initialize sync
+      expect_create_installation_token(expected_installation["id"])
+      expect_get_repo(expected_repo["full_name"], 200, expected_repo)
+
+      expect_create_workflow_dispatch(
+        expected_repo["full_name"],
+        "openfn-pull.yml"
+      )
+
+      view
+      |> form("#project-repo-connection-form")
+      |> render_submit(
+        connection: %{
+          branch: expected_branch["name"],
+          sync_direction: "pull",
+          accept: true
+        }
+      )
+
+      flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+      assert flash["info"] == "Connection made successfully"
+    end
+
+    test "users can save repo connection successfully by setting config path and choosing deploy to lightning immediately",
+         %{
+           conn: conn
+         } do
+      expected_installation = %{
+        "id" => 1234,
+        "account" => %{
+          "type" => "User",
+          "login" => "username"
+        }
+      }
+
+      expected_repo = %{
+        "full_name" => "someaccount/somerepo",
+        "default_branch" => "main"
+      }
+
+      expected_branch = %{"name" => "somebranch"}
+
+      project = insert(:project)
+
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_valid_github_oauth_token!(user)
+
+      expect_get_user_installations(200, %{
+        "installations" => [expected_installation]
+      })
+
+      expect_create_installation_token(expected_installation["id"])
+      expect_get_installation_repos(200, %{"repositories" => [expected_repo]})
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      render_async(view)
+
+      # lets select the installation
+      view
+      |> form("#project-repo-connection-form",
+        connection: %{github_installation_id: expected_installation["id"]}
+      )
+      |> render_change()
+
+      # we should now have the repos listed
+      render_async(view)
+
+      # lets select the repo
+      expect_create_installation_token(expected_installation["id"])
+
+      expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
+
+      view
+      |> form("#project-repo-connection-form",
+        connection: %{
+          github_installation_id: expected_installation["id"],
+          repo: expected_repo["full_name"]
+        }
+      )
+      |> render_change()
+
+      # we should now have the branches listed
+      render_async(view)
+
+      # let us submit
+
+      # push pull.yml
+      expect_get_repo(expected_repo["full_name"], 200, expected_repo)
+      expect_create_blob(expected_repo["full_name"])
+
+      expect_get_commit(
+        expected_repo["full_name"],
+        expected_repo["default_branch"]
+      )
+
+      expect_create_tree(expected_repo["full_name"])
+      expect_create_commit(expected_repo["full_name"])
+
+      expect_update_ref(
+        expected_repo["full_name"],
+        expected_repo["default_branch"]
+      )
+
+      # push deploy.yml
+      # only 1 blob is created for the deploy.yml
+      expect_create_blob(expected_repo["full_name"])
+      expect_get_commit(expected_repo["full_name"], expected_branch["name"])
+      expect_create_tree(expected_repo["full_name"])
+      expect_create_commit(expected_repo["full_name"])
+      expect_update_ref(expected_repo["full_name"], expected_branch["name"])
+
+      # write secret
+      expect_get_public_key(expected_repo["full_name"])
+      secret_name = "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
+      expect_create_repo_secret(expected_repo["full_name"], secret_name)
+
+      # sync is not initialized
+
+      view
+      |> form("#project-repo-connection-form")
+      |> render_submit(
+        connection: %{
+          branch: expected_branch["name"],
+          sync_direction: "deploy",
+          config_path: "./config.json",
+          accept: true
+        }
+      )
+
+      flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+      assert flash["info"] == "Connection made successfully"
+    end
+
+    test "users get an error when saving repo connection if the usage limiter returns an error",
+         %{
+           conn: conn
+         } do
+      expected_installation = %{
+        "id" => 1234,
+        "account" => %{
+          "type" => "User",
+          "login" => "username"
+        }
+      }
+
+      expected_repo = %{
+        "full_name" => "someaccount/somerepo",
+        "default_branch" => "main"
+      }
+
+      expected_branch = %{"name" => "somebranch"}
+
+      %{id: project_id} = project = insert(:project)
+
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_valid_github_oauth_token!(user)
+
+      expect_get_user_installations(200, %{
+        "installations" => [expected_installation]
+      })
+
+      expect_create_installation_token(expected_installation["id"])
+      expect_get_installation_repos(200, %{"repositories" => [expected_repo]})
+
+      Mox.stub_with(
+        Lightning.Extensions.MockUsageLimiter,
+        Lightning.Extensions.UsageLimiter
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      render_async(view)
+
+      # lets select the installation
+      view
+      |> form("#project-repo-connection-form",
+        connection: %{github_installation_id: expected_installation["id"]}
+      )
+      |> render_change()
+
+      # we should now have the repos listed
+      render_async(view)
+
+      # lets select the repo
+      expect_create_installation_token(expected_installation["id"])
+
+      expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
+
+      view
+      |> form("#project-repo-connection-form",
+        connection: %{
+          github_installation_id: expected_installation["id"],
+          repo: expected_repo["full_name"]
+        }
+      )
+      |> render_change()
+
+      # we should now have the branches listed
+      render_async(view)
+
+      # let us submit
+
+      error_msg = "Some funny error message"
+
+      Lightning.Extensions.MockUsageLimiter
+      |> Mox.expect(:limit_action, fn %{type: :github_sync},
+                                      %{project_id: ^project_id} ->
+        {:error, :disabled, %{text: error_msg}}
+      end)
+
+      view
+      |> form("#project-repo-connection-form")
+      |> render_submit(
+        connection: %{
+          branch: expected_branch["name"],
+          sync_direction: "pull",
+          accept: true
+        }
+      )
+
+      flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+      assert flash["error"] == error_msg
+    end
+
+    test "all users can see a saved repo connection", %{conn: conn} do
+      project = insert(:project)
+
+      repo_connection =
+        insert(:project_repo_connection,
+          project: project,
+          repo: "someaccount/somerepo",
+          branch: "somebranch",
+          github_installation_id: "1234"
+        )
+
+      for {conn, _user} <-
+            setup_project_users(conn, project, [:viewer, :editor, :admin, :owner]) do
+        # we are returning 404 for the access token so that we halt the pipeline for verifying the connection
+        expect_create_installation_token(
+          repo_connection.github_installation_id,
+          404,
+          %{"error" => "something terrible"}
+        )
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#vcs"
+          )
+
+        html = render_async(view)
+
+        refute has_element?(view, "#project-repo-connection-form")
+
+        assert html =~ repo_connection.repo
+        assert html =~ repo_connection.branch
+        assert html =~ repo_connection.github_installation_id
+      end
+    end
+
+    test "unauthorized users cannot reconnect project even if they have access to the installation",
+         %{conn: conn} do
+      project = insert(:project)
+
+      repo_connection =
+        insert(:project_repo_connection,
+          project: project,
+          repo: "someaccount/somerepo",
+          branch: "somebranch",
+          github_installation_id: "1234"
+        )
+
+      expected_installation = %{
+        "id" => repo_connection.github_installation_id,
+        "account" => %{
+          "type" => "User",
+          "login" => "username"
+        }
+      }
+
+      expected_access_token_endpoint =
+        "https://api.github.com/app/installations/#{repo_connection.github_installation_id}/access_tokens"
+
+      for {conn, user} <- setup_project_users(conn, project, [:viewer, :editor]) do
+        set_valid_github_oauth_token!(user)
+
+        # NOTE: This hasn't been migrated to the expect_github_action/3 function
+        # because of flaky order of expections.
+        Mox.expect(Lightning.Tesla.Mock, :call, 5, fn
+          # list installations for checking if the user has access to the intallation.
+          %{url: "https://api.github.com/user/installations"}, _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{"installations" => [expected_installation]}
+             }}
+
+          # get installation access token. This is called twice.
+          # When fetching repos and when verifying connection
+          %{url: ^expected_access_token_endpoint}, _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 201,
+               body: %{"token" => "some-token"}
+             }}
+
+          # list repos
+          %{url: "https://api.github.com/installation/repositories"}, _opts ->
+            {:ok, %Tesla.Env{status: 200, body: %{"repositories" => []}}}
+
+          # another call for verifying connection. Probably for checking if a file exists
+          # ignoring to halt the pipeline
+          %{url: _url}, _opts ->
+            {:error, "something unexpected happened"}
+        end)
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#vcs"
+          )
+
+        render_async(view)
+
+        refute has_element?(view, "#reconnect-project-button")
+
+        # try sending the event either way
+        view
+        |> with_target("#github-sync-component")
+        |> render_click("reconnect", %{
+          "connection" => %{"sync_direction" => "deploy"}
+        })
+
+        flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+        assert flash["error"] == "You are not authorized to perform this action"
+      end
+    end
+
+    test "authorized users cannot reconnect project if they don't have access to the installation",
+         %{conn: conn} do
+      project = insert(:project)
+
+      repo_connection =
+        insert(:project_repo_connection,
+          project: project,
+          repo: "someaccount/somerepo",
+          branch: "somebranch",
+          github_installation_id: "1234",
+          access_token: "someaccesstoken"
+        )
+
+      for {conn, user} <-
+            setup_project_users(conn, project, [:admin, :owner]) do
+        set_valid_github_oauth_token!(user)
+
+        # list installations for checking if the user has access to the intallation.
+        # in this case we return an empty list to simulate user not having access to the installation
+        expect_get_user_installations(200, %{"installations" => []})
+        # get installation access token. This is called when verifying connection
+        expect_create_installation_token(
+          repo_connection.github_installation_id,
+          404,
+          %{"error" => "something bad"}
+        )
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#vcs"
+          )
+
+        render_async(view)
+
+        refute has_element?(view, "#reconnect-project-button")
+      end
+    end
+
+    test "authorized users can reconnect project if they have access to the installation",
+         %{conn: conn} do
+      project = insert(:project)
+
+      repo_connection =
+        insert(:project_repo_connection,
+          project: project,
+          repo: "someaccount/somerepo",
+          branch: "somebranch",
+          github_installation_id: "1234",
+          access_token: "someaccesstoken"
+        )
+
+      expected_installation = %{
+        "id" => repo_connection.github_installation_id,
+        "account" => %{
+          "type" => "User",
+          "login" => "username"
+        }
+      }
+
+      expected_repo = %{
+        "full_name" => repo_connection.repo,
+        "default_branch" => "main"
+      }
+
+      expected_access_token_endpoint =
+        "https://api.github.com/app/installations/#{repo_connection.github_installation_id}/access_tokens"
+
+      for {conn, user} <-
+            setup_project_users(conn, project, [:admin, :owner]) do
+        set_valid_github_oauth_token!(user)
+
+        Mox.expect(Lightning.Tesla.Mock, :call, 5, fn
+          # list installations for checking if the user has access to the intallation.
+          %{url: "https://api.github.com/user/installations"}, _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{"installations" => [expected_installation]}
+             }}
+
+          # get installation access token. This is called twice.
+          # When fetching repos and when verifying connection
+          %{url: ^expected_access_token_endpoint}, _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 201,
+               body: %{"token" => "some-token"}
+             }}
+
+          # list repos
+          %{url: "https://api.github.com/installation/repositories"}, _opts ->
+            {:ok, %Tesla.Env{status: 200, body: %{"repositories" => []}}}
+
+          # another call for verifying connection. Probably for checking if a file exists
+          # ignoring to halt the pipeline
+          %{url: _url}, _opts ->
+            {:error, "something unexpected happened"}
+        end)
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#vcs"
+          )
+
+        render_async(view)
+
+        assert has_element?(view, "#reconnect-project-button")
+
+        # let's reconnect
+        # push pull.yml
+        expect_get_repo(repo_connection.repo, 200, expected_repo)
+        expect_create_blob(repo_connection.repo)
+
+        expect_get_commit(
+          repo_connection.repo,
+          expected_repo["default_branch"]
+        )
+
+        expect_create_tree(repo_connection.repo)
+        expect_create_commit(repo_connection.repo)
+
+        expect_update_ref(
+          repo_connection.repo,
+          expected_repo["default_branch"]
+        )
+
+        # push deploy.yml + config.json
+        # deploy.yml blob
+        expect_create_blob(repo_connection.repo)
+        # config.json blob
+        expect_create_blob(repo_connection.repo)
+        expect_get_commit(repo_connection.repo, repo_connection.branch)
+        expect_create_tree(repo_connection.repo)
+        expect_create_commit(repo_connection.repo)
+        expect_update_ref(repo_connection.repo, repo_connection.branch)
+
+        # write secret
+        expect_get_public_key(repo_connection.repo)
+        secret_name = "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
+        expect_create_repo_secret(repo_connection.repo, secret_name)
+
+        # initialize sync
+        expect_create_installation_token(repo_connection.github_installation_id)
+        expect_get_repo(repo_connection.repo, 200, expected_repo)
+
+        expect_create_workflow_dispatch(
+          repo_connection.repo,
+          "openfn-pull.yml"
+        )
+
+        view
+        |> form("#reconnect-project-form")
+        |> render_submit(
+          connection: %{"sync_direction" => "pull", "accept" => "true"}
+        )
+
+        flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+
+        assert flash["info"] == "Connection made successfully!"
+      end
+    end
+
+    test "authorized users get an error when reconnecting if the usage limiter returns an error",
+         %{conn: conn} do
+      %{id: project_id} = project = insert(:project)
+
+      repo_connection =
+        insert(:project_repo_connection,
+          project: project,
+          repo: "someaccount/somerepo",
+          branch: "somebranch",
+          github_installation_id: "1234",
+          access_token: "someaccesstoken"
+        )
+
+      expected_installation = %{
+        "id" => repo_connection.github_installation_id,
+        "account" => %{
+          "type" => "User",
+          "login" => "username"
+        }
+      }
+
+      expected_access_token_endpoint =
+        "https://api.github.com/app/installations/#{repo_connection.github_installation_id}/access_tokens"
+
+      for {conn, user} <-
+            setup_project_users(conn, project, [:admin, :owner]) do
+        set_valid_github_oauth_token!(user)
+
+        Mox.expect(Lightning.Tesla.Mock, :call, 5, fn
+          # list installations for checking if the user has access to the intallation.
+          %{url: "https://api.github.com/user/installations"}, _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{"installations" => [expected_installation]}
+             }}
+
+          # get installation access token. This is called twice.
+          # When fetching repos and when verifying connection
+          %{url: ^expected_access_token_endpoint}, _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 201,
+               body: %{"token" => "some-token"}
+             }}
+
+          # list repos
+          %{url: "https://api.github.com/installation/repositories"}, _opts ->
+            {:ok, %Tesla.Env{status: 200, body: %{"repositories" => []}}}
+
+          # another call for verifying connection. Probably for checking if a file exists
+          # ignoring to halt the pipeline
+          %{url: _url}, _opts ->
+            {:error, "something unexpected happened"}
+        end)
+
+        Mox.stub_with(
+          Lightning.Extensions.MockUsageLimiter,
+          Lightning.Extensions.UsageLimiter
+        )
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#vcs"
+          )
+
+        render_async(view)
+
+        assert has_element?(view, "#reconnect-project-button")
+
+        # let's reconnect
+        error_msg = "Some funny error message"
+
+        Lightning.Extensions.MockUsageLimiter
+        |> Mox.expect(:limit_action, fn %{type: :github_sync},
+                                        %{project_id: ^project_id} ->
+          {:error, :disabled, %{text: error_msg}}
+        end)
+
+        view
+        |> form("#reconnect-project-form")
+        |> render_submit(
+          connection: %{"sync_direction" => "pull", "accept" => "true"}
+        )
+
+        flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+
+        assert flash["error"] == error_msg
+      end
+    end
+
+    test "reconnect button does not show if everything checks out",
+         %{conn: conn} do
+      project = insert(:project)
+
+      repo_connection =
+        insert(:project_repo_connection,
+          project: project,
+          repo: "someaccount/somerepo",
+          branch: "somebranch",
+          github_installation_id: "1234",
+          access_token: "someaccesstoken"
+        )
+
+      for {conn, user} <-
+            setup_project_users(conn, project, [:viewer, :editor, :admin, :owner]) do
+        set_valid_github_oauth_token!(user)
+
+        repo_name = repo_connection.repo
+        branch_name = repo_connection.branch
+        installation_id = repo_connection.github_installation_id
+
+        expected_default_branch = "main"
+
+        expected_deploy_yml_path =
+          ".github/workflows/openfn-#{repo_connection.project_id}-deploy.yml"
+
+        expected_config_json_path =
+          "openfn-#{repo_connection.project_id}-config.json"
+
+        expected_secret_name =
+          "OPENFN_#{String.replace(repo_connection.project_id, "-", "_")}_API_KEY"
+
+        Mox.expect(Lightning.Tesla.Mock, :call, 9, fn
+          # list installations for checking if the user has access to the installation.
+          %{url: "https://api.github.com/user/installations"}, _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{
+                 "installations" => [
+                   %{
+                     "id" => installation_id,
+                     "account" => %{
+                       "type" => "User",
+                       "login" => "username"
+                     }
+                   }
+                 ]
+               }
+             }}
+
+          # get installation access token. This is called twice.
+          # When fetching repos and when verifying connection
+          %{
+            url:
+              "https://api.github.com/app/installations/" <>
+                  ^installation_id <> "/access_tokens"
+          },
+          _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 201,
+               body: %{"token" => "some-token"}
+             }}
+
+          # list repos. This goes hand in hand installations
+          %{url: "https://api.github.com/installation/repositories"}, _opts ->
+            {:ok, %Tesla.Env{status: 200, body: %{"repositories" => []}}}
+
+          # get repo content
+          %{url: "https://api.github.com/repos/" <> ^repo_name}, _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{"default_branch" => expected_default_branch}
+             }}
+
+          # check if pull yml exists in the default branch
+          %{
+            method: :get,
+            query: [{:ref, "heads/" <> ^expected_default_branch}],
+            url:
+              "https://api.github.com/repos/" <>
+                  ^repo_name <> "/contents/.github/workflows/openfn-pull.yml"
+          },
+          _opts ->
+            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+
+          # check if deploy yml exists in the target branch
+          %{
+            method: :get,
+            query: [{:ref, "heads/" <> ^branch_name}],
+            url:
+              "https://api.github.com/repos/" <>
+                  ^repo_name <> "/contents/" <> ^expected_deploy_yml_path
+          },
+          _opts ->
+            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+
+          # check if config.json exists in the target branch
+          %{
+            method: :get,
+            query: [{:ref, "heads/" <> ^branch_name}],
+            url:
+              "https://api.github.com/repos/" <>
+                  ^repo_name <> "/contents/" <> ^expected_config_json_path
+          },
+          _opts ->
+            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+
+          # check if api key secret exists
+          %{
+            method: :get,
+            url:
+              "https://api.github.com/repos/" <>
+                  ^repo_name <> "/actions/secrets/" <> ^expected_secret_name
+          },
+          _opts ->
+            {:ok, %Tesla.Env{status: 200, body: %{}}}
+        end)
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#vcs"
+          )
+
+        html = render_async(view)
+
+        refute has_element?(view, "#reconnect-project-button")
+
+        assert html =~ "Your repository is properly configured."
+      end
+    end
+
+    test "unauthorized users cannot remove github connection", %{conn: conn} do
+      project = insert(:project)
+
+      repo_connection =
+        insert(:project_repo_connection,
+          project: project,
+          repo: "someaccount/somerepo",
+          branch: "somebranch",
+          github_installation_id: "1234",
+          access_token: "someaccesstoken"
+        )
+
+      for {conn, user} <- setup_project_users(conn, project, [:viewer, :editor]) do
+        # giving the user a valid token
+        set_valid_github_oauth_token!(user)
+
+        Mox.expect(Lightning.Tesla.Mock, :call, 2, fn
+          # list installations for checking if the user has access to the installation.
+          # we return 400 to halt the pipeline
+          %{url: "https://api.github.com/user/installations"}, _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 400,
+               body: %{"something" => "bad"}
+             }}
+
+          # get access token. Gets called when verifying connection
+          %{
+            url: "https://api.github.com/app/installations/" <> _installation_id
+          },
+          _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 404,
+               body: %{"something" => "not right"}
+             }}
+        end)
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#vcs"
+          )
+
+        html = render_async(view)
+
+        refute has_element?(view, "#remove_connection_modal")
+
+        refute html =~ "Remove Integration"
+
+        # try sending the delete event either way
+        view
+        |> with_target("#github-sync-component")
+        |> render_click("delete-connection", %{})
+
+        flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+        assert flash["error"] == "You are not authorized to perform this action"
+
+        assert Lightning.Repo.reload(repo_connection)
+      end
+    end
+
+    test "authorized users who have not setup github accounts can remove github connection",
+         %{conn: conn} do
+      project = insert(:project)
+
+      for {conn, user} <- setup_project_users(conn, project, [:owner, :admin]) do
+        repo_connection =
+          insert(:project_repo_connection,
+            project: project,
+            repo: "someaccount/somerepo",
+            branch: "somebranch",
+            github_installation_id: "1234",
+            access_token: "someaccesstoken"
+          )
+
+        assert is_nil(user.github_oauth_token)
+
+        Mox.expect(Lightning.Tesla.Mock, :call, 1, fn
+          # get access token. Gets called when verifying connection
+          # we return 400 to halt the pipeline
+          %{
+            url: "https://api.github.com/app/installations/" <> _installation_id
+          },
+          _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 404,
+               body: %{"something" => "not right"}
+             }}
+        end)
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#vcs"
+          )
+
+        html = render_async(view)
+
+        assert has_element?(view, "#remove_connection_modal")
+        assert has_element?(view, "#remove_connection_modal_confirm_button")
+        assert html =~ "Remove Integration"
+
+        # click the confirm button
+        view
+        |> element("#remove_connection_modal_confirm_button")
+        |> render_click()
+
+        flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+
+        assert flash["info"] == "Connection removed successfully"
+
+        refute Lightning.Repo.reload(repo_connection)
+      end
+    end
+
+    test "authorized users with valid github oauth can remove github connection even when undoing some github actions fail",
+         %{conn: conn} do
+      project = insert(:project)
+
+      for {conn, user} <- setup_project_users(conn, project, [:owner, :admin]) do
+        user = set_valid_github_oauth_token!(user)
+
+        repo_connection =
+          insert(:project_repo_connection,
+            project: project,
+            repo: "someaccount/somerepo",
+            branch: "somebranch",
+            github_installation_id: "1234",
+            access_token: "someaccesstoken"
+          )
+
+        assert is_map(user.github_oauth_token)
+
+        Mox.expect(Lightning.Tesla.Mock, :call, 2, fn
+          # get access token. Gets called when verifying connection
+          # we return 400 to halt the pipeline
+          %{url: "https://api.github.com/app/installations/" <> _rest}, _opts ->
+            {:ok, %Tesla.Env{status: 404, body: %{"something" => "not right"}}}
+
+          # check if user has access to the installation
+          %{url: "https://api.github.com/user/installations"}, _opts ->
+            {:ok, %Tesla.Env{status: 404, body: %{"something" => "not right"}}}
+        end)
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#vcs"
+          )
+
+        html = render_async(view)
+
+        assert has_element?(view, "#remove_connection_modal")
+        assert has_element?(view, "#remove_connection_modal_confirm_button")
+        assert html =~ "Remove Integration"
+
+        # check if deploy yml exists for deletion
+        expected_deploy_yml_path =
+          ".github/workflows/openfn-#{project.id}-deploy.yml"
+
+        expect_get_repo_content(repo_connection.repo, expected_deploy_yml_path)
+
+        # deletes successfully
+        expect_delete_repo_content(
+          repo_connection.repo,
+          expected_deploy_yml_path
+        )
+
+        # check if deploy yml exists for deletion
+        expected_config_json_path = "openfn-#{project.id}-config.json"
+        expect_get_repo_content(repo_connection.repo, expected_config_json_path)
+        # fails to delete
+        expect_delete_repo_content(
+          repo_connection.repo,
+          expected_config_json_path,
+          400,
+          %{"something" => "happened"}
+        )
+
+        # delete secret
+        expect_delete_repo_secret(
+          repo_connection.repo,
+          "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
+        )
+
+        # click the confirm button
+        view
+        |> element("#remove_connection_modal_confirm_button")
+        |> render_click()
+
+        flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+
+        assert flash["info"] == "Connection removed successfully"
+
+        refute Lightning.Repo.reload(repo_connection)
+      end
+    end
+
+    test "unauthorized users cannot initiate github sync", %{conn: conn} do
+      project = insert(:project)
+
+      insert(:project_repo_connection,
+        project: project,
+        repo: "someaccount/somerepo",
+        branch: "somebranch",
+        github_installation_id: "1234",
+        access_token: "someaccesstoken"
+      )
+
+      for {conn, user} <- setup_project_users(conn, project, [:viewer]) do
+        # giving the user a valid token
+        set_valid_github_oauth_token!(user)
+
+        Mox.expect(Lightning.Tesla.Mock, :call, 2, fn
+          # list installations for checking if the user has access to the installation.
+          # we return 400 to halt the pipeline
+          %{url: "https://api.github.com/user/installations"}, _opts ->
+            {:ok, %Tesla.Env{status: 400, body: %{"something" => "bad"}}}
+
+          # get access token. Gets called when verifying connection
+          %{url: "https://api.github.com/app/installations/" <> _rest}, _opts ->
+            {:ok, %Tesla.Env{status: 404, body: %{"something" => "not right"}}}
+        end)
+
+        {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+
+        html = render_async(view)
+
+        assert html =~ "Contact an editor or admin to sync."
+        assert has_element?(view, "#initiate-sync-button:disabled")
+
+        # try sending the sync event either way
+        view
+        |> with_target("#github-sync-component")
+        |> render_click("initiate-sync", %{})
+
+        flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+        assert flash["error"] == "You are not authorized to perform this action"
+      end
+    end
+
+    test "authorized users can initiate github sync successfully", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      repo_connection =
+        insert(:project_repo_connection,
+          project: project,
+          repo: "someaccount/somerepo",
+          branch: "somebranch",
+          github_installation_id: "1234",
+          access_token: "someaccesstoken"
+        )
+
+      for {conn, user} <-
+            setup_project_users(conn, project, [:editor, :admin, :owner]) do
+        # users dont need the oauth token in order to initialize sync
+        assert is_nil(user.github_oauth_token)
+
+        # ensure project is all setup
+        repo_name = repo_connection.repo
+        branch_name = repo_connection.branch
+        installation_id = repo_connection.github_installation_id
+
+        expected_default_branch = "main"
+
+        expected_deploy_yml_path =
+          ".github/workflows/openfn-#{repo_connection.project_id}-deploy.yml"
+
+        expected_config_json_path =
+          "openfn-#{repo_connection.project_id}-config.json"
+
+        expected_secret_name =
+          "OPENFN_#{String.replace(repo_connection.project_id, "-", "_")}_API_KEY"
+
+        Mox.expect(Lightning.Tesla.Mock, :call, 6, fn
+          # get installation access token.
+          # called when verifying connection
+          %{
+            url:
+              "https://api.github.com/app/installations/" <>
+                  ^installation_id <> "/access_tokens"
+          },
+          _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 201,
+               body: %{"token" => "some-token"}
+             }}
+
+          # get repo content
+          %{url: "https://api.github.com/repos/" <> ^repo_name}, _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{"default_branch" => expected_default_branch}
+             }}
+
+          # check if pull yml exists in the default branch
+          %{
+            method: :get,
+            query: [{:ref, "heads/" <> ^expected_default_branch}],
+            url:
+              "https://api.github.com/repos/" <>
+                  ^repo_name <> "/contents/.github/workflows/openfn-pull.yml"
+          },
+          _opts ->
+            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+
+          # check if deploy yml exists in the target branch
+          %{
+            method: :get,
+            query: [{:ref, "heads/" <> ^branch_name}],
+            url:
+              "https://api.github.com/repos/" <>
+                  ^repo_name <> "/contents/" <> ^expected_deploy_yml_path
+          },
+          _opts ->
+            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+
+          # check if config.json exists in the target branch
+          %{
+            method: :get,
+            query: [{:ref, "heads/" <> ^branch_name}],
+            url:
+              "https://api.github.com/repos/" <>
+                  ^repo_name <> "/contents/" <> ^expected_config_json_path
+          },
+          _opts ->
+            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+
+          # check if api key secret exists
+          %{
+            method: :get,
+            url:
+              "https://api.github.com/repos/" <>
+                  ^repo_name <> "/actions/secrets/" <> ^expected_secret_name
+          },
+          _opts ->
+            {:ok, %Tesla.Env{status: 200, body: %{}}}
+        end)
+
+        {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+
+        html = render_async(view)
+
+        refute html =~ "Contact an editor or admin to sync."
+
+        button = element(view, "#initiate-sync-button")
+        assert has_element?(button)
+
+        # try clicking the button
+        expect_create_installation_token(repo_connection.github_installation_id)
+        expect_get_repo(repo_connection.repo)
+        expect_create_workflow_dispatch(repo_connection.repo, "openfn-pull.yml")
+
+        render_click(button)
+
+        flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+
+        assert flash["info"] == "Github sync initiated successfully!"
+      end
+    end
+
+    test "authorized users get an error when initiating github sync if the usage limiter returns an error",
+         %{
+           conn: conn
+         } do
+      %{id: project_id} = project = insert(:project)
+
+      repo_connection =
+        insert(:project_repo_connection,
+          project: project,
+          repo: "someaccount/somerepo",
+          branch: "somebranch",
+          github_installation_id: "1234",
+          access_token: "someaccesstoken"
+        )
+
+      for {conn, _user} <-
+            setup_project_users(conn, project, [:editor, :admin, :owner]) do
+        # ensure project is all setup
+        repo_name = repo_connection.repo
+        branch_name = repo_connection.branch
+        installation_id = repo_connection.github_installation_id
+
+        expected_default_branch = "main"
+
+        expected_deploy_yml_path =
+          ".github/workflows/openfn-#{repo_connection.project_id}-deploy.yml"
+
+        expected_config_json_path =
+          "openfn-#{repo_connection.project_id}-config.json"
+
+        expected_secret_name =
+          "OPENFN_#{String.replace(repo_connection.project_id, "-", "_")}_API_KEY"
+
+        Mox.stub_with(
+          Lightning.Extensions.MockUsageLimiter,
+          Lightning.Extensions.UsageLimiter
+        )
+
+        Mox.expect(Lightning.Tesla.Mock, :call, 6, fn
+          # get installation access token.
+          # called when verifying connection
+          %{
+            url:
+              "https://api.github.com/app/installations/" <>
+                  ^installation_id <> "/access_tokens"
+          },
+          _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 201,
+               body: %{"token" => "some-token"}
+             }}
+
+          # get repo content
+          %{url: "https://api.github.com/repos/" <> ^repo_name}, _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{"default_branch" => expected_default_branch}
+             }}
+
+          # check if pull yml exists in the default branch
+          %{
+            method: :get,
+            query: [{:ref, "heads/" <> ^expected_default_branch}],
+            url:
+              "https://api.github.com/repos/" <>
+                  ^repo_name <> "/contents/.github/workflows/openfn-pull.yml"
+          },
+          _opts ->
+            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+
+          # check if deploy yml exists in the target branch
+          %{
+            method: :get,
+            query: [{:ref, "heads/" <> ^branch_name}],
+            url:
+              "https://api.github.com/repos/" <>
+                  ^repo_name <> "/contents/" <> ^expected_deploy_yml_path
+          },
+          _opts ->
+            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+
+          # check if config.json exists in the target branch
+          %{
+            method: :get,
+            query: [{:ref, "heads/" <> ^branch_name}],
+            url:
+              "https://api.github.com/repos/" <>
+                  ^repo_name <> "/contents/" <> ^expected_config_json_path
+          },
+          _opts ->
+            {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+
+          # check if api key secret exists
+          %{
+            method: :get,
+            url:
+              "https://api.github.com/repos/" <>
+                  ^repo_name <> "/actions/secrets/" <> ^expected_secret_name
+          },
+          _opts ->
+            {:ok, %Tesla.Env{status: 200, body: %{}}}
+        end)
+
+        {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+
+        html = render_async(view)
+
+        refute html =~ "Contact an editor or admin to sync."
+
+        button = element(view, "#initiate-sync-button")
+        assert has_element?(button)
+
+        # try clicking the button
+
+        error_msg = "Some funny error message"
+
+        Lightning.Extensions.MockUsageLimiter
+        |> Mox.expect(:limit_action, fn %{type: :github_sync},
+                                        %{project_id: ^project_id} ->
+          {:error, :disabled, %{text: error_msg}}
+        end)
+
+        render_click(button)
+
+        flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+
+        assert flash["error"] == error_msg
+      end
+    end
+
+    test "error banner is displayed if github sync usage limiter returns an error",
+         %{
+           conn: conn
+         } do
+      import Phoenix.Component
+      %{id: project_id} = project = insert(:project)
+
+      for {conn, _user} <-
+            setup_project_users(conn, project, [:viewer, :editor, :admin, :owner]) do
+        error_msg = "I am a robot"
+
+        Lightning.Extensions.MockUsageLimiter
+        |> Mox.stub(:check_limits, fn %{project_id: ^project_id} -> :ok end)
+        |> Mox.stub(:limit_action, fn
+          %{type: :github_sync}, %{project_id: ^project_id} ->
+            {:error, :disabled,
+             %{
+               function: fn assigns ->
+                 ~H"<p>I am an error message that says: <%= @error %></p>"
+               end,
+               attrs: %{error: error_msg}
+             }}
+
+          _other_action, _context ->
+            :ok
+        end)
+
+        {:ok, _view, html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#vcs"
+          )
+
+        assert html =~ error_msg
+      end
+    end
+  end
+
+  defp find_selected_option(html, selector) do
+    html
+    |> Floki.parse_fragment!()
+    |> Floki.find(selector)
+    |> Enum.map(&Floki.raw_html/1)
+    |> Enum.find(fn el -> el =~ "selected=\"selected\"" end)
   end
 
   defp find_user_index_in_list(view, user) do
     Floki.parse_fragment!(render(view))
-    |> Floki.find("#project-users-form tbody tr")
+    |> Floki.find("#project-form tbody tr")
     |> Enum.find_index(fn el ->
       Floki.find(el, "td:first-child()") |> Floki.text() =~
         "#{user.first_name} #{user.last_name}"

@@ -81,12 +81,14 @@ defmodule LightningWeb.UserConfirmationControllerTest do
 
   describe "POST /users/confirm/:token" do
     test "confirms the given token once", %{conn: conn, user: user} do
-      token =
-        extract_user_token(fn url ->
-          Accounts.deliver_user_confirmation_instructions(user, url)
-        end)
+      {encoded_token, user_token} =
+        Accounts.UserToken.build_email_token(user, "confirm", user.email)
 
-      conn = post(conn, Routes.user_confirmation_path(conn, :update, token))
+      Repo.insert!(user_token)
+
+      conn =
+        post(conn, Routes.user_confirmation_path(conn, :update, encoded_token))
+
       assert redirected_to(conn) == "/"
 
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
@@ -97,7 +99,9 @@ defmodule LightningWeb.UserConfirmationControllerTest do
       assert Repo.all(Accounts.UserToken) == []
 
       # When not logged in
-      conn = post(conn, Routes.user_confirmation_path(conn, :update, token))
+      conn =
+        post(conn, Routes.user_confirmation_path(conn, :update, encoded_token))
+
       assert redirected_to(conn) == "/"
 
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
@@ -107,7 +111,7 @@ defmodule LightningWeb.UserConfirmationControllerTest do
       conn =
         build_conn()
         |> log_in_user(user)
-        |> post(Routes.user_confirmation_path(conn, :update, token))
+        |> post(Routes.user_confirmation_path(conn, :update, encoded_token))
 
       assert redirected_to(conn) == "/"
       refute Phoenix.Flash.get(conn.assigns.flash, :error)

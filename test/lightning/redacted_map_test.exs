@@ -1,5 +1,5 @@
 defmodule Lightning.RedactedMapTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   test "inspecting filters the configuration" do
     assert inspect(%Lightning.RedactedMap{

@@ -5,9 +5,27 @@ defmodule Lightning.FailureAlertTest do
   import Lightning.Helpers, only: [ms_to_human: 1]
   import Swoosh.TestAssertions
 
+  alias Lightning.Extensions.UsageLimiter
+  alias Lightning.Extensions.UsageLimiting.Context
+  alias Lightning.FailureAlerter
   alias Lightning.Repo
   alias Lightning.Workers
-  alias Lightning.FailureAlerter
+
+  setup do
+    Mox.stub(Lightning.Extensions.MockUsageLimiter, :check_limits, fn _context ->
+      :ok
+    end)
+
+    Mox.stub(
+      Lightning.Extensions.MockUsageLimiter,
+      :limit_action,
+      fn _action, _context ->
+        :ok
+      end
+    )
+
+    :ok
+  end
 
   describe "FailureAlert" do
     setup do
@@ -180,6 +198,35 @@ defmodule Lightning.FailureAlertTest do
       refute_email_sent(subject: "\"workflow-a\" failed.")
     end
 
+    test "does not send failure emails if the usage limiter returns an error", %{
+      runs: [run_1 | _rest],
+      project: %{id: project_id}
+    } do
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :alert_failure}, %{project_id: ^project_id} ->
+          :ok
+        end
+      )
+
+      FailureAlerter.alert_on_failure(run_1)
+
+      assert_email_sent(subject: "\"workflow-a\" failed.")
+
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :alert_failure}, %{project_id: ^project_id} ->
+          {:error, :not_enabled, %{text: "Failure alerts not enabled"}}
+        end
+      )
+
+      FailureAlerter.alert_on_failure(run_1)
+
+      refute_email_sent(subject: "\"workflow-a\" failed.")
+    end
+
     test "does not increment the rate-limiter counter when an email is not delivered.",
          %{runs: [run, _, _], workorders: [workorder, _, _]} do
       [time_scale: time_scale, rate_limit: rate_limit] =
@@ -216,13 +263,22 @@ defmodule Lightning.FailureAlertTest do
           Lightning.Config.worker_token_signer()
         )
 
+      expect(Lightning.MockConfig, :default_max_run_duration, fn -> 1 end)
+
+      run_options =
+        UsageLimiter.get_run_options(%Context{
+          project_id: run.work_order.workflow.project_id
+        })
+
       {:ok, %{}, socket} =
         LightningWeb.WorkerSocket
         |> socket("socket_id", %{token: bearer})
         |> subscribe_and_join(
           LightningWeb.RunChannel,
           "run:#{run.id}",
-          %{"token" => Workers.generate_run_token(run)}
+          %{
+            "token" => Workers.generate_run_token(run, run_options)
+          }
         )
 
       _ref =

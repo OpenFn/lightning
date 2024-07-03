@@ -13,7 +13,8 @@ jobs:
       - uses: erlef/setup-elixir@v1
         with:
           otp-version: 26
-          elixir-version: '1.15.4'
+          elixir-version: '1.16.2'
+      - run: sudo apt-get install -y libsodium-dev
       - run: mix deps.get
       - run: mix docs
 

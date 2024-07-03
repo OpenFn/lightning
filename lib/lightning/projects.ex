@@ -8,19 +8,21 @@ defmodule Lightning.Projects do
 
   import Ecto.Query, warn: false
 
+  alias Ecto.Multi
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserNotifier
   alias Lightning.ExportUtils
   alias Lightning.Invocation.Dataclip
+  alias Lightning.Invocation.LogLine
   alias Lightning.Invocation.Step
   alias Lightning.Projects.Events
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Projects.ProjectUser
-  alias Lightning.Projects.ProjectUser
   alias Lightning.Repo
   alias Lightning.Run
   alias Lightning.RunStep
+  alias Lightning.Services.ProjectHook
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
@@ -46,6 +48,14 @@ defmodule Lightning.Projects do
     {:ok, %{projects_deleted: projects_to_delete}}
   end
 
+  def perform(%Oban.Job{args: %{"type" => "data_retention"}}) do
+    list_projects_having_history_retention()
+    |> Enum.each(fn project ->
+      delete_history_for(project)
+      wipe_dataclips_for(project)
+    end)
+  end
+
   @doc """
   Returns the list of projects.
 
@@ -57,6 +67,14 @@ defmodule Lightning.Projects do
   """
   def list_projects do
     Repo.all(from(p in Project, order_by: p.name))
+  end
+
+  @doc """
+  Lists all projects that have history retention
+  """
+  @spec list_projects_having_history_retention() :: [] | [Project.t(), ...]
+  def list_projects_having_history_retention do
+    Repo.all(from(p in Project, where: not is_nil(p.history_retention_period)))
   end
 
   @doc """
@@ -76,6 +94,22 @@ defmodule Lightning.Projects do
   def get_project!(id), do: Repo.get!(Project, id)
 
   def get_project(id), do: Repo.get(Project, id)
+
+  @doc """
+  Should input or output dataclips be saved for runs in this project?
+  """
+  def save_dataclips?(id) do
+    from(
+      p in Project,
+      where: p.id == ^id,
+      select: p.retention_policy
+    )
+    |> Repo.one!()
+    |> case do
+      :retain_all -> true
+      :erase_all -> false
+    end
+  end
 
   @doc """
   Gets a single project_user.
@@ -163,14 +197,18 @@ defmodule Lightning.Projects do
       {:error, %Ecto.Changeset{}}
 
   """
-  def create_project(attrs \\ %{}) do
-    %Project{}
-    |> Project.changeset(attrs)
-    |> Repo.insert()
-    |> tap(fn result ->
-      with {:ok, project} <- result do
-        Events.project_created(project)
+  def create_project(attrs \\ %{}, schedule_email? \\ true) do
+    Repo.transact(fn ->
+      with {:ok, project} <- ProjectHook.handle_create_project(attrs) do
+        if schedule_email? do
+          schedule_project_addition_emails(%Project{project_users: []}, project)
+        end
+
+        {:ok, project}
       end
+    end)
+    |> tap(fn result ->
+      with {:ok, project} <- result, do: Events.project_created(project)
     end)
   end
 
@@ -187,9 +225,56 @@ defmodule Lightning.Projects do
 
   """
   def update_project(%Project{} = project, attrs) do
+    changeset = Project.changeset(project, attrs)
+
+    case Repo.update(changeset) do
+      {:ok, updated_project} ->
+        if retention_setting_updated?(changeset) do
+          send_data_retention_change_email(updated_project)
+        end
+
+        {:ok, updated_project}
+
+      error ->
+        error
+    end
+  end
+
+  @spec update_project_with_users(Project.t(), map()) ::
+          {:ok, Project.t()} | {:error, Ecto.Changeset.t()}
+  def update_project_with_users(%Project{} = project, attrs) do
+    project = Repo.preload(project, :project_users)
+
     project
-    |> Project.changeset(attrs)
+    |> Project.project_with_users_changeset(attrs)
     |> Repo.update()
+    |> tap(fn result ->
+      with {:ok, updated_project} <- result do
+        schedule_project_addition_emails(project, updated_project)
+      end
+    end)
+  end
+
+  defp retention_setting_updated?(changeset) do
+    Map.has_key?(changeset.changes, :history_retention_period) or
+      Map.has_key?(changeset.changes, :dataclip_retention_period)
+  end
+
+  defp send_data_retention_change_email(updated_project) do
+    users_query =
+      from pu in Ecto.assoc(updated_project, :project_users),
+        join: u in assoc(pu, :user),
+        where: pu.role in ^[:admin, :owner],
+        select: u
+
+    users = Repo.all(users_query)
+
+    Enum.each(users, fn user ->
+      UserNotifier.send_data_retention_change_email(
+        user,
+        updated_project
+      )
+    end)
   end
 
   @doc """
@@ -208,6 +293,37 @@ defmodule Lightning.Projects do
     project_user
     |> ProjectUser.changeset(attrs)
     |> Repo.update()
+  end
+
+  @spec add_project_users(Project.t(), [map(), ...]) ::
+          {:ok, [ProjectUser.t(), ...]} | {:error, Ecto.Changeset.t()}
+  def add_project_users(project, project_users) do
+    project = Repo.preload(project, :project_users)
+    # include the current list to ensure project owner validations work correctly
+    current_users = Enum.map(project.project_users, fn pu -> %{id: pu.id} end)
+    params = %{project_users: project_users ++ current_users}
+
+    with {:ok, updated_project} <- update_project_with_users(project, params) do
+      {:ok, updated_project.project_users}
+    end
+  end
+
+  defp schedule_project_addition_emails(old_project, updated_project) do
+    existing_user_ids = Enum.map(old_project.project_users, & &1.user_id)
+
+    emails =
+      updated_project.project_users
+      |> Enum.reject(fn pu -> pu.user_id in existing_user_ids end)
+      |> Enum.map(fn pu ->
+        UserNotifier.new(%{type: "project_addition", project_user_id: pu.id})
+      end)
+
+    Oban.insert_all(Lightning.Oban, emails)
+  end
+
+  @spec delete_project_user!(ProjectUser.t()) :: ProjectUser.t()
+  def delete_project_user!(%ProjectUser{} = project_user) do
+    Repo.delete!(project_user)
   end
 
   @doc """
@@ -231,56 +347,20 @@ defmodule Lightning.Projects do
       # coveralls-ignore-stop
     end)
 
-    Repo.transaction(fn ->
-      project_runs_query(project) |> Repo.delete_all()
+    Repo.transact(fn ->
+      with {:ok, project} <- ProjectHook.handle_delete_project(project) do
+        Logger.debug(fn ->
+          # coveralls-ignore-start
+          "Project ##{project.id} deleted."
+          # coveralls-ignore-stop
+        end)
 
-      project_run_step_query(project) |> Repo.delete_all()
-
-      project_workorders_query(project) |> Repo.delete_all()
-
-      project_steps_query(project) |> Repo.delete_all()
-
-      project_jobs_query(project) |> Repo.delete_all()
-
-      project_triggers_query(project) |> Repo.delete_all()
-
-      project_workflows_query(project) |> Repo.delete_all()
-
-      project_users_query(project) |> Repo.delete_all()
-
-      project_credentials_query(project) |> Repo.delete_all()
-
-      project_dataclips_query(project) |> Repo.delete_all()
-
-      {:ok, project} = Repo.delete(project)
-
-      Logger.debug(fn ->
-        # coveralls-ignore-start
-        "Project ##{project.id} deleted."
-        # coveralls-ignore-stop
-      end)
-
-      project
-    end)
-    |> tap(fn result ->
-      with {:ok, _project} <- result do
-        Events.project_deleted(project)
+        {:ok, project}
       end
     end)
-  end
-
-  @spec project_retention_policy_for(Run.t()) ::
-          Project.retention_policy_type()
-  def project_retention_policy_for(%Run{work_order_id: wo_id}) do
-    query =
-      from(wo in WorkOrder,
-        join: wf in assoc(wo, :workflow),
-        join: p in assoc(wf, :project),
-        where: wo.id == ^wo_id,
-        select: p.retention_policy
-      )
-
-    Repo.one(query)
+    |> tap(fn result ->
+      with {:ok, _project} <- result, do: Events.project_deleted(project)
+    end)
   end
 
   def project_runs_query(project) do
@@ -373,7 +453,8 @@ defmodule Lightning.Projects do
   def projects_for_user_query(%User{id: user_id}) do
     from(p in Project,
       join: pu in assoc(p, :project_users),
-      where: pu.user_id == ^user_id and is_nil(p.scheduled_deletion)
+      where: pu.user_id == ^user_id and is_nil(p.scheduled_deletion),
+      order_by: p.name
     )
   end
 
@@ -483,7 +564,7 @@ defmodule Lightning.Projects do
   """
   def schedule_project_deletion(project) do
     date =
-      case Application.get_env(:lightning, :purge_deleted_after_days) do
+      case Lightning.Config.purge_deleted_after_days() do
         nil -> DateTime.utc_now()
         integer -> DateTime.utc_now() |> Timex.shift(days: integer)
       end
@@ -534,5 +615,86 @@ defmodule Lightning.Projects do
     get_project!(project_id)
     |> Ecto.Changeset.change(%{scheduled_deletion: nil})
     |> Repo.update()
+  end
+
+  defp wipe_dataclips_for(%Project{dataclip_retention_period: period} = project)
+       when is_integer(period) do
+    update_query =
+      from d in Lightning.Invocation.Query.wipe_dataclips(),
+        where: d.project_id == ^project.id,
+        where: d.inserted_at < ago(^period, "day")
+
+    {count, _} = Repo.update_all(update_query, [])
+
+    {:ok, count}
+  end
+
+  defp wipe_dataclips_for(_project) do
+    {:error, :missing_dataclip_retention_period}
+  end
+
+  defp delete_history_for(%Project{history_retention_period: period} = project)
+       when is_integer(period) do
+    workflows_query = from w in Ecto.assoc(project, :workflows), select: w.id
+
+    workorders_query =
+      from wo in WorkOrder,
+        where:
+          wo.workflow_id in subquery(workflows_query) and
+            wo.last_activity < ago(^period, "day"),
+        select: wo.id
+
+    runs_query =
+      from r in Run,
+        where: r.work_order_id in subquery(workorders_query),
+        select: r.id
+
+    run_steps_query =
+      from rs in RunStep,
+        where: rs.run_id in subquery(runs_query),
+        select: rs.step_id
+
+    log_lines_query = from l in LogLine, where: l.run_id in subquery(runs_query)
+
+    dataclips_subset_query =
+      from d in Dataclip,
+        left_join: wo in WorkOrder,
+        on: d.id == wo.dataclip_id,
+        left_join: r in Run,
+        on: d.id == r.dataclip_id,
+        left_join: s in Step,
+        on: d.id == s.input_dataclip_id or d.id == s.output_dataclip_id,
+        where: d.project_id == ^project.id,
+        where: d.inserted_at < ago(^period, "day"),
+        where: is_nil(wo.dataclip_id),
+        where: is_nil(r.dataclip_id),
+        where: is_nil(s.input_dataclip_id),
+        where: is_nil(s.output_dataclip_id),
+        select: d.id
+
+    dataclips_query =
+      from d in Dataclip, where: d.id in subquery(dataclips_subset_query)
+
+    Multi.new()
+    |> Multi.delete_all(:log_lines, log_lines_query)
+    |> Multi.delete_all(:run_steps, run_steps_query)
+    |> Multi.delete_all(:steps, fn %{run_steps: {_, step_ids}} ->
+      from s in Step, where: s.id in ^step_ids
+    end)
+    |> Multi.delete_all(:runs, runs_query)
+    |> Multi.delete_all(:workorders, workorders_query)
+    |> Multi.delete_all(:dataclips, dataclips_query)
+    |> Repo.transaction(timeout: 100_000)
+    |> case do
+      {:ok, result} ->
+        {:ok, result}
+
+      {:error, _operation, failed_value, _changes} ->
+        {:error, failed_value}
+    end
+  end
+
+  defp delete_history_for(_project) do
+    {:error, :missing_history_retention_period}
   end
 end

@@ -2,9 +2,7 @@ defmodule Lightning.RunStep do
   @moduledoc """
   Ecto model for an the Steps in a Run.
   """
-  use Ecto.Schema
-
-  import Ecto.Changeset
+  use Lightning.Schema
 
   alias Lightning.Invocation.Step
   alias Lightning.Run
@@ -16,8 +14,6 @@ defmodule Lightning.RunStep do
           step: Step.t() | Ecto.Association.NotLoaded.t()
         }
 
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
   schema "run_steps" do
     belongs_to :run, Run
     belongs_to :step, Step

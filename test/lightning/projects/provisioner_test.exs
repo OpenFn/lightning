@@ -8,6 +8,8 @@ defmodule Lightning.Projects.ProvisionerTest do
 
   describe "parse_document/2 with a new project" do
     test "with invalid data" do
+      Mox.verify_on_exit!()
+
       changeset = Provisioner.parse_document(%Lightning.Projects.Project{}, %{})
 
       assert flatten_errors(changeset) == %{
@@ -31,6 +33,12 @@ defmodule Lightning.Projects.ProvisionerTest do
             end)
           end)
         end)
+
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
 
       changeset = Provisioner.parse_document(%Lightning.Projects.Project{}, body)
 
@@ -65,6 +73,7 @@ defmodule Lightning.Projects.ProvisionerTest do
 
   describe "import_document/2 with a new project" do
     test "with valid data" do
+      Mox.verify_on_exit!()
       user = insert(:user)
 
       %{
@@ -74,6 +83,12 @@ defmodule Lightning.Projects.ProvisionerTest do
         first_job_id: first_job_id,
         second_job_id: second_job_id
       } = valid_document()
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
 
       {:ok, project} =
         Provisioner.import_document(%Lightning.Projects.Project{}, user, body)
@@ -99,10 +114,22 @@ defmodule Lightning.Projects.ProvisionerTest do
 
   describe "import_document/2 with an existing project" do
     setup do
+      Mox.verify_on_exit!()
       %{project: ProjectsFixtures.project_fixture(), user: insert(:user)}
     end
 
-    test "doesn't add another project user", %{project: project, user: user} do
+    test "doesn't add another project user", %{
+      project: %{id: project_id} = project,
+      user: user
+    } do
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, %{project_id: ^project_id} ->
+          :ok
+        end
+      )
+
       %{body: body} = valid_document(project.id)
 
       {:ok, project} = Provisioner.import_document(project, user, body)
@@ -125,7 +152,18 @@ defmodule Lightning.Projects.ProvisionerTest do
       refute user2.id in project_user_ids
     end
 
-    test "changing, adding records", %{project: project, user: user} do
+    test "changing, adding records", %{
+      project: %{id: project_id} = project,
+      user: user
+    } do
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, %{project_id: ^project_id} ->
+          :ok
+        end
+      )
+
       %{body: body} = valid_document(project.id)
 
       {:ok, project} = Provisioner.import_document(project, user, body)
@@ -166,9 +204,17 @@ defmodule Lightning.Projects.ProvisionerTest do
     end
 
     test "adding a record from another project or workflow", %{
-      project: project,
+      project: %{id: project_id} = project,
       user: user
     } do
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, %{project_id: ^project_id} ->
+          :ok
+        end
+      )
+
       %{body: body, workflow_id: workflow_id} = valid_document(project.id)
 
       {:ok, project} = Provisioner.import_document(project, user, body)
@@ -223,6 +269,7 @@ defmodule Lightning.Projects.ProvisionerTest do
           body
           |> add_entity_to_workflow(workflow_id, "edges", %{
             "id" => other_edge_id,
+            "source_job_id" => third_job_id,
             "condition_type" => "on_job_success"
           })
         )
@@ -234,7 +281,59 @@ defmodule Lightning.Projects.ProvisionerTest do
              }
     end
 
-    test "removing a record", %{project: project, user: user} do
+    test "fails when an edge has no source", %{
+      project: %{id: project_id} = project,
+      user: user
+    } do
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, %{project_id: ^project_id} ->
+          :ok
+        end
+      )
+
+      %{body: body, workflow_id: workflow_id} = valid_document(project.id)
+
+      %{id: other_edge_id} = Lightning.Factories.insert(:edge)
+
+      {:error, changeset} =
+        Provisioner.import_document(
+          project,
+          user,
+          body
+          |> add_entity_to_workflow(workflow_id, "edges", %{
+            "id" => other_edge_id,
+            "condition_type" => "on_job_success"
+          })
+        )
+
+      assert flatten_errors(changeset) == %{
+               workflows: [
+                 %{
+                   edges: [
+                     %{
+                       source_job_id: [
+                         "source_job_id or source_trigger_id must be present"
+                       ]
+                     },
+                     %{},
+                     %{}
+                   ]
+                 }
+               ]
+             }
+    end
+
+    test "removing a record", %{project: %{id: project_id} = project, user: user} do
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, %{project_id: ^project_id} ->
+          :ok
+        end
+      )
+
       %{
         body: body,
         second_job_id: second_job_id
@@ -280,7 +379,18 @@ defmodule Lightning.Projects.ProvisionerTest do
              "The edge associated with the deleted job should be removed"
     end
 
-    test "removing a workflow", %{project: project, user: user} do
+    test "removing a workflow", %{
+      project: %{id: project_id} = project,
+      user: user
+    } do
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, %{project_id: ^project_id} ->
+          :ok
+        end
+      )
+
       %{
         body: body,
         workflow_id: workflow_id
@@ -307,9 +417,17 @@ defmodule Lightning.Projects.ProvisionerTest do
     end
 
     test "marking a new/changed record for deletion", %{
-      project: project,
+      project: %{id: project_id} = project,
       user: user
     } do
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, %{project_id: ^project_id} ->
+          :ok
+        end
+      )
+
       body = %{
         "id" => project.id,
         "name" => "test-project",
@@ -327,6 +445,55 @@ defmodule Lightning.Projects.ProvisionerTest do
                  %{delete: ["cannot change or add a record while deleting"]}
                ]
              }
+    end
+
+    test "adds error incase limit action is returns error", %{
+      project: %{id: project_id} = project,
+      user: user
+    } do
+      %{body: body} = valid_document(project_id)
+      error_msg = "Oopsie Doopsie"
+
+      Lightning.Extensions.MockUsageLimiter
+      |> Mox.expect(
+        :limit_action,
+        fn %{type: :github_sync}, %{project_id: ^project_id} -> :ok end
+      )
+      |> Mox.expect(
+        :limit_action,
+        fn _action, %{project_id: ^project_id} ->
+          {:error, :too_many_workflows, %{text: error_msg}}
+        end
+      )
+
+      assert {:error, changeset} =
+               Provisioner.import_document(project, user, body)
+
+      assert flatten_errors(changeset) == %{id: [error_msg]}
+    end
+
+    test "sends workflow updated event", %{
+      project: %{id: project_id} = project,
+      user: user
+    } do
+      %{body: body, workflow_id: workflow_id} = valid_document(project.id)
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, %{project_id: ^project_id} ->
+          :ok
+        end
+      )
+
+      Lightning.Workflows.subscribe(project.id)
+
+      assert {:ok, _project} =
+               Provisioner.import_document(project, user, body)
+
+      assert_received %Lightning.Workflows.Events.WorkflowUpdated{
+        workflow: %{id: ^workflow_id}
+      }
     end
   end
 

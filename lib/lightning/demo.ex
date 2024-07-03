@@ -11,23 +11,27 @@ defmodule Lightning.Demo do
   Kubernetes-deployed systems.
   """
   def reset_demo do
-    Lightning.Release.load_app()
+    if Application.get_env(:lightning, :is_resettable_demo) do
+      Lightning.Release.load_app()
 
-    children =
-      [
-        {Phoenix.PubSub,
-         name: Lightning.PubSub, adapter: Lightning.Demo.FakePubSub},
-        {Lightning.Vault, Application.get_env(:lightning, Lightning.Vault, [])}
-      ]
-      |> Enum.reject(fn {mod, _} -> Process.whereis(mod) end)
+      children =
+        [
+          {Phoenix.PubSub,
+           name: Lightning.PubSub, adapter: Lightning.Demo.FakePubSub},
+          {Lightning.Vault, Application.get_env(:lightning, Lightning.Vault, [])}
+        ]
+        |> Enum.reject(fn {mod, _} -> Process.whereis(mod) end)
 
-    Supervisor.start_link(children, strategy: :one_for_one)
+      Supervisor.start_link(children, strategy: :one_for_one)
 
-    {:ok, _, _} =
-      Ecto.Migrator.with_repo(Lightning.Repo, fn _repo ->
-        SetupUtils.tear_down(destroy_super: true)
-        SetupUtils.setup_demo(create_super: true)
-      end)
+      {:ok, _, _} =
+        Ecto.Migrator.with_repo(Lightning.Repo, fn _repo ->
+          SetupUtils.tear_down(destroy_super: true)
+          SetupUtils.setup_demo(create_super: true)
+        end)
+    else
+      IO.puts("I'm sorry, Dave. I'm afraid I can't do that.")
+    end
   end
 
   defmodule FakePubSub do

@@ -9,10 +9,7 @@ defmodule LightningWeb.UserConfirmationController do
 
   def create(conn, %{"user" => %{"email" => email}}) do
     if user = Accounts.get_user_by_email(email) do
-      Accounts.deliver_user_confirmation_instructions(
-        user,
-        &Routes.user_confirmation_url(conn, :edit, &1)
-      )
+      Accounts.deliver_user_confirmation_instructions(user)
     end
 
     conn

@@ -2,11 +2,10 @@ defmodule Lightning.Credentials.Credential do
   @moduledoc """
   The Credential model.
   """
-  use Ecto.Schema
-
-  import Ecto.Changeset
+  use Lightning.Schema
 
   alias Lightning.Accounts.User
+  alias Lightning.Credentials.OauthClient
   alias Lightning.Projects.ProjectCredential
 
   @type t :: %__MODULE__{
@@ -15,8 +14,6 @@ defmodule Lightning.Credentials.Credential do
           body: nil | %{}
         }
 
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
   schema "credentials" do
     field :name, :string
     field :body, Lightning.Encrypted.Map, redact: true
@@ -25,11 +22,12 @@ defmodule Lightning.Credentials.Credential do
     field :scheduled_deletion, :utc_datetime
 
     belongs_to :user, User
+    belongs_to :oauth_client, OauthClient
 
     has_many :project_credentials, ProjectCredential
     has_many :projects, through: [:project_credentials, :project]
 
-    timestamps(type: :utc_datetime)
+    timestamps()
   end
 
   @doc false
@@ -40,12 +38,14 @@ defmodule Lightning.Credentials.Credential do
       :body,
       :production,
       :user_id,
+      :oauth_client_id,
       :schema,
       :scheduled_deletion
     ])
     |> cast_assoc(:project_credentials)
     |> validate_required([:name, :body, :user_id])
     |> assoc_constraint(:user)
+    |> assoc_constraint(:oauth_client)
     |> validate_transfer_ownership()
   end
 

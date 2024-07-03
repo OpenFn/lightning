@@ -1,8 +1,9 @@
 import React, { memo } from 'react';
 import { Handle, NodeProps } from 'reactflow';
+
 import Shape from '../components/Shape';
+import ErrorMessage from '../components/ErrorMessage';
 import { nodeIconStyles, nodeLabelStyles } from '../styles';
-import { ExclamationCircleIcon } from '@heroicons/react/24/outline';
 
 type NodeData = any;
 
@@ -16,10 +17,6 @@ type BaseNodeProps = NodeProps<NodeData> & {
   errors?: any;
 };
 
-type ErrorMessageProps = {
-  message?: string;
-};
-
 type ErrorObject = {
   [key: string]: string[];
 };
@@ -30,7 +27,7 @@ type LabelProps = React.PropsWithChildren<{
 
 function errorsMessage(errors: ErrorObject): string {
   const messages = Object.entries(errors).map(([key, errorArray]) => {
-    return `${key} ${errorArray.join(', ')}`;
+    return `${errorArray.join(', ')}`;
   });
 
   return messages.join(', ');
@@ -57,18 +54,6 @@ const Label: React.FC<LabelProps> = ({ children, hasErrors = false }) => {
   return null;
 };
 
-const ErrorMessage: React.FC<ErrorMessageProps> = ({ message }) => {
-  if (message && message.length) {
-    return (
-      <p className="line-clamp-2 align-left text-xs text-red-500 flex items-center">
-        <ExclamationCircleIcon className="mr-1 w-5" />
-        {message}
-      </p>
-    );
-  }
-  return null;
-};
-
 const SubLabel = ({ children }: React.PropsWithChildren) => {
   if (children && (children as any).length) {
     return (
@@ -81,11 +66,13 @@ const SubLabel = ({ children }: React.PropsWithChildren) => {
 };
 
 const Node = ({
+  id,
   // standard  react flow stuff
   isConnectable,
   selected,
   targetPosition,
   sourcePosition,
+  data,
 
   // custom stuff
   toolbar,
@@ -102,24 +89,63 @@ const Node = ({
     hasErrors(errors)
   );
 
+  const nodeOpacity = data.dropTargetError ? 0.4 : 1;
+
   return (
     <div className="group">
       <div className="flex flex-row cursor-pointer">
         <div>
           {targetPosition && (
-            <Handle
-              type="target"
-              isConnectable={isConnectable}
-              position={targetPosition}
-              style={{
-                visibility: 'hidden',
-                height: 0,
-                top: 0,
-                left: strokeWidth + anchorx,
-              }}
-            />
+            <>
+              {/*
+                This is the standard handle for existing connections
+                Setting the id ensures that edges will connect here
+              */}
+              <Handle
+                id={id}
+                type="target"
+                isConnectable={false}
+                position={targetPosition}
+                style={{
+                  visibility: 'hidden',
+                  height: 0,
+                  top: 0,
+                  left: strokeWidth + anchorx,
+                }}
+              />
+
+              {/* This is the fancy, oversized drop handle */}
+              <Handle
+                type="target"
+                isConnectable={isConnectable}
+                // handles have a built-in way of updating styles when connecting - is this better?
+                // See https://reactflow.dev/examples/interaction/validation
+                style={{
+                  visibility: data.isValidDropTarget ? 'visible' : 'hidden',
+
+                  // abuse the handle style to make the whole node the drop target
+                  left: '52px',
+                  top: '-12px',
+                  width: '128px',
+                  height: '128px',
+                  backgroundColor: data.isActiveDropTarget
+                    ? 'rgba(79, 70, 229, 0.2)'
+                    : 'transparent',
+                  borderColor: 'rgb(79, 70, 229)',
+                  borderWidth: '4px',
+                  borderStyle: data.isActiveDropTarget ? 'solid' : 'dashed',
+                  borderRadius: '20%',
+                }}
+              />
+            </>
           )}
-          <svg style={{ maxWidth: '110px', maxHeight: '110px' }}>
+          <svg
+            style={{
+              maxWidth: '110px',
+              maxHeight: '110px',
+              opacity: nodeOpacity,
+            }}
+          >
             <Shape
               shape={shape}
               width={width}
@@ -138,6 +164,7 @@ const Node = ({
                 height: `${0.65 * height}px`,
                 width: `${0.65 * width}px`,
                 ...nodeLabelStyles(selected),
+                opacity: nodeOpacity,
               }}
             >
               {typeof primaryIcon === 'string' ? (
@@ -184,6 +211,7 @@ const Node = ({
             </div>
           )}
         </div>
+        {/* TODO the drag source should ideally be in the centre and behind the node */}
         {sourcePosition && (
           <Handle
             type="source"
@@ -197,14 +225,16 @@ const Node = ({
             }}
           />
         )}
-        <div className="flex flex-col flex-1 justify-center ml-2">
+        <div className="flex flex-col flex-1 ml-2 mt-8">
           <Label hasErrors={hasErrors(errors)}>{label}</Label>
-          {hasErrors(errors) && (
-            <ErrorMessage
-              message={errorsMessage(errors) || 'An error occurred'}
-            />
-          )}
           <SubLabel>{sublabel}</SubLabel>
+          {data.isActiveDropTarget &&
+            typeof data.dropTargetError === 'string' && (
+              <ErrorMessage>{data.dropTargetError}</ErrorMessage>
+            )}
+          {hasErrors(errors) && (
+            <ErrorMessage>{errorsMessage(errors)}</ErrorMessage>
+          )}
         </div>
       </div>
       {toolbar && (
@@ -212,11 +242,15 @@ const Node = ({
           style={{
             width: `${width}px`,
             marginLeft: '2px',
-            marginTop: '-14px',
+            marginTop: '-18px',
+            justifyContent: 'center',
           }}
-          className="flex flex-col items-center
-                    opacity-0  group-hover:opacity-100
-                    transition duration-150 ease-in-out"
+          className={`flex flex-row items-center
+                    opacity-0  ${
+                      (!data.isActiveDropTarget && 'group-hover:opacity-100') ??
+                      ''
+                    }
+                    transition duration-150 ease-in-out`}
         >
           {toolbar()}
         </div>

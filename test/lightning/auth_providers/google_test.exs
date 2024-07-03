@@ -4,26 +4,31 @@ defmodule Lightning.AuthProviders.GoogleTest do
 
   alias Lightning.AuthProviders.Common
 
+  setup _ do
+    Mox.stub_with(Lightning.Tesla.Mock, Tesla.Adapter.Hackney)
+    :ok
+  end
+
   describe "get_wellknown/0" do
     setup do
       bypass = Bypass.open()
 
-      Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
-        google: [
-          wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known"
-        ]
-      )
+      wellknown_url = "http://localhost:#{bypass.port}/auth/.well-known"
 
       expect_wellknown(bypass)
 
-      {:ok, bypass: bypass, endpoint_url: "http://localhost:#{bypass.port}"}
+      {:ok,
+       bypass: bypass,
+       endpoint_url: "http://localhost:#{bypass.port}",
+       wellknown_url: wellknown_url}
     end
 
     test "pulls the .well-known from the path specified in the Application", %{
-      bypass: bypass
+      bypass: bypass,
+      wellknown_url: wellknown_url
     } do
       assert {:ok, %Lightning.AuthProviders.WellKnown{} = wellknown} =
-               Common.get_wellknown(:google)
+               Common.get_wellknown(wellknown_url)
 
       assert wellknown.authorization_endpoint ==
                "#{endpoint_url(bypass)}/authorization_endpoint"
@@ -49,22 +54,6 @@ defmodule Lightning.AuthProviders.GoogleTest do
       assert Map.get(result, :access_token) == "ya29.a0AWY7CknfkidjXaoDTuNi"
       assert Map.get(result, :expires_at) == 4_786_203
       assert Map.get(result, :refresh_token) == "1//03dATMQTmE5NSCgYIARAAGAMSNwF"
-    end
-  end
-
-  describe "refresh_token" do
-    setup do
-      bypass = Bypass.open()
-
-      Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
-        google: [
-          wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known"
-        ]
-      )
-
-      expect_wellknown(bypass)
-
-      {:ok, bypass: bypass, endpoint_url: "http://localhost:#{bypass.port}"}
     end
   end
 end

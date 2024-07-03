@@ -1,18 +1,21 @@
 defmodule Lightning.RunsTest do
-  use Lightning.DataCase
+  use Lightning.DataCase, async: true
 
   import Lightning.Factories
-  import Mock
   import Ecto.Query
 
-  alias Lightning.WorkOrders
+  alias Ecto.Multi
+
+  alias Lightning.Invocation
   alias Lightning.Run
   alias Lightning.Runs
-  alias Lightning.Invocation
+  alias Lightning.WorkOrders
+  alias Lightning.Workflows
 
   describe "enqueue/1" do
     test "enqueues a run" do
       dataclip = insert(:dataclip)
+
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
 
       work_order =
@@ -29,7 +32,8 @@ defmodule Lightning.RunsTest do
           dataclip: dataclip
         )
 
-      assert {:ok, queued_run} = Runs.enqueue(run)
+      assert {:ok, %{run: queued_run}} =
+               Multi.new() |> Multi.insert(:run, run) |> Runs.enqueue()
 
       assert queued_run.id == run.id
       assert queued_run.state == :available
@@ -106,14 +110,18 @@ defmodule Lightning.RunsTest do
 
       runs =
         Map.new(1..4, fn i ->
-          build(:run,
-            work_order: work_order,
-            starting_trigger: trigger,
-            dataclip: dataclip,
-            priority: :immediate
-          )
+          run =
+            build(:run,
+              work_order: work_order,
+              starting_trigger: trigger,
+              dataclip: dataclip,
+              priority: :immediate
+            )
+
+          Multi.new()
+          |> Multi.insert(:run, run)
           |> Runs.enqueue()
-          |> then(fn {:ok, run} -> {i, run} end)
+          |> then(fn {:ok, %{run: run}} -> {i, run} end)
         end)
 
       assert {:ok, [claimed_1, claimed_2]} = Runs.claim(2)
@@ -170,8 +178,7 @@ defmodule Lightning.RunsTest do
         |> insert()
 
       {:error, changeset} =
-        Runs.start_step(%{
-          "run_id" => run.id,
+        Runs.start_step(run, %{
           "job_id" => Ecto.UUID.generate(),
           "input_dataclip_id" => dataclip.id,
           "step_id" => Ecto.UUID.generate()
@@ -182,8 +189,7 @@ defmodule Lightning.RunsTest do
 
       # both run_id and job_id doesn't exist
       {:error, changeset} =
-        Runs.start_step(%{
-          "run_id" => Ecto.UUID.generate(),
+        Runs.start_step(build(:run, snapshot_id: Ecto.UUID.generate()), %{
           "job_id" => Ecto.UUID.generate(),
           "input_dataclip_id" => dataclip.id,
           "step_id" => Ecto.UUID.generate()
@@ -195,14 +201,14 @@ defmodule Lightning.RunsTest do
       Lightning.WorkOrders.subscribe(workflow.project_id)
 
       {:ok, step} =
-        Runs.start_step(%{
-          "run_id" => run.id,
+        Runs.start_step(run, %{
           "job_id" => job.id,
           "input_dataclip_id" => dataclip.id,
           "step_id" => _step_id = Ecto.UUID.generate()
         })
 
-      assert step.started_at, "The step has been marked as started"
+      assert step.started_at, "The step should be marked as started"
+      assert step.snapshot_id == run.snapshot_id
 
       assert Repo.get_by(Lightning.RunStep, step_id: step.id),
              "There is a corresponding RunStep linking it to the run"
@@ -212,6 +218,42 @@ defmodule Lightning.RunsTest do
       assert_received %Lightning.WorkOrders.Events.RunUpdated{
         run: %{id: ^run_id}
       }
+    end
+
+    test "should not allow referencing job that is not on the snapshot" do
+      dataclip = insert(:dataclip)
+
+      %{triggers: [trigger], jobs: [old_job]} =
+        workflow = insert(:simple_workflow)
+
+      %{runs: [run_1]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      # Change the workflow to replace the job with another, and save it
+      # creating a new snapshot.
+      {:ok, %{jobs: [new_job]}} =
+        Workflows.change_workflow(workflow, %{jobs: [params_for(:job)]})
+        |> Workflows.save_workflow()
+
+      {:error, changeset} =
+        Runs.start_step(run_1, %{
+          "job_id" => new_job.id,
+          "input_dataclip_id" => dataclip.id,
+          "step_id" => Ecto.UUID.generate()
+        })
+
+      assert {:job_id, {"does not exist", []}} in changeset.errors
+
+      {:ok, step} =
+        Runs.start_step(run_1, %{
+          "job_id" => old_job.id,
+          "input_dataclip_id" => dataclip.id,
+          "step_id" => Ecto.UUID.generate()
+        })
+
+      assert step.job_id == old_job.id
+      assert step.snapshot_id == run_1.snapshot_id
     end
   end
 
@@ -245,13 +287,23 @@ defmodule Lightning.RunsTest do
       assert step.output_dataclip.body == %{"foo" => "bar"}
     end
 
-    test "wipes the dataclip if erase_all retention policy is specified" do
-      dataclip = insert(:dataclip)
+    test "wipes the dataclip if erase_all retention policy is specified at the project level when the run is created" do
       %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)
+
+      dataclip = insert(:dataclip, project: workflow.project)
+
+      Repo.get(Lightning.Projects.Project, workflow.project_id)
+      |> Ecto.Changeset.change(retention_policy: :erase_all)
+      |> Repo.update()
 
       %{runs: [run]} =
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
+
+      assert %Lightning.Runs.RunOptions{
+               save_dataclips: false,
+               run_timeout_ms: 300_000
+             } = run.options
 
       step =
         insert(:step, runs: [run], job: job, input_dataclip: dataclip)
@@ -266,7 +318,7 @@ defmodule Lightning.RunsTest do
             run_id: run.id,
             project_id: workflow.project_id
           },
-          :erase_all
+          run.options
         )
 
       step =
@@ -317,7 +369,7 @@ defmodule Lightning.RunsTest do
     end
   end
 
-  describe "get_input" do
+  describe "get_input/1" do
     setup context do
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
 
@@ -352,6 +404,107 @@ defmodule Lightning.RunsTest do
     end
   end
 
+  describe "get/2" do
+    setup context do
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      dataclip =
+        case context.dataclip_type do
+          :http_request ->
+            insert(:http_request_dataclip)
+
+          :step_result ->
+            insert(:dataclip,
+              body: %{"i'm" => ["a", "dataclip"]},
+              type: :step_result
+            )
+        end
+
+      %{runs: [run]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      %{run: run}
+    end
+
+    @tag dataclip_type: :http_request
+    test "retrieves a run with a snapshot", %{run: run} do
+      assert %{snapshot: %Lightning.Workflows.Snapshot{}} =
+               Runs.get(run.id, include: [:snapshot])
+    end
+  end
+
+  describe "get_for_worker/1" do
+    setup do
+      trigger =
+        build(:trigger,
+          type: :webhook,
+          enabled: true
+        )
+
+      job =
+        build(:job,
+          body: ~s[fn(state => { return {...state, extra: "data"} })],
+          project_credential: build(:project_credential)
+        )
+
+      %{triggers: [trigger]} =
+        workflow =
+        build(:workflow)
+        |> with_trigger(trigger)
+        |> with_job(job)
+        |> with_edge({trigger, job}, condition_type: :always)
+        |> insert()
+
+      dataclip = insert(:dataclip)
+
+      %{trigger: trigger, workflow: workflow, dataclip: dataclip}
+    end
+
+    test "retrieves a run with a snapshot and credential", %{
+      trigger: trigger,
+      workflow: workflow,
+      dataclip: dataclip
+    } do
+      %{runs: [run]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      run = Runs.get_for_worker(run.id)
+      refute is_struct(run.snapshot, Ecto.Association.NotLoaded)
+
+      assert run.snapshot.jobs
+             |> List.first()
+             |> Map.get(:credential)
+    end
+
+    test "builds a snapshot for runs that don't have one", %{
+      workflow: workflow,
+      dataclip: dataclip,
+      trigger: trigger
+    } do
+      # While snapshots are being introduced, we need to ensure that
+      # runs have a snapshot associated with them.
+      # Here we intentionally create a run _without_ a snapshot.
+      run =
+        insert(:run,
+          work_order:
+            build(:workorder,
+              workflow: workflow,
+              dataclip: dataclip,
+              trigger: trigger
+            ),
+          starting_trigger: trigger,
+          dataclip: dataclip
+        )
+
+      run = Runs.get_for_worker(run.id)
+
+      assert run.snapshot_id
+      refute is_struct(run.snapshot, Ecto.Association.NotLoaded)
+    end
+  end
+
   describe "start_run/1" do
     setup do
       dataclip = insert(:dataclip)
@@ -382,15 +535,6 @@ defmodule Lightning.RunsTest do
       }
     end
 
-    test "indicates if a response was unsuccessful", %{run: run} do
-      with_mock(
-        Lightning.Repo,
-        transaction: fn _multi -> {:error, nil, %Ecto.Changeset{}, nil} end
-      ) do
-        assert Runs.start_run(run) == {:error, %Ecto.Changeset{}}
-      end
-    end
-
     test "triggers a metric if starting the run was successful",
          %{run: run} do
       ref =
@@ -412,29 +556,6 @@ defmodule Lightning.RunsTest do
         [:domain, :run, :queue],
         ^ref,
         %{delay: ^delay},
-        %{}
-      }
-    end
-
-    test "does not trigger a metric if starting the run was unsuccessful",
-         %{run: run} do
-      ref =
-        :telemetry_test.attach_event_handlers(
-          self(),
-          [[:domain, :run, :queue]]
-        )
-
-      with_mock(
-        Lightning.Repo,
-        transaction: fn _multi -> {:error, nil, nil, nil} end
-      ) do
-        Runs.start_run(run)
-      end
-
-      refute_received {
-        [:domain, :run, :queue],
-        ^ref,
-        %{delay: _delay},
         %{}
       }
     end
@@ -712,14 +833,16 @@ defmodule Lightning.RunsTest do
       refute dataclip.wiped_at
 
       :ok = Runs.wipe_dataclips(run)
+      wiped_at = DateTime.utc_now() |> DateTime.truncate(:second)
 
       # dataclip body is cleared
       query = from(Invocation.Dataclip, select: [:wiped_at, :body, :request])
 
       updated_dataclip = Lightning.Repo.get(query, dataclip.id)
 
-      assert updated_dataclip.wiped_at ==
-               DateTime.utc_now() |> DateTime.truncate(:second)
+      assert updated_dataclip.wiped_at == wiped_at or
+               1 ==
+                 abs(DateTime.diff(updated_dataclip.wiped_at, wiped_at, :second))
 
       refute updated_dataclip.body
       refute updated_dataclip.request

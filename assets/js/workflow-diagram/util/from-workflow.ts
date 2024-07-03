@@ -20,7 +20,7 @@ function getEdgeLabel(edge: Lightning.Edge) {
       if (condition_label) {
         if (condition_label.length > 16) {
           label = condition_label.slice(0, 16) + '...';
-        } else {  
+        } else {
           label = condition_label;
         }
       }
@@ -85,7 +85,12 @@ const fromWorkflow = (
           width: 32,
           height: 32,
         };
-        model.data = { condition_type: edge.condition_type, enabled: edge.enabled };
+        model.data = {
+          condition_type: edge.condition_type,
+          // TODO something is up here - ?? true is a hack
+          // without it, new edges are marked as disabled
+          enabled: edge.enabled ?? true,
+        };
 
         // Note: we don't allow the user to disable the edge that goes from a
         // trigger to a job, but we want to show it as if it were disabled when

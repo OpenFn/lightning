@@ -19,19 +19,37 @@ defmodule LightningWeb.API.ProvisioningController do
            Permissions.can(
              Provisioning,
              :provision_project,
-             conn.assigns.current_user,
+             conn.assigns.current_resource,
              project
-           ),
-         {:ok, project} <-
-           Provisioner.import_document(
+           ) do
+      case Provisioner.import_document(
              project,
-             conn.assigns.current_user,
+             conn.assigns.current_resource,
              params
            ) do
-      conn
-      |> put_status(:created)
-      |> put_resp_header("location", ~p"/api/provision/#{project.id}")
-      |> render("create.json", project: project)
+        {:ok, project} ->
+          conn
+          |> put_status(:created)
+          |> put_resp_header("location", ~p"/api/provision/#{project.id}")
+          |> render("create.json", project: project)
+
+        {:error, %Ecto.Changeset{} = changeset} ->
+          conn
+          |> put_status(:unprocessable_entity)
+          |> render("error.json", changeset: changeset)
+
+        {:error, error} ->
+          conn
+          |> put_status(:forbidden)
+          |> put_view(LightningWeb.ErrorView)
+          |> render(:"403",
+            error:
+              case error do
+                %Lightning.Extensions.Message{text: text} -> text
+                _ -> error
+              end
+          )
+      end
     end
   end
 
@@ -41,14 +59,15 @@ defmodule LightningWeb.API.ProvisioningController do
   """
   def show(conn, params) do
     with project = %Project{} <-
-           Provisioner.load_project(params["id"]) || {:error, :not_found},
+           Projects.get_project(params["id"]) || {:error, :not_found},
          :ok <-
            Permissions.can(
              Provisioning,
              :describe_project,
-             conn.assigns.current_user,
+             conn.assigns.current_resource,
              project
-           ) do
+           ),
+         project <- Provisioner.preload_dependencies(project) do
       conn
       |> put_status(:ok)
       |> render("create.json", project: project)
@@ -61,12 +80,12 @@ defmodule LightningWeb.API.ProvisioningController do
   """
   def show_yaml(conn, %{"id" => id}) do
     with %Projects.Project{} = project <-
-           Lightning.Projects.get_project(id) || {:error, :not_found},
+           Projects.get_project(id) || {:error, :not_found},
          :ok <-
            Permissions.can(
              Provisioning,
              :describe_project,
-             conn.assigns.current_user,
+             conn.assigns.current_resource,
              project
            ) do
       {:ok, yaml} = Projects.export_project(:yaml, id)

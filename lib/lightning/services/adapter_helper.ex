@@ -4,14 +4,22 @@ defmodule Lightning.Services.AdapterHelper do
   """
 
   def adapter(extension_key) do
-    with nil <- :persistent_term.get({__MODULE__, extension_key}, nil) do
-      :lightning
-      |> Application.fetch_env!(Lightning.Extensions)
-      |> Enum.each(fn {key, module_name} ->
-        :persistent_term.put({__MODULE__, key}, module_name)
-      end)
+    case :persistent_term.get({__MODULE__, extension_key}, nil) do
+      nil ->
+        :lightning
+        |> Application.get_env(Lightning.Extensions, [])
+        |> Keyword.get(extension_key, :not_found)
+        |> case do
+          :not_found ->
+            nil
 
-      :persistent_term.get({__MODULE__, extension_key})
+          value ->
+            :persistent_term.put({__MODULE__, extension_key}, value)
+            value
+        end
+
+      value ->
+        value
     end
   end
 end

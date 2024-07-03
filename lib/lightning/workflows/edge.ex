@@ -8,8 +8,7 @@ defmodule Lightning.Workflows.Edge do
   The source of the edge is either a job or a trigger.
   The target of the edge is always a job.
   """
-  use Ecto.Schema
-  import Ecto.Changeset
+  use Lightning.Schema
   import Lightning.Validators
 
   alias Lightning.Workflows.Job
@@ -31,8 +30,6 @@ defmodule Lightning.Workflows.Edge do
         }
 
   @conditions [:on_job_success, :on_job_failure, :always, :js_expression]
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
   schema "workflow_edges" do
     belongs_to :workflow, Workflow
     belongs_to :source_job, Job
@@ -80,6 +77,7 @@ defmodule Lightning.Workflows.Edge do
     |> validate_required([:condition_type])
     |> validate_node_in_same_workflow()
     |> foreign_key_constraint(:workflow_id)
+    |> validate_has_source()
     |> validate_exclusive(
       [:source_job_id, :source_trigger_id],
       "source_job_id and source_trigger_id are mutually exclusive"
@@ -87,6 +85,19 @@ defmodule Lightning.Workflows.Edge do
     |> validate_source_condition()
     |> validate_js_condition()
     |> validate_different_nodes()
+  end
+
+  defp validate_has_source(changeset) do
+    if get_field(changeset, :source_trigger_id) != nil or
+         get_field(changeset, :source_job_id) != nil do
+      changeset
+    else
+      add_error(
+        changeset,
+        :source_job_id,
+        "source_job_id or source_trigger_id must be present"
+      )
+    end
   end
 
   defp validate_source_condition(changeset) do

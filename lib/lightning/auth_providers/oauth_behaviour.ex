@@ -6,13 +6,28 @@ defmodule Lightning.AuthProviders.OAuthBehaviour do
   authentication providers (e.g., Google, Salesforce)
   by defining a set of required functions that each provider must implement.
   """
-  @callback get_token(client :: map(), params :: map()) ::
+  @callback get_token(
+              client :: map(),
+              wellknown_url :: String.t() | nil,
+              params :: map()
+            ) ::
               {:ok, map()} | {:error, map()}
-  @callback refresh_token(client :: map(), token :: map()) ::
+  @callback refresh_token(
+              client :: map(),
+              token :: map(),
+              wellknown_url :: String.t() | nil
+            ) ::
               {:ok, map()} | {:error, map()}
-  @callback refresh_token(token :: map()) ::
+  @callback refresh_token(
+              token :: map(),
+              wellknown_url :: String.t() | nil
+            ) ::
               {:ok, map()} | {:error, map()}
-  @callback get_userinfo(client :: map(), token :: map()) ::
+  @callback get_userinfo(
+              client :: map(),
+              token :: map(),
+              wellknown_url :: String.t()
+            ) ::
               {:ok, map()} | {:error, map()}
   @callback build_client(opts :: Keyword.t()) ::
               {:ok, map()} | {:error, :invalid_config}

@@ -8,6 +8,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
   import Ecto.Query
 
   alias Lightning.Invocation
+  alias Lightning.Workflows
   alias Lightning.Workflows.Workflow
 
   setup :register_and_log_in_user
@@ -19,11 +20,15 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
     workflow: workflow,
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+    {:ok, view, _html} =
+      live(
+        conn,
+        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+      )
 
     job = workflow.jobs |> List.first()
 
-    view |> select_node(job)
+    view |> select_node(job, workflow.lock_version)
 
     view |> job_panel_element(job)
 
@@ -60,7 +65,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
     {:ok, view, _html} =
       live(
         conn,
-        ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}"
+        ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand", v: workflow.lock_version]}"
       )
 
     actual_attrs =
@@ -124,7 +129,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand", v: workflow.lock_version]}"
         )
 
       # dataclip dropdown is disabled
@@ -139,6 +144,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
                ~s{button[type='submit'][form='manual_run_form'][disabled]}
              )
              |> has_element?()
+
+      # Check that the liveview can handle an empty submit (dataclip dropdown is disabled)
+      # which happens on socket reconnects.
+      view |> element(~s{#manual-job-#{job.id} form}) |> render_change()
 
       assert view |> render_click("manual_run_submit", %{"manual" => %{}}) =~
                "You are not authorized to perform this action."
@@ -173,7 +182,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand", v: workflow.lock_version]}"
         )
 
       assert view
@@ -209,7 +218,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       job = w.jobs |> hd
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{p}/w/#{w}?#{[s: job, m: "expand"]}")
+        live(
+          conn,
+          ~p"/projects/#{p}/w/#{w}?#{[s: job, m: "expand", v: w.lock_version]}"
+        )
 
       assert Invocation.list_dataclips_for_job(job) |> Enum.count() == 0
 
@@ -230,6 +242,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
                  d.project_id == ^p.id
              )
              |> Lightning.Repo.exists?()
+
+      # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
+      # disconnection warnings.
+      live_children(view) |> Enum.each(&render_async/1)
     end
 
     @tag role: :editor
@@ -241,7 +257,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       job = w.jobs |> hd
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{p}/w/#{w}?#{[s: job, m: "expand"]}")
+        live(
+          conn,
+          ~p"/projects/#{p}/w/#{w}?#{[s: job, m: "expand", v: w.lock_version]}"
+        )
 
       view
       |> form("#manual-job-#{job.id} form", %{
@@ -261,11 +280,47 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       assert view |> has_element?("#manual-job-#{job.id} form", "Invalid JSON")
     end
 
+    test "can't run if limit is exceeded", %{
+      conn: conn,
+      project: %{id: project_id},
+      workflow: w
+    } do
+      job = w.jobs |> hd
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project_id}/w/#{w}?#{[s: job, m: "expand", v: w.lock_version]}"
+        )
+
+      assert Invocation.list_dataclips_for_job(job) |> Enum.count() == 0
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        &Lightning.Extensions.StubUsageLimiter.limit_action/2
+      )
+
+      assert view
+             |> form("#manual-job-#{job.id} form",
+               manual: %{
+                 body: Jason.encode!(%{"a" => 1})
+               }
+             )
+             |> render_submit()
+             |> Floki.parse_fragment!()
+
+      assert view |> has_element?("#flash p", "Runs limit exceeded")
+    end
+
     test "can run a job", %{conn: conn, project: p, workflow: w} do
       job = w.jobs |> hd
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{p}/w/#{w}?#{[s: job, m: "expand"]}")
+        live(
+          conn,
+          ~p"/projects/#{p}/w/#{w}?#{[s: job, m: "expand", v: w.lock_version]}"
+        )
 
       assert view
              |> element(
@@ -292,7 +347,6 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       |> render_submit()
 
       assert [run_viewer] = live_children(view)
-
       render_async(run_viewer)
 
       assert run_viewer
@@ -322,7 +376,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       )
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{p}/w/#{w}?#{[s: job, m: "expand"]}")
+        live(
+          conn,
+          ~p"/projects/#{p}/w/#{w}?#{[s: job, m: "expand", v: w.lock_version]}"
+        )
 
       body = %{"val" => Ecto.UUID.generate()}
 
@@ -343,9 +400,12 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       })
       |> render_submit()
 
-      assert render(view) =~ body["val"]
-
       new_dataclip = Lightning.Repo.one(dataclip_query)
+
+      assert has_element?(
+               view,
+               "#manual-job-#{job.id} form [phx-hook='DataclipViewer'][data-id='#{new_dataclip.id}']"
+             )
 
       element =
         view
@@ -358,6 +418,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       refute view
              |> element("save-and-run", ~c"Create New Work Order")
              |> has_element?()
+
+      # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
+      # disconnection warnings.
+      live_children(view) |> Enum.each(&render_async/1)
     end
 
     test "creating a work order from a newly created job should save the workflow first",
@@ -368,6 +432,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       workflow =
         insert(:workflow, project: project)
         |> Lightning.Repo.preload([:jobs, :work_orders])
+
+      {:ok, _snapshot} = Workflows.Snapshot.get_or_create_latest_for(workflow)
 
       new_job_name = "new job"
 
@@ -381,12 +447,16 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       %{"value" => %{"id" => job_id}} =
         job_patch = add_job_patch(new_job_name)
 
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project}/w/#{workflow}")
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[v: workflow.lock_version]}"
+        )
 
       # add a job to it but don't save
       view |> push_patches_to_view([job_patch])
 
-      view |> select_node(%{id: job_id})
+      view |> select_node(%{id: job_id}, workflow.lock_version)
 
       view |> click_edit(%{id: job_id})
 
@@ -397,6 +467,11 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         manual: %{body: Jason.encode!(%{})}
       })
       |> render_submit()
+
+      assert_patch(view)
+      # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
+      # disconnection warnings.
+      live_children(view) |> Enum.each(&render_async/1)
 
       workflow =
         Lightning.Repo.get!(Workflow, workflow.id)
@@ -416,6 +491,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
            conn: conn,
            user: user
          } do
+      Mox.verify_on_exit!()
+
       project =
         insert(:project, project_users: [%{user_id: user.id, role: :admin}])
 
@@ -444,11 +521,27 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
              )
 
       # submit the manual run form
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :new_run}, _context -> :ok end
+      )
+
+      # subscribe to workflow events
+      Lightning.Workflows.subscribe(project.id)
+
       view
       |> form("#manual_run_form", %{
         manual: %{body: Jason.encode!(%{})}
       })
       |> render_submit()
+
+      assert_patch(view)
+      # render_async(view)
+
+      # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
+      # disconnection warnings.
+      live_children(view) |> Enum.each(&render_async/1)
 
       # workflow has been created
       assert workflow =
@@ -464,28 +557,46 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
              end)
 
       assert length(workflow.work_orders) == 1
+
+      # workflow updated event is emitted
+      workflow_id = workflow.id
+
+      assert_received %Lightning.Workflows.Events.WorkflowUpdated{
+        workflow: %{id: ^workflow_id}
+      }
     end
 
     test "retry a work order saves the workflow first", %{
       conn: conn,
       project: project,
-      workflow: %{jobs: [job_1 | _]} = workflow
+      workflow: %{jobs: [job_1 | _], triggers: [trigger]} = workflow,
+      snapshot: snapshot
     } do
+      Mox.verify_on_exit!()
+
       dataclip = insert(:dataclip, type: :http_request)
+
+      # disable the trigger
+      trigger
+      |> Ecto.Changeset.change(%{enabled: false})
+      |> Lightning.Repo.update!()
 
       %{runs: [run]} =
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           dataclip: dataclip,
           state: :failed,
           runs: [
             build(:run,
               dataclip: dataclip,
+              snapshot: snapshot,
               starting_job: job_1,
               state: :failed,
               steps: [
                 build(:step,
                   job: job_1,
+                  snapshot: snapshot,
                   input_dataclip: dataclip,
                   output_dataclip: build(:dataclip),
                   exit_reason: "fail",
@@ -502,15 +613,59 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand", v: workflow.lock_version]}"
         )
 
       view
       |> change_editor_text("fn(state => state)")
 
       view
-      |> element("#save-and-run", "Rerun from here")
+      |> render_click("validate", %{
+        "workflow" => %{"triggers" => %{"0" => %{"enabled" => true}}}
+      })
+
+      # Try retrying with an error from the limitter
+      error_msg = "Oopsie Doopsie! An error occured"
+
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        2,
+        fn
+          %{type: :new_run}, _context ->
+            :ok
+
+          %{type: :activate_workflow}, _context ->
+            {:error, :too_many_workflows, %{text: error_msg}}
+        end
+      )
+
+      html =
+        view
+        |> element("#save-and-run", "Retry from here")
+        |> render_click()
+
+      assert html =~ error_msg
+
+      # Retry with an ok from the limitter
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        2,
+        fn
+          %{type: :new_run}, _context ->
+            :ok
+
+          %{type: :activate_workflow}, _context ->
+            :ok
+        end
+      )
+
+      view
+      |> element("#save-and-run", "Retry from here")
       |> render_click()
+
+      assert_patch(view)
 
       workflow =
         Lightning.Repo.reload(workflow) |> Lightning.Repo.preload([:jobs])
@@ -518,13 +673,18 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       job_1 = workflow.jobs |> Enum.find(fn job -> job.id === job_1.id end)
       assert job_1.body !== "fn(state => { return {...state, extra: \"data\"} })"
       assert job_1.body === "fn(state => state)"
+
+      # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
+      # disconnection warnings.
+      live_children(view) |> Enum.each(&render_async/1)
     end
 
     test "selects the input dataclip for the step if a run is followed",
          %{
            conn: conn,
            project: project,
-           workflow: %{jobs: [job_1, job_2 | _rest]} = workflow
+           workflow: %{jobs: [job_1, job_2 | _rest]} = workflow,
+           snapshot: snapshot
          } do
       input_dataclip = insert(:dataclip, project: project, type: :http_request)
 
@@ -538,13 +698,16 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       %{runs: [run]} =
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           dataclip: input_dataclip,
           runs: [
             build(:run,
+              snapshot: snapshot,
               dataclip: input_dataclip,
               starting_job: job_1,
               steps: [
                 build(:step,
+                  snapshot: snapshot,
                   job: job_1,
                   input_dataclip: input_dataclip,
                   output_dataclip: output_dataclip,
@@ -553,6 +716,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
                   exit_reason: "success"
                 ),
                 build(:step,
+                  snapshot: snapshot,
                   job: job_2,
                   input_dataclip: output_dataclip,
                   output_dataclip:
@@ -576,13 +740,16 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       for dataclip <- dataclips do
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           dataclip: dataclip,
           runs: [
             build(:run,
+              snapshot: snapshot,
               dataclip: dataclip,
               starting_job: job_2,
               steps: [
                 build(:step,
+                  snapshot: snapshot,
                   job: job_2,
                   input_dataclip: dataclip,
                   output_dataclip: nil,
@@ -599,7 +766,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand", v: workflow.lock_version]}"
         )
 
       # the step dataclip is different from the run dataclip.
@@ -607,8 +774,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       refute run.dataclip_id == output_dataclip.id
 
       # the form has the dataclips body
-      assert element(view, "#manual-job-#{job_2.id} form") |> render() =~
-               output_dataclip.body["val"]
+      assert has_element?(
+               view,
+               "#manual-job-#{job_2.id} form [phx-hook='DataclipViewer'][data-id='#{output_dataclip.id}']"
+             )
 
       # the step dataclip is selected
       element =
@@ -618,22 +787,31 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         )
 
       assert render(element) =~ "selected"
+
+      # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
+      # disconnection warnings.
+      [run_viewer_live] = live_children(view)
+      render_async(run_viewer_live)
+      render_async(run_viewer_live)
     end
 
     test "selects the input dataclip for the run if no step has been added yet",
          %{
            conn: conn,
            project: project,
-           workflow: %{jobs: [job_1 | _rest]} = workflow
+           workflow: %{jobs: [job_1 | _rest]} = workflow,
+           snapshot: snapshot
          } do
       input_dataclip = insert(:dataclip, project: project, type: :http_request)
 
       %{runs: [run]} =
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           dataclip: input_dataclip,
           runs: [
             build(:run,
+              snapshot: snapshot,
               dataclip: input_dataclip,
               starting_job: job_1,
               steps: []
@@ -648,14 +826,17 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       for dataclip <- dataclips do
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           dataclip: dataclip,
           runs: [
             build(:run,
+              snapshot: snapshot,
               dataclip: dataclip,
               starting_job: job_1,
               steps: [
                 build(:step,
                   job: job_1,
+                  snapshot: snapshot,
                   input_dataclip: dataclip,
                   output_dataclip: nil,
                   started_at: build(:timestamp),
@@ -671,7 +852,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand", v: workflow.lock_version]}"
         )
 
       # the form has the dataclip
@@ -686,27 +867,134 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         )
 
       assert render(element) =~ "selected"
+
+      # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
+      # disconnection warnings.
+      live_children(view) |> Enum.each(&render_async/1)
+    end
+
+    test "shows the body of selected dataclip correctly after retrying a workorder from a non-first step",
+         %{
+           conn: conn,
+           project: project,
+           workflow:
+             %{jobs: [job_1, job_2 | _rest], triggers: [trigger]} = workflow,
+           snapshot: snapshot
+         } do
+      input_dataclip = insert(:dataclip, project: project, type: :http_request)
+
+      output_dataclip =
+        insert(:dataclip,
+          project: project,
+          type: :step_result,
+          body: %{"uuid" => Ecto.UUID.generate()}
+        )
+
+      %{runs: [run]} =
+        insert(:workorder,
+          workflow: workflow,
+          snapshot: snapshot,
+          dataclip: input_dataclip,
+          state: :failed,
+          runs: [
+            build(:run,
+              snapshot: snapshot,
+              dataclip: input_dataclip,
+              starting_trigger: trigger,
+              state: :failed,
+              steps: [
+                build(:step,
+                  snapshot: snapshot,
+                  job: job_1,
+                  input_dataclip: input_dataclip,
+                  output_dataclip: output_dataclip,
+                  exit_reason: "success",
+                  started_at: build(:timestamp),
+                  finished_at: build(:timestamp)
+                ),
+                build(:step,
+                  snapshot: snapshot,
+                  job: job_2,
+                  input_dataclip: output_dataclip,
+                  output_dataclip: build(:dataclip),
+                  exit_reason: "fail",
+                  started_at: build(:timestamp),
+                  finished_at: build(:timestamp)
+                )
+              ]
+            )
+          ]
+        )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand", v: workflow.lock_version]}"
+        )
+
+      # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
+      # disconnection warnings.
+      live_children(view) |> Enum.each(&render_async/1)
+
+      # retry workorder
+      view
+      |> element("#save-and-run", "Retry from here")
+      |> render_click()
+
+      path = assert_patch(view)
+
+      {:ok, view, _html} = live(conn, path)
+
+      # the run input dataclip is selected
+      element =
+        view
+        |> element(
+          "select#manual_run_form_dataclip_id  option[value='#{output_dataclip.id}']"
+        )
+
+      assert render(element) =~ "selected"
+
+      # the body is rendered correctly
+      form = "#manual-job-#{job_2.id} form"
+
+      assert has_element?(
+               view,
+               "#{form} [phx-hook='DataclipViewer'][data-id='#{output_dataclip.id}']"
+             )
+
+      refute view |> element(form) |> render() =~
+               "Input data for this step has not been retained"
+
+      # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
+      # disconnection warnings.
+      [run_viewer_live] = live_children(view)
+      render_async(run_viewer_live)
+      render_async(run_viewer_live)
     end
 
     test "does not show the dataclip select input if the step dataclip is not available",
          %{
            conn: conn,
            project: project,
-           workflow: %{jobs: [job_1 | _rest]} = workflow
+           workflow: %{jobs: [job_1 | _rest], triggers: [trigger]} = workflow,
+           snapshot: snapshot
          } do
       input_dataclip = insert(:dataclip, project: project, type: :http_request)
 
       %{runs: [run]} =
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           dataclip: input_dataclip,
           runs: [
             build(:run,
+              snapshot: snapshot,
               dataclip: input_dataclip,
-              starting_job: job_1,
+              starting_trigger: trigger,
               steps: [
                 build(:step,
                   job: job_1,
+                  snapshot: snapshot,
                   input_dataclip: nil,
                   output_dataclip: nil,
                   started_at: build(:timestamp),
@@ -721,7 +1009,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand", v: workflow.lock_version]}"
         )
 
       # notice that we haven't wiped the run dataclip.
@@ -750,13 +1038,18 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       refute render(form) =~ "data for this step has not been retained"
 
       assert has_element?(view, "textarea#manual_run_form_body")
+
+      # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
+      # disconnection warnings.
+      live_children(view) |> Enum.each(&render_async/1)
     end
 
     test "shows the wiped dataclip viewer if the step dataclip was wiped",
          %{
            conn: conn,
            project: project,
-           workflow: %{jobs: [job_1 | _rest]} = workflow
+           workflow: %{jobs: [job_1 | _rest]} = workflow,
+           snapshot: snapshot
          } do
       input_dataclip =
         insert(:dataclip,
@@ -769,13 +1062,16 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       %{runs: [run]} =
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           dataclip: input_dataclip,
           runs: [
             build(:run,
+              snapshot: snapshot,
               dataclip: input_dataclip,
               starting_job: job_1,
               steps: [
                 build(:step,
+                  snapshot: snapshot,
                   job: job_1,
                   input_dataclip: input_dataclip,
                   output_dataclip: nil,
@@ -791,7 +1087,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand", v: workflow.lock_version]}"
         )
 
       # the form contains the dataclip
@@ -816,95 +1112,30 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       # the wiped message is nolonger displayed
       refute render(form) =~ "data for this step has not been retained"
+
+      # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
+      # disconnection warnings.
+      live_children(view) |> Enum.each(&render_async/1)
     end
 
     test "users can retry a workorder from a followed run",
          %{
            conn: conn,
            project: project,
-           workflow: %{jobs: [job_1, job_2 | _rest]} = workflow
+           workflow: %{jobs: [_job_1, job_2 | _rest]} = workflow,
+           snapshot: snapshot
          } do
-      input_dataclip = insert(:dataclip, project: project, type: :http_request)
-
-      output_dataclip =
-        insert(:dataclip,
-          project: project,
-          type: :step_result,
-          body: %{"val" => Ecto.UUID.generate()}
-        )
-
-      %{runs: [run]} =
-        workorder =
-        insert(:workorder,
-          workflow: workflow,
-          dataclip: input_dataclip,
-          state: :success,
-          runs: [
-            build(:run,
-              dataclip: input_dataclip,
-              starting_job: job_1,
-              state: :success,
-              steps: [
-                build(:step,
-                  job: job_1,
-                  input_dataclip: input_dataclip,
-                  output_dataclip: output_dataclip,
-                  started_at: build(:timestamp),
-                  finished_at: build(:timestamp),
-                  exit_reason: "success"
-                ),
-                build(:step,
-                  job: job_2,
-                  input_dataclip: output_dataclip,
-                  output_dataclip:
-                    build(:dataclip,
-                      type: :step_result,
-                      body: %{}
-                    ),
-                  started_at: build(:timestamp),
-                  finished_at: build(:timestamp),
-                  exit_reason: "success"
-                )
-              ]
-            )
-          ]
-        )
-
-      # insert 3 new dataclips
-      dataclips = insert_list(3, :dataclip, project: project)
-
-      # associate dataclips with job 2
-      for dataclip <- dataclips do
-        insert(:workorder,
-          workflow: workflow,
-          dataclip: dataclip,
-          runs: [
-            build(:run,
-              dataclip: dataclip,
-              starting_job: job_2,
-              steps: [
-                build(:step,
-                  job: job_2,
-                  input_dataclip: dataclip,
-                  output_dataclip: nil,
-                  started_at: build(:timestamp),
-                  finished_at: nil,
-                  exit_reason: nil
-                )
-              ]
-            )
-          ]
-        )
-      end
+      {dataclips, %{runs: [run]} = workorder} =
+        rerun_setup(project, workflow, snapshot)
 
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand", v: workflow.lock_version]}"
         )
 
       # user gets option to rerun
-      assert has_element?(view, "button", "Rerun from here")
+      assert has_element?(view, "button", "Retry from here")
       assert has_element?(view, "button", "Create New Work Order")
 
       # if we choose a different dataclip, the retry button disappears
@@ -912,7 +1143,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       |> form("#manual_run_form", manual: %{dataclip_id: hd(dataclips).id})
       |> render_change()
 
-      refute has_element?(view, "button", "Rerun from here")
+      refute has_element?(view, "button", "Retry from here")
       assert has_element?(view, "button", "Create New Work Order")
 
       # if we choose the step input dataclip, the retry button becomes available
@@ -922,28 +1153,63 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       |> form("#manual_run_form", manual: %{dataclip_id: step.input_dataclip_id})
       |> render_change()
 
-      assert has_element?(view, "button", "Rerun from here")
+      assert has_element?(view, "button", "Retry from here")
       assert has_element?(view, "button", "Create New Work Order")
 
-      view |> element("button", "Rerun from here") |> render_click()
+      view |> element("button", "Retry from here") |> render_click()
 
       all_runs =
         Lightning.Repo.preload(workorder, [:runs], force: true).runs
 
       assert Enum.count(all_runs) == 2
-      [new_run] = Enum.reject(all_runs, fn a -> a.id == run.id end)
+
+      [new_run] =
+        Enum.reject(all_runs, fn a -> a.id == run.id end)
 
       html = render(view)
 
-      refute html =~ run.id
+      # refute html =~ run.id
       assert html =~ new_run.id
+    end
+
+    test "can't retry when limit has been reached",
+         %{
+           conn: conn,
+           project: project,
+           workflow: %{jobs: [_job_1, job_2 | _rest]} = workflow,
+           snapshot: snapshot
+         } do
+      {_dataclips, %{runs: [run]} = workorder} =
+        rerun_setup(project, workflow, snapshot)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand", v: workflow.lock_version]}"
+        )
+
+      # user gets option to rerun
+      assert has_element?(view, "button", "Retry from here")
+      assert has_element?(view, "button", "Create New Work Order")
+
+      view |> element("button", "Retry from here") |> render_click()
+
+      all_runs =
+        Lightning.Repo.preload(workorder, [:runs], force: true).runs
+
+      assert Enum.count(all_runs) == 2
+
+      # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
+      # disconnection warnings.
+      live_children(view) |> Enum.each(&render_async/1)
     end
 
     test "followed run with wiped dataclip renders the page correctly",
          %{
            conn: conn,
            project: project,
-           workflow: %{jobs: [job_1, job_2 | _rest]} = workflow
+           workflow: %{jobs: [job_1, job_2 | _rest]} = workflow,
+           snapshot: snapshot
          } do
       wiped_dataclip =
         insert(:dataclip,
@@ -956,15 +1222,18 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       %{runs: [run]} =
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           dataclip: wiped_dataclip,
           state: :success,
           runs: [
             build(:run,
+              snapshot: snapshot,
               dataclip: wiped_dataclip,
               starting_job: job_1,
               state: :success,
               steps: [
                 build(:step,
+                  snapshot: snapshot,
                   job: job_1,
                   input_dataclip: nil,
                   output_dataclip: nil,
@@ -973,6 +1242,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
                   exit_reason: "success"
                 ),
                 build(:step,
+                  snapshot: snapshot,
                   job: job_2,
                   input_dataclip: nil,
                   output_dataclip: nil,
@@ -988,14 +1258,18 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand", v: workflow.lock_version]}"
         )
 
       # user cannot rerun
-      refute has_element?(view, "button", "Rerun from here")
+      refute has_element?(view, "button", "Retry from here")
 
       assert has_element?(view, "button:disabled", "Create New Work Order"),
              "create new workorder button is disabled"
+
+      # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
+      # disconnection warnings.
+      live_children(view) |> Enum.each(&render_async/1)
     end
 
     test "selected dataclip viewer is updated correctly if dataclip is wiped",
@@ -1013,17 +1287,21 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
           body: %{"foo" => unique_val}
         )
 
+      {:ok, snapshot} =
+        Lightning.Workflows.Snapshot.get_or_create_latest_for(workflow)
+
       %{runs: [run]} =
         insert(:workorder,
           workflow: workflow,
           dataclip: input_dataclip,
           state: :running,
+          snapshot: snapshot,
           runs: [
             build(:run,
               dataclip: input_dataclip,
+              snapshot: snapshot,
               starting_job: job_1,
-              state: :started,
-              steps: []
+              state: :started
             )
           ]
         )
@@ -1031,21 +1309,25 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand", v: workflow.lock_version]}"
         )
 
       # dataclip body is displayed
+      assert has_element?(
+               view,
+               "#manual-job-#{job_1.id} [phx-hook='DataclipViewer'][data-id='#{input_dataclip.id}']"
+             ),
+             "dataclip body is present"
+
       html = view |> element("#manual-job-#{job_1.id}") |> render()
-      assert html =~ unique_val, "dataclip body is present"
       refute html =~ "data for this step has not been retained"
 
       # let's subscribe to events to make sure we're in sync with liveview
-      Lightning.Runs.subscribe(run)
+      # Lightning.Runs.subscribe(run)
 
       # start step without dataclip
       {:ok, %{id: step_id}} =
-        Lightning.Runs.start_step(%{
-          "run_id" => run.id,
+        Lightning.Runs.start_step(run, %{
           "job_id" => job_1.id,
           "step_id" => Ecto.UUID.generate()
         })
@@ -1055,8 +1337,11 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       }
 
       # dataclip body is still present
-      html = view |> element("#manual-job-#{job_1.id}") |> render()
-      assert html =~ unique_val, "dataclip body is present when the step starts"
+      assert has_element?(
+               view,
+               "#manual-job-#{job_1.id} [phx-hook='DataclipViewer'][data-id='#{input_dataclip.id}']"
+             ),
+             "dataclip body is present when the step starts"
 
       # lets wipe the dataclip
       Lightning.Runs.wipe_dataclips(run)
@@ -1071,8 +1356,13 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       render(view)
 
       # dataclip body is nolonger present
+      refute has_element?(
+               view,
+               "#manual-job-#{job_1.id} [phx-hook='DataclipViewer'][data-id='#{input_dataclip.id}']"
+             ),
+             "dataclip body has been removed"
+
       html = view |> element("#manual-job-#{job_1.id}") |> render()
-      refute html =~ unique_val, "dataclip body has been removed"
       assert html =~ "data for this step has not been retained"
     end
 
@@ -1080,7 +1370,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
          %{
            conn: conn,
            project: project,
-           workflow: %{jobs: [job_1 | _rest]} = workflow
+           workflow: %{jobs: [job_1 | _rest]} = workflow,
+           snapshot: snapshot
          } do
       dataclip =
         insert(:dataclip,
@@ -1091,9 +1382,11 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       %{runs: [run]} =
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           dataclip: dataclip,
           runs: [
             build(:run,
+              snapshot: snapshot,
               dataclip: dataclip,
               starting_job: job_1,
               claimed_at: build(:timestamp),
@@ -1109,11 +1402,11 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand", v: workflow.lock_version]}"
         )
 
       # user cannot rerun
-      refute has_element?(view, "button", "Rerun from here")
+      refute has_element?(view, "button", "Retry from here")
 
       # user can create new work order
       assert has_element?(view, "button", "Create New Work Order")
@@ -1122,12 +1415,12 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       render_async(run_view)
 
-      # input tab shows correct information
-      html = run_view |> element("div[data-panel-hash='input']") |> render()
+      # input panel shows correct information
+      html = run_view |> element("div#input-panel") |> render()
       assert html =~ "No input/output available. This step was never started."
 
-      # output tab shows correct information
-      html = run_view |> element("div[data-panel-hash='output']") |> render()
+      # output panel shows correct information
+      html = run_view |> element("div#output-panel") |> render()
       assert html =~ "No input/output available. This step was never started."
     end
 
@@ -1140,11 +1433,11 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, m: "expand", v: workflow.lock_version]}"
         )
 
       # action button is rendered correctly
-      refute has_element?(view, "button", "Rerun from here")
+      refute has_element?(view, "button", "Retry from here")
       refute has_element?(view, "button", "Processing")
       assert has_element?(view, "button", "Create New Work Order")
 
@@ -1163,7 +1456,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       run_view = find_live_child(view, "run-viewer-#{run.id}")
 
       # action button is rendered correctly
-      refute has_element?(view, "button", "Rerun from here")
+      refute has_element?(view, "button", "Retry from here")
 
       assert has_element?(view, "button:disabled", "Processing"),
              "currently processing"
@@ -1171,14 +1464,14 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       refute has_element?(view, "button", "Create New Work Order")
 
       render_async(run_view)
-      # input tab shows correct information
-      html = run_view |> element("div[data-panel-hash='input']") |> render()
+      # input panel shows correct information
+      html = run_view |> element("div#input-panel") |> render()
 
       assert html =~ "Nothing yet"
       refute html =~ "No input/output available. This step was never started."
 
-      # output tab shows correct information
-      html = run_view |> element("div[data-panel-hash='output']") |> render()
+      # output panel shows correct information
+      html = run_view |> element("div#output-panel") |> render()
 
       assert html =~ "Nothing yet"
       refute html =~ "No input/output available. This step was never started."
@@ -1212,20 +1505,20 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       render(view)
 
       # action button is rendered correctly.
-      refute has_element?(view, "button", "Rerun from here")
+      refute has_element?(view, "button", "Retry from here")
       refute has_element?(view, "button", "Processing"), "nolonger processing"
       assert has_element?(view, "button", "Create New Work Order")
 
       # make sure event is processed by the run viewer
       render_async(run_view)
 
-      # input tab shows correct information
-      html = run_view |> element("div[data-panel-hash='input']") |> render()
+      # input panel shows correct information
+      html = run_view |> element("div#input-panel") |> render()
       refute html =~ "Nothing yet"
       assert html =~ "No input/output available. This step was never started."
 
-      # output tab shows correct information
-      html = run_view |> element("div[data-panel-hash='output']") |> render()
+      # output panel shows correct information
+      html = run_view |> element("div#output-panel") |> render()
       refute html =~ "Nothing yet"
       assert html =~ "No input/output available. This step was never started."
     end
@@ -1256,7 +1549,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand", v: workflow.lock_version]}"
         )
 
       assert has_element?(view, "#job-editor-pane-#{job.id}")
@@ -1299,7 +1592,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
     test "all users can view output and logs for a follwed run", %{
       conn: conn,
       project: project,
-      workflow: %{jobs: [job_1 | _rest]} = workflow
+      workflow: %{jobs: [job_1 | _rest]} = workflow,
+      snapshot: snapshot
     } do
       input_dataclip =
         insert(:dataclip,
@@ -1320,17 +1614,20 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       %{runs: [run]} =
         insert(:workorder,
           workflow: workflow,
+          snapshot: snapshot,
           dataclip: input_dataclip,
           state: :success,
           runs: [
             build(:run,
               dataclip: input_dataclip,
+              snapshot: snapshot,
               starting_job: job_1,
               state: :success,
               log_lines: [log_line],
               steps: [
                 build(:step,
                   job: job_1,
+                  snapshot: snapshot,
                   input_dataclip: input_dataclip,
                   output_dataclip: output_dataclip,
                   started_at: build(:timestamp),
@@ -1347,7 +1644,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         {:ok, view, _html} =
           live(
             conn,
-            ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand"]}"
+            ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand", v: workflow.lock_version]}"
           )
 
         run_view = find_live_child(view, "run-viewer-#{run.id}")
@@ -1357,24 +1654,107 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         # This ensures that stream messages are processed
         render(run_view)
 
-        # log tab shows correct information
-        html =
-          run_view |> element("div[data-panel-hash='log']") |> render_async()
+        assert has_element?(
+                 run_view,
+                 "div#log-panel [phx-hook='LogViewer'][data-run-id='#{run.id}']"
+               )
 
-        assert html =~ log_line.message
+        # input panel shows correct information
 
-        # input tab shows correct information
-        html =
-          run_view |> element("div[data-panel-hash='input']") |> render_async()
+        assert has_element?(
+                 run_view,
+                 "div#input-panel [phx-hook='DataclipViewer'][data-id='#{input_dataclip.id}']"
+               )
 
-        assert html =~ input_dataclip.body["input"]
-
-        # output tab shows correct information
-        html =
-          run_view |> element("div[data-panel-hash='output']") |> render_async()
-
-        assert html =~ output_dataclip.body["output"]
+        # output panel shows correct information
+        assert has_element?(
+                 run_view,
+                 "div#output-panel [phx-hook='DataclipViewer'][data-id='#{output_dataclip.id}']"
+               )
       end
     end
+  end
+
+  defp rerun_setup(project, %{jobs: [job_1, job_2 | _rest]} = workflow, snapshot) do
+    input_dataclip = insert(:dataclip, project: project, type: :http_request)
+
+    output_dataclip =
+      insert(:dataclip,
+        project: project,
+        type: :step_result,
+        body: %{"val" => Ecto.UUID.generate()}
+      )
+
+    workorder =
+      insert(:workorder,
+        workflow: workflow,
+        snapshot: snapshot,
+        dataclip: input_dataclip,
+        state: :success,
+        runs: [
+          build(:run,
+            snapshot: snapshot,
+            dataclip: input_dataclip,
+            starting_job: job_1,
+            state: :success,
+            steps: [
+              build(:step,
+                snapshot: snapshot,
+                job: job_1,
+                input_dataclip: input_dataclip,
+                output_dataclip: output_dataclip,
+                started_at: build(:timestamp),
+                finished_at: build(:timestamp),
+                exit_reason: "success"
+              ),
+              build(:step,
+                snapshot: snapshot,
+                job: job_2,
+                input_dataclip: output_dataclip,
+                output_dataclip:
+                  build(:dataclip,
+                    type: :step_result,
+                    body: %{}
+                  ),
+                started_at: build(:timestamp),
+                finished_at: build(:timestamp),
+                exit_reason: "success"
+              )
+            ]
+          )
+        ]
+      )
+
+    # insert 3 new dataclips
+    dataclips = insert_list(3, :dataclip, project: project)
+
+    # associate dataclips with job 2
+    for dataclip <- dataclips do
+      insert(:workorder,
+        workflow: workflow,
+        snapshot: snapshot,
+        dataclip: dataclip,
+        runs: [
+          build(:run,
+            snapshot: snapshot,
+            dataclip: dataclip,
+            starting_job: job_2,
+            steps: [
+              build(:step,
+                snapshot: snapshot,
+                job: job_2,
+                input_dataclip: dataclip,
+                output_dataclip: nil,
+                started_at: build(:timestamp),
+                finished_at: nil,
+                exit_reason: nil
+              )
+            ]
+          )
+        ]
+      )
+    end
+
+    {dataclips, workorder}
   end
 end

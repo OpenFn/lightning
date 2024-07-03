@@ -2,9 +2,10 @@ defmodule Lightning.Application do
   # See https://hexdocs.pm/elixir/Application.html
   # for more information on OTP Applications
   @moduledoc false
-
   use Application
   import Cachex.Spec
+
+  require Logger
 
   @impl true
   def start(_type, _args) do
@@ -34,7 +35,7 @@ defmodule Lightning.Application do
     :mnesia.wait_for_tables([:__hammer_backend_mnesia], 60_000)
 
     # Only add the Sentry backend if a dsn is provided.
-    if Application.get_env(:sentry, :included_environments, []) |> Enum.any?(),
+    if Application.get_env(:sentry, :dsn),
       do: Logger.add_backend(Sentry.LoggerBackend)
 
     adaptor_registry_childspec =
@@ -96,6 +97,7 @@ defmodule Lightning.Application do
       LightningWeb.Telemetry,
       # Start the PubSub system
       {Phoenix.PubSub, name: Lightning.PubSub},
+      {Finch, name: Lightning.Finch},
       auth_providers_cache_childspec,
       # Start the Endpoint (http/https)
       LightningWeb.Endpoint,
@@ -143,6 +145,67 @@ defmodule Lightning.Application do
   end
 
   def oban_opts do
-    Application.get_env(:lightning, Oban)
+    opts = Application.get_env(:lightning, Oban)
+
+    opts[:plugins]
+    |> List.keyfind(Oban.Plugins.Cron, 0)
+    |> then(fn {mod, cron_opts} ->
+      {mod, put_usage_tracking_cron_opts(cron_opts)}
+    end)
+
+    opts
+  end
+
+  defp put_usage_tracking_cron_opts(cron_opts) do
+    usage_tracking_opts = Lightning.Config.usage_tracking()
+
+    if usage_tracking_opts[:enabled] do
+      print_tracking_thanks_message()
+    else
+      print_tracking_opt_out_message()
+    end
+
+    Keyword.merge(
+      cron_opts,
+      [crontab: Lightning.Config.usage_tracking_cron_opts()],
+      fn _key, old, new -> old ++ new end
+    )
+  end
+
+  @about_anonymous_public_impact_tracking """
+  OpenFn is a free and open-source Digital Public Good.
+  Even if you are unable to contribute to the movement financially or by participating
+  in our product development community, sending these anonymous aggregate usage reports
+  will ensure the long-term sustainability of the project by allowing us
+  to understand the needs of our users, by better demonstrating our impact,
+  and by helping us secure further donor support.
+
+  View the aggregated anonymous public metrics submitted by other OpenFn
+  instance administrators like you from around the world here:
+
+  https://analytics.openfn.org/public/dashboard/d4d7766e-e2fe-4673-b4e5-8bf52f0054a1
+  """
+
+  defp print_tracking_thanks_message do
+    Logger.notice("""
+    ️❤️ Thank you for participating in anonymous public impact reporting!
+
+    #{@about_anonymous_public_impact_tracking}
+    You are reporting to #{Lightning.Config.usage_tracking()[:host]}.
+    If you would like to opt-out of anonymous public impact reporting,
+    you can set your `USAGE_TRACKING_ENABLED` environment variable to `false` at any time.
+    """)
+  end
+
+  defp print_tracking_opt_out_message do
+    Logger.notice("""
+    You have opted-out of anonymous public impact reporting.
+
+    #{@about_anonymous_public_impact_tracking}
+    If the product is benefitting you or your organization, we hope you
+    will consider opting-in to anonymous public impact reporting in the future.
+
+    You can do so by setting your `USAGE_TRACKING_ENABLED` environment variable to `true` at any time.
+    """)
   end
 end

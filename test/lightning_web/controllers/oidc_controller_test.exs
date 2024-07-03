@@ -168,7 +168,7 @@ defmodule LightningWeb.OidcControllerTest do
   end
 
   describe "GET /authenticate/callback" do
-    test "correctly broadcasts the code", %{conn: conn} do
+    setup %{conn: conn} do
       subscription_id =
         :crypto.strong_rand_bytes(4) |> Base.encode64(padding: false)
 
@@ -184,17 +184,51 @@ defmodule LightningWeb.OidcControllerTest do
 
       LightningWeb.OauthCredentialHelper.subscribe(subscription_id)
 
+      {:ok, conn: conn, component_id: component_id, state: state}
+    end
+
+    test "correctly broadcasts the code", %{
+      conn: conn,
+      component_id: component_id,
+      state: state
+    } do
+      perform_broadcast_test(
+        conn,
+        state,
+        component_id,
+        "code",
+        "callback_code",
+        :code
+      )
+    end
+
+    test "correctly broadcasts the error", %{
+      conn: conn,
+      component_id: component_id,
+      state: state
+    } do
+      perform_broadcast_test(
+        conn,
+        state,
+        component_id,
+        "error",
+        "timeout",
+        :error
+      )
+    end
+
+    defp perform_broadcast_test(conn, state, component_id, type, value, key) do
       response =
         conn
         |> get(
           Routes.oidc_path(conn, :new, %{
-            "code" => "callback_code",
+            "#{type}" => value,
             "state" => state
           })
         )
 
       assert_receive {:forward, LightningWeb.OidcControllerTest,
-                      [id: ^component_id, code: "callback_code"]}
+                      %{^key => ^value, id: ^component_id}}
 
       assert Regex.match?(
                ~r/window\.onload\s*=\s*function\(\)\s*\{\s*window\.close\(\);\s*\}/,

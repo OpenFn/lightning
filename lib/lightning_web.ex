@@ -22,7 +22,6 @@ defmodule LightningWeb do
 
   def router do
     quote do
-      # , helpers: false
       use Phoenix.Router
 
       import Plug.Conn
@@ -123,18 +122,18 @@ defmodule LightningWeb do
       import PetalComponents.Card
       import PetalComponents.Dropdown
       import PetalComponents.Table
-      import PetalComponents.Tabs
       import PetalComponents.Typography
 
       alias LightningWeb.Components
       alias LightningWeb.Components.Common
       alias LightningWeb.Components.Icon
       alias LightningWeb.Components.Layout
-      alias LightningWeb.Components.Settings
+      alias LightningWeb.Components.Menu
       alias LightningWeb.Router.Helpers, as: Routes
 
       import LightningWeb.Components.Pills
       import LightningWeb.Components.Loaders
+      import LightningWeb.Components.Icons
 
       unquote(verified_routes())
     end

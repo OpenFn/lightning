@@ -4,8 +4,9 @@ function PlusButton() {
   return (
     <button
       name="add-node"
-      className="transition duration-150 ease-in-out pointer-events-auto rounded-full
-               bg-indigo-600 py-1 px-4 text-[0.8125rem] font-semibold leading-5 text-white hover:bg-indigo-500"
+      className="transition duration-150 ease-in-out pointer-events-auto rounded-lg
+               bg-indigo-600 py-1 px-2 text-[0.8125rem] font-semibold leading-5 text-white
+               hover:bg-indigo-500 mr-1"
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"

@@ -11,8 +11,10 @@ defmodule Lightning.Credentials do
   import Lightning.Helpers, only: [coerce_json_field: 2]
 
   alias Ecto.Multi
+  alias Lightning.Accounts.User
   alias Lightning.Accounts.UserNotifier
   alias Lightning.AuthProviders.Common
+  alias Lightning.AuthProviders.OauthHTTPClient
   alias Lightning.Credentials
   alias Lightning.Credentials.Audit
   alias Lightning.Credentials.Credential
@@ -61,35 +63,37 @@ defmodule Lightning.Credentials do
   end
 
   @doc """
-  Returns the list of credentials.
+  Retrieves all credentials based on the given context, either a Project or a User.
+
+  ## Parameters
+
+    - context: The Project or User struct to retrieve credentials for.
+
+  ## Returns
+
+    - A list of credentials associated with the given Project or created by the given User.
 
   ## Examples
 
-      iex> list_credentials()
-      [%Credential{}, ...]
+    When given a Project:
+      iex> list_credentials(%Project{id: 1})
+      [%Credential{project_id: 1}, %Credential{project_id: 1}]
 
+    When given a User:
+      iex> list_credentials(%User{id: 123})
+      [%Credential{user_id: 123}, %Credential{user_id: 123}]
   """
-  def list_credentials do
-    Repo.all(Credential)
-  end
-
   def list_credentials(%Project{} = project) do
     Ecto.assoc(project, :credentials)
-    |> preload(:user)
+    |> preload([:user, :project_credentials, :projects, :oauth_client])
     |> Repo.all()
   end
 
-  @doc """
-  Returns the list of credentials for a given user.
-
-  ## Examples
-
-      iex> list_credentials_for_user(123)
-      [%Credential{user_id: 123}, %Credential{user_id: 123},...]
-
-  """
-  def list_credentials_for_user(user_id) do
-    from(c in Credential, where: c.user_id == ^user_id, preload: :projects)
+  def list_credentials(%User{id: user_id}) do
+    from(c in Credential,
+      where: c.user_id == ^user_id,
+      preload: [:projects, :oauth_client]
+    )
     |> Repo.all()
   end
 
@@ -118,6 +122,12 @@ defmodule Lightning.Credentials do
     Repo.one(query)
   end
 
+  def get_credential_for_update!(id) do
+    Credential
+    |> Repo.get!(id)
+    |> Repo.preload([:project_credentials, :projects])
+  end
+
   @doc """
   Creates a credential.
 
@@ -134,7 +144,6 @@ defmodule Lightning.Credentials do
     changeset =
       %Credential{}
       |> change_credential(attrs)
-      |> cast_body_change()
 
     Multi.new()
     |> Multi.insert(
@@ -199,26 +208,6 @@ defmodule Lightning.Credentials do
     end
   end
 
-  # Migration only
-  def migrate_credential_body(
-        %Credential{body: body, schema: schema_name} = credential
-      ) do
-    case put_typed_body(body, schema_name) do
-      {:ok, ^body} ->
-        :ok
-
-      {:ok, changed_body} ->
-        credential
-        |> change_credential(%{body: changed_body})
-        |> Repo.update!()
-
-      {:error, %Ecto.Changeset{errors: errors}} ->
-        Logger.warning(fn ->
-          "Casting credential on migration failed with reason: #{inspect(errors)}"
-        end)
-    end
-  end
-
   defp cast_body_change(
          %Ecto.Changeset{valid?: true, changes: %{body: body}} = changeset
        ) do
@@ -235,9 +224,9 @@ defmodule Lightning.Credentials do
 
   defp cast_body_change(changeset), do: changeset
 
-  defp put_typed_body(body, "raw"), do: {:ok, body}
-
-  defp put_typed_body(body, "salesforce_oauth"), do: {:ok, body}
+  defp put_typed_body(body, schema_name)
+       when schema_name in ["raw", "salesforce_oauth", "googlesheets", "oauth"],
+       do: {:ok, body}
 
   defp put_typed_body(body, schema_name) do
     schema = get_schema(schema_name)
@@ -410,7 +399,7 @@ defmodule Lightning.Credentials do
   end
 
   defp scheduled_deletion_date do
-    days = Application.get_env(:lightning, :purge_deleted_after_days, 0)
+    days = Lightning.Config.purge_deleted_after_days() || 0
     DateTime.utc_now() |> Timex.shift(days: days)
   end
 
@@ -494,6 +483,7 @@ defmodule Lightning.Credentials do
       credential,
       attrs |> coerce_json_field("body")
     )
+    |> cast_body_change()
   end
 
   @spec sensitive_values_for(Ecto.UUID.t() | Credential.t() | nil) :: [any()]
@@ -561,31 +551,62 @@ defmodule Lightning.Credentials do
     project_credentials -- project_users
   end
 
-  def maybe_refresh_token(%Credential{schema: schema} = credential) do
-    case lookup_adapter(schema) do
-      nil ->
+  def maybe_refresh_token(%Credential{schema: "oauth"} = credential) do
+    cond do
+      # TODO: Even tho the still_fresh/1 function is in the OauthHTTPClient module, it doesn't do any HTTP call.
+      #       It will be moved in another module after we deprecate salesforce and googlesheets oauth
+      OauthHTTPClient.still_fresh(credential.body) ->
         {:ok, credential}
 
-      adapter ->
-        token = Common.TokenBody.new(credential.body)
+      is_nil(credential.oauth_client_id) ->
+        {:ok, credential}
 
-        if Common.still_fresh(token) do
-          {:ok, credential}
-        else
-          {:ok, refreshed_token} =
-            adapter.refresh_token(token)
+      true ->
+        %{oauth_client: oauth_client, body: rotten_token} =
+          Lightning.Repo.preload(credential, :oauth_client)
 
-          update_credential(credential, %{
-            body:
-              refreshed_token
-              |> Common.TokenBody.from_oauth2_token()
-              |> Lightning.Helpers.json_safe()
-          })
+        case OauthHTTPClient.refresh_token(oauth_client, rotten_token) do
+          {:ok, fresh_token} ->
+            update_credential(credential, %{body: fresh_token})
+
+          {:error, error} ->
+            {:error, error}
         end
     end
   end
 
-  defp lookup_adapter(schema) do
+  # TODO: Remove this function when deprecating salesforce and googlesheets oauth
+  def maybe_refresh_token(%Credential{schema: schema} = credential)
+      when schema in ["salesforce_oauth", "googlesheets"] do
+    token = Common.TokenBody.new(credential.body)
+
+    if Common.still_fresh(token) do
+      {:ok, credential}
+    else
+      adapter = lookup_adapter(schema)
+      wellknown_url = adapter.wellknown_url(token.sandbox)
+
+      case adapter.refresh_token(token, wellknown_url) do
+        {:ok, refreshed_token} ->
+          updated_body =
+            refreshed_token
+            |> Common.TokenBody.from_oauth2_token()
+            |> Lightning.Helpers.json_safe()
+
+          update_credential(credential, %{body: updated_body})
+
+        {:error, error} ->
+          {:error, error}
+      end
+    end
+  end
+
+  def maybe_refresh_token(%Credential{} = credential) do
+    {:ok, credential}
+  end
+
+  # TODO: Remove this function when deprecating salesforce and googlesheets oauth
+  def lookup_adapter(schema) do
     case :ets.lookup(:adapter_lookup, schema) do
       [{^schema, adapter}] -> adapter
       [] -> nil

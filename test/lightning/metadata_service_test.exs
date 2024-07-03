@@ -1,5 +1,5 @@
 defmodule Lightning.MetadataServiceTest do
-  use Lightning.DataCase, async: true
+  use Lightning.DataCase, async: false
 
   alias Lightning.MetadataService
   import Lightning.CredentialsFixtures

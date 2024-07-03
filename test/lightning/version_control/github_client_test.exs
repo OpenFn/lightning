@@ -1,8 +1,7 @@
 defmodule Lightning.VersionControl.GithubClientTest do
-  use Lightning.DataCase, async: false
+  use Lightning.DataCase, async: true
   alias Lightning.VersionControl
-  import Lightning.Factories
-  import Lightning.ApplicationHelpers, only: [put_temporary_env: 3]
+  import Mox
 
   @cert """
   -----BEGIN RSA PRIVATE KEY-----
@@ -10,128 +9,69 @@ defmodule Lightning.VersionControl.GithubClientTest do
   -----END RSA PRIVATE KEY-----
   """
 
-  describe "Non success GitHub Client" do
-    setup do
-      put_temporary_env(:lightning, :github_app,
-        cert: @cert,
-        app_id: "111111",
-        app_name: "test-github"
+  describe "GithubClient.build_installation_client/1" do
+    setup :verify_on_exit!
+
+    test "error is logged when 401 status code is received" do
+      installation_id = "12345"
+      resp_body = %{"something" => "wrong"}
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        fn %{
+             url:
+               "https://api.github.com/app/installations/" <>
+                 ^installation_id <> "/access_tokens"
+           },
+           _opts ->
+          {:ok, %Tesla.Env{status: 401, body: resp_body}}
+        end
       )
 
-      Tesla.Mock.mock(fn env ->
-        case env.url do
-          "https://api.github.com/app/installations/some-id/access_tokens" ->
-            %Tesla.Env{status: 401, body: %{}}
-
-          "https://api.github.com/app/installations/fail-id/access_tokens" ->
-            %Tesla.Env{status: 404, body: %{}}
-
-          "https://api.github.com/installation/repositories" ->
-            %Tesla.Env{status: 404, body: %{}}
-
-          "https://api.github.com/repos/some/repo/branches" ->
-            %Tesla.Env{status: 401, body: %{}}
-        end
-      end)
-    end
-
-    @tag :capture_log
-    test "client can handle invalid application message from github" do
-      p_repo = insert(:project_repo_connection)
+      {result, log} =
+        ExUnit.CaptureLog.with_log(fn ->
+          VersionControl.GithubClient.build_installation_client(installation_id)
+        end)
 
       assert {:error,
               %{
                 code: :invalid_certificate,
                 message: "GitHub Certificate is misconfigured"
-              }} =
-               VersionControl.fetch_installation_repos(p_repo.project_id)
+              }} = result
+
+      assert log =~ "Unexpected GitHub Response: #{inspect(resp_body)}"
     end
 
-    @tag :capture_log
-    test "client can handle invalid PEM message from github" do
-      p_repo =
-        insert(:project_repo_connection, github_installation_id: "fail-id")
+    test "error is logged when 404 status code is received" do
+      installation_id = "12345"
+      resp_body = %{"something" => "wrong"}
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        fn %{
+             url:
+               "https://api.github.com/app/installations/" <>
+                 ^installation_id <> "/access_tokens"
+           },
+           _opts ->
+          {:ok, %Tesla.Env{status: 404, body: resp_body}}
+        end
+      )
+
+      {result, log} =
+        ExUnit.CaptureLog.with_log(fn ->
+          VersionControl.GithubClient.build_installation_client(installation_id)
+        end)
 
       assert {:error,
               %{
                 code: :installation_not_found,
                 message: "GitHub Installation APP ID is misconfigured"
-              }} =
-               VersionControl.initiate_sync(p_repo.project_id, "some-user-name")
-    end
+              }} = result
 
-    @tag :capture_log
-    test "fetch repo branches can handle fail" do
-      p_repo = insert(:project_repo_connection)
-
-      assert {:error,
-              %{
-                code: :invalid_certificate,
-                message: "GitHub Certificate is misconfigured"
-              }} =
-               VersionControl.fetch_repo_branches(p_repo.project_id, p_repo.repo)
-    end
-
-    @tag :capture_log
-    test "client can fetch installation repos" do
-      p_repo = insert(:project_repo_connection)
-
-      assert {:error,
-              %{
-                code: :invalid_certificate,
-                message: "GitHub Certificate is misconfigured"
-              }} =
-               VersionControl.fetch_installation_repos(p_repo.project_id)
-    end
-  end
-
-  describe "GitHub Client" do
-    setup do
-      put_temporary_env(:lightning, :github_app,
-        cert: @cert,
-        app_id: "111111",
-        app_name: "test-github"
-      )
-
-      Tesla.Mock.mock(fn env ->
-        case env.url do
-          "https://api.github.com/app/installations/some-id/access_tokens" ->
-            %Tesla.Env{status: 201, body: %{"token" => "some-token"}}
-
-          "https://api.github.com/installation/repositories" ->
-            %Tesla.Env{
-              status: 200,
-              body: %{"repositories" => [%{"full_name" => "org/repo"}]}
-            }
-
-          "https://api.github.com/repos/some/repo/branches" ->
-            %Tesla.Env{status: 200, body: [%{"name" => "master"}]}
-
-          "https://api.github.com/repos/some/repo/dispatches" ->
-            %Tesla.Env{status: 204, body: %{}}
-        end
-      end)
-    end
-
-    test "client can fetch installation repos" do
-      p_repo = insert(:project_repo_connection)
-
-      assert {:ok, ["org/repo"]} =
-               VersionControl.fetch_installation_repos(p_repo.project_id)
-    end
-
-    test "client can fetch repo branches" do
-      p_repo = insert(:project_repo_connection)
-
-      assert {:ok, ["master"]} =
-               VersionControl.fetch_repo_branches(p_repo.project_id, p_repo.repo)
-    end
-
-    test "client can fire repository dispatch event" do
-      p_repo = insert(:project_repo_connection)
-
-      assert {:ok, :fired} =
-               VersionControl.initiate_sync(p_repo.project_id, "some-user-name")
+      assert log =~ "Unexpected GitHub Response: #{inspect(resp_body)}"
     end
   end
 
@@ -159,7 +99,7 @@ defmodule Lightning.VersionControl.GithubClientTest do
       assert exp in Range.new(expected_expiry - 1, expected_expiry + 1),
              "Expiry is not within 1 second of expected expiry"
 
-      assert nbf >= Joken.current_time()
+      assert nbf >= current_time
 
       assert Joken.verify_and_validate(
                VersionControl.GithubToken.token_config()

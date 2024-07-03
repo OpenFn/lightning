@@ -11,7 +11,6 @@ defmodule Lightning.SetupUtils do
   alias Lightning.Projects
   alias Lightning.Repo
   alias Lightning.Runs
-  alias Lightning.VersionControl
   alias Lightning.Workflows
   alias Lightning.WorkOrders
 
@@ -65,14 +64,6 @@ defmodule Lightning.SetupUtils do
         %{user_id: viewer.id, role: :viewer}
       ])
 
-    Repo.insert!(%VersionControl.ProjectRepoConnection{
-      github_installation_id: "39991761",
-      repo: "OpenFn/demo-openhie",
-      branch: "main",
-      project_id: openhie_project.id,
-      user_id: super_user.id
-    })
-
     %{
       project: dhis2_project,
       workflow: dhis2_workflow,
@@ -80,7 +71,7 @@ defmodule Lightning.SetupUtils do
       workorders: [failure_dhis2_workorder]
     } =
       create_dhis2_project([
-        %{user_id: admin.id, role: :admin}
+        %{user_id: admin.id, role: :owner}
       ])
 
     %{
@@ -147,7 +138,7 @@ defmodule Lightning.SetupUtils do
       end
 
     {:ok, admin} =
-      Accounts.register_user(%{
+      Accounts.create_user(%{
         first_name: "Amy",
         last_name: "Admin",
         email: "demo@openfn.org",
@@ -155,7 +146,7 @@ defmodule Lightning.SetupUtils do
       })
 
     {:ok, editor} =
-      Accounts.register_user(%{
+      Accounts.create_user(%{
         first_name: "Esther",
         last_name: "Editor",
         email: "editor@openfn.org",
@@ -163,7 +154,7 @@ defmodule Lightning.SetupUtils do
       })
 
     {:ok, viewer} =
-      Accounts.register_user(%{
+      Accounts.create_user(%{
         first_name: "Vikram",
         last_name: "Viewer",
         email: "viewer@openfn.org",
@@ -175,13 +166,18 @@ defmodule Lightning.SetupUtils do
 
   def create_starter_project(name, project_users) do
     {:ok, project} =
-      Projects.create_project(%{
-        name: name,
-        project_users: project_users
-      })
+      Projects.create_project(
+        %{
+          name: name,
+          history_retention_period:
+            Application.get_env(:lightning, :default_retention_period),
+          project_users: project_users
+        },
+        false
+      )
 
     {:ok, workflow} =
-      Workflows.create_workflow(%{
+      Workflows.save_workflow(%{
         name: "Sample Workflow",
         project_id: project.id
       })
@@ -208,6 +204,15 @@ defmodule Lightning.SetupUtils do
         workflow_id: workflow.id
       })
 
+    {:ok, _root_edge} =
+      Workflows.create_edge(%{
+        workflow_id: workflow.id,
+        condition_type: :always,
+        source_trigger: source_trigger,
+        target_job: job_1,
+        enabled: true
+      })
+
     {:ok, job_2} =
       Jobs.create_job(%{
         name: "Job 2 - Convert data to DHIS2 format",
@@ -221,21 +226,14 @@ defmodule Lightning.SetupUtils do
         workflow_id: workflow.id
       })
 
-    {:ok, _job_1_edge} =
+    {:ok, _job_2_edge} =
       Workflows.create_edge(%{
         workflow_id: workflow.id,
-        source_trigger: source_trigger,
-        target_job: job_1,
+        source_job: job_1,
+        condition_type: :on_job_success,
+        target_job: job_2,
         enabled: true
       })
-
-    Workflows.create_edge(%{
-      workflow_id: workflow.id,
-      source_job: job_1,
-      condition_type: :on_job_success,
-      target_job_id: job_2.id,
-      enabled: true
-    })
 
     user = get_most_privileged_user!(project)
 
@@ -269,181 +267,35 @@ defmodule Lightning.SetupUtils do
       })
       |> Repo.insert()
 
-    Workflows.create_edge(%{
-      workflow_id: workflow.id,
-      source_job: job_2,
-      condition_type: :on_job_success,
-      target_job_id: job_3.id,
-      enabled: true
-    })
-
-    input_dataclip =
-      create_dataclip(%{
-        body: %{
-          data: %{},
-          references: [
-            %{}
-          ]
-        },
-        project_id: project.id,
-        type: :http_request
+    {:ok, _job_3_edge} =
+      Workflows.create_edge(%{
+        workflow_id: workflow.id,
+        source_job: job_2,
+        condition_type: :on_job_success,
+        target_job: job_3,
+        enabled: true
       })
-
-    step_params = [
-      %{
-        job_id: job_2.id,
-        exit_reason: "success",
-        log_lines:
-          to_log_lines("""
-          -- THIS IS ONLY A SAMPLE --
-          [CLI] ℹ Versions:
-               ▸ node.js                    18.12.0
-               ▸ cli                        0.0.32
-               ▸ runtime                    0.0.20
-               ▸ compiler                   0.0.26
-               ▸ @openfn/language-common    1.7.5
-          [CLI] ✔ Loaded state from /tmp/state-1686850600-169521-e1925t.json
-          [CLI] ℹ Loaded typedefs for @openfn/language-common@latest
-          [CMP] ℹ Added import statement for @openfn/language-common
-          [CMP] ℹ Added export * statement for @openfn/language-common
-          [CLI] ✔ Compiled job from /tmp/expression-1686850600-169521-1sqw0sl.js
-          [R/T] ℹ Resolved adaptor @openfn/language-common to version 1.7.5
-          [R/T] ✔ Operation 1 complete in 0ms
-          [CLI] ✔ Writing output to /tmp/output-1686850600-169521-1drewz.json
-          [CLI] ✔ Done in 304ms! ✨
-          """),
-        input_dataclip_id:
-          create_dataclip(%{
-            body: %{
-              data: %{
-                age_in_months: 19,
-                name: "Genevieve Wimplemews"
-              }
-            },
-            project_id: project.id,
-            type: :step_result
-          }).id,
-        output_dataclip:
-          %{
-            data: %{
-              age_in_months: 19,
-              name: "Genevieve Wimplemews"
-            },
-            names: [
-              "Genevieve",
-              "Wimplemews"
-            ]
-          }
-          |> Jason.encode!()
-      },
-      %{
-        job_id: job_3.id,
-        exit_reason: "success",
-        log_lines:
-          to_log_lines("""
-          -- THIS IS ONLY A SAMPLE --
-          [CLI] ℹ Versions:
-               ▸ node.js                   18.12.0
-               ▸ cli                       0.0.32
-               ▸ runtime                   0.0.20
-               ▸ compiler                  0.0.26
-               ▸ @openfn/language-dhis2    3.2.11
-          [CLI] ✔ Loaded state from /tmp/state-1686850601-169521-1eyevfx.json
-          [CLI] ℹ Loaded typedefs for @openfn/language-dhis2@latest
-          [CMP] ℹ Added import statement for @openfn/language-dhis2
-          [CMP] ℹ Added export * statement for @openfn/language-dhis2
-          [CLI] ✔ Compiled job from /tmp/expression-1686850601-169521-1i644ux.js
-          [R/T] ℹ Resolved adaptor @openfn/language-dhis2 to version 3.2.11
-          Preparing create operation...
-          Using latest available version of the DHIS2 api on this server.
-          Sending post request to https://play.dhis2.org/dev/api/trackedEntityInstances
-          ✓ Success at Thu Jun 15 2023 17:36:44 GMT+0000 (Greenwich Mean Time):
-          Created trackedEntityInstances with response {
-            "httpStatus": "OK",
-            "httpStatusCode": 200,
-            "status": "OK",
-            "message": "Import was successful.",
-            "response": {
-              "responseType": "ImportSummaries",
-              "status": "SUCCESS",
-              "imported": 1,
-              "updated": 0,
-              "deleted": 0,
-              "ignored": 0,
-              "total": 1
-            }
-          }
-          [R/T] ✔ Operation 1 complete in 1.775s
-          [CLI] ✔ Writing output to /tmp/output-1686850601-169521-1k3hzfw.json
-          [CLI] ✔ Done in 2.052s! ✨
-          """),
-        started_at: DateTime.utc_now() |> DateTime.add(-35, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(-30, :second),
-        output_dataclip:
-          %{
-            data: %{
-              httpStatus: "OK",
-              httpStatusCode: 200,
-              message: "Import was successful.",
-              response: %{
-                importSummaries: [
-                  %{
-                    href:
-                      "https://play.dhis2.org/dev/api/trackedEntityInstances/iqJrb85GmJb",
-                    reference: "iqJrb85GmJb",
-                    responseType: "ImportSummary",
-                    status: "SUCCESS"
-                  }
-                ],
-                imported: 1,
-                responseType: "ImportSummaries",
-                status: "SUCCESS",
-                total: 1,
-                updated: 0
-              },
-              status: "OK"
-            },
-            names: [
-              "Genevieve",
-              "Wimplemews"
-            ],
-            references: [
-              %{
-                age_in_months: 19,
-                name: "Genevieve Wimplemews"
-              }
-            ]
-          }
-          |> Jason.encode!()
-      }
-    ]
-
-    {:ok, workorder} =
-      create_workorder(
-        workflow,
-        source_trigger,
-        input_dataclip,
-        step_params
-      )
 
     %{
       project: project,
       workflow: workflow,
-      workorder: workorder,
       jobs: [job_1, job_2, job_3]
     }
   end
 
   def create_openhie_project(project_users) do
     {:ok, openhie_project} =
-      Projects.create_project(%{
-        name: "openhie-project",
-        id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa",
-        project_users: project_users
-      })
+      Projects.create_project(
+        %{
+          name: "openhie-project",
+          id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa",
+          project_users: project_users
+        },
+        false
+      )
 
     {:ok, openhie_workflow} =
-      Workflows.create_workflow(%{
+      Workflows.save_workflow(%{
         name: "OpenHIE Workflow",
         project_id: openhie_project.id
       })
@@ -656,13 +508,16 @@ defmodule Lightning.SetupUtils do
 
   def create_dhis2_project(project_users) do
     {:ok, project} =
-      Projects.create_project(%{
-        name: "dhis2-project",
-        project_users: project_users
-      })
+      Projects.create_project(
+        %{
+          name: "dhis2-project",
+          project_users: project_users
+        },
+        false
+      )
 
     {:ok, dhis2_workflow} =
-      Workflows.create_workflow(%{
+      Workflows.save_workflow(%{
         name: "DHIS2 to Sheets",
         project_id: project.id
       })
@@ -929,8 +784,7 @@ defmodule Lightning.SetupUtils do
                 Map.get(previous, :output_dataclip_id, input_dataclip.id)
               )
 
-            Runs.start_step(%{
-              run_id: run.id,
+            Runs.start_step(run, %{
               step_id: step_id,
               job_id: step.job_id,
               input_dataclip_id: input_dataclip_id,
@@ -995,15 +849,17 @@ defmodule Lightning.SetupUtils do
   end
 
   defp get_most_privileged_user!(project) do
-    Ecto.assoc(project, :project_users)
-    |> with_cte("role_ordering",
-      as:
-        fragment(
+    role_ordering_query =
+      from(
+        s in fragment(
           "SELECT * FROM UNNEST(?::varchar[]) WITH ORDINALITY o(role, ord)",
           ~w[owner admin editor viewer]
-        )
-    )
-    |> join(:inner, [pu], o in "role_ordering", on: pu.role == o.role)
+        ),
+        select: %{role: s.role, ord: s.ord}
+      )
+
+    Ecto.assoc(project, :project_users)
+    |> join(:inner, [pu], o in ^role_ordering_query, on: pu.role == o.role)
     |> join(:inner, [pu], u in assoc(pu, :user))
     |> order_by([pu, o], asc: o.ord)
     |> select([pu, _o, u], u)

@@ -6,7 +6,6 @@ defmodule Lightning.InvocationTest do
   alias Lightning.Runs
   alias Lightning.WorkOrders.SearchParams
   alias Lightning.Invocation
-  alias Lightning.Invocation.Step
   alias Lightning.Repo
 
   require SearchParams
@@ -22,7 +21,15 @@ defmodule Lightning.InvocationTest do
       |> with_edge({trigger, job})
       |> insert()
 
-    {Repo.reload!(workflow), Repo.reload!(trigger), Repo.reload!(job)}
+    {:ok, snapshot} =
+      Lightning.Workflows.Snapshot.get_or_create_latest_for(workflow)
+
+    %{
+      workflow: workflow,
+      snapshot: snapshot,
+      trigger: trigger |> Repo.reload!(),
+      job: job |> Repo.reload!()
+    }
   end
 
   describe "dataclips" do
@@ -130,15 +137,6 @@ defmodule Lightning.InvocationTest do
   end
 
   describe "steps" do
-    @invalid_attrs %{job_id: nil}
-    @valid_attrs %{
-      # Note that we faithfully persist any string the worker sends back.
-      exit_reason: "something very strange",
-      finished_at: ~U[2022-02-02 11:49:00.000000Z],
-      log: [],
-      started_at: ~U[2022-02-02 11:49:00.000000Z]
-    }
-
     test "list_steps/0 returns all steps" do
       step = insert(:step)
       assert Invocation.list_steps() |> Enum.map(fn s -> s.id end) == [step.id]
@@ -152,41 +150,6 @@ defmodule Lightning.InvocationTest do
       assert actual_step.id == step.id
       assert actual_step.input_dataclip_id == step.input_dataclip_id
       assert actual_step.job_id == step.job_id
-    end
-
-    test "create_step/1 with valid data creates a step" do
-      project = insert(:project)
-      dataclip = insert(:dataclip, project: project)
-      workflow = insert(:workflow, project: project)
-      job = insert(:job, workflow: workflow)
-
-      assert {:ok, %Step{} = step} =
-               Invocation.create_step(
-                 Map.merge(@valid_attrs, %{
-                   job_id: job.id,
-                   input_dataclip_id: dataclip.id
-                 })
-               )
-
-      assert step.exit_reason == "something very strange"
-      assert step |> Invocation.logs_for_step() == []
-      assert step.finished_at == ~U[2022-02-02 11:49:00.000000Z]
-      assert step.started_at == ~U[2022-02-02 11:49:00.000000Z]
-    end
-
-    test "create_step/1 with invalid data returns error changeset" do
-      assert {:error, %Ecto.Changeset{}} = Invocation.create_step(@invalid_attrs)
-
-      assert {:error, %Ecto.Changeset{errors: errors}} =
-               Map.merge(@valid_attrs, %{event_id: Ecto.UUID.generate()})
-               |> Invocation.create_step()
-
-      assert event_id:
-               {
-                 "does not exist",
-                 #  TODO - foreign keys? come back?
-                 [constraint: :foreign, constraint_name: "runs_event_id_fkey"]
-               } in errors
     end
 
     test "change_step/1 returns a step changeset" do
@@ -205,7 +168,7 @@ defmodule Lightning.InvocationTest do
     ).entries()
   end
 
-  defp create_work_order(project, workflow, job, trigger, now, seconds) do
+  defp create_work_order(project, snapshot, workflow, job, trigger, now, seconds) do
     dataclip = insert(:dataclip, project: project)
 
     wo =
@@ -213,19 +176,20 @@ defmodule Lightning.InvocationTest do
         :workorder,
         workflow: workflow,
         trigger: trigger,
-        dataclip: dataclip
+        dataclip: dataclip,
+        snapshot: snapshot
       )
 
     run =
       insert(:run,
         work_order: wo,
         dataclip: dataclip,
-        starting_trigger: trigger
+        starting_trigger: trigger,
+        snapshot: snapshot
       )
 
     {:ok, step} =
-      Runs.start_step(%{
-        "run_id" => run.id,
+      Runs.start_step(run, %{
         "job_id" => job.id,
         "input_dataclip_id" => dataclip.id,
         "started_at" => now |> Timex.shift(seconds: seconds),
@@ -248,12 +212,50 @@ defmodule Lightning.InvocationTest do
     ).entries()
   end
 
+  describe "search_workorders_for_retry/2" do
+    test "returns workorders without preloading and without wiped dataclips" do
+      project = insert(:project)
+      dataclip = insert(:dataclip)
+      wiped_dataclip = insert(:dataclip, wiped_at: Timex.now())
+
+      %{workflow: workflow, trigger: trigger} =
+        build_workflow(project: project)
+
+      workorders =
+        insert_list(2, :workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      insert_list(2, :workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: wiped_dataclip
+      )
+
+      assert found_workorders =
+               Invocation.search_workorders_for_retry(
+                 project,
+                 SearchParams.new(%{"status" => SearchParams.status_list()})
+               )
+
+      assert MapSet.new(workorders, & &1.id) ==
+               MapSet.new(found_workorders, & &1.id)
+
+      refute Enum.any?(found_workorders, &Ecto.assoc_loaded?(&1.dataclip))
+      refute Enum.any?(found_workorders, &Ecto.assoc_loaded?(&1.snapshot))
+      refute Enum.any?(found_workorders, &Ecto.assoc_loaded?(&1.workflow))
+      refute Enum.any?(found_workorders, &Ecto.assoc_loaded?(&1.runs))
+    end
+  end
+
   describe "search_workorders/1" do
     test "returns workorders ordered inserted at desc, with nulls first" do
       project = insert(:project)
       dataclip = insert(:dataclip)
 
-      {workflow, trigger, job} =
+      %{workflow: workflow, trigger: trigger, job: job} =
         build_workflow(project: project, name: "chw-help")
 
       workorders =
@@ -280,8 +282,7 @@ defmodule Lightning.InvocationTest do
         started_shift = -50 - index * 10
         finished_shift = -40 - index * 10
 
-        Runs.start_step(%{
-          "run_id" => run.id,
+        Runs.start_step(run, %{
           "job_id" => job.id,
           "input_dataclip_id" => dataclip.id,
           "started_at" => now |> Timex.shift(seconds: started_shift),
@@ -324,7 +325,7 @@ defmodule Lightning.InvocationTest do
                total_pages: 1,
                entries: entries
              } =
-               Lightning.Invocation.search_workorders(
+               Invocation.search_workorders(
                  project,
                  SearchParams.new(%{"status" => ["pending", "crashed"]}),
                  %{
@@ -357,7 +358,7 @@ defmodule Lightning.InvocationTest do
                total_pages: 1,
                entries: entries
              } =
-               Lightning.Invocation.search_workorders(
+               Invocation.search_workorders(
                  project,
                  SearchParams.new(%{"status" => SearchParams.status_list()}),
                  %{
@@ -387,7 +388,7 @@ defmodule Lightning.InvocationTest do
         total_pages: total_pages,
         entries: entries
       } =
-        Lightning.Invocation.search_workorders(
+        Invocation.search_workorders(
           project,
           SearchParams.new(%{"status" => ["crashed"]}),
           %{
@@ -406,7 +407,7 @@ defmodule Lightning.InvocationTest do
         total_pages: total_pages,
         entries: entries
       } =
-        Lightning.Invocation.search_workorders(
+        Invocation.search_workorders(
           project,
           SearchParams.new(%{"status" => ["crashed"]}),
           %{
@@ -425,7 +426,7 @@ defmodule Lightning.InvocationTest do
         total_pages: total_pages,
         entries: entries
       } =
-        Lightning.Invocation.search_workorders(
+        Invocation.search_workorders(
           project,
           SearchParams.new(%{"status" => ["crashed"]}),
           %{
@@ -441,43 +442,43 @@ defmodule Lightning.InvocationTest do
     test "returns paginated workorders with ordering" do
       project = insert(:project)
 
-      {workflow1, trigger1, job1} =
+      %{workflow: workflow1, trigger: trigger1, job: job1, snapshot: snapshot} =
         build_workflow(project: project, name: "workflow-1")
 
       now = Timex.now()
 
       %{work_order: wf1_wo1, step: _wf1_step1} =
-        create_work_order(project, workflow1, job1, trigger1, now, 10)
+        create_work_order(project, snapshot, workflow1, job1, trigger1, now, 10)
 
       %{work_order: wf1_wo2, step: _wf1_step2} =
-        create_work_order(project, workflow1, job1, trigger1, now, 20)
+        create_work_order(project, snapshot, workflow1, job1, trigger1, now, 20)
 
       %{work_order: wf1_wo3, step: _wf1_step3} =
-        create_work_order(project, workflow1, job1, trigger1, now, 30)
+        create_work_order(project, snapshot, workflow1, job1, trigger1, now, 30)
 
-      {workflow2, trigger2, job2} =
+      %{workflow: workflow2, trigger: trigger2, job: job2, snapshot: snapshot} =
         build_workflow(project: project, name: "workflow-2")
 
       %{work_order: wf2_wo1, step: _wf2_step1} =
-        create_work_order(project, workflow2, job2, trigger2, now, 40)
+        create_work_order(project, snapshot, workflow2, job2, trigger2, now, 40)
 
       %{work_order: wf2_wo2, step: _wf2_step2} =
-        create_work_order(project, workflow2, job2, trigger2, now, 50)
+        create_work_order(project, snapshot, workflow2, job2, trigger2, now, 50)
 
       %{work_order: wf2_wo3, step: _wf2_step3} =
-        create_work_order(project, workflow2, job2, trigger2, now, 60)
+        create_work_order(project, snapshot, workflow2, job2, trigger2, now, 60)
 
-      {workflow3, trigger3, job3} =
+      %{workflow: workflow3, trigger: trigger3, job: job3, snapshot: snapshot} =
         build_workflow(project: project, name: "workflow-3")
 
       %{work_order: wf3_wo1, step: _wf3_step1} =
-        create_work_order(project, workflow3, job3, trigger3, now, 70)
+        create_work_order(project, snapshot, workflow3, job3, trigger3, now, 70)
 
       %{work_order: wf3_wo2, step: _wf3_step2} =
-        create_work_order(project, workflow3, job3, trigger3, now, 80)
+        create_work_order(project, snapshot, workflow3, job3, trigger3, now, 80)
 
       %{work_order: wf3_wo3, step: _wf3_step3} =
-        create_work_order(project, workflow3, job3, trigger3, now, 90)
+        create_work_order(project, snapshot, workflow3, job3, trigger3, now, 90)
 
       ### PAGE 1 -----------------------------------------------------------------------
 
@@ -591,7 +592,7 @@ defmodule Lightning.InvocationTest do
       insert_list(3, :workorder, workflow: workflow2, state: :crashed)
 
       workflow1_results =
-        Lightning.Invocation.search_workorders(
+        Invocation.search_workorders(
           project,
           SearchParams.new(%{"workflow_id" => workflow1.id})
         ).entries
@@ -603,7 +604,7 @@ defmodule Lightning.InvocationTest do
              end)
 
       workflow2_results =
-        Lightning.Invocation.search_workorders(
+        Invocation.search_workorders(
           project,
           SearchParams.new(%{"workflow_id" => workflow2.id})
         ).entries
@@ -625,7 +626,7 @@ defmodule Lightning.InvocationTest do
       workorder_2 = insert(:workorder, workflow: workflow, state: :success)
 
       page_result =
-        Lightning.Invocation.search_workorders(
+        Invocation.search_workorders(
           project,
           SearchParams.new(%{"workorder_id" => workorder_1.id})
         )
@@ -634,7 +635,7 @@ defmodule Lightning.InvocationTest do
       assert entry.id == workorder_1.id
 
       page_result =
-        Lightning.Invocation.search_workorders(
+        Invocation.search_workorders(
           project,
           SearchParams.new(%{"workorder_id" => workorder_2.id})
         )
@@ -647,7 +648,7 @@ defmodule Lightning.InvocationTest do
       project = insert(:project)
       _dataclip = insert(:dataclip)
 
-      {workflow, _trigger, _job} =
+      %{workflow: workflow} =
         build_workflow(project: project, name: "chw-help")
 
       now = Timex.now()
@@ -676,7 +677,7 @@ defmodule Lightning.InvocationTest do
         )
 
       [found_workorder] =
-        Lightning.Invocation.search_workorders(
+        Invocation.search_workorders(
           project,
           SearchParams.new(%{
             "date_after" => Timex.shift(now, minutes: -1),
@@ -700,7 +701,7 @@ defmodule Lightning.InvocationTest do
       insert(:workorder, workflow: workflow, inserted_at: future_time)
 
       [found_workorder] =
-        Lightning.Invocation.search_workorders(
+        Invocation.search_workorders(
           project,
           SearchParams.new(%{
             "wo_date_after" => Timex.shift(now, minutes: -1),
@@ -711,36 +712,70 @@ defmodule Lightning.InvocationTest do
       assert found_workorder.id == wo_now.id
     end
 
-    test "filters workorders by search term on body and/or run logs and/or workorder, run, or step ID" do
+    # to be replaced by paginator unit tests
+    @tag :skip
+    test "filters workorders sets timeout" do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+
+      SearchParams.status_list()
+      |> Enum.map(fn status ->
+        insert_list(1_000, :workorder, workflow: workflow, state: status)
+      end)
+
+      try do
+        Invocation.search_workorders(
+          project,
+          SearchParams.new(%{"status" => SearchParams.status_list()}),
+          %{
+            page: 1,
+            page_size: 10,
+            options: [timeout: 30]
+          }
+        )
+      rescue
+        e in [DBConnection.ConnectionError] ->
+          assert e.message =~ "timeout"
+      end
+    end
+  end
+
+  describe "searching across workorders" do
+    setup do
       project = insert(:project)
 
       dataclip =
         insert(:dataclip,
-          body: %{"player" => "Sadio Mane"},
+          body: %{
+            "player" => "Sadio Mane",
+            "date_of_birth" => "1992-04-10",
+            "fav_color" => "vert foncé"
+          },
           type: :global,
           project: project
         )
 
-      {workflow, trigger, job} =
+      %{workflow: workflow, trigger: trigger, job: job, snapshot: snapshot} =
         build_workflow(project: project, name: "chw-help")
 
       workorder =
         insert(:workorder,
           workflow: workflow,
           trigger: trigger,
-          dataclip: dataclip
+          dataclip: dataclip,
+          snapshot: snapshot
         )
 
       run =
         insert(:run,
           work_order: workorder,
           dataclip: dataclip,
+          snapshot: snapshot,
           starting_trigger: trigger
         )
 
       {:ok, step} =
-        Runs.start_step(%{
-          "run_id" => run.id,
+        Runs.start_step(run, %{
           "job_id" => job.id,
           "input_dataclip_id" => dataclip.id,
           "step_id" => Ecto.UUID.generate()
@@ -749,11 +784,238 @@ defmodule Lightning.InvocationTest do
       insert(:log_line,
         run: run,
         step: step,
-        message: "Sadio Mane is playing in Senegal",
+        message: "Sadio Mane is playing for Senegal",
         timestamp: Timex.now()
       )
 
-      assert Lightning.Invocation.search_workorders(
+      insert(:log_line,
+        run: run,
+        step: step,
+        message: "Bukayo Saka is playing for England",
+        timestamp: Timex.now()
+      )
+
+      %{
+        project: project,
+        dataclip: dataclip,
+        workorder: workorder,
+        run: run,
+        step: step
+      }
+    end
+
+    @tag skip: "Ooops. We don't support this yet."
+    test "search on UUIDs can find partial string matches at any point in the dataclip UUID",
+         %{project: project, dataclip: dataclip} do
+      assert [_found] =
+               Invocation.search_workorders(
+                 project,
+                 SearchParams.new(%{
+                   "search_term" => dataclip.id,
+                   "search_fields" => ["id"]
+                 })
+               ).entries
+
+      assert [_found] =
+               Invocation.search_workorders(
+                 project,
+                 SearchParams.new(%{
+                   "search_term" => String.slice(dataclip.id, 4, 3),
+                   "search_fields" => ["id"]
+                 })
+               ).entries
+    end
+
+    test "search on UUIDs can find partial string matches at any point in the work_order UUID",
+         %{project: project, workorder: workorder} do
+      assert [_found] =
+               Invocation.search_workorders(
+                 project,
+                 SearchParams.new(%{
+                   "search_term" => workorder.id,
+                   "search_fields" => ["id"]
+                 })
+               ).entries
+
+      assert [_found] =
+               Invocation.search_workorders(
+                 project,
+                 SearchParams.new(%{
+                   "search_term" => String.slice(workorder.id, 4, 3),
+                   "search_fields" => ["id"]
+                 })
+               ).entries
+    end
+
+    test "search on UUIDs can find partial string matches at any point in the run UUID",
+         %{project: project, run: run} do
+      assert [_found] =
+               Invocation.search_workorders(
+                 project,
+                 SearchParams.new(%{
+                   "search_term" => run.id,
+                   "search_fields" => ["id"]
+                 })
+               ).entries
+
+      assert [_found] =
+               Invocation.search_workorders(
+                 project,
+                 SearchParams.new(%{
+                   "search_term" => String.slice(run.id, 4, 3),
+                   "search_fields" => ["id"]
+                 })
+               ).entries
+    end
+
+    test "search on UUIDs can find partial string matches at any point in the step UUID",
+         %{project: project, step: step} do
+      assert [_found] =
+               Invocation.search_workorders(
+                 project,
+                 SearchParams.new(%{
+                   "search_term" => step.id,
+                   "search_fields" => ["id"]
+                 })
+               ).entries
+
+      assert [_found] =
+               Invocation.search_workorders(
+                 project,
+                 SearchParams.new(%{
+                   "search_term" => String.slice(step.id, 7, 2),
+                   "search_fields" => ["id"]
+                 })
+               ).entries
+    end
+
+    test "search on logs does NOT return 'stem' matches... only exact matches",
+         %{project: project} do
+      assert [] =
+               Invocation.search_workorders(
+                 project,
+                 SearchParams.new(%{
+                   "search_term" => "played",
+                   "search_fields" => ["log"]
+                 })
+               ).entries
+
+      assert [] =
+               Invocation.search_workorders(
+                 project,
+                 SearchParams.new(%{
+                   "search_term" => "playings",
+                   "search_fields" => ["log"]
+                 })
+               ).entries
+    end
+
+    test "search on logs can find partial string matches at the start of words",
+         %{project: project} do
+      assert [_found] =
+               Invocation.search_workorders(
+                 project,
+                 SearchParams.new(%{
+                   "search_term" => "Buka",
+                   "search_fields" => ["log"]
+                 })
+               ).entries
+    end
+
+    @tag skip: "Ooops. We don't support this yet."
+    test "search on logs can find partial string matches at the end of words", %{
+      project: project
+    } do
+      assert [_found] =
+               Invocation.search_workorders(
+                 project,
+                 SearchParams.new(%{
+                   "search_term" => "ngland",
+                   "search_fields" => ["log"]
+                 })
+               ).entries
+    end
+
+    test "search on logs can find partial string matches across words", %{
+      project: project
+    } do
+      assert [_found] =
+               Invocation.search_workorders(
+                 project,
+                 SearchParams.new(%{
+                   "search_term" => "Bukayo Sa",
+                   "search_fields" => ["log"]
+                 })
+               ).entries
+    end
+
+    test "search on dataclips can find partial string matches at the start of keys",
+         %{
+           project: project
+         } do
+      assert [_found] =
+               Invocation.search_workorders(
+                 project,
+                 SearchParams.new(%{
+                   "search_term" => "date_of",
+                   "search_fields" => ["body"]
+                 })
+               ).entries
+
+      assert [_found] =
+               Invocation.search_workorders(
+                 project,
+                 SearchParams.new(%{
+                   "search_term" => "bir",
+                   "search_fields" => ["body"]
+                 })
+               ).entries
+
+      assert [] =
+               Invocation.search_workorders(
+                 project,
+                 SearchParams.new(%{
+                   "search_term" => "irth",
+                   "search_fields" => ["body"]
+                 })
+               ).entries
+    end
+
+    test "search on dataclips can find partial string matches at the start of values",
+         %{
+           project: project
+         } do
+      assert [_found] =
+               Invocation.search_workorders(
+                 project,
+                 SearchParams.new(%{
+                   "search_term" => "vert",
+                   "search_fields" => ["body"]
+                 })
+               ).entries
+
+      assert [] =
+               Invocation.search_workorders(
+                 project,
+                 SearchParams.new(%{
+                   "search_term" => "ncé",
+                   "search_fields" => ["body"]
+                 })
+               ).entries
+
+      assert [_found] =
+               Invocation.search_workorders(
+                 project,
+                 SearchParams.new(%{
+                   "search_term" => "199",
+                   "search_fields" => ["body"]
+                 })
+               ).entries
+    end
+
+    test "filters workorders by search term on body and/or run logs and/or workorder, run, or step ID",
+         %{project: project, workorder: workorder, run: run, step: step} do
+      assert Invocation.search_workorders(
                project,
                SearchParams.new(%{
                  "search_term" => "won't match anything",
@@ -762,7 +1024,7 @@ defmodule Lightning.InvocationTest do
              ).entries == []
 
       assert [found_workorder] =
-               Lightning.Invocation.search_workorders(
+               Invocation.search_workorders(
                  project,
                  SearchParams.new(%{
                    "search_term" => "senegal",
@@ -773,7 +1035,7 @@ defmodule Lightning.InvocationTest do
       assert found_workorder.id == workorder.id
 
       assert [] ==
-               Lightning.Invocation.search_workorders(
+               Invocation.search_workorders(
                  project,
                  SearchParams.new(%{
                    "search_term" => "senegal",
@@ -782,7 +1044,7 @@ defmodule Lightning.InvocationTest do
                ).entries
 
       assert [] ==
-               Lightning.Invocation.search_workorders(
+               Invocation.search_workorders(
                  project,
                  SearchParams.new(%{
                    "search_term" => "liverpool",
@@ -792,7 +1054,7 @@ defmodule Lightning.InvocationTest do
 
       # By ID
       assert [] ==
-               Lightning.Invocation.search_workorders(
+               Invocation.search_workorders(
                  project,
                  SearchParams.new(%{
                    "search_term" => "nonexistentid",
@@ -811,7 +1073,7 @@ defmodule Lightning.InvocationTest do
 
       for search_id <- search_ids do
         assert [found_workorder] =
-                 Lightning.Invocation.search_workorders(
+                 Invocation.search_workorders(
                    project,
                    SearchParams.new(%{
                      "search_term" => search_id,
@@ -823,57 +1085,6 @@ defmodule Lightning.InvocationTest do
 
         assert found_workorder.id == workorder.id
       end
-    end
-
-    # to be replaced by paginator unit tests
-    @tag :skip
-    test "filters workorders sets timeout" do
-      project = insert(:project)
-      workflow = insert(:workflow, project: project)
-
-      SearchParams.status_list()
-      |> Enum.map(fn status ->
-        insert_list(1_000, :workorder, workflow: workflow, state: status)
-      end)
-
-      try do
-        Lightning.Invocation.search_workorders(
-          project,
-          SearchParams.new(%{"status" => SearchParams.status_list()}),
-          %{
-            page: 1,
-            page_size: 10,
-            options: [timeout: 30]
-          }
-        )
-      rescue
-        e in [DBConnection.ConnectionError] ->
-          assert e.message =~ "timeout"
-      end
-    end
-  end
-
-  describe "search_workorders_query/2" do
-    test "ignores status filter when all statuses are queried" do
-      project = insert(:project)
-
-      query =
-        Lightning.Invocation.search_workorders_query(
-          project,
-          SearchParams.new(%{"status" => ["pending"]})
-        )
-
-      {sql, _value} = Repo.to_sql(:all, query)
-      assert sql =~ ~S["state" = ]
-
-      query =
-        Lightning.Invocation.search_workorders_query(
-          project,
-          SearchParams.new(%{"status" => SearchParams.status_list()})
-        )
-
-      {sql, _value} = Repo.to_sql(:all, query)
-      refute sql =~ ~S["state" = ]
     end
   end
 

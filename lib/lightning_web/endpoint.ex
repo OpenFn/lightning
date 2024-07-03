@@ -1,7 +1,6 @@
 defmodule LightningWeb.Endpoint do
   use Sentry.PlugCapture
   use Phoenix.Endpoint, otp_app: :lightning
-
   alias LightningWeb.Plugs
 
   # The session will be stored in the cookie and signed,
@@ -49,11 +48,22 @@ defmodule LightningWeb.Endpoint do
     if: {LightningWeb.PromExPlugAuthorization, nil},
     do: {PromEx.Plug, prom_ex_module: Lightning.PromEx}
 
+  @plug_extensions Application.compile_env(
+                     :lightning,
+                     Lightning.Extensions.Plugs,
+                     []
+                   )
+  for {plug, mfa_opts} <- @plug_extensions do
+    plug Replug, plug: plug, opts: mfa_opts
+  end
+
   plug Replug,
     plug: Plug.Parsers,
     opts: {LightningWeb.PlugConfigs, :plug_parsers}
 
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
+
+  plug CORSPlug, origin: &Lightning.Config.cors_origin/0
 
   plug Plugs.WebhookAuth
 

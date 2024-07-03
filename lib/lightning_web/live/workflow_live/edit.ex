@@ -3,9 +3,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
   use LightningWeb, {:live_view, container: {:div, []}}
 
   import LightningWeb.Components.NewInputs
+  import LightningWeb.Components.Icons
   import LightningWeb.WorkflowLive.Components
 
+  alias Lightning.Extensions.UsageLimiting.Action
+  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Invocation
+  alias Lightning.OauthClients
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
@@ -13,8 +17,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Lightning.Runs.Events.DataclipUpdated
   alias Lightning.Runs.Events.RunUpdated
   alias Lightning.Runs.Events.StepCompleted
+  alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows
   alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
   alias Lightning.WorkOrders
@@ -52,22 +58,59 @@ defmodule LightningWeb.WorkflowLive.Edit do
         <LayoutComponents.header current_user={@current_user}>
           <:title>
             <.workflow_name_field form={@workflow_form} />
+            <div class="mx-2"></div>
+            <LightningWeb.Components.Common.snapshot_version_chip
+              id="canvas-workflow-version"
+              version={@snapshot_version_tag}
+              tooltip={
+                if @snapshot_version_tag == "latest",
+                  do: "This is the latest version of this workflow",
+                  else:
+                    "You are viewing a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(@snapshot.inserted_at)}"
+              }
+            />
           </:title>
-          <.with_changes_indicator changeset={@changeset}>
+          <div class="mx-2"></div>
+          <div :if={@snapshot_version_tag != "latest"} class="flex">
+            <div class="flex-shrink-0">
+              <Heroicons.information_circle solid class="h-5 w-5 text-yellow-600" />
+            </div>
+            <div class="ml-1 flex-1 md:flex md:justify-between">
+              <p class="text-sm text-yellow-600">
+                You cannot edit or run an old snapshot of a workflow.
+              </p>
+            </div>
+          </div>
+          <div class="mx-1"></div>
+          <.button
+            :if={@snapshot_version_tag != "latest"}
+            id={"version-switcher-button-#{@workflow.id}"}
+            type="button"
+            phx-click="switch-version"
+            phx-value-type="commit"
+            color_class="text-white bg-primary-600 hover:bg-primary-700"
+          >
+            Switch to the latest version
+            <Heroicons.arrow_up_on_square_stack class="w-4 h-4 ml-1" />
+          </.button>
+          <.with_changes_indicator
+            :if={@snapshot_version_tag == "latest"}
+            changeset={@changeset}
+          >
             <div class="flex flex-row gap-2">
               <.icon
                 :if={!@can_edit_workflow}
                 name="hero-lock-closed"
                 class="w-5 h-5 place-self-center text-gray-300"
               />
-              <Form.submit_button
-                class=""
-                phx-disable-with="Saving..."
-                disabled={!@can_edit_workflow or !@changeset.valid?}
-                form="workflow-form"
-              >
-                Save
-              </Form.submit_button>
+              <div class="m-auto">
+                <.offline_indicator />
+              </div>
+              <.save_workflow_button
+                changeset={@changeset}
+                can_edit_workflow={@can_edit_workflow}
+                snapshot_version_tag={@snapshot_version_tag}
+              />
             </div>
           </.with_changes_indicator>
         </LayoutComponents.header>
@@ -78,46 +121,98 @@ defmodule LightningWeb.WorkflowLive.Edit do
           <div
             :if={@selected_job && @selection_mode == "expand"}
             class={[
-              "fixed left-0 top-0 right-0 bottom-0 m-8 flex-wrap",
+              "fixed left-0 top-0 right-0 bottom-0 flex-wrap",
               "hidden opacity-0",
-              "bg-white inset-0 z-30 overflow-hidden rounded-lg drop-shadow-[0_35px_35px_rgba(0,0,0,0.25)]"
+              "bg-white inset-0 z-30 overflow-hidden drop-shadow-[0_35px_35px_rgba(0,0,0,0.25)]"
             ]}
             phx-mounted={fade_in()}
             phx-remove={fade_out()}
           >
             <LightningWeb.WorkflowLive.JobView.job_edit_view
               job={@selected_job}
+              snapshot={@snapshot}
+              snapshot_version={@snapshot_version_tag}
               current_user={@current_user}
               project={@project}
               socket={@socket}
               follow_run_id={@follow_run && @follow_run.id}
-              close_url={
-                "#{@base_url}?s=#{@selected_job.id}"
-              }
+              close_url={close_url(assigns, :selected_job, :select)}
               form={single_inputs_for(@workflow_form, :jobs, @selected_job.id)}
             >
-              <:collapsible_panel
+              <.collapsible_panel
                 id={"manual-job-#{@selected_job.id}"}
-                panel_title="Input"
+                class="h-full border border-l-0"
               >
-                <LightningWeb.WorkflowLive.ManualWorkorder.component
-                  id={"manual-job-#{@selected_job.id}"}
-                  form={@manual_run_form}
-                  dataclips={@selectable_dataclips}
-                  disabled={!@can_run_workflow}
-                  project={@project}
-                  admin_contacts={@admin_contacts}
-                  can_edit_data_retention={@can_edit_data_retention}
-                  follow_run_id={@follow_run && @follow_run.id}
-                  show_wiped_dataclip_selector={@show_wiped_dataclip_selector}
-                />
-              </:collapsible_panel>
+                <:tabs>
+                  <LightningWeb.Components.Tabbed.tabs
+                    id="tab-bar-left"
+                    default_hash="manual"
+                    class="flex flex-row space-x-6 -my-2 job-viewer-tabs"
+                  >
+                    <:tab hash="manual">
+                      <span class="inline-block align-middle">Input</span>
+                    </:tab>
+                    <:tab
+                      :if={Lightning.AiAssistant.authorized?(@current_user)}
+                      hash="aichat"
+                    >
+                      <span class="inline-block align-middle">AI Assistant</span>
+                    </:tab>
+                  </LightningWeb.Components.Tabbed.tabs>
+                </:tabs>
+                <LightningWeb.Components.Tabbed.panels
+                  id="input-panels"
+                  class="contents"
+                  default_hash="manual"
+                >
+                  <:panel hash="manual" class="overflow-auto h-full">
+                    <div class="grow flex flex-col gap-4 p-2 min-h-0 h-full">
+                      <LightningWeb.WorkflowLive.ManualWorkorder.component
+                        id={"manual-job-#{@selected_job.id}"}
+                        form={@manual_run_form}
+                        dataclips={@selectable_dataclips}
+                        disabled={
+                          !@can_run_workflow ||
+                            @snapshot_version_tag != "latest"
+                        }
+                        project={@project}
+                        admin_contacts={@admin_contacts}
+                        can_edit_data_retention={@can_edit_data_retention}
+                        follow_run_id={@follow_run && @follow_run.id}
+                        show_wiped_dataclip_selector={@show_wiped_dataclip_selector}
+                      />
+                    </div>
+                  </:panel>
+                  <:panel
+                    :if={Lightning.AiAssistant.authorized?(@current_user)}
+                    hash="aichat"
+                    class="h-full"
+                  >
+                    <div class="grow min-h-0 h-full text-sm">
+                      <.live_component
+                        module={LightningWeb.WorkflowLive.AiAssistantComponent}
+                        selected_job={@selected_job}
+                        id={"aichat-#{@selected_job.id}"}
+                      />
+                    </div>
+                  </:panel>
+                </LightningWeb.Components.Tabbed.panels>
+              </.collapsible_panel>
               <:footer>
                 <div class="flex flex-row gap-x-2">
-                  <.save_is_blocked_error :if={
-                    editor_is_empty(@workflow_form, @selected_job)
-                  }>
-                    The step can't be blank
+                  <% {is_empty, error_message} =
+                    editor_is_empty(@workflow_form, @selected_job) %>
+
+                  <.version_switcher_toggle
+                    :if={display_switcher(@snapshot, @workflow)}
+                    id={@selected_job.id}
+                    label="Switch to the latest version"
+                    disabled={job_deleted?(@selected_job, @workflow)}
+                    version={@snapshot_version_tag}
+                  />
+
+                  <.save_is_blocked_error :if={is_empty}>
+                    <%= error_message %>
                   </.save_is_blocked_error>
 
                   <.icon
@@ -147,20 +242,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           selected_dataclip_wiped?(
                             @manual_run_form,
                             @selectable_dataclips
-                          )
+                          ) || @snapshot_version_tag != "latest"
                       }
                     >
                       <%= if processing(@follow_run) do %>
                         <.icon
-                          name="hero-arrow-path-mini"
+                          name="hero-arrow-path"
                           class="w-4 h-4 animate-spin mr-1"
                         /> Processing
                       <% else %>
                         <%= if step_retryable?(@step, @manual_run_form, @selectable_dataclips) do %>
-                          <.icon name="hero-arrow-path-mini" class="w-4 h-4 mr-1" />
-                          Rerun from here
+                          <.icon name="hero-play-mini" class="w-4 h-4 mr-1" />
+                          Retry from here
                         <% else %>
-                          <.icon name="hero-play-solid" class="w-4 h-4 mr-1" />
+                          <.icon name="hero-play-mini" class="w-4 h-4 mr-1" />
                           Create New Work Order
                         <% end %>
                       <% end %>
@@ -181,7 +276,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         id="option-menu-button"
                         aria-expanded="true"
                         aria-haspopup="true"
-                        disabled={@save_and_run_disabled}
+                        disabled={
+                          @save_and_run_disabled ||
+                            @snapshot_version_tag != "latest"
+                        }
                         phx-click={show_dropdown("create-new-work-order")}
                       >
                         <span class="sr-only">Open options</span>
@@ -215,7 +313,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
                             "text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
                           ]}
                           form={@manual_run_form.id}
-                          disabled={@save_and_run_disabled}
+                          disabled={
+                            @save_and_run_disabled ||
+                              @snapshot_version_tag != "latest"
+                          }
                         >
                           <.icon name="hero-play-solid" class="w-4 h-4 mr-1" />
                           Create New Work Order
@@ -224,14 +325,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     </div>
                   </div>
                   <.with_changes_indicator changeset={@changeset}>
-                    <Form.submit_button
-                      class=""
-                      phx-disable-with="Saving..."
-                      disabled={!@can_edit_workflow or !@changeset.valid?}
-                      form="workflow-form"
-                    >
-                      Save
-                    </Form.submit_button>
+                    <.save_workflow_button
+                      changeset={@changeset}
+                      can_edit_workflow={@can_edit_workflow}
+                      snapshot_version_tag={@snapshot_version_tag}
+                    />
                   </.with_changes_indicator>
                 </div>
               </:footer>
@@ -256,47 +354,47 @@ defmodule LightningWeb.WorkflowLive.Edit do
             </span>
           </div>
         </div>
-        <%= if @selected_job do %>
-          <.live_component
-            id="new-credential-modal"
-            module={LightningWeb.CredentialLive.FormComponent}
-            action={:new}
-            credential_type={@selected_credential_type}
-            credential={
-              %Lightning.Credentials.Credential{
-                user_id: @current_user.id,
-                project_credentials: [
-                  %Lightning.Projects.ProjectCredential{
-                    project_id: @project.id
-                  }
-                ]
-              }
+        <.live_component
+          :if={@selected_job}
+          id="new-credential-modal"
+          module={LightningWeb.CredentialLive.CredentialFormComponent}
+          action={:new}
+          credential_type={@selected_credential_type}
+          credential={
+            %Lightning.Credentials.Credential{
+              user_id: @current_user.id,
+              project_credentials: [
+                %Lightning.Projects.ProjectCredential{
+                  project_id: @project.id
+                }
+              ]
             }
-            current_user={@current_user}
-            projects={[]}
-            project={@project}
-            show_project_credentials={false}
-            on_save={
-              fn credential ->
-                form =
-                  single_inputs_for(@workflow_form, :jobs, @selected_job.id)
+          }
+          current_user={@current_user}
+          oauth_clients={@oauth_clients}
+          projects={[]}
+          project={@project}
+          show_project_credentials={false}
+          on_save={
+            fn credential ->
+              form =
+                single_inputs_for(@workflow_form, :jobs, @selected_job.id)
 
-                params =
-                  LightningWeb.Utils.build_params_for_field(
-                    form,
-                    :project_credential_id,
-                    credential.project_credentials |> Enum.at(0) |> Map.get(:id)
-                  )
+              params =
+                LightningWeb.Utils.build_params_for_field(
+                  form,
+                  :project_credential_id,
+                  credential.project_credentials |> Enum.at(0) |> Map.get(:id)
+                )
 
-                send_form_changed(params)
-              end
-            }
-            can_create_project_credential={@can_edit_workflow}
-            return_to={
-              ~p"/projects/#{@project.id}/w/#{@workflow.id}?s=#{@selected_job.id}"
-            }
-          />
-        <% end %>
+              send_form_changed(params)
+            end
+          }
+          can_create_project_credential={@can_edit_workflow}
+          return_to={
+            ~p"/projects/#{@project.id}/w/#{@workflow.id}?s=#{@selected_job.id}"
+          }
+        />
         <.form
           id="workflow-form"
           for={@workflow_form}
@@ -304,6 +402,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           phx-hook="SaveViaCtrlS"
           phx-change="validate"
         >
+          <input type="hidden" name="_ignore_me" />
           <.single_inputs_for
             :let={{jf}}
             :if={@selected_job}
@@ -320,12 +419,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 end)
               }
               id={"job-pane-#{@selected_job.id}"}
-              cancel_url={@base_url}
+              cancel_url={close_url(assigns, :selected_job, :unselect)}
             >
               <!-- Show only the currently selected one -->
               <.job_form
                 on_change={&send_form_changed/1}
-                editable={@can_edit_workflow}
+                editable={
+                  @can_edit_workflow &&
+                    @snapshot_version_tag == "latest"
+                }
                 form={jf}
                 project_user={@project_user}
               />
@@ -334,7 +436,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   <div class="flex items-center">
                     <.expand_job_editor
                       base_url={@base_url}
+                      snapshot_lock_version={@snapshot && @snapshot.lock_version}
                       job={@selected_job}
+                      selected_run={@selected_run}
                       form={@workflow_form}
                     />
                   </div>
@@ -347,14 +451,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
                         disabled={
                           !@can_edit_workflow or @has_child_edges or @is_first_job or
-                            @has_steps
+                            @snapshot_version_tag != "latest"
                         }
                         tooltip={
                           deletion_tooltip_message(
                             @can_edit_workflow,
                             @has_child_edges,
-                            @is_first_job,
-                            @has_steps
+                            @is_first_job
                           )
                         }
                         data-confirm="Are you sure you want to delete this step?"
@@ -376,7 +479,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           >
             <.panel
               id={"trigger-pane-#{@selected_trigger.id}"}
-              cancel_url={@base_url}
+              cancel_url={close_url(assigns, :selected_trigger, :unselect)}
               title={
                 Phoenix.HTML.Form.input_value(tf, :type)
                 |> to_string()
@@ -392,14 +495,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 <.trigger_form
                   form={tf}
                   on_change={&send_form_changed/1}
-                  disabled={!@can_edit_workflow}
+                  disabled={
+                    !@can_edit_workflow or
+                      @snapshot_version_tag != "latest"
+                  }
                   can_write_webhook_auth_method={@can_write_webhook_auth_method}
                   webhook_url={webhook_url(@selected_trigger)}
                   selected_trigger={@selected_trigger}
                   action={@live_action}
-                  cancel_url={
-                    ~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"
-                  }
+                  cancel_url={close_url(assigns, :selected_trigger, :unselect)}
                 />
               </div>
             </.panel>
@@ -411,15 +515,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
             field={:edges}
             id={@selected_edge.id}
           >
-            <.panel id={"edge-pane-#{@selected_edge.id}"} cancel_url="?" title="Path">
+            <.panel
+              id={"edge-pane-#{@selected_edge.id}"}
+              cancel_url={close_url(assigns, :selected_edge, :unselect)}
+              title="Path"
+            >
               <div class="w-auto h-full" id={"edge-pane-#{@workflow.id}"}>
                 <!-- Show only the currently selected one -->
                 <.edge_form
                   form={ef}
-                  disabled={!@can_edit_workflow}
-                  cancel_url={
-                    ~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"
+                  disabled={
+                    !@can_edit_workflow or
+                      @snapshot_version_tag != "latest"
                   }
+                  cancel_url={close_url(assigns, :selected_edge, :unselect)}
                 />
               </div>
             </.panel>
@@ -429,7 +538,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         <.live_component
           :if={
             @live_action == :edit && @can_write_webhook_auth_method &&
-              @selected_trigger
+              @selected_trigger && @snapshot_version_tag == "latest"
           }
           module={LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent}
           id="webhooks_auth_method_modal"
@@ -444,6 +553,34 @@ defmodule LightningWeb.WorkflowLive.Edit do
       </div>
     </LayoutComponents.page_content>
     """
+  end
+
+  @spec close_url(map(), atom(), atom()) :: String.t()
+  defp close_url(assigns, type, selection) do
+    query_params = %{
+      "a" => assigns[:selected_run],
+      "v" => Ecto.Changeset.get_field(assigns[:changeset], :lock_version)
+    }
+
+    query_params =
+      case selection do
+        :select ->
+          Map.merge(query_params, %{"s" => assigns[type] && assigns[type].id})
+
+        :unselect ->
+          query_params
+      end
+
+    query_string =
+      query_params
+      |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+      |> URI.encode_query()
+
+    "#{assigns[:base_url]}?#{query_string}"
+  end
+
+  defp display_switcher(snapshot, workflow) do
+    snapshot && snapshot.lock_version != workflow.lock_version
   end
 
   defp step_retryable?(step, form, selectable_dataclips) do
@@ -476,8 +613,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp deletion_tooltip_message(
          can_edit_job,
          has_child_edges,
-         is_first_job,
-         has_steps
+         is_first_job
        ) do
     cond do
       !can_edit_job ->
@@ -487,18 +623,50 @@ defmodule LightningWeb.WorkflowLive.Edit do
         "You can't delete a step that other downstream steps depend on."
 
       is_first_job ->
-        "You can't delete the only step of a workflow."
-
-      has_steps ->
-        "You can't delete a step with associated history while it's protected by your data retention period. (Workflow 'snapshots' are coming. For now, disable the incoming edge to prevent the job from running.)"
+        "You can't delete the first step in a workflow."
 
       true ->
         nil
     end
   end
 
+  defp job_deleted?(selected_job, workflow) do
+    not Enum.any?(workflow.jobs, fn job -> job.id == selected_job.id end)
+  end
+
+  defp version_switcher_toggle(assigns) do
+    ~H"""
+    <div
+      id={"version-switcher-toggle-wrapper-#{@id}"}
+      class="flex items-center justify-between"
+      {if @disabled, do: ["phx-hook": "Tooltip", "data-placement": "top", "aria-label": "Can't switch to the latest version, the job has been deleted from the workflow."], else: []}
+    >
+      <span class="flex flex-grow flex-col">
+        <span class="inline-flex items-center px-2 py-1 font-medium text-yellow-600">
+          <%= @label %>
+        </span>
+      </span>
+      <button
+        id={"version-switcher-toggle-#{@id}"}
+        data-version={@version}
+        phx-click="switch-version"
+        phx-value-type="toggle"
+        type="button"
+        disabled={@disabled}
+        class={"#{if @version == "latest", do: "bg-indigo-600", else: "bg-gray-200"} relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"}
+      >
+        <span
+          aria-hidden="true"
+          class={"#{if @version == "latest", do: "translate-x-5", else: "translate-x-0"} pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"}
+        >
+        </span>
+      </button>
+    </div>
+    """
+  end
+
   defp expand_job_editor(assigns) do
-    is_empty = editor_is_empty(assigns.form, assigns.job)
+    {is_empty, error_message} = editor_is_empty(assigns.form, assigns.job)
 
     button_base_classes =
       ~w(
@@ -510,15 +678,23 @@ defmodule LightningWeb.WorkflowLive.Edit do
           do: ~w(ring-red-300),
           else: ~w(ring-gray-300)
 
-    assigns = assign(assigns, is_empty: is_empty, button_classes: button_classes)
+    assigns =
+      assign(assigns,
+        is_empty: is_empty,
+        button_classes: button_classes,
+        error_message: error_message
+      )
 
     ~H"""
-    <.link patch={"#{@base_url}?s=#{@job.id}&m=expand"} class={@button_classes}>
-      <.icon name="hero-code-bracket-mini" class="w-4 h-4 text-grey-400" />
+    <.link
+      patch={"#{@base_url}?s=#{@job.id}&m=expand" <> (if @snapshot_lock_version, do: "&v=#{@snapshot_lock_version}", else: "") <> (if @selected_run, do: "&a=#{@selected_run}", else: "")}
+      class={@button_classes}
+    >
+      <.icon name="hero-code-bracket" class="w-4 h-4 text-grey-400" />
     </.link>
 
     <.save_is_blocked_error :if={@is_empty}>
-      The step can't be blank
+      <%= @error_message %>
     </.save_is_blocked_error>
     """
   end
@@ -666,13 +842,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
        page_title: "",
        selected_edge: nil,
        selected_job: nil,
+       selected_run: nil,
        selected_trigger: nil,
        selection_mode: nil,
        query_params: %{"s" => nil, "m" => nil, "a" => nil},
        workflow: nil,
+       snapshot: nil,
+       changeset: nil,
+       snapshot_version_tag: "latest",
        workflow_name: "",
        workflow_params: %{},
        selected_credential_type: nil,
+       oauth_clients: OauthClients.list_clients(assigns.project),
        show_wiped_dataclip_selector: false,
        admin_contacts: Projects.list_project_admin_emails(assigns.project.id)
      )}
@@ -700,7 +881,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> assign(page_title: "New Workflow")
   end
 
-  def apply_action(socket, :edit, %{"id" => workflow_id}) do
+  def apply_action(
+        socket,
+        :edit,
+        %{"id" => workflow_id, "v" => version} = params
+      ) do
     case socket.assigns.workflow do
       %{id: ^workflow_id} ->
         socket
@@ -717,8 +902,102 @@ defmodule LightningWeb.WorkflowLive.Edit do
                [:credential, steps: Invocation.Query.any_step()]}
           ])
 
-        socket |> assign_workflow(workflow) |> assign(page_title: workflow.name)
+        if workflow do
+          run_id = Map.get(params, "a")
+          snapshot = snapshot_by_version(workflow.id, version)
+
+          socket
+          |> assign(selected_run: run_id)
+          |> assign_workflow(workflow, snapshot)
+          |> assign(page_title: workflow.name)
+        else
+          socket
+          |> put_flash(:error, "Workflow not found")
+          |> push_redirect(to: ~p"/projects/#{socket.assigns.project}/w")
+        end
     end
+  end
+
+  defp snapshot_by_version(workflow_id, version),
+    do: Snapshot.get_by_version(workflow_id, version)
+
+  defp remove_edges_from_params(initial_params, edges_to_delete, id) do
+    Map.update!(initial_params, "edges", fn edges ->
+      edges
+      |> Enum.reject(fn edge ->
+        edge["id"] in Enum.map(edges_to_delete, & &1.id)
+      end)
+    end)
+    |> Map.update!("jobs", &Enum.reject(&1, fn job -> job["id"] == id end))
+  end
+
+  defp toggle_latest_version(socket) do
+    %{
+      changeset: prev_changeset,
+      project: project,
+      workflow: workflow,
+      selected_job: selected_job
+    } =
+      socket.assigns
+
+    if job_deleted?(selected_job, workflow) do
+      put_flash(
+        socket,
+        :info,
+        "Can't switch to the latest version, the job has been deleted from the workflow."
+      )
+    else
+      {next_changeset, version} = switch_changeset(socket)
+
+      prev_params = WorkflowParams.to_map(prev_changeset)
+      next_params = WorkflowParams.to_map(next_changeset)
+
+      patches = WorkflowParams.to_patches(prev_params, next_params)
+
+      lock_version = Ecto.Changeset.get_field(next_changeset, :lock_version)
+
+      query_params =
+        socket.assigns.query_params
+        |> Map.reject(fn {_k, v} -> is_nil(v) end)
+        |> Map.put("v", lock_version)
+
+      url = ~p"/projects/#{project.id}/w/#{workflow.id}?#{query_params}"
+
+      socket
+      |> assign(changeset: next_changeset)
+      |> assign(workflow_params: next_params)
+      |> assign(snapshot_version_tag: version)
+      |> push_event("patches-applied", %{patches: patches})
+      |> push_patch(to: url)
+    end
+  end
+
+  defp commit_latest_version(socket) do
+    %{changeset: prev_changeset, project: project, workflow: workflow} =
+      socket.assigns
+
+    snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
+
+    next_changeset = Ecto.Changeset.change(workflow)
+
+    prev_params = WorkflowParams.to_map(prev_changeset)
+    next_params = WorkflowParams.to_map(next_changeset)
+
+    patches = WorkflowParams.to_patches(prev_params, next_params)
+
+    lock_version = Ecto.Changeset.get_field(next_changeset, :lock_version)
+
+    query_params =
+      socket.assigns.query_params
+      |> Map.reject(fn {_k, v} -> is_nil(v) end)
+      |> Map.put("v", lock_version)
+
+    url = ~p"/projects/#{project.id}/w/#{workflow.id}?#{query_params}"
+
+    socket
+    |> assign_workflow(workflow, snapshot)
+    |> push_event("patches-applied", %{patches: patches})
+    |> push_patch(to: url)
   end
 
   @impl true
@@ -730,6 +1009,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
      })}
   end
 
+  def handle_event("get-current-state", _params, socket) do
+    {:reply, %{workflow_params: socket.assigns.workflow_params}, socket}
+  end
+
+  def handle_event("switch-version", %{"type" => type}, socket) do
+    updated_socket =
+      case type do
+        "commit" -> commit_latest_version(socket)
+        "toggle" -> toggle_latest_version(socket)
+      end
+
+    {:noreply, updated_socket}
+  end
+
   def handle_event("delete_node", %{"id" => id}, socket) do
     %{
       changeset: changeset,
@@ -737,29 +1030,22 @@ defmodule LightningWeb.WorkflowLive.Edit do
       can_edit_workflow: can_edit_workflow,
       has_child_edges: has_child_edges,
       is_first_job: is_first_job,
-      has_steps: has_steps
+      snapshot_version_tag: tag
     } = socket.assigns
 
     with true <- can_edit_workflow || :not_authorized,
          true <- !has_child_edges || :has_child_edges,
          true <- !is_first_job || :is_first_job,
-         true <- !has_steps || :has_steps do
+         true <- tag == "latest" || :view_only do
       edges_to_delete =
         Ecto.Changeset.get_assoc(changeset, :edges, :struct)
         |> Enum.filter(&(&1.target_job_id == id))
 
-      next_params =
-        Map.update!(initial_params, "edges", fn edges ->
-          edges
-          |> Enum.reject(fn edge ->
-            edge["id"] in Enum.map(edges_to_delete, & &1.id)
-          end)
-        end)
-        |> Map.update!("jobs", &Enum.reject(&1, fn job -> job["id"] == id end))
+      next_params = remove_edges_from_params(initial_params, edges_to_delete, id)
 
       {:noreply,
        socket
-       |> apply_params(next_params)
+       |> apply_params(next_params, :workflow)
        |> push_patches_applied(initial_params)}
     else
       :not_authorized ->
@@ -775,31 +1061,92 @@ defmodule LightningWeb.WorkflowLive.Edit do
       :is_first_job ->
         {:noreply,
          socket
-         |> put_flash(:error, "You can't delete the first step of a workflow.")}
+         |> put_flash(:error, "You can't delete the first step in a workflow.")}
 
-      :has_steps ->
+      :view_only ->
         {:noreply,
          socket
          |> put_flash(
            :error,
-           "You can't delete a step that has already been ran."
+           "Cannot delete a node in snapshot mode, switch to latest"
+         )}
+    end
+  end
+
+  def handle_event("delete_edge", %{"id" => id}, socket) do
+    %{
+      changeset: changeset,
+      workflow_params: initial_params,
+      can_edit_workflow: can_edit_workflow,
+      selected_edge: selected_edge,
+      snapshot_version_tag: tag
+    } = socket.assigns
+
+    with true <- can_edit_workflow || :not_authorized,
+         true <-
+           (selected_edge && is_nil(selected_edge.source_trigger_id)) ||
+             :is_initial_edge,
+         true <- tag == "latest" || :view_only do
+      edges_to_delete =
+        Ecto.Changeset.get_assoc(changeset, :edges, :struct)
+        |> Enum.filter(&(&1.id == id))
+
+      next_params = remove_edges_from_params(initial_params, edges_to_delete, id)
+
+      {:noreply,
+       socket
+       |> apply_params(next_params, :workflow)
+       |> push_patches_applied(initial_params)}
+    else
+      :is_initial_edge ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "You cannot remove the first edge in a workflow.")}
+
+      :not_authorized ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "You are not authorized to delete edges.")}
+
+      :view_only ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :error,
+           "Cannot delete an edge in snapshot mode, switch to latest"
          )}
     end
   end
 
   def handle_event("validate", %{"workflow" => params}, socket) do
-    {:noreply, handle_new_params(socket, params)}
+    {:noreply, handle_new_params(socket, params, :workflow)}
+  end
+
+  def handle_event("validate", %{"snapshot" => params}, socket) do
+    {:noreply, handle_new_params(socket, params, :snapshot)}
+  end
+
+  # TODO: remove this and the matching hidden input when issue resolved in LiveView.
+  # The hidden input is a workaround for a bug in LiveView where the form is
+  # considered for recovery because it has a submit button, but skips the
+  # recovery because it has no inputs.
+  # This causes the LiveView to not be set as joined, and further diffs to
+  # not be applied.
+  def handle_event("validate", %{"_ignore_me" => _}, socket) do
+    {:noreply, socket}
   end
 
   def handle_event("save", params, socket) do
     %{
       project: project,
       workflow_params: initial_params,
-      can_edit_workflow: can_edit_workflow
+      can_edit_workflow: can_edit_workflow,
+      snapshot_version_tag: tag
     } =
       socket.assigns
 
-    if can_edit_workflow do
+    with true <- can_edit_workflow || :not_authorized,
+         true <- tag == "latest" || :view_only do
       next_params =
         case params do
           %{"workflow" => params} ->
@@ -813,19 +1160,31 @@ defmodule LightningWeb.WorkflowLive.Edit do
         end
 
       %{assigns: %{changeset: changeset}} =
-        socket = socket |> apply_params(next_params)
+        socket = socket |> apply_params(next_params, :workflow)
 
-      Lightning.Repo.insert_or_update(changeset)
-      |> case do
+      case Helpers.save_workflow(changeset) do
         {:ok, workflow} ->
+          snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
+
+          query_params =
+            socket.assigns.query_params
+            |> Map.put("v", workflow.lock_version)
+            |> Map.reject(fn {_key, value} -> is_nil(value) end)
+
           {:noreply,
            socket
-           |> assign_workflow(workflow)
+           |> assign_workflow(workflow, snapshot)
            |> put_flash(:info, "Workflow saved")
            |> push_patches_applied(initial_params)
-           |> on_new_navigate_to_edit(project, workflow)}
+           |> push_patch(
+             to: ~p"/projects/#{project.id}/w/#{workflow.id}?#{query_params}",
+             replace: true
+           )}
 
-        {:error, changeset} ->
+        {:error, %{text: message}} ->
+          {:noreply, put_flash(socket, :error, message)}
+
+        {:error, %Ecto.Changeset{} = changeset} ->
           {:noreply,
            socket
            |> assign_changeset(changeset)
@@ -834,9 +1193,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
            |> push_patches_applied(initial_params)}
       end
     else
-      {:noreply,
-       socket
-       |> put_flash(:error, "You are not authorized to perform this action.")}
+      :view_only ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :error,
+           "Cannot save in snapshot mode, switch to the latest version."
+         )}
+
+      :not_authorized ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "You are not authorized to perform this action.")}
     end
   end
 
@@ -846,7 +1214,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:ok, params} =
       WorkflowParams.apply_patches(socket.assigns.workflow_params, patches)
 
-    socket = socket |> apply_params(params)
+    socket = socket |> apply_params(params, :workflow)
 
     # Calculate the difference between the new params and changes introduced by
     # the changeset/validation.
@@ -879,40 +1247,71 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, socket |> assign_manual_run_form(changeset)}
   end
 
+  # Handle empty manual run form submission, this happens when the dataclip
+  # dropdown is disabled and the socket reconnects.
+  def handle_event("manual_run_change", _params, socket) do
+    {:noreply, socket}
+  end
+
   # The retry_from_run event is for creating a new run for an existing work
   # order, just like clicking "rerun from here" on the history page.
-
-  @impl true
   def handle_event(
         "rerun",
         %{"run_id" => run_id, "step_id" => step_id},
         socket
       ) do
-    if socket.assigns.can_run_workflow do
-      case Lightning.Repo.update(%{socket.assigns.changeset | action: :update}) do
-        {:ok, workflow} ->
-          {:ok, run} =
-            WorkOrders.retry(run_id, step_id,
-              created_by: socket.assigns.current_user
-            )
+    %{
+      can_run_workflow: can_run_workflow?,
+      current_user: current_user,
+      changeset: changeset,
+      project: %{id: project_id},
+      snapshot_version_tag: tag
+    } = socket.assigns
 
-          Runs.subscribe(run)
+    with true <- can_run_workflow? || :not_authorized,
+         true <- tag == "latest" || :view_only,
+         :ok <-
+           UsageLimiter.limit_action(%Action{type: :new_run}, %Context{
+             project_id: project_id
+           }),
+         {:ok, workflow} <-
+           Helpers.save_workflow(%{changeset | action: :update}),
+         {:ok, run} <-
+           WorkOrders.retry(run_id, step_id, created_by: current_user) do
+      Runs.subscribe(run)
 
-          {:noreply, socket |> assign_workflow(workflow) |> follow_run(run)}
+      snapshot = Snapshot.get_by_version(workflow.id, workflow.lock_version)
 
-        {:error, changeset} ->
-          {
-            :noreply,
-            socket
-            |> assign_changeset(changeset)
-            |> mark_validated()
-            |> put_flash(:error, "Workflow could not be saved")
-          }
-      end
-    else
       {:noreply,
        socket
-       |> put_flash(:error, "You are not authorized to perform this action.")}
+       |> assign_workflow(workflow, snapshot)
+       |> follow_run(run)
+       |> push_event("push-hash", %{"hash" => "log"})}
+    else
+      {:error, _reason, %{text: error_text}} ->
+        {:noreply, put_flash(socket, :error, error_text)}
+
+      {:error, %{text: message}} ->
+        {:noreply, put_flash(socket, :error, message)}
+
+      {:error, changeset} ->
+        {
+          :noreply,
+          socket
+          |> assign_changeset(changeset)
+          |> mark_validated()
+          |> put_flash(:error, "Workflow could not be saved")
+        }
+
+      :not_authorized ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "You are not authorized to perform this action.")}
+
+      :view_only ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Cannot rerun in snapshot mode, switch to latest.")}
     end
   end
 
@@ -925,33 +1324,34 @@ defmodule LightningWeb.WorkflowLive.Edit do
       current_user: current_user,
       workflow_params: workflow_params,
       can_edit_workflow: can_edit_workflow,
-      can_run_workflow: can_run_workflow
+      can_run_workflow: can_run_workflow,
+      snapshot_version_tag: tag
     } = socket.assigns
 
-    socket = socket |> apply_params(workflow_params)
+    socket = socket |> apply_params(workflow_params, :workflow)
 
-    if can_run_workflow && can_edit_workflow do
-      Helpers.save_and_run(
-        socket.assigns.changeset,
-        params,
-        project: project,
-        selected_job: selected_job,
-        created_by: current_user
-      )
+    with true <- (can_run_workflow && can_edit_workflow) || :not_authorized,
+         true <- tag == "latest" || :view_only,
+         {:ok, %{workorder: workorder, workflow: workflow}} <-
+           Helpers.save_and_run(
+             socket.assigns.changeset,
+             params,
+             project: project,
+             selected_job: selected_job,
+             created_by: current_user
+           ) do
+      %{runs: [run]} = workorder
+
+      Runs.subscribe(run)
+
+      snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
+
+      {:noreply,
+       socket
+       |> assign_workflow(workflow, snapshot)
+       |> follow_run(run)
+       |> push_event("push-hash", %{"hash" => "log"})}
     else
-      {:error, :unauthorized}
-    end
-    |> case do
-      {:ok, %{workorder: workorder, workflow: workflow}} ->
-        %{runs: [run]} = workorder
-
-        Runs.subscribe(run)
-
-        {:noreply,
-         socket
-         |> assign_workflow(workflow)
-         |> follow_run(run)}
-
       {:error, %Ecto.Changeset{data: %WorkOrders.Manual{}} = changeset} ->
         {:noreply,
          socket
@@ -966,16 +1366,32 @@ defmodule LightningWeb.WorkflowLive.Edit do
           |> put_flash(:error, "Workflow could not be saved")
         }
 
-      {:error, :unauthorized} ->
+      :not_authorized ->
         {:noreply,
          socket
          |> put_flash(:error, "You are not authorized to perform this action.")}
+
+      :view_only ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Cannot run in snapshot mode, switch to latest.")}
+
+      {:error, %{text: message}} ->
+        {:noreply, put_flash(socket, :error, message)}
     end
+  end
+
+  def handle_event("manual_run_submit", _params, socket) do
+    {:noreply, socket}
   end
 
   @impl true
   def handle_info({"form_changed", %{"workflow" => params}}, socket) do
-    {:noreply, handle_new_params(socket, params)}
+    {:noreply, handle_new_params(socket, params, :workflow)}
+  end
+
+  def handle_info({"form_changed", %{"snapshot" => params}}, socket) do
+    {:noreply, handle_new_params(socket, params, :snapshot)}
   end
 
   def handle_info({:forward, mod, opts}, socket) do
@@ -983,12 +1399,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, socket}
   end
 
-  def handle_info({:credential_type_changed, type}, socket) do
-    {:noreply, socket |> assign(:selected_credential_type, type)}
-  end
-
   def handle_info(%DataclipUpdated{dataclip: dataclip}, socket) do
-    dataclip = Invocation.get_dataclip_details!(dataclip.id)
+    dataclip = Invocation.get_dataclip!(dataclip.id)
 
     {:noreply,
      assign_dataclips(socket, socket.assigns.selectable_dataclips, dataclip)}
@@ -1027,7 +1439,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       when not is_nil(job) ->
         dataclip =
           assigns[:follow_run] &&
-            get_selected_dataclip(assigns[:follow_run].id, job.id)
+            get_selected_dataclip(assigns[:follow_run], job.id)
 
         changeset =
           WorkOrders.Manual.new(
@@ -1067,11 +1479,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> assign(show_wiped_dataclip_selector: is_map(step_dataclip))
   end
 
-  defp get_selected_dataclip(run_id, job_id) do
-    dataclip = Invocation.get_dataclip_for_run_and_job(run_id, job_id)
+  defp get_selected_dataclip(run, job_id) do
+    dataclip = Invocation.get_dataclip_for_run_and_job(run.id, job_id)
 
-    if is_nil(dataclip) and Invocation.get_step_count_for_run(run_id) == 0 do
-      Invocation.get_dataclip_for_run(run_id)
+    if is_nil(dataclip) and
+         (run.starting_job_id == job_id ||
+            Invocation.get_step_count_for_run(run.id) == 0) do
+      Invocation.get_dataclip_for_run(run.id)
     else
       dataclip
     end
@@ -1093,8 +1507,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp assign_manual_run_form(socket, changeset) do
-    socket
-    |> assign(manual_run_form: to_form(changeset, id: "manual_run_form"))
+    assign(socket, manual_run_form: to_form(changeset, id: "manual_run_form"))
   end
 
   defp save_and_run_disabled?(attrs) do
@@ -1126,11 +1539,24 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp editor_is_empty(form, job) do
     %Phoenix.HTML.FormField{field: field_name, form: parent_form} = form[:jobs]
 
-    parent_form.impl.to_form(parent_form.source, parent_form, field_name, [])
-    |> Enum.find(fn f -> Ecto.Changeset.get_field(f.source, :id) == job.id end)
-    |> Map.get(:source)
-    |> Map.get(:errors)
-    |> Keyword.has_key?(:body)
+    found_job =
+      parent_form.impl.to_form(parent_form.source, parent_form, field_name, [])
+      |> Enum.find(fn f -> Ecto.Changeset.get_field(f.source, :id) == job.id end)
+
+    if found_job do
+      errors =
+        found_job
+        |> Map.get(:source)
+        |> Map.get(:errors)
+
+      error_message = LightningWeb.CoreComponents.translate_errors(errors, :body)
+
+      is_empty? = Keyword.has_key?(errors, :body)
+
+      {is_empty?, error_message}
+    else
+      {false, nil}
+    end
   end
 
   defp has_child_edges?(workflow_changeset, job_id) do
@@ -1145,17 +1571,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> Enum.any?()
   end
 
-  defp has_steps?(job) do
-    !Enum.empty?(job.steps)
-  end
-
   defp get_filtered_edges(workflow_changeset, filter_func) do
     workflow_changeset
     |> Ecto.Changeset.get_assoc(:edges, :struct)
     |> Enum.filter(filter_func)
   end
 
-  defp handle_new_params(socket, params) do
+  defp handle_new_params(socket, params, type) do
     %{workflow_params: initial_params, can_edit_workflow: can_edit_workflow} =
       socket.assigns
 
@@ -1164,7 +1586,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
 
       socket
-      |> apply_params(next_params)
+      |> apply_params(next_params, type)
       |> mark_validated()
       |> push_patches_applied(initial_params)
     else
@@ -1191,19 +1613,40 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp assign_workflow(socket, workflow) do
     socket
     |> assign(workflow: workflow)
-    |> apply_params(socket.assigns.workflow_params)
+    |> apply_params(socket.assigns.workflow_params, :workflow)
   end
 
-  defp apply_params(socket, params) do
-    changeset =
-      socket.assigns.workflow
-      |> Workflow.changeset(
-        params
-        |> set_default_adaptors()
-        |> Map.put("project_id", socket.assigns.project.id)
-      )
+  defp assign_workflow(socket, workflow, snapshot) do
+    {changeset, snapshot_version_tag} =
+      if snapshot.lock_version == workflow.lock_version do
+        {Ecto.Changeset.change(workflow), "latest"}
+      else
+        {Ecto.Changeset.change(snapshot), String.slice(snapshot.id, 0..6)}
+      end
 
-    socket |> assign_changeset(changeset)
+    socket
+    |> assign(workflow: workflow)
+    |> assign(snapshot: snapshot)
+    |> assign(snapshot_version_tag: snapshot_version_tag)
+    |> assign_changeset(changeset)
+  end
+
+  defp apply_params(socket, params, type) do
+    changeset =
+      case type do
+        :snapshot ->
+          Ecto.Changeset.change(socket.assigns.snapshot)
+
+        :workflow ->
+          socket.assigns.workflow
+          |> Workflow.changeset(
+            params
+            |> set_default_adaptors()
+            |> Map.put("project_id", socket.assigns.project.id)
+          )
+      end
+
+    assign_changeset(socket, changeset)
   end
 
   defp apply_query_params(socket, params) do
@@ -1226,7 +1669,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       # Try to select the given item, possibly with a mode (such as `expand`)
       %{"s" => selected_id, "m" => mode} ->
-        case find_item_in_changeset(socket.assigns.changeset, selected_id) do
+        case find_item(socket.assigns.changeset, selected_id) do
           [type, selected] ->
             socket
             |> set_selected_node(type, selected, mode)
@@ -1235,12 +1678,24 @@ defmodule LightningWeb.WorkflowLive.Edit do
             socket |> unselect_all()
         end
     end
-    |> maybe_follow_run(socket.assigns.query_params)
+    |> assign_follow_run(socket.assigns.query_params)
+  end
+
+  defp switch_changeset(socket) do
+    %{changeset: changeset, workflow: workflow, snapshot: snapshot} =
+      socket.assigns
+
+    case changeset do
+      %Ecto.Changeset{data: %Snapshot{}} ->
+        {Ecto.Changeset.change(workflow), "latest"}
+
+      %Ecto.Changeset{data: %Workflow{}} ->
+        {Ecto.Changeset.change(snapshot), String.slice(snapshot.id, 0..6)}
+    end
   end
 
   defp assign_changeset(socket, changeset) do
-    # Prepare a new set of workflow params from the changeset
-    workflow_params = changeset |> WorkflowParams.to_map()
+    workflow_params = WorkflowParams.to_map(changeset)
 
     socket
     |> assign(
@@ -1252,7 +1707,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp push_patches_applied(socket, initial_params) do
     next_params = socket.assigns.workflow_params
 
-    patches = WorkflowParams.to_patches(initial_params, next_params)
+    patches =
+      WorkflowParams.to_patches(initial_params, next_params)
 
     socket
     |> push_event("patches-applied", %{patches: patches})
@@ -1296,7 +1752,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
       :jobs ->
         socket
         |> assign(
-          has_steps: has_steps?(value),
           has_child_edges: has_child_edges?(socket.assigns.changeset, value.id),
           is_first_job: first_job?(socket.assigns.changeset, value.id),
           selected_job: value,
@@ -1319,38 +1774,50 @@ defmodule LightningWeb.WorkflowLive.Edit do
     %{query_params: query_params, project: project, workflow: workflow} =
       socket.assigns
 
-    params = query_params |> Map.put("a", run.id) |> Enum.into([])
+    version =
+      Ecto.Changeset.get_field(socket.assigns.changeset, :lock_version)
+
+    params =
+      query_params
+      |> Map.put("a", run.id)
+      |> Map.put("v", version)
 
     socket
     |> push_patch(to: ~p"/projects/#{project}/w/#{workflow}?#{params}")
   end
 
-  defp maybe_follow_run(socket, query_params) do
-    case query_params do
-      %{"a" => run_id} when is_binary(run_id) ->
-        run = Runs.get(run_id)
-
-        step =
-          Invocation.get_step_for_run_and_job(
-            run_id,
-            socket.assigns.selected_job.id
-          )
-
-        Runs.subscribe(run)
-
-        socket |> assign(follow_run: run, step: step)
-
-      _ ->
-        socket |> assign(follow_run: nil)
-    end
+  defp assign_follow_run(socket, %{"a" => run_id}) when is_binary(run_id) do
+    assign_follow_run(socket, run_id)
   end
 
-  # find the changeset for the selected item
-  # it could be an edge, a job or a trigger
-  defp find_item_in_changeset(changeset, id) do
+  defp assign_follow_run(socket, query_params) when is_map(query_params) do
+    assign(socket, follow_run: nil)
+  end
+
+  defp assign_follow_run(%{assigns: %{selected_job: nil}} = socket, _run_id) do
+    assign(socket, follow_run: nil)
+  end
+
+  defp assign_follow_run(%{assigns: %{selected_job: job}} = socket, run_id)
+       when is_binary(run_id) do
+    run = Runs.get(run_id)
+    step = Invocation.get_step_for_run_and_job(run_id, job.id)
+
+    Runs.subscribe(run)
+
+    assign(socket, follow_run: run, step: step)
+  end
+
+  defp find_item(%Ecto.Changeset{} = changeset, id) do
+    find_item_helper(changeset, id, fn data, field ->
+      Ecto.Changeset.get_assoc(data, field, :struct)
+    end)
+  end
+
+  defp find_item_helper(data, id, accessor) do
     [:jobs, :triggers, :edges]
     |> Enum.reduce_while(nil, fn field, _ ->
-      Ecto.Changeset.get_assoc(changeset, field, :struct)
+      accessor.(data, field)
       |> Enum.find(&(&1.id == id))
       |> case do
         nil ->
@@ -1396,12 +1863,37 @@ defmodule LightningWeb.WorkflowLive.Edit do
     """
   end
 
-  defp on_new_navigate_to_edit(socket, %{id: project_id}, %{id: workflow_id}) do
-    if socket.assigns.live_action == :new do
-      socket
-      |> push_navigate(to: ~p"/projects/#{project_id}/w/#{workflow_id}")
-    else
-      socket
-    end
+  attr :can_edit_workflow, :boolean, required: true
+  attr :changeset, Ecto.Changeset, required: true
+  attr :snapshot_version_tag, :string, required: true
+
+  defp save_workflow_button(assigns) do
+    alias Phoenix.LiveView.JS
+
+    %{
+      can_edit_workflow: can_edit_workflow,
+      changeset: changeset,
+      snapshot_version_tag: snapshot_version_tag
+    } = assigns
+
+    assigns =
+      assigns
+      |> assign(
+        disabled:
+          !can_edit_workflow or !changeset.valid? or
+            snapshot_version_tag != "latest"
+      )
+
+    ~H"""
+    <Form.submit_button
+      phx-disable-with="Saving..."
+      disabled={@disabled}
+      form="workflow-form"
+      phx-disconnected={JS.set_attribute({"disabled", ""})}
+      phx-connected={!@disabled && JS.remove_attribute("disabled")}
+    >
+      Save
+    </Form.submit_button>
+    """
   end
 end

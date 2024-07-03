@@ -11,8 +11,7 @@ defmodule Lightning.Workflows.Trigger do
   A webhook trigger allows a Job to invoked (via `Lightning.Invocation`) when it's
   endpoint is called.
   """
-  use Ecto.Schema
-  import Ecto.Changeset
+  use Lightning.Schema
   import Ecto.Query
 
   alias Lightning.Workflows.Workflow
@@ -25,13 +24,11 @@ defmodule Lightning.Workflows.Trigger do
   @trigger_types [:webhook, :cron]
 
   @type trigger_type :: :webhook | :cron
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
   schema "triggers" do
     field :comment, :string
     field :custom_path, :string
     field :cron_expression, :string
-    field :enabled, :boolean
+    field :enabled, :boolean, default: true
     belongs_to :workflow, Workflow
 
     has_many :edges, Lightning.Workflows.Edge, foreign_key: :source_trigger_id
@@ -81,7 +78,7 @@ defmodule Lightning.Workflows.Trigger do
 
   defp validate_cron(changeset, _options \\ []) do
     changeset
-    |> validate_change(:cron_expression, fn _, cron_expression ->
+    |> validate_change(:cron_expression, fn _field, cron_expression ->
       Crontab.CronExpression.Parser.parse(cron_expression)
       |> case do
         {:error, error_message} ->

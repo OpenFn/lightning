@@ -3,7 +3,7 @@ defmodule Lightning.WorkOrders.Events do
 
   defmodule WorkOrderCreated do
     @moduledoc false
-    defstruct work_order: nil
+    defstruct work_order: nil, project_id: nil
   end
 
   defmodule WorkOrderUpdated do
@@ -13,7 +13,7 @@ defmodule Lightning.WorkOrders.Events do
 
   defmodule RunCreated do
     @moduledoc false
-    defstruct run: nil
+    defstruct run: nil, project_id: nil, from_rejected_workorder: false
   end
 
   defmodule RunUpdated do
@@ -24,7 +24,7 @@ defmodule Lightning.WorkOrders.Events do
   def work_order_created(project_id, work_order) do
     Lightning.broadcast(
       topic(project_id),
-      %WorkOrderCreated{work_order: work_order}
+      %WorkOrderCreated{work_order: work_order, project_id: project_id}
     )
   end
 
@@ -38,7 +38,7 @@ defmodule Lightning.WorkOrders.Events do
   def run_created(project_id, run) do
     Lightning.broadcast(
       topic(project_id),
-      %RunCreated{run: run}
+      %RunCreated{run: run, project_id: project_id}
     )
   end
 

@@ -12,9 +12,13 @@ export type RemoveArgs = {
   edges?: string[];
 };
 
-export type ChangeArgs = Partial<WorkflowProps>;
-
 export type AddArgs = ChangeArgs;
+
+export type ChangeArgs = {
+  triggers?: (Partial<Lightning.TriggerNode> & { id: string })[];
+  jobs?: (Partial<Lightning.JobNode> & { id: string })[];
+  edges?: (Partial<Lightning.Edge> & { id: string })[];
+};
 
 export type WorkflowProps = {
   triggers: Lightning.TriggerNode[];
@@ -26,6 +30,10 @@ export interface WorkflowState extends WorkflowProps {
   add: (data: AddArgs) => void;
   change: (data: ChangeArgs) => void;
   remove: (data: RemoveArgs) => void;
+  rebase: (data: Partial<WorkflowProps>) => void;
+  getById: <T = Lightning.Node | Lightning.Edge | Lightning.TriggerNode>(
+    id: string
+  ) => T | undefined;
   onChange: (pendingAction: PendingAction) => void;
   applyPatches: (patches: Patch[]) => void;
 }
@@ -86,15 +94,19 @@ export const createWorkflowStore = (
       }
     );
 
+    console.debug('Proposing changes', patches);
+
     if (onChange) onChange({ id: crypto.randomUUID(), fn, patches });
 
     return nextState;
   }
 
-  return createStore<WorkflowState>()(set => ({
+  return createStore<WorkflowState>()((set, get) => ({
     ...DEFAULT_PROPS,
     ...initProps,
     add: data => {
+      console.log('add', data);
+
       set(state =>
         proposeChanges(state, draft => {
           ['jobs', 'triggers', 'edges'].forEach(k => {
@@ -131,6 +143,18 @@ export const createWorkflowStore = (
         })
       );
     },
+    // Change the state of the workflow. The data object should have the
+    // following shape:
+    //
+    // ```
+    // {
+    //   jobs: [{ id: '123', body: 'new body' }],
+    //   triggers: [{ id: '456', enabled: false }]
+    // }
+    // ```
+    //
+    // The `id` property is required for each item in the array.
+    // You can provide as many or as few changes as you like.
     change: data => {
       set(state =>
         proposeChanges(state, draft => {
@@ -140,6 +164,7 @@ export const createWorkflowStore = (
               const current = draft[type] as Array<
                 Lightning.Node | Lightning.Edge
               >;
+
               const item = current.find(i => i.id === change.id);
               if (item) {
                 Object.assign(item, change);
@@ -148,6 +173,39 @@ export const createWorkflowStore = (
           }
         })
       );
+    },
+    getById(id) {
+      const state = get();
+
+      for (const items of Object.entries(state).reduce((acc, [k, v]) => {
+        if (['triggers', 'jobs', 'edges'].includes(k)) {
+          acc.push(v);
+        }
+        return acc;
+      }, [])) {
+        const item = items.find(i => i.id === id);
+        if (item) {
+          return item;
+        }
+      }
+    },
+    // Experimental
+    // Used to compare the current state with the state in the browser and
+    // calculate the patches to apply to bring the server state in sync with the
+    // client state.
+    // Currently it just considers each item in the state as a whole and
+    // replaces it with the new state. This is a naive approach and will need to
+    // be improved to just the differences.
+    rebase: data => {
+      const state = get();
+      proposeChanges(data, draft => {
+        for (const [t, changes] of Object.entries(state)) {
+          if (['triggers', 'jobs', 'edges'].includes(t)) {
+            const type = t as 'jobs' | 'triggers' | 'edges';
+            draft[type] = changes;
+          }
+        }
+      });
     },
     applyPatches: patches => {
       const immerPatches: ImmerPatch[] = patches.map(patch => ({
@@ -160,3 +218,5 @@ export const createWorkflowStore = (
     onChange,
   }));
 };
+
+export type WorkflowStore = ReturnType<typeof createWorkflowStore>;

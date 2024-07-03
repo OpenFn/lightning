@@ -1,5 +1,5 @@
 defmodule Lightning.Runtime.RuntimeManagerTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
 
   alias Lightning.Runtime.RuntimeManager
 

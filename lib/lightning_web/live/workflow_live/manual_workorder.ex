@@ -124,9 +124,12 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
     </div>
     <div
       :if={@selected_dataclip && is_nil(@selected_dataclip.wiped_at)}
-      class="grow overflow-y-auto rounded-md"
+      class="grow overflow-y-auto"
     >
-      <.log_view dataclip={@selected_dataclip} class="" />
+      <LightningWeb.Components.Viewers.dataclip_viewer
+        dataclip={@selected_dataclip}
+        id={"selected-dataclip-#{@selected_dataclip.id}"}
+      />
     </div>
     <LightningWeb.Components.Viewers.wiped_dataclip_viewer
       :if={@selected_dataclip && @selected_dataclip.wiped_at}
@@ -140,29 +143,11 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
         type="textarea"
         field={@form[:body]}
         disabled={@disabled}
-        class="h-full pb-2"
+        class="h-full pb-2 font-mono proportional-nums"
         phx-debounce="300"
         phx-hook="BlurDataclipEditor"
       />
     </div>
     """
-  end
-
-  attr :dataclip, :map, required: true
-  attr :class, :string, default: nil
-
-  defp log_view(assigns) do
-    assigns = assigns |> assign(log: format_dataclip_body(assigns.dataclip))
-
-    ~H"""
-    <LightningWeb.RunLive.Components.log_view log={@log} class={@class} />
-    """
-  end
-
-  defp format_dataclip_body(dataclip) do
-    dataclip.body
-    |> Jason.encode!()
-    |> Jason.Formatter.pretty_print()
-    |> String.split("\n")
   end
 end

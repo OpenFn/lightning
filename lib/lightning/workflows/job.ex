@@ -15,9 +15,7 @@ defmodule Lightning.Workflows.Job do
     in this context, the front end will ensure a version is stated (`@latest`
     being the default).
   """
-  use Ecto.Schema
-
-  import Ecto.Changeset
+  use Lightning.Schema
 
   alias Lightning.Credentials.Credential
   alias Lightning.Projects.ProjectCredential
@@ -33,8 +31,6 @@ defmodule Lightning.Workflows.Job do
           workflow: nil | Workflow.t() | Ecto.Association.NotLoaded.t()
         }
 
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
   schema "jobs" do
     field :body, :string
 
@@ -54,7 +50,7 @@ defmodule Lightning.Workflows.Job do
   end
 
   def new(attrs \\ %{}) do
-    change(%__MODULE__{}, attrs)
+    change(%__MODULE__{}, Map.merge(%{id: Ecto.UUID.generate()}, attrs))
   end
 
   @doc false
@@ -71,15 +67,26 @@ defmodule Lightning.Workflows.Job do
       :workflow_id
     ])
     |> validate()
-    |> unique_constraint(:name, name: "jobs_name_workflow_id_index")
+    |> update_change(:name, &String.trim/1)
+    |> unique_constraint(:name,
+      name: "jobs_name_workflow_id_index",
+      message: "job name has already been taken"
+    )
   end
 
   def validate(changeset) do
     changeset
-    |> validate_required([:name, :body, :adaptor])
+    |> validate_required(:name, message: "job name can't be blank")
+    |> validate_required(:body, message: "job body can't be blank")
+    |> validate_required(:adaptor, message: "job adaptor can't be blank")
     |> assoc_constraint(:workflow)
-    |> validate_length(:name, max: 100)
-    |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/)
+    |> validate_length(:name,
+      max: 100,
+      message: "job name should be at most %{count} character(s)"
+    )
+    |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/,
+      message: "job name has invalid format"
+    )
   end
 
   @doc """

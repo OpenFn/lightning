@@ -19,8 +19,7 @@ defmodule Lightning.Invocation.Dataclip do
   * `:saved_input`
     An arbitrary input, created by a user. (Only configuration will be overwritten.)
   """
-  use Ecto.Schema
-  import Ecto.Changeset
+  use Lightning.Schema
 
   alias Lightning.Invocation.Step
   alias Lightning.Projects.Project
@@ -29,7 +28,7 @@ defmodule Lightning.Invocation.Dataclip do
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,
           project_id: Ecto.UUID.t() | nil,
-          body: %{} | nil,
+          body: %{} | String.t() | nil,
           request: %{} | nil,
           source_step: Step.t() | Ecto.Association.NotLoaded.t() | nil
         }
@@ -37,8 +36,6 @@ defmodule Lightning.Invocation.Dataclip do
   @type source_type :: :http_request | :global | :step_result | :saved_input
   @source_types [:http_request, :global, :step_result, :saved_input]
 
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
   schema "dataclips" do
     field :body, :map, load_in_query: false
     field :request, :map, load_in_query: false

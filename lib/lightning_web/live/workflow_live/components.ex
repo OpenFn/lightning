@@ -2,7 +2,6 @@ defmodule LightningWeb.WorkflowLive.Components do
   @moduledoc false
   use LightningWeb, :component
 
-  alias Lightning.Workflows.Trigger
   alias LightningWeb.Components.Form
   alias Phoenix.LiveView.JS
 
@@ -161,7 +160,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :can_write_webhook_auth_method, :boolean, required: true
   attr :webhook_url, :string, required: true
   attr :on_change, :any, required: true
-  attr :selected_trigger, Trigger, required: true
+  attr :selected_trigger, :any, required: true
   attr :action, :any, required: true
 
   def trigger_form(%{form: form} = assigns) do
@@ -249,7 +248,9 @@ defmodule LightningWeb.WorkflowLive.Components do
                     href="#"
                     class={[
                       "text-indigo-400 underline not-italic inline-flex items-center",
-                      if(@action == :new or !@can_write_webhook_auth_method,
+                      if(
+                        @action == :new or !@can_write_webhook_auth_method or
+                          @disabled,
                         do: "text-gray-500 cursor-not-allowed",
                         else: ""
                       )
@@ -289,7 +290,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                     href="#"
                     class={[
                       "text-primary-700 underline hover:text-primary-800",
-                      !@can_write_webhook_auth_method &&
+                      (!@can_write_webhook_auth_method or @disabled) &&
                         "text-gray-500 cursor-not-allowed"
                     ]}
                     phx-click={show_modal("webhooks_auth_method_modal")}
@@ -407,22 +408,45 @@ defmodule LightningWeb.WorkflowLive.Components do
         <div>
           <.label>
             JS Expression
-            <p class="font-normal text-xs text-gray-500 ">
-              To match on output of last Step
-            </p>
-            <.input
-              type="textarea"
-              field={@form[:condition_expression]}
-              class="h-24"
-              phx-debounce="300"
-              maxlength="255"
-            />
           </.label>
+          <.input
+            type="textarea"
+            field={@form[:condition_expression]}
+            class="h-24 font-mono proportional-nums"
+            phx-debounce="300"
+            maxlength="255"
+            placeholder="eg: !state.error"
+          />
+          <details class="mt-5 ml-1">
+            <summary class="text-xs cursor-pointer">
+              How to write expressions
+            </summary>
+            <div class="font-normal text-xs text-gray-500 ml-1 pl-2 border-l-2 border-grey-500">
+              <p class="mb-2 mt-1">
+                Use the state from the previous step to decide whether this step should run.
+              </p>
+              <p class="mb-2">
+                Must be a single JavaScript expression with <code>state</code>
+                in scope.
+              </p>
+              <p class="">
+                Check
+                <a
+                  class="text-indigo-700 hover:underline"
+                  href="https://docs.openfn.org/documentation/build/paths#writing-javascript-expressions-for-custom-path-conditions"
+                  target="_blank"
+                >
+                  docs.openfn.org
+                </a>
+                for more details.
+              </p>
+            </div>
+          </details>
         </div>
       <% end %>
-      <%= if Phoenix.HTML.Form.input_value(@form, :source_trigger_id) do %>
+      <%= if @form[:source_trigger_id].value do %>
         <div class="max-w-xl text-sm text-gray-500 mt-3">
-          <p>This path will be active if its trigger is enabled.</p>
+          <p>This path will be active if its trigger is enabled</p>
         </div>
       <% else %>
         <div class="mt-7 border-t flex flex-col justify-between">
@@ -437,6 +461,22 @@ defmodule LightningWeb.WorkflowLive.Components do
               value={@edge_enabled}
             />
           </h2>
+        </div>
+      <% end %>
+      <%= unless @form[:source_trigger_id].value do %>
+        <div class="grow flex justify-end">
+          <label>
+            <.button
+              id="delete-edge-button"
+              class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
+              data-confirm="Are you sure you want to delete this path?"
+              phx-click="delete_edge"
+              phx-value-id={@form[:id].value}
+              disabled={@disabled or @form[:source_trigger_id].value}
+            >
+              Delete Path
+            </.button>
+          </label>
         </div>
       <% end %>
     </div>
@@ -505,26 +545,33 @@ defmodule LightningWeb.WorkflowLive.Components do
   defp error_to_string(errors) when is_list(errors), do: Enum.join(errors, ", ")
 
   slot :inner_block, required: true
+  slot :tabs, required: false
   attr :class, :string, default: ""
   attr :id, :string, required: true
-  attr :panel_title, :string, required: true
+  attr :panel_title, :string, default: ""
 
   def collapsible_panel(assigns) do
     ~H"""
     <div
       id={@id}
       lv-keep-class
-      class={["w-full flex flex-col p-4 collapsible-panel", @class]}
+      class={[
+        "w-full flex flex-col collapsible-panel bg-slate-100 overflow-hidden",
+        @class
+      ]}
     >
-      <div class="flex-0">
+      <div class="flex-0 m-0">
         <div
           id={"#{@id}-panel-header"}
-          class="flex justify-between items-center panel-header"
+          class="flex justify-between items-center p-2 px-4 panel-header"
         >
           <div
             id={"#{@id}-panel-header-title"}
-            class="text-center font-semibold text-secondary-700 mb-2 panel-header-title"
+            class="text-center font-semibold text-secondary-700 panel-header-title text-xs"
           >
+            <%= for tabs <- @tabs do %>
+              <%= render_slot(tabs) %>
+            <% end %>
             <%= @panel_title %>
           </div>
           <div class="close-button">
@@ -534,22 +581,22 @@ defmodule LightningWeb.WorkflowLive.Components do
               href="#"
               phx-click={JS.dispatch("collapse", to: "##{@id}")}
             >
-              <Heroicons.minus_small class="w-10 h-10 p-2 hover:bg-gray-200 text-gray-600 rounded-lg" />
+              <Heroicons.minus_circle class="w-5 h-5 hover:bg-gray-200 text-gray-600 rounded-lg" />
             </a>
             <a
-              id={"#{@id}-panel-ezxpand-icon"}
+              id={"#{@id}-panel-expand-icon"}
               href="#"
               class="hidden panel-expand-icon"
               phx-click={JS.dispatch("expand-panel", to: "##{@id}")}
             >
-              <Heroicons.plus class="w-10 h-10 p-2 hover:bg-gray-200 text-gray-600 rounded-lg" />
+              <Heroicons.plus_circle class="w-5 h-5 hover:bg-gray-200 text-gray-600 rounded-lg" />
             </a>
           </div>
         </div>
       </div>
       <div
         id={"#{@id}-panel-content"}
-        class="panel-content min-h-0 min-w-0 flex-1 pt-2"
+        class="panel-content min-h-0 min-w-0 flex-1 bg-white"
       >
         <%= render_slot(@inner_block) %>
       </div>

@@ -144,7 +144,6 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       assert %{
                "id" => ^trigger_id,
                "type" => "webhook",
-               "cron_expression" => "* * * * *",
                "enabled" => true
              } = trigger_json
 
@@ -156,6 +155,42 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
                "name" => ^project_name,
                "workflows" => [^workflow_json]
              } = response["data"]
+    end
+
+    test "returns a project without deleted workflows", %{
+      conn: conn,
+      user: user
+    } do
+      %{id: project_id, name: project_name} =
+        project =
+        insert(:project,
+          project_users: [%{user_id: user.id}]
+        )
+
+      _deleted_workflow =
+        insert(:workflow,
+          project: project,
+          name: "Deleted workflow",
+          deleted_at: DateTime.utc_now()
+        )
+
+      existing_workflow =
+        insert(:workflow,
+          project: project,
+          name: "Existing workflow",
+          deleted_at: nil
+        )
+
+      conn = get(conn, ~p"/api/provision/#{project_id}")
+      response = json_response(conn, 200)
+
+      assert %{
+               "id" => ^project_id,
+               "name" => ^project_name,
+               "workflows" => [workflow_resp]
+             } = response["data"]
+
+      assert workflow_resp["id"] == existing_workflow.id
     end
 
     test "returns a project if user has owner access", %{
@@ -228,6 +263,59 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
 
       assert response == %{"error" => "Forbidden"}
     end
+
+    test "returns a 200 if a valid repo conenction token is provided for the project state" do
+      project = insert(:project)
+
+      repo_connection = insert(:project_repo_connection, project: project)
+
+      conn =
+        Plug.Conn.put_req_header(
+          build_conn(),
+          "authorization",
+          "Bearer #{repo_connection.access_token}"
+        )
+
+      response = get(conn, ~p"/api/provision/#{project.id}")
+      assert response.status == 200
+    end
+
+    test "returns a 200 if a valid repo conenction token is provided for the project yaml" do
+      project = insert(:project)
+
+      repo_connection = insert(:project_repo_connection, project: project)
+
+      conn =
+        Plug.Conn.put_req_header(
+          build_conn(),
+          "authorization",
+          "Bearer #{repo_connection.access_token}"
+        )
+
+      response = get(conn, ~p"/api/provision/yaml?#{%{id: project.id}}")
+      assert response.status == 200
+    end
+
+    test "returns a 403 if an invalid repo conenction token is provided" do
+      project_1 = insert(:project)
+      project_2 = insert(:project)
+
+      wrong_repo_connection =
+        insert(:project_repo_connection, project: project_2)
+
+      conn =
+        Plug.Conn.put_req_header(
+          build_conn(),
+          "authorization",
+          "Bearer #{wrong_repo_connection.access_token}"
+        )
+
+      conn = get(conn, ~p"/api/provision/#{project_1.id}")
+
+      response = json_response(conn, 403)
+
+      assert response == %{"error" => "Forbidden"}
+    end
   end
 
   describe "post (with an API token)" do
@@ -263,6 +351,55 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       assert response.status == 403
     end
 
+    test "is forbidden for an invalid PRC access_token", %{conn: conn} do
+      project = insert(:project)
+      wrong_project = insert(:project)
+
+      wrong_repo_connection =
+        insert(:project_repo_connection, project: wrong_project)
+
+      %{body: body} = valid_payload(project.id)
+
+      conn =
+        Plug.Conn.put_req_header(
+          conn,
+          "authorization",
+          "Bearer #{wrong_repo_connection.access_token}"
+        )
+
+      response = post(conn, ~p"/api/provision", body)
+      assert response.status == 403
+    end
+
+    test "fails with 403 when usage limiter returns an error", %{
+      conn: conn
+    } do
+      %{id: project_id} = project = insert(:project)
+
+      repo_connection =
+        insert(:project_repo_connection, project: project)
+
+      %{body: body} = valid_payload(project.id)
+
+      conn =
+        Plug.Conn.put_req_header(
+          conn,
+          "authorization",
+          "Bearer #{repo_connection.access_token}"
+        )
+
+      error_text = "some error message"
+
+      Lightning.Extensions.MockUsageLimiter
+      |> Mox.expect(:limit_action, fn %{type: :github_sync},
+                                      %{project_id: ^project_id} ->
+        {:error, :disabled, %Lightning.Extensions.Message{text: error_text}}
+      end)
+
+      assert post(conn, ~p"/api/provision", body) |> json_response(403) ==
+               %{"error" => error_text}
+    end
+
     test "fails with a 422 on validation errors", %{conn: conn, user: user} do
       project =
         insert(:project,
@@ -281,7 +418,9 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       assert response == %{
                "errors" => %{
                  "name" => ["This field can't be blank."],
-                 "workflows" => [%{"id" => ["This field can't be blank."]}]
+                 "workflows" => %{
+                   "default" => %{"id" => ["This field can't be blank."]}
+                 }
                }
              }
 
@@ -310,23 +449,74 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
 
       assert response == %{
                "errors" => %{
-                 "workflows" => [
-                   %{
-                     "jobs" => [
-                       %{
+                 "workflows" => %{
+                   "default" => %{
+                     "jobs" => %{
+                       "first-job" => %{
                          "id" => ["This field can't be blank."],
-                         "body" => ["This field can't be blank."]
+                         "body" => ["Code editor cannot be empty."]
                        },
-                       %{
-                         "name" => ["This field can't be blank."],
+                       "" => %{
+                         "name" => ["Job name can't be blank."],
                          "id" => ["This field can't be blank."]
                        }
-                     ],
+                     },
                      "id" => ["This field can't be blank."]
                    }
-                 ]
+                 }
                }
              }
+
+      job_id = Ecto.UUID.generate()
+      trigger_id = Ecto.UUID.generate()
+
+      for trigger_type <- ["cron", "webhook"] do
+        body = %{
+          "id" => project.id,
+          "name" => "test-project",
+          "workflows" => [
+            %{
+              "id" => Ecto.UUID.generate(),
+              "name" => "default",
+              "jobs" => [
+                %{
+                  "id" => job_id,
+                  "name" => "first-job",
+                  "adaptor" => "@openfn/language-common@latest",
+                  "body" => "console.log('hello world')"
+                }
+              ],
+              "triggers" => [
+                %{"id" => trigger_id, "type" => trigger_type}
+              ],
+              "edges" => [
+                %{
+                  "id" => Ecto.UUID.generate(),
+                  "source_trigger_id" => trigger_id,
+                  "target_job_id" => job_id
+                }
+              ]
+            }
+          ]
+        }
+
+        conn = post(conn, ~p"/api/provision", body)
+        response = json_response(conn, 422)
+
+        assert response == %{
+                 "errors" => %{
+                   "workflows" => %{
+                     "default" => %{
+                       "edges" => %{
+                         "#{trigger_type}->first-job" => %{
+                           "condition_type" => ["This field can't be blank."]
+                         }
+                       }
+                     }
+                   }
+                 }
+               }
+      end
     end
 
     test "allows an owner to update an existing project", %{
@@ -411,6 +601,54 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
         )
 
       %{body: body} = valid_payload(project.id)
+
+      assert post(conn, ~p"/api/provision", body) |> json_response(201)
+    end
+
+    test "allows a valid PRC token to update an existing project", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      repo_connection =
+        insert(:project_repo_connection, project: project)
+
+      %{body: body} = valid_payload(project.id)
+
+      conn =
+        Plug.Conn.put_req_header(
+          conn,
+          "authorization",
+          "Bearer #{repo_connection.access_token}"
+        )
+
+      assert post(conn, ~p"/api/provision", body) |> json_response(201)
+    end
+
+    test "returns 201 for an existing project with workflows marked for deletion",
+         %{
+           conn: conn
+         } do
+      project = insert(:project)
+
+      _deleted_workflow =
+        insert(:workflow,
+          project: project,
+          name: "Deleted workflow",
+          deleted_at: DateTime.utc_now()
+        )
+
+      repo_connection =
+        insert(:project_repo_connection, project: project)
+
+      %{body: body} = valid_payload(project.id)
+
+      conn =
+        Plug.Conn.put_req_header(
+          conn,
+          "authorization",
+          "Bearer #{repo_connection.access_token}"
+        )
 
       assert post(conn, ~p"/api/provision", body) |> json_response(201)
     end

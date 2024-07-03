@@ -5,15 +5,21 @@ defmodule LightningWeb.RunLive.Index do
   use LightningWeb, :live_view
 
   import Ecto.Changeset, only: [get_change: 2]
+  import LightningWeb.Components.Icons
 
+  alias Lightning.Extensions.UsageLimiting.Action
+  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Invocation
   alias Lightning.Invocation.Step
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
+  alias Lightning.Services.UsageLimiter
   alias Lightning.WorkOrders
   alias Lightning.WorkOrders.Events
   alias Lightning.WorkOrders.SearchParams
+  alias LightningWeb.LiveHelpers
   alias LightningWeb.RunLive.Components
+
   alias Phoenix.LiveView.AsyncResult
   alias Phoenix.LiveView.JS
 
@@ -36,7 +42,8 @@ defmodule LightningWeb.RunLive.Index do
     cancelled: :boolean,
     killed: :boolean,
     exception: :boolean,
-    lost: :boolean
+    lost: :boolean,
+    rejected: :boolean
   }
 
   @empty_page %{
@@ -92,7 +99,8 @@ defmodule LightningWeb.RunLive.Index do
       %{id: :cancelled, label: "Cancelled"},
       %{id: :killed, label: "Killed"},
       %{id: :exception, label: "Exception"},
-      %{id: :lost, label: "Lost"}
+      %{id: :lost, label: "Lost"},
+      %{id: :rejected, label: "Rejected"}
     ]
 
     search_fields = [
@@ -124,7 +132,6 @@ defmodule LightningWeb.RunLive.Index do
     do: %{
       "workflow_id" => "",
       "search_term" => "",
-      "body" => "true",
       "log" => "true",
       "date_after" =>
         Timex.now() |> Timex.shift(days: -30) |> DateTime.to_string(),
@@ -140,6 +147,7 @@ defmodule LightningWeb.RunLive.Index do
 
     {:noreply,
      socket
+     |> LiveHelpers.check_limits(project.id)
      |> assign(
        filters: filters,
        page_title: "History",
@@ -150,33 +158,28 @@ defmodule LightningWeb.RunLive.Index do
        async_page: AsyncResult.loading()
      )
      |> start_async(:load_workorders, fn ->
-       monitored_search(project, params)
+       perform_search(project, params)
      end)}
   end
 
   # returns the search result
-  defp monitored_search(project, page_params) do
-    span_metadata = %{
-      project_id: project.id,
-      provided_filters: Map.get(page_params, "filters", %{})
-    }
-
-    :telemetry.span(
+  defp perform_search(project, page_params) do
+    LightningWeb.Telemetry.with_span(
       [:lightning, :ui, :projects, :history],
-      span_metadata,
+      %{
+        project_id: project.id,
+        provided_filters: Map.get(page_params, "filters", %{})
+      },
       fn ->
         search_params =
           Map.get(page_params, "filters", init_filters())
           |> SearchParams.new()
 
-        search_result =
-          Invocation.search_workorders(
-            project,
-            search_params,
-            page_params
-          )
-
-        {search_result, span_metadata}
+        Invocation.search_workorders(
+          project,
+          search_params,
+          page_params
+        )
       end
     )
   end
@@ -240,13 +243,20 @@ defmodule LightningWeb.RunLive.Index do
           work_order: [
             :workflow,
             :dataclip,
-            runs: [steps: [:job, :input_dataclip]]
+            runs: [
+              steps: [
+                :job,
+                :input_dataclip,
+                snapshot: [triggers: :webhook_auth_methods]
+              ]
+            ],
+            snapshot: [triggers: :webhook_auth_methods]
           ]
         ],
         force: true
       )
 
-    {:noreply, update_page(socket, work_order)}
+    {:noreply, socket |> update_page(work_order)}
   end
 
   @impl true
@@ -257,9 +267,9 @@ defmodule LightningWeb.RunLive.Index do
   """
   def handle_info(
         %Events.WorkOrderCreated{work_order: work_order},
-        %{assigns: assigns} = socket
+        socket
       ) do
-    %{project: project, filters: filters} = assigns
+    %{project: project, filters: filters} = socket.assigns
 
     params =
       filters
@@ -281,11 +291,22 @@ defmodule LightningWeb.RunLive.Index do
     work_order =
       Lightning.Repo.preload(
         work_order,
-        [:workflow, :dataclip, runs: [steps: [:job, :input_dataclip]]],
+        [
+          :dataclip,
+          :workflow,
+          runs: [
+            steps: [
+              :job,
+              :input_dataclip,
+              snapshot: [triggers: :webhook_auth_methods]
+            ]
+          ],
+          snapshot: [triggers: :webhook_auth_methods]
+        ],
         force: true
       )
 
-    {:noreply, update_page(socket, work_order)}
+    {:noreply, socket |> update_page(work_order)}
   end
 
   @impl true
@@ -294,10 +315,32 @@ defmodule LightningWeb.RunLive.Index do
         %{"run_id" => run_id, "step_id" => step_id},
         socket
       ) do
-    if socket.assigns.can_run_workflow do
-      WorkOrders.retry(run_id, step_id, created_by: socket.assigns.current_user)
+    %{
+      project: %{id: project_id},
+      can_run_workflow: can_run_workflow?,
+      current_user: current_user
+    } =
+      socket.assigns
 
-      {:noreply, socket}
+    if can_run_workflow? do
+      with :ok <-
+             UsageLimiter.limit_action(%Action{type: :new_run}, %Context{
+               project_id: project_id
+             }),
+           {:ok, _run} <-
+             WorkOrders.retry(run_id, step_id, created_by: current_user) do
+        {:noreply, LiveHelpers.check_limits(socket, project_id)}
+      else
+        {:error, _reason, %{text: error_text}} ->
+          {:noreply,
+           socket
+           |> put_flash(:error, error_text)}
+
+        {:error, _changeset} ->
+          {:noreply,
+           socket
+           |> put_flash(:error, "Oops! an error occured during retry.")}
+      end
     else
       {:noreply,
        socket
@@ -336,6 +379,11 @@ defmodule LightningWeb.RunLive.Index do
         {:noreply,
          socket
          |> put_flash(:error, "Oops! an error occured during retries.")}
+
+      {:error, _reason, %{text: error_message}} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, error_message)}
     end
   end
 
@@ -406,6 +454,12 @@ defmodule LightningWeb.RunLive.Index do
      )}
   end
 
+  def handle_event("invalid-rerun:" <> error_message, _params, socket) do
+    {:noreply,
+     socket
+     |> put_flash(:error, error_message)}
+  end
+
   defp find_workflow_name(workflows, workflow_id) do
     Enum.find_value(workflows, fn {name, id} ->
       if id == workflow_id do
@@ -416,32 +470,40 @@ defmodule LightningWeb.RunLive.Index do
 
   defp handle_bulk_rerun(socket, %{"type" => "selected", "job" => job_id}) do
     socket.assigns.selected_work_orders
-    |> WorkOrders.retry_many(job_id, created_by: socket.assigns.current_user)
+    |> WorkOrders.retry_many(job_id,
+      created_by: socket.assigns.current_user,
+      project_id: socket.assigns.project.id
+    )
   end
 
   defp handle_bulk_rerun(socket, %{"type" => "all", "job" => job_id}) do
     filter = SearchParams.new(socket.assigns.filters)
 
     socket.assigns.project
-    |> Invocation.search_workorders_query(filter)
-    |> Invocation.exclude_wiped_dataclips()
-    |> Lightning.Repo.all()
-    |> WorkOrders.retry_many(job_id, created_by: socket.assigns.current_user)
+    |> Invocation.search_workorders_for_retry(filter)
+    |> WorkOrders.retry_many(job_id,
+      created_by: socket.assigns.current_user,
+      project_id: socket.assigns.project.id
+    )
   end
 
   defp handle_bulk_rerun(socket, %{"type" => "selected"}) do
     socket.assigns.selected_work_orders
-    |> WorkOrders.retry_many(created_by: socket.assigns.current_user)
+    |> WorkOrders.retry_many(
+      created_by: socket.assigns.current_user,
+      project_id: socket.assigns.project.id
+    )
   end
 
   defp handle_bulk_rerun(socket, %{"type" => "all"}) do
     filter = SearchParams.new(socket.assigns.filters)
 
     socket.assigns.project
-    |> Invocation.search_workorders_query(filter)
-    |> Invocation.exclude_wiped_dataclips()
-    |> Lightning.Repo.all()
-    |> WorkOrders.retry_many(created_by: socket.assigns.current_user)
+    |> Invocation.search_workorders_for_retry(filter)
+    |> WorkOrders.retry_many(
+      created_by: socket.assigns.current_user,
+      project_id: socket.assigns.project.id
+    )
   end
 
   defp all_selected?(work_orders, entries) do
@@ -533,5 +595,17 @@ defmodule LightningWeb.RunLive.Index do
     end
 
     socket
+  end
+
+  def validate_bulk_rerun(selected_work_orders, %{id: project_id}) do
+    with {:error, _reason, %{text: error_message}} <-
+           UsageLimiter.limit_action(
+             %Action{type: :new_run, amount: length(selected_work_orders)},
+             %Context{
+               project_id: project_id
+             }
+           ) do
+      "invalid-rerun:#{error_message}"
+    end
   end
 end

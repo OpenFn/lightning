@@ -27,13 +27,15 @@ import { LiveSocket } from 'phoenix_live_view';
 import topbar from '../vendor/topbar';
 import * as Hooks from './hooks';
 import JobEditor from './job-editor';
-import JobEditorResizer from './job-editor-resizer/mount';
 import WorkflowEditor from './workflow-editor';
+import DataclipViewer from './dataclip-viewer';
+import LogViewer from './log-viewer';
 
 let hooks = {
   JobEditor,
-  JobEditorResizer,
   WorkflowEditor,
+  DataclipViewer,
+  LogViewer,
   ...Hooks,
 };
 
@@ -56,6 +58,18 @@ let liveSocket = new LiveSocket('/live', Socket, {
 
       if (from.attributes['lv-keep-class']) {
         to.setAttribute('class', from.attributes.class.value);
+      }
+
+      if (from.attributes['lv-keep-hidden']) {
+        to.setAttribute('hidden', from.getAttribute('hidden'));
+      }
+
+      if (from.attributes['lv-keep-aria']) {
+        Object.values(from.attributes).forEach(attr => {
+          if (attr.name.startsWith('aria-')) {
+            to.setAttribute(attr.name, attr.value);
+          }
+        });
       }
     },
   },
@@ -86,3 +100,9 @@ liveSocket.connect();
 // >> liveSocket.enableLatencySim(1000)  // enabled for duration of browser session
 // >> liveSocket.disableLatencySim()
 window.liveSocket = liveSocket;
+
+// Testing helper to simulate a reconnect
+window.triggerReconnect = function triggerReconnect(timeout = 5000) {
+  liveSocket.disconnect();
+  setTimeout(liveSocket.connect.bind(liveSocket), timeout);
+};

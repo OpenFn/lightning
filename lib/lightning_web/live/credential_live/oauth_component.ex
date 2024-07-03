@@ -3,15 +3,27 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   use LightningWeb, :live_component
 
   import LightningWeb.OauthCredentialHelper
+  import LightningWeb.Components.Oauth
 
   alias Lightning.AuthProviders.Common
+  alias Lightning.AuthProviders.Common.TokenBody
+  alias Lightning.Credentials
+  alias Phoenix.LiveView.AsyncResult
 
   require Logger
+
+  @oauth_states %{
+    success: [:userinfo_received],
+    failure: [:token_failed, :userinfo_failed, :refresh_failed]
+  }
 
   attr :form, :map, required: true
   attr :id, :string, required: true
   attr :update_body, :any, required: true
-  attr :provider, :any, required: true
+  attr :action, :any, required: true
+  attr :scopes_changed, :boolean, default: false
+  attr :sandbox_changed, :boolean, default: false
+  attr :schema, :string, required: true
   slot :inner_block
 
   def fieldset(assigns) do
@@ -40,9 +52,12 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
          [
            module: __MODULE__,
            form: @form,
+           action: @action,
+           scopes_changed: @scopes_changed,
+           sandbox_changed: @sandbox_changed,
            token_body_changeset: @token_body_changeset,
            update_body: @update_body,
-           provider: @provider,
+           schema: @schema,
            id: "inner-form-#{@id}"
          ],
          {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
@@ -60,7 +75,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
           No Client Configured
         </div>
         <span class="text-sm">
-          <%= provider_name(@provider) |> String.capitalize() %> authorization has not been set up on this instance.
+          <%= @provider %> authorization has not been set up on this instance.
         </span>
       </div>
     </div>
@@ -68,346 +83,83 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   end
 
   def render(assigns) do
+    display_loader = display_loader?(assigns.oauth_progress)
+    display_reauthorize_banner = display_reauthorize_banner?(assigns)
+
+    display_authorize_button =
+      display_authorize_button?(assigns, display_reauthorize_banner)
+
+    display_userinfo =
+      display_userinfo?(
+        assigns.oauth_progress,
+        display_reauthorize_banner,
+        assigns.scopes_changed,
+        assigns.sandbox_changed
+      )
+
+    display_error =
+      display_error?(
+        assigns.oauth_progress,
+        display_reauthorize_banner,
+        assigns.scopes_changed,
+        assigns.sandbox_changed
+      )
+
     assigns =
       assigns
-      |> update(:form, fn form, %{token_body_changeset: token_body_changeset} ->
-        # Merge in any changes that have been made to the TokenBody changeset
-        # _inside_ this component.
-        %{
-          form
-          | params: Map.put(form.params, "body", token_body_changeset.params)
-        }
-      end)
-      |> assign(
-        show_authorize:
-          !(assigns.authorizing || assigns.error || assigns.userinfo)
-      )
+      |> update_form()
+      |> assign(:display_loader, display_loader)
+      |> assign(:display_reauthorize_banner, display_reauthorize_banner)
+      |> assign(:display_authorize_button, display_authorize_button)
+      |> assign(:display_userinfo, display_userinfo)
+      |> assign(:display_error, display_error)
 
     ~H"""
     <fieldset id={@id}>
       <div :for={
         body_form <- Phoenix.HTML.FormData.to_form(:credential, @form, :body, [])
       }>
-        <%= Phoenix.HTML.Form.hidden_input(body_form, :access_token) %>
-        <%= Phoenix.HTML.Form.hidden_input(body_form, :refresh_token) %>
-        <%= Phoenix.HTML.Form.hidden_input(body_form, :expires_at) %>
         <%= Phoenix.HTML.Form.hidden_input(body_form, :scope) %>
+        <%= Phoenix.HTML.Form.hidden_input(body_form, :expires_at) %>
+        <%= Phoenix.HTML.Form.hidden_input(body_form, :access_token) %>
         <%= Phoenix.HTML.Form.hidden_input(body_form, :instance_url) %>
+        <%= Phoenix.HTML.Form.hidden_input(body_form, :refresh_token) %>
       </div>
-      <div class="lg:grid lg:grid-cols-2 grid-cols-1 grid-flow-col mt-5">
-        <.authorize_button
-          :if={@show_authorize}
-          authorize_url={@authorize_url}
-          socket={@socket}
-          myself={@myself}
-          provider={@provider}
-        />
-        <.disabled_authorize_button
-          :if={!@show_authorize}
-          authorize_url={@authorize_url}
-          socket={@socket}
-          myself={@myself}
-          provider={@provider}
-        />
-        <.error_block
-          :if={@error}
-          type={@error}
-          myself={@myself}
-          provider={@provider}
-        />
-        <.userinfo :if={@userinfo} userinfo={@userinfo} />
-      </div>
+      <.reauthorize_banner
+        :if={@display_reauthorize_banner}
+        authorize_url={@authorize_url}
+        myself={@myself}
+      />
+      <.text_ping_loader :if={@display_loader}>
+        <%= case @oauth_progress do %>
+          <% :started  -> %>
+            Authenticating with <%= @provider %>
+          <% _ -> %>
+            Fetching user data from <%= @provider %>
+        <% end %>
+      </.text_ping_loader>
+      <.authorize_button
+        :if={@display_authorize_button}
+        authorize_url={@authorize_url}
+        socket={@socket}
+        myself={@myself}
+        provider={@provider}
+      />
+      <.userinfo
+        :if={@display_userinfo}
+        myself={@myself}
+        socket={@socket}
+        userinfo={@userinfo.result}
+        authorize_url={@authorize_url}
+      />
+      <.error_block
+        :if={@display_error}
+        type={@oauth_progress}
+        myself={@myself}
+        provider={@provider}
+        authorize_url={@authorize_url}
+      />
     </fieldset>
-    """
-  end
-
-  def authorize_button(assigns) do
-    ~H"""
-    <.link
-      href={@authorize_url}
-      id="authorize-button"
-      target="_blank"
-      class="bg-primary-600 hover:bg-primary-700 text-white font-bold py-1 px-1 pr-3 rounded inline-flex items-center"
-      phx-click="authorize_click"
-      phx-target={@myself}
-    >
-      <div class="py-1 px-1 mr-2 bg-white rounded">
-        <img
-          src={
-            Routes.static_path(
-              @socket,
-              "/images/#{provider_name(@provider)}.png"
-            )
-          }
-          alt="Authorizing..."
-          class="w-10 h-10 bg-white rounded"
-        />
-      </div>
-      <span class="text-xl">Sign in with <%= provider_name(@provider) %></span>
-    </.link>
-    """
-  end
-
-  def disabled_authorize_button(assigns) do
-    ~H"""
-    <div>
-      <div class="bg-primary-300 text-white font-bold py-1 px-1 pr-3 rounded inline-flex items-center">
-        <div class="py-1 px-1 mr-2 bg-white rounded">
-          <img
-            src={
-              Routes.static_path(
-                @socket,
-                "/images/#{provider_name(@provider)}.png"
-              )
-            }
-            alt="Authorizing..."
-            class="w-10 h-10 bg-white rounded"
-          />
-        </div>
-        <span class="text-xl">
-          Sign in with <%= provider_name(@provider) |> String.capitalize() %>
-        </span>
-      </div>
-      <div class="text-sm ml-1">
-        Not working?
-        <.link
-          href={@authorize_url}
-          target="_blank"
-          phx-target={@myself}
-          phx-click="authorize_click"
-          class="hover:underline text-primary-900"
-        >
-          Reauthorize.
-        </.link>
-      </div>
-    </div>
-    """
-  end
-
-  def error_block(%{type: :userinfo_failed} = assigns) do
-    ~H"""
-    <div class="mx-auto pt-2 max-w-md">
-      <div class="text-center">
-        <Heroicons.exclamation_triangle class="h-6 w-6 text-red-600 inline-block" />
-        <div class="text-base font-medium text-gray-900">
-          Something went wrong.
-        </div>
-        <p class="text-sm mt-2">
-          Failed retrieving your information.
-        </p>
-        <p class="text-sm mt-2">
-          Please
-          <a
-            href="#"
-            phx-click="try_userinfo_again"
-            phx-target={@myself}
-            class="hover:underline text-primary-900"
-          >
-            try again.
-          </a>
-        </p>
-        <.helpblock provider={@provider} type={@type} />
-      </div>
-    </div>
-    """
-  end
-
-  def error_block(%{type: :token_failed} = assigns) do
-    ~H"""
-    <div class="mx-auto pt-2 max-w-md">
-      <div class="text-center">
-        <Heroicons.exclamation_triangle class="h-6 w-6 text-red-600 inline-block" />
-        <div class="text-base font-medium text-gray-900">
-          Something went wrong.
-        </div>
-        <p class="text-sm mt-2">
-          Failed retrieving the token from the provider
-        </p>
-      </div>
-    </div>
-    """
-  end
-
-  def error_block(%{type: :no_refresh_token} = assigns) do
-    ~H"""
-    <div class="mx-auto pt-2 max-w-md">
-      <div class="text-center">
-        <Heroicons.exclamation_triangle class="h-6 w-6 text-red-600 inline-block" />
-        <div class="text-base font-medium text-gray-900">
-          Something went wrong.
-        </div>
-        <p class="text-sm mt-2">
-          The token is missing it's
-          <code class="bg-gray-200 rounded-md p-1">refresh_token</code>
-          value.
-        </p>
-        <p class="text-sm mt-2">
-          Please reauthorize.
-        </p>
-        <.helpblock provider={@provider} type={@type} />
-      </div>
-    </div>
-    """
-  end
-
-  def error_block(%{type: :refresh_failed} = assigns) do
-    ~H"""
-    <div class="mx-auto pt-2 max-w-md">
-      <div class="text-center">
-        <Heroicons.exclamation_triangle class="h-6 w-6 text-red-600 inline-block" />
-        <div class="text-base font-medium text-gray-900">
-          Something went wrong.
-        </div>
-        <p class="text-sm mt-2">
-          Failed renewing your access token.
-        </p>
-        <p class="text-sm mt-2">
-          Please try again.
-        </p>
-        <.helpblock provider={@provider} type={@type} />
-      </div>
-    </div>
-    """
-  end
-
-  def helpblock(
-        %{provider: Lightning.AuthProviders.Google, type: :userinfo_failed} =
-          assigns
-      ) do
-    ~H"""
-    <p class="text-sm mt-2">
-      If the issue persists, please follow the "Remove third-party account access"
-      instructions on the
-      <a
-        class="text-indigo-600 underline"
-        href="https://support.google.com/accounts/answer/3466521"
-        target="_blank"
-      >
-        Manage third-party apps & services with access to your account
-      </a>
-      <Heroicons.arrow_top_right_on_square class="h-4 w-4 text-indigo-600 inline-block" />
-      page.
-    </p>
-    """
-  end
-
-  def helpblock(
-        %{provider: Lightning.AuthProviders.Google, type: :no_refresh_token} =
-          assigns
-      ) do
-    ~H"""
-    <p class="text-sm mt-2">
-      If the issue persists, please follow the "Remove third-party account access"
-      instructions on the
-      <a
-        class="text-indigo-600 underline"
-        href="https://support.google.com/accounts/answer/3466521"
-        target="_blank"
-      >
-        Manage third-party apps & services with access to your account
-      </a>
-      <Heroicons.arrow_top_right_on_square class="h-4 w-4 text-indigo-600 inline-block" />
-      page.
-    </p>
-    """
-  end
-
-  def helpblock(
-        %{provider: Lightning.AuthProviders.Google, type: :refresh_failed} =
-          assigns
-      ) do
-    ~H"""
-    <p class="text-sm mt-2">
-      If the issue persists, please follow the "Remove third-party account access"
-      instructions on the
-      <a
-        class="text-indigo-600 underline"
-        href="https://support.google.com/accounts/answer/3466521"
-        target="_blank"
-      >
-        Manage third-party apps & services with access to your account
-      </a>
-      <Heroicons.arrow_top_right_on_square class="h-4 w-4 text-indigo-600 inline-block" />
-      page.
-    </p>
-    """
-  end
-
-  def helpblock(
-        %{provider: Lightning.AuthProviders.Salesforce, type: :userinfo_failed} =
-          assigns
-      ) do
-    ~H"""
-    <p class="text-sm mt-2">
-      If the issue persists, please follow the "Query for User Information"
-      instructions on the
-      <a
-        class="text-indigo-600 underline"
-        href="https://help.salesforce.com/s/articleView?id=sf.remoteaccess_authenticate.htm&type=5"
-        target="_blank"
-      >
-        Authorize Connected Apps With OAuth
-      </a>
-      <Heroicons.arrow_top_right_on_square class="h-4 w-4 text-indigo-600 inline-block" />
-      page.
-    </p>
-    """
-  end
-
-  def helpblock(
-        %{provider: Lightning.AuthProviders.Salesforce, type: :no_refresh_token} =
-          assigns
-      ) do
-    ~H"""
-    <p class="text-sm mt-2">
-      If the issue persists, please follow the "OAuth 2.0 Refresh Token Flow for Renewed Sessions"
-      instructions on the
-      <a
-        class="text-indigo-600 underline"
-        href="https://support.google.com/accounts/answer/3466521"
-        target="_blank"
-      >
-        OAuth Authorization Flows
-      </a>
-      <Heroicons.arrow_top_right_on_square class="h-4 w-4 text-indigo-600 inline-block" />
-      page.
-    </p>
-    """
-  end
-
-  def helpblock(
-        %{provider: Lightning.AuthProviders.Salesforce, type: :refresh_failed} =
-          assigns
-      ) do
-    ~H"""
-    <p class="text-sm mt-2">
-      If the issue persists, please follow the "OAuth 2.0 Refresh Token Flow for Renewed Sessions"
-      instructions on the
-      <a
-        class="text-indigo-600 underline"
-        href="https://support.google.com/accounts/answer/3466521"
-        target="_blank"
-      >
-        OAuth Authorization Flows
-      </a>
-      <Heroicons.arrow_top_right_on_square class="h-4 w-4 text-indigo-600 inline-block" />
-      page.
-    </p>
-    """
-  end
-
-  def userinfo(assigns) do
-    ~H"""
-    <div class="flex flex-col items-center self-center">
-      <div class="flex-none">
-        <img src={@userinfo["picture"]} class="h-12 w-12 rounded-full" />
-      </div>
-      <div class="flex mb-1 ml-2">
-        <span class="font-medium text-lg text-gray-700">
-          <%= @userinfo["name"] %>
-        </span>
-      </div>
-    </div>
     """
   end
 
@@ -415,7 +167,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   def mount(socket) do
     subscribe(socket.id)
 
-    {:ok, socket |> assign(userinfo: nil)}
+    {:ok, reset_assigns(socket)}
   end
 
   @impl true
@@ -423,9 +175,12 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
         %{
           form: _form,
           id: _id,
+          action: _action,
+          scopes_changed: _scopes_changed,
+          sandbox_changed: _sandbox_changed,
           token_body_changeset: _changeset,
           update_body: _body,
-          provider: _provider
+          schema: _schema
         } = params,
         socket
       ) do
@@ -443,25 +198,42 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   end
 
   def update(%{code: code}, socket) do
-    handle_code_update(code, socket)
-  end
+    %{adapter: adapter, client: client, sandbox: sandbox} = socket.assigns
+    wellknown_url = adapter.wellknown_url(sandbox)
 
-  def update(%{error: error}, socket) do
-    {:ok, socket |> assign(error: error, authorizing: false)}
-  end
-
-  def update(%{userinfo: userinfo}, socket) do
-    {:ok, socket |> assign(userinfo: userinfo, authorizing: false, error: nil)}
+    {:ok,
+     socket
+     |> assign(:oauth_progress, :code_received)
+     |> start_async(:token, fn ->
+       fetch_token(adapter, client, code, wellknown_url)
+     end)}
   end
 
   def update(%{scopes: scopes}, socket) do
     handle_scopes_update(scopes, socket)
   end
 
+  def update(%{sandbox: sandbox}, socket) do
+    wellknown_url = socket.assigns.adapter.wellknown_url(sandbox)
+
+    {:ok, client} = build_client(socket, wellknown_url)
+    state = build_state(socket.id, __MODULE__, socket.assigns.id)
+
+    authorize_url =
+      socket.assigns.adapter.authorize_url(client, state, socket.assigns.scopes)
+
+    {:ok,
+     socket
+     |> assign(sandbox: sandbox, client: client, authorize_url: authorize_url)}
+  end
+
   defp reset_assigns(socket) do
     socket
-    |> assign_new(:userinfo, fn -> nil end)
-    |> assign_new(:authorizing, fn -> false end)
+    |> assign_new(:scopes, fn -> [] end)
+    |> assign_new(:token, fn -> %AsyncResult{} end)
+    |> assign_new(:userinfo, fn -> %AsyncResult{} end)
+    |> assign_new(:oauth_progress, fn -> :not_started end)
+    |> assign_new(:sandbox, fn -> false end)
   end
 
   defp update_assigns(
@@ -469,93 +241,92 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
          %{
            form: form,
            id: id,
+           action: action,
+           scopes_changed: scopes_changed,
+           sandbox_changed: sandbox_changed,
            token_body_changeset: token_body_changeset,
            update_body: update_body,
-           provider: provider
+           schema: schema
          },
          token
        ) do
+    adapter = Credentials.lookup_adapter(schema)
+
+    sandbox =
+      token_body_changeset
+      |> Ecto.Changeset.fetch_field!(:sandbox)
+
     socket
     |> assign(
       form: form,
       id: id,
       token_body_changeset: token_body_changeset,
-      token: token,
-      error: token_error(token),
+      token: AsyncResult.ok(token),
       update_body: update_body,
-      provider: provider
+      adapter: adapter,
+      provider: adapter.provider_name,
+      action: action,
+      scopes_changed: scopes_changed,
+      sandbox_changed: sandbox_changed,
+      sandbox: sandbox
     )
   end
 
   defp update_client(socket) do
+    wellknown_url =
+      socket.assigns.adapter.wellknown_url(socket.assigns.sandbox)
+
     socket
     |> assign_new(:client, fn %{token: token} ->
       socket
-      |> build_client()
+      |> build_client(wellknown_url)
       |> case do
-        {:ok, client} -> client |> Map.put(:token, token)
+        {:ok, client} -> client |> Map.put(:token, token.result)
         {:error, _} -> nil
       end
     end)
     |> assign_new(:authorize_url, fn %{client: client} ->
       if client do
-        socket.assigns.provider.authorize_url(
-          client,
-          build_state(socket.id, __MODULE__, socket.assigns.id),
-          []
-        )
+        %{optional: _optional_scopes, mandatory: mandatory_scopes} =
+          socket.assigns.adapter.scopes
+
+        state = build_state(socket.id, __MODULE__, socket.assigns.id)
+
+        socket.assigns.adapter.authorize_url(client, state, mandatory_scopes)
       end
     end)
   end
 
-  defp handle_code_update(code, socket) do
-    client = socket.assigns.client
-
-    # NOTE: there can be _no_ refresh token if something went wrong like if the
-    # previous auth didn't receive a refresh_token
-
-    case socket.assigns.provider.get_token(client, code: code) do
-      {:ok, client} ->
-        client.token
-        |> token_to_params()
-        |> socket.assigns.update_body.()
-
-        {:ok, socket |> assign(authorizing: false, client: client)}
-
-      {:error, %OAuth2.Response{status_code: 400, body: body}} ->
-        Logger.error("Failed retrieving token from provider:\n#{inspect(body)}")
-
-        send_update(self(), __MODULE__,
-          id: socket.assigns.id,
-          error: :token_failed
-        )
-
-        {:ok, socket}
-    end
-  end
-
   defp handle_scopes_update(scopes, socket) do
-    authorize_url =
-      socket.assigns.provider.authorize_url(
-        socket.assigns.client,
-        build_state(socket.id, __MODULE__, socket.assigns.id),
-        scopes
-      )
+    state = build_state(socket.id, __MODULE__, socket.assigns.id)
 
-    {:ok, socket |> assign(authorize_url: authorize_url)}
+    authorize_url =
+      socket.assigns.client
+      |> socket.assigns.adapter.authorize_url(state, scopes)
+
+    {:ok,
+     socket |> assign(scopes: scopes) |> assign(authorize_url: authorize_url)}
   end
 
   @impl true
   def handle_event("authorize_click", _, socket) do
-    {:noreply, socket |> assign(authorizing: true, userinfo: nil, error: nil)}
+    {:noreply, socket |> assign(oauth_progress: :started)}
   end
 
   def handle_event("try_userinfo_again", _, socket) do
     Logger.debug("Attempting to retrieve userinfo again...")
 
-    pid = self()
-    Task.start(fn -> get_userinfo(pid, socket) end)
-    {:noreply, socket |> assign(authorizing: true, error: nil, userinfo: nil)}
+    %{adapter: adapter, client: client, token: token, sandbox: sandbox} =
+      socket.assigns
+
+    wellknown_url = adapter.wellknown_url(sandbox)
+
+    {:noreply,
+     socket
+     |> assign(:oauth_progress, :requesting_userinfo)
+     |> start_async(:userinfo, fn ->
+       get_userinfo(adapter, client, token.result, wellknown_url)
+     end)}
   end
 
   defp maybe_fetch_userinfo(%{assigns: %{client: nil}} = socket) do
@@ -563,62 +334,155 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   end
 
   defp maybe_fetch_userinfo(socket) do
-    %{token_body_changeset: token_body_changeset, token: token} = socket.assigns
+    if changed?(socket, :token) and socket.assigns.token_body_changeset.valid? do
+      %{client: client, adapter: adapter, sandbox: sandbox, token: token} =
+        socket.assigns
 
-    if socket |> changed?(:token) and token_body_changeset.valid? do
-      pid = self()
+      wellknown_url = adapter.wellknown_url(sandbox)
 
-      # TODO: We should change all those Task.start(fn) with assign_async/4 (https://hexdocs.pm/phoenix_live_view/Phoenix.LiveView.html#assign_async/4)
-      if Common.still_fresh(token) do
-        Logger.debug("Retrieving userinfo")
-        Task.start(fn -> get_userinfo(pid, socket) end)
+      if Common.still_fresh(token.result) do
+        start_async(socket, :userinfo, fn ->
+          get_userinfo(adapter, client, token.result, wellknown_url)
+        end)
       else
-        Logger.debug("Refreshing expired token")
-        Task.start(fn -> refresh_token(pid, socket) end)
+        start_async(socket, :token, fn ->
+          refresh_token(adapter, client, token.result, wellknown_url)
+        end)
       end
-
-      socket |> assign(authorizing: true)
     else
       socket
     end
   end
 
-  defp get_userinfo(pid, socket) do
-    %{id: id, client: client, token: token} = socket.assigns
+  @impl true
+  def handle_async(:token, {:ok, {:ok, token}}, socket) do
+    %{
+      client: client,
+      adapter: adapter,
+      sandbox: sandbox,
+      update_body: update_body
+    } = socket.assigns
 
-    socket.assigns.provider.get_userinfo(client, token)
+    wellknown_url = adapter.wellknown_url(sandbox)
+
+    parsed_token = token_to_params(token)
+
+    update_body.(parsed_token)
+
+    {:noreply,
+     socket
+     |> assign(:oauth_progress, :token_received)
+     |> assign(token: AsyncResult.ok(parsed_token))
+     |> start_async(:userinfo, fn ->
+       get_userinfo(adapter, client, parsed_token, wellknown_url)
+     end)}
+  end
+
+  def handle_async(:token, {:ok, {:error, {:token_failed, reason}}}, socket) do
+    Logger.error("Failed retrieving token from provider:\n#{inspect(reason)}")
+
+    {:noreply,
+     socket
+     |> assign(:oauth_progress, :token_failed)
+     |> assign(:scopes_changed, false)
+     |> assign(:sandbox_changed, false)
+     |> assign(token: AsyncResult.failed(%AsyncResult{}, reason))}
+  end
+
+  def handle_async(:token, {:ok, {:error, {:refresh_failed, reason}}}, socket) do
+    Logger.error("Failed refreshing token from provider:\n#{inspect(reason)}")
+
+    {:noreply,
+     socket
+     |> assign(:oauth_progress, :refresh_failed)
+     |> assign(:scopes_changed, false)
+     |> assign(:sandbox_changed, false)
+     |> assign(token: AsyncResult.failed(%AsyncResult{}, reason))}
+  end
+
+  def handle_async(:token, {:exit, reason}, socket) do
+    Logger.error(reason)
+
+    {:noreply,
+     socket
+     |> assign(:oauth_progress, :token_failed)
+     |> assign(:scopes_changed, false)
+     |> assign(:sandbox_changed, false)
+     |> assign(token: AsyncResult.failed(%AsyncResult{}, "Network error"))}
+  end
+
+  def handle_async(:userinfo, {:ok, {:ok, userinfo}}, socket) do
+    {:noreply,
+     socket
+     |> assign(:oauth_progress, :userinfo_received)
+     |> assign(scopes_changed: false)
+     |> assign(:sandbox_changed, false)
+     |> assign(userinfo: AsyncResult.ok(userinfo))}
+  end
+
+  def handle_async(
+        :userinfo,
+        {:ok, {:error, {:userinfo_failed, reason}}},
+        socket
+      ) do
+    Logger.error(
+      "Failed retrieving user data from provider:\n#{inspect(reason)}"
+    )
+
+    {:noreply,
+     socket
+     |> assign(:oauth_progress, :userinfo_failed)
+     |> assign(scopes_changed: false)
+     |> assign(:sandbox_changed, false)
+     |> assign(userinfo: AsyncResult.failed(%AsyncResult{}, reason))}
+  end
+
+  def handle_async(:userinfo, {:exit, reason}, socket) do
+    Logger.error(inspect(reason))
+
+    {:noreply,
+     socket
+     |> assign(:oauth_progress, :userinfo_failed)
+     |> assign(:scopes_changed, false)
+     |> assign(:sandbox_changed, false)
+     |> assign(userinfo: AsyncResult.failed(%AsyncResult{}, "Network error"))}
+  end
+
+  defp get_userinfo(adapter, client, token, wellknown_url) do
+    adapter.get_userinfo(client, token, wellknown_url)
     |> case do
       {:ok, resp} ->
-        send_update(pid, __MODULE__, id: id, userinfo: resp.body)
+        {:ok, resp.body}
 
       {:error, resp} ->
-        Logger.error("Failed retrieving userinfo with:\n#{inspect(resp)}")
-
-        send_update(pid, __MODULE__, id: id, error: :userinfo_failed)
+        {:error, {:userinfo_failed, resp}}
     end
   end
 
-  defp refresh_token(pid, socket) do
-    %{id: id, client: client, update_body: update_body, token: token} =
-      socket.assigns
-
-    socket.assigns.provider.refresh_token(client, token)
+  defp refresh_token(adapter, client, token, wellknown_url) do
+    adapter.refresh_token(client, token, wellknown_url)
     |> case do
-      {:ok, token} ->
-        update_body.(token |> token_to_params())
-
-        Logger.debug("Retrieving userinfo")
-        Task.start(fn -> get_userinfo(pid, socket) end)
+      {:ok, fresh_token} ->
+        {:ok, fresh_token}
 
       {:error, reason} ->
-        Logger.error("Failed refreshing valid token: #{inspect(reason)}")
-
-        send_update(pid, __MODULE__, id: id, error: :refresh_failed)
+        {:error, {:refresh_failed, reason}}
     end
   end
 
-  defp build_client(socket) do
-    socket.assigns.provider.build_client(
+  defp fetch_token(adapter, client, code, wellknown_url) do
+    case adapter.get_token(client, wellknown_url, code: code) do
+      {:ok, %{token: token} = _response} ->
+        {:ok, token}
+
+      {:error, %OAuth2.Response{body: body}} ->
+        {:error, {:token_failed, body}}
+    end
+  end
+
+  defp build_client(socket, wellknown_url) do
+    socket.assigns.adapter.build_client(
+      wellknown_url,
       callback_url: LightningWeb.RouteHelpers.oidc_callback_url()
     )
   end
@@ -645,7 +509,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     end)
   end
 
-  defp params_to_token(%Lightning.AuthProviders.Common.TokenBody{} = token) do
+  defp params_to_token(%TokenBody{} = token) do
     struct!(
       OAuth2.AccessToken,
       token
@@ -656,19 +520,63 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     )
   end
 
-  defp token_error(token) do
-    if is_nil(token.refresh_token) and token.access_token do
-      :no_refresh_token
-    else
-      nil
+  defp display_loader?(oauth_progress) do
+    oauth_progress not in List.flatten([:not_started | Map.values(@oauth_states)])
+  end
+
+  defp display_reauthorize_banner?(%{
+         action: action,
+         scopes_changed: scopes_changed,
+         sandbox_changed: sandbox_changed,
+         oauth_progress: oauth_progress
+       }) do
+    case action do
+      :new ->
+        (sandbox_changed || scopes_changed) &&
+          oauth_progress in (@oauth_states.success ++
+                               @oauth_states.failure)
+
+      :edit ->
+        (sandbox_changed || scopes_changed) && oauth_progress not in [:started]
+
+      _ ->
+        false
     end
   end
 
-  defp provider_name(Lightning.AuthProviders.Salesforce) do
-    "salesforce"
+  defp display_authorize_button?(
+         %{action: action, oauth_progress: oauth_progress},
+         display_reauthorize_banner
+       ) do
+    action == :new && oauth_progress == :not_started &&
+      !display_reauthorize_banner
   end
 
-  defp provider_name(Lightning.AuthProviders.Google) do
-    "google"
+  defp display_userinfo?(
+         oauth_progress,
+         display_reauthorize_banner,
+         scopes_changed,
+         sandbox_changed
+       ) do
+    oauth_progress == :userinfo_received && !display_reauthorize_banner &&
+      !(scopes_changed or sandbox_changed)
+  end
+
+  defp display_error?(
+         oauth_progress,
+         display_reauthorize_banner,
+         scopes_changed,
+         sandbox_changed
+       ) do
+    oauth_progress in @oauth_states.failure && !display_reauthorize_banner &&
+      !(scopes_changed || sandbox_changed)
+  end
+
+  defp update_form(assigns) do
+    update(assigns, :form, fn form,
+                              %{token_body_changeset: token_body_changeset} ->
+      params = Map.put(form.params, "body", token_body_changeset.params)
+      %{form | params: params}
+    end)
   end
 end

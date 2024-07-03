@@ -15,49 +15,29 @@ defmodule Lightning.Runs.Handlers do
     @moduledoc """
     Schema to validate the input attributes of a started step.
     """
-    use Ecto.Schema
-    import Ecto.Changeset
+    use Lightning.Schema
     import Ecto.Query
+
+    import Lightning.ChangesetUtils
 
     @primary_key false
     embedded_schema do
-      field :run_id, Ecto.UUID
-      field :step_id, Ecto.UUID
       field :credential_id, Ecto.UUID
-      field :job_id, Ecto.UUID
       field :input_dataclip_id, Ecto.UUID
+      field :job_id, Ecto.UUID
+      field :run_id, Ecto.UUID
+      field :snapshot_id, Ecto.UUID
       field :started_at, :utc_datetime_usec
+      field :step_id, Ecto.UUID
     end
 
-    def new(params) do
-      cast(%__MODULE__{}, params, [
-        :run_id,
-        :step_id,
-        :credential_id,
-        :job_id,
-        :input_dataclip_id,
-        :started_at
-      ])
-      |> then(fn changeset ->
-        if get_change(changeset, :started_at) do
-          changeset
-        else
-          put_change(changeset, :started_at, DateTime.utc_now())
-        end
-      end)
-      |> validate_required([
-        :run_id,
-        :step_id,
-        :job_id,
-        :started_at
-      ])
-      |> then(&validate_job_reachable/1)
-    end
-
-    def call(params) do
-      with {:ok, attrs} <- new(params) |> apply_action(:validate),
+    @spec call(Run.t(), map()) ::
+            {:ok, Step.t()} | {:error, Ecto.Changeset.t()}
+    def call(run, params) do
+      with {:ok, attrs} <- new(run, params) |> apply_action(:validate),
            {:ok, step} <- insert(attrs) do
-        run = Runs.get(attrs.run_id, include: [:workflow])
+        run = Runs.get(attrs.run_id, include: [:workflow, :snapshot])
+        step = Repo.preload(step, :snapshot)
         WorkOrders.Events.run_updated(run.workflow.project_id, run)
         Runs.Events.step_started(attrs.run_id, step)
 
@@ -65,7 +45,28 @@ defmodule Lightning.Runs.Handlers do
       end
     end
 
-    defp insert(attrs) do
+    defp new(run, params) do
+      cast(%__MODULE__{}, params, [
+        :credential_id,
+        :input_dataclip_id,
+        :job_id,
+        :started_at,
+        :step_id
+      ])
+      |> put_change(:run_id, run.id)
+      |> put_change(:snapshot_id, run.snapshot_id)
+      |> put_new_change(:started_at, DateTime.utc_now())
+      |> validate_required([
+        :job_id,
+        :run_id,
+        :snapshot_id,
+        :started_at,
+        :step_id
+      ])
+      |> then(&validate_job_reachable/1)
+    end
+
+    defp insert(%__MODULE__{} = attrs) do
       Repo.transact(fn ->
         with {:ok, step} <- attrs |> to_step() |> Repo.insert(),
              {:ok, _} <- attrs |> to_run_step() |> Repo.insert() do
@@ -76,7 +77,13 @@ defmodule Lightning.Runs.Handlers do
 
     defp to_step(%__MODULE__{step_id: step_id} = start_step) do
       start_step
-      |> Map.take([:credential_id, :input_dataclip_id, :job_id, :started_at])
+      |> Map.take([
+        :credential_id,
+        :input_dataclip_id,
+        :job_id,
+        :started_at,
+        :snapshot_id
+      ])
       |> Map.put(:id, step_id)
       |> Step.new()
     end
@@ -89,37 +96,41 @@ defmodule Lightning.Runs.Handlers do
     end
 
     defp validate_job_reachable(changeset) do
-      case changeset do
-        %{valid?: false} ->
-          changeset
+      if changeset.valid? do
+        job_id = get_field(changeset, :job_id)
+        run_id = get_field(changeset, :run_id)
 
-        _ ->
-          job_id = get_field(changeset, :job_id)
-          run_id = get_field(changeset, :run_id)
-
-          # Verify that all of the required entities exist with a single query,
-          # then reduce the results into a single changeset by adding errors for
-          # any columns/ids that are null.
-          run_id
-          |> fetch_existing_job(job_id)
-          |> Enum.reduce(changeset, fn {k, v}, changeset ->
-            if is_nil(v) do
-              add_error(changeset, k, "does not exist")
-            else
-              changeset
-            end
-          end)
+        # Verify that all of the required entities exist with a single query,
+        # then reduce the results into a single changeset by adding errors for
+        # any columns/ids that are null.
+        run_id
+        |> fetch_existing_job(job_id)
+        |> Enum.reduce(changeset, fn {k, v}, changeset ->
+          if is_nil(v) do
+            add_error(changeset, k, "does not exist")
+          else
+            changeset
+          end
+        end)
+      else
+        changeset
       end
     end
 
     defp fetch_existing_job(run_id, job_id) do
+      snapshots_with_job =
+        from(s in Lightning.Workflows.Snapshot,
+          cross_lateral_join: job in fragment("jsonb_array_elements(?)", s.jobs),
+          where: fragment("? ->> ?", job, "id") == ^job_id,
+          select: %{snapshot_id: s.id, job_id: fragment("? ->> ?", job, "id")}
+        )
+
       query =
-        from(a in Run,
-          where: a.id == ^run_id,
-          left_join: w in assoc(a, :workflow),
-          left_join: j in assoc(w, :jobs),
-          on: j.id == ^job_id,
-          select: %{run_id: a.id, job_id: j.id}
+        from(r in Run,
+          where: r.id == ^run_id,
+          left_join: s in subquery(snapshots_with_job),
+          on: s.snapshot_id == r.snapshot_id,
+          select: %{run_id: r.id, job_id: s.job_id}
         )
 
       Repo.one(query) || %{run_id: nil, job_id: nil}
@@ -130,9 +141,10 @@ defmodule Lightning.Runs.Handlers do
     @moduledoc """
     Schema to validate the input attributes of a completed step.
     """
-    use Ecto.Schema
-    import Ecto.Changeset
+    use Lightning.Schema
     import Ecto.Query
+
+    import Lightning.ChangesetUtils
 
     @primary_key false
     embedded_schema do
@@ -147,7 +159,7 @@ defmodule Lightning.Runs.Handlers do
       field :finished_at, :utc_datetime_usec
     end
 
-    def new(params, retention_policy) do
+    def new(params, options) do
       cast(%__MODULE__{}, params, [
         :run_id,
         :output_dataclip,
@@ -159,19 +171,13 @@ defmodule Lightning.Runs.Handlers do
         :step_id,
         :finished_at
       ])
-      |> then(fn changeset ->
-        if get_change(changeset, :finished_at) do
-          changeset
-        else
-          put_change(changeset, :finished_at, DateTime.utc_now())
-        end
-      end)
+      |> put_new_change(:finished_at, DateTime.utc_now())
       |> then(fn changeset ->
         output_dataclip_id = get_change(changeset, :output_dataclip_id)
         output_dataclip = get_change(changeset, :output_dataclip)
 
-        case {retention_policy, output_dataclip, output_dataclip_id} do
-          {:erase_all, _, _} ->
+        case {options, output_dataclip, output_dataclip_id} do
+          {%Runs.RunOptions{save_dataclips: false}, _, _} ->
             changeset
 
           {_, nil, nil} ->
@@ -191,20 +197,22 @@ defmodule Lightning.Runs.Handlers do
       ])
     end
 
-    def call(params, retention_policy) do
+    def call(params, options) do
       with {:ok, complete_step} <-
-             params |> new(retention_policy) |> apply_action(:validate),
-           {:ok, step} <- update_step(complete_step, retention_policy) do
+             params |> new(options) |> apply_action(:validate),
+           {:ok, step} <- update_step(complete_step, options) do
+        step = Repo.preload(step, :snapshot)
         Runs.Events.step_completed(complete_step.run_id, step)
 
         {:ok, step}
       end
     end
 
-    defp update_step(complete_step, retention_policy) do
+    defp update_step(complete_step, options) do
       Repo.transact(fn ->
         with %Step{} = step <- get_step(complete_step.step_id),
-             {:ok, _} <- maybe_save_dataclip(complete_step, retention_policy) do
+             {:ok, _} <-
+               maybe_save_dataclip(complete_step, options) do
           step
           |> Step.finished(
             complete_step.output_dataclip_id,
@@ -235,7 +243,7 @@ defmodule Lightning.Runs.Handlers do
              project_id: project_id,
              output_dataclip_id: dataclip_id
            },
-           :erase_all
+           %Lightning.Runs.RunOptions{save_dataclips: false}
          ) do
       if is_nil(dataclip_id) do
         {:ok, nil}
@@ -253,7 +261,7 @@ defmodule Lightning.Runs.Handlers do
 
     defp maybe_save_dataclip(
            %__MODULE__{output_dataclip: nil},
-           _retention_policy
+           _run_options
          ) do
       {:ok, nil}
     end
@@ -264,7 +272,7 @@ defmodule Lightning.Runs.Handlers do
              project_id: project_id,
              output_dataclip_id: dataclip_id
            },
-           _retention_policy
+           _run_options
          ) do
       Dataclip.new(%{
         id: dataclip_id,

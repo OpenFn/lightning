@@ -3,6 +3,12 @@ defmodule Lightning.WorkersTest do
 
   alias Lightning.Workers.Token
 
+  setup do
+    Mox.stub_with(LightningMock, Lightning.API)
+
+    :ok
+  end
+
   describe "Token" do
     test "can generate a token" do
       {:ok, token, claims} =

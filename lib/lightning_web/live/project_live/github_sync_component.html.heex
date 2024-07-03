@@ -1,0 +1,214 @@
+<div id={@id}>
+  <div :if={@action == :new} class="bg-white p-4 rounded-md">
+    <.form
+      :let={f}
+      id="project-repo-connection-form"
+      for={@changeset}
+      as={:connection}
+      phx-change="validate"
+      phx-submit="save"
+      phx-target={@myself}
+    >
+      <div class="flex">
+        <.input
+          id="select-installations-input"
+          type="select"
+          field={f[:github_installation_id]}
+          label="Github Installation"
+          prompt="Select an installation"
+          options={installations_select_options(@installations)}
+          disabled={if(@installations.loading, do: true, else: false)}
+          required="true"
+          button_placement="right"
+        >
+          <.button
+            id="refresh-installation-button"
+            type="button"
+            class="rounded-l-none my-px h-9"
+            color_class="text-gray-900 ring-1 ring-gray-300 hover:bg-gray-100"
+            disabled={if(@installations.loading, do: true, else: false)}
+            phx-click="refresh-installations"
+            phx-target={@myself}
+          >
+            <Heroicons.arrow_path
+              mini
+              class={"-ml-0.5 h-5 w-5 #{if(@installations.loading, do: "animate-spin")}"}
+            />
+          </.button>
+        </.input>
+      </div>
+      <div class="mt-2">
+        Can't find the right installation or repository?
+        <.link
+          target="_blank"
+          class="text-indigo-600 hover:underline"
+          href={"https://github.com/apps/#{github_config()[:app_name]}"}
+        >
+          Create/update GitHub installations or modify permissions.
+        </.link>
+      </div>
+      <div class="mt-4">
+        <.input
+          id="select-repos-input"
+          type="select"
+          field={f[:repo]}
+          label="Repository"
+          prompt="Select a repository"
+          options={
+            repos_select_options(@repos, f[:github_installation_id].value)
+          }
+          disabled={
+            to_string(f[:github_installation_id].value) == "" or !@repos.ok?
+          }
+          required="true"
+        />
+      </div>
+      <div class="mt-4">
+        <.input
+          id="select-branches-input"
+          type="select"
+          field={f[:branch]}
+          label="Branch"
+          prompt="Select a branch"
+          options={branches_select_options(@branches, f[:repo].value)}
+          disabled={to_string(f[:repo].value) == "" or !@branches.ok?}
+          required="true"
+          button_placement="right"
+        >
+          <.button
+            id="refresh-branches-button"
+            type="button"
+            class="rounded-l-none my-px h-9"
+            color_class="text-gray-900 ring-1 ring-gray-300 hover:bg-gray-100"
+            disabled={if(@branches.loading, do: true, else: false)}
+            phx-click="refresh-branches"
+            phx-target={@myself}
+          >
+            <Heroicons.arrow_path
+              mini
+              class={"-ml-0.5 h-5 w-5 #{if(@branches.loading, do: "animate-spin")}"}
+            />
+          </.button>
+        </.input>
+      </div>
+      <div class="mt-4">
+        <.input
+          type="text"
+          field={f[:config_path]}
+          label={"Path to config #{if f[:sync_direction].value == :deploy, do: "(required)", else: "(optional)"}"}
+          placeholder={"./openfn-#{@project.id}-config.json"}
+          class="placeholder:italic placeholder:text-slate-400"
+        />
+      </div>
+      <div class="mt-4">
+        <.sync_order_radio form={f} />
+      </div>
+      <%= if f[:branch].value do %>
+        <.accept_checkbox
+          project={@project}
+          form={f}
+          default_branch={
+            get_default_branch(
+              @repos,
+              f[:repo].value
+            )
+          }
+        />
+      <% end %>
+      <div class="flex gap-4 mt-2">
+        <.button
+          type="submit"
+          phx-disable-with="Connecting..."
+          disabled={!@changeset.valid?}
+        >
+          Connect Branch & Initiate First Sync
+        </.button>
+      </div>
+    </.form>
+  </div>
+  <div :if={@action == :show}>
+    <.verify_connection_banner
+      id="verify-connection-banner"
+      verify_connection={@verify_connection}
+      myself={@myself}
+      changeset={@changeset}
+      repos={@repos}
+      project={@project}
+      can_reconnect={
+        @can_install_github &&
+          can_access_github_installation?(
+            @project_repo_connection,
+            @installations
+          )
+      }
+    />
+    <div class="bg-white p-4 rounded-md">
+      <div class="flex flex-col gap-2 text-black">
+        <span>
+          Repository:
+          <.link
+            href={"https://www.github.com/" <> @project_repo_connection.repo}
+            target="_blank"
+            class="hover:underline text-primary-600"
+          >
+            <%= @project_repo_connection.repo %>
+          </.link>
+        </span>
+
+        <span>
+          Branch:
+          <span class="text-xs font-mono bg-gray-200 rounded-md p-1">
+            <%= @project_repo_connection.branch %>
+          </span>
+        </span>
+
+        <span>
+          GitHub Installation ID:
+          <span class="text-xs font-mono bg-gray-200 rounded-md p-1">
+            <%= @project_repo_connection.github_installation_id %>
+          </span>
+        </span>
+
+        <span>
+          Path to config:
+          <span class="text-xs font-mono bg-gray-200 rounded-md p-1">
+            <%= ProjectRepoConnection.config_path(@project_repo_connection) %>
+          </span>
+        </span>
+
+        <div class="pt-2">
+          <.button
+            id="initiate-sync-button"
+            disabled={!@can_initiate_github_sync || !@verify_connection.ok?}
+            type="button"
+            tooltip={
+              !@can_initiate_github_sync &&
+                "Contact an editor or admin to sync."
+            }
+            phx-click="initiate-sync"
+            phx-disable-with="Syncing.."
+            phx-target={@myself}
+            class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+          >
+            Initiate Sync to Branch
+          </.button>
+        </div>
+      </div>
+    </div>
+    <div :if={@can_install_github} class="mt-2">
+      No longer need to sync this project?
+      <.link
+        href="#"
+        class="hover:underline text-red-600"
+        phx-click={show_modal("remove_connection_modal")}
+        phx-target={@myself}
+      >
+        Remove Integration.
+      </.link>
+      <.confirm_connection_removal_modal
+        id="remove_connection_modal"
+        myself={@myself}
+      />
+    </div>
+  </div>
+</div>

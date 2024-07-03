@@ -1,7 +1,11 @@
 defmodule Lightning.AccountsTest do
   use Lightning.DataCase, async: true
 
-  alias Lightning.AccountsFixtures
+  alias Lightning.Accounts.Events
+  alias Lightning.Accounts.User
+  alias Lightning.Accounts.UserBackupCode
+  alias Lightning.Accounts.UserToken
+  alias Lightning.Accounts.UserTOTP
   alias Lightning.Credentials
   alias Lightning.Jobs
   alias Lightning.JobsFixtures
@@ -10,13 +14,12 @@ defmodule Lightning.AccountsTest do
   alias Lightning.Accounts
   alias Lightning.Projects.ProjectUser
 
-  alias Lightning.Accounts.{User, UserBackupCode, UserToken, UserTOTP}
   import Lightning.AccountsFixtures
   import Lightning.Factories
 
   test "has_activity_in_projects?/1 returns true if user has activity in a project (is associated with a run) and false otherwise." do
-    user = AccountsFixtures.user_fixture()
-    another_user = AccountsFixtures.user_fixture()
+    user = insert(:user)
+    another_user = insert(:user)
 
     workflow = insert(:workflow)
     trigger = insert(:trigger, workflow: workflow)
@@ -42,12 +45,12 @@ defmodule Lightning.AccountsTest do
   end
 
   test "list_users/0 returns all users" do
-    user = user_fixture()
-    assert user in Accounts.list_users()
+    %{id: user_id} = insert(:user)
+    assert [%{id: ^user_id}] = Accounts.list_users()
   end
 
   test "list_api_token/1 returns all user tokens" do
-    user = user_fixture()
+    user = insert(:user)
 
     tokens =
       for(_ <- 1..3, do: Accounts.generate_api_token(user))
@@ -63,7 +66,7 @@ defmodule Lightning.AccountsTest do
     end
 
     test "returns the user if the email exists" do
-      %{id: id} = user = user_fixture()
+      %{id: id} = user = insert(:user)
       assert %User{id: ^id} = Accounts.get_user_by_email(user.email)
     end
   end
@@ -77,12 +80,12 @@ defmodule Lightning.AccountsTest do
     end
 
     test "does not return the user if the password is not valid" do
-      user = user_fixture()
+      user = insert(:user)
       refute Accounts.get_user_by_email_and_password(user.email, "invalid")
     end
 
     test "returns the user if the email and password are valid" do
-      %{id: id} = user = user_fixture()
+      %{id: id} = user = insert(:user)
 
       assert %User{id: ^id} =
                Accounts.get_user_by_email_and_password(
@@ -100,7 +103,7 @@ defmodule Lightning.AccountsTest do
     end
 
     test "returns the user with the given id" do
-      %{id: id} = user = user_fixture()
+      %{id: id} = user = insert(:user)
       assert %User{id: ^id} = Accounts.get_user!(user.id)
     end
   end
@@ -113,7 +116,7 @@ defmodule Lightning.AccountsTest do
     end
 
     test "returns the token with the given id" do
-      user = user_fixture()
+      user = insert(:user)
       token = Accounts.generate_api_token(user)
       %{id: id} = user_token = Repo.get_by(UserToken, token: token)
 
@@ -123,7 +126,7 @@ defmodule Lightning.AccountsTest do
 
   describe "get_user_totp/1" do
     setup do
-      user = user_fixture()
+      user = insert(:user)
       [user: user]
     end
 
@@ -141,7 +144,7 @@ defmodule Lightning.AccountsTest do
 
   describe "upsert_user_totp/2" do
     setup do
-      user = user_fixture()
+      user = insert(:user)
       [user: user]
     end
 
@@ -304,7 +307,7 @@ defmodule Lightning.AccountsTest do
 
   describe "delete_user_totp/1" do
     test "successfully deletes the given user TOTP and disables the mfa_flag" do
-      user = user_fixture()
+      user = insert(:user)
       user_totp = %UserTOTP{secret: NimbleTOTP.secret(), user_id: user.id}
       valid_code = NimbleTOTP.verification_code(user_totp.secret)
       {:ok, totp} = Accounts.upsert_user_totp(user_totp, %{code: valid_code})
@@ -359,7 +362,7 @@ defmodule Lightning.AccountsTest do
     end
 
     test "validates email uniqueness" do
-      %{email: email} = user_fixture()
+      %{email: email} = insert(:user)
       {:error, changeset} = Accounts.register_user(%{email: email})
       assert "has already been taken" in errors_on(changeset).email
 
@@ -367,17 +370,41 @@ defmodule Lightning.AccountsTest do
       {:error, changeset} =
         Accounts.register_user(%{email: String.upcase(email)})
 
+      refute_receive %Events.UserRegistered{user: _user}
+
       assert "has already been taken" in errors_on(changeset).email
     end
 
-    test "registers users with a hashed password" do
+    test "registers users with a hashed password and publishes event" do
+      Events.subscribe()
+
       email = unique_user_email()
-      {:ok, user} = Accounts.register_user(valid_user_attributes(email: email))
+
+      assert {:ok, user} =
+               Accounts.register_user(valid_user_attributes(email: email))
+
+      assert user.contact_preference == :critical
+
+      assert ^user = Repo.get!(User, user.id)
+      assert_receive %Events.UserRegistered{user: ^user}
+
       assert user.email == email
       assert user.role == :user
       assert is_binary(user.hashed_password)
       assert is_nil(user.confirmed_at)
       assert is_nil(user.password)
+    end
+
+    test "user can choose to prefer any type of email" do
+      assert {:ok, user} =
+               Accounts.register_user(
+                 valid_user_attributes(
+                   email: unique_user_email(),
+                   contact_preference: "any"
+                 )
+               )
+
+      assert user.contact_preference == :any
     end
   end
 
@@ -433,7 +460,7 @@ defmodule Lightning.AccountsTest do
     test "returns a changeset" do
       assert %Ecto.Changeset{} = changeset = Accounts.change_user_registration()
 
-      assert changeset.required == [:password, :email]
+      assert changeset.required == [:password, :first_name, :last_name, :email]
     end
 
     test "allows fields to be set" do
@@ -517,7 +544,7 @@ defmodule Lightning.AccountsTest do
     end
 
     test "purging a user sets all project credentials that use their credentials to nil" do
-      user = user_fixture()
+      user = insert(:user)
       project = Lightning.ProjectsFixtures.project_fixture()
 
       project_credential_1 =
@@ -547,7 +574,7 @@ defmodule Lightning.AccountsTest do
     end
 
     test "purging user deletes all project credentials that involve this user's credentials" do
-      user = user_fixture()
+      user = insert(:user)
 
       CredentialsFixtures.project_credential_fixture(user_id: user.id)
       CredentialsFixtures.project_credential_fixture(user_id: user.id)
@@ -561,8 +588,8 @@ defmodule Lightning.AccountsTest do
     end
 
     test "purging a user deletes all of that user's credentials" do
-      user_1 = user_fixture()
-      user_2 = user_fixture()
+      user_1 = insert(:user)
+      user_2 = insert(:user)
 
       CredentialsFixtures.credential_fixture(user_id: user_1.id)
       CredentialsFixtures.credential_fixture(user_id: user_1.id)
@@ -638,7 +665,7 @@ defmodule Lightning.AccountsTest do
           scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: -10)
         )
 
-      another_user = user_fixture()
+      another_user = insert(:user)
 
       project =
         Lightning.ProjectsFixtures.project_fixture(
@@ -669,7 +696,7 @@ defmodule Lightning.AccountsTest do
 
   describe "apply_user_email/3" do
     setup do
-      %{user: user_fixture()}
+      %{user: insert(:user)}
     end
 
     test "requires email to change", %{user: user} do
@@ -699,7 +726,7 @@ defmodule Lightning.AccountsTest do
     end
 
     test "validates email uniqueness", %{user: user} do
-      %{email: email} = user_fixture()
+      %{email: email} = insert(:user)
 
       {:error, changeset} =
         Accounts.apply_user_email(user, valid_user_password(), %{email: email})
@@ -727,7 +754,7 @@ defmodule Lightning.AccountsTest do
 
   describe "deliver_update_email_instructions/3" do
     setup do
-      %{user: user_fixture()}
+      %{user: insert(:user)}
     end
 
     test "sends token through notification", %{user: user} do
@@ -753,7 +780,7 @@ defmodule Lightning.AccountsTest do
 
   describe "update_user_email/2" do
     setup do
-      user = user_fixture()
+      user = insert(:user)
       # email = "current@example.com"
       email = unique_user_email()
 
@@ -829,7 +856,7 @@ defmodule Lightning.AccountsTest do
 
   describe "update_user_password/3" do
     setup do
-      %{user: user_fixture()}
+      %{user: insert(:user)}
     end
 
     test "validates password", %{user: user} do
@@ -870,8 +897,6 @@ defmodule Lightning.AccountsTest do
           password: "new valid password"
         })
 
-      assert is_nil(user.password)
-
       assert Accounts.get_user_by_email_and_password(
                user.email,
                "new valid password"
@@ -892,7 +917,7 @@ defmodule Lightning.AccountsTest do
 
   describe "generate_user_session_token/1" do
     setup do
-      %{user: user_fixture()}
+      %{user: insert(:user)}
     end
 
     test "generates a token", %{user: user} do
@@ -904,7 +929,7 @@ defmodule Lightning.AccountsTest do
       assert_raise Ecto.ConstraintError, fn ->
         Repo.insert!(%UserToken{
           token: user_token.token,
-          user_id: user_fixture().id,
+          user_id: insert(:user).id,
           context: "session"
         })
       end
@@ -913,7 +938,7 @@ defmodule Lightning.AccountsTest do
 
   describe "generate_auth_token/1" do
     setup do
-      %{user: user_fixture()}
+      %{user: insert(:user)}
     end
 
     test "generates a token", %{user: user} do
@@ -925,7 +950,7 @@ defmodule Lightning.AccountsTest do
       assert_raise Ecto.ConstraintError, fn ->
         Repo.insert!(%UserToken{
           token: user_token.token,
-          user_id: user_fixture().id,
+          user_id: insert(:user).id,
           context: "auth"
         })
       end
@@ -934,7 +959,7 @@ defmodule Lightning.AccountsTest do
 
   describe "exchange_auth_token/1" do
     setup do
-      user = user_fixture()
+      user = insert(:user)
       token = Accounts.generate_auth_token(user)
       %{user: user, token: token}
     end
@@ -954,7 +979,7 @@ defmodule Lightning.AccountsTest do
 
   describe "generate_api_token/1" do
     setup do
-      %{user: user_fixture()}
+      %{user: insert(:user)}
     end
 
     test "generates a token", %{user: user} do
@@ -968,7 +993,7 @@ defmodule Lightning.AccountsTest do
       assert_raise Ecto.ConstraintError, fn ->
         Repo.insert!(%UserToken{
           token: user_token.token,
-          user_id: user_fixture().id,
+          user_id: insert(:user).id,
           context: "api"
         })
       end
@@ -977,7 +1002,7 @@ defmodule Lightning.AccountsTest do
 
   describe "get_user_by_api_token/1" do
     setup do
-      user = user_fixture()
+      user = insert(:user)
       token = Accounts.generate_api_token(user)
 
       user_token =
@@ -1000,7 +1025,7 @@ defmodule Lightning.AccountsTest do
 
   describe "delete_token/1" do
     test "deletes the token" do
-      user = user_fixture()
+      user = insert(:user)
       token = Accounts.generate_api_token(user)
       %{id: id} = user_token = Repo.get_by(UserToken, token: token)
 
@@ -1011,7 +1036,7 @@ defmodule Lightning.AccountsTest do
 
   describe "get_user_by_auth_token/1" do
     setup do
-      user = user_fixture()
+      user = insert(:user)
       token = Accounts.generate_auth_token(user)
       %{user: user, token: token}
     end
@@ -1035,7 +1060,7 @@ defmodule Lightning.AccountsTest do
 
   describe "delete_auth_token/1" do
     test "deletes the token" do
-      user = user_fixture()
+      user = insert(:user)
       token = Accounts.generate_auth_token(user)
       assert Accounts.delete_auth_token(token) == :ok
       refute Accounts.get_user_by_auth_token(token)
@@ -1044,7 +1069,7 @@ defmodule Lightning.AccountsTest do
 
   describe "get_user_by_session_token/1" do
     setup do
-      user = user_fixture()
+      user = insert(:user)
       token = Accounts.generate_user_session_token(user)
       %{user: user, token: token}
     end
@@ -1068,7 +1093,7 @@ defmodule Lightning.AccountsTest do
 
   describe "delete_session_token/1" do
     test "deletes the token" do
-      user = user_fixture()
+      user = insert(:user)
       token = Accounts.generate_user_session_token(user)
       assert Accounts.delete_session_token(token) == :ok
       refute Accounts.get_user_by_session_token(token)
@@ -1077,14 +1102,17 @@ defmodule Lightning.AccountsTest do
 
   describe "deliver_user_confirmation_instructions/2" do
     setup do
-      %{user: user_fixture()}
+      %{user: insert(:user)}
     end
 
     test "sends token through notification", %{user: user} do
-      token =
-        extract_user_token(fn url ->
-          Accounts.deliver_user_confirmation_instructions(user, url)
-        end)
+      {:ok, email} = Accounts.deliver_user_confirmation_instructions(user)
+
+      %{"token" => token} =
+        Regex.named_captures(
+          ~r/\/users\/confirm\/(?<token>\S+)/,
+          email.text_body
+        )
 
       {:ok, token} = Base.url_decode64(token, padding: false)
 
@@ -1099,14 +1127,18 @@ defmodule Lightning.AccountsTest do
 
   describe "deliver_user_confirmation_instructions/3" do
     setup do
-      %{superuser: superuser_fixture(), user: user_fixture()}
+      %{superuser: insert(:user, role: :superuser), user: insert(:user)}
     end
 
     test "sends token through notification", %{superuser: superuser, user: user} do
-      token =
-        extract_user_token(fn url ->
-          Accounts.deliver_user_confirmation_instructions(superuser, user, url)
-        end)
+      {:ok, email} =
+        Accounts.deliver_user_confirmation_instructions(superuser, user)
+
+      %{"token" => token} =
+        Regex.named_captures(
+          ~r/\/users\/confirm\/(?<token>\S+)/,
+          email.text_body
+        )
 
       {:ok, token} = Base.url_decode64(token, padding: false)
 
@@ -1121,12 +1153,15 @@ defmodule Lightning.AccountsTest do
 
   describe "confirm_user/1" do
     setup do
-      user = user_fixture()
+      user = insert(:user)
 
-      token =
-        extract_user_token(fn url ->
-          Accounts.deliver_user_confirmation_instructions(user, url)
-        end)
+      {:ok, email} = Accounts.deliver_user_confirmation_instructions(user)
+
+      %{"token" => token} =
+        Regex.named_captures(
+          ~r/\/users\/confirm\/(?<token>\S+)/,
+          email.text_body
+        )
 
       %{user: user, token: token}
     end
@@ -1157,7 +1192,7 @@ defmodule Lightning.AccountsTest do
 
   describe "deliver_user_reset_password_instructions/2" do
     setup do
-      %{user: user_fixture()}
+      %{user: insert(:user)}
     end
 
     test "sends token through notification", %{user: user} do
@@ -1179,7 +1214,7 @@ defmodule Lightning.AccountsTest do
 
   describe "get_user_by_reset_password_token/1" do
     setup do
-      user = user_fixture()
+      user = insert(:user)
 
       token =
         extract_user_token(fn url ->
@@ -1210,7 +1245,7 @@ defmodule Lightning.AccountsTest do
 
   describe "reset_user_password/2" do
     setup do
-      %{user: user_fixture()}
+      %{user: insert(:user)}
     end
 
     test "validates password", %{user: user} do
@@ -1235,10 +1270,8 @@ defmodule Lightning.AccountsTest do
     end
 
     test "updates the password", %{user: user} do
-      {:ok, updated_user} =
+      {:ok, _updated_user} =
         Accounts.reset_user_password(user, %{password: "new valid password"})
-
-      assert is_nil(updated_user.password)
 
       assert Accounts.get_user_by_email_and_password(
                user.email,
@@ -1258,14 +1291,14 @@ defmodule Lightning.AccountsTest do
 
   describe "delete_user/1" do
     test "delete_user/1 deletes the user" do
-      user = user_fixture()
+      user = insert(:user)
       assert {:ok, %User{}} = Accounts.delete_user(user)
       assert_raise Ecto.NoResultsError, fn -> Accounts.get_user!(user.id) end
     end
 
     test "removes any associated Run and RunStep records" do
-      user_1 = user_fixture()
-      user_2 = user_fixture()
+      user_1 = insert(:user)
+      user_2 = insert(:user)
 
       run_1 = insert_run(user_1)
       run_2 = insert_run(user_1)
@@ -1284,8 +1317,8 @@ defmodule Lightning.AccountsTest do
     end
 
     test "removes any associated LogLine records" do
-      user_1 = user_fixture()
-      user_2 = user_fixture()
+      user_1 = insert(:user)
+      user_2 = insert(:user)
 
       insert_run(user_1, build_list(2, :log_line))
       insert_run(user_1, build_list(2, :log_line))
@@ -1315,18 +1348,14 @@ defmodule Lightning.AccountsTest do
 
   describe "scheduling a user for deletion" do
     setup do
-      prev = Application.get_env(:lightning, :purge_deleted_after_days)
-      Application.put_env(:lightning, :purge_deleted_after_days, 2)
-
-      on_exit(fn ->
-        Application.put_env(:lightning, :purge_deleted_after_days, prev)
-      end)
+      Mox.stub(Lightning.MockConfig, :purge_deleted_after_days, fn -> 2 end)
+      :ok
     end
 
     test "schedule_user_deletion/2 sets a date in the future according to the :purge_deleted_after_days env" do
-      days = Application.get_env(:lightning, :purge_deleted_after_days)
+      days = Lightning.Config.purge_deleted_after_days()
 
-      user = user_fixture()
+      user = insert(:user)
       assert user.scheduled_deletion == nil
 
       now = DateTime.utc_now() |> DateTime.truncate(:second)
@@ -1340,7 +1369,7 @@ defmodule Lightning.AccountsTest do
 
   describe "SUDO mode" do
     setup do
-      %{user: user_fixture()}
+      %{user: insert(:user)}
     end
 
     test "generates sudo session token", %{user: user} do
@@ -1352,7 +1381,7 @@ defmodule Lightning.AccountsTest do
       assert_raise Ecto.ConstraintError, fn ->
         Repo.insert!(%UserToken{
           token: user_token.token,
-          user_id: user_fixture().id,
+          user_id: insert(:user).id,
           context: "sudo_session"
         })
       end
@@ -1362,7 +1391,7 @@ defmodule Lightning.AccountsTest do
       token = Accounts.generate_sudo_session_token(user)
       assert Accounts.sudo_session_token_valid?(user, token)
 
-      user2 = user_fixture()
+      user2 = insert(:user)
       refute Accounts.sudo_session_token_valid?(user2, token)
       token_schema = Repo.get_by(UserToken, token: token)
       query = "update user_tokens set inserted_at=$1 where token=$2"
@@ -1392,10 +1421,10 @@ defmodule Lightning.AccountsTest do
   test "has_one_superuser?/0" do
     refute Accounts.has_one_superuser?()
 
-    user_fixture()
+    insert(:user)
     refute Accounts.has_one_superuser?()
 
-    superuser_fixture()
+    insert(:user, role: :superuser)
     assert Accounts.has_one_superuser?()
   end
 

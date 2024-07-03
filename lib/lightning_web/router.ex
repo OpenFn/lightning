@@ -3,6 +3,7 @@ defmodule LightningWeb.Router do
   The router for Lightning.
   """
   use LightningWeb, :router
+  use Lightning.BuildMacros
 
   import LightningWeb.UserAuth
   import Phoenix.LiveDashboard.Router
@@ -21,6 +22,14 @@ defmodule LightningWeb.Router do
     plug :put_secure_browser_headers
     plug :fetch_current_user
     plug LightningWeb.Plugs.FirstSetup
+
+    plug LightningWeb.Plugs.BlockRoutes, [
+      {
+        "/users/register",
+        :allow_signup,
+        "Self-signup has been disabled for this instance. Please contact the administrator."
+      }
+    ]
   end
 
   pipeline :api do
@@ -41,15 +50,20 @@ defmodule LightningWeb.Router do
     get "/authenticate/callback", OidcController, :new
     get "/authenticate/:provider", OidcController, :show
     get "/authenticate/:provider/callback", OidcController, :new
+
+    get "/oauth/:provider/callback", OauthController, :new
   end
 
   ## JSON API
 
   scope "/api", LightningWeb, as: :api do
+    pipe_through [:api]
+
+    post "/users/register", API.RegistrationController, :create
+
     pipe_through [
-      :api,
       :authenticate_bearer,
-      :require_authenticated_user
+      :require_authenticated_api_resource
     ]
 
     get "/provision/yaml", API.ProvisioningController, :show_yaml
@@ -87,6 +101,7 @@ defmodule LightningWeb.Router do
     post "/users/two-factor", UserTOTPController, :create
     get "/setup_vcs", VersionControlController, :index
     get "/download/yaml", DownloadsController, :download_project_yaml
+    get "/dataclip/body/:id", DataclipController, :show
 
     get "/profile/confirm_email/:token",
         UserConfirmationController,
@@ -169,6 +184,7 @@ defmodule LightningWeb.Router do
     pipe_through :api
 
     post "/*path", WebhooksController, :create
+    get "/*path", WebhooksController, :check
   end
 
   scope "/" do
@@ -197,7 +213,7 @@ defmodule LightningWeb.Router do
     live_dashboard "/dashboard", metrics: LightningWeb.Telemetry
   end
 
-  if Mix.env() == :dev do
+  do_in(:dev) do
     import PhoenixStorybook.Router
 
     scope "/" do

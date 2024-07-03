@@ -33,9 +33,16 @@ config :lightning, LightningWeb.Endpoint,
 config :lightning, Lightning.Extensions,
   rate_limiter: Lightning.Extensions.RateLimiter,
   usage_limiter: Lightning.Extensions.UsageLimiter,
-  run_queue: Lightning.Extensions.FifoRunQueue
+  run_queue: Lightning.Extensions.FifoRunQueue,
+  account_hook: Lightning.Extensions.AccountHook,
+  project_hook: Lightning.Extensions.ProjectHook
 
+# TODO: don't use this value in production
 config :joken, default_signer: "secret"
+
+config :lightning, Lightning.Runtime.RuntimeManager,
+  start: false,
+  env: [{"NODE_OPTIONS", "--dns-result-order=ipv4first"}]
 
 # Configures the mechanism for erlang node clustering
 config :libcluster,
@@ -63,8 +70,10 @@ config :lightning, :oauth_clients,
     wellknown_url: "https://accounts.google.com/.well-known/openid-configuration"
   ],
   salesforce: [
-    wellknown_url:
-      "https://login.salesforce.com/.well-known/openid-configuration"
+    prod_wellknown_url:
+      "https://login.salesforce.com/.well-known/openid-configuration",
+    sandbox_wellknown_url:
+      "https://test.salesforce.com/.well-known/openid-configuration"
   ]
 
 # Configure esbuild (the version is required)
@@ -87,7 +96,7 @@ config :esbuild,
 
 # https://fly.io/phoenix-files/tailwind-standalone/
 config :tailwind,
-  version: "3.3.5",
+  version: "3.4.4",
   default: [
     args: ~w(
       --config=tailwind.config.js
@@ -122,8 +131,12 @@ config :lightning, Lightning.FailureAlerter,
 # Disables / Hides the credential transfer feature for beta (in LightningWeb.CredentialLive.Edit)
 config :lightning, LightningWeb, allow_credential_transfer: false
 
-# Rather than default  since httpc doesnt have certificate checking
-config :tesla, adapter: Tesla.Adapter.Hackney
+config :tesla, adapter: {Tesla.Adapter.Finch, name: Lightning.Finch}
+
+config :lightning, :is_resettable_demo, false
+config :lightning, :default_retention_period, nil
+
+config :lightning, Lightning.Runtime.RuntimeManager, start: false
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

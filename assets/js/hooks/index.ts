@@ -3,10 +3,38 @@ import { PhoenixHook } from './PhoenixHook';
 
 import LogLineHighlight from './LogLineHighlight';
 import ElapsedIndicator from './ElapsedIndicator';
-import TabSelector from './TabSelector';
+import {
+  TabbedContainer,
+  TabbedSelector,
+  TabbedPanels,
+} from './TabbedContainer';
 import { initiateSaveAndRun } from '../common';
 
-export { LogLineHighlight, ElapsedIndicator, TabSelector };
+export {
+  LogLineHighlight,
+  ElapsedIndicator,
+  TabbedContainer,
+  TabbedSelector,
+  TabbedPanels,
+};
+
+export const EditScope = {
+  mounted() {
+    this.el.addEventListener('dblclick', _e => {
+      const scopeValue = this.el.dataset.scope;
+      const eventType = this.el.dataset.eventType;
+      this.pushEventTo(this.el, eventType, { scope: scopeValue });
+    });
+  },
+} as PhoenixHook<{}, { scope: string; eventType: string }>;
+
+export const ClearInput = {
+  mounted() {
+    this.handleEvent('clear_input', () => {
+      this.el.value = '';
+    });
+  },
+} as PhoenixHook<{}, {}, HTMLInputElement>;
 
 export const ModalHook = {
   mounted() {
@@ -132,21 +160,31 @@ export const AssocListChange = {
   },
 } as PhoenixHook<{}, {}, HTMLSelectElement>;
 
-export const collapsiblePanel = {
+export const CollapsiblePanel = {
   mounted() {
+    this.el.addEventListener('click', event => {
+      const target = event.target as HTMLElement;
+
+      // If the click target smells like a link, expand the panel.
+      if (target.closest('a[href]')) {
+        target
+          .closest('.collapsed')
+          ?.dispatchEvent(new Event('expand-panel', { bubbles: true }));
+      }
+    });
+
     this.el.addEventListener('collapse', event => {
       const target = event.target;
-      const collection = document.getElementsByClassName('collapsed');
-      if (collection.length < 2) {
-        target.classList.toggle('collapsed');
+      if (target) {
+        const collection = this.el.getElementsByClassName('collapsed');
+        if (collection.length < 2) {
+          target.classList.add('collapsed');
+        }
       }
-      document.dispatchEvent(new Event('update-layout'));
     });
 
     this.el.addEventListener('expand-panel', event => {
-      const target = event.target;
-      target.classList.toggle('collapsed');
-      document.dispatchEvent(new Event('update-layout'));
+      event.target.classList.remove('collapsed');
     });
   },
 } as PhoenixHook;

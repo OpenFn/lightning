@@ -3,6 +3,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
 
   alias Lightning.Name
   alias Lightning.Repo
+  alias Lightning.Workflows
   alias Lightning.Workflows.WebhookAuthMethod
 
   import Phoenix.LiveViewTest
@@ -15,8 +16,11 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
     workflow = insert(:workflow, project: project)
     trigger = insert(:trigger, type: :webhook, workflow: workflow)
 
+    {:ok, snapshot} = Workflows.Snapshot.get_or_create_latest_for(workflow)
+
     [
       workflow: workflow,
+      snapshot: snapshot,
       trigger: trigger
     ]
   end
@@ -30,7 +34,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}"
         )
 
       assert view |> element("a#addAuthenticationLink") |> has_element?()
@@ -41,7 +45,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}"
         )
 
       assert view
@@ -62,7 +66,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, _view, html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}"
         )
 
       auth_method =
@@ -77,7 +81,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, _view, html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}"
         )
 
       assert html =~ auth_method.name
@@ -96,7 +100,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}"
         )
 
       refute view |> element("##{modal_id}") |> has_element?()
@@ -106,7 +110,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}"
         )
 
       assert view |> element("##{modal_id}") |> has_element?()
@@ -145,7 +149,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, _view, html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}"
         )
 
       assert html =~ auth_method_name
@@ -173,7 +177,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}"
         )
 
       refute view |> element("##{modal_id}") |> has_element?()
@@ -183,7 +187,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}"
         )
 
       assert view |> element("##{modal_id}") |> has_element?()
@@ -222,7 +226,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, _view, html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}"
         )
 
       assert html =~ auth_method_name
@@ -256,7 +260,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}"
         )
 
       refute view |> element("##{modal_id}") |> has_element?()
@@ -266,7 +270,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}"
         )
 
       assert view |> element("##{modal_id}") |> has_element?()
@@ -329,7 +333,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}"
         )
 
       refute view |> element("#webhooks_auth_method_modal") |> has_element?()
@@ -339,7 +343,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}"
         )
 
       assert view |> element("#webhooks_auth_method_modal") |> has_element?()
@@ -367,7 +371,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}"
         )
 
       view

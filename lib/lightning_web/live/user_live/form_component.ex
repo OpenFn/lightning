@@ -49,8 +49,7 @@ defmodule LightningWeb.UserLive.FormComponent do
         {:ok, _} =
           Accounts.deliver_user_confirmation_instructions(
             socket.assigns.current_user,
-            user,
-            &Routes.user_confirmation_url(socket, :edit, &1)
+            user
           )
 
         {:noreply,

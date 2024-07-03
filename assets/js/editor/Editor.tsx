@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import Monaco from '@monaco-editor/react';
 import type { EditorProps as MonacoProps } from '@monaco-editor/react/lib/types';
 
+import { MonacoEditor, Monaco } from '../monaco';
 import { fetchDTSListing, fetchFile } from '@openfn/describe-package';
 import createCompletionProvider from './magic-completion';
 import { initiateSaveAndRun } from '../common';
@@ -9,8 +9,10 @@ import { initiateSaveAndRun } from '../common';
 // static imports for core lib
 import dts_es5 from './lib/es5.min.dts';
 
-export const DEFAULT_TEXT =
-  '// Get started by adding operations from the API reference\n';
+export const DEFAULT_TEXT = `
+// Check out the Job Writing Guide for help getting started:
+// https://docs.openfn.org/documentation/jobs/job-writing-guide
+`;
 
 type EditorProps = {
   source?: string;
@@ -18,6 +20,7 @@ type EditorProps = {
   metadata?: object; // TODO I can actually this very effectively from adaptors...
   onChange?: (newSource: string) => void;
   disabled?: boolean;
+  disabledMessage?: string;
 };
 
 const spinner = (
@@ -44,7 +47,7 @@ const spinner = (
 );
 
 const loadingIndicator = (
-  <div className="bg-vs-dark inline-block p-2">
+  <div className="inline-block p-2">
     <span className="mr-2">Loading</span>
     {spinner}
   </div>
@@ -68,6 +71,10 @@ const defaultOptions: MonacoProps['options'] = {
 
   codeLens: false,
   wordBasedSuggestions: false,
+
+  fontFamily: 'Fira Code VF',
+  fontSize: 14,
+  fontLigatures: true,
 
   suggest: {
     showKeywords: false,
@@ -145,120 +152,102 @@ export default function Editor({
   adaptor,
   onChange,
   disabled,
+  disabledMessage,
   metadata,
 }: EditorProps) {
   const [lib, setLib] = useState<Lib[]>();
   const [loading, setLoading] = useState(false);
-  const [monaco, setMonaco] = useState<typeof Monaco>();
   const [options, setOptions] = useState(defaultOptions);
   const listeners = useRef<{
     insertSnippet?: EventListenerOrEventListenerObject;
     updateLayout?: any;
   }>({});
 
+  const monacoRef = useRef<any>(null);
+
   const handleSourceChange = useCallback(
-    (newSource: string) => {
-      if (onChange) {
+    (newSource: string | undefined) => {
+      if (onChange && newSource) {
         onChange(newSource);
       }
     },
     [onChange]
   );
 
-  const handleEditorDidMount = useCallback(
-    (editor: any, monaco: typeof Monaco) => {
-      setMonaco(monaco);
+  const handleEditorDidMount = useCallback((editor: any, monaco: Monaco) => {
+    monacoRef.current = monaco;
 
-      editor.addCommand(
-        monaco.KeyCode.Escape,
-        () => {
-          document.activeElement.blur();
-        },
-        '!suggestWidgetVisible'
-      );
+    editor.addCommand(
+      monaco.KeyCode.Escape,
+      () => {
+        document.activeElement.blur();
+      },
+      '!suggestWidgetVisible'
+    );
 
-      editor.addCommand(
-        // https://microsoft.github.io/monaco-editor/typedoc/classes/KeyMod.html
-        // https://microsoft.github.io/monaco-editor/typedoc/enums/KeyCode.html
-        monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
-        function () {
-          const actionButton = document.getElementById('save-and-run')!;
-          initiateSaveAndRun(actionButton);
-        }
-      );
+    editor.addCommand(
+      // https://microsoft.github.io/monaco-editor/typedoc/classes/KeyMod.html
+      // https://microsoft.github.io/monaco-editor/typedoc/enums/KeyCode.html
+      monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
+      function () {
+        const actionButton = document.getElementById('save-and-run')!;
+        initiateSaveAndRun(actionButton);
+      }
+    );
 
-      editor.addCommand(
-        // https://microsoft.github.io/monaco-editor/typedoc/classes/KeyMod.html
-        // https://microsoft.github.io/monaco-editor/typedoc/enums/KeyCode.html
-        monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter,
-        function () {
-          const actionButton = document.getElementById(
-            'create-new-work-order'
-          )!;
-          initiateSaveAndRun(actionButton);
-        }
-      );
+    editor.addCommand(
+      // https://microsoft.github.io/monaco-editor/typedoc/classes/KeyMod.html
+      // https://microsoft.github.io/monaco-editor/typedoc/enums/KeyCode.html
+      monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter,
+      function () {
+        const actionButton = document.getElementById('create-new-work-order')!;
+        initiateSaveAndRun(actionButton);
+      }
+    );
 
-      monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
-        // This seems to be needed to track the modules in d.ts files
-        allowNonTsExtensions: true,
+    monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
+      // This seems to be needed to track the modules in d.ts files
+      allowNonTsExtensions: true,
 
-        // Disables core js libs in code completion
-        noLib: true,
-      });
+      // Disables core js libs in code completion
+      noLib: true,
+    });
 
-      listeners.current.insertSnippet = (e: Event) => {
-        // Snippets are always added to the end of the job code
-        const model = editor.getModel();
-        const lastLine = model.getLineCount();
-        const eol = model.getLineLength(lastLine);
-        const op = {
-          range: new monaco.Range(lastLine, eol, lastLine, eol),
-          // @ts-ignore event typings
-          text: `\n${e.snippet}`,
-          forceMoveMarkers: true,
-        };
-
-        // Append the snippet
-        // https://microsoft.github.io/monaco-editor/api/interfaces/monaco.editor.ICodeEditor.html#executeEdits
-        editor.executeEdits('snippets', [op]);
-
-        // Ensure the snippet is fully visible
-        const newLastLine = model.getLineCount();
-        editor.revealLines(lastLine + 1, newLastLine, 0); // 0 = smooth scroll
-
-        // Set the selection to the start of the snippet
-        editor.setSelection(new monaco.Range(lastLine + 1, 0, lastLine + 1, 0));
-
-        // ensure the editor has focus
-        editor.focus();
+    listeners.current.insertSnippet = (e: Event) => {
+      // Snippets are always added to the end of the job code
+      const model = editor.getModel();
+      const lastLine = model.getLineCount();
+      const eol = model.getLineLength(lastLine);
+      const op = {
+        range: new monaco.Range(lastLine, eol, lastLine, eol),
+        // @ts-ignore event typings
+        text: `\n${e.snippet}`,
+        forceMoveMarkers: true,
       };
 
-      // Force the editor to resize
-      listeners.current.updateLayout = (_e: Event) => {
-        editor.layout({ width: 0, height: 0 });
-        setTimeout(() => {
-          try {
-            editor.layout();
-          } catch (e) {
-            editor.layout();
-          }
-        }, 1);
-      };
+      // Append the snippet
+      // https://microsoft.github.io/monaco-editor/api/interfaces/monaco.editor.ICodeEditor.html#executeEdits
+      editor.executeEdits('snippets', [op]);
 
-      document.addEventListener(
-        'insert-snippet',
-        listeners.current.insertSnippet
-      );
-      document.addEventListener(
-        'update-layout',
-        listeners.current.updateLayout
-      );
-    },
-    []
-  );
+      // Ensure the snippet is fully visible
+      const newLastLine = model.getLineCount();
+      editor.revealLines(lastLine + 1, newLastLine, 0); // 0 = smooth scroll
+
+      // Set the selection to the start of the snippet
+      editor.setSelection(new monaco.Range(lastLine + 1, 0, lastLine + 1, 0));
+
+      // ensure the editor has focus
+      editor.focus();
+    };
+
+    document.addEventListener(
+      'insert-snippet',
+      listeners.current.insertSnippet
+    );
+  }, []);
 
   useEffect(() => {
+    let monaco = monacoRef.current;
     if (monaco && metadata) {
       const p = monaco.languages.registerCompletionItemProvider(
         'javascript',
@@ -272,7 +261,7 @@ export default function Editor({
         p.dispose();
       };
     }
-  }, [monaco, metadata]);
+  }, [monacoRef, metadata]);
 
   useEffect(() => {
     // Create a node to hold overflow widgets
@@ -285,7 +274,6 @@ export default function Editor({
       ...defaultOptions,
       overflowWidgetsDomNode: overflowNode,
       fixedOverflowWidgets: true,
-      readOnly: disabled,
     });
 
     return () => {
@@ -311,22 +299,28 @@ export default function Editor({
   }, [adaptor]);
 
   useEffect(() => {
-    if (monaco) {
-      monaco.languages.typescript.javascriptDefaults.setExtraLibs(lib);
-    }
-  }, [monaco, lib]);
+    monacoRef.current?.languages.typescript.javascriptDefaults.setExtraLibs(
+      lib
+    );
+  }, [monacoRef, lib]);
 
   return (
     <>
       <div className="relative z-10 h-0 overflow-visible text-right text-xs text-white">
         {loading && loadingIndicator}
       </div>
-      <Monaco
+      <MonacoEditor
         defaultLanguage="javascript"
-        theme="vs-dark"
         defaultPath="/job.js"
+        loading={<div className="text-white">Loading...</div>}
         value={source || DEFAULT_TEXT}
-        options={options}
+        options={{
+          ...options,
+          readOnly: disabled,
+          readOnlyMessage: {
+            value: disabledMessage,
+          },
+        }}
         onMount={handleEditorDidMount}
         onChange={handleSourceChange}
       />

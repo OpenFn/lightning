@@ -12,9 +12,9 @@
 #   - https://pkgs.org/ - resource for finding needed packages
 #   - Ex: hexpm/elixir:1.13.2-erlang-24.2.1-debian-bullseye-20210902-slim
 #
-ARG ELIXIR_VERSION=1.15.4
-ARG OTP_VERSION=26.0.2
-ARG DEBIAN_VERSION=bookworm-20230612
+ARG ELIXIR_VERSION=1.16.2
+ARG OTP_VERSION=26.2.5
+ARG DEBIAN_VERSION=bookworm-20240513
 ARG NODE_VERSION=18.17.1
 
 ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
@@ -25,7 +25,7 @@ ARG NODE_VERSION
 
 # install build and dev dependencies
 RUN apt-get update -y && apt-get install -y \
-  build-essential curl git inotify-tools
+    build-essential curl git inotify-tools libsodium-dev
 
 COPY bin/install_node bin/install_node
 RUN bin/install_node ${NODE_VERSION}
@@ -91,7 +91,7 @@ LABEL branch=${BRANCH}
 LABEL commit=${COMMIT}
 
 RUN apt-get update -y && apt-get install -y libstdc++6 openssl libncurses5 \
-  locales curl gpg
+  locales curl gpg libsodium-dev
 
 RUN apt-get clean && rm -f /var/lib/apt/lists/*_**
 
@@ -118,6 +118,7 @@ ENV ADAPTORS_PATH /app/priv/openfn
 COPY --from=builder --chown=lightning:root /app/_build/${MIX_ENV}/rel/lightning ./
 COPY --from=builder --chown=lightning:root /app/priv/openfn ./priv/openfn
 COPY --from=builder --chown=lightning:root /app/priv/schemas ./priv/schemas
+COPY --from=builder --chown=lightning:root /app/priv/github ./priv/github
 
 USER lightning
 

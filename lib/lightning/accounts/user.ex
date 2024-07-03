@@ -2,9 +2,8 @@ defmodule Lightning.Accounts.User do
   @moduledoc """
   The User model.
   """
-  use Ecto.Schema
+  use Lightning.Schema
 
-  import Ecto.Changeset
   import Ecto.Query
   import EctoEnum
 
@@ -19,8 +18,6 @@ defmodule Lightning.Accounts.User do
     :superuser
   ])
 
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
   schema "users" do
     field :first_name, :string
     field :last_name, :string
@@ -32,9 +29,15 @@ defmodule Lightning.Accounts.User do
     field :disabled, :boolean, default: false
     field :mfa_enabled, :boolean, default: false
     field :scheduled_deletion, :utc_datetime
+    field :github_oauth_token, Lightning.Encrypted.Map, redact: true
+
+    field :contact_preference, Ecto.Enum,
+      values: [:critical, :any],
+      default: :critical
 
     has_one :user_totp, Lightning.Accounts.UserTOTP
     has_many :credentials, Lightning.Credentials.Credential
+    has_many :oauth_clients, Lightning.Credentials.OauthClient
     has_many :project_users, Lightning.Projects.ProjectUser
     has_many :projects, through: [:project_users, :project]
 
@@ -50,7 +53,8 @@ defmodule Lightning.Accounts.User do
       :first_name,
       :last_name,
       :email,
-      :password
+      :password,
+      :contact_preference
     ])
     |> validate_name()
     |> validate_email()
@@ -64,7 +68,9 @@ defmodule Lightning.Accounts.User do
     password: :string,
     hashed_password: :string,
     disabled: :boolean,
-    scheduled_deletion: :utc_datetime
+    scheduled_deletion: :utc_datetime,
+    contact_preference:
+      Ecto.ParameterizedType.init(Ecto.Enum, values: [:critical, :any])
   }
 
   @doc """
@@ -97,6 +103,7 @@ defmodule Lightning.Accounts.User do
         ]
     )
     |> validate_email()
+    |> validate_name()
     |> validate_password(opts)
     |> validate_change(:terms_accepted, fn :terms_accepted, terms_accepted ->
       if terms_accepted do
@@ -260,6 +267,12 @@ defmodule Lightning.Accounts.User do
   def confirm_changeset(user) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
     change(user, confirmed_at: now)
+  end
+
+  def github_token_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:github_oauth_token])
+    |> validate_required([:github_oauth_token])
   end
 
   @doc """

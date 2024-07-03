@@ -2,7 +2,11 @@ defmodule Lightning.Runs do
   @moduledoc """
   Gathers operations to create, update and delete Runs.
   """
+  @behaviour Lightning.Extensions.RunQueue
+
   import Ecto.Query
+
+  alias Ecto.Multi
 
   alias Lightning.Invocation.LogLine
   alias Lightning.Repo
@@ -10,12 +14,14 @@ defmodule Lightning.Runs do
   alias Lightning.Runs.Events
   alias Lightning.Runs.Handlers
   alias Lightning.Services.RunQueue
+  alias Lightning.Workflows
 
   require Logger
 
   @doc """
   Enqueue a run to be processed.
   """
+  @impl Lightning.Extensions.RunQueue
   def enqueue(run) do
     RunQueue.enqueue(run)
   end
@@ -26,6 +32,7 @@ defmodule Lightning.Runs do
   # The `demand` parameter is used to request more than a since run,
   # all implementation should default to 1.
   # """
+  @impl Lightning.Extensions.RunQueue
   def claim(demand \\ 1) do
     RunQueue.claim(demand)
   end
@@ -33,6 +40,7 @@ defmodule Lightning.Runs do
   # @doc """
   # Removes a run from the queue.
   # """
+  @impl Lightning.Extensions.RunQueue
   def dequeue(run) do
     RunQueue.dequeue(run)
   end
@@ -47,13 +55,53 @@ defmodule Lightning.Runs do
   @spec get(Ecto.UUID.t(), [{:include, term()}]) ::
           Run.t() | nil
   def get(id, opts \\ []) do
+    get_query(id, opts)
+    |> Repo.one()
+  end
+
+  @doc """
+  Get a run by id, preloading the snapshot and its credential.
+  """
+  @spec get_for_worker(Ecto.UUID.t()) :: Run.t() | nil
+  def get_for_worker(id) do
+    Multi.new()
+    |> Multi.one(
+      :__pre_check_run__,
+      get_query(id, include: [snapshot: [jobs: :credential]])
+    )
+    |> Multi.merge(fn %{__pre_check_run__: run} ->
+      case run do
+        %{snapshot_id: nil} ->
+          # TODO: remove this after the next minor release, all runs created after
+          # this point will have a snapshot associated.
+
+          Multi.new()
+          |> Multi.one(:workflow, Ecto.assoc(run, :workflow))
+          |> Multi.run(:snapshot, fn _repo, %{workflow: workflow} ->
+            Workflows.Snapshot.get_or_create_latest_for(workflow)
+          end)
+          |> Multi.update(:run_with_snapshot, fn %{snapshot: snapshot} ->
+            Ecto.Changeset.change(run, snapshot_id: snapshot.id)
+          end)
+          |> Multi.one(
+            :run,
+            get_query(id, include: [snapshot: [jobs: :credential]])
+          )
+
+        run ->
+          Multi.new() |> Multi.put(:run, run)
+      end
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{run: run}} -> run
+    end
+  end
+
+  defp get_query(id, opts) do
     preloads = opts |> Keyword.get(:include, [])
 
-    from(a in Run,
-      where: a.id == ^id,
-      preload: ^preloads
-    )
-    |> Repo.one()
+    from(r in Run, where: r.id == ^id, preload: ^preloads)
   end
 
   @doc """
@@ -111,13 +159,10 @@ defmodule Lightning.Runs do
   """
   @spec wipe_dataclips(Run.t()) :: :ok
   def wipe_dataclips(%Run{} = run) do
-    query =
-      from(d in Ecto.assoc(run, :dataclip),
-        update: [set: [request: nil, body: nil, wiped_at: ^DateTime.utc_now()]],
-        select: d
-      )
-
-    query
+    run
+    |> Ecto.assoc(:dataclip)
+    |> select([d], d)
+    |> Lightning.Invocation.Query.wipe_dataclips()
     |> Repo.update_all([])
     |> then(fn {1, [dataclip]} ->
       Events.dataclip_updated(run.id, dataclip)
@@ -186,9 +231,9 @@ defmodule Lightning.Runs do
 
     Ecto.Multi.new()
     |> Ecto.Multi.update_all(:runs, update_query, updates)
-    |> Ecto.Multi.run(:post, fn _, %{runs: {_, runs}} ->
+    |> Ecto.Multi.run(:post, fn _repo, %{runs: {_, runs}} ->
       Enum.each(runs, fn run ->
-        {:ok, _} = Lightning.WorkOrders.update_state(run)
+        {:ok, _run} = Lightning.WorkOrders.update_state(run)
       end)
 
       {:ok, nil}
@@ -196,14 +241,18 @@ defmodule Lightning.Runs do
     |> Repo.transaction()
     |> tap(fn result ->
       with {:ok, %{runs: {_n, runs}}} <- result do
-        Enum.each(runs, &Events.run_updated/1)
+        # TODO: remove the requirement for events to be hydrated with a specific
+        # set of preloads.
+        runs
+        |> Enum.map(fn run -> Repo.preload(run, :snapshot) end)
+        |> Enum.each(&Events.run_updated/1)
       end
     end)
   end
 
   def append_run_log(run, params, scrubber \\ nil) do
     LogLine.new(run, params, scrubber)
-    |> Ecto.Changeset.validate_change(:step_id, fn _, step_id ->
+    |> Ecto.Changeset.validate_change(:step_id, fn _field, step_id ->
       if is_nil(step_id) do
         []
       else
@@ -232,16 +281,16 @@ defmodule Lightning.Runs do
 
   The Step is created and marked as started at the current time.
   """
-  @spec start_step(map()) ::
+  @spec start_step(Run.t(), map()) ::
           {:ok, Lightning.Invocation.Step.t()} | {:error, Ecto.Changeset.t()}
-  def start_step(params) do
-    Handlers.StartStep.call(params)
+  def start_step(run, params) do
+    Handlers.StartStep.call(run, params)
   end
 
-  @spec complete_step(map(), Lightning.Projects.Project.retention_policy_type()) ::
+  @spec complete_step(map(), Lightning.Runs.RunOptions) ::
           {:ok, Lightning.Invocation.Step.t()} | {:error, Ecto.Changeset.t()}
-  def complete_step(params, retention_policy \\ :retain_all) do
-    Handlers.CompleteStep.call(params, retention_policy)
+  def complete_step(params, options \\ Lightning.Runs.RunOptions) do
+    Handlers.CompleteStep.call(params, options)
   end
 
   @spec mark_run_lost(Lightning.Run.t()) ::
@@ -295,6 +344,5 @@ defmodule Lightning.Runs do
     )
   end
 
-  defp track_run_queue_delay({:error, _changeset}) do
-  end
+  defp track_run_queue_delay({:error, _changeset}), do: nil
 end

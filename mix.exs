@@ -4,27 +4,28 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.0.0",
+      version: "2.7.1",
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
         warnings_as_errors: true
       ],
-      compilers: Mix.compilers(),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
       dialyzer: [
-        plt_add_apps: [:mix, :ex_unit],
-        plt_local_path: "priv/plts/"
+        plt_add_apps: [:mix],
+        plt_local_path: "priv/plts/",
+        plt_core_path: "priv/plts/core.plt"
       ],
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [
-        verify: :test,
-        coveralls: :test,
         "coveralls.detail": :test,
+        "coveralls.html": :test,
         "coveralls.post": :test,
-        "coveralls.html": :test
+        "test.watch": :test,
+        coveralls: :test,
+        verify: :test
       ],
 
       # Docs
@@ -68,15 +69,15 @@ defmodule Lightning.MixProject do
       # {:rexbug, ">= 1.0.0", only: :test},
       {:bcrypt_elixir, "~> 2.0"},
       {:bodyguard, "~> 2.2"},
-      {:bypass, "~> 2.1"},
+      {:bypass, "~> 2.1", only: :test},
       {:cachex, "~> 3.4"},
-      {:cloak_ecto, "~> 1.2.0"},
+      {:cloak_ecto, "~> 1.3.0"},
       {:credo, "~> 1.7.3", only: [:test, :dev]},
       {:crontab, "~> 1.1"},
       {:dialyxir, "~> 1.4.2", only: [:test, :dev], runtime: false},
       {:ecto_enum, "~> 1.4"},
       {:ecto_psql_extras, "~> 0.7.14"},
-      {:ecto_sql, "~> 3.6"},
+      {:ecto_sql, "~> 3.11"},
       {:esbuild, "~> 0.3", runtime: Mix.env() == :dev},
       {:ex_doc, "~> 0.28", only: :dev, runtime: false},
       {:ex_json_schema, "~> 0.9.1"},
@@ -115,14 +116,15 @@ defmodule Lightning.MixProject do
       {:phoenix_live_dashboard, "~> 0.8"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_view, "~> 0.20.5"},
-      {:phoenix_storybook, "~> 0.5.2"},
+      {:phoenix_storybook, "~> 0.5.2", only: :dev},
+      {:cors_plug, "~> 3.0"},
       {:plug_cowboy, "~> 2.5"},
       {:postgrex, ">= 0.0.0"},
       {:prom_ex, "~> 1.8.0"},
       {:rambo, "~> 0.3.4"},
       {:scrivener, "~> 2.7"},
-      {:sentry, "~> 8.0"},
-      {:sobelow, "~> 0.13.0", only: [:test, :dev], runtime: false},
+      {:sentry, "~> 10.5.0"},
+      {:sobelow, "~> 0.13.0", only: [:test, :dev]},
       {:sweet_xml, "~> 0.7.1", only: [:test]},
       {:swoosh, "~> 1.9"},
       {:tailwind, "~> 0.1", runtime: Mix.env() == :dev},
@@ -136,10 +138,13 @@ defmodule Lightning.MixProject do
       {:phoenix_swoosh, "~> 1.0"},
       {:hammer_backend_mnesia, "~> 0.6"},
       {:hammer, "~> 6.0"},
-      {:vapor, "~> 0.10.0"},
+      {:dotenvy, "~> 0.8.0"},
       # MFA
       {:nimble_totp, "~> 1.0"},
-      {:eqrcode, "~> 0.1"}
+      {:eqrcode, "~> 0.1"},
+      # Github API Secret Encoding
+      {:enacl, github: "aeternity/enacl", branch: "master"},
+      {:earmark, "~> 1.4"}
     ]
   end
 
@@ -160,7 +165,7 @@ defmodule Lightning.MixProject do
         "lightning.install_schemas",
         "ecto.setup"
       ],
-      "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
+      "ecto.setup": ["ecto.create", "ecto.migrate"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
       "assets.deploy": [

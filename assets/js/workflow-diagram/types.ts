@@ -6,9 +6,15 @@ export namespace Lightning {
     id: string;
     name: string;
     workflow_id: string;
+    disabled: boolean;
 
     // Not technically from Lightning, but we'll infer this and scribble it
     placeholder?: boolean;
+  }
+
+  export interface Job extends Node {
+    adaptor: string | null;
+    body: string;
   }
 
   export interface CronTrigger extends Node {
@@ -43,6 +49,7 @@ export namespace Lightning {
     error_path?: boolean;
     errors: any;
     condition_label?: string;
+    disabled: boolean;
   }
 
   export type Workflow = {
@@ -54,10 +61,22 @@ export namespace Lightning {
   };
 }
 
-export namespace Flow {
-  export type Node = ReactFlow.Node;
+export type NodeData = {
+  isValidDropTarget?: boolean;
+  isActiveDropTarget?: boolean;
+  enabled?: boolean;
+};
 
-  export type Edge = ReactFlow.Edge;
+export type EdgeData = {
+  enabled?: boolean;
+  placeholder?: boolean;
+  condition_type?: string;
+};
+
+export namespace Flow {
+  export type Node = ReactFlow.Node<NodeData>;
+
+  export type Edge = ReactFlow.Edge<EdgeData>;
 
   export type Model = {
     nodes: Node[];

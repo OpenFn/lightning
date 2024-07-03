@@ -4,6 +4,10 @@ defmodule LightningWeb.Components.Loaders do
   """
   use Phoenix.Component
 
+  import LightningWeb.Components.Icons
+
+  alias Phoenix.LiveView.JS
+
   slot :inner_block, required: true
 
   def text_ping_loader(assigns) do
@@ -44,6 +48,18 @@ defmodule LightningWeb.Components.Loaders do
         </span>
       </span>
     </span>
+    """
+  end
+
+  def offline_indicator(assigns) do
+    ~H"""
+    <div
+      class="hidden"
+      phx-disconnected={JS.show(transition: "fade-in")}
+      phx-connected={JS.hide(transition: "fade-out")}
+    >
+      <.icon name="hero-signal-slash" class="w-6 h-6 mr-2 text-red-500" />
+    </div>
     """
   end
 end

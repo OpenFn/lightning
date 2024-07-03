@@ -4,6 +4,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
 
   alias Lightning.DashboardStats.ProjectMetrics
   alias Lightning.Projects.Project
+  alias Lightning.Workflows.WorkflowUsageLimiter
   alias Lightning.WorkOrders.SearchParams
   alias Timex.Format.DateTime.Formatters.Relative
 
@@ -180,7 +181,9 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
     <div class="flex flex-1 items-center truncate">
       <.link
         id={"workflow-card-#{@workflow.id}"}
-        navigate={~p"/projects/#{@project.id}/w/#{@workflow.id}"}
+        navigate={
+          ~p"/projects/#{@project.id}/w/#{@workflow.id}?v=#{@workflow.lock_version}"
+        }
         role="button"
       >
         <div class="text-sm">
@@ -212,25 +215,45 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
     """
   end
 
+  attr :can_create_workflow, :boolean, required: true
+  attr :project, :map, required: true
+
   def create_workflow_card(assigns) do
+    limit_error = limit_workflow_creation_error(assigns.project)
+
+    assigns =
+      assigns
+      |> assign_new(:disabled, fn ->
+        !assigns.can_create_workflow || is_binary(limit_error)
+      end)
+      |> assign_new(:tooltip, fn ->
+        limit_error || "You are not authorized to perform this action."
+      end)
+
     ~H"""
     <div>
-      <button
-        phx-click={show_modal("workflow_modal")}
+      <.button
+        disabled={@disabled}
+        tooltip={@tooltip}
+        phx-click={if !@disabled, do: show_modal("workflow_modal")}
         class="col-span-1 w-full rounded-md"
-        role={@can_create_workflow && "button"}
+        role="button"
         id="open-modal-button"
       >
-        <div class={"flex flex-1 items-center justify-between truncate rounded-md border border-gray-200 text-white " <> (if @can_create_workflow, do: "bg-primary-600 hover:bg-primary-700", else: "bg-gray-400")}>
-          <div class="flex-1 truncate px-4 py-2 text-sm text-left">
-            <span class="font-medium">
-              Create new workflow
-            </span>
-          </div>
-        </div>
-      </button>
+        Create new workflow
+      </.button>
     </div>
     """
+  end
+
+  defp limit_workflow_creation_error(project) do
+    case WorkflowUsageLimiter.limit_workflow_creation(project) do
+      :ok ->
+        nil
+
+      {:error, _reason, %{text: error_msg}} ->
+        error_msg
+    end
   end
 
   attr :metrics, ProjectMetrics, required: true

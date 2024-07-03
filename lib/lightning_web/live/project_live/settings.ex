@@ -7,31 +7,41 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   alias Lightning.Accounts.User
   alias Lightning.Credentials
+  alias Lightning.Credentials.Credential
+  alias Lightning.OauthClients
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
-  alias Lightning.Projects.Project
+  alias Lightning.Projects.ProjectAlertsLimiter
   alias Lightning.Projects.ProjectUser
+  alias Lightning.Projects.ProjectUsersLimiter
   alias Lightning.VersionControl
-  alias Lightning.VersionControl.GithubError
   alias Lightning.WebhookAuthMethods
   alias Lightning.Workflows.WebhookAuthMethod
   alias LightningWeb.Components.Form
-  alias LightningWeb.ProjectLive.DeleteConnectionModal
+  alias LightningWeb.Components.GithubComponents
+  alias LightningWeb.LiveHelpers
 
   require Logger
 
   on_mount {LightningWeb.Hooks, :project_scope}
+  on_mount {LightningWeb.Hooks, :limit_github_sync}
 
   @impl true
   def mount(_params, _session, socket) do
     %{project: project, current_user: current_user} = socket.assigns
 
-    project_users =
-      Projects.get_project_users!(project.id)
+    if connected?(socket) do
+      VersionControl.subscribe(current_user)
+    end
 
-    credentials = Credentials.list_credentials(project)
+    project_user = Projects.get_project_user(project, current_user)
+
+    credentials = list_credentials(project)
+    oauth_clients = list_clients(project)
     auth_methods = WebhookAuthMethods.list_for_project(project)
+
+    projects = Projects.get_projects_for_user(current_user)
 
     can_delete_project =
       ProjectUsers
@@ -46,13 +56,24 @@ defmodule LightningWeb.ProjectLive.Settings do
       |> Permissions.can?(
         :edit_project,
         current_user,
-        project
+        project_user
       )
 
-    project_user =
-      Enum.find(project_users, fn project_user ->
-        project_user.user_id == current_user.id
-      end)
+    can_add_project_user =
+      Permissions.can?(
+        ProjectUsers,
+        :add_project_user,
+        current_user,
+        project_user
+      )
+
+    can_remove_project_user =
+      Permissions.can?(
+        ProjectUsers,
+        :remove_project_user,
+        current_user,
+        project_user
+      )
 
     can_edit_data_retention =
       Permissions.can?(
@@ -94,12 +115,10 @@ defmodule LightningWeb.ProjectLive.Settings do
         project_user
       )
 
-    {show_github_setup, show_repo_setup, show_sync_button,
-     project_repo_connection} = repo_settings(project)
+    can_receive_failure_alerts =
+      :ok == ProjectAlertsLimiter.limit_failure_alert(project.id)
 
-    if show_repo_setup and connected?(socket) do
-      collect_project_repo_connections(socket.assigns.project.id)
-    end
+    repo_connection = VersionControl.get_repo_connection_for_project(project.id)
 
     {:ok,
      socket
@@ -107,58 +126,50 @@ defmodule LightningWeb.ProjectLive.Settings do
        active_menu_item: :settings,
        webhook_auth_methods: auth_methods,
        credentials: credentials,
-       project_users: project_users,
+       oauth_clients: oauth_clients,
+       project_users: [],
        current_user: socket.assigns.current_user,
        project_changeset: Projects.change_project(socket.assigns.project),
        can_delete_project: can_delete_project,
        can_edit_project: can_edit_project,
+       can_add_project_user: can_add_project_user,
+       can_remove_project_user: can_remove_project_user,
        can_edit_data_retention: can_edit_data_retention,
        can_write_webhook_auth_method: can_write_webhook_auth_method,
        can_create_project_credential: can_create_project_credential,
-       show_github_setup: show_github_setup,
-       show_repo_setup: show_repo_setup,
-       show_sync_button: show_sync_button,
-       project_repo_connection: project_repo_connection,
-       repos: [],
-       branches: [],
-       loading_branches: false,
+       project_repo_connection: repo_connection,
        github_enabled: VersionControl.github_enabled?(),
        can_install_github: can_write_github_connection,
        can_initiate_github_sync: can_initiate_github_sync,
-       pending_github_installation:
-         VersionControl.get_pending_user_installation(
-           socket.assigns.current_user.id
-         ),
-       selected_credential_type: nil
+       can_receive_failure_alerts: can_receive_failure_alerts,
+       selected_credential_type: nil,
+       show_collaborators_modal: false,
+       projects: projects
      )}
   end
 
-  defp repo_settings(%Project{id: project_id}) do
-    repo_connection = VersionControl.get_repo_connection(project_id)
+  defp list_credentials(project) do
+    Credentials.list_credentials(project)
+    |> Enum.map(fn c ->
+      project_names =
+        Map.get(c, :projects, [])
+        |> Enum.map(fn p -> p.name end)
 
-    project_repo_connection = %{"repo" => nil, "branch" => nil}
-
-    # {show_github_setup, show_repo_setup, show_sync_button}
-    case repo_connection do
-      nil ->
-        {true, false, false, project_repo_connection}
-
-      %{repo: nil} ->
-        {false, true, false, project_repo_connection}
-
-      %{repo: r, branch: b, github_installation_id: g} ->
-        {false, true, true,
-         %{"repo" => r, "branch" => b, "github_installation_id" => g}}
-    end
+      Map.put(c, :project_names, project_names)
+    end)
   end
 
-  # we should only run this if repo setting is pending
-  defp collect_project_repo_connections(project_id) do
-    pid = self()
+  defp list_clients(project) do
+    OauthClients.list_clients(project)
+    |> Enum.map(fn c ->
+      project_names =
+        if c.global,
+          do: ["GLOBAL"],
+          else:
+            Map.get(c, :projects, [])
+            |> Enum.map(fn p -> p.name end)
 
-    Task.start(fn ->
-      resp = VersionControl.fetch_installation_repos(project_id)
-      send(pid, {:repos_fetched, resp})
+      Map.put(c, :project_names, project_names)
     end)
   end
 
@@ -182,11 +193,23 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   @impl true
   def handle_params(params, _url, socket) do
-    {:noreply, socket |> apply_action(socket.assigns.live_action, params)}
+    %{project: %{id: project_id}, live_action: live_action} = socket.assigns
+
+    {:noreply,
+     socket
+     |> LiveHelpers.check_limits(project_id)
+     |> apply_action(live_action, params)}
   end
 
   defp apply_action(socket, :index, _params) do
-    socket |> assign(:page_title, "Project settings")
+    project_users = Projects.get_project_users!(socket.assigns.project.id)
+
+    socket
+    |> assign(
+      page_title: "Project settings",
+      project_users: project_users,
+      show_collaborators_modal: false
+    )
   end
 
   defp apply_action(socket, :delete, %{"project_id" => id}) do
@@ -200,10 +223,17 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   @impl true
-  def handle_event("validate", %{"project" => project_params}, socket) do
+  def handle_event("validate", %{"project" => params}, socket) do
+    params =
+      if params["retention_policy"] == "erase_all" do
+        Map.merge(params, %{"dataclip_retention_period" => nil})
+      else
+        params
+      end
+
     changeset =
       socket.assigns.project
-      |> Projects.change_project(project_params)
+      |> Projects.change_project(params)
       |> Map.put(:action, :validate)
 
     {:noreply, assign(socket, :project_changeset, changeset)}
@@ -233,6 +263,20 @@ defmodule LightningWeb.ProjectLive.Settings do
     end
   end
 
+  def handle_event(
+        "save_retention_settings",
+        %{"project" => project_params},
+        socket
+      ) do
+    if socket.assigns.can_edit_data_retention do
+      save_project(socket, project_params)
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You are not authorized to perform this action.")}
+    end
+  end
+
   def handle_event("toggle-mfa", _params, socket) do
     if can_edit_project(socket.assigns) do
       project = socket.assigns.project
@@ -252,6 +296,15 @@ defmodule LightningWeb.ProjectLive.Settings do
          "You are not authorized to perform this action."
        )}
     end
+  end
+
+  def handle_event("toggle_collaborators_modal", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(
+       :show_collaborators_modal,
+       !socket.assigns.show_collaborators_modal
+     )}
   end
 
   def handle_event(
@@ -299,202 +352,103 @@ defmodule LightningWeb.ProjectLive.Settings do
     end
   end
 
-  def handle_event("install_app", _, socket) do
-    user_id = socket.assigns.current_user.id
-    project_id = socket.assigns.project.id
-
-    case Application.get_env(:lightning, :github_app) |> Map.new() do
-      %{app_name: nil} ->
-        Logger.error("GitHub App Name not configured")
-        # Send to sentry and show cozy error
-        error =
-          GithubError.misconfigured("GitHub App Name Misconfigured", %{
-            app_name: nil
-          })
-
-        Sentry.capture_exception(error)
-
-        {:noreply,
-         socket
-         |> put_flash(
-           :error,
-           "Sorry, it seems that the GitHub App Name has not been properly configured for this instance of Lighting. Please contact the instance administrator"
-         )}
-
-      %{app_name: app_name} ->
-        {:ok, _connection} =
-          VersionControl.create_github_connection(%{
-            user_id: user_id,
-            project_id: project_id
-          })
-
-        {:noreply,
-         redirect(socket,
-           external: "https://github.com/apps/#{app_name}"
-         )}
-    end
-  end
-
-  def handle_event("reinstall_app", _, socket) do
-    user_id = socket.assigns.current_user.id
-    project_id = socket.assigns.project.id
-
-    case Application.get_env(:lightning, :github_app) |> Map.new() do
-      %{app_name: nil} ->
-        error =
-          GithubError.misconfigured("GitHub App Name Misconfigured", %{
-            app_name: nil
-          })
-
-        Sentry.capture_exception(error)
-
-        {:noreply,
-         socket
-         |> put_flash(
-           :error,
-           "Sorry, it seems that the GitHub App Name has not been properly configured for this instance of Lighting. Please contact the instance administrator"
-         )}
-
-      %{app_name: app_name} ->
-        {:ok, _} = VersionControl.remove_github_connection(project_id)
-
-        {:ok, _connection} =
-          VersionControl.create_github_connection(%{
-            user_id: user_id,
-            project_id: project_id
-          })
-
-        {:noreply,
-         redirect(socket, external: "https://github.com/apps/#{app_name}")}
-    end
-  end
-
-  def handle_event("delete_repo_connection", _, socket) do
-    project_id = socket.assigns.project.id
-
-    {:ok, _} = VersionControl.remove_github_connection(project_id)
+  def handle_event(
+        "delete_oauth_client",
+        %{"oauth_client_id" => oauth_client_id},
+        %{assigns: assigns} = socket
+      ) do
+    OauthClients.get_client!(oauth_client_id) |> OauthClients.delete_client()
 
     {:noreply,
      socket
-     |> assign(show_github_setup: true, show_sync_button: false)
-     |> push_patch(to: ~p"/projects/#{project_id}/settings#vcs")}
-  end
-
-  def handle_event("save_repo", params, socket) do
-    %{project: project} = socket.assigns
-
-    {:ok, %{github_installation_id: github_installation_id}} =
-      VersionControl.add_github_repo_and_branch(
-        project.id,
-        params["repo"],
-        params["branch"]
-      )
-
-    {:noreply,
-     socket
+     |> put_flash(:info, "Oauth client deleted successfully!")
      |> assign(
-       show_repo_setup: false,
-       show_sync_button: true,
-       project_repo_connection: %{
-         "branch" => params["branch"],
-         "repo" => params["repo"],
-         "github_installation_id" => github_installation_id
-       }
+       :oauth_clients,
+       list_clients(assigns.project)
      )}
   end
 
   def handle_event(
-        "initiate_sync",
-        params,
-        %{assigns: %{current_user: u}} = socket
+        "delete_credential",
+        %{"credential_id" => credential_id},
+        %{assigns: assigns} = socket
       ) do
-    if socket.assigns.can_initiate_github_sync do
-      case VersionControl.initiate_sync(params["id"], u.email) do
-        {:ok, :fired} ->
-          {:noreply, socket |> put_flash(:info, "Sync Initialized")}
+    credential = Credentials.get_credential!(credential_id)
 
-        _err ->
-          # we should log or instrument this situation
-          {:noreply, socket |> put_flash(:error, "Sync Error")}
-      end
-    else
-      {:noreply, socket |> put_flash(:error, "Viewers Cannot Initiate Sync")}
-    end
-  end
+    case Credentials.schedule_credential_deletion(credential) do
+      {:ok, %Credential{}} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Credential deleted successfully!")
+         |> assign(
+           :credentials,
+           list_credentials(assigns.project)
+         )}
 
-  def handle_event("repo_selected", params, socket) do
-    pid = self()
-
-    Task.start(fn ->
-      {:ok, branches} =
-        VersionControl.fetch_repo_branches(
-          socket.assigns.project.id,
-          params["repo"]
-        )
-
-      send(pid, {:branches_fetched, branches})
-    end)
-
-    {:noreply,
-     socket
-     |> assign(
-       loading_branches: true,
-       project_repo_connection: %{
-         socket.assigns.project_repo_connection
-         | "repo" => params["repo"]
-       }
-     )}
-  end
-
-  def handle_event("branch_selected", params, socket) do
-    {:noreply,
-     socket
-     |> assign(
-       project_repo_connection: %{
-         socket.assigns.project_repo_connection
-         | "branch" => params["branch"]
-       }
-     )}
-  end
-
-  @impl true
-  def handle_info({:branches_fetched, branches_result}, socket) do
-    case branches_result do
-      {:error, error} ->
-        {:noreply, socket |> put_flash(:error, error_message(error))}
-
-      branches ->
-        {:noreply, socket |> assign(loading_branches: false, branches: branches)}
-    end
-  end
-
-  def handle_info({:repos_fetched, result}, socket) do
-    case result do
-      {:error, error} ->
-        {:noreply, socket |> put_flash(:error, error_message(error))}
-
-      {:ok, [_ | _] = repos} ->
-        {:noreply, socket |> assign(repos: repos)}
-
-      # while it's possible to trigger this state when testing
-      # GitHub makes it pretty impossible to arrive here
-      _ ->
+      {:error, %Ecto.Changeset{} = _changeset} ->
         {:noreply, socket}
     end
   end
 
-  def handle_info({:credential_type_changed, type}, socket) do
-    {:noreply, socket |> assign(:selected_credential_type, type)}
+  def handle_event(
+        "remove_project_user",
+        %{"project_user_id" => project_user_id},
+        %{assigns: assigns} = socket
+      ) do
+    project_user = Projects.get_project_user!(project_user_id)
+
+    if user_removable?(
+         project_user,
+         assigns.current_user,
+         assigns.can_remove_project_user
+       ) do
+      Projects.delete_project_user!(project_user)
+
+      {:noreply,
+       socket
+       |> put_flash(:info, "Collaborator removed successfully!")
+       |> push_navigate(
+         to: ~p"/projects/#{assigns.project}/settings#collaboration"
+       )}
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You are not authorized to perform this action")}
+    end
   end
 
-  defp error_message(error) do
-    case error do
-      %{code: :installation_not_found} ->
-        "Sorry, it seems that the GitHub App ID has not been properly configured for this instance of Lightning. Please contact the instance administrator"
+  @impl true
+  def handle_info({:forward, mod, opts}, socket) do
+    send_update(mod, opts)
+    {:noreply, socket}
+  end
 
-      %{code: :invalid_certificate} ->
-        "Sorry, it seems that the GitHub cert has not been properly configured for this instance of Lightning. Please contact the instance administrator"
-    end
+  def handle_info(
+        %Lightning.VersionControl.Events.OauthTokenAdded{},
+        socket
+      ) do
+    {:noreply,
+     socket
+     |> put_flash(:info, "Github account linked successfully")
+     |> push_navigate(to: ~p"/projects/#{socket.assigns.project}/settings#vcs")}
+  end
+
+  def handle_info(
+        %Lightning.VersionControl.Events.OauthTokenFailed{},
+        socket
+      ) do
+    {:noreply,
+     socket
+     |> put_flash(
+       :error,
+       "Oops! Github account failed to link. Please try again"
+     )}
+  end
+
+  # catch all callback. Needed for tests because of Swoosh emails in tests
+  def handle_info(msg, socket) do
+    Logger.debug("Received unknown message: #{inspect(msg)}")
+    {:noreply, socket}
   end
 
   defp dispatch_flash(change_result, socket) do
@@ -515,7 +469,7 @@ defmodule LightningWeb.ProjectLive.Settings do
     end
   end
 
-  def failure_alert(assigns) do
+  defp failure_alert(assigns) do
     assigns =
       assigns
       |> assign(
@@ -524,26 +478,31 @@ defmodule LightningWeb.ProjectLive.Settings do
       )
 
     ~H"""
-    <%= if @can_edit_failure_alert do %>
-      <.form
-        :let={form}
-        for={%{"failure_alert" => @project_user.failure_alert}}
-        phx-change="set_failure_alert"
-        id={"failure-alert-#{@project_user.id}"}
-      >
-        <%= Phoenix.HTML.Form.hidden_input(form, :project_user_id,
-          value: @project_user.id
-        ) %>
-        <LightningWeb.Components.Form.select_field
-          form={form}
-          name="failure_alert"
-          values={[Disabled: false, Enabled: true]}
-        />
-      </.form>
-    <% else %>
-      <%= if @project_user.failure_alert,
-        do: "Enabled",
-        else: "Disabled" %>
+    <%= cond do %>
+      <% @can_receive_failure_alerts && @can_edit_failure_alert -> %>
+        <.form
+          :let={form}
+          for={%{"failure_alert" => @project_user.failure_alert}}
+          phx-change="set_failure_alert"
+          id={"failure-alert-#{@project_user.id}"}
+        >
+          <%= Phoenix.HTML.Form.hidden_input(form, :project_user_id,
+            value: @project_user.id
+          ) %>
+          <LightningWeb.Components.Form.select_field
+            form={form}
+            name="failure_alert"
+            values={[Disabled: false, Enabled: true]}
+          />
+        </.form>
+      <% @can_receive_failure_alerts -> %>
+        <span id={"failure-alert-status-#{@project_user.id}"}>
+          <%= if @project_user.failure_alert,
+            do: "Enabled",
+            else: "Disabled" %>
+        </span>
+      <% true -> %>
+        <span id={"failure-alert-status-#{@project_user.id}"}>Disabled</span>
     <% end %>
     """
   end
@@ -594,7 +553,10 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   def user(assigns) do
     ~H"""
-    <%= @project_user.user.first_name %> <%= @project_user.user.last_name %>
+    <div>
+      <%= @project_user.user.first_name %> <%= @project_user.user.last_name %>
+    </div>
+    <span class="text-xs"><%= @project_user.user.email %></span>
     """
   end
 
@@ -617,36 +579,94 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   def permissions_message(assigns) do
     ~H"""
-    <small id="permission" class="mt-2 text-red-700">
+    <small class="mt-2 text-red-700">
       Role based permissions: You cannot modify this project's <%= @section %>
     </small>
     """
   end
 
-  defp has_pending_installation?(%{id: project_id}, %{
-         project_id: installation_project_id
-       }) do
-    project_id != installation_project_id
+  defp confirm_user_removal_modal(assigns) do
+    ~H"""
+    <.modal id={@id} width="max-w-md">
+      <:title>
+        <div class="flex justify-between">
+          <span class="font-bold">
+            Remove <%= @project_user.user.first_name %> <%= @project_user.user.last_name %>
+          </span>
+
+          <button
+            phx-click={hide_modal(@id)}
+            type="button"
+            class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
+            aria-label={gettext("close")}
+          >
+            <span class="sr-only">Close</span>
+            <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
+          </button>
+        </div>
+      </:title>
+      <div class="px-6">
+        <p class="text-sm text-gray-500">
+          Are you sure you want to remove "<%= @project_user.user.first_name %> <%= @project_user.user.last_name %>" from this project?
+          They will nolonger have access.
+          Do you wish to proceed with this action?
+        </p>
+      </div>
+      <div class="flex flex-row-reverse gap-4 mx-6 mt-2">
+        <.button
+          id={"#{@id}_confirm_button"}
+          type="button"
+          phx-value-project_user_id={@project_user.id}
+          phx-click="remove_project_user"
+          color_class="bg-red-600 hover:bg-red-700 text-white"
+          phx-disable-with="Removing..."
+        >
+          Confirm
+        </.button>
+        <button
+          type="button"
+          phx-click={hide_modal(@id)}
+          class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+      </div>
+    </.modal>
+    """
   end
 
-  defp has_pending_installation?(_project, _installation) do
-    false
+  defp remove_user_tooltip(project_user, current_user, can_remove_project_user) do
+    cond do
+      !can_remove_project_user ->
+        "You do not have permission to remove a user"
+
+      project_user.user_id == current_user.id ->
+        "You cannot remove yourself"
+
+      project_user.role == :owner ->
+        "You cannot remove an owner"
+
+      true ->
+        ""
+    end
   end
 
-  defp install_github_tooltip(project, can_install_github, pending_installation) do
-    case {can_install_github,
-          has_pending_installation?(project, pending_installation)} do
-      {false, _} ->
-        "You're not allowed to configure repository connections for this project."
+  defp user_removable?(project_user, current_user, can_remove_project_user) do
+    can_remove_project_user and project_user.role != :owner and
+      project_user.user_id != current_user.id
+  end
 
-      {_, true} ->
-        """
-        You have a pending github installation in another project.
-        <a href="#{~p"/projects/#{pending_installation.project_id}/settings#vcs"}" class="underline text-blue-400">Click here</a> to complete it / remove it before proceeding
-        """
+  defp user_has_valid_oauth_token(user) do
+    VersionControl.oauth_token_valid?(user.github_oauth_token)
+  end
 
-      _other ->
+  defp get_collaborator_limit_error(project) do
+    case ProjectUsersLimiter.request_new(project.id, 1) do
+      :ok ->
         nil
+
+      {:error, _reason, %{text: error}} ->
+        error
     end
   end
 end

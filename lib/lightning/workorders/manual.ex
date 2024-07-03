@@ -3,9 +3,7 @@ defmodule Lightning.WorkOrders.Manual do
   A model is used to build WorkOrders with custom input data.
   """
 
-  use Ecto.Schema
-
-  import Ecto.Changeset
+  use Lightning.Schema
 
   alias Lightning.Validators
 
@@ -37,21 +35,22 @@ defmodule Lightning.WorkOrders.Manual do
     |> remove_body_if_dataclip_present()
     |> validate_body_or_dataclip()
     |> validate_json(:body)
-    |> validate_change(:workflow, fn _, workflow ->
+    |> validate_change(:workflow, fn _field, workflow ->
       case workflow do
         %{__meta__: %{state: :built}} ->
           [:workflow, "Workflow must be saved first."]
 
-        _ ->
+        _other ->
           []
       end
     end)
   end
 
   defp remove_body_if_dataclip_present(changeset) do
-    case get_change(changeset, :dataclip_id) do
-      nil -> changeset
-      _ -> Ecto.Changeset.delete_change(changeset, :body)
+    if is_nil(get_change(changeset, :dataclip_id)) do
+      changeset
+    else
+      Ecto.Changeset.delete_change(changeset, :body)
     end
   end
 

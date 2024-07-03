@@ -2,15 +2,47 @@ defmodule LightningWeb.RunLive.Show do
   use LightningWeb, :live_view
   use LightningWeb.RunLive.Streaming, chunk_size: 100
 
+  import LightningWeb.Components.Icons
   import LightningWeb.RunLive.Components
 
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
+  alias LightningWeb.Components.Tabbed
   alias LightningWeb.Components.Viewers
   alias Phoenix.LiveView.AsyncResult
 
   on_mount {LightningWeb.Hooks, :project_scope}
+
+  attr :run, :map, required: true
+  attr :workflow, :map, required: true
+
+  defp snapshot_version(assigns) do
+    %{run: run, workflow: workflow} = assigns
+
+    snapshot_version =
+      if run.snapshot.lock_version == workflow.lock_version do
+        "latest"
+      else
+        String.slice(run.snapshot.id, 0..6)
+      end
+
+    assigns =
+      assign(assigns, snapshot_version: snapshot_version)
+
+    ~H"""
+    <LightningWeb.Components.Common.snapshot_version_chip
+      id="run-workflow-version"
+      version={@snapshot_version}
+      tooltip={
+        if @snapshot_version == "latest",
+          do: "This run is based on the latest version of this workflow.",
+          else:
+            "This run is based on a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(run.snapshot.inserted_at)}"
+      }
+    />
+    """
+  end
 
   @impl true
   def render(assigns) do
@@ -26,11 +58,17 @@ defmodule LightningWeb.RunLive.Show do
             <span class="pl-2 font-light">
               <%= display_short_uuid(@id) %>
             </span>
+            <div class="mx-2"></div>
+            <.async_result :let={run} assign={@run}>
+              <%= if run do %>
+                <.snapshot_version run={run} workflow={@workflow} />
+              <% end %>
+            </.async_result>
           </:title>
         </LayoutComponents.header>
       </:header>
 
-      <LayoutComponents.centered class="@container/main">
+      <LayoutComponents.centered class="@container/main h-full">
         <.async_result :let={run} assign={@run}>
           <:loading>
             <.loading_filler />
@@ -39,8 +77,8 @@ defmodule LightningWeb.RunLive.Show do
             there was an error loading the run
           </:failed>
 
-          <div class="flex gap-6 @5xl/main:flex-row flex-col">
-            <div class="basis-1/3 flex-none flex gap-6 @5xl/main:flex-col flex-row">
+          <div class="flex gap-x-6 @5xl/main:flex-row flex-col h-full">
+            <div class="@5xl/main:basis-1/3 flex gap-y-6 @5xl/main:flex-col flex-row">
               <.detail_list
                 id={"run-detail-#{run.id}"}
                 class="flex-1 @5xl/main:flex-none"
@@ -49,7 +87,9 @@ defmodule LightningWeb.RunLive.Show do
                   <:label>Workflow</:label>
                   <:value>
                     <.link
-                      navigate={~p"/projects/#{@project}/w/#{@workflow.id}"}
+                      navigate={
+                        ~p"/projects/#{@project}/w/#{@workflow.id}?v=#{run.snapshot.lock_version}"
+                      }
                       class="hover:underline hover:text-primary-900 whitespace-nowrap text-ellipsis"
                     >
                       <span class="whitespace-nowrap text-ellipsis">
@@ -78,24 +118,33 @@ defmodule LightningWeb.RunLive.Show do
                 <.list_item>
                   <:label>Started</:label>
                   <:value>
-                    <%= if run.started_at,
-                      do:
-                        Timex.format!(
+                    <%= if run.started_at do %>
+                      <Common.wrapper_tooltip
+                        id={run.id <> "start-tip"}
+                        tooltip={DateTime.to_iso8601(run.started_at)}
+                      >
+                        <%= Timex.Format.DateTime.Formatters.Relative.format!(
                           run.started_at,
-                          "%d/%b/%y, %H:%M:%S",
-                          :strftime
+                          "{relative}"
                         ) %>
+                      </Common.wrapper_tooltip>
+                    <% end %>
                   </:value>
                 </.list_item>
                 <.list_item>
                   <:label>Finished</:label>
                   <:value>
-                    <%= if run.finished_at,
-                      do:
-                        Timex.Format.DateTime.Formatters.Relative.format!(
+                    <%= if run.finished_at do %>
+                      <Common.wrapper_tooltip
+                        id={run.id <> "finish-tip"}
+                        tooltip={DateTime.to_iso8601(run.finished_at)}
+                      >
+                        <%= Timex.Format.DateTime.Formatters.Relative.format!(
                           run.finished_at,
                           "{relative}"
                         ) %>
+                      </Common.wrapper_tooltip>
+                    <% end %>
                   </:value>
                 </.list_item>
                 <.list_item>
@@ -114,33 +163,35 @@ defmodule LightningWeb.RunLive.Show do
                 :let={step}
                 id={"step-list-#{run.id}"}
                 steps={@steps}
-                class="flex-1"
+                class="flex-1 items-center"
               >
-                <.link patch={"?step=#{step.id}"} id={"select-step-#{step.id}"}>
+                <.link patch={"?step=#{step.id}"}>
                   <.step_item
                     step={step}
                     is_clone={
                       DateTime.compare(step.inserted_at, run.inserted_at) == :lt
                     }
                     selected={step.id == @selected_step_id}
-                    show_inspector_link={true}
                     run_id={run.id}
                     project_id={@project}
                   />
                 </.link>
               </.step_list>
             </div>
-            <div class="basis-2/3 flex-none flex flex-col gap-4">
-              <Common.tab_bar orientation="horizontal" id="1" default_hash="log">
-                <Common.tab_item orientation="horizontal" hash="log">
+            <div class="@5xl/main:basis-2/3 flex flex-col gap-4 h-full">
+              <Tabbed.container
+                id={"run-#{run.id}-tabbed-container"}
+                class="run-tab-container"
+                default_hash="log"
+              >
+                <:tab hash="log">
                   <.icon
                     name="hero-command-line"
                     class="h-5 w-5 inline-block mr-1 align-middle"
                   />
                   <span class="inline-block align-middle">Log</span>
-                </Common.tab_item>
-                <Common.tab_item
-                  orientation="horizontal"
+                </:tab>
+                <:tab
                   hash="input"
                   disabled={@no_step_selected?}
                   disabled_msg="A valid step must be selected to view its input"
@@ -150,57 +201,53 @@ defmodule LightningWeb.RunLive.Show do
                     class="h-5 w-5 inline-block mr-1 align-middle"
                   />
                   <span class="inline-block align-middle">Input</span>
-                </Common.tab_item>
-                <Common.tab_item
-                  orientation="horizontal"
+                </:tab>
+                <:tab
                   hash="output"
                   disabled={@no_step_selected?}
                   disabled_msg="A valid step (with a readable output) must be selected to view its output"
                 >
                   <.icon
                     name="hero-arrow-up-on-square"
-                    class="h-5 w-5 inline-block mr-1 align-middle"
+                    class="h-5 w-5 inline-block mr-1 align-middle rotate-180"
                   />
-                  <span class="inline-block align-middle">
-                    Output
-                  </span>
-                </Common.tab_item>
-              </Common.tab_bar>
-
-              <Common.panel_content for_hash="log">
-                <Viewers.log_viewer
-                  id={"run-log-#{run.id}"}
-                  highlight_id={@selected_step_id}
-                  stream={@streams.log_lines}
-                  stream_empty?={@log_lines_stream_empty?}
-                />
-              </Common.panel_content>
-              <Common.panel_content for_hash="input">
-                <Viewers.step_dataclip_viewer
-                  id={"step-input-#{@selected_step_id}"}
-                  stream={@streams.input_dataclip}
-                  stream_empty?={@input_dataclip_stream_empty?}
-                  step={@selected_step}
-                  dataclip={@input_dataclip}
-                  input_or_output={:input}
-                  project_id={@project.id}
-                  admin_contacts={@admin_contacts}
-                  can_edit_data_retention={@can_edit_data_retention}
-                />
-              </Common.panel_content>
-              <Common.panel_content for_hash="output">
-                <Viewers.step_dataclip_viewer
-                  id={"step-output-#{@selected_step_id}"}
-                  stream={@streams.output_dataclip}
-                  stream_empty?={@output_dataclip_stream_empty?}
-                  step={@selected_step}
-                  dataclip={@output_dataclip}
-                  input_or_output={:output}
-                  project_id={@project.id}
-                  admin_contacts={@admin_contacts}
-                  can_edit_data_retention={@can_edit_data_retention}
-                />
-              </Common.panel_content>
+                  <span class="inline-block align-middle"> Output </span>
+                </:tab>
+                <:panel hash="input" class="flex-grow h-full">
+                  <Viewers.step_dataclip_viewer
+                    id={"step-input-#{@selected_step_id}"}
+                    run_state={@run.result.state}
+                    step={@selected_step}
+                    dataclip={@input_dataclip}
+                    input_or_output={:input}
+                    project_id={@project.id}
+                    admin_contacts={@admin_contacts}
+                    can_edit_data_retention={@can_edit_data_retention}
+                  />
+                </:panel>
+                <:panel hash="log" class="flex-grow">
+                  <Viewers.log_viewer
+                    id={"run-log-#{run.id}"}
+                    class="h-full"
+                    run_id={run.id}
+                    run_state={@run.result.state}
+                    logs_empty?={@log_lines_empty?}
+                    selected_step_id={@selected_step_id}
+                  />
+                </:panel>
+                <:panel hash="output" class="flex-1">
+                  <Viewers.step_dataclip_viewer
+                    id={"step-output-#{@selected_step_id}"}
+                    run_state={@run.result.state}
+                    step={@selected_step}
+                    dataclip={@output_dataclip}
+                    input_or_output={:output}
+                    project_id={@project.id}
+                    admin_contacts={@admin_contacts}
+                    can_edit_data_retention={@can_edit_data_retention}
+                  />
+                </:panel>
+              </Tabbed.container>
             </div>
           </div>
         </.async_result>
@@ -223,16 +270,11 @@ defmodule LightningWeb.RunLive.Show do
        selected_step_id: nil,
        steps: []
      )
-     |> stream(:log_lines, [])
-     |> assign(:log_lines_stream_empty?, true)
-     |> stream(:input_dataclip, [])
-     |> assign(:input_dataclip_stream_empty?, true)
-     |> assign(:input_dataclip, false)
-     |> stream(:output_dataclip, [])
-     |> assign(:output_dataclip_stream_empty?, true)
-     |> assign(:output_dataclip, false)
+     |> assign(:input_dataclip, nil)
+     |> assign(:output_dataclip, nil)
      |> assign(:run, AsyncResult.loading())
      |> assign(:log_lines, AsyncResult.loading())
+     |> assign(:log_lines_empty?, true)
      |> assign(
        can_edit_data_retention:
          Permissions.can?(

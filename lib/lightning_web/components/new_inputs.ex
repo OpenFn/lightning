@@ -5,6 +5,8 @@ defmodule LightningWeb.Components.NewInputs do
   """
   use Phoenix.Component
 
+  import LightningWeb.Components.Icons
+
   alias Phoenix.LiveView.JS
 
   @doc """
@@ -20,7 +22,8 @@ defmodule LightningWeb.Components.NewInputs do
   attr :class, :any, default: ""
 
   attr :color_class, :any,
-    default: "bg-primary-600 hover:bg-primary-700 text-white"
+    default:
+      "bg-primary-600 hover:bg-primary-700 text-white focus:ring-primary-500 disabled:bg-primary-300"
 
   attr :rest, :global, include: ~w(disabled form name value)
   attr :tooltip, :any, default: nil
@@ -29,19 +32,14 @@ defmodule LightningWeb.Components.NewInputs do
 
   def button(assigns) do
     ~H"""
-    <.tooltip_when_disabled
-      id={@rest[:id]}
-      tooltip={@tooltip}
-      disabled={@rest[:disabled]}
-    >
+    <.tooltip_when_disabled id={@id} tooltip={@tooltip} disabled={@rest[:disabled]}>
       <button
         id={@id}
         type={@type}
         class={[
-          "inline-flex justify-center py-2 px-4 border border-transparent",
+          "inline-flex justify-center items-center py-2 px-4 border border-transparent",
           "shadow-sm text-sm font-medium rounded-md focus:outline-none",
-          "focus:ring-2 focus:ring-offset-2 focus:ring-primary-500",
-          "disabled:bg-primary-300",
+          "focus:ring-2 focus:ring-offset-2",
           "phx-submit-loading:opacity-75",
           @color_class,
           @class
@@ -122,6 +120,21 @@ defmodule LightningWeb.Components.NewInputs do
 
   attr :errors, :list, default: []
   attr :checked, :boolean, doc: "the checked flag for checkbox inputs"
+
+  attr :checked_value, :any,
+    default: "true",
+    doc: "the value to be sent when the checkbox is checked. Defaults to 'true'"
+
+  attr :unchecked_value, :any,
+    default: "false",
+    doc:
+      "the value to be sent when the checkbox is unchecked, Defaults to 'false'"
+
+  attr :hidden_input, :boolean,
+    default: true,
+    doc:
+      "controls if this function will generate a hidden input to submit the unchecked value or not. Defaults to 'true'"
+
   attr :prompt, :string, default: nil, doc: "the prompt for select inputs"
 
   attr :options, :list,
@@ -130,6 +143,8 @@ defmodule LightningWeb.Components.NewInputs do
   attr :multiple, :boolean,
     default: false,
     doc: "the multiple flag for select inputs"
+
+  attr :button_placement, :string, default: nil
 
   attr :rest, :global,
     include:
@@ -162,18 +177,29 @@ defmodule LightningWeb.Components.NewInputs do
 
     ~H"""
     <div phx-feedback-for={@name}>
-      <label class="flex items-center gap-4 text-sm leading-6 text-slate-600">
-        <input type="hidden" name={@name} value="false" />
+      <label class="flex items-center gap-2 text-sm leading-6 text-slate-600">
+        <input
+          :if={@hidden_input}
+          type="hidden"
+          name={@name}
+          value={@unchecked_value}
+        />
         <input
           type="checkbox"
           id={@id}
           name={@name}
-          value="true"
+          value={@checked_value}
           checked={@checked}
-          class="rounded border-slate-300 text-slate-900 focus:ring-0"
+          class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-600
+            checked:disabled:bg-indigo-300 checked:disabled:border-indigo-300
+            checked:bg-indigo-600 checked:border-indigo-600 focus:outline-none
+            transition duration-200 cursor-pointer"
           {@rest}
         />
-        <%= @label %>
+        <%= @label %><span
+          :if={Map.get(@rest, :required, false)}
+          class="text-red-500"
+        > *</span>
       </label>
       <.error :for={msg <- @errors}><%= msg %></.error>
     </div>
@@ -183,22 +209,35 @@ defmodule LightningWeb.Components.NewInputs do
   def input(%{type: "select"} = assigns) do
     ~H"""
     <div phx-feedback-for={@name}>
-      <.label for={@id}><%= @label %></.label>
-      <select
-        id={@id}
-        name={@name}
-        class={[
-          "block w-full rounded-md border border-secondary-300 bg-white mt-2",
-          "text-sm shadow-sm",
-          "focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50",
-          "disabled:cursor-not-allowed"
-        ]}
-        multiple={@multiple}
-        {@rest}
-      >
-        <option :if={@prompt} value=""><%= @prompt %></option>
-        <%= Phoenix.HTML.Form.options_for_select(@options, @value) %>
-      </select>
+      <.label :if={@label} class="mb-2" for={@id}>
+        <%= @label %><span
+          :if={Map.get(@rest, :required, false)}
+          class="text-red-500"
+        > *</span>
+      </.label>
+      <div class="flex w-full">
+        <div class="relative items-center">
+          <select
+            id={@id}
+            name={@name}
+            class={[
+              "block w-full rounded-lg border border-secondary-300 bg-white",
+              "sm:text-sm shadow-sm",
+              "focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50",
+              "disabled:cursor-not-allowed #{@button_placement == "right" && "rounded-r-none"}",
+              "#{@button_placement == "left" && "rounded-l-none"}"
+            ]}
+            multiple={@multiple}
+            {@rest}
+          >
+            <option :if={@prompt} value=""><%= @prompt %></option>
+            <%= Phoenix.HTML.Form.options_for_select(@options, @value) %>
+          </select>
+        </div>
+        <div class="relative ronded-l-none">
+          <%= render_slot(@inner_block) %>
+        </div>
+      </div>
       <.error :for={msg <- @errors}><%= msg %></.error>
     </div>
     """
@@ -207,12 +246,17 @@ defmodule LightningWeb.Components.NewInputs do
   def input(%{type: "textarea"} = assigns) do
     ~H"""
     <div phx-feedback-for={@name} class={@class}>
-      <.label for={@id}><%= @label %></.label>
+      <.label for={@id}>
+        <%= @label %><span
+          :if={Map.get(@rest, :required, false)}
+          class="text-red-500"
+        > *</span>
+      </.label>
       <textarea
         id={@id}
         name={@name}
         class={[
-          "focus:outline focus:outline-2 focus:outline-offset-1 rounded-md shadow-sm font-mono proportional-nums text-sm",
+          "focus:outline focus:outline-2 focus:outline-offset-1 rounded-md shadow-sm text-sm",
           "mt-2 block w-full focus:ring-0",
           "text-slate-200 bg-slate-700 sm:text-sm sm:leading-6",
           "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 overflow-y-auto",
@@ -232,7 +276,12 @@ defmodule LightningWeb.Components.NewInputs do
   def input(%{type: "password"} = assigns) do
     ~H"""
     <div phx-feedback-for={@name}>
-      <.label for={@id}><%= @label %></.label>
+      <.label for={@id}>
+        <%= @label %><span
+          :if={Map.get(@rest, :required, false)}
+          class="text-red-500"
+        > *</span>
+      </.label>
       <div class="relative mt-2 rounded-lg shadow-sm">
         <input
           type={@type}
@@ -273,7 +322,7 @@ defmodule LightningWeb.Components.NewInputs do
           />
         </div>
       </div>
-      <div class="error-space h-6">
+      <div :if={Enum.any?(@errors)} class="error-space h-6">
         <.error :for={msg <- @errors}><%= msg %></.error>
       </div>
     </div>
@@ -309,20 +358,25 @@ defmodule LightningWeb.Components.NewInputs do
   def input(assigns) do
     ~H"""
     <div phx-feedback-for={@name}>
-      <.label for={@id}><%= @label %></.label>
+      <.label :if={@label} for={@id} class="mb-2">
+        <%= @label %><span
+          :if={Map.get(@rest, :required, false)}
+          class="text-red-500"
+        > *</span>
+      </.label>
       <input
         type={@type}
         name={@name}
         id={@id}
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         class={[
-          "focus:outline focus:outline-2 focus:outline-offset-1 mt-2 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
+          "focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
           "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500",
-          @class,
           @errors == [] &&
             "border-slate-300 focus:border-slate-400 focus:outline-indigo-600",
           @errors != [] &&
-            "border-danger-400 focus:border-danger-400 focus:outline-danger-400"
+            "border-danger-400 focus:border-danger-400 focus:outline-danger-400",
+          @class
         ]}
         {@rest}
       />
@@ -360,39 +414,11 @@ defmodule LightningWeb.Components.NewInputs do
     ~H"""
     <p
       data-tag="error_message"
-      class="mt-3 inline-flex items-center gap-x-1.5 text-xs text-danger-600"
+      class="mt-1 inline-flex items-center gap-x-1.5 text-xs text-danger-600"
     >
       <.icon name="hero-exclamation-circle" class="h-4 w-4" />
       <%= render_slot(@inner_block) %>
     </p>
-    """
-  end
-
-  @doc """
-  Renders a [Heroicon](https://heroicons.com).
-
-  Heroicons come in three styles – outline, solid, and mini.
-  By default, the outline style is used, but solid and mini may
-  be applied by using the `-solid` and `-mini` suffix.
-
-  You can customize the size and colors of the icons by setting
-  width, height, and background color classes.
-
-  Icons are extracted from your `assets/vendor/heroicons` directory and bundled
-  within your compiled app.css by the plugin in your `assets/tailwind.config.js`.
-
-  ## Examples
-
-      <.icon name="hero-x-mark-solid" />
-      <.icon name="hero-arrow-path" class="ml-1 w-3 h-3 animate-spin" />
-  """
-  attr :name, :string, required: true
-  attr :class, :string, default: nil
-  attr :rest, :global
-
-  def icon(%{name: "hero-" <> _} = assigns) do
-    ~H"""
-    <span class={[@name, @class]} {@rest} />
     """
   end
 end
