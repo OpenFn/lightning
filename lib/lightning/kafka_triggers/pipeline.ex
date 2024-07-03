@@ -1,14 +1,14 @@
 defmodule Lightning.KafkaTriggers.Pipeline do
   use Broadway
 
-  # import Ecto.Query
+  require Logger
 
   alias Ecto.Multi
   alias Lightning.KafkaTriggers
   alias Lightning.KafkaTriggers.TriggerKafkaMessage
   alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
   alias Lightning.Repo
-  # alias Lightning.Workflows.Trigger
+  alias Lightning.Workflows.Trigger
 
   def start_link(opts) do
     trigger_id = opts |> Keyword.get(:trigger_id)
@@ -42,7 +42,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
       metadata: %{
         key: key,
         offset: offset,
-        partition: _partition,
+        partition: partition,
         topic: topic,
         ts: timestamp
       }
@@ -60,7 +60,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
         }
       )
 
-    message_changeset = 
+    message_changeset =
       %TriggerKafkaMessage{}
       |> TriggerKafkaMessage.changeset(%{
         data: data,
@@ -72,43 +72,57 @@ defmodule Lightning.KafkaTriggers.Pipeline do
         trigger_id: trigger_id |> Atom.to_string()
       })
 
+    trigger_changeset =
+      Trigger
+      |> Repo.get(trigger_id |> Atom.to_string())
+      |> KafkaTriggers.update_partition_data(partition, timestamp)
 
     Multi.new()
     |> Multi.insert(:record, record_changeset)
     |> Multi.insert(:message, message_changeset)
+    |> Multi.update(:trigger, trigger_changeset)
     |> Repo.transaction()
-    # case record_changeset |> Repo.insert() do
-    #   # TODO Use transaction for DB operations
-    #   {:ok, _} ->
-    #     trigger =
-    #       Trigger
-    #       |> preload([:workflow])
-    #       |> Repo.get(trigger_id |> Atom.to_string())
-    #
-    #     %TriggerKafkaMessage{}
-    #     |> TriggerKafkaMessage.changeset(%{
-    #       data: data,
-    #       key: key,
-    #       message_timestamp: timestamp,
-    #       metadata: message.metadata,
-    #       offset: offset,
-    #       topic: topic,
-    #       trigger_id: trigger_id |> Atom.to_string()
-    #     })
-    #     |> Repo.insert!()
-    #
-    #     trigger
-    #     |> KafkaTriggers.update_partition_data(partition, timestamp)
-    #
-    #   {:error,
-    #    %{errors: [trigger_id: {_, [constraint: :unique, constraint_name: _]}]}} ->
-    #     IO.puts(
-    #       "**** #{trigger_id} received DUPLICATE on #{partition} produced at #{timestamp}"
-    #     )
-    #
-    #   _ ->
-    #     raise "Unhandled error when persisting TriggerKafkaMessageRecord"
-    # end
+    |> case do
+      {:ok, _} ->
+        nil
+
+      {
+        :error,
+        :record,
+        %{errors: [trigger_id: {"has already been taken", _constraints}]},
+        _changes_so_far
+      } ->
+        log_message =
+          "Kafka Pipeline Duplicate Message:" <>
+            " Trigger_id: `#{trigger_id}`" <>
+            " Topic: `#{topic}`" <>
+            " Partition: `#{partition}`" <>
+            " Offset: `#{offset}`"
+
+        Logger.warning(log_message)
+
+      {:error, _step, _error_changes, _changes_so_far} ->
+        Sentry.capture_message(
+          "Kafka pipeline - message processing error",
+          extra: %{
+            key: key,
+            offset: offset,
+            partition: partition,
+            topic: topic,
+            trigger_id: trigger_id
+          }
+        )
+
+        log_message =
+          "Kafka Pipeline Error:" <>
+            " Trigger_id: `#{context.trigger_id}`" <>
+            " Topic: `#{message.metadata.topic}`" <>
+            " Partition: `#{message.metadata.partition}`" <>
+            " Offset: `#{message.metadata.offset}`" <>
+            " Key: `#{message.metadata.key}`"
+
+        Logger.error(log_message)
+    end
 
     message
   end

@@ -2,6 +2,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
   use Lightning.DataCase
 
   import Mock
+  import ExUnit.CaptureLog
 
   alias Ecto.Changeset
   alias Lightning.KafkaTriggers.TriggerKafkaMessage
@@ -277,18 +278,78 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       assert Repo.one(TriggerKafkaMessage) == nil
     end
 
-    test "raises error on non-duplicate TriggerKafkaMessageRecord save error", %{
+    test "logs on duplicate message", %{
+      context: context
+    } do
+      trigger_id = context.trigger_id |> Atom.to_string()
+      message = build_broadway_message()
+
+      expected_log_message =
+        "Kafka Pipeline Duplicate Message:" <>
+          " Trigger_id: `#{context.trigger_id}`" <>
+          " Topic: `#{message.metadata.topic}`" <>
+          " Partition: `#{message.metadata.partition}`" <>
+          " Offset: `#{message.metadata.offset}`"
+
+      insert_message_record(trigger_id)
+
+      fun = fn -> Pipeline.handle_message(nil, message, context) end
+
+      assert capture_log([level: :info], fun) =~ expected_log_message
+    end
+
+    test "logs on a non-duplicate error", %{
       context: context
     } do
       message = build_broadway_message()
 
-      Pipeline.handle_message(nil, message, context)
-
       with_mock Repo,
-        insert: fn _ -> {:error, %Changeset{}} end do
-        assert_raise RuntimeError, ~r/Unhandled error/, fn ->
-          Pipeline.handle_message(nil, message, context)
-        end
+                [:passthrough],
+                transaction: fn _ -> {:error, :message, %Changeset{}, %{}} end do
+        expected_log_message =
+          "Kafka Pipeline Error:" <>
+            " Trigger_id: `#{context.trigger_id}`" <>
+            " Topic: `#{message.metadata.topic}`" <>
+            " Partition: `#{message.metadata.partition}`" <>
+            " Offset: `#{message.metadata.offset}`" <>
+            " Key: `#{message.metadata.key}`"
+
+        fun = fn -> Pipeline.handle_message(nil, message, context) end
+
+        assert capture_log(fun) =~ expected_log_message
+      end
+    end
+
+    test "notifies sentry on a non-duplicate error", %{
+      context: context
+    } do
+      message = build_broadway_message()
+
+      notification = "Kafka pipeline - message processing error"
+
+      extra = %{
+        key: message.metadata.key,
+        offset: message.metadata.offset,
+        partition: message.metadata.partition,
+        topic: message.metadata.topic,
+        trigger_id: context.trigger_id
+      }
+
+      with_mocks([
+        {
+          Repo,
+          [:passthrough],
+          [transaction: fn _ -> {:error, :message, %Changeset{}, %{}} end]
+        },
+        {
+          Sentry,
+          [:passthrough],
+          [capture_message: fn _, _ -> :ok end]
+        }
+      ]) do
+        Pipeline.handle_message(nil, message, context)
+
+        assert_called(Sentry.capture_message(notification, extra: extra))
       end
     end
 

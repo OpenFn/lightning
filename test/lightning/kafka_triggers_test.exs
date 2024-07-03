@@ -170,19 +170,21 @@ defmodule Lightning.KafkaTriggersTest do
           kafka_configuration: configuration(partition_timestamps: %{})
         )
 
-      changeset = 
+      expected_timestamps = %{
+        "#{partition}" => timestamp
+      }
+
+      changeset =
         trigger
         |> KafkaTriggers.update_partition_data(partition, timestamp)
 
       assert %Changeset{data: ^trigger, changes: changes} = changeset
 
-      assert changes == %{
-        kafka_configuration: %{
-          partition_timestamps: %{"#{partition}" => timestamp}
-        }
-      }
-      # trigger
-      # |> assert_persisted_config(%{"#{partition}" => timestamp})
+      assert %{
+               kafka_configuration: %{
+                 changes: %{partition_timestamps: ^expected_timestamps}
+               }
+             } = changes
     end
 
     test "adds data for partition if partition is new but there is data", %{
@@ -196,25 +198,22 @@ defmodule Lightning.KafkaTriggersTest do
           kafka_configuration: configuration(partition_timestamps: %{"3" => 123})
         )
 
+      expected_timestamps = %{
+        "3" => 123,
+        "#{partition}" => timestamp
+      }
+
       changeset =
         trigger
         |> KafkaTriggers.update_partition_data(partition, timestamp)
 
       assert %Changeset{data: ^trigger, changes: changes} = changeset
 
-      assert changes == %{
-        kafka_configuration: %{
-          partition_timestamps: %{
-            "3" => 123,
-            "#{partition}" => timestamp
-          }
-        }
-      }
-      # trigger
-      # |> assert_persisted_config(%{
-      #   "3" => 123,
-      #   "#{partition}" => timestamp
-      # })
+      assert %{
+               kafka_configuration: %{
+                 changes: %{partition_timestamps: ^expected_timestamps}
+               }
+             } = changes
     end
 
     test "does not update partition data if persisted timestamp is newer", %{
@@ -238,22 +237,13 @@ defmodule Lightning.KafkaTriggersTest do
         trigger
         |> KafkaTriggers.update_partition_data(partition, timestamp)
 
-      assert %Changeset{data: ^trigger, changes: changes} = changeset
+      %{changes: %{kafka_configuration: config_changeset}} = changeset
 
-      assert changes == %{
-        kafka_configuration: %{
-          partition_timestamps: %{
-            "3" => 123,
-            "#{partition}" => timestamp + 1
-          }
-        }
-      }
-      #
-      # trigger
-      # |> assert_persisted_config(%{
-      #   "3" => 123,
-      #   "#{partition}" => timestamp + 1
-      # })
+      changes =
+        config_changeset
+        |> Changeset.get_change(:partition_timestamps)
+
+      assert changes == nil
     end
 
     test "updates persisted partition data if persisted timestamp is older", %{
@@ -285,42 +275,11 @@ defmodule Lightning.KafkaTriggersTest do
       assert %Changeset{data: ^trigger, changes: changes} = changeset
 
       assert %{
-        kafka_configuration: %{
-          changes: %{partition_timestamps: ^expected_timestamps}
-        }
-      } = changes
-
-      # assert changes == %{
-      #   kafka_configuration: %Changeset{
-      #     changes: %{
-      #       partition_timestamps: %{
-      #         "3" => 123,
-      #         "#{partition}" => timestamp
-      #       }
-      #     }
-      #   }
-      # }
-      # trigger
-      # |> KafkaTriggers.update_partition_data(partition, timestamp)
-      #
-      # trigger
-      # |> assert_persisted_config(%{
-      #   "3" => 123,
-      #   "#{partition}" => timestamp
-      # })
+               kafka_configuration: %{
+                 changes: %{partition_timestamps: ^expected_timestamps}
+               }
+             } = changes
     end
-
-    # defp assert_persisted_config(trigger, expected_partition_timestamps) do
-    #   reloaded_trigger = Trigger |> Repo.get(trigger.id)
-    #
-    #   %Trigger{
-    #     kafka_configuration: %{
-    #       partition_timestamps: partition_timestamps
-    #     }
-    #   } = reloaded_trigger
-    #
-    #   assert partition_timestamps == expected_partition_timestamps
-    # end
   end
 
   describe ".determine_offset_reset_policy" do
