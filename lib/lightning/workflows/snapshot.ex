@@ -4,9 +4,8 @@ defmodule Lightning.Workflows.Snapshot do
 
   Snapshots are a way to store the state of a workflow at a given point in time.
   """
-  use Ecto.Schema
+  use Lightning.Schema
 
-  import Ecto.Changeset
   import Ecto.Query
 
   alias Ecto.Multi
@@ -26,8 +25,6 @@ defmodule Lightning.Workflows.Snapshot do
           edges: [%Lightning.Workflows.Snapshot.Edge{}]
         }
 
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
   schema "workflow_snapshots" do
     belongs_to :workflow, Workflow
     field :name, :string

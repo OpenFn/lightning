@@ -6,9 +6,7 @@ defmodule Lightning.Credentials.OauthClient do
   projects through relational fields.
   """
 
-  use Ecto.Schema
-
-  import Ecto.Changeset
+  use Lightning.Schema
 
   alias Lightning.Accounts.User
   alias Lightning.Credentials.Credential
@@ -21,8 +19,6 @@ defmodule Lightning.Credentials.OauthClient do
           name: String.t()
         }
 
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
   schema "oauth_clients" do
     field :name, :string
     field :client_id, :string
@@ -42,7 +38,7 @@ defmodule Lightning.Credentials.OauthClient do
     has_many :project_oauth_clients, ProjectOauthClient
     has_many :projects, through: [:project_oauth_clients, :project]
 
-    timestamps(type: :utc_datetime)
+    timestamps()
   end
 
   @doc """

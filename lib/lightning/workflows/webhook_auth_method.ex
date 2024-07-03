@@ -24,14 +24,11 @@ defmodule Lightning.Workflows.WebhookAuthMethod do
   The `valid_password?/2` function is provided to verify passwords and it avoids timing attacks by using `Bcrypt.no_user_verify/0` when there is no webhook_auth_method or the webhook_auth_method doesn't have a password.
 
   """
-  use Ecto.Schema
-  import Ecto.Changeset
+  use Lightning.Schema
 
   @type t :: %__MODULE__{}
 
   @auth_types [:basic, :api]
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
 
   schema "webhook_auth_methods" do
     field :name, :string
