@@ -405,4 +405,13 @@ defmodule Lightning.Workflows do
   def jobs_ordered_subquery do
     from(j in Job, order_by: [asc: j.inserted_at])
   end
+
+  def latest?(%Workflow{lock_version: version}) do
+    query =
+      from s in Snapshot,
+        where: s.lock_version > ^version,
+        select: count(s.id)
+
+    Repo.one(query) == 0
+  end
 end

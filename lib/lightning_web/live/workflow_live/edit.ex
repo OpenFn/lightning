@@ -1005,15 +1005,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       _ ->
         # TODO we shouldn't be calling Repo from here
-        workflow =
-          Workflows.get_workflow(workflow_id)
-          |> Lightning.Repo.preload([
-            :edges,
-            triggers: Trigger.with_auth_methods_query(),
-            jobs:
-              {Workflows.jobs_ordered_subquery(),
-               [:credential, steps: Invocation.Query.any_step()]}
-          ])
+        workflow = get_workflow_by_id(workflow_id)
 
         if workflow do
           run_id = Map.get(params, "a")
@@ -1658,8 +1650,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
       selected_run: selected_run
     } = socket.assigns
 
-    if prior_presence.user.id == current_user.id do
-      reloaded_workflow = reload_workflow(workflow)
+    if prior_presence.user.id == current_user.id && !Workflows.latest?(workflow) do
+      reloaded_workflow = get_workflow_by_id(workflow.id)
 
       socket = assign(socket, workflow: reloaded_workflow)
 
@@ -1673,7 +1665,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  defp reload_workflow(%Workflow{id: workflow_id}) do
+  defp get_workflow_by_id(workflow_id) do
     Workflows.get_workflow(workflow_id)
     |> Lightning.Repo.preload([
       :edges,
