@@ -15,6 +15,15 @@ export const EDGE_COLOR_SELECTED_DISABLED = '#bdbaf3';
 
 export const ERROR_COLOR = '#ef4444';
 
+export const iconStyles = {
+  fontSize: 18,
+  marginRight: '6px',
+  fontWeight: 700,
+  height: '30px',
+  lineHeight: '30px',
+  verticalAlign: 'middle',
+};
+
 export const edgeLabelStyles = (selected?: boolean, data) => {
   const { label, enabled } = data;
   const primaryColor = (selected?: boolean, enabled?: boolean) => {
@@ -23,22 +32,7 @@ export const edgeLabelStyles = (selected?: boolean, data) => {
   };
 
   const backgroundColor = enabled ? 'white' : '#F6F6F6';
-
-  if (label && label.length > 1) {
-    return {
-      padding: '0 4px',
-      height: '32px',
-      border: `solid 2px ${primaryColor(selected, enabled)}`,
-      borderRadius: 4,
-      display: 'inline-block',
-      fontSize: 14,
-      lineHeight: '26px',
-      textAlign: 'center' as const,
-      fontWeight: 500,
-      color: primaryColor(selected, enabled),
-      backgroundColor,
-    };
-  } else {
+  if (typeof label === 'string') {
     return {
       width: '32px',
       height: '32px',
@@ -46,7 +40,22 @@ export const edgeLabelStyles = (selected?: boolean, data) => {
       borderRadius: 16,
       fontSize: 18,
       textAlign: 'center' as const,
+      verticalAlign: 'middle',
       fontWeight: 700,
+      color: primaryColor(selected, enabled),
+      backgroundColor,
+    };
+  } else {
+    return {
+      ...iconStyles,
+      padding: '0 4px',
+      border: `solid 2px ${primaryColor(selected, enabled)}`,
+      borderRadius: 8,
+      display: 'flex',
+      alignItems: 'center',
+      fontSize: 14,
+      textAlign: 'center' as const,
+      fontWeight: 500,
       color: primaryColor(selected, enabled),
       backgroundColor,
     };

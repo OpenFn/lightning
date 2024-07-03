@@ -1,12 +1,9 @@
+import React from 'react';
 import { Lightning, Flow, Positions } from '../types';
-import { sortOrderForSvg, styleEdge, styleItem, styleNode } from '../styles';
+import { sortOrderForSvg, styleEdge, styleNode, iconStyles } from '../styles';
 
 function getEdgeLabel(edge: Lightning.Edge) {
-  let label = '( )';
-
-  if (edge.condition_label) {
-    return edge.condition_label;
-  }
+  let label: string | JSX.Element = '{ }';
 
   switch (edge.condition_type) {
     case 'on_job_success':
@@ -18,17 +15,27 @@ function getEdgeLabel(edge: Lightning.Edge) {
     case 'always':
       label = '∞';
       break;
-    case 'js_expression':
-      const condition_label = edge.condition_label;
+  }
+  const { condition_label } = edge;
 
-      if (condition_label) {
-        if (condition_label.length > 16) {
-          label = condition_label.slice(0, 16) + '...';
-        } else {
-          label = condition_label;
-        }
-      }
-      break;
+  if (condition_label) {
+    const l =
+      condition_label.length > 16
+        ? condition_label.slice(0, 16) + '...'
+        : condition_label;
+    label = (
+      <>
+        <span style={iconStyles}>{label}</span>
+        <span
+          style={{
+            lineHeight: iconStyles.lineHeight,
+            verticalAlign: iconStyles.verticalAlign,
+          }}
+        >
+          {l}
+        </span>
+      </>
+    );
   }
 
   return label;
