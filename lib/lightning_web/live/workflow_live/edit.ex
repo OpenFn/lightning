@@ -1459,6 +1459,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               assigns[:follow_run].id,
               job.id
             )
+            |> IO.inspect(label: "STEP STEP STEP STEP")
 
         socket
         |> assign_manual_run_form(changeset)
@@ -1801,7 +1802,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp assign_follow_run(%{assigns: %{selected_job: job}} = socket, run_id)
        when is_binary(run_id) do
     run = Runs.get(run_id)
-    step = Invocation.get_step_for_run_and_job(run_id, job.id)
+
+    step =
+      Invocation.get_step_for_run_and_job(run_id, job.id)
+      |> IO.inspect(label: "STEP STEP STEP STEP")
 
     Runs.subscribe(run)
 

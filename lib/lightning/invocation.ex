@@ -79,7 +79,7 @@ defmodule Lightning.Invocation do
         join: s in Lightning.Invocation.Step,
         on: s.input_dataclip_id == d.id and s.job_id == ^job_id,
         join: a in assoc(s, :runs),
-        on: a.id == ^run_id
+        on: a.id == ^run_id and a.starting_job_id == ^job_id
 
     Repo.one(query)
   end
@@ -90,12 +90,26 @@ defmodule Lightning.Invocation do
         ) ::
           Lightning.Invocation.Step.t() | nil
   def get_step_for_run_and_job(run_id, job_id) do
+    Repo.all(
+      from e in Lightning.Workflows.Edge, where: e.target_job_id == ^job_id
+    )
+    |> IO.inspect()
+
+    Repo.get(Lightning.Workflows.Job, job_id) |> IO.inspect()
+
+    Repo.all(
+      from s in Lightning.Invocation.Step,
+        join: a in assoc(s, :runs),
+        select: a
+    )
+    |> IO.inspect()
+
     query =
       from s in Lightning.Invocation.Step,
         join: a in assoc(s, :runs),
-        on: a.id == ^run_id,
+        on: a.id == ^run_id and a.starting_job_id == ^job_id,
         where: s.job_id == ^job_id,
-        preload: [snapshot: [triggers: :webhook_auth_methods]]
+        preload: [:job, :runs, snapshot: [triggers: :webhook_auth_methods]]
 
     Repo.one(query)
   end
