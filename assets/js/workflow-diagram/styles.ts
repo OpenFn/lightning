@@ -15,13 +15,48 @@ export const EDGE_COLOR_SELECTED_DISABLED = '#bdbaf3';
 
 export const ERROR_COLOR = '#ef4444';
 
-export const iconStyles = {
-  fontSize: 18,
-  marginRight: '6px',
+const iconColorMap = {
+  on_job_success: '#c9f9ca',
+  on_job_failure: '#ffd6d6',
+  always: '#fbfad7',
+  js_expression: '#d9e3ff',
+};
+
+export const edgeLabelIconStyles = (type: string) => ({
+  fontSize: 24,
+  // marginRight: '6px',
   fontWeight: 700,
-  height: '30px',
-  lineHeight: '30px',
-  verticalAlign: 'middle',
+  // display: 'inline-block',
+  display: 'flex',
+  height: '46px',
+  width: '46px',
+  // lineHeight: '30px',
+  // verticalAlign: 'middle',
+  borderStyle: 'solid',
+  borderWidth: '2px',
+  borderRadius: '100%',
+  borderColor: 'inherit',
+  backgroundColor: iconColorMap[type],
+
+  alignItems: 'center',
+  justifyContent: 'center',
+
+  // cheat (good for {} though)
+  // paddingBottom: '2px',
+
+  zIndex: 1,
+});
+
+export const edgeLabelTextStyles = {
+  borderStyle: 'solid',
+  borderWidth: '2px',
+  borderRadius: '8px',
+  borderColor: 'inherit',
+  backgroundColor: 'white',
+  padding: '2px 6px',
+  paddingLeft: '24px',
+  marginLeft: '-22px',
+  height: '34px',
 };
 
 export const edgeLabelStyles = (selected?: boolean, data) => {
@@ -31,35 +66,46 @@ export const edgeLabelStyles = (selected?: boolean, data) => {
     return selected ? EDGE_COLOR_SELECTED_DISABLED : EDGE_COLOR_DISABLED;
   };
 
-  const backgroundColor = enabled ? 'white' : '#F6F6F6';
-  if (typeof label === 'string') {
-    return {
-      width: '32px',
-      height: '32px',
-      border: `solid 2px ${primaryColor(selected, enabled)}`,
-      borderRadius: 16,
-      fontSize: 18,
-      textAlign: 'center' as const,
-      verticalAlign: 'middle',
-      fontWeight: 700,
-      color: primaryColor(selected, enabled),
-      backgroundColor,
-    };
-  } else {
-    return {
-      ...iconStyles,
-      padding: '0 4px',
-      border: `solid 2px ${primaryColor(selected, enabled)}`,
-      borderRadius: 8,
-      display: 'flex',
-      alignItems: 'center',
-      fontSize: 14,
-      textAlign: 'center' as const,
-      fontWeight: 500,
-      color: primaryColor(selected, enabled),
-      backgroundColor,
-    };
-  }
+  // this is just styling the parent of the edge label
+  // the icon and label will inherit
+
+  // const backgroundColor = enabled ? 'white' : '#F6F6F6';
+  return {
+    borderColor: primaryColor(selected, enabled),
+    // set the text colour deliberately a bit darker to get the right contrast
+    color: '#a9a8a8', //primaryColor(selected, enabled),
+    backgroundColor: 'transparent',
+    display: 'flex',
+    alignItems: 'center',
+  };
+  // if (typeof label === 'string') {
+  //   return {
+  //     width: '32px',
+  //     height: '32px',
+  //     border: `solid 2px ${primaryColor(selected, enabled)}`,
+  //     borderRadius: 16,
+  //     fontSize: 18,
+  //     textAlign: 'center' as const,
+  //     verticalAlign: 'middle',
+  //     fontWeight: 700,
+  //     color: primaryColor(selected, enabled),
+  //     backgroundColor,
+  //   };
+  // } else {
+  //   return {
+  //     ...edgeLabelIconStyles,
+  //     padding: '0 4px',
+  //     border: `solid 2px ${primaryColor(selected, enabled)}`,
+  //     borderRadius: 8,
+  //     display: 'flex',
+  //     alignItems: 'center',
+  //     fontSize: 14,
+  //     textAlign: 'center' as const,
+  //     fontWeight: 500,
+  //     color: primaryColor(selected, enabled),
+  //     backgroundColor,
+  //   };
+  // }
 };
 
 export const styleItem = (item: Flow.Edge | Flow.Node) => {
