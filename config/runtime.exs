@@ -228,7 +228,8 @@ base_cron = [
    args: %{"type" => "weekly_project_digest"}},
   {"0 10 1 * *", Lightning.DigestEmailWorker,
    args: %{"type" => "monthly_project_digest"}},
-  {"1 2 * * *", Lightning.Projects, args: %{"type" => "data_retention"}}
+  {"1 2 * * *", Lightning.Projects, args: %{"type" => "data_retention"}},
+  {"*/10 * * * *", Lightning.KafkaTriggers.DuplicateTrackingCleanupWorker}
 ]
 
 cleanup_cron =

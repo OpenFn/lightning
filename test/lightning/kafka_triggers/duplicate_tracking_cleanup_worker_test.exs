@@ -5,7 +5,7 @@ defmodule Lightning.KafkaTriggers.DuplicateTrackingCleanupWorkerTest do
   alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
   alias Lightning.Repo
 
-  test "deletes all data that is older than the retention period" do
+  setup do
     retention_period =
       Application.get_env(
         :lightning,
@@ -17,59 +17,73 @@ defmodule Lightning.KafkaTriggers.DuplicateTrackingCleanupWorkerTest do
     discard_offset = -retention_period - 1
     discard_time = now |> DateTime.add(discard_offset)
 
-    record_to_be_retained_1 =
+    records_to_be_retained = [
       insert(
         :trigger_kafka_message_record,
         trigger_id: insert(:trigger).id,
         topic_partition_offset: "A",
         inserted_at: retain_time
-      )
-    record_to_be_retained_2 =
+      ),
       insert(
         :trigger_kafka_message_record,
         topic_partition_offset: "B",
         trigger_id: insert(:trigger).id,
         inserted_at: retain_time
       )
-
-    record_to_be_discarded_1 =
+    ]
+    records_to_be_discarded = [
       insert(
         :trigger_kafka_message_record,
         trigger_id: insert(:trigger).id,
         topic_partition_offset: "C",
         inserted_at: discard_time
-      )
-    record_to_be_discarded_2 =
+      ),
       insert(
         :trigger_kafka_message_record,
         trigger_id: insert(:trigger).id,
         topic_partition_offset: "D",
         inserted_at: discard_time
-      )
-    record_to_be_discarded_3 =
+      ),
       insert(
         :trigger_kafka_message_record,
         trigger_id: insert(:trigger).id,
         topic_partition_offset: "E",
         inserted_at: discard_time
-      )
-    record_to_be_discarded_4 =
+      ),
       insert(
         :trigger_kafka_message_record,
         trigger_id: insert(:trigger).id,
         topic_partition_offset: "F",
         inserted_at: discard_time
       )
+    ]
+
+    %{
+      records_to_be_discarded: records_to_be_discarded,
+      records_to_be_retained: records_to_be_retained,
+    }
+  end
+
+  test "deletes all data that is older than the retention period", %{
+    records_to_be_discarded: to_be_discarded,
+    records_to_be_retained: to_be_retained
+  } do
+    [discard_1, discard_2, discard_3, discard_4] = to_be_discarded
+    [retain_1, retain_2] = to_be_retained
 
     perform_job(DuplicateTrackingCleanupWorker, %{})
 
-    refute find_record(record_to_be_discarded_1)
-    refute find_record(record_to_be_discarded_2)
-    refute find_record(record_to_be_discarded_3)
-    refute find_record(record_to_be_discarded_4)
+    refute find_record(discard_1)
+    refute find_record(discard_2)
+    refute find_record(discard_3)
+    refute find_record(discard_4)
 
-    assert find_record(record_to_be_retained_1)
-    assert find_record(record_to_be_retained_2)
+    assert find_record(retain_1)
+    assert find_record(retain_2)
+  end
+
+  test "returns :ok" do
+    assert perform_job(DuplicateTrackingCleanupWorker, %{}) == :ok
   end
 
   defp find_record(%{topic_partition_offset: topic_partition_offset}) do
