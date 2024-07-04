@@ -864,7 +864,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply,
      apply_action(socket, socket.assigns.live_action, params)
      |> apply_query_params(params)
-     |> maybe_show_manual_run()}
+     |> maybe_show_manual_run()
+     |> tap(fn socket ->
+       if connected?(socket) do
+         if changed?(socket, :selected_job) do
+           Helpers.broadcast_updated_params(socket, %{
+             job_id:
+               case socket.assigns.selected_job do
+                 nil -> nil
+                 job -> job.id
+               end
+           })
+         end
+       end
+     end)}
   end
 
   def apply_action(socket, :new, params) do

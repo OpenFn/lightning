@@ -12,6 +12,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
   alias Lightning.Projects.Project
   alias LightningWeb.Components.Tabbed
   alias LightningWeb.Components.Viewers
+  alias LightningWeb.WorkflowLive.Helpers
 
   alias Phoenix.LiveView.AsyncResult
 
@@ -182,8 +183,6 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                             DateTime.compare(step.inserted_at, run.inserted_at) ==
                               :lt
                           }
-                          phx-click="select_step"
-                          phx-value-id={step.id}
                           selected={step.id == @selected_step_id}
                           class="cursor-pointer"
                           project_id={@project}
@@ -268,10 +267,15 @@ defmodule LightningWeb.RunLive.RunViewerLive do
         %{
           "run_id" => run_id,
           "project_id" => project_id,
-          "user_id" => user_id
+          "user_id" => user_id,
+          "socket_id" => socket_id
         } = session,
         socket
       ) do
+    if connected?(socket) do
+      Helpers.subscribe_to_params_update(socket_id)
+    end
+
     project_user =
       Projects.get_project_user(%Project{id: project_id}, %User{id: user_id})
 
@@ -308,6 +312,11 @@ defmodule LightningWeb.RunLive.RunViewerLive do
   @impl true
   def handle_info(%Lightning.Runs.Events.DataclipUpdated{}, socket) do
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:updated_params, %{job_id: job_id}}, socket) do
+    {:noreply, socket |> assign(job_id: job_id)}
   end
 
   def handle_steps_change(socket) do

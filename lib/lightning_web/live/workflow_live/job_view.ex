@@ -187,10 +187,11 @@ defmodule LightningWeb.WorkflowLive.JobView do
               "run_id" => @follow_run_id,
               "job_id" => @job.id,
               "project_id" => @project.id,
-              "user_id" => @current_user.id
+              "user_id" => @current_user.id,
+              "socket_id" => @socket.id
             },
-            container: {:div, class: "h-full p-2"},
-            sticky: true
+            sticky: true,
+            container: {:div, class: "h-full p-2"}
           ) %>
         <% else %>
           <div class="w-1/2 h-16 text-center m-auto p-4">
