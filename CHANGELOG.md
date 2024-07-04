@@ -26,6 +26,8 @@ and this project adheres to
 - In the workflow diagram, remove the "autofit" toggle in the control bar
 - Moved the Edge Condition Label field to the top of the form, so it's always
   visible
+- Update edge condition labels in the Workflow Diagram to always show the
+  condition type icon and the label
 
 ### Fixed
 
