@@ -70,6 +70,12 @@ defmodule Lightning.Workflows.Workflow do
     |> cast(attrs, [:deleted_at])
   end
 
+  @doc """
+  Returns true if the workflow has any triggers that are _going to be_ activated.
+
+  New triggers are enabled by default, but existing triggers are only considered
+  activated if their `enabled` field is _changed_ to `true`.
+  """
   @spec workflow_activated?(Ecto.Changeset.t()) :: boolean()
   def workflow_activated?(%Ecto.Changeset{data: %Workflow{}} = changeset) do
     changeset
