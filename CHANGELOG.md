@@ -21,6 +21,26 @@ and this project adheres to
 
 ### Fixed
 
+## [v2.7.2] - 2024-07-03
+
+### Changed
+
+- Allow endpoint plugs to be injected at compile time.
+  [#2248](https://github.com/OpenFn/lightning/pull/2248)
+- All models to use the `public` schema.
+  [#2249](https://github.com/OpenFn/lightning/pull/2249)
+- In the workflow diagram, smartly update the view when adding new nodes
+  [#2174](https://github.com/OpenFn/lightning/issues/2174)
+- In the workflow diagram, remove the "autofit" toggle in the control bar
+
+### Fixed
+
+- Remove prompt parameter from the authorization URL parameters for the Generic
+  Oauth Clients [#2250](https://github.com/OpenFn/lightning/issues/2250)
+- Fixed react key error [#2233](https://github.com/OpenFn/lightning/issues/2233)
+- Show common functions in the Docs panel
+  [#1733](https://github.com/OpenFn/lightning/issues/1733)
+
 ## [v2.7.1] - 2024-07-01
 
 ### Changed

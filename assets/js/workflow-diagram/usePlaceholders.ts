@@ -22,6 +22,9 @@ export const create = (parentNode: Flow.Node) => {
     id: targetId,
     type: 'placeholder',
     position: {
+      // mark this as as default position
+      // @ts-ignore _default is a temporary flag added by us
+      _default: true,
       // Offset the position of the placeholder to be more pleasing during animation
       x: parentNode.position.x,
       y: parentNode.position.y + 100,

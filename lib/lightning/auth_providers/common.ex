@@ -11,8 +11,7 @@ defmodule Lightning.AuthProviders.Common do
     Defines a schema for OAuth token information.
     """
 
-    use Ecto.Schema
-    import Ecto.Changeset
+    use Lightning.Schema
 
     @primary_key false
     embedded_schema do

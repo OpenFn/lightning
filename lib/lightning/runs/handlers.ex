@@ -15,8 +15,7 @@ defmodule Lightning.Runs.Handlers do
     @moduledoc """
     Schema to validate the input attributes of a started step.
     """
-    use Ecto.Schema
-    import Ecto.Changeset
+    use Lightning.Schema
     import Ecto.Query
 
     import Lightning.ChangesetUtils
@@ -142,8 +141,7 @@ defmodule Lightning.Runs.Handlers do
     @moduledoc """
     Schema to validate the input attributes of a completed step.
     """
-    use Ecto.Schema
-    import Ecto.Changeset
+    use Lightning.Schema
     import Ecto.Query
 
     import Lightning.ChangesetUtils

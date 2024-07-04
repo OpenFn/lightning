@@ -99,7 +99,6 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
     default_params = [
       access_type: "offline",
       client_id: client.client_id,
-      prompt: "consent",
       redirect_uri: RouteHelpers.oidc_callback_url(),
       response_type: "code",
       scope: "",
