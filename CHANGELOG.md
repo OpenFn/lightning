@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Workflow activation only considers new and changed workflows
+  [#2237](https://github.com/OpenFn/lightning/pull/2237)
+
 ## [v2.7.2] - 2024-07-03
 
 ### Changed
