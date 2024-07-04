@@ -1,11 +1,15 @@
 defmodule Lightning.KafkaTriggersTest do
-  use Lightning.DataCase, async: false
+  # use Lightning.DataCase, async: false
+  use LightningWeb.ConnCase, async: false
 
+  import Lightning.Factories
   import Mock
 
   require Lightning.Run
 
   alias Ecto.Changeset
+  alias Lightning.Extensions.MockUsageLimiter
+  alias Lightning.Extensions.StubUsageLimiter
   alias Lightning.Invocation
   alias Lightning.KafkaTriggers
   alias Lightning.KafkaTriggers.PipelineSupervisor
@@ -691,6 +695,8 @@ defmodule Lightning.KafkaTriggersTest do
       }
     end
 
+    setup [:stub_usage_limiter_ok]
+
     test "returns :ok but does nothing if there is no candidate for the set", %{
       candidate_set: candidate_set
     } do
@@ -737,6 +743,54 @@ defmodule Lightning.KafkaTriggersTest do
                  project_id: ^project_id,
                  type: :kafka
                },
+               state: :pending,
+               trigger: ^trigger,
+               workflow: ^workflow
+             } = work_order
+    end
+
+    test "creates a rejected work order if usage is limited", %{
+      candidate_set: candidate_set,
+      message_1: message_1
+    } do
+      # TODO Can I make an assertion re: args?
+      Mox.stub(MockUsageLimiter, :limit_action, &StubUsageLimiter.limit_action/2)
+
+      %{trigger: %{workflow: workflow} = trigger} = message_1
+      project_id = workflow.project_id
+
+      assert KafkaTriggers.process_candidate_for(candidate_set) == :ok
+
+      %{work_order: work_order} =
+        TriggerKafkaMessage
+        |> Repo.get(message_1.id)
+        |> Repo.preload(
+          work_order: [
+            [dataclip: Invocation.Query.dataclip_with_body()],
+            :runs,
+            trigger: [workflow: [:project]],
+            workflow: [:project]
+          ]
+        )
+
+      expected_body = %{
+        "data" => %{
+          "triggers" => "test"
+        },
+        "request" => %{
+          "offset" => 1,
+          "partition" => 1,
+          "topic" => "test-topic"
+        }
+      }
+
+      assert %WorkOrder{
+               dataclip: %{
+                 body: ^expected_body,
+                 project_id: ^project_id,
+                 type: :kafka
+               },
+               state: :rejected,
                trigger: ^trigger,
                workflow: ^workflow
              } = work_order

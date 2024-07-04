@@ -2,8 +2,11 @@ defmodule Lightning.KafkaTriggers do
   import Ecto.Query
 
   alias Ecto.Changeset
+  alias Lightning.Extensions.UsageLimiting.Action
+  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.KafkaTriggers.TriggerKafkaMessage
   alias Lightning.Repo
+  alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows.Trigger
   alias Lightning.WorkOrder
   alias Lightning.WorkOrders
@@ -219,6 +222,8 @@ defmodule Lightning.KafkaTriggers do
     |> Jason.decode()
     |> case do
       {:ok, body} ->
+        {:ok, without_run?} = check_skip_run_creation(workflow.project_id)
+
         {:ok, %WorkOrder{id: work_order_id}} =
           WorkOrders.create_for(trigger,
             workflow: workflow,
@@ -228,7 +233,7 @@ defmodule Lightning.KafkaTriggers do
               type: :kafka,
               project_id: workflow.project_id
             },
-            without_run: false
+            without_run: without_run?
           )
 
         candidate
@@ -250,6 +255,24 @@ defmodule Lightning.KafkaTriggers do
 
   defp handle_candidate(%{work_order: work_order} = candidate) do
     if successful?(work_order), do: candidate |> Repo.delete()
+  end
+
+  # Stolen from the `webhooks_controller.ex` file and simplified until
+  # I understand the details (ask Roger).
+  defp check_skip_run_creation(project_id) do
+    case UsageLimiter.limit_action(
+           %Action{type: :new_run},
+           %Context{project_id: project_id}
+         ) do
+      :ok ->
+        {:ok, false}
+
+      {:error, :too_many_runs, _message} ->
+        {:ok, true}
+
+      error ->
+        error
+    end
   end
 
   @doc """
