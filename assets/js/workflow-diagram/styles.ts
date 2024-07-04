@@ -79,7 +79,7 @@ export const edgeLabelStyles = (selected?: boolean, data) => {
     backgroundColor: 'transparent',
     display: 'flex',
     alignItems: 'center',
-    opacity: enabled ? 1 : 0.8,
+    opacity: enabled ? 1 : 0.9,
   };
   // if (typeof label === 'string') {
   //   return {
