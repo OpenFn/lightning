@@ -1,6 +1,12 @@
 import React from 'react';
 import { Lightning, Flow, Positions } from '../types';
-import { sortOrderForSvg, styleEdge, styleNode, iconStyles } from '../styles';
+import {
+  sortOrderForSvg,
+  styleEdge,
+  styleNode,
+  edgeLabelIconStyles,
+  edgeLabelTextStyles,
+} from '../styles';
 
 function getEdgeLabel(edge: Lightning.Edge) {
   let label: string | JSX.Element = '{ }';
@@ -18,27 +24,19 @@ function getEdgeLabel(edge: Lightning.Edge) {
   }
   const { condition_label } = edge;
 
+  const result = [
+    <span style={edgeLabelIconStyles(edge.condition_type)}>{label}</span>,
+  ];
+
   if (condition_label) {
     const l =
-      condition_label.length > 16
-        ? condition_label.slice(0, 16) + '...'
+      condition_label.length > 22
+        ? condition_label.slice(0, 22) + '...'
         : condition_label;
-    label = (
-      <>
-        <span style={iconStyles}>{label}</span>
-        <span
-          style={{
-            lineHeight: iconStyles.lineHeight,
-            verticalAlign: iconStyles.verticalAlign,
-          }}
-        >
-          {l}
-        </span>
-      </>
-    );
+    result.push(<span style={edgeLabelTextStyles}>{l}</span>);
   }
 
-  return label;
+  return result;
 }
 
 const fromWorkflow = (
