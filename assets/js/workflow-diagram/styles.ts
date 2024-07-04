@@ -16,10 +16,10 @@ export const EDGE_COLOR_SELECTED_DISABLED = '#bdbaf3';
 export const ERROR_COLOR = '#ef4444';
 
 const iconColorMap = {
-  on_job_success: '#c9f9ca',
-  on_job_failure: '#ffd6d6',
-  always: '#fbfad7',
-  js_expression: '#d9e3ff',
+  on_job_success: '#e7f3e8',
+  on_job_failure: '#ffe9e9',
+  always: '#ffffef',
+  js_expression: '#eff3ff',
 };
 
 export const edgeLabelIconStyles = (type: string) => ({
