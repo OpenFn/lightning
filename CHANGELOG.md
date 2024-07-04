@@ -23,6 +23,8 @@ and this project adheres to
 
 - Fix issue when selecting different steps in RunViewer and the parent liveview
   not being informed [#2253](https://github.com/OpenFn/lightning/issues/2253)
+- Stopped inspector from crashing when looking for a step by a run/job
+  combination [#2201](https://github.com/OpenFn/lightning/issues/2201)
 - Workflow activation only considers new and changed workflows
   [#2237](https://github.com/OpenFn/lightning/pull/2237)
 
