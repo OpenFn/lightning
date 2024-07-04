@@ -36,7 +36,7 @@ export const edgeLabelIconStyles = (type: string) => ({
   borderWidth: '2px',
   borderRadius: '100%',
   borderColor: 'inherit',
-  backgroundColor: iconColorMap[type],
+  backgroundColor: 'white', // iconColorMap[type],
 
   alignItems: 'center',
   justifyContent: 'center',
@@ -44,19 +44,21 @@ export const edgeLabelIconStyles = (type: string) => ({
   // cheat (good for {} though)
   // paddingBottom: '2px',
 
-  zIndex: 1,
+  // zIndex: 1,
 });
 
 export const edgeLabelTextStyles = {
   borderStyle: 'solid',
   borderWidth: '2px',
-  borderRadius: '8px',
+  borderTopRightRadius: '8px',
+  borderBottomRightRadius: '8px',
   borderColor: 'inherit',
   backgroundColor: 'white',
   padding: '2px 6px',
-  paddingLeft: '24px',
-  marginLeft: '-22px',
+  paddingLeft: '8px',
+  marginLeft: '-11px',
   height: '34px',
+  borderLeft: 'solid 2px white',
 };
 
 export const edgeLabelStyles = (selected?: boolean, data) => {
@@ -77,6 +79,7 @@ export const edgeLabelStyles = (selected?: boolean, data) => {
     backgroundColor: 'transparent',
     display: 'flex',
     alignItems: 'center',
+    opacity: enabled ? 1 : 0.8,
   };
   // if (typeof label === 'string') {
   //   return {
