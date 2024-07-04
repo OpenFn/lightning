@@ -202,6 +202,8 @@ triggers and a snapshot needs to made; but the Workflow itself didn't change.</p
 
       </div>
 
+        <div class="summary-synopsis"><p>Returns true if the workflow has any triggers that are <em>going to be</em> activated.</p></div>
+
     </div>
 
 </div>
@@ -306,7 +308,7 @@ triggers and a snapshot needs to made; but the Workflow itself didn't change.</p
     </a>
     <h1 class="signature" translate="no">touch(workflow)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L90" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L98" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -358,7 +360,7 @@ triggers and a snapshot needs to made; but the Workflow itself didn't change.</p
     </a>
     <h1 class="signature" translate="no">workflow_activated?(changeset)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L74" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L80" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -374,7 +376,8 @@ triggers and a snapshot needs to made; but the Workflow itself didn't change.</p
 
       </div>
 
-
+<p>Returns true if the workflow has any triggers that are <em>going to be</em> activated.</p><p>New triggers are enabled by default, but existing triggers are only considered
+activated if their <code class="inline">enabled</code> field is <em>changed</em> to <code class="inline">true</code>.</p>
   </section>
 </section>
 
