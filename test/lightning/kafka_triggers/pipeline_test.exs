@@ -209,7 +209,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
     test "converts empty Kafka key to nil TriggerKafkaMessage key", %{
       context: context
     } do
-      message = build_broadway_message("")
+      message = build_broadway_message(key: "")
 
       Pipeline.handle_message(nil, message, context)
 
@@ -278,98 +278,31 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       assert Repo.one(TriggerKafkaMessage) == nil
     end
 
-    test "logs on duplicate message", %{
+    test "marks message as failed when duplicate", %{
       context: context
     } do
       trigger_id = context.trigger_id |> Atom.to_string()
       message = build_broadway_message()
 
-      expected_log_message =
-        "Kafka Pipeline Duplicate Message:" <>
-          " Trigger_id: `#{context.trigger_id}`" <>
-          " Topic: `#{message.metadata.topic}`" <>
-          " Partition: `#{message.metadata.partition}`" <>
-          " Offset: `#{message.metadata.offset}`"
-
       insert_message_record(trigger_id)
 
-      fun = fn -> Pipeline.handle_message(nil, message, context) end
+      %{status: status} = Pipeline.handle_message(nil, message, context)
 
-      assert capture_log([level: :info], fun) =~ expected_log_message
+      assert {:failed, :duplicate} = status
     end
 
-    test "logs on a non-duplicate error", %{
+    test "marks message as failed for non-duplicate error", %{
       context: context
     } do
-      message = build_broadway_message()
-
       with_mock Repo,
                 [:passthrough],
                 transaction: fn _ -> {:error, :message, %Changeset{}, %{}} end do
-        expected_log_message =
-          "Kafka Pipeline Error:" <>
-            " Trigger_id: `#{context.trigger_id}`" <>
-            " Topic: `#{message.metadata.topic}`" <>
-            " Partition: `#{message.metadata.partition}`" <>
-            " Offset: `#{message.metadata.offset}`" <>
-            " Key: `#{message.metadata.key}`"
+        message = build_broadway_message()
 
-        fun = fn -> Pipeline.handle_message(nil, message, context) end
+        %{status: status} = Pipeline.handle_message(nil, message, context)
 
-        assert capture_log(fun) =~ expected_log_message
+        assert {:failed, :persistence} = status
       end
-    end
-
-    test "notifies sentry on a non-duplicate error", %{
-      context: context
-    } do
-      message = build_broadway_message()
-
-      notification = "Kafka pipeline - message processing error"
-
-      extra = %{
-        key: message.metadata.key,
-        offset: message.metadata.offset,
-        partition: message.metadata.partition,
-        topic: message.metadata.topic,
-        trigger_id: context.trigger_id
-      }
-
-      with_mocks([
-        {
-          Repo,
-          [:passthrough],
-          [transaction: fn _ -> {:error, :message, %Changeset{}, %{}} end]
-        },
-        {
-          Sentry,
-          [:passthrough],
-          [capture_message: fn _, _ -> :ok end]
-        }
-      ]) do
-        Pipeline.handle_message(nil, message, context)
-
-        assert_called(Sentry.capture_message(notification, extra: extra))
-      end
-    end
-
-    defp build_broadway_message(key \\ "abc_123_def") do
-      %Broadway.Message{
-        data: %{interesting: "stuff"} |> Jason.encode!(),
-        metadata: %{
-          offset: 11,
-          partition: 2,
-          key: key,
-          headers: [],
-          ts: 1_715_164_718_283,
-          topic: "bar_topic"
-        },
-        acknowledger: nil,
-        batcher: :default,
-        batch_key: {"bar_topic", 2},
-        batch_mode: :bulk,
-        status: :ok
-      }
     end
 
     defp configuration(opts) do
@@ -432,5 +365,110 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       acc
       |> Map.merge(%{to_string(key) => val})
     end
+  end
+
+  describe ".handle_failed/2" do
+    setup do
+      messages = [
+        build_broadway_message(offset: 1) |> Broadway.Message.failed(:duplicate),
+        build_broadway_message(offset: 2) |> Broadway.Message.failed(:who_knows)
+      ]
+
+      %{
+        context: %{trigger_id: "my_trigger_id"},
+        messages: messages
+      }
+    end
+
+    test "returns the messages unmodified", %{
+      context: context,
+      messages: messages
+    } do
+      assert Pipeline.handle_failed(messages, context) == messages
+    end
+
+    test "creates a log entry for a failed message", %{
+      context: context,
+      messages: messages
+    } do
+      [message_1, message_2] = messages
+
+      expected_entry_1 = message_1 |> expected_duplicate_log_message(context)
+      expected_entry_2 = message_2 |> expected_general_error_message(context)
+
+      fun = fn -> Pipeline.handle_failed(messages, context) end
+
+      assert capture_log(fun) =~ expected_entry_1
+      assert capture_log(fun) =~ expected_entry_2
+    end
+
+    test "notifies Sentry for failures that are not related to duplication", %{
+      context: context,
+      messages: messages
+    } do
+      [message_1, message_2] = messages
+
+      notification = "Kafka pipeline - message processing error"
+
+      extra_1 = message_1 |> expected_extra_sentry_data(context)
+      extra_2 = message_2 |> expected_extra_sentry_data(context)
+
+      with_mock Sentry,
+        capture_message: fn _data, _extra -> :ok end do
+        Pipeline.handle_failed(messages, context)
+
+        assert_not_called(Sentry.capture_message(notification, extra: extra_1))
+        assert_called(Sentry.capture_message(notification, extra: extra_2))
+      end
+    end
+
+    defp expected_duplicate_log_message(message, context) do
+      "Kafka Pipeline Duplicate Message:" <>
+        " Trigger_id `#{context.trigger_id}`" <>
+        " Topic `#{message.metadata.topic}`" <>
+        " Partition `#{message.metadata.partition}`" <>
+        " Offset `#{message.metadata.offset}`"
+    end
+
+    defp expected_general_error_message(message, context) do
+      "Kafka Pipeline Error:" <>
+        " Trigger_id `#{context.trigger_id}`" <>
+        " Topic `#{message.metadata.topic}`" <>
+        " Partition `#{message.metadata.partition}`" <>
+        " Offset `#{message.metadata.offset}`" <>
+        " Key `#{message.metadata.key}`"
+    end
+
+    defp expected_extra_sentry_data(message, context) do
+      %{
+        key: message.metadata.key,
+        offset: message.metadata.offset,
+        partition: message.metadata.partition,
+        topic: message.metadata.topic,
+        trigger_id: context.trigger_id
+      }
+    end
+  end
+
+  defp build_broadway_message(opts \\ []) do
+    key = Keyword.get(opts, :key, "abc_123_def")
+    offset = Keyword.get(opts, :offset, 11)
+
+    %Broadway.Message{
+      data: %{interesting: "stuff"} |> Jason.encode!(),
+      metadata: %{
+        offset: offset,
+        partition: 2,
+        key: key,
+        headers: [],
+        ts: 1_715_164_718_283,
+        topic: "bar_topic"
+      },
+      acknowledger: nil,
+      batcher: :default,
+      batch_key: {"bar_topic", 2},
+      batch_mode: :bulk,
+      status: :ok
+    }
   end
 end

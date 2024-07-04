@@ -34,6 +34,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
     )
   end
 
+  @impl true
   def handle_message(_processor, message, context) do
     %{trigger_id: trigger_id} = context
 
@@ -84,7 +85,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
     |> Repo.transaction()
     |> case do
       {:ok, _} ->
-        nil
+        message
 
       {
         :error,
@@ -92,39 +93,86 @@ defmodule Lightning.KafkaTriggers.Pipeline do
         %{errors: [trigger_id: {"has already been taken", _constraints}]},
         _changes_so_far
       } ->
-        log_message =
-          "Kafka Pipeline Duplicate Message:" <>
-            " Trigger_id: `#{trigger_id}`" <>
-            " Topic: `#{topic}`" <>
-            " Partition: `#{partition}`" <>
-            " Offset: `#{offset}`"
-
-        Logger.warning(log_message)
+        Broadway.Message.failed(message, :duplicate)
 
       {:error, _step, _error_changes, _changes_so_far} ->
-        Sentry.capture_message(
-          "Kafka pipeline - message processing error",
-          extra: %{
-            key: key,
-            offset: offset,
-            partition: partition,
-            topic: topic,
-            trigger_id: trigger_id
-          }
-        )
-
-        log_message =
-          "Kafka Pipeline Error:" <>
-            " Trigger_id: `#{context.trigger_id}`" <>
-            " Topic: `#{message.metadata.topic}`" <>
-            " Partition: `#{message.metadata.partition}`" <>
-            " Offset: `#{message.metadata.offset}`" <>
-            " Key: `#{message.metadata.key}`"
-
-        Logger.error(log_message)
+        Broadway.Message.failed(message, :persistence)
     end
+  end
 
-    message
+  @impl true
+  def handle_failed(messages, context) do
+    messages
+    |> Enum.each(fn message ->
+      notify_sentry(message, context)
+      create_log_entry(message, context)
+    end)
+
+    messages
+  end
+
+  defp create_log_entry(message = %{status: {:failed, :duplicate}}, context) do
+    %{
+      metadata: %{
+        offset: offset,
+        partition: partition,
+        topic: topic
+      }
+    } = message
+
+    log_entry =
+      "Kafka Pipeline Duplicate Message:" <>
+        " Trigger_id `#{context.trigger_id}`" <>
+        " Topic `#{topic}`" <>
+        " Partition `#{partition}`" <>
+        " Offset `#{offset}`"
+
+    Logger.warning(log_entry)
+  end
+
+  defp create_log_entry(message, context) do
+    %{
+      metadata: %{
+        key: key,
+        offset: offset,
+        partition: partition,
+        topic: topic
+      }
+    } = message
+
+    log_message =
+      "Kafka Pipeline Error:" <>
+        " Trigger_id `#{context.trigger_id}`" <>
+        " Topic `#{topic}`" <>
+        " Partition `#{partition}`" <>
+        " Offset `#{offset}`" <>
+        " Key `#{key}`"
+
+    Logger.error(log_message)
+  end
+
+  defp notify_sentry(%{status: {:failed, :duplicate}}, _context), do: nil
+
+  defp notify_sentry(message, context) do
+    %{
+      metadata: %{
+        key: key,
+        offset: offset,
+        partition: partition,
+        topic: topic
+      }
+    } = message
+
+    Sentry.capture_message(
+      "Kafka pipeline - message processing error",
+      extra: %{
+        key: key,
+        offset: offset,
+        partition: partition,
+        topic: topic,
+        trigger_id: context.trigger_id
+      }
+    )
   end
 
   defp build_producer_opts(opts) do
