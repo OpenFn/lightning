@@ -68,8 +68,8 @@ function coerceLogs(logs: LogLine[]): LogLine[] {
 function isProbablyJSON(str: string) {
   // Check if the string starts with '{' or '[' and ends with '}' or ']'
   return (
-    (str.trim().startsWith('{') && str.trim().endsWith('}')) ||
-    (str.trim().startsWith('[') && str.trim().endsWith(']'))
+    (str.startsWith('{') && str.endsWith('}')) ||
+    (str.startsWith('[') && str.endsWith(']'))
   );
 }
 
