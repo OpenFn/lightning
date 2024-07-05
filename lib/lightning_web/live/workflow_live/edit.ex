@@ -1468,7 +1468,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
         step =
           assigns[:follow_run] &&
-            Invocation.get_step_for_run_and_job(
+            Invocation.get_first_step_for_run_and_job(
               assigns[:follow_run].id,
               job.id
             )
@@ -1493,7 +1493,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp get_selected_dataclip(run, job_id) do
-    dataclip = Invocation.get_dataclip_for_run_and_job(run.id, job_id)
+    dataclip = Invocation.get_first_dataclip_for_run_and_job(run.id, job_id)
 
     if is_nil(dataclip) and
          (run.starting_job_id == job_id ||
@@ -1814,7 +1814,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp assign_follow_run(%{assigns: %{selected_job: job}} = socket, run_id)
        when is_binary(run_id) do
     run = Runs.get(run_id)
-    step = Invocation.get_step_for_run_and_job(run_id, job.id)
+    step = Invocation.get_first_step_for_run_and_job(run_id, job.id)
 
     Runs.subscribe(run)
 

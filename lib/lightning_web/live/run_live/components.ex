@@ -154,7 +154,7 @@ defmodule LightningWeb.RunLive.Components do
       class={[
         "relative flex space-x-3 border-r-4 items-center",
         if(@selected,
-          do: "border-primary-500",
+          do: "border-primary-500 text-indigo-500",
           else: "border-transparent hover:border-gray-300"
         ),
         @class
@@ -186,7 +186,7 @@ defmodule LightningWeb.RunLive.Components do
             </span>
           </div>
         <% end %>
-        <div class="flex text-sm space-x-1 text-gray-900 items-center">
+        <div class="flex text-sm space-x-1 items-center">
           <span><%= @job.name %></span>
           <%= unless @job_id == @job.id do %>
             <.link

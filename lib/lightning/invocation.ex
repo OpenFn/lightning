@@ -68,12 +68,12 @@ defmodule Lightning.Invocation do
     Repo.one(query)
   end
 
-  @spec get_dataclip_for_run_and_job(
+  @spec get_first_dataclip_for_run_and_job(
           run_id :: Ecto.UUID.t(),
           job_id :: Ecto.UUID.t()
         ) ::
           Dataclip.t() | nil
-  def get_dataclip_for_run_and_job(run_id, job_id) do
+  def get_first_dataclip_for_run_and_job(run_id, job_id) do
     query =
       from d in Dataclip,
         join: s in Lightning.Invocation.Step,
@@ -81,15 +81,17 @@ defmodule Lightning.Invocation do
         join: a in assoc(s, :runs),
         on: a.id == ^run_id
 
-    Repo.one(query)
+    query
+    |> first(:inserted_at)
+    |> Repo.one()
   end
 
-  @spec get_step_for_run_and_job(
+  @spec get_first_step_for_run_and_job(
           run_id :: Ecto.UUID.t(),
           job_id :: Ecto.UUID.t()
         ) ::
           Lightning.Invocation.Step.t() | nil
-  def get_step_for_run_and_job(run_id, job_id) do
+  def get_first_step_for_run_and_job(run_id, job_id) do
     query =
       from s in Lightning.Invocation.Step,
         join: a in assoc(s, :runs),
@@ -97,7 +99,9 @@ defmodule Lightning.Invocation do
         where: s.job_id == ^job_id,
         preload: [snapshot: [triggers: :webhook_auth_methods]]
 
-    Repo.one(query)
+    query
+    |> first(:inserted_at)
+    |> Repo.one()
   end
 
   @spec get_step_count_for_run(run_id :: Ecto.UUID.t()) :: non_neg_integer()
