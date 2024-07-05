@@ -19,6 +19,12 @@ and this project adheres to
 
 ### Changed
 
+- When the entire log string is a valid JSON object, pretty print it with a
+  standard `JSON.stringify(str, null, 2)` but if it's something else then let
+  the user do whatever they want (e.g., if you write
+  `console.log('some', 'cool', state.data)` we won't mess with it.)
+  [#2260](https://github.com/OpenFn/lightning/pull/2260)
+
 ### Fixed
 
 - Fix issue when selecting different steps in RunViewer and the parent liveview
