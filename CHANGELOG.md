@@ -19,6 +19,8 @@ and this project adheres to
 
 ### Changed
 
+- Bumped the ws-worker to v1.3
+
 ### Fixed
 
 - Fix issue when selecting different steps in RunViewer and the parent liveview
