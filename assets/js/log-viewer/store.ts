@@ -66,7 +66,12 @@ function coerceLogs(logs: LogLine[]): LogLine[] {
 }
 
 function formatLogLine(log: LogLine) {
-  return `${log.source} ${log.message}`;
+  try {
+    const jsonObj = JSON.parse(log.message);
+    return `${log.source} ${JSON.stringify(jsonObj, null, 2)}`;
+  } catch {
+    return `${log.source} ${log.message}`;
+  }
 }
 
 export const createLogStore = () => {
