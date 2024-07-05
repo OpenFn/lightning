@@ -1,4 +1,8 @@
 defmodule Lightning.KafkaTriggers.MessageCandidateSetServer do
+  @moduledoc """
+  Server responsible for maintaining a list of message candidate sets that
+  are provided to the worker processes.
+  """
   use GenServer
 
   alias Lightning.KafkaTriggers
