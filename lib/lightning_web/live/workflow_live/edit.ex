@@ -95,6 +95,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           </.button>
           <.with_changes_indicator
             :if={@snapshot_version_tag == "latest"}
+            version={@snapshot_version_tag}
             changeset={@changeset}
           >
             <div class="flex flex-row gap-2">
@@ -324,7 +325,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       </div>
                     </div>
                   </div>
-                  <.with_changes_indicator changeset={@changeset}>
+                  <.with_changes_indicator
+                    version={@snapshot_version_tag}
+                    changeset={@changeset}
+                  >
                     <.save_workflow_button
                       changeset={@changeset}
                       can_edit_workflow={@can_edit_workflow}
@@ -1227,7 +1231,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:ok, params} =
       WorkflowParams.apply_patches(socket.assigns.workflow_params, patches)
 
-    socket = socket |> apply_params(params, :workflow)
+    version_type =
+      if socket.assigns.snapshot_version_tag == "latest" do
+        :workflow
+      else
+        :snapshot
+      end
+
+    socket = socket |> apply_params(params, version_type)
 
     # Calculate the difference between the new params and changes introduced by
     # the changeset/validation.
@@ -1866,7 +1877,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     ~H"""
     <div class="relative">
       <div
-        :if={@changeset.changes |> Enum.any?()}
+        :if={@version == "latest" && @changeset.changes |> Enum.any?()}
         class="absolute -m-1 rounded-full bg-danger-500 w-3 h-3 top-0 right-0"
         data-is-dirty="true"
       >
