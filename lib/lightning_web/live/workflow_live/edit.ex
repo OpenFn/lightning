@@ -93,11 +93,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             Switch to the latest version
             <Heroicons.arrow_up_on_square_stack class="w-4 h-4 ml-1" />
           </.button>
-          <.with_changes_indicator
-            :if={@snapshot_version_tag == "latest"}
-            version={@snapshot_version_tag}
-            changeset={@changeset}
-          >
+          <.with_changes_indicator changeset={@changeset}>
             <div class="flex flex-row gap-2">
               <.icon
                 :if={!@can_edit_workflow}
@@ -325,10 +321,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       </div>
                     </div>
                   </div>
-                  <.with_changes_indicator
-                    version={@snapshot_version_tag}
-                    changeset={@changeset}
-                  >
+                  <.with_changes_indicator changeset={@changeset}>
                     <.save_workflow_button
                       changeset={@changeset}
                       can_edit_workflow={@can_edit_workflow}
@@ -1877,7 +1870,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     ~H"""
     <div class="relative">
       <div
-        :if={@version == "latest" && @changeset.changes |> Enum.any?()}
+        :if={@changeset.changes |> Enum.any?()}
         class="absolute -m-1 rounded-full bg-danger-500 w-3 h-3 top-0 right-0"
         data-is-dirty="true"
       >
