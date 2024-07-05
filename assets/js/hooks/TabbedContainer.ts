@@ -111,6 +111,7 @@ const TabbedSelector: PhoenixHook<{
     };
 
     window.addEventListener('hashchange', this._onHashChange);
+    window.addEventListener('phx:page-loading-stop', this._onHashChange);
 
     this.syncSelectedTab();
     this.updateTabs();
@@ -147,6 +148,7 @@ const TabbedSelector: PhoenixHook<{
   },
   destroyed() {
     window.removeEventListener('hashchange', this._onHashChange);
+    window.removeEventListener('phx:page-loading-stop', this._onHashChange);
   },
 } as typeof TabbedSelector;
 
@@ -171,6 +173,7 @@ const TabbedPanels: PhoenixHook<{
     };
 
     window.addEventListener('hashchange', this._onHashChange);
+    window.addEventListener('phx:page-loading-stop', this._onHashChange);
 
     this.syncSelectedPanel();
     this.updatePanels();
@@ -208,6 +211,7 @@ const TabbedPanels: PhoenixHook<{
   },
   destroyed() {
     window.removeEventListener('hashchange', this._onHashChange);
+    window.removeEventListener('phx:page-loading-stop', this._onHashChange);
   },
 } as typeof TabbedPanels;
 
