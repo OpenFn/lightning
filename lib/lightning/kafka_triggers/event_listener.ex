@@ -1,4 +1,8 @@
 defmodule Lightning.KafkaTriggers.EventListener do
+  @moduledoc """
+  Listens for events related to Kafka triggers and updates the affected pipeline
+  process by enabling, reloading or disabling it.
+  """
   use GenServer
 
   alias Lightning.KafkaTriggers
