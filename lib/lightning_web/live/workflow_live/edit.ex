@@ -1222,12 +1222,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("push-change", %{"patches" => patches}, socket) do
+    %{workflow: workflow, snapshot: snapshot} = socket.assigns
     # Apply the incoming patches to the current workflow params producing a new
     # set of params.
     {:ok, params} =
       WorkflowParams.apply_patches(socket.assigns.workflow_params, patches)
 
-    socket = socket |> apply_params(params, :workflow)
+    version_type =
+      if snapshot == nil or workflow.lock_version == snapshot.lock_version do
+        :workflow
+      else
+        :snapshot
+      end
+
+    socket = socket |> apply_params(params, version_type)
 
     # Calculate the difference between the new params and changes introduced by
     # the changeset/validation.
