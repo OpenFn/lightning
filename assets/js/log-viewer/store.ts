@@ -28,7 +28,9 @@ function findSelectedRanges(logs: LogLine[], stepId: string | undefined) {
   }>(
     ({ ranges, marker }, log) => {
       // Get the number of newlines in the message, used to determine the end index.
-      const newLineCount = [...log.message.matchAll(/\n/g)].length;
+      const newLineCount = [...possiblyPrettify(log.message).matchAll(/\n/g)]
+        .length;
+
       const nextMarker = marker + 1 + newLineCount;
 
       if (log.step_id !== stepId) {
@@ -65,8 +67,33 @@ function coerceLogs(logs: LogLine[]): LogLine[] {
   }));
 }
 
+function isProbablyJSON(str: string) {
+  // Check if the string starts with '{' or '[' and ends with '}' or ']'
+  return (
+    (str.startsWith('{') && str.endsWith('}')) ||
+    (str.startsWith('[') && str.endsWith(']'))
+  );
+}
+
+function tryPrettyJSON(str: string) {
+  try {
+    const jsonObj = JSON.parse(str);
+    return JSON.stringify(jsonObj, null, 2);
+  } catch {
+    return str;
+  }
+}
+
+function possiblyPrettify(str: string | string) {
+  if (isProbablyJSON(str)) {
+    return tryPrettyJSON(str);
+  }
+  return str;
+}
+
 function formatLogLine(log: LogLine) {
-  return `${log.source} ${log.message}`;
+  const { source, message } = log;
+  return `${source} ${possiblyPrettify(message)}`;
 }
 
 export const createLogStore = () => {
