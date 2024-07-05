@@ -19,6 +19,12 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v2.7.3] - 2024-07-05
+
+### Changed
+
 - Bumped the ws-worker to v1.3
 
 ### Fixed
