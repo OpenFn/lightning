@@ -1,4 +1,8 @@
 defmodule Lightning.KafkaTriggers.Supervisor do
+  @moduledoc """
+  Starts all the processes needed to pull data from Kafka clusters and then
+  generate work orders based on the messages received.
+  """
   use Supervisor
 
   def start_link(init_arg) do
@@ -6,7 +10,7 @@ defmodule Lightning.KafkaTriggers.Supervisor do
   end
 
   @impl true
-  def init(__init_arg) do
+  def init(_init_arg) do
     run_kafka_trigger_supervisors =
       Application.get_env(:lightning, :kafka_triggers)[:run_supervisors]
 
