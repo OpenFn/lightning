@@ -218,4 +218,36 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
         set
     end
   end
+
+  @doc """
+  Returns a changeset to maintain persisted partition timestamps. These
+  timestamps are used to provide an updated offset reset policy should the
+  associated consumer group have been used previously but has not connected to
+  the cluster for a long enough time that the cluster no longer has a committed
+  offset.
+  """
+  def partitions_changeset(configuration, partition, timestamp) do
+    partition_key = partition |> Integer.to_string()
+
+    %{
+      partition_timestamps: partition_timestamps
+    } = configuration
+
+    updated_partition_timestamps =
+      partition_timestamps
+      |> case do
+        existing = %{^partition_key => existing_timestamp}
+        when existing_timestamp < timestamp ->
+          existing |> Map.merge(%{partition_key => timestamp})
+
+        existing = %{^partition_key => _existing_timestamp} ->
+          existing
+
+        existing ->
+          existing |> Map.merge(%{partition_key => timestamp})
+      end
+
+    configuration
+    |> changeset(%{partition_timestamps: updated_partition_timestamps})
+  end
 end

@@ -148,4 +148,20 @@ defmodule Lightning.Workflows.Trigger do
             )
       }
   end
+
+  def kafka_partitions_changeset(
+    trigger = %{type: :kafka, kafka_configuration: kafka_configuration},
+    partition,
+    timestamp
+  ) do
+    config_changes =
+      kafka_configuration
+      |> KafkaConfiguration.partitions_changeset(partition, timestamp)
+
+    change(trigger, %{kafka_configuration: config_changes})
+  end
+
+  def kafka_partitions_changeset(trigger, _partition, _timestamp) do
+    change(trigger, %{})
+  end
 end

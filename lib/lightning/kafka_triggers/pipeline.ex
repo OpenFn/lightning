@@ -199,7 +199,6 @@ defmodule Lightning.KafkaTriggers.Pipeline do
     sasl = opts |> Keyword.get(:sasl)
     ssl = opts |> Keyword.get(:ssl)
 
-    # TODO Not tested
     base_config = [{:ssl, ssl}, {:connect_timeout, connect_timeout}]
 
     case sasl do
