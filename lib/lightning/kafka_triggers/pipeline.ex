@@ -1,4 +1,8 @@
 defmodule Lightning.KafkaTriggers.Pipeline do
+  @moduledoc """
+  Broadway pipeline that processes messages from Kafka clusters and persists
+  the received messages if they are not duplicating a previous message.
+  """
   use Broadway
 
   require Logger
