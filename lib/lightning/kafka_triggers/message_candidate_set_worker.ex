@@ -1,4 +1,8 @@
 defmodule Lightning.KafkaTriggers.MessageCandidateSetWorker do
+  @moduledoc """
+  Requests a message candidate set from the MessageCandidateSetServer and
+  manages the state of the returned candidate set.
+  """
   use GenServer
 
   alias Lightning.KafkaTriggers
