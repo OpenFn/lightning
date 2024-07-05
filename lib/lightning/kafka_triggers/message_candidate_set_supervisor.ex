@@ -1,4 +1,10 @@
 defmodule Lightning.KafkaTriggers.MessageCandidateSetSupervisor do
+  @moduledoc """
+  Starts the server and worker processes responsible for converting messages
+  received from Kafka clusters. The sole purpose of this is to ensure that
+  messages with the same key (for a given cluster/topic configuration) are 
+  processed in the same order they were received.
+  """
   use Supervisor
 
   alias Lightning.KafkaTriggers.MessageCandidateSetServer
