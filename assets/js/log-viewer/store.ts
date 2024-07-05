@@ -65,13 +65,26 @@ function coerceLogs(logs: LogLine[]): LogLine[] {
   }));
 }
 
+function isProbablyJSON(str: string) {
+  // Check if the string starts with '{' or '[' and ends with '}' or ']'
+  return (
+    (str.trim().startsWith('{') && str.trim().endsWith('}')) ||
+    (str.trim().startsWith('[') && str.trim().endsWith(']'))
+  );
+}
+
 function formatLogLine(log: LogLine) {
-  try {
-    const jsonObj = JSON.parse(log.message);
-    return `${log.source} ${JSON.stringify(jsonObj, null, 2)}`;
-  } catch {
-    return `${log.source} ${log.message}`;
+  const { source, message } = log;
+  if (isProbablyJSON(message)) {
+    try {
+      const jsonObj = JSON.parse(message);
+      return `${source} ${JSON.stringify(jsonObj, null, 2)}`;
+    } catch {
+      return `${source} ${message}`;
+    }
   }
+
+  return `${source} ${message}`;
 }
 
 export const createLogStore = () => {
