@@ -150,7 +150,7 @@ defmodule LightningWeb.Components.Menu do
     ~H"""
     <div class="h-12 mx-2">
       <%= if assigns[:href] do %>
-          <.link href={@href} target={@target} class={@class}>
+        <.link href={@href} target={@target} class={@class}>
           <%= if assigns[:inner_block] do %>
             <%= render_slot(@inner_block) %>
           <% else %>
