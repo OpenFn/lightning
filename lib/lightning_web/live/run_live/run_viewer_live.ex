@@ -12,6 +12,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
   alias Lightning.Projects.Project
   alias LightningWeb.Components.Tabbed
   alias LightningWeb.Components.Viewers
+  alias LightningWeb.WorkflowLive.Helpers
 
   alias Phoenix.LiveView.AsyncResult
 
@@ -56,7 +57,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                     <:label>Run</:label>
                     <:value>
                       <.link
-                        navigate={
+                        patch={
                           ~p"/projects/#{@project}/runs/#{run}?step=#{@selected_step_id || ""}"
                         }
                         class="hover:underline hover:text-primary-900 whitespace-nowrap text-ellipsis"
@@ -268,10 +269,15 @@ defmodule LightningWeb.RunLive.RunViewerLive do
         %{
           "run_id" => run_id,
           "project_id" => project_id,
-          "user_id" => user_id
+          "user_id" => user_id,
+          "socket_id" => socket_id
         } = session,
         socket
       ) do
+    if connected?(socket) do
+      Helpers.subscribe_to_params_update(socket_id)
+    end
+
     project_user =
       Projects.get_project_user(%Project{id: project_id}, %User{id: user_id})
 
@@ -280,6 +286,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
      |> assign(
        selected_step_id: nil,
        job_id: Map.get(session, "job_id"),
+       selected_step: nil,
        steps: []
      )
      |> assign(:input_dataclip, nil)
@@ -310,21 +317,37 @@ defmodule LightningWeb.RunLive.RunViewerLive do
     {:noreply, socket}
   end
 
+  @impl true
+  def handle_info({:updated_params, %{job_id: job_id}}, socket) do
+    {:noreply, socket |> assign(job_id: job_id) |> handle_steps_change()}
+  end
+
   def handle_steps_change(socket) do
     # either a job_id or a step_id is passed in
     # if a step_id is passed in, we can highlight the log lines immediately
     # if a job_id is passed in, we need to wait for the step to start
     # if neither is passed in, we can't highlight anything
+    cond do
+      changed?(socket, :selected_step_id) ->
+        socket
 
-    %{job_id: job_id, steps: steps} = socket.assigns
+      changed?(socket, :job_id) ->
+        socket
+        |> assign(
+          :selected_step_id,
+          get_step_id_for_job_id(socket.assigns.job_id, socket.assigns.steps)
+        )
 
-    selected_step_id =
-      socket.assigns.selected_step_id || get_step_id_for_job_id(job_id, steps)
-
-    selected_step = steps |> Enum.find(&(&1.id == selected_step_id))
-
-    socket
-    |> assign(selected_step_id: selected_step_id, selected_step: selected_step)
+      true ->
+        socket
+        |> update(:selected_step_id, fn selected_step_id,
+                                        %{job_id: job_id, steps: steps} ->
+          selected_step_id || get_step_id_for_job_id(job_id, steps)
+        end)
+    end
+    |> update(:selected_step, fn _, assigns ->
+      Enum.find(assigns.steps, &(&1.id == assigns.selected_step_id))
+    end)
     |> maybe_load_input_dataclip()
     |> maybe_load_output_dataclip()
   end

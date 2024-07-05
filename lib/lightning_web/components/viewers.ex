@@ -206,7 +206,7 @@ defmodule LightningWeb.Components.Viewers do
         <%= if @can_edit_data_retention do %>
           You can’t rerun this work order, but you can change
           <.link
-            href={~p"/projects/#{@project_id}/settings#data-storage"}
+            navigate={~p"/projects/#{@project_id}/settings#data-storage"}
             class="underline inline-block text-blue-400 hover:text-blue-600"
           >
             this policy

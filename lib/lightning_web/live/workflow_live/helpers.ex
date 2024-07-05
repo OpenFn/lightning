@@ -14,6 +14,14 @@ defmodule LightningWeb.WorkflowLive.Helpers do
   alias Lightning.WorkOrder
   alias Lightning.WorkOrders
 
+  def subscribe_to_params_update(socket_id) do
+    Lightning.subscribe(socket_id)
+  end
+
+  def broadcast_updated_params(socket, params) do
+    Lightning.local_broadcast(socket.id, {:updated_params, params})
+  end
+
   @spec save_workflow(Ecto.Changeset.t()) ::
           {:ok, Workflows.Workflow.t()}
           | {:error, Ecto.Changeset.t() | UsageLimiting.message()}

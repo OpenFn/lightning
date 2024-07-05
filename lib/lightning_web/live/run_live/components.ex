@@ -191,9 +191,8 @@ defmodule LightningWeb.RunLive.Components do
           <%= unless @job_id == @job.id do %>
             <.link
               class="pl-1"
-              navigate={
-                ~p"/projects/#{@project_id}/w/#{@step.snapshot.workflow_id}"
-                  <> "?v=#{@step.snapshot.lock_version}&a=#{@run_id}&m=expand&s=#{@step.job_id}#log"
+              patch={
+                ~p"/projects/#{@project_id}/w/#{@step.snapshot.workflow_id}?#{%{v: @step.snapshot.lock_version, a: @run_id, m: "expand", s: @job.id}}" <> "#log"
               }
             >
               <.icon

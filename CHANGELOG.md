@@ -21,6 +21,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix issue when selecting different steps in RunViewer and the parent liveview
+  not being informed [#2253](https://github.com/OpenFn/lightning/issues/2253)
 - Workflow activation only considers new and changed workflows
   [#2237](https://github.com/OpenFn/lightning/pull/2237)
 
