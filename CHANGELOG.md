@@ -19,6 +19,12 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v2.7.4] 2024-07-06
+
+### Changed
+
 - When the entire log string is a valid JSON object, pretty print it with a
   standard `JSON.stringify(str, null, 2)` but if it's something else then let
   the user do whatever they want (e.g., if you write
@@ -26,6 +32,9 @@ and this project adheres to
   [#2260](https://github.com/OpenFn/lightning/pull/2260)
 
 ### Fixed
+
+- Fixed sticky toggle button for switching between latest version and a snapshot
+  of a workflow [#2264](https://github.com/OpenFn/lightning/pull/2264)
 
 ## [v2.7.3] - 2024-07-05
 
