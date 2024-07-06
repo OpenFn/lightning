@@ -378,7 +378,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert view
              |> has_element?(
                "[id='version-switcher-button-#{workflow.id}']",
-               "Switch to the latest version"
+               "Switch to latest version"
              )
 
       snapshot.jobs

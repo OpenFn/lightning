@@ -73,10 +73,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
           <div class="mx-2"></div>
           <div :if={@snapshot_version_tag != "latest"} class="flex">
             <div class="flex-shrink-0">
-              <Heroicons.information_circle solid class="h-5 w-5 text-yellow-600" />
+              <Heroicons.information_circle solid class="h-5 w-5 text-indigo-500" />
             </div>
-            <div class="ml-1 flex-1 md:flex md:justify-between">
-              <p class="text-sm text-yellow-600">
+            <div class="mx-1 flex-1 md:flex md:justify-between">
+              <p class="text-sm font-semibold text-gray-600">
                 You cannot edit or run an old snapshot of a workflow.
               </p>
             </div>
@@ -90,8 +90,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             phx-value-type="commit"
             color_class="text-white bg-primary-600 hover:bg-primary-700"
           >
-            Switch to the latest version
-            <Heroicons.arrow_up_on_square_stack class="w-4 h-4 ml-1" />
+            Switch to latest version
           </.button>
           <.with_changes_indicator
             :if={@snapshot_version_tag == "latest"}
@@ -206,7 +205,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   <.version_switcher_toggle
                     :if={display_switcher(@snapshot, @workflow)}
                     id={@selected_job.id}
-                    label="Switch to the latest version"
+                    label="Latest Version"
                     disabled={job_deleted?(@selected_job, @workflow)}
                     version={@snapshot_version_tag}
                   />
@@ -638,27 +637,54 @@ defmodule LightningWeb.WorkflowLive.Edit do
     ~H"""
     <div
       id={"version-switcher-toggle-wrapper-#{@id}"}
-      class="flex items-center justify-between"
+      phx-click="switch-version"
+      phx-value-type="toggle"
+      class="flex items-center justify-between mr-1 text-sm z-50 cursor-pointer"
       {if @disabled, do: ["phx-hook": "Tooltip", "data-placement": "top", "aria-label": "Can't switch to the latest version, the job has been deleted from the workflow."], else: []}
     >
       <span class="flex flex-grow flex-col">
-        <span class="inline-flex items-center px-2 py-1 font-medium text-yellow-600">
+        <span class="inline-flex items-center px-2 py-1 font-medium mr-1 text-gray-700">
           <%= @label %>
         </span>
       </span>
       <button
         id={"version-switcher-toggle-#{@id}"}
-        data-version={@version}
         phx-click="switch-version"
         phx-value-type="toggle"
+        data-version={@version}
         type="button"
         disabled={@disabled}
-        class={"#{if @version == "latest", do: "bg-indigo-600", else: "bg-gray-200"} relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"}
+        class={"#{if @version == "latest", do: "bg-indigo-600", else: "bg-gray-200"} relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-gray-200 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"}
+        role="switch"
+        aria-checked="false"
       >
-        <span
-          aria-hidden="true"
-          class={"#{if @version == "latest", do: "translate-x-5", else: "translate-x-0"} pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"}
-        >
+        <span class={"pointer-events-none relative inline-block h-5 w-5 translate-x-0 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out #{if @version == "latest", do: "translate-x-5", else: "translate-x-0"}"}>
+          <span
+            class={"absolute inset-0 flex h-full w-full items-center justify-center transition-opacity #{if @version == "latest", do: "opacity-0 duration-100 ease-out", else: "opacity-100 duration-200 ease-in"}"}
+            aria-hidden="true"
+          >
+            <svg class="h-3 w-3 text-gray-400" fill="none" viewBox="0 0 12 12">
+              <path
+                d="M4 8l2-2m0 0l2-2M6 6L4 4m2 2l2 2"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </span>
+          <span
+            class={"absolute inset-0 flex h-full w-full items-center justify-center transition-opacity #{if @version == "latest", do: "opacity-100 duration-200 ease-in", else: "opacity-0 duration-100 ease-out"}"}
+            aria-hidden="true"
+          >
+            <svg
+              class="h-3 w-3 text-indigo-600"
+              fill="currentColor"
+              viewBox="0 0 12 12"
+            >
+              <path d="M3.707 5.293a1 1 0 00-1.414 1.414l1.414-1.414zM5 8l-.707.707a1 1 0 001.414 0L5 8zm4.707-3.293a1 1 0 00-1.414-1.414l1.414 1.414zm-7.414 2l2 2 1.414-1.414-2-2-1.414 1.414zm3.414 2l4-4-1.414-1.414-4 4 1.414 1.414z" />
+            </svg>
+          </span>
         </span>
       </button>
     </div>

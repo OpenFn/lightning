@@ -154,7 +154,7 @@ defmodule LightningWeb.RunLive.Components do
       class={[
         "relative flex space-x-3 border-r-4 items-center",
         if(@selected,
-          do: "border-primary-500 text-indigo-500",
+          do: "border-primary-500 font-semibold",
           else: "border-transparent hover:border-gray-300"
         ),
         @class
