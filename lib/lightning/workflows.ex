@@ -407,11 +407,6 @@ defmodule Lightning.Workflows do
   end
 
   def has_newer_version?(%Workflow{lock_version: version}) do
-    from(s in Snapshot,
-      where: s.lock_version > ^version,
-      limit: 1,
-      select: true
-    )
-    |> Repo.exists?()
+    from(s in Snapshot, where: s.lock_version > ^version) |> Repo.exists?()
   end
 end
