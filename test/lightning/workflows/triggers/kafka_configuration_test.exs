@@ -666,9 +666,9 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
 
   describe ".set_group_id_if_required/1" do
     test "adds a generated group_id to the changeset" do
-      with_mock Ecto.UUID, 
+      with_mock Ecto.UUID,
         generate: fn -> "a-b-c-d" end do
-        changeset = 
+        changeset =
           Changeset.change(%KafkaConfiguration{}, %{})
           |> KafkaConfiguration.set_group_id_if_required()
 
@@ -677,7 +677,7 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
     end
 
     test "does not add a change if the struct already has a group_id" do
-      changeset = 
+      changeset =
         %KafkaConfiguration{group_id: "foo"}
         |> Changeset.change(%{})
         |> KafkaConfiguration.set_group_id_if_required()
@@ -688,7 +688,7 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
     end
 
     test "clears any existing group_id changes" do
-      changeset = 
+      changeset =
         %KafkaConfiguration{group_id: "foo"}
         |> Changeset.change(%{group_id: "bar"})
         |> KafkaConfiguration.set_group_id_if_required()
@@ -697,9 +697,9 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
 
       assert changes == %{}
 
-      with_mock Ecto.UUID, 
+      with_mock Ecto.UUID,
         generate: fn -> "a-b-c-d" end do
-        changeset = 
+        changeset =
           %KafkaConfiguration{}
           |> Changeset.change(%{group_id: "foo"})
           |> KafkaConfiguration.set_group_id_if_required()
@@ -772,9 +772,7 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
         config
         |> KafkaConfiguration.partitions_changeset(partition, timestamp)
 
-      assert %Changeset{changes: changes, valid?: true} = changeset
-
-      assert %{partition_timestamps: nil} = changes
+      assert changeset |> Changeset.get_change(:partition_timestamps) == nil
     end
 
     test "updates persisted partition data if persisted timestamp is older", %{

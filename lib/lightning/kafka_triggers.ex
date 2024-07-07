@@ -33,48 +33,6 @@ defmodule Lightning.KafkaTriggers do
   end
 
   @doc """
-  Updates the partition-specific timestamps for a given trigger. These
-  timestamps are used to provide an updated offset reset policy should the
-  associated consumer group have been used previously but has not connected to
-  the cluster for a long enough time that the cluster no longer has a committed
-  offset.
-  """
-  def update_partition_data(trigger, partition, timestamp) do
-    partition_key = partition |> Integer.to_string()
-
-    %Trigger{
-      kafka_configuration: existing_kafka_configuration
-    } = trigger
-
-    %{
-      partition_timestamps: partition_timestamps
-    } = existing_kafka_configuration
-
-    updated_partition_timestamps =
-      partition_timestamps
-      |> case do
-        existing = %{^partition_key => existing_timestamp}
-        when existing_timestamp < timestamp ->
-          existing |> Map.merge(%{partition_key => timestamp})
-
-        existing = %{^partition_key => _existing_timestamp} ->
-          existing
-
-        existing ->
-          existing |> Map.merge(%{partition_key => timestamp})
-      end
-
-    updated_kafka_configuration = %{
-      hosts_string: generate_hosts_string(existing_kafka_configuration),
-      partition_timestamps: updated_partition_timestamps,
-      topics_string: generate_topics_string(existing_kafka_configuration)
-    }
-
-    trigger
-    |> Trigger.changeset(%{kafka_configuration: updated_kafka_configuration})
-  end
-
-  @doc """
   Selects the appropriate offset reset policy for a given trigger based on the
   presence of partition-specific timestamps.
   """
@@ -369,37 +327,6 @@ defmodule Lightning.KafkaTriggers do
     }
   end
 
-  # TODO Centralise the below two methods and test
-  defp generate_hosts_string(kafka_configuration) do
-    kafka_configuration.hosts
-    |> case do
-      nil ->
-        ""
-
-      hosts ->
-        hosts
-        |> Enum.map(fn
-          [host, port] -> "#{host}:#{port}"
-          # TODO something_else is a bandaid for a live validation issue
-          # make a better plan
-          something_else -> something_else
-        end)
-        |> Enum.join(", ")
-    end
-  end
-
-  defp generate_topics_string(kafka_configuration) do
-    kafka_configuration.topics
-    |> case do
-      nil ->
-        ""
-
-      topics ->
-        topics
-        |> Enum.join(", ")
-    end
-  end
-
   def get_kafka_triggers_being_updated(changeset) do
     changeset
     |> Changeset.fetch_change(:triggers)
@@ -411,7 +338,7 @@ defmodule Lightning.KafkaTriggers do
         triggers
     end
     |> Enum.filter(fn changeset ->
-      {_data_or_change, type} = 
+      {_data_or_change, type} =
         changeset
         |> Changeset.fetch_field(:type)
 
@@ -429,6 +356,7 @@ defmodule Lightning.KafkaTriggers do
     |> case do
       nil ->
         nil
+
       %{enabled: true} = trigger ->
         spec = generate_pipeline_child_spec(trigger)
 

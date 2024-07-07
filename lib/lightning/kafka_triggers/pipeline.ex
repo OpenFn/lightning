@@ -80,7 +80,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
     trigger_changeset =
       Trigger
       |> Repo.get(trigger_id |> Atom.to_string())
-      |> KafkaTriggers.update_partition_data(partition, timestamp)
+      |> Trigger.kafka_partitions_changeset(partition, timestamp)
 
     Multi.new()
     |> Multi.insert(:record, record_changeset)
