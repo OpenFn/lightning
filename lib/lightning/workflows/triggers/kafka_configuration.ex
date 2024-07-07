@@ -47,14 +47,13 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
       :topics_string,
       :username
     ])
-    |> validate_required([
-      :connect_timeout,
-      :hosts_string,
-      :initial_offset_reset_policy,
-      :topics_string
-    ])
     |> apply_hosts_string()
     |> apply_topics_string()
+    |> validate_required([
+      :connect_timeout,
+      :hosts,
+      :initial_offset_reset_policy,
+    ])
     |> set_group_id_if_required()
     |> validate_sasl_credentials()
     |> validate_number(:connect_timeout, greater_than: 0)
@@ -106,7 +105,11 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
         changeset
 
       "" ->
-        changeset |> put_change(:hosts, [])
+        changeset
+        |> add_error(
+          :hosts_string,
+          "Must be specified in the format `host:port, host:port`"
+        )
 
       hosts_string ->
         [hosts, errors] =
@@ -148,15 +151,27 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
         changeset
 
       "" ->
-        changeset |> put_change(:topics, [])
+        changeset
+        |> add_error(
+          :topics_string,
+          "Must be specified in the format `topic_1, topic_2`"
+        )
 
       topics_string ->
-        topics =
           topics_string
           |> String.split(",")
           |> Enum.map(&String.trim/1)
-
-        changeset |> put_change(:topics, topics)
+          |> Enum.reject(&(&1 == ""))
+          |> case do
+            [] ->
+              changeset
+              |> add_error(
+                :topics_string,
+                "Must be specified in the format `topic_1, topic_2`"
+              )
+            topics ->
+              changeset |> put_change(:topics, topics)
+          end
     end
   end
 

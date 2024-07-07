@@ -335,7 +335,7 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
       assert username_error == {"Requires SASL to be selected", []}
     end
 
-    test "is invalid if hosts_string is not provided", %{
+    test "is valid if hosts_string is not provided but hosts is set", %{
       base_changes: base_changes
     } do
       changeset =
@@ -345,14 +345,29 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
           |> Map.merge(%{hosts_string: nil})
         )
 
+      assert %Changeset{valid?: true} = changeset
+    end
+
+    test "is invalid if invalid hosts_string is provided", %{
+      base_changes: base_changes
+    } do
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes
+          |> Map.merge(%{hosts_string: "oops"})
+        )
+
       assert %Changeset{errors: errors, valid?: false} = changeset
 
       assert errors == [
-               hosts_string: {"can't be blank", [{:validation, :required}]}
-             ]
+        hosts_string: {
+          "Must be specified in the format `host:port, host:port`", []
+        }
+      ]
     end
 
-    test "is invalid if topics_string is not provided", %{
+    test "is valid if topics_string is not provided but topics is set", %{
       base_changes: base_changes
     } do
       changeset =
@@ -362,11 +377,41 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
           |> Map.merge(%{topics_string: nil})
         )
 
+      assert %Changeset{valid?: true} = changeset
+    end
+
+    test "is invalid if invalid topics_string is provided", %{
+      base_changes: base_changes
+    } do
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes
+          |> Map.merge(%{topics_string: ","})
+        )
+
       assert %Changeset{errors: errors, valid?: false} = changeset
 
       assert errors == [
-               topics_string: {"can't be blank", [{:validation, :required}]}
-             ]
+        topics_string: {
+          "Must be specified in the format `topic_1, topic_2`", []
+        }
+      ]
+    end
+
+    test "is invalid if hosts are nil", %{
+      base_changes: base_changes
+    } do
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes
+          |> Map.merge(%{hosts: nil, hosts_string: nil})
+        )
+
+      assert %Changeset{errors: errors, valid?: false} = changeset
+
+      assert errors == [hosts: {"can't be blank", [{:validation, :required}]}]
     end
 
     test "is invalid if initial_offset_reset_policy is not provided", %{
@@ -559,17 +604,22 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
              ]
     end
 
-    test "clears hosts if hosts_string is an empty string", %{
+    test "sets an error if hosts_string is an empty string", %{
       changeset: changeset
     } do
       changeset =
-        changeset |> Changeset.put_change(:hosts_string, "")
-
-      %Changeset{changes: %{hosts: hosts}} =
         changeset
+        |> Changeset.put_change(:hosts_string, "")
         |> KafkaConfiguration.apply_hosts_string()
 
-      assert hosts == []
+      assert %{errors: errors, valid?: false} = changeset
+
+      assert errors == [
+               hosts_string: {
+                 "Must be specified in the format `host:port, host:port`",
+                 []
+               }
+             ]
     end
 
     test "sets an error if the host/port couplets are incorrect", %{
@@ -648,19 +698,43 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
         changeset |> KafkaConfiguration.apply_topics_string()
 
       assert topics == ["foo", "bar"]
+
     end
 
-    test "clears topics if topics_string is an empty string", %{
+    test "sets an error if topics_string is an empty string", %{
       changeset: changeset
     } do
       changeset =
         changeset
         |> Changeset.put_change(:topics_string, "")
+        |> KafkaConfiguration.apply_topics_string()
 
-      %Changeset{changes: %{topics: topics}} =
-        changeset |> KafkaConfiguration.apply_topics_string()
+      assert %{errors: errors, valid?: false} = changeset
 
-      assert topics == []
+      assert errors == [
+               topics_string: {
+                 "Must be specified in the format `topic_1, topic_2`",
+                 []
+               }
+             ]
+    end
+
+    test "sets an error if topics_string parses to an empty array", %{
+      changeset: changeset
+    } do
+      changeset =
+        changeset
+        |> Changeset.put_change(:topics_string, " , ")
+        |> KafkaConfiguration.apply_topics_string()
+
+      assert %{errors: errors, valid?: false} = changeset
+
+      assert errors == [
+               topics_string: {
+                 "Must be specified in the format `topic_1, topic_2`",
+                 []
+               }
+             ]
     end
   end
 
