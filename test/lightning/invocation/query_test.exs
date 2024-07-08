@@ -95,7 +95,7 @@ defmodule Lightning.Invocation.QueryTest do
           request: %{"url" => "https://example.com"}
         )
 
-      query = from d in Dataclip
+      query = from(d in Dataclip)
 
       result =
         query
@@ -103,11 +103,11 @@ defmodule Lightning.Invocation.QueryTest do
         |> Repo.one()
 
       assert %Dataclip{
-        body: %{
-          "data" => %{"key" => "value"},
-          "request" => %{"url" => "https://example.com"}
-        }
-      } = result
+               body: %{
+                 "data" => %{"key" => "value"},
+                 "request" => %{"url" => "https://example.com"}
+               }
+             } = result
     end
 
     test "with a `kafka` dataclip - nests body and request" do
@@ -119,7 +119,7 @@ defmodule Lightning.Invocation.QueryTest do
           request: %{"partition" => 9}
         )
 
-      query = from d in Dataclip
+      query = from(d in Dataclip)
 
       result =
         query
@@ -127,11 +127,11 @@ defmodule Lightning.Invocation.QueryTest do
         |> Repo.one()
 
       assert %Dataclip{
-        body: %{
-          "data" => %{"key" => "value"},
-          "request" => %{"partition" => 9}
-        }
-      } = result
+               body: %{
+                 "data" => %{"key" => "value"},
+                 "request" => %{"partition" => 9}
+               }
+             } = result
     end
 
     test "dataclip neither `http_request` nor `kafka` - does not nest body" do
@@ -143,7 +143,7 @@ defmodule Lightning.Invocation.QueryTest do
           request: %{"url" => "https://example.com"}
         )
 
-      query = from d in Dataclip
+      query = from(d in Dataclip)
 
       result =
         query
@@ -151,9 +151,9 @@ defmodule Lightning.Invocation.QueryTest do
         |> Repo.one()
 
       assert %Dataclip{
-        body: %{"key" => "value"},
-        request: nil
-      } = result
+               body: %{"key" => "value"},
+               request: nil
+             } = result
     end
   end
 end

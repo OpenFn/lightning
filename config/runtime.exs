@@ -513,4 +513,5 @@ config :lightning, :usage_tracking,
 config :lightning, :kafka_pipelines,
   duplicate_tracking_retention_seconds:
     env!("KAFKA_DUPLICATE_TRACKING_RETENTION_SECONDS", :integer, 3600)
+
 # ==============================================================================

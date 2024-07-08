@@ -11,6 +11,7 @@ defmodule Lightning.KafkaTriggers.DuplicateTrackingCleanupWorkerTest do
         :lightning,
         :kafka_pipelines
       )[:duplicate_tracking_retention_seconds]
+
     now = DateTime.utc_now()
     retain_offset = -retention_period + 2
     retain_time = now |> DateTime.add(retain_offset)
@@ -31,6 +32,7 @@ defmodule Lightning.KafkaTriggers.DuplicateTrackingCleanupWorkerTest do
         inserted_at: retain_time
       )
     ]
+
     records_to_be_discarded = [
       insert(
         :trigger_kafka_message_record,
@@ -60,7 +62,7 @@ defmodule Lightning.KafkaTriggers.DuplicateTrackingCleanupWorkerTest do
 
     %{
       records_to_be_discarded: records_to_be_discarded,
-      records_to_be_retained: records_to_be_retained,
+      records_to_be_retained: records_to_be_retained
     }
   end
 

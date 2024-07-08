@@ -152,5 +152,4 @@ config :lightning, :github_app,
   -----END RSA PRIVATE KEY-----
   """
 
-config :lightning, :kafka_triggers,
-  run_supervisors: false
+config :lightning, :kafka_triggers, run_supervisors: false

@@ -33,7 +33,8 @@ defmodule Lightning.Invocation.Dataclip do
           source_step: Step.t() | Ecto.Association.NotLoaded.t() | nil
         }
 
-  @type source_type :: :http_request | :global | :step_result | :saved_input | :kafka
+  @type source_type ::
+          :http_request | :global | :step_result | :saved_input | :kafka
   @source_types [:http_request, :global, :step_result, :saved_input, :kafka]
 
   schema "dataclips" do
@@ -111,12 +112,16 @@ defmodule Lightning.Invocation.Dataclip do
     case {type, request} do
       {:kafka, nil} ->
         add_error(changeset, :request, "must be set for kafka type")
+
       {:http_request, _request} ->
         changeset
+
       {:kafka, _request} ->
         changeset
+
       {_, request} when not is_nil(request) ->
         add_error(changeset, :request, "cannot be set for this type")
+
       {_, _} ->
         changeset
     end

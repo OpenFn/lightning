@@ -4,7 +4,6 @@ defmodule LightningWeb.JobLive.KafkaSetupComponent do
   alias Lightning.Workflows.Triggers.KafkaConfiguration
   alias LightningWeb.Components.Form
 
-
   attr :id, :string, required: true
   attr :form, :map, required: true
   attr :disabled, :boolean, required: true
@@ -17,9 +16,7 @@ defmodule LightningWeb.JobLive.KafkaSetupComponent do
         <div class="py-2"></div>
       </div>
       <%= Phoenix.HTML.Form.inputs_for @form, :kafka_configuration, fn kafka_config -> %>
-        <%
-
-        sasl_types =
+        <% sasl_types =
           KafkaConfiguration.sasl_types()
           |> Enum.map(fn type -> {type, type} end)
 
@@ -28,42 +25,83 @@ defmodule LightningWeb.JobLive.KafkaSetupComponent do
           |> KafkaConfiguration.generate_hosts_string()
           |> KafkaConfiguration.generate_topics_string()
 
-        password = source.changes |> Map.get(:password, Map.get(source.data, :password, ""))
+        password =
+          source.changes |> Map.get(:password, Map.get(source.data, :password, ""))
 
-        kafka_config = %{kafka_config | source: source}
-
-        %>
+        kafka_config = %{kafka_config | source: source} %>
         <div class="col-span-4 @md:col-span-2">
-          <Form.text_field field={:hosts_string} form={kafka_config} label={"Hosts"} disabled={@disabled} />
+          <Form.text_field
+            field={:hosts_string}
+            form={kafka_config}
+            label="Hosts"
+            disabled={@disabled}
+          />
         </div>
 
         <div class="col-span-4 @md:col-span-2">
-          <Form.text_field field={:topics_string} form={kafka_config} label={"Topics"} disabled={@disabled} />
+          <Form.text_field
+            field={:topics_string}
+            form={kafka_config}
+            label="Topics"
+            disabled={@disabled}
+          />
         </div>
 
         <div class="col-span-4 @md:col-span-2">
-          <Form.check_box field={:ssl} form={kafka_config} label={"SSL"} disabled={@disabled} />
+          <Form.check_box
+            field={:ssl}
+            form={kafka_config}
+            label="SSL"
+            disabled={@disabled}
+          />
         </div>
 
         <div class="col-span-4 @md:col-span-2">
-          <Form.label_field field={:sasl} form={kafka_config} title={"SASL Authentication"} />
-          <Form.select_field name={:sasl} form={kafka_config} values={[{"none", nil}] ++ sasl_types} disabled={@disabled} />
+          <Form.label_field
+            field={:sasl}
+            form={kafka_config}
+            title="SASL Authentication"
+          />
+          <Form.select_field
+            name={:sasl}
+            form={kafka_config}
+            values={[{"none", nil}] ++ sasl_types}
+            disabled={@disabled}
+          />
         </div>
 
         <div class="col-span-4 @md:col-span-2">
-          <Form.text_field field={:username} form={kafka_config} disabled={@disabled} />
+          <Form.text_field
+            field={:username}
+            form={kafka_config}
+            disabled={@disabled}
+          />
         </div>
 
         <div class="col-span-4 @md:col-span-2">
-          <Form.password_field field={:password} id={:password} form={kafka_config} value={password} disabled={@disabled} />
+          <Form.password_field
+            field={:password}
+            id={:password}
+            form={kafka_config}
+            value={password}
+            disabled={@disabled}
+          />
         </div>
 
         <div class="col-span-4 @md:col-span-2">
-          <Form.text_field field={:initial_offset_reset_policy} form={kafka_config} disabled={@disabled} />
+          <Form.text_field
+            field={:initial_offset_reset_policy}
+            form={kafka_config}
+            disabled={@disabled}
+          />
         </div>
 
         <div class="col-span-4 @md:col-span-2">
-          <Form.text_field field={:connect_timeout} form={kafka_config} disabled={@disabled} />
+          <Form.text_field
+            field={:connect_timeout}
+            form={kafka_config}
+            disabled={@disabled}
+          />
         </div>
       <% end %>
     </div>

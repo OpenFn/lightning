@@ -79,6 +79,7 @@ defmodule Lightning.WorkflowsTest do
           kafka_configuration: kafka_configuration,
           enabled: false
         )
+
       cron_trigger_1 =
         insert(
           :trigger,
@@ -86,6 +87,7 @@ defmodule Lightning.WorkflowsTest do
           workflow: workflow,
           enabled: false
         )
+
       kafka_trigger_2 =
         insert(
           :trigger,
@@ -98,7 +100,7 @@ defmodule Lightning.WorkflowsTest do
       triggers = [
         {kafka_trigger_1, %{enabled: true}},
         {cron_trigger_1, %{enabled: true}},
-        {kafka_trigger_2, %{enabled: true}},
+        {kafka_trigger_2, %{enabled: true}}
       ]
 
       kafka_trigger_1_id = kafka_trigger_1.id
@@ -129,6 +131,7 @@ defmodule Lightning.WorkflowsTest do
           kafka_configuration: kafka_configuration,
           enabled: false
         )
+
       cron_trigger_1 =
         insert(
           :trigger,
@@ -136,6 +139,7 @@ defmodule Lightning.WorkflowsTest do
           workflow: workflow,
           enabled: false
         )
+
       kafka_trigger_2 =
         insert(
           :trigger,
@@ -148,7 +152,7 @@ defmodule Lightning.WorkflowsTest do
       triggers = [
         {kafka_trigger_1, %{enabled: true}},
         {cron_trigger_1, %{type: :unobtainium}},
-        {kafka_trigger_2, %{enabled: true}},
+        {kafka_trigger_2, %{enabled: true}}
       ]
 
       kafka_trigger_1_id = kafka_trigger_1.id

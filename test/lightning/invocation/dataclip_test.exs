@@ -36,16 +36,16 @@ defmodule Lightning.Invocation.DataclipTest do
 
     test "is valid when request is set to nil" do
       assert {:ok, _dataclip} =
-        params_with_assocs(:dataclip, request: nil)
-        |> Dataclip.new()
-        |> Repo.insert()
+               params_with_assocs(:dataclip, request: nil)
+               |> Dataclip.new()
+               |> Repo.insert()
     end
 
     test "is valid when request is set absent" do
       assert {:ok, _dataclip} =
-        params_with_assocs(:dataclip)
-        |> Dataclip.new()
-        |> Repo.insert()
+               params_with_assocs(:dataclip)
+               |> Dataclip.new()
+               |> Repo.insert()
     end
 
     test "only http_request dataclips can have a request" do

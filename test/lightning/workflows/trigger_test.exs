@@ -171,6 +171,7 @@ defmodule Lightning.Workflows.TriggerTest do
     } do
       kafka_configuration =
         build(:triggers_kafka_configuration, partition_timestamps: %{})
+
       trigger =
         insert(:trigger, type: :kafka, kafka_configuration: kafka_configuration)
 
