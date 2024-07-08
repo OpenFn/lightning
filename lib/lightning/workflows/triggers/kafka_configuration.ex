@@ -301,43 +301,7 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
           existing |> Map.merge(%{partition_key => timestamp})
       end
 
-    # TODO Rearrange changeset so that we do not the *_string values
     configuration
-    |> changeset(%{
-      hosts_string: hosts_string_from(configuration),
-      partition_timestamps: updated_partition_timestamps,
-      topics_string: topics_string_from(configuration)
-    })
-  end
-
-  # TODO Centralise the below two methods and test
-  defp hosts_string_from(kafka_configuration) do
-    kafka_configuration.hosts
-    |> case do
-      nil ->
-        ""
-
-      hosts ->
-        hosts
-        |> Enum.map(fn
-          [host, port] -> "#{host}:#{port}"
-          # TODO something_else is a bandaid for a live validation issue
-          # make a better plan
-          something_else -> something_else
-        end)
-        |> Enum.join(", ")
-    end
-  end
-
-  defp topics_string_from(kafka_configuration) do
-    kafka_configuration.topics
-    |> case do
-      nil ->
-        ""
-
-      topics ->
-        topics
-        |> Enum.join(", ")
-    end
+    |> changeset(%{partition_timestamps: updated_partition_timestamps})
   end
 end
