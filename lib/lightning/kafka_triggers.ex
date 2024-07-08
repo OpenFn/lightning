@@ -65,58 +65,6 @@ defmodule Lightning.KafkaTriggers do
   end
 
   @doc """
-  This method has been rendered obsolete by the introduction of the
-  embedded schema for the Kafka configuration. It is still used in some tests
-  but should be replaced.
-  """
-  def build_trigger_configuration(opts \\ []) do
-    group_id = opts |> Keyword.fetch!(:group_id)
-    hosts = opts |> Keyword.fetch!(:hosts)
-    policy_option = opts |> Keyword.fetch!(:initial_offset_reset_policy)
-    topics = opts |> Keyword.fetch!(:topics)
-    sasl_option = opts |> Keyword.get(:sasl, nil)
-    ssl = opts |> Keyword.get(:ssl, false)
-
-    policy = policy_config_value(policy_option)
-
-    [sasl_type, username, password] =
-      case sasl_option do
-        nil ->
-          [nil, nil, nil]
-
-        [sasl_type, username, password] ->
-          ["#{sasl_type}", username, password]
-      end
-
-    %{
-      group_id: group_id,
-      hosts: hosts,
-      initial_offset_reset_policy: policy,
-      partition_timestamps: %{},
-      password: password,
-      sasl: sasl_type,
-      ssl: ssl,
-      topics: topics,
-      username: username
-    }
-  end
-
-  # TODO This method is only used in the `build_trigger_configuration` method
-  # and can be removed when the caller is removed.
-  defp policy_config_value(initial_policy) do
-    case initial_policy do
-      policy when is_integer(policy) ->
-        policy
-
-      policy when policy in [:earliest, :latest] ->
-        "#{policy}"
-
-      _unrecognised_policy ->
-        raise "initial_offset_reset_policy must be :earliest, :latest or integer"
-    end
-  end
-
-  @doc """
   Generate the key that is used to identify duplicate messages when used in
   association with the trigger id.
   """
