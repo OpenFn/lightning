@@ -10,6 +10,7 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
   alias Lightning.Extensions.MockUsageLimiter
   alias Lightning.Extensions.StubUsageLimiter
   alias Lightning.Invocation
+  alias Lightning.KafkaTriggers.MessageCandidateSet
   alias Lightning.KafkaTriggers.MessageHandling
   alias Lightning.KafkaTriggers.TriggerKafkaMessage
   alias Lightning.Run
@@ -136,7 +137,7 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
           work_order: nil
         )
 
-      candidate_set = %{
+      candidate_set = %MessageCandidateSet{
         trigger_id: message_1.trigger.id,
         topic: message_1.topic,
         key: message_1.key
@@ -396,7 +397,7 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
           work_order: build(:workorder)
         )
 
-      candidate_set = %{
+      candidate_set = %MessageCandidateSet{
         trigger_id: trigger.id,
         topic: "set_topic",
         key: "set_key"
@@ -507,7 +508,7 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
           work_order: build(:workorder)
         )
 
-      candidate_set = %{
+      candidate_set = %MessageCandidateSet{
         trigger_id: trigger.id,
         topic: "set_topic",
         key: nil

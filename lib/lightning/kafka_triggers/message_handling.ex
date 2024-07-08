@@ -3,6 +3,7 @@ defmodule Lightning.KafkaTriggers.MessageHandling do
 
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
+  alias Lightning.KafkaTriggers.MessageCandidateSet
   alias Lightning.KafkaTriggers.TriggerKafkaMessage
   alias Lightning.Repo
   alias Lightning.Services.UsageLimiter
@@ -22,11 +23,11 @@ defmodule Lightning.KafkaTriggers.MessageHandling do
     query
     |> Repo.all()
     |> Enum.map(fn [trigger_id, topic, key] ->
-      %{trigger_id: trigger_id, topic: topic, key: key}
+      %MessageCandidateSet{trigger_id: trigger_id, topic: topic, key: key}
     end)
   end
 
-  def process_candidate_for(candidate_set) do
+  def process_candidate_for(candidate_set = %MessageCandidateSet{}) do
     Repo.transaction(fn ->
       candidate_set
       |> find_candidate_for()
@@ -36,17 +37,18 @@ defmodule Lightning.KafkaTriggers.MessageHandling do
         nil ->
           nil
 
+        candidate = %{work_order: nil} ->
+          create_work_order(candidate)
+
         candidate ->
-          handle_candidate(candidate)
+          maybe_delete_candidate(candidate)
       end
     end)
 
     :ok
   end
 
-  # Take the appropriate action based on the state of the candidate.
-  # TODO If this method was public, it may make simpler tests possible.
-  defp handle_candidate(%{work_order: nil} = candidate) do
+  defp create_work_order(candidate) do
     %{
       data: data,
       metadata: metadata,
@@ -88,8 +90,8 @@ defmodule Lightning.KafkaTriggers.MessageHandling do
     end
   end
 
-  defp handle_candidate(%{work_order: work_order} = candidate) do
-    if successful?(work_order), do: candidate |> Repo.delete()
+  defp maybe_delete_candidate(candidate) do
+    if successful?(candidate.work_order), do: Repo.delete(candidate)
   end
 
   def successful?(%{state: state}) do
@@ -103,7 +105,11 @@ defmodule Lightning.KafkaTriggers.MessageHandling do
   Within the current implementation, this no longer needs to be a public method,
   but having it as a public method allows for easier testing.
   """
-  def find_candidate_for(%{trigger_id: trigger_id, topic: topic, key: nil}) do
+  def find_candidate_for(%MessageCandidateSet{
+        trigger_id: trigger_id,
+        topic: topic,
+        key: nil
+      }) do
     from t in TriggerKafkaMessage,
       where: t.trigger_id == ^trigger_id and t.topic == ^topic and is_nil(t.key),
       order_by: t.offset,
@@ -111,7 +117,11 @@ defmodule Lightning.KafkaTriggers.MessageHandling do
       preload: [:work_order, trigger: [:workflow]]
   end
 
-  def find_candidate_for(%{trigger_id: trigger_id, topic: topic, key: key}) do
+  def find_candidate_for(%MessageCandidateSet{
+        trigger_id: trigger_id,
+        topic: topic,
+        key: key
+      }) do
     from t in TriggerKafkaMessage,
       where: t.trigger_id == ^trigger_id and t.topic == ^topic and t.key == ^key,
       order_by: t.offset,
