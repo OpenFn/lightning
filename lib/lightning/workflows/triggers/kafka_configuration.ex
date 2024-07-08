@@ -57,6 +57,7 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
     ])
     |> validate_length(:hosts, min: 1)
     |> validate_length(:topics, min: 1)
+    |> validate_initial_offset_reset_policy()
     |> set_group_id_if_required()
     |> validate_sasl_credentials()
     |> validate_number(:connect_timeout, greater_than: 0)
@@ -209,6 +210,32 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
 
           topics ->
             changeset |> put_change(:topics, topics)
+        end
+    end
+  end
+
+  def validate_initial_offset_reset_policy(changeset) do
+    case get_change(changeset, :initial_offset_reset_policy) do
+      nil ->
+        changeset
+
+      policy ->
+        trimmed_policy = String.trim(policy)
+
+        cond do
+          trimmed_policy in ["earliest", "latest"] ->
+            changeset |> put_change(:initial_offset_reset_policy, trimmed_policy)
+
+          String.match?(trimmed_policy, ~r/^\d{13}$/) ->
+            changeset |> put_change(:initial_offset_reset_policy, trimmed_policy)
+
+          true ->
+            changeset
+            |> add_error(
+              :initial_offset_reset_policy,
+              "must be `earliest`, `latest` or timestamp with millisecond " <>
+                "precision (e.g. `1720428955123`)"
+            )
         end
     end
   end

@@ -513,6 +513,27 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
              ]
     end
 
+    test "invalid if initial_offset_reset_policy is not an expected value", %{
+      base_changes: base_changes
+    } do
+      error_message =
+        "must be `earliest`, `latest` or timestamp with millisecond precision" <>
+          " (e.g. `1720428955123`)"
+
+      # String that is neither earliest nor latest and cannto be converted to a
+      # number
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes
+          |> Map.merge(%{initial_offset_reset_policy: "whenever"})
+        )
+
+      assert %Changeset{errors: errors, valid?: false} = changeset
+
+      assert errors == [initial_offset_reset_policy: {error_message, []}]
+    end
+
     test "is invalid if connect_timeout is not provided", %{
       base_changes: base_changes
     } do
@@ -1034,6 +1055,168 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
       assert %Changeset{changes: changes, valid?: true} = changeset
 
       assert %{partition_timestamps: ^expected_timestamps} = changes
+    end
+  end
+
+  describe ".validate_initial_offset_reset_policy/1" do
+    setup do
+      base_changes = %{
+        connect_timeout: 7,
+        hosts: [
+          ["host1", "9092"],
+          ["host2", "9093"]
+        ],
+        hosts_string: "host1:9092, host2:9093",
+        initial_offset_reset_policy: "earliest",
+        partition_timestamps: %{"1" => 1_717_174_749_123},
+        password: "password",
+        sasl: "plain",
+        ssl: true,
+        topics: ["foo", "bar"],
+        topics_string: "foo, bar",
+        username: "username"
+      }
+
+      error_message =
+        "must be `earliest`, `latest` or timestamp with millisecond precision" <>
+          " (e.g. `1720428955123`)"
+
+      %{
+        base_changes: base_changes,
+        error_message: error_message
+      }
+    end
+
+    test "changeset is valid if initial_offset_reset_policy is `earliest`", %{
+      base_changes: base_changes
+    } do
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes
+        )
+        |> Changeset.put_change(:initial_offset_reset_policy, "earliest")
+        |> KafkaConfiguration.validate_initial_offset_reset_policy()
+
+      assert %Changeset{valid?: true} = changeset
+    end
+
+    test "changeset is valid if it is `latest`", %{
+      base_changes: base_changes
+    } do
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes
+        )
+        |> Changeset.put_change(:initial_offset_reset_policy, "latest")
+        |> KafkaConfiguration.validate_initial_offset_reset_policy()
+
+      assert %Changeset{valid?: true} = changeset
+    end
+
+    test "changeset is valid if it is a timestamp", %{
+      base_changes: base_changes
+    } do
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes
+        )
+        |> Changeset.put_change(:initial_offset_reset_policy, "1720428955123")
+        |> KafkaConfiguration.validate_initial_offset_reset_policy()
+
+      assert %Changeset{valid?: true} = changeset
+    end
+
+    test "trims any whitespace off the initial_offset_reset_policy", %{
+      base_changes: base_changes
+    } do
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes
+        )
+        |> Changeset.put_change(:initial_offset_reset_policy, " earliest ")
+        |> KafkaConfiguration.validate_initial_offset_reset_policy()
+
+      assert %Changeset{valid?: true} = changeset
+
+      assert changeset
+             |> Changeset.get_change(:initial_offset_reset_policy) == "earliest"
+
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes
+        )
+        |> Changeset.put_change(:initial_offset_reset_policy, " 1720428955123 ")
+        |> KafkaConfiguration.validate_initial_offset_reset_policy()
+
+      assert %Changeset{valid?: true} = changeset
+
+      assert changeset
+             |> Changeset.get_change(:initial_offset_reset_policy) ==
+               "1720428955123"
+    end
+
+    test "changeset is valid if there is no change", %{
+      base_changes: base_changes
+    } do
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes
+        )
+        |> Changeset.put_change(:initial_offset_reset_policy, nil)
+        |> KafkaConfiguration.validate_initial_offset_reset_policy()
+
+      assert %Changeset{valid?: true} = changeset
+    end
+
+    test "changeset invalid if other non-numerical string", %{
+      base_changes: base_changes,
+      error_message: error_message
+    } do
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes
+          |> Map.merge(%{initial_offset_reset_policy: "whenever"})
+        )
+
+      assert %Changeset{errors: errors, valid?: false} = changeset
+
+      assert errors == [initial_offset_reset_policy: {error_message, []}]
+    end
+
+    test "changeset invalid if number but not timestamp", %{
+      base_changes: base_changes,
+      error_message: error_message
+    } do
+      # One digit too short
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes
+          |> Map.merge(%{initial_offset_reset_policy: "172000930622"})
+        )
+
+      assert %Changeset{errors: errors, valid?: false} = changeset
+
+      assert errors == [initial_offset_reset_policy: {error_message, []}]
+
+      # One digit too long
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes
+          |> Map.merge(%{initial_offset_reset_policy: "17200093062219"})
+        )
+
+      assert %Changeset{errors: errors, valid?: false} = changeset
+
+      assert errors == [initial_offset_reset_policy: {error_message, []}]
     end
   end
 end
