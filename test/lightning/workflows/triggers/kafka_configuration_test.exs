@@ -361,10 +361,11 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
       assert %Changeset{errors: errors, valid?: false} = changeset
 
       assert errors == [
-        hosts_string: {
-          "Must be specified in the format `host:port, host:port`", []
-        }
-      ]
+               hosts_string: {
+                 "Must be specified in the format `host:port, host:port`",
+                 []
+               }
+             ]
     end
 
     test "is valid if topics_string is not provided but topics is set", %{
@@ -393,10 +394,11 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
       assert %Changeset{errors: errors, valid?: false} = changeset
 
       assert errors == [
-        topics_string: {
-          "Must be specified in the format `topic_1, topic_2`", []
-        }
-      ]
+               topics_string: {
+                 "Must be specified in the format `topic_1, topic_2`",
+                 []
+               }
+             ]
     end
 
     test "is invalid if hosts is nil", %{
@@ -409,9 +411,17 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
           |> Map.merge(%{hosts: nil, hosts_string: nil})
         )
 
-      assert %Changeset{errors: errors, valid?: false} = changeset
+      assert %Changeset{
+               errors: [{:hosts, errors} | _other_errors],
+               valid?: false
+             } = changeset
 
-      assert errors == [hosts: {"can't be blank", [{:validation, :required}]}]
+      expected_hosts_errors = {
+        "can't be blank",
+        [{:validation, :required}]
+      }
+
+      assert errors == expected_hosts_errors
     end
 
     test "is invalid if hosts is an empty array", %{
@@ -424,14 +434,17 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
           |> Map.merge(%{hosts: [], hosts_string: nil})
         )
 
-      assert %Changeset{errors: errors, valid?: false} = changeset
+      assert %Changeset{
+               errors: [{:hosts, errors} | _other_errors],
+               valid?: false
+             } = changeset
 
-      assert errors == [
-        hosts: {
-          "should have at least %{count} item(s)",
-          [{:count, 1}, {:validation, :length}, {:kind, :min}, {:type, :list}]
-        }
-      ]
+      expected_hosts_errors = {
+        "should have at least %{count} item(s)",
+        [{:count, 1}, {:validation, :length}, {:kind, :min}, {:type, :list}]
+      }
+
+      assert errors == expected_hosts_errors
     end
 
     test "is invalid if topics is nil", %{
@@ -444,9 +457,17 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
           |> Map.merge(%{topics: nil, topics_string: nil})
         )
 
-      assert %Changeset{errors: errors, valid?: false} = changeset
+      assert %Changeset{
+               errors: [{:topics, errors} | _other_errors],
+               valid?: false
+             } = changeset
 
-      assert errors == [topics: {"can't be blank", [{:validation, :required}]}]
+      expected_topics_errors = {
+        "can't be blank",
+        [{:validation, :required}]
+      }
+
+      assert errors == expected_topics_errors
     end
 
     test "is invalid if topics is an empty array", %{
@@ -459,14 +480,17 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
           |> Map.merge(%{topics: [], topics_string: nil})
         )
 
-      assert %Changeset{errors: errors, valid?: false} = changeset
+      assert %Changeset{
+               errors: [{:topics, errors} | _other_errors],
+               valid?: false
+             } = changeset
 
-      assert errors == [
-        topics: {
-          "should have at least %{count} item(s)",
-          [{:count, 1}, {:validation, :length}, {:kind, :min}, {:type, :list}]
-        }
-      ]
+      expected_topics_errors = {
+        "should have at least %{count} item(s)",
+        [{:count, 1}, {:validation, :length}, {:kind, :min}, {:type, :list}]
+      }
+
+      assert errors == expected_topics_errors
     end
 
     test "is invalid if initial_offset_reset_policy is not provided", %{
@@ -629,7 +653,7 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
              ]
     end
 
-    test "does nothing if hosts_string is nil", %{
+    test "does nothing if hosts_string is nil but hosts is populated", %{
       changeset: changeset
     } do
       changeset =
@@ -643,6 +667,50 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
       assert hosts == [
                ["host1", "9092"],
                ["host2", "9093"]
+             ]
+    end
+
+    test "sets an error if hosts_string is nil and hosts is nil", %{
+      changeset: changeset
+    } do
+      changeset =
+        changeset
+        |> Changeset.put_change(:hosts, nil)
+        |> Changeset.put_change(:hosts_string, nil)
+
+      changeset =
+        changeset
+        |> KafkaConfiguration.apply_hosts_string()
+
+      assert %{errors: errors, valid?: false} = changeset
+
+      assert errors == [
+               hosts_string: {
+                 "Must be specified in the format `host:port, host:port`",
+                 []
+               }
+             ]
+    end
+
+    test "does nothing if hosts_string is nil but hosts is empty", %{
+      changeset: changeset
+    } do
+      changeset =
+        changeset
+        |> Changeset.put_change(:hosts, [])
+        |> Changeset.put_change(:hosts_string, nil)
+
+      changeset =
+        changeset
+        |> KafkaConfiguration.apply_hosts_string()
+
+      assert %{errors: errors, valid?: false} = changeset
+
+      assert errors == [
+               hosts_string: {
+                 "Must be specified in the format `host:port, host:port`",
+                 []
+               }
              ]
     end
 
@@ -746,6 +814,44 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
       assert topics == ["foo", "bar"]
     end
 
+    test "sets an error if topics_string is nil and topics is nil", %{
+      changeset: changeset
+    } do
+      changeset =
+        changeset
+        |> Changeset.put_change(:topics, nil)
+        |> Changeset.put_change(:topics_string, nil)
+        |> KafkaConfiguration.apply_topics_string()
+
+      assert %{errors: errors, valid?: false} = changeset
+
+      assert errors == [
+               topics_string: {
+                 "Must be specified in the format `topic_1, topic_2`",
+                 []
+               }
+             ]
+    end
+
+    test "sets an error if topics_string is nil and topics is empty", %{
+      changeset: changeset
+    } do
+      changeset =
+        changeset
+        |> Changeset.put_change(:topics, [])
+        |> Changeset.put_change(:topics_string, nil)
+        |> KafkaConfiguration.apply_topics_string()
+
+      assert %{errors: errors, valid?: false} = changeset
+
+      assert errors == [
+               topics_string: {
+                 "Must be specified in the format `topic_1, topic_2`",
+                 []
+               }
+             ]
+    end
+
     test "does nothing if topics_string is absent", %{
       changeset: changeset
     } do
@@ -753,7 +859,6 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
         changeset |> KafkaConfiguration.apply_topics_string()
 
       assert topics == ["foo", "bar"]
-
     end
 
     test "sets an error if topics_string is an empty string", %{

@@ -53,7 +53,7 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
       :connect_timeout,
       :hosts,
       :initial_offset_reset_policy,
-      :topics,
+      :topics
     ])
     |> validate_length(:hosts, min: 1)
     |> validate_length(:topics, min: 1)
@@ -105,7 +105,24 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
   def apply_hosts_string(changeset) do
     case get_field(changeset, :hosts_string) do
       nil ->
-        changeset
+        case get_field(changeset, :hosts) do
+          nil ->
+            changeset
+            |> add_error(
+              :hosts_string,
+              "Must be specified in the format `host:port, host:port`"
+            )
+
+          [] ->
+            changeset
+            |> add_error(
+              :hosts_string,
+              "Must be specified in the format `host:port, host:port`"
+            )
+
+          _hosts ->
+            changeset
+        end
 
       "" ->
         changeset
@@ -151,7 +168,24 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
   def apply_topics_string(changeset) do
     case get_field(changeset, :topics_string) do
       nil ->
-        changeset
+        case get_field(changeset, :topics) do
+          nil ->
+            changeset
+            |> add_error(
+              :topics_string,
+              "Must be specified in the format `topic_1, topic_2`"
+            )
+
+          [] ->
+            changeset
+            |> add_error(
+              :topics_string,
+              "Must be specified in the format `topic_1, topic_2`"
+            )
+
+          _topics ->
+            changeset
+        end
 
       "" ->
         changeset
@@ -161,20 +195,21 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
         )
 
       topics_string ->
-          topics_string
-          |> String.split(",")
-          |> Enum.map(&String.trim/1)
-          |> Enum.reject(&(&1 == ""))
-          |> case do
-            [] ->
-              changeset
-              |> add_error(
-                :topics_string,
-                "Must be specified in the format `topic_1, topic_2`"
-              )
-            topics ->
-              changeset |> put_change(:topics, topics)
-          end
+        topics_string
+        |> String.split(",")
+        |> Enum.map(&String.trim/1)
+        |> Enum.reject(&(&1 == ""))
+        |> case do
+          [] ->
+            changeset
+            |> add_error(
+              :topics_string,
+              "Must be specified in the format `topic_1, topic_2`"
+            )
+
+          topics ->
+            changeset |> put_change(:topics, topics)
+        end
     end
   end
 
