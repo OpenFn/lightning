@@ -59,7 +59,7 @@ defmodule Lightning.KafkaTriggers.MessageHandling do
     |> Jason.decode()
     |> case do
       {:ok, body} ->
-        {:ok, without_run?} = check_skip_run_creation(workflow.project_id)
+        {:ok, without_run?} = check_skip_run_creation?(workflow.project_id)
 
         {:ok, %WorkOrder{id: work_order_id}} =
           WorkOrders.create_for(trigger,
@@ -131,7 +131,7 @@ defmodule Lightning.KafkaTriggers.MessageHandling do
 
   # Stolen from the `webhooks_controller.ex` file and simplified until
   # I understand the details (ask Roger).
-  defp check_skip_run_creation(project_id) do
+  defp check_skip_run_creation?(project_id) do
     case UsageLimiter.limit_action(
            %Action{type: :new_run},
            %Context{project_id: project_id}
@@ -139,11 +139,8 @@ defmodule Lightning.KafkaTriggers.MessageHandling do
       :ok ->
         {:ok, false}
 
-      {:error, :too_many_runs, _message} ->
+      _some_error ->
         {:ok, true}
-
-      error ->
-        error
     end
   end
 end
