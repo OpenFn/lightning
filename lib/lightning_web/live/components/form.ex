@@ -14,6 +14,7 @@ defmodule LightningWeb.Components.Form do
       py-2
       px-4
       border
+      min-w-\[7rem\]
       border-transparent
       shadow-sm
       text-sm
