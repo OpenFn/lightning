@@ -5,7 +5,7 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetWorker do
   """
   use GenServer
 
-  alias Lightning.KafkaTriggers
+  alias Lightning.KafkaTriggers.MessageHandling
   alias Lightning.KafkaTriggers.MessageCandidateSetServer
 
   def start_link(_opts) do
@@ -26,7 +26,7 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetWorker do
         Process.send_after(self(), :request_candidate_set, 2000)
 
       candidate_set ->
-        KafkaTriggers.process_candidate_for(candidate_set)
+        MessageHandling.process_candidate_for(candidate_set)
         Process.send_after(self(), :request_candidate_set, 1000)
     end
 

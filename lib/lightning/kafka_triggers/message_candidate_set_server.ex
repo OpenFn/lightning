@@ -5,7 +5,7 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetServer do
   """
   use GenServer
 
-  alias Lightning.KafkaTriggers
+  alias Lightning.KafkaTriggers.MessageHandling
 
   def start_link(_opts) do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
@@ -28,7 +28,7 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetServer do
   end
 
   defp pop_candidate([]) do
-    case KafkaTriggers.find_message_candidate_sets() do
+    case MessageHandling.find_message_candidate_sets() do
       [candidate_set | remaining_sets] ->
         {candidate_set, remaining_sets}
 
