@@ -399,7 +399,7 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
       ]
     end
 
-    test "is invalid if hosts are nil", %{
+    test "is invalid if hosts is nil", %{
       base_changes: base_changes
     } do
       changeset =
@@ -412,6 +412,61 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
       assert %Changeset{errors: errors, valid?: false} = changeset
 
       assert errors == [hosts: {"can't be blank", [{:validation, :required}]}]
+    end
+
+    test "is invalid if hosts is an empty array", %{
+      base_changes: base_changes
+    } do
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes
+          |> Map.merge(%{hosts: [], hosts_string: nil})
+        )
+
+      assert %Changeset{errors: errors, valid?: false} = changeset
+
+      assert errors == [
+        hosts: {
+          "should have at least %{count} item(s)",
+          [{:count, 1}, {:validation, :length}, {:kind, :min}, {:type, :list}]
+        }
+      ]
+    end
+
+    test "is invalid if topics is nil", %{
+      base_changes: base_changes
+    } do
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes
+          |> Map.merge(%{topics: nil, topics_string: nil})
+        )
+
+      assert %Changeset{errors: errors, valid?: false} = changeset
+
+      assert errors == [topics: {"can't be blank", [{:validation, :required}]}]
+    end
+
+    test "is invalid if topics is an empty array", %{
+      base_changes: base_changes
+    } do
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes
+          |> Map.merge(%{topics: [], topics_string: nil})
+        )
+
+      assert %Changeset{errors: errors, valid?: false} = changeset
+
+      assert errors == [
+        topics: {
+          "should have at least %{count} item(s)",
+          [{:count, 1}, {:validation, :length}, {:kind, :min}, {:type, :list}]
+        }
+      ]
     end
 
     test "is invalid if initial_offset_reset_policy is not provided", %{

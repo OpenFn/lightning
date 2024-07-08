@@ -53,7 +53,10 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
       :connect_timeout,
       :hosts,
       :initial_offset_reset_policy,
+      :topics,
     ])
+    |> validate_length(:hosts, min: 1)
+    |> validate_length(:topics, min: 1)
     |> set_group_id_if_required()
     |> validate_sasl_credentials()
     |> validate_number(:connect_timeout, greater_than: 0)
