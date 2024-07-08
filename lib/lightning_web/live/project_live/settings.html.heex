@@ -116,7 +116,7 @@
                     !(@project_changeset.valid? and can_edit_project(assigns) and
                         can_edit_project(assigns))
                   }
-                  phx-disable-with="Saving"
+                  phx-disable-with="Saving..."
                 >
                   Save
                 </Form.submit_button>
@@ -994,7 +994,7 @@
                     not @project_changeset.valid? or
                       not @can_edit_data_retention
                   }
-                  phx-disable-with="Saving"
+                  phx-disable-with="Saving..."
                 >
                   Save
                 </Form.submit_button>
