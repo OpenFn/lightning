@@ -21,6 +21,8 @@ and this project adheres to
 
 ### Fixed
 
+- Trim errant spaces on user first and last names
+
 ## [v2.7.4] 2024-07-06
 
 ### Changed

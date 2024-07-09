@@ -213,6 +213,8 @@ defmodule Lightning.Accounts.User do
       :scheduled_deletion
     ])
     |> validate_email()
+    |> update_change(:first_name, &String.trim/1)
+    |> update_change(:last_name, &String.trim/1)
     |> validate_name()
     |> validate_role()
   end
