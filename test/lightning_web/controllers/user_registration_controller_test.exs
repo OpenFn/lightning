@@ -75,7 +75,6 @@ defmodule LightningWeb.UserRegistrationControllerTest do
             )
         )
         |> get("/")
-        |> IO.inspect()
 
       assert conn.assigns.current_user.first_name == "Emory H"
       assert conn.assigns.current_user.last_name == "McLasterson"
