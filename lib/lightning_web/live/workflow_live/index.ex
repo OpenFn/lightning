@@ -108,7 +108,7 @@ defmodule LightningWeb.WorkflowLive.Index do
     socket
     |> assign(
       active_menu_item: :overview,
-      page_title: "Dashboard",
+      page_title: "Workflows",
       metrics: DashboardStats.aggregate_project_metrics(workflows_stats),
       workflows_stats: workflows_stats
     )
