@@ -9,8 +9,8 @@ configuration stored as an embedded schema `.kafka_configuration` represented by
 Each kafka trigger instance gets mapped to a BroadwayKafka pipeline. The
 pipelines are supervised by `Lightning.KafkaTriggers.PipelineSupervisor`.
 
-When a Trigger is enabled or disabled it is added to or removed from the
-children of the PipelineSupervisor.
+When a Trigger is updaed it is added to, removed from or removed from and then
+added to the children of the PipelineSupervisor.
 
 Each message received by the pipeline is persisted as a
 `Lightning.KafkaTriggers.TriggerKafkaMessage` record. The pipeline also
@@ -38,21 +38,18 @@ developer's workstation.
 The primary risk remains the behaviour of the Lightning/Kafka integration under
 conditons closer to those that will be encountered in production scenarios. As
 a result, there are a number of sharp edges and affordances that are not present,
-and much of the code can do with some housekeeping. 
+and much of the code can do with some housekeeping.
 
 ## Detail
 
-### KafkaTriggers.PipelineSupervisor
+### KafkaTriggers.Supervisor
 
-After the PipelineSupervisor has started, it enqueues an Oban job
-(KafkaTriggers.PipelineWorker) to be performed after a delay
-(currently 10 seconds). PipelineWorker is responsible for finding all enabled
-Kafka triggers and using these to create KafkaTriggers.Pipeline children of the
-PipelineSupervisor.
+The KafkaTriggers.Supervisor is the top-level supervisor for all the Kafka
+functionality. Its starts KafkaTriggers.MessageCandidateSetSupervisor and
+KafkaTriggers.PipelineSupervisor as well as KafkaTriggers.EventListener.
 
-When a child is added, the trigger ID is used as the ID for the child. This is
-to ensure that duplicate triggers are not added as well as allowing the code
-to remove a disabled trigger.
+It is also responsible for the initial population of pipelines for the
+active Kafka triggers.
 
 ### KafkaTriggers.Pipeline
 
@@ -78,8 +75,9 @@ the combination of trigger, topic, parition and offset. Each incoming message
 is checked for an existing TriggerKafkaMessageRecord that matches and, if so,
 the message is discarded.
 
-Work still needs to be done on a process that will remove stale
-TriggerKafkaMessageRecord entries.
+Errors in message processing (e.g. failure to persist) are handled by marking
+the message as failed and then writing some details regarding the message to
+the log and to Sentry. No provision for reprocessing the message curently exists.
 
 ### KafkaTriggers.MessageCandidateSetSupervisor
 
@@ -92,28 +90,27 @@ a single `MessageCandidateSetServer`.
 
 A `MessageCandidateSet` is the collection of TriggerKafkaMessage records that
 all have the same trigger_id, topic and key. Each unique combination of
-trigger_id, topic and key is a the identifier for a `MessageCandidateSet`
-(**MCSID**)
+trigger_id, topic and key is defined as `MessageCandidateSet` (**MCS**) instance.
 
 The `MessageCandidateSetServer` is reponsible for finding all the unique
-MCSIDs within the persisted `TriggerKafkaMessage` records and providing these,
+MCSs within the persisted `TriggerKafkaMessage` records and providing these,
 one at a time to the `MessageCandidateSetWorker` when requested.
 
-On the first request for an MCSID after the `MessageCandidateSetServer` has
-started, the `MessageCandidateSetServer` will retrive all distinct MCSIDs from
+On the first request for an MCS after the `MessageCandidateSetServer` has
+started, the `MessageCandidateSetServer` will retrive all distinct MCSs from
 the database and store these in memory. It will serve from memory until the list
-has been exhausted, whereupon it will, once again, retrieve all distinct MCSIDs
+has been exhausted, whereupon it will, once again, retrieve all distinct MCSs
 from the database.
 
 ### KafkaTriggers.MessageCandidateSetWorker
 
 When a `MessageCandidateSetWorker` is started, it will  `enqueue` a message to
-itself using `Process.send_after`. Upon receipt of ths message, it will
-request a MCSID from the `MessageCandidateSetServer`.
+itself using `Process.send_after`. Upon receipt of this message, it will
+request a MCS from the `MessageCandidateSetServer`.
 
-If a MCSID is returned, the `MessageCandidateSetWorker` will attempt to find
-a MessageCandidateSetCandidate for the MCSID. The `MessageCandidateSetCandidate`
-is the earliest TriggerKafkaMessage record for the given MCSID, based on
+If a MCS is returned, the `MessageCandidateSetWorker` will attempt to find
+a MessageCandidateSetCandidate for the MCS. The `MessageCandidateSetCandidate`
+is the earliest TriggerKafkaMessage record for the given MCS, based on
 message offset.
 
 If a `MessageCandidateSetCandidate` is found, the `MessageCandidateSetWorker`
@@ -130,9 +127,9 @@ will follow one of three paths:
 - If the `MessageCandidateSetCandidate` is associated with a `WorkOrder` that
   has completed successfully, the TriggerKafkaMessage record will be deleted.
 
-Once the `MessageCandidateSetWorker` has completed processing the MCSID, it
+Once the `MessageCandidateSetWorker` has completed processing the MCS, it
 will `enqueue` a message to itself using `Process.send_after` to request the
-next MCSID.
+next MCS.
 
 Before a `MessageCandidateSetWorker` interacts with a
 `MessageCandidateSetCandidate` it will attempt to lock the TriggerKafkaMessage
@@ -140,9 +137,9 @@ record. If this fails, the `MessageCandidateSetWorker` will assume that another
 worker is busy with the MessageCandidateSet it will request the next MCSID.
 
 If the `MessageCandidateSetWorker` is unable to find a
-`MessageCandidateSetCandidate` for a given MCSID or if it does not get an MCSID
+`MessageCandidateSetCandidate` for a given MCS or if it does not get an MCS
 it will `enqueue` a message to itself using `Process.send_after` to request
-another MCSID.
+another MCS.
 
 ### Workflows.Trigger.KafkaConfiguration
 
@@ -156,37 +153,29 @@ values `earliest` (start from the earliest message in the topic),
 `latest` (start from the latest message in the topic) or a UNIX timestamp
 with millsecond precision. If a timestamp is given the cluster will attempt to
 start from the message with the offset closest to the timestamp. Using a
-timestamp may be useful for migration scenarios but is has not been tested 
+timestamp may be useful for migration scenarios but is has not been tested
 outside of a local Kafka cluster so more testing is required.
 
 `partition_timestamps` this tracks the last timestamp for each partition. It is
 hoped that this will be useful for cases where a trigger has been disabled for
 so long that the cluster no longer retains a committed offset for the consumer
 group. In this case, the offset provided when the consumer group starts will
-be the ealiest of the timestamps across all partitions rather than what 
+be the ealiest of the timestamps across all partitions rather than what
 was provided in `initial_offset_reset_policy`.
 
 ### Workflows
 
-`Workflows.save_workflow/1` has been extended to call 
-`KafkaTriggers.enable_disabled_triggers/0` after saving a workflow. This takes
-a collection of all the triggers in the workflow and attempts to add or remove
-pipelines based on the state of any Kafka triggers present in the set.
+`Workflows.save_workflow/1` has been extended to call
+`Triggers.Events.kafka_trigger_updated` if any kafka triggers form part of the
+workflow changes.
 
-This implementation was chosed largely for speed of implementation rather than
-as an expression of design intent - a possible alternative is to enqueue an
-Oban job to handle the call.
+The event that is published will be received by `KafkaTriggers.EventListener`.
 
-### KafkaTesting.Utils
+### KafkaTriggers.EventListener
 
-This module contains a number of functions that were useful during the initial
-development and testing of the Kafk implementation. Most of these functions have
-been rendered obsolete by the introduction of the `KafkaConfiguration` as well
-as a functional UI to create Kafka triggers and the addition of 
-`PipelineSupervisor` and `MessageCandidateSetSupervisor` to the supervision tree.
-
-`Utils.which_children/0` is still useful to track the running `Pipeline`
-instances.
+The `KafkaTriggers.EventListener` listens for events relating to changes to
+Kafka trigges and it will update/dd or remove the BroadayKafka pipeline that
+is associated with the affected trigger.
 
 ## Testing
 
@@ -205,6 +194,14 @@ to validate behaviour:
 The Kafka container has a number of CLI
 [tools](https://docs.confluent.io/kafka/operations-tools/kafka-tools.html)
 that can be useful for testing.
+
+### Viewing triggers that are currently active
+
+```
+GenServer.whereis(:kafka_pipeline_supervisor) |> Supervisor.which_children()
+```
+
+### Testing locally using the a single bitnami
 
 ### Testing locally using the docker Kafka cluster
 
@@ -263,7 +260,7 @@ a way to automate the population of topics.
 
 Once these are setup, you can create a Kafka trigger via the UI.
 
-You will need to speicfy the following:
+You will need to specify the following:
 
 ```
 Hosts: localhost:9094, localhost:9095, localhost:9096
@@ -340,12 +337,30 @@ your credit card details (le sigh), but thus far my usage has been low enough
 so that I still have the same number of credits as when I started.
 
 Confluent Cloud is useful for testing SASL authentication and SSL and can
-serve as a sanity check. You will just need to update your `kcat` configuration
-and create your Kafka trigger accordingly.
+serve as a sanity check.
 
-When creating a Trigger via the Admin UI, you will need to select SSL and set
+As Confluent Cloud requires authentication, the most convenient way to use it
+with `kcat` is to create a config file at `~/.config/kcat.conf`:
+
+```
+bootstrap.servers=my-host.us-west2.gcp.confluent.cloud:9092
+security.protocol=sasl_ssl
+sasl.mechanism=PLAIN
+sasl.username=your-username
+sasl.password=your-password
+session.timeout.ms=45000
+```
+
+Assuming you have created a topic on your Confluent Cloud instance, named
+`baz-topic`, you can produce a message using the below:
+
+```
+cat message.json | kcat -P -t baz_topic
+```
+
+When creating a Trigger via the UI, you will need to select SSL and set
 `SASL Authentication`, `Username` and `Password` based on what Confluent
 provides.
 
 Confluent provides a nice UI which is useful for setting up topics or
-producting the occasional message.
+producing the occasional message.
