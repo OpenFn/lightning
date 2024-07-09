@@ -52,7 +52,11 @@ defmodule LightningWeb.RunLive.Show do
     ~H"""
     <LayoutComponents.page_content>
       <:header>
-        <LayoutComponents.header current_user={@current_user}>
+        <LayoutComponents.header
+          current_user={@current_user}
+          project={@project}
+          breadcrumbs={[{"History", ~p"/projects/#{@project}/history"}]}
+        >
           <:title>
             <%= @page_title %>
             <span class="pl-2 font-light">
