@@ -6,7 +6,6 @@
  * if it's going to help yet
  */
 import { Flow } from './types';
-// import { isPlaceholder } from './util/placeholder';
 
 export const EDGE_COLOR = '#b1b1b7';
 export const EDGE_COLOR_DISABLED = '#E1E1E1';
@@ -15,43 +14,53 @@ export const EDGE_COLOR_SELECTED_DISABLED = '#bdbaf3';
 
 export const ERROR_COLOR = '#ef4444';
 
-export const labelStyles = (selected?: boolean, data) => {
-  const { condition_type, enabled } = data;
+export const edgeLabelIconStyles = (type: string) => ({
+  fontSize: 24,
+  fontWeight: 700,
+  display: 'flex',
+  height: '46px',
+  width: '46px',
+  borderStyle: 'solid',
+  borderWidth: '2px',
+  borderRadius: '100%',
+  borderColor: 'inherit',
+  backgroundColor: 'white',
 
+  alignItems: 'center',
+  justifyContent: 'center',
+});
+
+export const edgeLabelTextStyles = {
+  borderStyle: 'solid',
+  borderWidth: '2px',
+  borderTopRightRadius: '8px',
+  borderBottomRightRadius: '8px',
+  borderColor: 'inherit',
+  backgroundColor: 'white',
+  padding: '2px 6px',
+  paddingLeft: '8px',
+  marginLeft: '-11px',
+  height: '34px',
+  borderLeft: 'solid 2px white',
+};
+
+export const edgeLabelStyles = (selected?: boolean, data) => {
+  const { label, enabled } = data;
   const primaryColor = (selected?: boolean, enabled?: boolean) => {
     if (enabled) return selected ? EDGE_COLOR_SELECTED : EDGE_COLOR;
     return selected ? EDGE_COLOR_SELECTED_DISABLED : EDGE_COLOR_DISABLED;
   };
 
-  const backgroundColor = enabled ? 'white' : '#F6F6F6';
-
-  if (condition_type === 'js_expression') {
-    return {
-      padding: '0 4px',
-      height: '32px',
-      border: `solid 2px ${primaryColor(selected, enabled)}`,
-      borderRadius: 4,
-      display: 'inline-block',
-      fontSize: 14,
-      lineHeight: '26px',
-      textAlign: 'center' as const,
-      fontWeight: 500,
-      color: primaryColor(selected, enabled),
-      backgroundColor,
-    };
-  } else {
-    return {
-      width: '32px',
-      height: '32px',
-      border: `solid 2px ${primaryColor(selected, enabled)}`,
-      borderRadius: 16,
-      fontSize: 18,
-      textAlign: 'center' as const,
-      fontWeight: 700,
-      color: primaryColor(selected, enabled),
-      backgroundColor,
-    };
-  }
+  // this is just styling the parent of the edge label
+  // the icon and label will inherit
+  return {
+    borderColor: primaryColor(selected, enabled),
+    color: primaryColor(selected, enabled),
+    backgroundColor: 'transparent',
+    display: 'flex',
+    alignItems: 'center',
+    opacity: enabled ? 1 : 0.9,
+  };
 };
 
 export const styleItem = (item: Flow.Edge | Flow.Node) => {

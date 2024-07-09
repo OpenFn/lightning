@@ -1,12 +1,6 @@
 import React, { FC } from 'react';
-import {
-  SmoothStepEdge,
-  BezierEdge,
-  Edge,
-  EdgeProps,
-  EdgeLabelRenderer,
-} from 'reactflow';
-import { labelStyles } from '../styles';
+import { BezierEdge, EdgeProps, EdgeLabelRenderer } from 'reactflow';
+import { edgeLabelStyles } from '../styles';
 
 const CustomEdge: FC<EdgeProps> = props => {
   const { sourceX, sourceY, targetX, targetY, selected } = props;
@@ -29,7 +23,7 @@ const CustomEdge: FC<EdgeProps> = props => {
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
               background: 'white',
               pointerEvents: 'all',
-              ...labelStyles(selected, stepEdgeProps.data),
+              ...edgeLabelStyles(selected, stepEdgeProps.data),
             }}
             className="nodrag nopan cursor-pointer"
           >
