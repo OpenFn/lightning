@@ -67,7 +67,8 @@ defmodule LightningWeb.API.ProvisioningController do
              conn.assigns.current_resource,
              project
            ),
-         project <- Provisioner.preload_dependencies(project) do
+         project <-
+           Provisioner.preload_dependencies(project, params["snapshots"]) do
       conn
       |> put_status(:ok)
       |> render("create.json", project: project)
@@ -78,7 +79,7 @@ defmodule LightningWeb.API.ProvisioningController do
   Returns a description of the project as yaml. Same as the export project to
   yaml button (see Downloads Controller) but made for the API.
   """
-  def show_yaml(conn, %{"id" => id}) do
+  def show_yaml(conn, %{"id" => id} = params) do
     with %Projects.Project{} = project <-
            Projects.get_project(id) || {:error, :not_found},
          :ok <-
@@ -88,7 +89,7 @@ defmodule LightningWeb.API.ProvisioningController do
              conn.assigns.current_resource,
              project
            ) do
-      {:ok, yaml} = Projects.export_project(:yaml, id)
+      {:ok, yaml} = Projects.export_project(:yaml, id, params["snapshots"])
 
       conn
       |> put_resp_content_type("text/yaml")

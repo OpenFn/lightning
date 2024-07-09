@@ -16,6 +16,8 @@ defmodule Lightning.VersionControl do
   alias Lightning.VersionControl.GithubError
   alias Lightning.VersionControl.ProjectRepoConnection
   alias Lightning.VersionControl.VersionControlUsageLimiter
+  alias Lightning.Workflows.Snapshot
+  alias Lightning.Workflows.Workflow
 
   defdelegate subscribe(user), to: Events
 
@@ -130,6 +132,8 @@ defmodule Lightning.VersionControl do
            VersionControlUsageLimiter.limit_github_sync(
              repo_connection.project_id
            ),
+         snapshots <-
+           list_or_create_snapshots_for_project(repo_connection.project_id),
          {:ok, client} <-
            GithubClient.build_installation_client(
              repo_connection.github_installation_id
@@ -143,17 +147,47 @@ defmodule Lightning.VersionControl do
              pull_yml_target_path() |> Path.basename(),
              %{
                ref: default_branch,
-               inputs: %{
-                 projectId: repo_connection.project_id,
-                 apiSecretName: api_secret_name(repo_connection),
-                 pathToConfig: config_target_path(repo_connection),
-                 branch: repo_connection.branch,
-                 commitMessage:
-                   "user #{user_email} initiated a sync from Lightning"
-               }
+               inputs:
+                 %{
+                   projectId: repo_connection.project_id,
+                   apiSecretName: api_secret_name(repo_connection),
+                   pathToConfig: config_target_path(repo_connection),
+                   branch: repo_connection.branch,
+                   commitMessage:
+                     "user #{user_email} initiated a sync from Lightning"
+                 }
+                 |> maybe_add_snapshots(snapshots)
              }
            ) do
       :ok
+    end
+  end
+
+  defp list_or_create_snapshots_for_project(project_id) do
+    current_query =
+      from w in Workflow,
+        left_join: s in assoc(w, :snapshots),
+        on: s.lock_version == w.lock_version,
+        where: w.project_id == ^project_id and is_nil(w.deleted_at),
+        select: {w, s.id}
+
+    workflows = Repo.all(current_query)
+
+    Enum.reduce(workflows, [], fn {workflow, snapshot_id}, acc ->
+      if is_nil(snapshot_id) do
+        {:ok, snapshot} = Snapshot.get_or_create_latest_for(workflow)
+        [snapshot.id | acc]
+      else
+        [snapshot_id | acc]
+      end
+    end)
+  end
+
+  defp maybe_add_snapshots(inputs, snapshot_ids) do
+    if Enum.empty?(snapshot_ids) do
+      inputs
+    else
+      Map.put(inputs, :snapshots, Enum.join(snapshot_ids, " "))
     end
   end
 

@@ -157,6 +157,13 @@ defmodule Lightning.Workflows.Snapshot do
     |> Repo.all()
   end
 
+  def get_all_by_ids(ids) do
+    from(s in __MODULE__,
+      where: s.id in ^ids
+    )
+    |> Repo.all()
+  end
+
   @doc """
   Get the latest snapshot for a workflow, based on the lock_version.
 

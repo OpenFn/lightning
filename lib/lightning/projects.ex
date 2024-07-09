@@ -558,9 +558,10 @@ defmodule Lightning.Projects do
       {:ok, string}
 
   """
-  @spec export_project(:yaml, any) :: {:ok, binary}
-  def export_project(:yaml, project_id) do
-    {:ok, yaml} = ExportUtils.generate_new_yaml(project_id)
+  @spec export_project(:yaml, Ecto.UUID.t(), [Ecto.UUID.t(), ...] | nil) ::
+          {:ok, binary}
+  def export_project(:yaml, project_id, snapshots \\ nil) do
+    {:ok, yaml} = ExportUtils.generate_new_yaml(project_id, snapshots)
 
     {:ok, yaml}
   end

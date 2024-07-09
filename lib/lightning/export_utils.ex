@@ -5,8 +5,8 @@ defmodule Lightning.ExportUtils do
   """
 
   alias Lightning.Projects
-  alias Lightning.Repo
   alias Lightning.Workflows
+  alias Lightning.Workflows.Snapshot
 
   defp hyphenate(string) when is_binary(string) do
     string |> String.replace(" ", "-")
@@ -41,36 +41,38 @@ defmodule Lightning.ExportUtils do
       else: base
   end
 
-  defp edge_to_treenode(%{source_job_id: nil} = edge, triggers) do
-    edge = Repo.preload(edge, [:source_trigger, :target_job])
-    trigger_name = edge.source_trigger.type |> Atom.to_string()
-    target_job = edge.target_job.name |> hyphenate()
+  defp edge_to_treenode(%{source_job_id: nil} = edge, triggers, jobs) do
+    source_trigger =
+      Enum.find(triggers, fn t -> t.id == edge.source_trigger_id end)
+
+    target_job = Enum.find(jobs, fn j -> j.id == edge.target_job_id end)
+    trigger_name = to_string(source_trigger.type)
+    target_job_name = hyphenate(target_job.name)
 
     %{
-      name: "#{trigger_name}->#{target_job}",
-      source_trigger: find_trigger_name(edge, triggers)
+      name: "#{trigger_name}->#{target_job_name}",
+      source_trigger: trigger_name
     }
-    |> merge_edge_common_fields(edge)
+    |> merge_edge_common_fields(edge, target_job)
   end
 
-  defp edge_to_treenode(%{source_trigger_id: nil} = edge, _unused_triggers) do
-    edge = Repo.preload(edge, [:source_job, :target_job])
-    source_job = edge.source_job.name |> hyphenate()
-    target_job = edge.target_job.name |> hyphenate()
+  defp edge_to_treenode(%{source_trigger_id: nil} = edge, _triggers, jobs) do
+    target_job = Enum.find(jobs, fn j -> j.id == edge.target_job_id end)
+    source_job = Enum.find(jobs, fn j -> j.id == edge.source_job_id end)
+    source_job_name = hyphenate(source_job.name)
+    target_job_name = hyphenate(target_job.name)
 
     %{
-      name: "#{source_job}->#{target_job}",
-      source_job: source_job
+      name: "#{source_job_name}->#{target_job_name}",
+      source_job: source_job_name
     }
-    |> merge_edge_common_fields(edge)
+    |> merge_edge_common_fields(edge, target_job)
   end
 
-  defp merge_edge_common_fields(json, edge) do
-    target_job = edge.target_job.name |> hyphenate()
-
+  defp merge_edge_common_fields(json, edge, target_job) do
     json
     |> Map.merge(%{
-      target_job: target_job,
+      target_job: hyphenate(target_job.name),
       condition_type: edge.condition_type |> Atom.to_string(),
       enabled: edge.enabled,
       node_type: :edge
@@ -85,12 +87,6 @@ defmodule Lightning.ExportUtils do
         map
       end
     end)
-  end
-
-  defp find_trigger_name(edge, triggers) do
-    [trigger] = Enum.filter(triggers, fn t -> t.id == edge.source_trigger_id end)
-
-    trigger.name
   end
 
   defp pick_and_sort(map) do
@@ -229,7 +225,9 @@ defmodule Lightning.ExportUtils do
     edges =
       workflow.edges
       |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
-      |> Enum.map(fn e -> edge_to_treenode(e, triggers) end)
+      |> Enum.map(fn e ->
+        edge_to_treenode(e, workflow.triggers, workflow.jobs)
+      end)
 
     flow_map = %{jobs: jobs, edges: edges, triggers: triggers}
 
@@ -237,12 +235,27 @@ defmodule Lightning.ExportUtils do
     |> to_workflow_yaml_tree(workflow)
   end
 
-  def generate_new_yaml(project_id) do
+  def generate_new_yaml(project_id, snapshots \\ nil)
+
+  def generate_new_yaml(project_id, nil) do
     project = Projects.get_project!(project_id)
 
     yaml =
       project
       |> Workflows.get_workflows_for()
+      |> build_yaml_tree(project)
+      |> to_new_yaml()
+
+    {:ok, yaml}
+  end
+
+  def generate_new_yaml(project_id, snapshots) when is_list(snapshots) do
+    project = Projects.get_project!(project_id)
+
+    yaml =
+      snapshots
+      |> Snapshot.get_all_by_ids()
+      |> Enum.sort_by(fn s -> s.name end)
       |> build_yaml_tree(project)
       |> to_new_yaml()
 
