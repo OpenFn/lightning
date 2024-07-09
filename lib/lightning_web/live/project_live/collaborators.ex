@@ -37,7 +37,7 @@ defmodule LightningWeb.ProjectLive.Collaborators do
   def prepare_for_insertion(schema, attrs, current_project_users) do
     changeset = changeset(schema, attrs)
 
-    changeset =
+    {changeset, non_existing_users} =
       if changeset.valid? do
         collaborators = get_embed(changeset, :collaborators)
 
@@ -45,16 +45,17 @@ defmodule LightningWeb.ProjectLive.Collaborators do
 
         existing_users = Lightning.Accounts.list_users_by_emails(emails)
 
-        updated_collaborators =
+        {updated_collaborators, non_existing_users} =
           validate_collaborators(
             collaborators,
             existing_users,
             current_project_users
           )
 
-        put_embed(changeset, :collaborators, updated_collaborators)
+        {put_embed(changeset, :collaborators, updated_collaborators),
+         non_existing_users}
       else
-        changeset
+        {changeset, []}
       end
 
     with {:ok, %{collaborators: collaborators}} <-
@@ -64,7 +65,7 @@ defmodule LightningWeb.ProjectLive.Collaborators do
           Map.take(c, [:user_id, :role])
         end)
 
-      {:ok, collaborators}
+      {:ok, %{collaborators: collaborators, to_invite: non_existing_users}}
     end
   end
 
@@ -73,26 +74,37 @@ defmodule LightningWeb.ProjectLive.Collaborators do
          existing_users,
          current_project_users
        ) do
-    Enum.map(collaborators, fn collaborator ->
+    # {validated_collaborators, non_existing_users} =
+    Enum.reduce(collaborators, {[], []}, fn collaborator,
+                                            {acc_validated, acc_non_existing} ->
       existing_user =
         Enum.find(existing_users, fn u ->
           u.email == get_field(collaborator, :email)
         end)
 
-      collaborator
-      |> put_change(:user_id, existing_user && existing_user.id)
-      |> validate_change(:email, fn :email, _email ->
-        cond do
-          is_nil(existing_user) ->
-            [email: "There is no account connected this email"]
+      if is_nil(existing_user) do
+        {acc_validated,
+         [{:email, get_field(collaborator, :email)} | acc_non_existing]}
+      else
+        validated_collaborator =
+          collaborator
+          |> put_change(:user_id, existing_user.id)
+          |> validate_change(:email, fn :email, _email ->
+            if Enum.find(
+                 current_project_users,
+                 &(&1.user_id == existing_user.id)
+               ) do
+              [email: "This account is already part of this project"]
+            else
+              []
+            end
+          end)
 
-          Enum.find(current_project_users, &(&1.user_id == existing_user.id)) ->
-            [email: "This account is already part of this project"]
-
-          true ->
-            []
-        end
-      end)
+        {[validated_collaborator | acc_validated], acc_non_existing}
+      end
     end)
+
+    # Return the validated collaborators and the non-existing users
+    # {Enum.reverse(validated_collaborators), Enum.reverse(non_existing_users)}
   end
 end

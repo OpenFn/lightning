@@ -34,11 +34,19 @@ defmodule LightningWeb.ProjectLive.NewCollaboratorComponent do
 
   def handle_event("add_collaborators", %{"project" => params}, socket) do
     with :ok <- limit_adding_users(socket, params),
-         {:ok, project_users} <- prepare_for_insertion(socket, params),
+         {:ok, %{collaborators: project_users, to_invite: users_to_invite}} <-
+           prepare_for_insertion(socket, params),
          {:ok, _project} <- add_project_users(socket, project_users) do
+      n_project_users = length(project_users)
+      n_to_invite = length(users_to_invite)
+      total = n_project_users + n_to_invite
+
+      message =
+        "#{n_project_users} out of #{total} collaborators have OpenFn accounts and have been added to your project. You can invite others to join OpenFn and grant them access to this project."
+
       {:noreply,
        socket
-       |> put_flash(:info, "Collaborators updated successfully!")
+       |> put_flash(:info, message)
        |> push_navigate(
          to: ~p"/projects/#{socket.assigns.project}/settings#collaboration"
        )}
@@ -51,8 +59,8 @@ defmodule LightningWeb.ProjectLive.NewCollaboratorComponent do
            params,
            assigns.project_users
          ) do
-      {:ok, project_users} ->
-        {:ok, project_users}
+      {:ok, %{collaborators: project_users, to_invite: non_project_users}} ->
+        {:ok, %{collaborators: project_users, to_invite: non_project_users}}
 
       {:error, changeset} ->
         {:noreply, assign(socket, changeset: changeset)}
