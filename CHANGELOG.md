@@ -21,7 +21,8 @@ and this project adheres to
 
 ### Fixed
 
-- Trim errant spaces on user first and last names
+- Trim erroneous spaces on user first and last names
+  [#2269](https://github.com/OpenFn/lightning/pull/2269)
 
 ## [v2.7.4] 2024-07-06
 
