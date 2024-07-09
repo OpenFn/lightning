@@ -28,7 +28,8 @@ defmodule LightningWeb.WorkflowLive.Index do
 
   @impl true
   def render(%{project: %{id: project_id}} = assigns) do
-    assigns = LiveHelpers.check_limits(assigns, project_id)
+    assigns =
+      LiveHelpers.check_limits(assigns, project_id)
 
     ~H"""
     <LayoutComponents.page_content>
@@ -42,7 +43,7 @@ defmodule LightningWeb.WorkflowLive.Index do
         <% end %>
       </:banner>
       <:header>
-        <LayoutComponents.header current_user={@current_user}>
+        <LayoutComponents.header current_user={@current_user} project={@project}>
           <:title><%= @page_title %></:title>
           <:period><%= @dashboard_period %></:period>
         </LayoutComponents.header>

@@ -55,7 +55,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     ~H"""
     <LayoutComponents.page_content>
       <:header>
-        <LayoutComponents.header current_user={@current_user}>
+        <LayoutComponents.header current_user={@current_user} project={@project}>
           <:title>
             <.workflow_name_field form={@workflow_form} />
             <div class="mx-2"></div>
