@@ -56,6 +56,7 @@ defmodule Lightning.Accounts.User do
       :password,
       :contact_preference
     ])
+    |> trim_name()
     |> validate_name()
     |> validate_email()
     |> validate_password([])
@@ -103,6 +104,7 @@ defmodule Lightning.Accounts.User do
         ]
     )
     |> validate_email()
+    |> trim_name()
     |> validate_name()
     |> validate_password(opts)
     |> validate_change(:terms_accepted, fn :terms_accepted, terms_accepted ->
@@ -213,8 +215,7 @@ defmodule Lightning.Accounts.User do
       :scheduled_deletion
     ])
     |> validate_email()
-    |> update_change(:first_name, &String.trim/1)
-    |> update_change(:last_name, &String.trim/1)
+    |> trim_name()
     |> validate_name()
     |> validate_role()
   end
@@ -329,5 +330,11 @@ defmodule Lightning.Accounts.User do
         "This email doesn't match your current email"
       )
     end
+  end
+
+  defp trim_name(changeset) do
+    changeset
+    |> update_change(:first_name, &String.trim/1)
+    |> update_change(:last_name, &String.trim/1)
   end
 end
