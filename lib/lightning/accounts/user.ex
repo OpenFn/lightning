@@ -56,8 +56,8 @@ defmodule Lightning.Accounts.User do
       :password,
       :contact_preference
     ])
-    |> trim_name()
     |> validate_name()
+    |> trim_name()
     |> validate_email()
     |> validate_password([])
   end
@@ -104,8 +104,8 @@ defmodule Lightning.Accounts.User do
         ]
     )
     |> validate_email()
-    |> trim_name()
     |> validate_name()
+    |> trim_name()
     |> validate_password(opts)
     |> validate_change(:terms_accepted, fn :terms_accepted, terms_accepted ->
       if terms_accepted do
@@ -215,8 +215,8 @@ defmodule Lightning.Accounts.User do
       :scheduled_deletion
     ])
     |> validate_email()
-    |> trim_name()
     |> validate_name()
+    |> trim_name()
     |> validate_role()
   end
 
