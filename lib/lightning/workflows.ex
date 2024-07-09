@@ -406,7 +406,8 @@ defmodule Lightning.Workflows do
     from(j in Job, order_by: [asc: j.inserted_at])
   end
 
-  def has_newer_version?(%Workflow{lock_version: version}) do
-    from(s in Snapshot, where: s.lock_version > ^version) |> Repo.exists?()
+  def has_newer_version?(%Workflow{lock_version: version, id: id}) do
+    from(w in Workflow, where: w.lock_version > ^version and w.id == ^id)
+    |> Repo.exists?()
   end
 end
