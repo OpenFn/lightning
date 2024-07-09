@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Do Not Require Lock Version In URL Parameters
+  [#2267](https://github.com/OpenFn/lightning/pull/2267)
+
 ## [v2.7.4] 2024-07-06
 
 ### Changed
