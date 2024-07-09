@@ -90,13 +90,15 @@ defmodule Lightning.Encrypted.Binary do
   # TODO How do I test this?
   def embed_as(_format), do: :dump
 
+  def dump(nil), do: super(nil)
+
   def dump(value) do
     with {:ok, encrypted} <- super(value) do
       {:ok, Base.encode64(encrypted)}
     end
   end
 
-  def load(nil), do: {:ok, nil}
+  def load(nil), do: super(nil)
 
   def load(value), do: super(Base.decode64!(value))
 end

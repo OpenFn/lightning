@@ -5,8 +5,8 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetWorker do
   """
   use GenServer
 
-  alias Lightning.KafkaTriggers.MessageHandling
   alias Lightning.KafkaTriggers.MessageCandidateSetServer
+  alias Lightning.KafkaTriggers.MessageHandling
 
   def start_link(_opts) do
     GenServer.start_link(__MODULE__, [])

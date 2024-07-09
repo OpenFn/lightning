@@ -1,4 +1,9 @@
 defmodule Lightning.KafkaTriggers.MessageHandling do
+  @moduledoc """
+  Contains the logic for ensuring that messages are processed in the order
+  they are received (within the guarantees provided by Kafka for messages with
+  the same key and topic).
+  """
   import Ecto.Query
 
   alias Lightning.Extensions.UsageLimiting.Action
@@ -11,7 +16,7 @@ defmodule Lightning.KafkaTriggers.MessageHandling do
   alias Lightning.WorkOrders
 
   @doc """
-  This method finds all unique MessageCandidateSetIDs present in the
+  This method finds all unique MessageCandidateSets present in the
   `TriggerKafkaMessage` table.
   """
   def find_message_candidate_sets do
@@ -27,7 +32,7 @@ defmodule Lightning.KafkaTriggers.MessageHandling do
     end)
   end
 
-  def process_candidate_for(candidate_set = %MessageCandidateSet{}) do
+  def process_candidate_for(%MessageCandidateSet{} = candidate_set) do
     Repo.transaction(fn ->
       candidate_set
       |> find_candidate_for()

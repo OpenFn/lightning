@@ -1,4 +1,7 @@
 defmodule Lightning.KafkaTriggers do
+  @moduledoc """
+  Contains the logic to manage kafka trigger and their associated pipelines.
+  """
   import Ecto.Query
 
   alias Ecto.Changeset
@@ -47,7 +50,7 @@ defmodule Lightning.KafkaTriggers do
   defp initial_policy(%{initial_offset_reset_policy: initial_policy}) do
     cond do
       initial_policy in ["earliest", "latest"] ->
-        initial_policy |> String.to_atom()
+        initial_policy |> String.to_existing_atom()
 
       String.match?(initial_policy, ~r/^\d+$/) ->
         {timestamp, _remainder} = Integer.parse(initial_policy)
@@ -131,6 +134,7 @@ defmodule Lightning.KafkaTriggers do
             group_id: group_id,
             hosts: hosts,
             offset_reset_policy: offset_reset_policy,
+            # sobelow_skip ["StringToAtom"]
             trigger_id: trigger.id |> String.to_atom(),
             sasl: sasl,
             ssl: ssl,

@@ -1,12 +1,17 @@
 defmodule Lightning.KafkaTriggers.DuplicateTrackingCleanupWorker do
+  @moduledoc """
+  Repsonsible for cleaing up stale TriggerKafkaMessageRecords entries. 
+  TriggerKafkaMessageRecords are used to deduplicate incoming messages from
+  a Kafka cluster.
+  """
   use Oban.Worker,
     queue: :background,
     max_attempts: 1
 
   import Ecto.Query
 
-  alias Lightning.Repo
   alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
+  alias Lightning.Repo
 
   @impl Oban.Worker
   def perform(_opts) do

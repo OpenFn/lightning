@@ -1,4 +1,7 @@
 defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
+  @moduledoc """
+  Configuration of Kafka Triggers.
+  """
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -73,13 +76,13 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
 
         hosts ->
           hosts
-          |> Enum.map(fn
-            [host, port] -> "#{host}:#{port}"
-            # TODO something_else is a bandaid for a live validation issue
-            # make a better plan
-            something_else -> something_else
-          end)
-          |> Enum.join(", ")
+          |> Enum.map_join(
+            ", ",
+            fn
+              [host, port] -> "#{host}:#{port}"
+              something_else -> something_else
+            end
+          )
       end
 
     changeset
@@ -106,24 +109,7 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
   def apply_hosts_string(changeset) do
     case get_field(changeset, :hosts_string) do
       nil ->
-        case get_field(changeset, :hosts) do
-          nil ->
-            changeset
-            |> add_error(
-              :hosts_string,
-              "Must be specified in the format `host:port, host:port`"
-            )
-
-          [] ->
-            changeset
-            |> add_error(
-              :hosts_string,
-              "Must be specified in the format `host:port, host:port`"
-            )
-
-          _hosts ->
-            changeset
-        end
+        changeset |> check_for_existing_hosts()
 
       "" ->
         changeset
@@ -156,13 +142,34 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
           [] ->
             changeset |> put_change(:hosts, hosts |> Enum.reverse())
 
-          _ ->
+          _some_errors ->
             changeset
             |> add_error(
               :hosts_string,
               "Must be specified in the format `host:port, host:port`"
             )
         end
+    end
+  end
+
+  defp check_for_existing_hosts(changeset) do
+    case get_field(changeset, :hosts) do
+      nil ->
+        changeset
+        |> add_error(
+          :hosts_string,
+          "Must be specified in the format `host:port, host:port`"
+        )
+
+      [] ->
+        changeset
+        |> add_error(
+          :hosts_string,
+          "Must be specified in the format `host:port, host:port`"
+        )
+
+      _hosts ->
+        changeset
     end
   end
 
@@ -245,44 +252,78 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
     |> get_field(:sasl)
     |> case do
       nil ->
-        changeset =
-          case get_field(changeset, :password) do
-            nil ->
-              changeset
-
-            _ ->
-              changeset
-              |> add_error(:password, "Requires SASL to be selected")
-          end
-
-        case get_field(changeset, :username) do
-          nil ->
-            changeset
-
-          _ ->
-            changeset
-            |> add_error(:username, "Requires SASL to be selected")
-        end
+        changeset |> check_for_superfluous_credentials()
 
       _sasl_type ->
-        changeset =
-          case get_field(changeset, :password) do
-            nil ->
-              changeset
-              |> add_error(:password, "Required if SASL is selected")
+        changeset |> check_for_required_credentials()
+        # changeset =
+        #   case get_field(changeset, :password) do
+        #     nil ->
+        #       changeset
+        #       |> add_error(:password, "Required if SASL is selected")
+        #
+        #     _password ->
+        #       changeset
+        #   end
+        #
+        # case get_field(changeset, :username) do
+        #   nil ->
+        #     changeset
+        #     |> add_error(:username, "Required if SASL is selected")
+        #
+        #   _username ->
+        #     changeset
+        # end
+    end
+  end
 
-            _ ->
-              changeset
-          end
+  defp check_for_superfluous_credentials(changeset) do
+    changeset =
+      changeset
+      |> get_field(:password)
+      |> case do
+        nil ->
+          changeset
 
-        case get_field(changeset, :username) do
-          nil ->
-            changeset
-            |> add_error(:username, "Required if SASL is selected")
+        _password ->
+          changeset
+          |> add_error(:password, "Requires SASL to be selected")
+      end
 
-          _ ->
-            changeset
-        end
+    changeset
+    |> get_field(:username)
+    |> case do
+      nil ->
+        changeset
+
+      _username ->
+        changeset
+        |> add_error(:username, "Requires SASL to be selected")
+    end
+  end
+
+  defp check_for_required_credentials(changeset) do
+    changeset =
+      changeset
+      |> get_field(:password)
+      |> case do
+        nil ->
+          changeset
+          |> add_error(:password, "Required if SASL is selected")
+
+        _password ->
+          changeset
+      end
+
+    changeset
+    |> get_field(:username)
+    |> case do
+      nil ->
+        changeset
+        |> add_error(:username, "Required if SASL is selected")
+
+      _username ->
+        changeset
     end
   end
 

@@ -1,4 +1,8 @@
 defmodule Lightning.KafkaTriggers.TriggerKafkaMessageRecord do
+  @moduledoc """
+  Persists a lightweight represenattion of a message that has been recevied from
+  a Kafka cluster, for the purpose of deduplication.
+  """
   use Ecto.Schema
 
   import Ecto.Changeset

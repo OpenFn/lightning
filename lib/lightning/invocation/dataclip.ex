@@ -100,7 +100,7 @@ defmodule Lightning.Invocation.Dataclip do
         changeset
         |> foreign_key_constraint(:source_step)
 
-      _ ->
+      _other ->
         changeset
     end
   end

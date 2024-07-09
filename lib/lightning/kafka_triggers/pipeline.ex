@@ -5,14 +5,14 @@ defmodule Lightning.KafkaTriggers.Pipeline do
   """
   use Broadway
 
-  require Logger
-
   alias Ecto.Multi
   alias Lightning.KafkaTriggers
   alias Lightning.KafkaTriggers.TriggerKafkaMessage
   alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
   alias Lightning.Repo
   alias Lightning.Workflows.Trigger
+
+  require Logger
 
   def start_link(opts) do
     trigger_id = opts |> Keyword.get(:trigger_id)
@@ -115,7 +115,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
     messages
   end
 
-  defp create_log_entry(message = %{status: {:failed, :duplicate}}, context) do
+  defp create_log_entry(%{status: {:failed, :duplicate}} = message, context) do
     %{
       metadata: %{
         offset: offset,

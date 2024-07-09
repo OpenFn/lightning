@@ -11,7 +11,7 @@ defmodule Lightning.Workflows.Triggers.Events do
     )
   end
 
-  def subscribe_to_kafka_trigger_updated() do
+  def subscribe_to_kafka_trigger_updated do
     Lightning.subscribe(kafka_trigger_updated_topic())
   end
 

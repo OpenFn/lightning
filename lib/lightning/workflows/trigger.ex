@@ -14,8 +14,8 @@ defmodule Lightning.Workflows.Trigger do
   use Lightning.Schema
   import Ecto.Query
 
-  alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.Triggers.KafkaConfiguration
+  alias Lightning.Workflows.Workflow
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -129,7 +129,7 @@ defmodule Lightning.Workflows.Trigger do
     |> get_field(field)
     |> case do
       nil -> changeset |> put_change(field, value)
-      _ -> changeset
+      _value -> changeset
     end
   end
 
@@ -150,7 +150,7 @@ defmodule Lightning.Workflows.Trigger do
   end
 
   def kafka_partitions_changeset(
-        trigger = %{type: :kafka, kafka_configuration: kafka_configuration},
+        %{type: :kafka, kafka_configuration: kafka_configuration} = trigger,
         partition,
         timestamp
       ) do

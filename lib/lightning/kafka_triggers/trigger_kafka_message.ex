@@ -1,4 +1,7 @@
 defmodule Lightning.KafkaTriggers.TriggerKafkaMessage do
+  @moduledoc """
+  This persists a message received from a Kafka cluster.
+  """
   use Ecto.Schema
   import Ecto.Changeset
 
