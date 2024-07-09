@@ -66,16 +66,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
     ~H"""
     <LayoutComponents.page_content>
       <:header>
-        <LayoutComponents.header current_user={@current_user}>
+        <LayoutComponents.header
+          current_user={@current_user}
+          project={@project}
+          breadcrumbs={[{"Workflows", "/"}]}
+        >
           <:title>
-            <.workflow_name_field
-              form={@workflow_form}
-              disabled={
-                !@can_edit_workflow or
-                  @snapshot_version_tag != "latest" or
-                  !@has_presence_edit_priority
-              }
-            />
+            <%= @page_title %>
             <div class="mx-2"></div>
             <LightningWeb.Components.Common.snapshot_version_chip
               id="canvas-workflow-version"
