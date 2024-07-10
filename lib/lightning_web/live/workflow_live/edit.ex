@@ -612,7 +612,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     cond do
       current_user_presence.active_sessions > 1 ->
-        "You cannot edit this workflow because it has #{current_user_presence.active_sessions} active sessions at the moment. To enable editing, close other active sessions."
+        "You can't edit this workflow because you have #{current_user_presence.active_sessions} active sessions. Close your other sessions to enable editing."
 
       current_user_presence.user.id != prior_user_presence.user.id ->
         "This workflow is currently locked for editing because a collaborator (#{prior_user_name}) is currently working on it. You can inspect this workflow and its associated steps but cannot make edits."

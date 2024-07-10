@@ -371,10 +371,10 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
       assert another_amy_view |> has_element?("#canvas-banner-#{amy.id}")
 
       assert amy_view |> element("#canvas-banner-#{amy.id}") |> render() =~
-               "You cannot edit this workflow because it has 2 active sessions at the moment. To enable editing, close other active sessions."
+               "You can&#39;t edit this workflow because you have 2 active sessions. Close your other sessions to enable editing."
 
       assert another_amy_view |> element("#canvas-banner-#{amy.id}") |> render() =~
-               "You cannot edit this workflow because it has 2 active sessions at the moment. To enable editing, close other active sessions."
+               "You can&#39;t edit this workflow because you have 2 active sessions. Close your other sessions to enable editing."
     end
 
     test "in inspector", %{conn: conn} do
@@ -415,12 +415,12 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
       assert another_amy_view |> has_element?("#inspector-banner-#{amy.id}")
 
       assert amy_view |> element("#inspector-banner-#{amy.id}") |> render() =~
-               "You cannot edit this workflow because it has 2 active sessions at the moment. To enable editing, close other active sessions."
+               "You can&#39;t edit this workflow because you have 2 active sessions. Close your other sessions to enable editing."
 
       assert another_amy_view
              |> element("#inspector-banner-#{amy.id}")
              |> render() =~
-               "You cannot edit this workflow because it has 2 active sessions at the moment. To enable editing, close other active sessions."
+               "You can&#39;t edit this workflow because you have 2 active sessions. Close your other sessions to enable editing."
     end
   end
 end
