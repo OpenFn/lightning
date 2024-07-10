@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="project" content="Lightning v2.7.4">
+
+    <title>Lightning.Workflows.Presence — Lightning v2.7.4</title>
+    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
+
+
+    <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
+    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
+    <script src="dist/sidebar_items-EF4121CF.js"></script>
+
+      <script src="docs_config.js"></script>
+
+    <script async src="dist/html-J2ASZTQE.js"></script>
+
+
+  </head>
+  <body data-type="modules" class="page-module">
+    <script>
+
+      try {
+        var settings = JSON.parse(localStorage.getItem('ex_doc:settings') || '{}');
+
+        if (settings.theme === 'dark' ||
+           ((settings.theme === 'system' || settings.theme == null) &&
+             window.matchMedia('(prefers-color-scheme: dark)').matches)
+           ) {
+          document.body.classList.add('dark')
+        }
+      } catch (error) { }
+    </script>
+
+<div class="main">
+
+<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+  <form class="sidebar-search" action="search.html">
+    <label class="search-label">
+      <span class="sr-only">Search documentation of Lightning</span>
+      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+    </label>
+    <button type="submit" class="search-button" aria-label="Submit Search">
+      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
+    </button>
+    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+      <i class="ri-close-line ri-lg" title="Cancel search"></i>
+    </button>
+  </form>
+
+  <div class="autocomplete">
+    <div class="autocomplete-results">
+    </div>
+  </div>
+
+  <div class="sidebar-header">
+
+      <a href="https://openfn.github.io/Lightning">
+        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
+      </a>
+
+    <div class="sidebar-projectDetails">
+      <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+Lightning
+      </a>
+      <div class="sidebar-projectVersion" translate="no">
+        v2.7.4
+      </div>
+    </div>
+    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
+      <li>
+        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
+Pages
+        </button>
+      </li>
+
+        <li>
+          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
+            Modules
+          </button>
+        </li>
+
+
+        <li>
+          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
+            <span translate="no">Mix</span> Tasks
+          </button>
+        </li>
+
+    </ul>
+  </div>
+
+  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
+    <ul id="extras-full-list" class="full-list"></ul>
+  </div>
+
+    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
+      <ul id="modules-full-list" class="full-list"></ul>
+    </div>
+
+
+    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
+      <ul id="tasks-full-list" class="full-list"></ul>
+    </div>
+
+</nav>
+
+<main class="content">
+  <output role="status" id="toast"></output>
+  <div class="content-outer">
+    <div id="content" class="content-inner">
+
+<h1>
+<button class="icon-action display-settings">
+  <i class="ri-settings-3-line"></i>
+  <span class="sr-only">Settings</span>
+</button>
+
+
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/presence.ex#L1" title="View Source" class="icon-action" rel="help">
+      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+      <span class="sr-only">View Source</span>
+    </a>
+
+  <span translate="no">Lightning.Workflows.Presence</span> 
+  <small class="app-vsn" translate="no">(Lightning v2.7.4)</small>
+
+</h1>
+
+
+  <section id="moduledoc">
+<p>Handles user presence tracking within the Workflow canvas page.</p><p>This module leverages Phoenix.Presence to track user sessions, manage user priorities,
+and list active presences on specified topics.</p>
+  </section>
+
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#build_presences_summary/2" translate="no">build_presences_summary(presences, params)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Builds a summary of presences with details about the current user's presence, promotable presences,
+and edit priority.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#child_spec/1" translate="no">child_spec(opts)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#fetch/2" translate="no">fetch(topic, presences)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/phoenix/1.7.12/Phoenix.Presence.html#c:fetch/2"><code class="inline">Phoenix.Presence.fetch/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#fetchers_pids/0" translate="no">fetchers_pids()</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_by_key/2" translate="no">get_by_key(topic, key)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/phoenix/1.7.12/Phoenix.Presence.html#c:get_by_key/2"><code class="inline">Phoenix.Presence.get_by_key/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#list/1" translate="no">list(topic)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/phoenix/1.7.12/Phoenix.Presence.html#c:list/1"><code class="inline">Phoenix.Presence.list/1</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#list_presences/1" translate="no">list_presences(topic)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Lists all presences for a given topic.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#new_user_presence/3" translate="no">new_user_presence(user, joined_at, active_sessions \\ 0)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Creates a new <code class="inline">UserPresence</code> struct.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#track/3" translate="no">track(socket, key, meta)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/phoenix/1.7.12/Phoenix.Presence.html#c:track/3"><code class="inline">Phoenix.Presence.track/3</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#track/4" translate="no">track(pid, topic, key, meta)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/phoenix/1.7.12/Phoenix.Presence.html#c:track/4"><code class="inline">Phoenix.Presence.track/4</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#track_user_presence/3" translate="no">track_user_presence(user, topic, pid)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Tracks the presence of a user on a given topic.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#untrack/2" translate="no">untrack(socket, key)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/phoenix/1.7.12/Phoenix.Presence.html#c:untrack/2"><code class="inline">Phoenix.Presence.untrack/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#untrack/3" translate="no">untrack(pid, topic, key)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/phoenix/1.7.12/Phoenix.Presence.html#c:untrack/3"><code class="inline">Phoenix.Presence.untrack/3</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#update/3" translate="no">update(socket, key, meta)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/phoenix/1.7.12/Phoenix.Presence.html#c:update/3"><code class="inline">Phoenix.Presence.update/3</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#update/4" translate="no">update(pid, topic, key, meta)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/phoenix/1.7.12/Phoenix.Presence.html#c:update/4"><code class="inline">Phoenix.Presence.update/4</code></a>.</p></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+    <div class="functions-list">
+<section class="detail" id="build_presences_summary/2">
+
+  <div class="detail-header">
+    <a href="#build_presences_summary/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">build_presences_summary(presences, params)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/presence.ex#L134" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Builds a summary of presences with details about the current user's presence, promotable presences,
+and edit priority.</p><h2 id="build_presences_summary/2-parameters" class="section-heading">
+  <a href="#build_presences_summary/2-parameters" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Parameters</span>
+</h2>
+<ul><li><code class="inline">presences</code> (list): A list of presence records, each containing user information and a joined_at timestamp.</li><li><code class="inline">params</code> (map): A map containing the following keys:<ul><li><code class="inline">:current_user_presence</code> - The presence record for the current user.</li><li><code class="inline">:current_user</code> - The current user record.</li><li><code class="inline">:view_only_users_ids</code> - A list of user IDs who have view-only permissions.</li></ul></li></ul><h2 id="build_presences_summary/2-returns" class="section-heading">
+  <a href="#build_presences_summary/2-returns" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Returns</span>
+</h2>
+<ul><li><code class="inline">map</code>: A map containing the following keys:<ul><li><code class="inline">:presences</code> - The sorted list of all presences.</li><li><code class="inline">:prior_user_presence</code> - The presence record with edit priority.</li><li><code class="inline">:current_user_presence</code> - The presence record for the current user.</li><li><code class="inline">:has_presence_edit_priority</code> - A boolean indicating if the current user has edit priority.</li></ul></li></ul><h2 id="build_presences_summary/2-examples" class="section-heading">
+  <a href="#build_presences_summary/2-examples" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Examples</span>
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">presences</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="1738251286-1">[</span><span class="w">
+</span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="p" data-group-id="1738251286-2">%{</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1738251286-3">%{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="1738251286-3">}</span><span class="p">,</span><span class="w"> </span><span class="ss">joined_at</span><span class="p">:</span><span class="w"> </span><span class="ld">~N[2024-07-03 12:00:00]</span><span class="p">,</span><span class="w"> </span><span class="ss">active_sessions</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="1738251286-2">}</span><span class="p">,</span><span class="w">
+</span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="p" data-group-id="1738251286-4">%{</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1738251286-5">%{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p" data-group-id="1738251286-5">}</span><span class="p">,</span><span class="w"> </span><span class="ss">joined_at</span><span class="p">:</span><span class="w"> </span><span class="ld">~N[2024-07-03 12:05:00]</span><span class="p">,</span><span class="w"> </span><span class="ss">active_sessions</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="1738251286-4">}</span><span class="p">,</span><span class="w">
+</span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="p" data-group-id="1738251286-6">%{</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1738251286-7">%{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p" data-group-id="1738251286-7">}</span><span class="p">,</span><span class="w"> </span><span class="ss">joined_at</span><span class="p">:</span><span class="w"> </span><span class="ld">~N[2024-07-03 12:10:00]</span><span class="p">,</span><span class="w"> </span><span class="ss">active_sessions</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="1738251286-6">}</span><span class="w">
+</span><span class="gp unselectable">...&gt; </span><span class="p" data-group-id="1738251286-1">]</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">params</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="1738251286-8">%{</span><span class="w">
+</span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="ss">current_user_presence</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1738251286-9">%{</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1738251286-10">%{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="1738251286-10">}</span><span class="p">,</span><span class="w"> </span><span class="ss">joined_at</span><span class="p">:</span><span class="w"> </span><span class="ld">~N[2024-07-03 12:00:00]</span><span class="p">,</span><span class="w"> </span><span class="ss">active_sessions</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="1738251286-9">}</span><span class="p">,</span><span class="w">
+</span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="ss">current_user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1738251286-11">%{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="1738251286-11">}</span><span class="p">,</span><span class="w">
+</span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="ss">view_only_users_ids</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1738251286-12">[</span><span class="mi">2</span><span class="p" data-group-id="1738251286-12">]</span><span class="w">
+</span><span class="gp unselectable">...&gt; </span><span class="p" data-group-id="1738251286-8">}</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">build_presences_summary</span><span class="p" data-group-id="1738251286-13">(</span><span class="n">presences</span><span class="p">,</span><span class="w"> </span><span class="n">params</span><span class="p" data-group-id="1738251286-13">)</span><span class="w">
+</span><span class="p" data-group-id="1738251286-14">%{</span><span class="w">
+  </span><span class="ss">presences</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1738251286-15">[</span><span class="w">
+    </span><span class="p" data-group-id="1738251286-16">%{</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1738251286-17">%{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="1738251286-17">}</span><span class="p">,</span><span class="w"> </span><span class="ss">joined_at</span><span class="p">:</span><span class="w"> </span><span class="ld">~N[2024-07-03 12:00:00]</span><span class="p">,</span><span class="w"> </span><span class="ss">active_sessions</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="1738251286-16">}</span><span class="p">,</span><span class="w">
+    </span><span class="p" data-group-id="1738251286-18">%{</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1738251286-19">%{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p" data-group-id="1738251286-19">}</span><span class="p">,</span><span class="w"> </span><span class="ss">joined_at</span><span class="p">:</span><span class="w"> </span><span class="ld">~N[2024-07-03 12:05:00]</span><span class="p">,</span><span class="w"> </span><span class="ss">active_sessions</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="1738251286-18">}</span><span class="p">,</span><span class="w">
+    </span><span class="p" data-group-id="1738251286-20">%{</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1738251286-21">%{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p" data-group-id="1738251286-21">}</span><span class="p">,</span><span class="w"> </span><span class="ss">joined_at</span><span class="p">:</span><span class="w"> </span><span class="ld">~N[2024-07-03 12:10:00]</span><span class="p">,</span><span class="w"> </span><span class="ss">active_sessions</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="1738251286-20">}</span><span class="w">
+  </span><span class="p" data-group-id="1738251286-15">]</span><span class="p">,</span><span class="w">
+  </span><span class="ss">prior_user_presence</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1738251286-22">%{</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1738251286-23">%{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p" data-group-id="1738251286-23">}</span><span class="p">,</span><span class="w"> </span><span class="ss">joined_at</span><span class="p">:</span><span class="w"> </span><span class="ld">~N[2024-07-03 12:10:00]</span><span class="p">,</span><span class="w"> </span><span class="ss">active_sessions</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="1738251286-22">}</span><span class="p">,</span><span class="w">
+  </span><span class="ss">current_user_presence</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1738251286-24">%{</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1738251286-25">%{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="1738251286-25">}</span><span class="p">,</span><span class="w"> </span><span class="ss">joined_at</span><span class="p">:</span><span class="w"> </span><span class="ld">~N[2024-07-03 12:00:00]</span><span class="p">,</span><span class="w"> </span><span class="ss">active_sessions</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="1738251286-24">}</span><span class="p">,</span><span class="w">
+  </span><span class="ss">has_presence_edit_priority</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="w">
+</span><span class="p" data-group-id="1738251286-14">}</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="child_spec/1">
+
+  <div class="detail-header">
+    <a href="#child_spec/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">child_spec(opts)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/presence.ex#L8" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="fetch/2">
+
+  <div class="detail-header">
+    <a href="#fetch/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">fetch(topic, presences)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/presence.ex#L8" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Callback implementation for <a href="https://hexdocs.pm/phoenix/1.7.12/Phoenix.Presence.html#c:fetch/2"><code class="inline">Phoenix.Presence.fetch/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="fetchers_pids/0">
+
+  <div class="detail-header">
+    <a href="#fetchers_pids/0" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">fetchers_pids()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/presence.ex#L8" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="get_by_key/2">
+
+  <div class="detail-header">
+    <a href="#get_by_key/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">get_by_key(topic, key)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/presence.ex#L8" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Callback implementation for <a href="https://hexdocs.pm/phoenix/1.7.12/Phoenix.Presence.html#c:get_by_key/2"><code class="inline">Phoenix.Presence.get_by_key/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="list/1">
+
+  <div class="detail-header">
+    <a href="#list/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">list(topic)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/presence.ex#L8" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Callback implementation for <a href="https://hexdocs.pm/phoenix/1.7.12/Phoenix.Presence.html#c:list/1"><code class="inline">Phoenix.Presence.list/1</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="list_presences/1">
+
+  <div class="detail-header">
+    <a href="#list_presences/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">list_presences(topic)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/presence.ex#L82" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Lists all presences for a given topic.</p><h2 id="list_presences/1-parameters" class="section-heading">
+  <a href="#list_presences/1-parameters" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Parameters</span>
+</h2>
+<ul><li><code class="inline">topic</code>: The topic to list the presences for.</li></ul><h2 id="list_presences/1-examples" class="section-heading">
+  <a href="#list_presences/1-examples" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Examples</span>
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">Lightning.Workflows.Presence</span><span class="o">.</span><span class="n">list_presences</span><span class="p" data-group-id="4278896314-1">(</span><span class="s">&quot;workflow:canvas&quot;</span><span class="p" data-group-id="4278896314-1">)</span><span class="w">
+</span><span class="p" data-group-id="4278896314-2">[</span><span class="p" data-group-id="4278896314-3">%</span><span class="nc" data-group-id="4278896314-3">Lightning.Workflows.Presence</span><span class="p" data-group-id="4278896314-3">{</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4278896314-4">%</span><span class="nc" data-group-id="4278896314-4">User</span><span class="p" data-group-id="4278896314-4">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="4278896314-4">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="4278896314-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="4278896314-2">]</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="new_user_presence/3">
+
+    <span id="new_user_presence/2"></span>
+
+  <div class="detail-header">
+    <a href="#new_user_presence/3" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">new_user_presence(user, joined_at, active_sessions \\ 0)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/presence.ex#L35" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Creates a new <code class="inline">UserPresence</code> struct.</p><h2 id="new_user_presence/3-parameters" class="section-heading">
+  <a href="#new_user_presence/3-parameters" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Parameters</span>
+</h2>
+<ul><li><code class="inline">user</code>: The user data to be included in the presence.</li><li><code class="inline">joined_at</code>: The timestamp when the user joined, in microseconds.</li><li><code class="inline">active_sessions</code>: The number of active sessions for the user (default is 0).</li></ul><h2 id="new_user_presence/3-examples" class="section-heading">
+  <a href="#new_user_presence/3-examples" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Examples</span>
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">Lightning.Workflows.Presence</span><span class="o">.</span><span class="n">new_user_presence</span><span class="p" data-group-id="8138662100-1">(</span><span class="p" data-group-id="8138662100-2">%</span><span class="nc" data-group-id="8138662100-2">User</span><span class="p" data-group-id="8138662100-2">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="8138662100-2">}</span><span class="p">,</span><span class="w"> </span><span class="mi">1625597762000000</span><span class="p" data-group-id="8138662100-1">)</span><span class="w">
+</span><span class="p" data-group-id="8138662100-3">%</span><span class="nc" data-group-id="8138662100-3">Lightning.Workflows.Presence</span><span class="p" data-group-id="8138662100-3">{</span><span class="w">
+  </span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8138662100-4">%</span><span class="nc" data-group-id="8138662100-4">User</span><span class="p" data-group-id="8138662100-4">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="8138662100-4">}</span><span class="p">,</span><span class="w">
+  </span><span class="ss">joined_at</span><span class="p">:</span><span class="w"> </span><span class="mi">1625597762000000</span><span class="p">,</span><span class="w">
+  </span><span class="ss">active_sessions</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w">
+</span><span class="p" data-group-id="8138662100-3">}</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="track/3">
+
+  <div class="detail-header">
+    <a href="#track/3" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">track(socket, key, meta)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/presence.ex#L8" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Callback implementation for <a href="https://hexdocs.pm/phoenix/1.7.12/Phoenix.Presence.html#c:track/3"><code class="inline">Phoenix.Presence.track/3</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="track/4">
+
+  <div class="detail-header">
+    <a href="#track/4" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">track(pid, topic, key, meta)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/presence.ex#L8" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Callback implementation for <a href="https://hexdocs.pm/phoenix/1.7.12/Phoenix.Presence.html#c:track/4"><code class="inline">Phoenix.Presence.track/4</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="track_user_presence/3">
+
+  <div class="detail-header">
+    <a href="#track_user_presence/3" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">track_user_presence(user, topic, pid)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/presence.ex#L58" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Tracks the presence of a user on a given topic.</p><h2 id="track_user_presence/3-parameters" class="section-heading">
+  <a href="#track_user_presence/3-parameters" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Parameters</span>
+</h2>
+<ul><li><code class="inline">user</code>: The user to be tracked.</li><li><code class="inline">topic</code>: The topic to track the user on.</li><li><code class="inline">pid</code>: The process identifier for the user's session.</li></ul><h2 id="track_user_presence/3-examples" class="section-heading">
+  <a href="#track_user_presence/3-examples" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Examples</span>
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">Lightning.Workflows.Presence</span><span class="o">.</span><span class="n">track_user_presence</span><span class="p" data-group-id="1979248826-1">(</span><span class="p" data-group-id="1979248826-2">%</span><span class="nc" data-group-id="1979248826-2">User</span><span class="p" data-group-id="1979248826-2">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="1979248826-2">}</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;room:lobby&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">self</span><span class="p" data-group-id="1979248826-3">(</span><span class="p" data-group-id="1979248826-3">)</span><span class="p" data-group-id="1979248826-1">)</span><span class="w">
+</span><span class="ss">:ok</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="untrack/2">
+
+  <div class="detail-header">
+    <a href="#untrack/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">untrack(socket, key)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/presence.ex#L8" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Callback implementation for <a href="https://hexdocs.pm/phoenix/1.7.12/Phoenix.Presence.html#c:untrack/2"><code class="inline">Phoenix.Presence.untrack/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="untrack/3">
+
+  <div class="detail-header">
+    <a href="#untrack/3" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">untrack(pid, topic, key)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/presence.ex#L8" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Callback implementation for <a href="https://hexdocs.pm/phoenix/1.7.12/Phoenix.Presence.html#c:untrack/3"><code class="inline">Phoenix.Presence.untrack/3</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="update/3">
+
+  <div class="detail-header">
+    <a href="#update/3" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">update(socket, key, meta)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/presence.ex#L8" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Callback implementation for <a href="https://hexdocs.pm/phoenix/1.7.12/Phoenix.Presence.html#c:update/3"><code class="inline">Phoenix.Presence.update/3</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="update/4">
+
+  <div class="detail-header">
+    <a href="#update/4" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">update(pid, topic, key, meta)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/presence.ex#L8" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Callback implementation for <a href="https://hexdocs.pm/phoenix/1.7.12/Phoenix.Presence.html#c:update/4"><code class="inline">Phoenix.Presence.update/4</code></a>.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+      <footer class="footer">
+        <p>
+
+          <span class="line">
+            <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+              Search HexDocs
+            </button>
+
+              <a href="Lightning.epub" title="ePub version">
+                Download ePub version
+              </a>
+
+          </span>
+        </p>
+
+        <p class="built-using">
+          Built using
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
+
+            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+        </p>
+      </footer>
+    </div>
+  </div>
+</main>
+</div>
+
+
+  </body>
+</html>
