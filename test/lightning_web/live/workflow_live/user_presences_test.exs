@@ -137,6 +137,8 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
       assert amy_view |> has_element?("#canvas-online-users-#{ana.id}")
       refute amy_view |> has_element?("#canvas-banner-#{amy.id}")
 
+      wait_for_canvas_disabled_state(ana_view, false)
+
       refute ana_view |> has_element?("#canvas-online-users-#{ana.id}")
       assert ana_view |> has_element?("#canvas-online-users-#{amy.id}")
       assert ana_view |> has_element?("#canvas-banner-#{ana.id}")
@@ -169,6 +171,8 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
 
       assert ana_view |> element("#canvas-banner-#{ana.id}") |> render() =~
                "This workflow is currently locked for editing because a collaborator (Amy Ly) is currently working on it. You can inspect this workflow and its associated steps but cannot make edits."
+
+      wait_for_canvas_disabled_state(aly_view, false)
 
       refute aly_view |> has_element?("#canvas-online-users-#{aly.id}")
       assert aly_view |> has_element?("#canvas-online-users-#{amy.id}")
@@ -259,6 +263,8 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
           ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job.id, m: "expand"]}"
         )
 
+      wait_for_canvas_disabled_state(amy_view, false)
+
       refute amy_view |> has_element?("#inspector-online-users-#{amy.id}")
       refute amy_view |> has_element?("#inspector-banner")
 
@@ -273,6 +279,8 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
           ana_session,
           ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job.id, m: "expand"]}"
         )
+
+      wait_for_canvas_disabled_state(ana_view, true)
 
       refute amy_view |> has_element?("#inspector-online-users-#{amy.id}")
       assert amy_view |> has_element?("#inspector-online-users-#{ana.id}")
@@ -297,6 +305,8 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
           aly_session,
           ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job.id, m: "expand"]}"
         )
+
+      wait_for_canvas_disabled_state(aly_view, false)
 
       refute amy_view |> has_element?("#inspector-online-users-#{amy.id}")
       assert amy_view |> has_element?("#inspector-online-users-#{ana.id}")
@@ -367,7 +377,10 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
           ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
         )
 
+      wait_for_canvas_disabled_state(amy_view, false)
       assert amy_view |> has_element?("#canvas-banner-#{amy.id}")
+
+      wait_for_canvas_disabled_state(another_amy_view, false)
       assert another_amy_view |> has_element?("#canvas-banner-#{amy.id}")
 
       assert amy_view |> element("#canvas-banner-#{amy.id}") |> render() =~
@@ -411,7 +424,10 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
           ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job.id, m: "expand"]}"
         )
 
+      wait_for_canvas_disabled_state(amy_view, false)
       assert amy_view |> has_element?("#inspector-banner-#{amy.id}")
+
+      wait_for_canvas_disabled_state(another_amy_view, false)
       assert another_amy_view |> has_element?("#inspector-banner-#{amy.id}")
 
       assert amy_view |> element("#inspector-banner-#{amy.id}") |> render() =~
@@ -422,5 +438,14 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
              |> render() =~
                "You can&#39;t edit this workflow because you have 2 active sessions. Close your other sessions to enable editing."
     end
+  end
+
+  # HACK: This is a workaround to wait for presence to be syncronized.
+  # This is used above to wait for other users to have their presence
+  # updated, so we can assert that they can see other users.
+  defp wait_for_canvas_disabled_state(view, state) do
+    {ref, _, _} = view.proxy
+
+    assert_receive({^ref, {:push_event, "set-disabled", %{disabled: ^state}}})
   end
 end
