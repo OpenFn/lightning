@@ -17,10 +17,16 @@ and this project adheres to
 
 ### Added
 
-- Handle Simultaneous Editors Working In Same Workflow
-  [#1949](https://github.com/OpenFn/lightning/issues/1949)
+### Changed
+
+### Fixed
+
+## [v2.7.5] - 2024-07-10
 
 ### Changed
+
+- Prevent two editors from making changes to the same workflow at the same time
+  [#1949](https://github.com/OpenFn/lightning/issues/1949)
 
 ### Fixed
 
@@ -29,7 +35,7 @@ and this project adheres to
 - Trim erroneous spaces on user first and last names
   [#2269](https://github.com/OpenFn/lightning/pull/2269)
 
-## [v2.7.4] 2024-07-06
+## [v2.7.4] - 2024-07-06
 
 ### Changed
 
