@@ -14,11 +14,10 @@ const JobNode = ({
   ...props
 }: NodeProps<NodeData>) => {
   const toolbar = () => [
-    props.data?.allowPlaceholder &&
-      !props.data?.disabled && [
-        <PlusButton key="+step" />,
-        <PathButton key="+path" />,
-      ],
+    props.data?.allowPlaceholder && [
+      <PlusButton key="+step" />,
+      <PathButton key="+path" />,
+    ],
   ];
 
   const adaptorIconsData = useAdaptorIcons();

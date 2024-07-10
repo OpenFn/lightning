@@ -70,28 +70,19 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
   contain atom values.
   """
   @spec to_map(Ecto.Changeset.t()) :: %{String.t() => any()}
-  def to_map(%Ecto.Changeset{data: %Lightning.Workflows.Snapshot{}} = changeset) do
-    changeset
-    |> to_serializable(&Ecto.Changeset.get_embed/2)
-    |> add_disabled_to_nested(true)
-  end
-
   def to_map(%Ecto.Changeset{} = changeset) do
-    changeset
-    |> to_serializable(&Ecto.Changeset.get_assoc/2)
-    |> add_disabled_to_nested(false)
+    changeset |> to_serializable(embed_or_assoc_getter(changeset))
   end
 
-  defp add_disabled_to_nested(map, disabled_value) do
-    map
-    |> Map.update("jobs", [], &add_disabled_to_list(&1, disabled_value))
-    |> Map.update("edges", [], &add_disabled_to_list(&1, disabled_value))
-    |> Map.update("triggers", [], &add_disabled_to_list(&1, disabled_value))
-  end
+  defp embed_or_assoc_getter(%Ecto.Changeset{
+         data: %Lightning.Workflows.Snapshot{}
+       }),
+       do: &Ecto.Changeset.get_embed/2
 
-  defp add_disabled_to_list(list, disabled_value) do
-    Enum.map(list, fn item -> Map.put(item, "disabled", disabled_value) end)
-  end
+  defp embed_or_assoc_getter(%Ecto.Changeset{
+         data: %Lightning.Workflows.Workflow{}
+       }),
+       do: &Ecto.Changeset.get_assoc/2
 
   defp to_serializable(%Ecto.Changeset{} = changeset, accessor)
        when is_function(accessor) do

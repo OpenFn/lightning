@@ -45,7 +45,8 @@ const fromWorkflow = (
   placeholders: Flow.Model = { nodes: [], edges: [] },
   selectedId: string | null
 ): Flow.Model => {
-  const allowPlaceholder = placeholders.nodes.length === 0;
+  const allowPlaceholder =
+    placeholders.nodes.length === 0 && !workflow.disabled;
 
   const process = (
     items: Array<Lightning.Node | Lightning.Edge>,
@@ -135,7 +136,7 @@ const fromWorkflow = (
 
   const sortedEdges = edges.sort(sortOrderForSvg);
 
-  return { nodes, edges: sortedEdges };
+  return { nodes, edges: sortedEdges, disabled: workflow.disabled };
 };
 
 export default fromWorkflow;

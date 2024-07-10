@@ -108,6 +108,10 @@ export default {
       this.workflowStore.getState().applyPatches(response.patches);
     });
 
+    this.handleEvent('set-disabled', (response: { disabled: boolean }) => {
+      this.workflowStore.getState().setDisabled(response.disabled);
+    });
+
     this.handleEvent<{ href: string; patch: boolean }>('navigate', e => {
       const id = new URL(window.location.href).searchParams.get('s');
 

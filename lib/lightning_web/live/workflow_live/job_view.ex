@@ -62,6 +62,10 @@ defmodule LightningWeb.WorkflowLive.JobView do
   attr :follow_run_id, :any, default: nil
   attr :snapshot, :any, required: true
   attr :snapshot_version, :any, required: true
+  attr :display_banner, :boolean, default: false
+  attr :banner_message, :string, default: ""
+  attr :presences, :list, required: true
+  attr :prior_user_presence, :any, required: true
 
   slot :footer
 
@@ -73,7 +77,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
 
   def job_edit_view(assigns) do
     {editor_disabled?, editor_disabled_message, editor_panel_title} =
-      editor_disabled?(assigns.form.source.data)
+      editor_disabled?(assigns)
 
     assigns =
       assigns
@@ -112,6 +116,12 @@ defmodule LightningWeb.WorkflowLive.JobView do
                   "You are viewing a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(@snapshot.inserted_at)}"
             }
           />
+          <LightningWeb.WorkflowLive.Components.online_users
+            id="inspector-online-users"
+            presences={@presences}
+            current_user={@current_user}
+            prior_user={@prior_user_presence.user}
+          />
           <div class="flex flex-grow items-center justify-end">
             <.offline_indicator />
             <.link
@@ -131,6 +141,12 @@ defmodule LightningWeb.WorkflowLive.JobView do
             </.link>
           </div>
         </div>
+        <LightningWeb.WorkflowLive.Components.workflow_info_banner
+          :if={@display_banner}
+          id={"inspector-banner-#{@current_user.id}"}
+          position="relative"
+          message={@banner_message}
+        />
       </:top>
       <%= for slot <- @collapsible_panel do %>
         <.collapsible_panel
@@ -207,12 +223,19 @@ defmodule LightningWeb.WorkflowLive.JobView do
     """
   end
 
-  defp editor_disabled?(%Lightning.Workflows.Job{}), do: {false, "", "Editor"}
+  defp editor_disabled?(params) do
+    cond do
+      is_struct(params.form.source.data, Lightning.Workflows.Snapshot.Job) ->
+        {true, "Cannot edit in snapshot mode, switch to the latest version.",
+         "Editor (read-only)"}
 
-  defp editor_disabled?(%Lightning.Workflows.Snapshot.Job{}),
-    do:
-      {true, "Cannot edit in snapshot mode, switch to the latest version.",
-       "Editor (read-only)"}
+      params.display_banner ->
+        {true, "Cannot edit in low priority access.", "Editor (read-only)"}
+
+      true ->
+        {false, "", "Editor"}
+    end
+  end
 
   defp credential_block(assigns) do
     ~H"""

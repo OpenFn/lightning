@@ -68,6 +68,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
         jobs: state.jobs,
         triggers: state.triggers,
         edges: state.edges,
+        disabled: state.disabled,
       }),
       shallow
     );

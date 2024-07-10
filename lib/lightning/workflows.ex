@@ -405,4 +405,9 @@ defmodule Lightning.Workflows do
   def jobs_ordered_subquery do
     from(j in Job, order_by: [asc: j.inserted_at])
   end
+
+  def has_newer_version?(%Workflow{lock_version: version, id: id}) do
+    from(w in Workflow, where: w.lock_version > ^version and w.id == ^id)
+    |> Repo.exists?()
+  end
 end

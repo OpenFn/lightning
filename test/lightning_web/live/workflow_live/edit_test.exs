@@ -9,11 +9,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   import Ecto.Query
 
   alias Lightning.Helpers
-  alias Lightning.Workflows.Snapshot
-  alias Lightning.Workflows
   alias Lightning.Repo
-  alias LightningWeb.CredentialLiveHelpers
+  alias Lightning.Workflows
+  alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Workflow
+  alias LightningWeb.CredentialLiveHelpers
 
   setup :register_and_log_in_user
   setup :create_project_for_current_user
@@ -104,7 +104,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                 "name" => ["Job name can't be blank."]
               }
             },
-            %{op: "add", path: "/jobs/0/disabled", value: false},
             %{op: "add", path: "/jobs/0/body", value: ""},
             %{
               op: "add",
@@ -363,6 +362,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       version = String.slice(snapshot.id, 0..6)
 
+      view
+      |> element("a[href='/projects/#{project.id}/w']", "Workflows")
+      |> render_click()
+
       {:ok, view, _html} =
         live(
           conn,
@@ -451,20 +454,22 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       last_job = List.last(snapshot.jobs)
       last_edge = List.last(snapshot.edges)
 
-      force_event(view, :save) =~
-        "Cannot save in snapshot mode, switch to the latest version."
+      assert force_event(view, :save) =~
+               "Cannot save in snapshot mode, switch to the latest version."
 
-      force_event(view, :delete_node, last_job) =~
-        "Cannot delete a node in snapshot mode, switch to latest"
+      assert force_event(view, :delete_node, last_job) =~
+               "Cannot delete a step in snapshot mode, switch to latest"
 
-      force_event(view, :delete_edge, last_edge) =~
-        "Cannot delete a node in snapshot mode, switch to latest"
+      view |> select_node(last_edge, snapshot.lock_version)
 
-      force_event(view, :manual_run_submit, %{}) =~
-        "Cannot run in snapshot mode, switch to latest."
+      assert force_event(view, :delete_edge, last_edge) =~
+               "Cannot delete an edge in snapshot mode, switch to latest"
 
-      force_event(view, :rerun, nil, nil) =~
-        "Cannot rerun in snapshot mode, switch to latest."
+      assert force_event(view, :manual_run_submit, %{}) =~
+               "Cannot run in snapshot mode, switch to latest."
+
+      assert force_event(view, :rerun, nil, nil) =~
+               "Cannot rerun in snapshot mode, switch to latest."
 
       assert view
              |> element(
