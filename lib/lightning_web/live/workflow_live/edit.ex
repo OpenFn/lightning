@@ -920,11 +920,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> assign(page_title: "New Workflow")
   end
 
-  def apply_action(
-        socket,
-        :edit,
-        %{"id" => workflow_id, "v" => version} = params
-      ) do
+  def apply_action(socket, :edit, %{"id" => workflow_id} = params) do
     case socket.assigns.workflow do
       %{id: ^workflow_id} ->
         socket
@@ -943,6 +939,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
         if workflow do
           run_id = Map.get(params, "a")
+          version = Map.get(params, "v") || workflow.lock_version
+
           snapshot = snapshot_by_version(workflow.id, version)
 
           socket
