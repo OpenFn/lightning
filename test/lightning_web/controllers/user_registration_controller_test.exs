@@ -68,9 +68,16 @@ defmodule LightningWeb.UserRegistrationControllerTest do
       conn =
         conn
         |> post(~p"/users/register",
-          user: valid_user_attributes(first_name: "Emory")
+          user:
+            valid_user_attributes(
+              first_name: " Emory H   ",
+              last_name: " McLasterson "
+            )
         )
         |> get("/")
+
+      assert conn.assigns.current_user.first_name == "Emory H"
+      assert conn.assigns.current_user.last_name == "McLasterson"
 
       project =
         conn.assigns.current_user
@@ -78,7 +85,7 @@ defmodule LightningWeb.UserRegistrationControllerTest do
         |> Lightning.Repo.one!()
 
       assert project
-             |> Map.get(:name) == "emory-demo"
+             |> Map.get(:name) == "emory-h-demo"
 
       assert project
              |> Lightning.Projects.project_workorders_query()

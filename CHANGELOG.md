@@ -23,6 +23,8 @@ and this project adheres to
 
 - Do Not Require Lock Version In URL Parameters
   [#2267](https://github.com/OpenFn/lightning/pull/2267)
+- Trim erroneous spaces on user first and last names
+  [#2269](https://github.com/OpenFn/lightning/pull/2269)
 
 ## [v2.7.4] 2024-07-06
 
@@ -65,6 +67,10 @@ and this project adheres to
 - In the workflow diagram, smartly update the view when adding new nodes
   [#2174](https://github.com/OpenFn/lightning/issues/2174)
 - In the workflow diagram, remove the "autofit" toggle in the control bar
+- Moved the Edge Condition Label field to the top of the form, so it's always
+  visible
+- Update edge condition labels in the Workflow Diagram to always show the
+  condition type icon and the label
 
 ### Fixed
 

@@ -389,6 +389,14 @@ defmodule LightningWeb.WorkflowLive.Components do
     <div class="grid grid-flow-row gap-4 auto-rows-max">
       <div>
         <.input
+          type="text"
+          label="Label"
+          field={@form[:condition_label]}
+          maxlength="255"
+        />
+      </div>
+      <div>
+        <.input
           type="select"
           label="Condition"
           field={@form[:condition_type]}
@@ -397,14 +405,6 @@ defmodule LightningWeb.WorkflowLive.Components do
         />
       </div>
       <%= if @edge_condition == "js_expression" do %>
-        <div>
-          <.input
-            type="text"
-            label="Condition Label"
-            field={@form[:condition_label]}
-            maxlength="255"
-          />
-        </div>
         <div>
           <.label>
             JS Expression

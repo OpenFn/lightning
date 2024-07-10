@@ -1,8 +1,15 @@
+import React from 'react';
 import { Lightning, Flow, Positions } from '../types';
-import { sortOrderForSvg, styleEdge, styleItem, styleNode } from '../styles';
+import {
+  sortOrderForSvg,
+  styleEdge,
+  styleNode,
+  edgeLabelIconStyles,
+  edgeLabelTextStyles,
+} from '../styles';
 
 function getEdgeLabel(edge: Lightning.Edge) {
-  let label = '( )';
+  let label: string | JSX.Element = '{ }';
 
   switch (edge.condition_type) {
     case 'on_job_success':
@@ -14,20 +21,22 @@ function getEdgeLabel(edge: Lightning.Edge) {
     case 'always':
       label = '∞';
       break;
-    case 'js_expression':
-      const condition_label = edge.condition_label;
+  }
+  const { condition_label } = edge;
 
-      if (condition_label) {
-        if (condition_label.length > 16) {
-          label = condition_label.slice(0, 16) + '...';
-        } else {
-          label = condition_label;
-        }
-      }
-      break;
+  const result = [
+    <span style={edgeLabelIconStyles(edge.condition_type)}>{label}</span>,
+  ];
+
+  if (condition_label) {
+    const l =
+      condition_label.length > 22
+        ? condition_label.slice(0, 22) + '...'
+        : condition_label;
+    result.push(<span style={edgeLabelTextStyles}>{l}</span>);
   }
 
-  return label;
+  return result;
 }
 
 const fromWorkflow = (
@@ -76,10 +85,11 @@ const fromWorkflow = (
         styleNode(model);
       } else {
         const edge = item as Lightning.Edge;
+        const label = getEdgeLabel(edge);
         model.source = edge.source_trigger_id || edge.source_job_id;
         model.target = edge.target_job_id;
         model.type = 'step';
-        model.label = getEdgeLabel(edge);
+        model.label = label;
         model.markerEnd = {
           type: 'arrowclosed',
           width: 32,
@@ -90,6 +100,7 @@ const fromWorkflow = (
           // TODO something is up here - ?? true is a hack
           // without it, new edges are marked as disabled
           enabled: edge.enabled ?? true,
+          label,
         };
 
         // Note: we don't allow the user to disable the edge that goes from a
