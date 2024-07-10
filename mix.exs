@@ -143,7 +143,8 @@ defmodule Lightning.MixProject do
       {:eqrcode, "~> 0.1"},
       # Github API Secret Encoding
       {:enacl, github: "aeternity/enacl", branch: "master"},
-      {:earmark, "~> 1.4"}
+      {:earmark, "~> 1.4"},
+      {:eventually, "~> 1.1"}
     ]
   end
 
