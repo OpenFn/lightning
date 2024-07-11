@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+## [v2.7.6] - 2024-07-11
+
+### Fixed
+
 - UsageTracking crons are enabled again (if config is enabled)
   [#2276](https://github.com/OpenFn/lightning/issues/2276)
 - UsageTracking metrics absorb the fact that a step's job_id may not currently
