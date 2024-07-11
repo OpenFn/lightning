@@ -128,7 +128,7 @@ defmodule Lightning.UsageTracking.RunServiceTest do
     end
   end
 
-  describe "unique_jobs/2" do
+  describe "unique_job_ids/2" do
     test "returns unique jobs across all steps finished on report date" do
       job_1 = insert(:job)
       job_2 = insert(:job)
@@ -149,7 +149,7 @@ defmodule Lightning.UsageTracking.RunServiceTest do
         unfinished
       ]
 
-      assert RunService.unique_jobs(steps, @date) == [job_1, job_2]
+      assert RunService.unique_job_ids(steps, @date) == [job_1.id, job_2.id]
     end
 
     defp insert_step(job, finished_at) do
