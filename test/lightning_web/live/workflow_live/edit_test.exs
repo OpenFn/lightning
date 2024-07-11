@@ -413,7 +413,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
         assert view
                |> has_element?(
-                 "[id='job-editor-#{job.id}'][data-disabled='true'][data-disabled-message='Cannot edit in snapshot mode, switch to the latest version.']"
+                 "[id='job-editor-#{job.id}'][data-disabled='true'][data-disabled-message='You cannot edit or run an old snapshot of a workflow.']"
                )
 
         assert view
@@ -502,7 +502,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert view |> element("[type='submit']", "Save") |> has_element?()
     end
 
-    test "Inspector renders run thru their snapshots and allows switching to the latest versions for edition",
+    test "Inspector renders run thru their snapshots and allows switching to the latest versions for editing",
          %{conn: conn, project: project, workflow: workflow} do
       {:ok, earliest_snapshot} = Snapshot.get_or_create_latest_for(workflow)
 
@@ -568,7 +568,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert view
              |> has_element?(
-               "[id='job-editor-#{job_1.id}'][data-disabled-message='Cannot edit in snapshot mode, switch to the latest version.'][data-disabled='true'][data-source='#{job_1.body}']"
+               "[id='job-editor-#{job_1.id}'][data-disabled-message='You can't edit while viewing a snapshot, switch to the latest version.'][data-disabled='true'][data-source='#{job_1.body}']"
              )
 
       assert view |> has_element?("[id='manual_run_form_dataclip_id'][disabled]")

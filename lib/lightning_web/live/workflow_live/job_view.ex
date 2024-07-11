@@ -141,12 +141,6 @@ defmodule LightningWeb.WorkflowLive.JobView do
             </.link>
           </div>
         </div>
-        <LightningWeb.WorkflowLive.Components.workflow_info_banner
-          :if={@display_banner}
-          id={"inspector-banner-#{@current_user.id}"}
-          position="relative"
-          message={@banner_message}
-        />
       </:top>
       <%= for slot <- @collapsible_panel do %>
         <.collapsible_panel
@@ -226,11 +220,12 @@ defmodule LightningWeb.WorkflowLive.JobView do
   defp editor_disabled?(params) do
     cond do
       is_struct(params.form.source.data, Lightning.Workflows.Snapshot.Job) ->
-        {true, "Cannot edit in snapshot mode, switch to the latest version.",
+        {true,
+         "You can't edit while viewing a snapshot, switch to the latest version.",
          "Editor (read-only)"}
 
       params.display_banner ->
-        {true, "Cannot edit in low priority access.", "Editor (read-only)"}
+        {true, params.banner_message, "Editor (read-only)"}
 
       true ->
         {false, "", "Editor"}
