@@ -238,14 +238,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   <% {is_empty, error_message} =
                     editor_is_empty(@workflow_form, @selected_job) %>
 
+                  <div
+                    :if={@snapshot_version_tag == "latest" && @display_banner}
+                    id={"inspector-banner-#{@current_user.id}"}
+                    class="flex items-center text-sm font-medium mr-1 text-gray-700"
+                  >
+                    <Heroicons.lock_closed solid class="h-4 w-4 mr-1" />
+                    <%= @banner_message %>
+                  </div>
+
                   <.version_switcher_toggle
                     :if={display_switcher(@snapshot, @workflow)}
                     id={@selected_job.id}
                     label="Latest Version"
-                    disabled={
-                      job_deleted?(@selected_job, @workflow) ||
-                        !@has_presence_edit_priority
-                    }
+                    disabled={job_deleted?(@selected_job, @workflow)}
                     version={@snapshot_version_tag}
                   />
 
@@ -612,10 +618,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     cond do
       current_user_presence.active_sessions > 1 ->
-        "You can't edit this workflow because you have #{current_user_presence.active_sessions} active sessions. Close your other sessions to enable editing."
+        "You have this workflow open in #{current_user_presence.active_sessions} tabs and can't edit until you close the other#{if current_user_presence.active_sessions > 2, do: "s", else: ""}."
 
       current_user_presence.user.id != prior_user_presence.user.id ->
-        "This workflow is currently locked for editing because a collaborator (#{prior_user_name}) is currently working on it. You can inspect this workflow and its associated steps but cannot make edits."
+        "#{prior_user_name} is currently active and you can't edit this workflow until they close the editor and canvas."
 
       true ->
         nil
