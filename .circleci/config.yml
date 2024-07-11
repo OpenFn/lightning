@@ -5,7 +5,7 @@ orbs:
 
 commands:
   install_node:
-    description: "Install NodeJS"
+    description: 'Install NodeJS'
     parameters:
       version:
         type: string
@@ -14,7 +14,7 @@ commands:
           key: v4-nodejs-<< parameters.version >>
 
       - run:
-          name: "Install Node.js and npm"
+          name: 'Install Node.js and npm'
           command: |
             ./bin/install_node --no-cleanup << parameters.version >>
 
@@ -24,7 +24,7 @@ commands:
             - ./node-v<< parameters.version >>-linux-x64.tar.gz
 
       - run:
-          name: "Cleanup NodeJS install files"
+          name: 'Cleanup NodeJS install files'
           command: |
             rm ./node-v*.tar.gz
 
@@ -34,11 +34,11 @@ jobs:
       elixir_version:
         description: Elixir version
         type: string
-        default: "1.16.2-otp-26"
+        default: '1.16.2-otp-26'
       nodejs_version:
         description: NodeJS version
         type: string
-        default: "18.17.1"
+        default: '18.17.1'
       execute:
         description: What steps to execute after build
         type: steps
@@ -56,19 +56,20 @@ jobs:
           version: << parameters.nodejs_version >>
 
       - run:
-          name: "Save Elixir and Erlang version for PLT caching"
+          name: 'Save Elixir and Erlang version for PLT caching'
           command: echo "$ELIXIR_VERSION $OTP_VERSION" | tee .elixir_otp_version
 
       - run:
-          name: "Introspect schedulers"
+          name: 'Introspect schedulers'
           command: elixir -v
 
       - restore_cache:
           keys:
-            - v1-deps-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum "mix.lock" }}
+            - v1-deps-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{
+              checksum "mix.lock" }}
             - v1-deps-{{ arch }}-{{ checksum ".elixir_otp_version" }}
       - run:
-          name: "Install libsodium"
+          name: 'Install libsodium'
           command: |
             apt-get update && apt-get install -y libsodium-dev
 
@@ -78,21 +79,26 @@ jobs:
       - run: MIX_ENV=test mix lightning.install_runtime
 
       - save_cache:
-          key: v1-deps-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum "mix.lock" }}
+          key:
+            v1-deps-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum
+            "mix.lock" }}
           paths:
             - _build
             - deps
             - ~/.mix
 
       - restore_cache:
-          name: "Restore PLT cache"
+          name: 'Restore PLT cache'
           keys:
-            - v1-plt-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum "mix.lock" }}
+            - v1-plt-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum
+              "mix.lock" }}
             - v1-plt-{{ arch }}-{{ checksum ".elixir_otp_version" }}
 
       - run: MIX_ENV=test mix dialyzer --plt
       - save_cache:
-          key: v1-plt-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum "mix.lock" }}
+          key:
+            v1-plt-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum
+            "mix.lock" }}
           paths:
             - priv/plts
 
@@ -102,32 +108,37 @@ workflows:
   pre-flight checks:
     jobs:
       - build:
-          name: "Check code formatting"
+          name: 'Check code formatting'
           execute:
             - run: MIX_ENV=test mix format --check-formatted
       - build:
-          name: "Check code style"
+          name: 'Check code style'
           execute:
             - run: MIX_ENV=test mix credo --strict --all
       - build:
-          name: "Type check"
+          name: 'Type check'
           execute:
             - run: MIX_ENV=test mix dialyzer
       - build:
-          name: "Check for security vulnerabilities"
+          name: 'Check for security vulnerabilities'
           execute:
             - run: MIX_ENV=test mix sobelow
       - build:
-          name: "Check Elixir tests (codecov)"
+          name: 'Check Elixir tests (codecov)'
           execute:
-            - run: MIX_ENV=test mix do ecto.create, ecto.migrate
             - run:
-                command: MIX_ENV=test mix coveralls.json -o ./test/reports
+                command: |
+                  circleci tests glob 'lib/**/*_test.exs'
+                  | circleci tests run --command='xargs -n1 echo > test_file_paths.txt'
+
+                  MIX_ENV=test mix ecto.setup --quiet
+                  cat test_file_paths.txt | xargs MIX_ENV=test mix coveralls.json -o ./test/reports
             - codecov/upload:
                 file: test/reports/excoveralls.json
             - store_test_results:
                 path: test/reports/
+                when: always
       - build:
-          name: "Check Javascript tests"
+          name: 'Check Javascript tests'
           execute:
             - run: cd assets && npm install && npm run test-report
