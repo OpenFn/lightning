@@ -18,7 +18,7 @@ defmodule Lightning.UsageTracking.RunService do
   def unique_job_ids(steps, date) do
     steps
     |> finished_on(date)
-    |> Enum.map(& &1.job.id)
+    |> Enum.map(& &1.job_id)
     |> Enum.uniq_by(& &1)
   end
 

@@ -130,16 +130,16 @@ defmodule Lightning.UsageTracking.RunServiceTest do
 
   describe "unique_job_ids/2" do
     test "returns unique jobs across all steps finished on report date" do
-      job_1 = insert(:job)
-      job_2 = insert(:job)
-      job_3 = insert(:job)
-      job_4 = insert(:job)
+      job_1_id = Ecto.UUID.generate()
+      job_2_id = Ecto.UUID.generate()
+      job_3_id = Ecto.UUID.generate()
+      job_4_id = Ecto.UUID.generate()
 
-      finished_on_date_1 = insert_step(job_1, @finished_at)
-      finished_on_date_2 = insert_step(job_2, @finished_at)
-      finished_on_date_3 = insert_step(job_1, @finished_at)
-      finished_on_another_date = insert_step(job_3, @other_finished_at)
-      unfinished = insert_step(job_4, nil)
+      finished_on_date_1 = insert_step(job_1_id, @finished_at)
+      finished_on_date_2 = insert_step(job_2_id, @finished_at)
+      finished_on_date_3 = insert_step(job_1_id, @finished_at)
+      finished_on_another_date = insert_step(job_3_id, @other_finished_at)
+      unfinished = insert_step(job_4_id, nil)
 
       steps = [
         finished_on_date_1,
@@ -149,21 +149,32 @@ defmodule Lightning.UsageTracking.RunServiceTest do
         unfinished
       ]
 
-      assert RunService.unique_job_ids(steps, @date) == [job_1.id, job_2.id]
+      assert RunService.unique_job_ids(steps, @date) == [job_1_id, job_2_id]
     end
 
-    defp insert_step(job, finished_at) do
-      insert(
-        :run_step,
-        run:
-          build(
-            :run,
-            work_order: build(:workorder),
-            starting_job: job,
-            dataclip: build(:dataclip)
-          ),
-        step: build(:step, finished_at: finished_at, job: job)
-      ).step
+    defp insert_step(job_id, finished_at) do
+      step = %Lightning.Invocation.Step{
+        job_id: job_id,
+        input_dataclip: build(:dataclip),
+        snapshot: build(:snapshot),
+        finished_at: finished_at
+      }
+
+      run_step =
+        insert(
+          :run_step,
+          run:
+            build(
+              :run,
+              work_order: build(:workorder),
+              starting_job: build(:job),
+              dataclip: build(:dataclip)
+            ),
+          step: step
+        )
+        |> Repo.preload(step: :job)
+
+      run_step.step
     end
   end
 end
