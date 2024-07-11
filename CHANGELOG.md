@@ -20,11 +20,15 @@ and this project adheres to
 ### Changed
 
 ### Fixed
+
 - UsageTracking crons are enabled again (if config is enabled)
   [#2276](https://github.com/OpenFn/lightning/issues/2276)
-- UsageTracking metrics absorb the fact that a step's job\_id may not currently
+- UsageTracking metrics absorb the fact that a step's job_id may not currently
   exist when counting unique jobs.
   [#2279](https://github.com/OpenFn/lightning/issues/2279)
+- Adjusted layout and text displayed when preventing simultaneous edits to
+  accommodate more screen sizes
+  [#2277](https://github.com/OpenFn/lightning/issues/2277)
 
 ## [v2.7.5] - 2024-07-10
 
