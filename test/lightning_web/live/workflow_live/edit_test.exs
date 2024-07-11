@@ -298,7 +298,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
         refute view
                |> has_element?(
-                 "[id='job-editor-#{job.id}'][data-disabled='true'][data-disabled-message='You can&#39;t edit while viewing a snapshot, switch to the latest version.']"
+                 "[id='job-editor-#{job.id}'][data-disabled='true']"
                )
 
         refute view
@@ -413,7 +413,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
         assert view
                |> has_element?(
-                 "[id='job-editor-#{job.id}'][data-disabled='true']"
+                 "[id='job-editor-#{job.id}'][data-disabled='true'][data-disabled-message=\"You can't edit while viewing a snapshot, switch to the latest version.\""
                )
 
         assert view
