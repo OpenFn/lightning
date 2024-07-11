@@ -148,13 +148,18 @@ defmodule Lightning.Application do
   def oban_opts do
     opts = Application.get_env(:lightning, Oban)
 
-    opts[:plugins]
-    |> List.keyfind(Oban.Plugins.Cron, 0)
-    |> then(fn {mod, cron_opts} ->
-      {mod, put_usage_tracking_cron_opts(cron_opts)}
-    end)
+    {_keyword, new_opts} =
+      opts[:plugins]
+      |> List.keyfind(Oban.Plugins.Cron, 0)
+      |> then(fn {mod, cron_opts} ->
+        {mod, put_usage_tracking_cron_opts(cron_opts)}
+      end)
 
-    opts
+    updated_plugins =
+      opts[:plugins]
+      |> Keyword.merge([{Oban.Plugins.Cron, new_opts}])
+
+    opts |> Keyword.put(:plugins, updated_plugins)
   end
 
   defp put_usage_tracking_cron_opts(cron_opts) do
