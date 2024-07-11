@@ -568,7 +568,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert view
              |> has_element?(
-               "[id='job-editor-#{job_1.id}'][data-disabled='true'][data-source='#{job_1.body}']"
+               "[id='job-editor-#{job_1.id}'][data-disabled='true'][data-source='#{job_1.body}'][data-disabled-message=\"You can't edit while viewing a snapshot, switch to the latest version.\"]"
              )
 
       assert view |> has_element?("[id='manual_run_form_dataclip_id'][disabled]")
