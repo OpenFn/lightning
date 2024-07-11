@@ -251,10 +251,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     :if={display_switcher(@snapshot, @workflow)}
                     id={@selected_job.id}
                     label="Latest Version"
-                    disabled={
-                      job_deleted?(@selected_job, @workflow) ||
-                        !@has_presence_edit_priority
-                    }
+                    disabled={job_deleted?(@selected_job, @workflow)}
                     version={@snapshot_version_tag}
                   />
 
@@ -730,6 +727,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         phx-value-type="toggle"
         data-version={@version}
         type="button"
+        disabled={@disabled}
         class={"#{if @version == "latest", do: "bg-indigo-600", else: "bg-gray-200"} relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-gray-200 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"}
         role="switch"
         aria-checked="false"
