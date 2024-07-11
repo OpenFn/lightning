@@ -2,6 +2,9 @@ defmodule Lightning.Projects do
   @moduledoc """
   The Projects context.
   """
+  alias Lightning.Accounts.UserToken
+  alias Dialyxir.Project
+
   use Oban.Worker,
     queue: :background,
     max_attempts: 1
@@ -696,5 +699,62 @@ defmodule Lightning.Projects do
 
   defp delete_history_for(_project) do
     {:error, :missing_history_retention_period}
+  end
+
+  def invite_user(project_id, %{"role" => role} = user_params) do
+    Multi.new()
+    |> Multi.put(:attrs, user_params)
+    |> Multi.merge(&register_user/1)
+    |> Multi.insert(:project_user, fn %{user: user} = changes ->
+      user_id = Map.get(changes.new_user, :id)
+
+      ProjectUser.changeset(%ProjectUser{}, %{
+        project_id: project_id,
+        user_id: user_id,
+        role: role
+      })
+    end)
+    |> Multi.run(:invite_user, fn _repo, %{project_user: project_user} ->
+      %{user: user} = Repo.preload(project_user, :user)
+
+      {encoded_token, user_token} =
+        UserToken.build_email_token(user, "reset_password", user.email)
+
+      Repo.insert!(user_token)
+
+      UserNotifier.deliver_reset_password_instructions(
+        user,
+        &"/users/confirm/#{&1}"
+      )
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{project_user: project_user}} ->
+        {:ok, project_user}
+
+      {:error, _op, changeset, _chages} ->
+        changeset
+    end
+  end
+
+  defp register_user(%{attrs: user_params}) do
+    user_params =
+      Map.put(
+        user_params,
+        "password",
+        :crypto.strong_rand_bytes(12)
+        |> Base.encode64(padding: false)
+      )
+
+    Multi.new()
+    |> Multi.insert(
+      :new_user,
+      struct(
+        User,
+        user_params
+        |> User.user_registration_changeset()
+        |> Ecto.Changeset.apply_action!(:insert)
+      )
+    )
   end
 end

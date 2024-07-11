@@ -581,7 +581,7 @@
               </.button>
               <.live_component
                 :if={@can_add_project_user && @show_collaborators_modal}
-                module={LightningWeb.ProjectLive.NewCollaboratorComponent}
+                module={LightningWeb.ProjectLive.InviteCollaboratorComponent}
                 id="add_collaborators_modal"
                 project={@project}
                 project_users={@project_users}
