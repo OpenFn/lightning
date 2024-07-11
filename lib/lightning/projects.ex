@@ -2,6 +2,7 @@ defmodule Lightning.Projects do
   @moduledoc """
   The Projects context.
   """
+  alias ElixirLS.LanguageServer.Providers.Completion.Reducers.Struct
   alias Lightning.Accounts.UserToken
   alias Dialyxir.Project
 
@@ -701,60 +702,61 @@ defmodule Lightning.Projects do
     {:error, :missing_history_retention_period}
   end
 
-  def invite_user(project_id, %{"role" => role} = user_params) do
+  def invite_collaborators(project, collaborators) do
     Multi.new()
-    |> Multi.put(:attrs, user_params)
+    |> Multi.put(:collaborators, collaborators)
     |> Multi.merge(&register_user/1)
-    |> Multi.insert(:project_user, fn %{user: user} = changes ->
-      user_id = Map.get(changes.new_user, :id)
-
-      ProjectUser.changeset(%ProjectUser{}, %{
-        project_id: project_id,
-        user_id: user_id,
-        role: role
-      })
+    |> Multi.insert(:project_user, fn %{new_user: new_user} ->
+      add_project_users()
     end)
-    |> Multi.run(:invite_user, fn _repo, %{project_user: project_user} ->
-      %{user: user} = Repo.preload(project_user, :user)
-
+    |> Multi.run(:build_and_insert_token, fn _repo, %{new_user: user} ->
       {encoded_token, user_token} =
         UserToken.build_email_token(user, "reset_password", user.email)
 
-      Repo.insert!(user_token)
+      case Repo.insert(user_token) do
+        {:ok, _} -> {:ok, %{encoded_token: encoded_token}}
+        {:error, reason} -> {:error, reason}
+      end
+    end)
+    |> Multi.run(:invite_user, fn _repo,
+                                  %{
+                                    project_user: project_user,
+                                    encoded_token: encoded_token
+                                  } ->
+      %{user: user, project: project} =
+        Repo.preload(project_user, [:user, :project])
 
-      UserNotifier.deliver_reset_password_instructions(
+      UserNotifier.deliver_project_invitation_email(
         user,
-        &"/users/confirm/#{&1}"
+        project,
+        "/users/reset_password/#{encoded_token}"
       )
+
+      {:ok, project_user}
     end)
     |> Repo.transaction()
     |> case do
       {:ok, %{project_user: project_user}} ->
         {:ok, project_user}
 
-      {:error, _op, changeset, _chages} ->
+      {:error, _op, changeset, _changes} ->
         changeset
     end
   end
 
-  defp register_user(%{attrs: user_params}) do
-    user_params =
-      Map.put(
-        user_params,
-        "password",
+  defp register_user(%{collaborators: collaborators}) do
+    Multi.new()
+    |> Multi.insert(:new_user, fn _changes ->
+      collaborators
+      |> Map.from_struct()
+      |> Map.take([:first_name, :last_name, :email])
+      |> Map.put(
+        :password,
         :crypto.strong_rand_bytes(12)
         |> Base.encode64(padding: false)
       )
-
-    Multi.new()
-    |> Multi.insert(
-      :new_user,
-      struct(
-        User,
-        user_params
-        |> User.user_registration_changeset()
-        |> Ecto.Changeset.apply_action!(:insert)
-      )
-    )
+      |> User.user_registration_changeset()
+      |> Ecto.Changeset.apply_action!(:insert)
+    end)
   end
 end

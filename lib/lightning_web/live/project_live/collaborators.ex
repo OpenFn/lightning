@@ -37,47 +37,24 @@ defmodule LightningWeb.ProjectLive.Collaborators do
   def prepare_for_insertion(schema, attrs, current_project_users) do
     changeset = changeset(schema, attrs)
 
-    {changeset, non_existing_users} =
+    changeset =
       if changeset.valid? do
         collaborators = get_embed(changeset, :collaborators)
 
         emails = Enum.map(collaborators, &get_field(&1, :email))
 
-        found_users = Lightning.Accounts.list_users_by_emails(emails)
-
-        # Create a list of users or emails based on whether the user is found
-        user_or_email_list =
-          Enum.map(emails, fn email ->
-            case Enum.find(found_users, fn user -> user.email == email end) do
-              nil -> {:not_found, email}
-              user -> {:found, user}
-            end
-          end)
-
-        # Use Enum.split_with to separate found users from non-existing emails
-        {found, not_found} =
-          Enum.split_with(user_or_email_list, fn
-            {:found, _user} -> true
-            {:not_found, _email} -> false
-          end)
-
-        # Extract users and emails from the tuples
-        found_users = Enum.map(found, fn {:found, user} -> user end)
-
-        non_existing_users =
-          Enum.map(not_found, fn {:not_found, email} -> email end)
+        existing_users = Lightning.Accounts.list_users_by_emails(emails)
 
         updated_collaborators =
           validate_collaborators(
             collaborators,
-            found_users,
+            existing_users,
             current_project_users
           )
 
-        {put_embed(changeset, :collaborators, updated_collaborators),
-         non_existing_users}
+        put_embed(changeset, :collaborators, updated_collaborators)
       else
-        {changeset, []}
+        changeset
       end
 
     with {:ok, %{collaborators: collaborators}} <-
@@ -87,7 +64,7 @@ defmodule LightningWeb.ProjectLive.Collaborators do
           Map.take(c, [:user_id, :role])
         end)
 
-      {:ok, %{collaborators: collaborators, to_invite: non_existing_users}}
+      {:ok, collaborators}
     end
   end
 
@@ -106,6 +83,9 @@ defmodule LightningWeb.ProjectLive.Collaborators do
       |> put_change(:user_id, existing_user && existing_user.id)
       |> validate_change(:email, fn :email, _email ->
         cond do
+          is_nil(existing_user) ->
+            [email: "There is no account connected this email"]
+
           Enum.find(current_project_users, &(&1.user_id == existing_user.id)) ->
             [email: "This account is already part of this project"]
 

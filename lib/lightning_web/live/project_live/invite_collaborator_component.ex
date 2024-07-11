@@ -34,39 +34,19 @@ defmodule LightningWeb.ProjectLive.InviteCollaboratorComponent do
   end
 
   def handle_event("add_collaborators", %{"project" => params}, socket) do
-    with :ok <- limit_adding_users(socket, params),
-         {:ok, project_users} <- prepare_for_insertion(socket, params),
-         {:ok, _project} <- add_project_users(socket, project_users) do
+    with :ok <- limit_adding_users(socket, params) do
+      {:ok, %{invited_collaborators: collaborators}} =
+        InvitedCollaborators.changeset(socket.assigns.collaborators, params)
+        |> Ecto.Changeset.apply_action(:insert)
+
+      Projects.invite_user(socket.assigns.project, collaborators)
+
       {:noreply,
        socket
        |> put_flash(:info, "Collaborators updated successfully!")
        |> push_navigate(
          to: ~p"/projects/#{socket.assigns.project}/settings#collaboration"
        )}
-    end
-  end
-
-  defp prepare_for_insertion(%{assigns: assigns} = socket, params) do
-    case InvitedCollaborators.prepare_for_insertion(
-           assigns.collaborators,
-           params,
-           assigns.project_users
-         ) do
-      {:ok, project_users} ->
-        {:ok, project_users}
-
-      {:error, changeset} ->
-        {:noreply, assign(socket, changeset: changeset)}
-    end
-  end
-
-  defp add_project_users(socket, project_users) do
-    case Projects.add_project_users(socket.assigns.project, project_users) do
-      {:ok, project} ->
-        {:ok, project}
-
-      {:error, changeset} ->
-        {:noreply, assign(socket, changeset: changeset)}
     end
   end
 
