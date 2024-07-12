@@ -2,17 +2,17 @@
   <.modal
     id={@id}
     show={true}
-    on_close={JS.push("toggle_collaborators_modal")}
+    on_close={JS.push("toggle_invite_collaborators_modal")}
     width="min-w-1/2 max-w-xl"
   >
     <:title>
       <div class="flex justify-between">
         <span class="font-bold">
-          Invite new collaborator(s)
+          Invite new user(s) to join OpenFn
         </span>
 
         <button
-          phx-click="toggle_collaborators_modal"
+          phx-click="toggle_invite_collaborators_modal"
           type="button"
           class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
           aria-label={gettext("close")}
@@ -24,7 +24,7 @@
     </:title>
     <:subtitle>
       <span class="text-xs">
-        Enter the email address and role of new collaborator(s) to invite them to this project
+        The following users don't have OpenFn accounts, you can invite them to join and grant access to this project
       </span>
     </:subtitle>
 
@@ -60,7 +60,7 @@
               <.input
                 type="text"
                 field={cf[:first_name]}
-                placeholder="Ayodele"
+                placeholder="First Name"
                 required="true"
               />
             </div>
@@ -68,17 +68,12 @@
               <.input
                 type="text"
                 field={cf[:last_name]}
-                placeholder="Adeyemo"
+                placeholder="Last Name"
                 required="true"
               />
             </div>
             <div class="min-w-1/5">
-              <.input
-                type="text"
-                field={cf[:email]}
-                placeholder="ayodele@openfn.org"
-                required="true"
-              />
+              <.input type="email" field={cf[:email]} required="true" />
             </div>
             <div class="min-w-1/4">
               <.input
@@ -113,19 +108,6 @@
             </div>
           </div>
         </.inputs_for>
-
-        <div class="mt-5">
-          <input type="hidden" name={"#{f.name}[collaborators_drop][]"} />
-          <button
-            type="button"
-            name={"#{f.name}[collaborators_sort][]"}
-            value="new"
-            phx-click={JS.dispatch("change")}
-            class="inline-flex items-center gap-x-2 rounded-md bg-white px-3.5 py-2.5 text-sm  text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-          >
-            <Heroicons.plus_circle class="w-5 h-5" /> Add Additonal Collaborator
-          </button>
-        </div>
       </div>
       <.modal_footer class="mx-6 mt-6">
         <div class="flex flex-row-reverse gap-4">
@@ -135,13 +117,14 @@
             phx-disable-with="Adding..."
             disabled={!@changeset.valid? || !is_nil(@error)}
           >
-            Invite Collaborator<%= if(Enum.count(f[:invited_collaborators].value) > 1,
+            Invite new user<%= if(
+              Enum.count(f[:invited_collaborators].value) > 1,
               do: "s"
             ) %>
           </.button>
           <button
             type="button"
-            phx-click="toggle_collaborators_modal"
+            phx-click="toggle_invite_collaborators_modal"
             class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
           >
             Cancel

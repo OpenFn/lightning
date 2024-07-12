@@ -10,9 +10,17 @@ defmodule LightningWeb.ProjectLive.InviteCollaboratorComponent do
 
   @impl true
   def update(assigns, socket) do
+    collaborators_data =
+      Enum.map(assigns.collaborators, fn %{role: role, email: email} ->
+        %{role: role, email: email}
+      end)
+
     collaborators = %InvitedCollaborators{}
 
-    changeset = InvitedCollaborators.changeset(collaborators, %{})
+    changeset =
+      InvitedCollaborators.changeset(collaborators, %{
+        invited_collaborators: collaborators_data
+      })
 
     {:ok,
      socket
@@ -39,11 +47,11 @@ defmodule LightningWeb.ProjectLive.InviteCollaboratorComponent do
         InvitedCollaborators.changeset(socket.assigns.collaborators, params)
         |> Ecto.Changeset.apply_action(:insert)
 
-      Projects.invite_user(socket.assigns.project, collaborators)
+      Projects.invite_collaborators(socket.assigns.project, collaborators)
 
       {:noreply,
        socket
-       |> put_flash(:info, "Collaborators updated successfully!")
+       |> put_flash(:info, "Invites sent successfully")
        |> push_navigate(
          to: ~p"/projects/#{socket.assigns.project}/settings#collaboration"
        )}

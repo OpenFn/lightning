@@ -2,9 +2,7 @@ defmodule Lightning.Projects do
   @moduledoc """
   The Projects context.
   """
-  alias ElixirLS.LanguageServer.Providers.Completion.Reducers.Struct
   alias Lightning.Accounts.UserToken
-  alias Dialyxir.Project
 
   use Oban.Worker,
     queue: :background,
@@ -705,58 +703,86 @@ defmodule Lightning.Projects do
   def invite_collaborators(project, collaborators) do
     Multi.new()
     |> Multi.put(:collaborators, collaborators)
-    |> Multi.merge(&register_user/1)
-    |> Multi.insert(:project_user, fn %{new_user: new_user} ->
-      add_project_users()
-    end)
-    |> Multi.run(:build_and_insert_token, fn _repo, %{new_user: user} ->
-      {encoded_token, user_token} =
-        UserToken.build_email_token(user, "reset_password", user.email)
+    |> Multi.merge(&register_users/1)
+    |> Multi.run(:add_project_users, fn _repo, changes ->
+      project_users = build_project_users_list(collaborators, changes)
 
-      case Repo.insert(user_token) do
-        {:ok, _} -> {:ok, %{encoded_token: encoded_token}}
+      case add_project_users(project, project_users) do
+        {:ok, project_users} -> {:ok, %{project_users: project_users}}
         {:error, reason} -> {:error, reason}
       end
     end)
-    |> Multi.run(:invite_user, fn _repo,
-                                  %{
-                                    project_user: project_user,
-                                    encoded_token: encoded_token
-                                  } ->
-      %{user: user, project: project} =
-        Repo.preload(project_user, [:user, :project])
-
-      UserNotifier.deliver_project_invitation_email(
-        user,
-        project,
-        "/users/reset_password/#{encoded_token}"
-      )
-
-      {:ok, project_user}
+    |> Multi.run(:build_and_invite_users, fn _repo, changes ->
+      build_tokens_and_send_invitations(changes, project)
     end)
     |> Repo.transaction()
     |> case do
-      {:ok, %{project_user: project_user}} ->
-        {:ok, project_user}
+      {:ok, changes} ->
+        {:ok, changes}
 
       {:error, _op, changeset, _changes} ->
         changeset
     end
   end
 
-  defp register_user(%{collaborators: collaborators}) do
-    Multi.new()
-    |> Multi.insert(:new_user, fn _changes ->
-      collaborators
-      |> Map.from_struct()
-      |> Map.take([:first_name, :last_name, :email])
-      |> Map.put(
-        :password,
-        :crypto.strong_rand_bytes(12)
-        |> Base.encode64(padding: false)
-      )
-      |> User.user_registration_changeset()
-      |> Ecto.Changeset.apply_action!(:insert)
+  defp register_users(%{collaborators: collaborators}) do
+    Enum.reduce(collaborators, Multi.new(), fn collaborator, multi ->
+      user_params =
+        Map.take(collaborator, [:first_name, :last_name, :email])
+        |> Map.put(
+          :password,
+          :crypto.strong_rand_bytes(12)
+          |> Base.encode64(padding: false)
+        )
+
+      data =
+        User.user_registration_changeset(user_params)
+        |> Ecto.Changeset.apply_action!(:insert)
+
+      Multi.insert(multi, {:new_user, collaborator.email}, struct!(User, data))
     end)
+  end
+
+  defp build_project_users_list(collaborators, changes) do
+    Enum.map(collaborators, fn collaborator ->
+      user = changes[{:new_user, collaborator.email}]
+      %{role: collaborator.role, user_id: user.id}
+    end)
+  end
+
+  defp build_tokens_and_send_invitations(changes, project) do
+    tokens =
+      Enum.reduce(changes, [], fn
+        {{:new_user, email}, user}, acc ->
+          {encoded_token, user_token} =
+            UserToken.build_email_token(user, "reset_password", user.email)
+
+          case Repo.insert(user_token) do
+            {:ok, _} -> [{:encoded_token, email, encoded_token} | acc]
+            {:error, reason} -> {:error, reason}
+          end
+
+        _, acc ->
+          acc
+      end)
+
+    if is_list(tokens) do
+      Enum.each(tokens, fn {:encoded_token, email, encoded_token} ->
+        user =
+          Enum.find_value(changes, fn {key, val} ->
+            if key == {:new_user, email}, do: val, else: nil
+          end)
+
+        UserNotifier.deliver_project_invitation_email(
+          user,
+          project,
+          encoded_token
+        )
+      end)
+
+      {:ok, tokens}
+    else
+      tokens
+    end
   end
 end

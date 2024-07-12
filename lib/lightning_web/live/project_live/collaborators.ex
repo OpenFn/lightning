@@ -33,7 +33,7 @@ defmodule LightningWeb.ProjectLive.Collaborators do
   end
 
   @spec prepare_for_insertion(%__MODULE__{}, map(), [map(), ...]) ::
-          {:ok, [map(), ...]} | {:error, Ecto.Changeset.t()}
+          {:ok, [map(), ...], [map(), ...]} | {:error, Ecto.Changeset.t()}
   def prepare_for_insertion(schema, attrs, current_project_users) do
     changeset = changeset(schema, attrs)
 
@@ -45,24 +45,35 @@ defmodule LightningWeb.ProjectLive.Collaborators do
 
         existing_users = Lightning.Accounts.list_users_by_emails(emails)
 
+        existing_emails = Enum.map(existing_users, & &1.email)
+
+        {existing_collaborators, new_collaborators} =
+          Enum.split_with(collaborators, fn collaborator ->
+            Enum.member?(existing_emails, get_field(collaborator, :email))
+          end)
+
         updated_collaborators =
           validate_collaborators(
-            collaborators,
+            existing_collaborators,
             existing_users,
             current_project_users
           )
 
-        put_embed(changeset, :collaborators, updated_collaborators)
+        put_embed(
+          changeset,
+          :collaborators,
+          updated_collaborators ++ new_collaborators
+        )
       else
         changeset
       end
 
     with {:ok, %{collaborators: collaborators}} <-
            apply_action(changeset, :insert) do
-      collaborators =
-        Enum.map(collaborators, fn c ->
-          Map.take(c, [:user_id, :role])
-        end)
+      # collaborators =
+      #   Enum.map(collaborators, fn c ->
+      #     Map.take(c, [:user_id, :role])
+      #   end)
 
       {:ok, collaborators}
     end
@@ -84,7 +95,7 @@ defmodule LightningWeb.ProjectLive.Collaborators do
       |> validate_change(:email, fn :email, _email ->
         cond do
           is_nil(existing_user) ->
-            [email: "There is no account connected this email"]
+            []
 
           Enum.find(current_project_users, &(&1.user_id == existing_user.id)) ->
             [email: "This account is already part of this project"]

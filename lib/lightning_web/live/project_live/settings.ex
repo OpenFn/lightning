@@ -144,6 +144,8 @@ defmodule LightningWeb.ProjectLive.Settings do
        can_receive_failure_alerts: can_receive_failure_alerts,
        selected_credential_type: nil,
        show_collaborators_modal: false,
+       show_invite_collaborators_modal: false,
+       collaborators_to_invite: [],
        projects: projects
      )}
   end
@@ -208,7 +210,8 @@ defmodule LightningWeb.ProjectLive.Settings do
     |> assign(
       page_title: "Project settings",
       project_users: project_users,
-      show_collaborators_modal: false
+      show_collaborators_modal: false,
+      show_invite_collaborators_modal: false
     )
   end
 
@@ -304,6 +307,15 @@ defmodule LightningWeb.ProjectLive.Settings do
      |> assign(
        :show_collaborators_modal,
        !socket.assigns.show_collaborators_modal
+     )}
+  end
+
+  def handle_event("toggle_invite_collaborators_modal", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(
+       :show_invite_collaborators_modal,
+       !socket.assigns.show_invite_collaborators_modal
      )}
   end
 
@@ -443,6 +455,16 @@ defmodule LightningWeb.ProjectLive.Settings do
        :error,
        "Oops! Github account failed to link. Please try again"
      )}
+  end
+
+  def handle_info({:show_invite_collaborators_modal, new_project_users}, socket) do
+    {:noreply,
+     socket
+     |> assign(
+       :show_invite_collaborators_modal,
+       true
+     )
+     |> assign(:collaborators_to_invite, new_project_users)}
   end
 
   # catch all callback. Needed for tests because of Swoosh emails in tests
