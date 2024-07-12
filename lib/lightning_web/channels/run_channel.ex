@@ -102,10 +102,6 @@ defmodule LightningWeb.RunChannel do
       :not_found ->
         {:reply, {:error, %{errors: %{id: ["Credential not found!"]}}}, socket}
 
-      # TODO - would it be OK to send the actual error back to the logger?
-      # https://github.com/OpenFn/lightning/issues/1842#issuecomment-2109682877
-      # @openfn/ws-worker@1.1.9-pre will now handle this!
-      # {:error, %{body: %{"error" => "invalid_grant", "error_description" => "expired access/refresh token"}}
       {:error,
        %{
          body: %{
@@ -113,7 +109,6 @@ defmodule LightningWeb.RunChannel do
            "error_description" => error_description
          }
        }} ->
-        # TODO - how can we ensure this is safe to send back?
         {:reply,
          {
            :error,
