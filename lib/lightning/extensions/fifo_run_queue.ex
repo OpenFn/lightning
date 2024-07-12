@@ -9,8 +9,8 @@ defmodule Lightning.Extensions.FifoRunQueue do
 
   alias Ecto.Multi
   alias Lightning.Repo
-  alias Lightning.Runs.Queue
   alias Lightning.Runs.Query
+  alias Lightning.Runs.Queue
 
   @impl true
   def enqueue(%Multi{} = multi), do: Repo.transaction(multi)

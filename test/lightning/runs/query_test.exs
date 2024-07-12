@@ -153,9 +153,12 @@ defmodule Lightning.Runs.QueryTest do
           %{project: project, workflow: workflow}
         end)
 
-      projects = [red, green, blue, yellow, magenta, cyan]
-
-      projects
+      # We cycle through a list of colors to insert runs for each project
+      # The contiguous runs for the same project are added so that we
+      # can ensure the sorting order for eligible_for_claim is reliable,
+      # i.e. items are processed in order of insertion, not by their
+      # position in a given project (i.e. `row_number`)
+      [red, green, green, green, blue, yellow, magenta, cyan, red, blue, blue]
       |> Stream.cycle()
       |> Stream.take(60)
       |> Enum.map(fn color ->
@@ -188,14 +191,8 @@ defmodule Lightning.Runs.QueryTest do
       )
       |> Repo.update_all([])
 
-      assert number_of_runs_for_project(red, :available) == 9
-      assert number_of_runs_for_project(blue, :available) == 7
-      # there should be three claimed runs for projects red and blue
-
-      from(r in subquery(Query.in_progress_window()),
-        select: [r.id, r.project_name, r.state, r.row_number, r.concurrency]
-      )
-      |> Repo.all()
+      assert number_of_runs_for_project(red, :available) == 10
+      assert number_of_runs_for_project(blue, :available) == 13
 
       demand = 1
 

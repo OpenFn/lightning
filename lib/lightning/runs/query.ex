@@ -112,6 +112,6 @@ defmodule Lightning.Runs.Query do
       (w.row_number <= w.concurrency or is_nil(w.concurrency)) and
         r.state == :available
     )
-    |> order_by([r, w], asc: w.row_number, asc: r.inserted_at)
+    |> order_by([r, w], asc: r.inserted_at, asc: w.row_number)
   end
 end
