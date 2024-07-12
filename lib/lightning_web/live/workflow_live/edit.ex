@@ -133,6 +133,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
               />
               <div class="m-auto">
                 <.offline_indicator />
+                <.link
+                  patch={
+                    if @selection_mode == "settings",
+                      do: @base_url,
+                      else: "#{@base_url}?m=settings"
+                  }
+                  class="w-5 h-5 place-self-center text-slate-500 hover:text-slate-400 cursor-pointer"
+                  id="toggle-settings"
+                >
+                  <.icon name="hero-adjustments-vertical" />
+                </.link>
               </div>
               <.save_workflow_button
                 changeset={@changeset}
@@ -329,18 +340,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         phx-click={show_dropdown("create-new-work-order")}
                       >
                         <span class="sr-only">Open options</span>
-                        <svg
-                          class="h-5 w-5"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                          aria-hidden="true"
-                        >
-                          <path
-                            fill-rule="evenodd"
-                            d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-                            clip-rule="evenodd"
-                          />
-                        </svg>
+                        <.icon name="hero-chevron-down" class="w-4 h-4" />
                       </.button>
                       <div
                         role="menu"
@@ -457,6 +457,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
           phx-change="validate"
         >
           <input type="hidden" name="_ignore_me" />
+          <.panel
+            :if={@selection_mode == "settings"}
+            title="Workflow settings"
+            id={"workflow-settings-#{@workflow.id}"}
+            class="hidden"
+            phx-mounted={fade_in()}
+            phx-remove={fade_out()}
+            cancel_url={@base_url}
+          >
+            <.workflow_settings form={@workflow_form} />
+          </.panel>
+
           <.single_inputs_for
             :let={{jf}}
             :if={@selected_job}
@@ -474,6 +486,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
               }
               id={"job-pane-#{@selected_job.id}"}
               cancel_url={close_url(assigns, :selected_job, :unselect)}
+              class="hidden"
+              phx-mounted={fade_in()}
+              phx-remove={fade_out()}
             >
               <!-- Show only the currently selected one -->
               <.job_form
@@ -535,6 +550,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
             <.panel
               id={"trigger-pane-#{@selected_trigger.id}"}
               cancel_url={close_url(assigns, :selected_trigger, :unselect)}
+              class="hidden"
+              phx-mounted={fade_in()}
+              phx-remove={fade_out()}
               title={
                 Phoenix.HTML.Form.input_value(tf, :type)
                 |> to_string()
@@ -575,6 +593,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
               id={"edge-pane-#{@selected_edge.id}"}
               cancel_url={close_url(assigns, :selected_edge, :unselect)}
               title="Path"
+              class="hidden"
+              phx-mounted={fade_in()}
+              phx-remove={fade_out()}
             >
               <div class="w-auto h-full" id={"edge-pane-#{@workflow.id}"}>
                 <!-- Show only the currently selected one -->
@@ -1937,16 +1958,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp apply_query_params(socket) do
     socket.assigns.query_params
     |> case do
+      %{"m" => "settings", "s" => nil, "a" => nil} ->
+        socket |> unselect_all() |> set_mode("settings")
+
       # Nothing is selected
       %{"s" => nil} ->
-        socket |> unselect_all()
+        socket |> unselect_all() |> set_mode(nil)
 
       # Try to select the given item, possibly with a mode (such as `expand`)
       %{"s" => selected_id, "m" => mode} ->
         case find_item(socket.assigns.changeset, selected_id) do
           [type, selected] ->
             socket
-            |> set_selected_node(type, selected, mode)
+            |> set_selected_node(type, selected)
+            |> set_mode(if mode in ["expand"], do: mode, else: nil)
 
           nil ->
             socket |> unselect_all()
@@ -2017,11 +2042,24 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   defp unselect_all(socket) do
     socket
-    |> assign(selected_job: nil, selected_trigger: nil, selected_edge: nil)
-    |> assign(selection_mode: nil)
+    |> assign(
+      selected_edge: nil,
+      selected_job: nil,
+      selected_trigger: nil,
+      selection_mode: nil
+    )
   end
 
-  defp set_selected_node(socket, type, value, selection_mode) do
+  defp set_mode(socket, mode) do
+    if mode in [nil, "expand", "settings"] do
+      socket
+      |> assign(selection_mode: mode)
+    else
+      socket
+    end
+  end
+
+  defp set_selected_node(socket, type, value) do
     case type do
       :jobs ->
         socket
@@ -2041,7 +2079,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
         socket
         |> assign(selected_job: nil, selected_trigger: nil, selected_edge: value)
     end
-    |> assign(selection_mode: selection_mode)
   end
 
   defp follow_run(socket, run) do

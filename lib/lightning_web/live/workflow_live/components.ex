@@ -54,6 +54,8 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :id, :string, required: true
   attr :title, :string, required: true
   attr :cancel_url, :string, required: true
+  attr :class, :string, default: ""
+  attr :rest, :global
   slot :inner_block, required: true
   slot :header
   slot :footer
@@ -61,8 +63,12 @@ defmodule LightningWeb.WorkflowLive.Components do
   def panel(assigns) do
     ~H"""
     <div
-      class="absolute right-0 sm:m-4 w-full sm:w-1/2 md:w-1/3 lg:w-1/4 max-h-content"
+      class={[
+        "absolute right-0 sm:m-4 w-full sm:w-1/2 md:w-1/3 lg:w-1/4 max-h-content",
+        @class
+      ]}
       id={@id}
+      {@rest}
     >
       <div class="divide-y divide-gray-200 rounded-lg bg-white shadow">
         <div class="flex px-4 py-5 sm:px-6">
@@ -76,7 +82,7 @@ defmodule LightningWeb.WorkflowLive.Components do
               patch={@cancel_url}
               class="justify-center hover:text-gray-500"
             >
-              <Heroicons.x_mark solid class="h-4 w-4 inline-block" />
+              <.icon name="hero-x-mark" class="h-4 w-4 inline-block" />
             </.link>
           </div>
         </div>
@@ -92,6 +98,67 @@ defmodule LightningWeb.WorkflowLive.Components do
                 <%= render_slot(item) %>
               <% end %>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  attr :form, :map, required: true
+
+  def workflow_settings(assigns) do
+    ~H"""
+    <div class="md:grid md:grid-cols-6 md:gap-4 p-2 @container">
+      <div class="col-span-6 @md:col-span-4">
+        <.input type="text" label="Name" field={@form[:name]} />
+      </div>
+
+      <div class="col-span-6 @md:col-span-4">
+        <.label for={@form[:concurrency].id}>
+          Concurrency
+        </.label>
+        <p class="text-xs text-slate-500 pb-2">
+          The maximum number of concurrent runs.
+        </p>
+        <div class="flex place-content-between items-center space-x-2">
+          <span class="text-sm">Limit</span>
+          <div class="w-24">
+            <.input_element
+              type="number"
+              name={@form[:concurrency].name}
+              value={
+                Phoenix.HTML.Form.normalize_value(
+                  "number",
+                  @form[:concurrency].value
+                )
+              }
+              class="w-4 text-right"
+            />
+          </div>
+        </div>
+        <div class="flex place-content-between items-center space-x-2 pt-1">
+          <div
+            :if={!is_nil(@form[:concurrency].value)}
+            class="hover:cursor-pointer hover:text-slate-400"
+            phx-click={
+              JS.dispatch("change", to: "input[name='workflow\[concurrency\]']")
+            }
+          >
+            <.icon name="hero-lock-closed" class="h4 w-4" />
+          </div>
+          <div :if={is_nil(@form[:concurrency].value)}>
+            <.icon name="hero-lock-open" class="h4 w-4" />
+          </div>
+          <.errors field={@form[:concurrency]} />
+          <div
+            :if={Enum.empty?(@form[:concurrency].errors)}
+            class="text-xs text-slate-500 italic"
+          >
+            <%= case @form[:concurrency].value do
+              nil -> "Unlimited"
+              value -> "Maximum of #{value} run(s) at a time"
+            end %>
           </div>
         </div>
       </div>
@@ -583,7 +650,10 @@ defmodule LightningWeb.WorkflowLive.Components do
               href="#"
               phx-click={JS.dispatch("collapse", to: "##{@id}")}
             >
-              <Heroicons.minus_circle class="w-5 h-5 hover:bg-gray-200 text-gray-600 rounded-lg" />
+              <.icon
+                name="hero-minus-circle"
+                class="w-5 h-5 hover:bg-slate-400 text-slate-500"
+              />
             </a>
             <a
               id={"#{@id}-panel-expand-icon"}
@@ -591,7 +661,10 @@ defmodule LightningWeb.WorkflowLive.Components do
               class="hidden panel-expand-icon"
               phx-click={JS.dispatch("expand-panel", to: "##{@id}")}
             >
-              <Heroicons.plus_circle class="w-5 h-5 hover:bg-gray-200 text-gray-600 rounded-lg" />
+              <.icon
+                name="hero-plus-circle"
+                class="w-5 h-5 hover:bg-slate-400 text-slate-500"
+              />
             </a>
           </div>
         </div>

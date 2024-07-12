@@ -49,7 +49,7 @@ defmodule Lightning.Workflows.Workflow do
   @doc false
   def changeset(workflow, attrs) do
     workflow
-    |> cast(attrs, [:name, :project_id])
+    |> cast(attrs, [:name, :project_id, :concurrency])
     |> optimistic_lock(:lock_version)
     |> cast_assoc(:edges, with: &Edge.changeset/2)
     |> cast_assoc(:jobs, with: &Job.changeset/2)
@@ -60,6 +60,7 @@ defmodule Lightning.Workflows.Workflow do
   def validate(changeset) do
     changeset
     |> assoc_constraint(:project)
+    |> validate_number(:concurrency, greater_than_or_equal_to: 1)
     |> validate_required([:name])
     |> unique_constraint([:name, :project_id],
       message: "a workflow with this name already exists in this project."
