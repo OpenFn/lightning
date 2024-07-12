@@ -33,7 +33,7 @@ defmodule LightningWeb.ProjectLive.Collaborators do
   end
 
   @spec prepare_for_insertion(%__MODULE__{}, map(), [map(), ...]) ::
-          {:ok, [map(), ...], [map(), ...]} | {:error, Ecto.Changeset.t()}
+          {:ok, [map(), ...]} | {:error, Ecto.Changeset.t()}
   def prepare_for_insertion(schema, attrs, current_project_users) do
     changeset = changeset(schema, attrs)
 
@@ -70,11 +70,6 @@ defmodule LightningWeb.ProjectLive.Collaborators do
 
     with {:ok, %{collaborators: collaborators}} <-
            apply_action(changeset, :insert) do
-      # collaborators =
-      #   Enum.map(collaborators, fn c ->
-      #     Map.take(c, [:user_id, :role])
-      #   end)
-
       {:ok, collaborators}
     end
   end
