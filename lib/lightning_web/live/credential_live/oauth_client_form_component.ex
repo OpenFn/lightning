@@ -400,6 +400,17 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
               <div>
                 <NewInputs.input
                   type="text"
+                  field={f[:revoke_endpoint]}
+                  label="Revoke URL"
+                  required="true"
+                />
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <div>
+                <NewInputs.input
+                  type="text"
                   field={f[:introspection_endpoint]}
                   label="Introspection URL"
                 />

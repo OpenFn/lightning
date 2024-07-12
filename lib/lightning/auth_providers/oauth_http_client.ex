@@ -10,6 +10,29 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
   alias LightningWeb.RouteHelpers
 
   @doc """
+  Revokes an OAuth token.
+
+  ## Parameters
+  - `client`: The client configuration containing client_id and client_secret.
+  - `token`: The token to be revoked (access_token or refresh_token).
+
+  ## Returns
+  - `{:ok, response}` on success
+  - `{:error, reason}` on failure
+  """
+  def revoke_token(client, token) do
+    body = %{
+      token: token["access_token"],
+      client_id: client.client_id,
+      client_secret: client.client_secret
+    }
+
+    Tesla.client([Tesla.Middleware.FormUrlencoded])
+    |> post(client.revoke_endpoint, body)
+    |> handle_resp([200])
+  end
+
+  @doc """
   Fetches a new token using the authorization code provided by the OAuth provider.
 
   ## Parameters

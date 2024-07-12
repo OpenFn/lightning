@@ -25,6 +25,7 @@ defmodule Lightning.Credentials.OauthClient do
     field :client_secret, :string
     field :authorization_endpoint, :string
     field :token_endpoint, :string
+    field :revoke_endpoint, :string
     field :userinfo_endpoint, :string
     field :introspection_endpoint, :string
     field :global, :boolean, default: false
@@ -62,6 +63,7 @@ defmodule Lightning.Credentials.OauthClient do
       :client_secret,
       :authorization_endpoint,
       :token_endpoint,
+      :revoke_endpoint,
       :userinfo_endpoint,
       :introspection_endpoint,
       :global,
@@ -75,10 +77,12 @@ defmodule Lightning.Credentials.OauthClient do
       :client_id,
       :client_secret,
       :authorization_endpoint,
-      :token_endpoint
+      :token_endpoint,
+      :revoke_endpoint
     ])
     |> Validators.validate_url(:authorization_endpoint)
     |> Validators.validate_url(:token_endpoint)
+    |> Validators.validate_url(:revoke_endpoint)
     |> Validators.validate_url(:userinfo_endpoint)
     |> Validators.validate_url(:introspection_endpoint)
     |> Validators.validate_url(:scopes_doc_url)
