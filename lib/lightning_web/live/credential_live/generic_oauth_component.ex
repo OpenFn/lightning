@@ -116,7 +116,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   end
 
   def update(%{code: code} = _assigns, socket) do
-    if Map.get(socket.assigns, :code, false) do
+    if Map.get(socket.assigns, :code) do
       {:ok, socket}
     else
       client = socket.assigns.selected_client
@@ -224,9 +224,42 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
      )}
   end
 
-  @impl true
   def handle_event("authorize_click", _, socket) do
-    {:noreply, socket |> assign(oauth_progress: :started)}
+    credential = Map.get(socket.assigns, :credential)
+
+    with body when not is_nil(body) <- credential && credential.body,
+         selected_client when not is_nil(selected_client) <-
+           socket.assigns.selected_client || :no_oauth_client,
+         authorize_url when not is_nil(authorize_url) <-
+           socket.assigns.authorize_url || :no_authorization_url,
+         {:ok, _response} <- OauthHTTPClient.revoke_token(selected_client, body) do
+      {:noreply,
+       socket
+       |> assign(code: nil)
+       |> push_event("open_authorize_url", %{url: authorize_url})
+       |> assign(oauth_progress: :started)}
+    else
+      :no_oauth_client ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "OAuth client not found.")}
+
+      :no_authorization_url ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Authorization URL not found.")}
+
+      {:error, reason} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Failed to revoke token: #{reason}")}
+
+      _ ->
+        {:noreply,
+         socket
+         |> push_event("open_authorize_url", %{url: socket.assigns.authorize_url})
+         |> assign(oauth_progress: :started)}
+    end
   end
 
   def handle_event("check_scope", %{"_target" => [scope]}, socket) do
@@ -519,7 +552,11 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
             />
           </div>
 
-          <div class="space-y-4 my-10">
+          <div
+            id={"#{@id}-feedback"}
+            phx-hook="OpenAuthorizeUrl"
+            class="space-y-4 my-10"
+          >
             <.reauthorize_banner
               :if={@display_reauthorize_banner}
               authorize_url={@authorize_url}
@@ -540,12 +577,13 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
               myself={@myself}
             />
             <.userinfo
-              :if={@display_userinfo && @selected_client}
+              :if={@display_userinfo && @userinfo}
               myself={@myself}
               userinfo={@userinfo}
               socket={@socket}
               authorize_url={@authorize_url}
             />
+            <.success_message :if={@display_userinfo && !@userinfo} myself={@myself} />
             <.error_block
               :if={@display_error}
               type={@oauth_progress}
@@ -653,7 +691,8 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   end
 
   defp display_userinfo?(oauth_progress, display_reauthorize_banner) do
-    oauth_progress == :userinfo_received && !display_reauthorize_banner
+    oauth_progress in [:userinfo_received, :token_received] &&
+      !display_reauthorize_banner
   end
 
   defp display_error?(oauth_progress, display_reauthorize_banner) do

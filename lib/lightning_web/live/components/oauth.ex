@@ -89,21 +89,34 @@ defmodule LightningWeb.Components.Oauth do
           <p class="text-sm text-gray-500">
             <a href="#"><%= @userinfo["email"] %></a>
           </p>
-          <div class="text-sm mt-2">
-            Success. If your credential stops working, you may try to
-            <.link
-              href={@authorize_url}
-              target="_blank"
-              phx-target={@myself}
-              phx-click="authorize_click"
-              class="hover:underline text-primary-900"
-            >
-              re-authorize.
-            </.link>
-          </div>
         </div>
       </div>
     </div>
+    """
+  end
+
+  def success_message(assigns) do
+    ~H"""
+    <div class="text-sm">
+      <Heroicons.check_circle class="h-4 w-4 text-green-600 inline-block" />
+      Success. If your credential is no longer working, you may try to revoke and re-authenticate by clicking
+      <.reauthorize_button target={@myself}>
+        re-authorize.
+      </.reauthorize_button>
+    </div>
+    """
+  end
+
+  defp reauthorize_button(assigns) do
+    ~H"""
+    <.link
+      href="#"
+      phx-target={@target}
+      phx-click="authorize_click"
+      class="hover:underline text-primary-900"
+    >
+      <%= render_slot(@inner_block) %>
+    </.link>
     """
   end
 
@@ -119,16 +132,7 @@ defmodule LightningWeb.Components.Oauth do
           <div class="mt-2 text-sm text-yellow-700">
             <p class="text-sm mt-2">
               Failed retrieving the token from the provider. Please try again
-              <.link
-                href={@authorize_url}
-                target="_blank"
-                phx-target={@myself}
-                phx-click="authorize_click"
-                class="hover:underline text-primary-900"
-              >
-                here
-                <Heroicons.arrow_top_right_on_square class="h-4 w-4 text-indigo-600 inline-block" />.
-              </.link>
+              <.reauthorize_button target={@myself}>here</.reauthorize_button>
             </p>
           </div>
         </div>
@@ -149,16 +153,7 @@ defmodule LightningWeb.Components.Oauth do
           <div class="mt-2 text-sm text-yellow-700">
             <p class="text-sm mt-2">
               Failed renewing your access token. Please request a new token by clicking
-              <.link
-                href={@authorize_url}
-                target="_blank"
-                phx-target={@myself}
-                phx-click="authorize_click"
-                class="hover:underline text-primary-900"
-              >
-                here
-                <Heroicons.arrow_top_right_on_square class="h-4 w-4 text-indigo-600 inline-block" />.
-              </.link>
+              <.reauthorize_button target={@myself}>here</.reauthorize_button>
             </p>
           </div>
         </div>
@@ -206,16 +201,7 @@ defmodule LightningWeb.Components.Oauth do
           <div class="mt-2 text-sm text-yellow-700">
             <p class="text-sm mt-2">
               We didn't receive a refresh token from this provider. Sometimes this happens if you have already granted access to OpenFn via another credential. If you have another credential, please use that one. If you don't, please revoke OpenFn's access to your provider via the "third party apps" section of their website. Once that is done, you can try to reauthorize
-              <.link
-                href={@authorize_url}
-                target="_blank"
-                phx-target={@myself}
-                phx-click="authorize_click"
-                class="hover:underline text-primary-900"
-              >
-                here
-                <Heroicons.arrow_top_right_on_square class="h-4 w-4 text-indigo-600 inline-block" />.
-              </.link>
+              <.reauthorize_button target={@myself}>here</.reauthorize_button>
             </p>
           </div>
         </div>
@@ -235,16 +221,11 @@ defmodule LightningWeb.Components.Oauth do
           <h3 class="text-sm font-medium text-yellow-800">Something went wrong.</h3>
           <div class="mt-2 text-sm text-yellow-700">
             <p class="text-sm mt-2">
-              Failed retrieving authentication code. Please reauthorize <.link
-                href={@authorize_url}
-                target="_blank"
-                phx-target={@myself}
-                phx-click="authorize_click"
-                class="hover:underline text-primary-900"
-              >
-            here
-            <Heroicons.arrow_top_right_on_square class="h-4 w-4 text-indigo-600 inline-block" />.
-          </.link>.
+              Failed retrieving authentication code. Please reauthorize
+              <.reauthorize_button target={@myself}>
+                here
+                <Heroicons.arrow_top_right_on_square class="h-4 w-4 text-indigo-600 inline-block" />.
+              </.reauthorize_button>
             </p>
           </div>
         </div>
@@ -288,16 +269,9 @@ defmodule LightningWeb.Components.Oauth do
             Please re-authenticate to save your credential with the updated scopes
           </p>
           <p class="mt-3 text-sm md:ml-6 md:mt-0">
-            <.link
-              href={@authorize_url}
-              id="re-authorize-button"
-              target="_blank"
-              class="whitespace-nowrap font-medium text-blue-700 hover:text-blue-600"
-              phx-click="authorize_click"
-              phx-target={@myself}
-            >
+            <.reauthorize_button target={@myself}>
               Re-authenticate <span aria-hidden="true"> &rarr;</span>
-            </.link>
+            </.reauthorize_button>
           </p>
         </div>
       </div>
