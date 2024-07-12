@@ -554,7 +554,7 @@ defmodule Lightning.Credentials do
   def maybe_refresh_token(%Credential{schema: "oauth"} = credential) do
     cond do
       # TODO: Even tho the still_fresh/1 function is in the OauthHTTPClient module, it doesn't do any HTTP call.
-      #       It will be moved in another module after we deprecate salesforce and googlesheets oauth
+      # It will be moved in another module after we deprecate salesforce and googlesheets oauth
       OauthHTTPClient.still_fresh(credential.body) ->
         {:ok, credential}
 

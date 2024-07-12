@@ -102,6 +102,19 @@ defmodule LightningWeb.RunChannel do
       :not_found ->
         {:reply, {:error, %{errors: %{id: ["Credential not found!"]}}}, socket}
 
+      {:error,
+       %{
+         body: %{
+           "error" => error,
+           "error_description" => error_description
+         }
+       }} ->
+        {:reply,
+         {
+           :error,
+           %{errors: %{id: ["#{inspect(error)}: #{inspect(error_description)}"]}}
+         }, socket}
+
       {:error, error} ->
         Logger.error(fn ->
           """

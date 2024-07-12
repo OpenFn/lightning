@@ -14,7 +14,13 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
   @oauth_states %{
     success: [:userinfo_received, :token_received],
-    failure: [:token_failed, :userinfo_failed, :code_failed, :refresh_failed]
+    failure: [
+      :token_failed,
+      :userinfo_failed,
+      :code_failed,
+      :refresh_failed,
+      :no_refresh_token
+    ]
   }
 
   @impl true
@@ -69,7 +75,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
         scope: stringified_scopes
       )
 
-    socket = maybe_refresh_token(socket, assigns, selected_client)
+    socket = refresh_token_or_fetch_userinfo(socket, assigns, selected_client)
 
     {:ok,
      build_assigns(socket, assigns,
@@ -166,10 +172,16 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
   def handle_async(:token, {:ok, {:error, error}}, socket) do
     Logger.info(
-      "Failed fetching token using #{socket.assigns.selected_client.name}. Received error message: #{inspect(error)}"
+      "Failed fetching valid token using #{socket.assigns.selected_client.name}. Received error message: #{inspect(error)}"
     )
 
-    {:noreply, assign(socket, :oauth_progress, :token_failed)}
+    case error do
+      :no_refresh_token ->
+        {:noreply, assign(socket, :oauth_progress, :no_refresh_token)}
+
+      _ ->
+        {:noreply, assign(socket, :oauth_progress, :token_failed)}
+    end
   end
 
   def handle_async(:userinfo, {:ok, {:error, error}}, socket) do
@@ -304,7 +316,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
      )}
   end
 
-  defp maybe_refresh_token(socket, assigns, selected_client) do
+  defp refresh_token_or_fetch_userinfo(socket, assigns, selected_client) do
     case OauthHTTPClient.still_fresh(assigns.credential.body) do
       true ->
         if selected_client.userinfo_endpoint do
@@ -374,50 +386,58 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   defp get_scopes(_), do: []
 
   defp save_credential(socket, :new, params) do
-    user_id = Ecto.Changeset.fetch_field!(socket.assigns.changeset, :user_id)
-    body = Ecto.Changeset.fetch_field!(socket.assigns.changeset, :body)
+    if socket.assigns.changeset.valid? do
+      user_id = Ecto.Changeset.fetch_field!(socket.assigns.changeset, :user_id)
+      body = Ecto.Changeset.fetch_field!(socket.assigns.changeset, :body)
 
-    body = Map.put(body, "apiVersion", socket.assigns.api_version)
+      body = Map.put(body, "apiVersion", socket.assigns.api_version)
 
-    params
-    |> Map.put("user_id", user_id)
-    |> Map.put("schema", "oauth")
-    |> Map.put("body", body)
-    |> Map.put("oauth_client_id", socket.assigns.selected_client.id)
-    |> Credentials.create_credential()
-    |> case do
-      {:ok, credential} ->
-        {:noreply, Helpers.handle_save_response(socket, credential)}
+      params
+      |> Map.put("user_id", user_id)
+      |> Map.put("schema", "oauth")
+      |> Map.put("body", body)
+      |> Map.put("oauth_client_id", socket.assigns.selected_client.id)
+      |> Credentials.create_credential()
+      |> case do
+        {:ok, credential} ->
+          {:noreply, Helpers.handle_save_response(socket, credential)}
 
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, :changeset, changeset)}
+        {:error, %Ecto.Changeset{} = changeset} ->
+          {:noreply, assign(socket, :changeset, changeset)}
+      end
+    else
+      {:noreply, socket |> put_flash(:error, "Can't save invalid credential")}
     end
   end
 
   defp save_credential(socket, :edit, params) do
-    body =
-      Ecto.Changeset.fetch_field!(socket.assigns.changeset, :body)
-      |> Map.put("apiVersion", socket.assigns.api_version)
+    if socket.assigns.changeset.valid? do
+      body =
+        Ecto.Changeset.fetch_field!(socket.assigns.changeset, :body)
+        |> Map.put("apiVersion", socket.assigns.api_version)
 
-    params =
-      Map.put(params, "body", body)
+      params =
+        Map.put(params, "body", body)
 
-    params =
-      if socket.assigns.selected_client do
-        Map.put(params, "oauth_client_id", socket.assigns.selected_client.id)
-      else
-        params
+      params =
+        if socket.assigns.selected_client do
+          Map.put(params, "oauth_client_id", socket.assigns.selected_client.id)
+        else
+          params
+        end
+
+      case Credentials.update_credential(socket.assigns.credential, params) do
+        {:ok, _credential} ->
+          {:noreply,
+           socket
+           |> put_flash(:info, "Credential updated successfully")
+           |> push_redirect(to: socket.assigns.return_to)}
+
+        {:error, %Ecto.Changeset{} = changeset} ->
+          {:noreply, assign(socket, :changeset, changeset)}
       end
-
-    case Credentials.update_credential(socket.assigns.credential, params) do
-      {:ok, _credential} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Credential updated successfully")
-         |> push_redirect(to: socket.assigns.return_to)}
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, :changeset, changeset)}
+    else
+      {:noreply, socket |> put_flash(:error, "Can't save invalid credential")}
     end
   end
 
@@ -567,6 +587,9 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
             <div class="flex-1 w-1/2">
               <div class="sm:flex sm:flex-row-reverse">
                 <button
+                  id={
+                  "save-credential-button-#{@credential.id || "new"}"
+                }
                   type="submit"
                   disabled={!@changeset.valid? || @scopes_changed}
                   class="inline-flex justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3"

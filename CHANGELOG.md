@@ -21,6 +21,11 @@ and this project adheres to
 
 ### Fixed
 
+- Prevent Oauth credentials from being created if they don't have a
+  `refresh_token` [#2289](https://github.com/OpenFn/lightning/pull/2289) and
+  send more helpful error data back to the worker during token refresh failure
+  [#2135](https://github.com/OpenFn/lightning/issues/2135)
+
 ## [v2.7.6] - 2024-07-11
 
 ### Fixed
@@ -28,7 +33,7 @@ and this project adheres to
 - UsageTracking crons are enabled again (if config is enabled)
   [#2276](https://github.com/OpenFn/lightning/issues/2276)
 - UsageTracking metrics absorb the fact that a step's job_id may not currently
-  exist when counting unique jobs.
+  exist when counting unique jobs
   [#2279](https://github.com/OpenFn/lightning/issues/2279)
 - Adjusted layout and text displayed when preventing simultaneous edits to
   accommodate more screen sizes
