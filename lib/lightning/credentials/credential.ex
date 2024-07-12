@@ -46,7 +46,26 @@ defmodule Lightning.Credentials.Credential do
     |> validate_required([:name, :body, :user_id])
     |> assoc_constraint(:user)
     |> assoc_constraint(:oauth_client)
+    |> validate_oauth()
     |> validate_transfer_ownership()
+  end
+
+  defp validate_oauth(changeset) do
+    if get_field(changeset, :schema) == "oauth" do
+      case get_field(changeset, :body) do
+        %{"refresh_token" => _any} ->
+          changeset
+
+        _else ->
+          add_error(
+            changeset,
+            :body,
+            "We can't save this credential with a refresh_token."
+          )
+      end
+    else
+      changeset
+    end
   end
 
   defp validate_transfer_ownership(changeset) do
