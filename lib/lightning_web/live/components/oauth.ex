@@ -202,21 +202,20 @@ defmodule LightningWeb.Components.Oauth do
           <Heroicons.exclamation_triangle class="h-5 w-5 text-yellow-400" />
         </div>
         <div class="ml-3">
-          <h3 class="text-sm font-medium text-yellow-800">Something went wrong.</h3>
+          <h3 class="text-sm font-medium text-yellow-800">Missing refresh token</h3>
           <div class="mt-2 text-sm text-yellow-700">
             <p class="text-sm mt-2">
-              The token is missing it's
-              <code class="bg-gray-200 rounded-md p-1">refresh_token</code>
-              value. Please reauthorize <.link
+              We didn't receive a refresh token from this provider. Sometimes this happens if you have already granted access to OpenFn via another credential. If you have another credential, please use that one. If you don't, please revoke OpenFn's access to your provider via the "third party apps" section of their website. Once that is done, you can try to reauthorize
+              <.link
                 href={@authorize_url}
                 target="_blank"
                 phx-target={@myself}
                 phx-click="authorize_click"
                 class="hover:underline text-primary-900"
               >
-            here
-            <Heroicons.arrow_top_right_on_square class="h-4 w-4 text-indigo-600 inline-block" />.
-          </.link>.
+                here
+                <Heroicons.arrow_top_right_on_square class="h-4 w-4 text-indigo-600 inline-block" />.
+              </.link>
             </p>
           </div>
         </div>

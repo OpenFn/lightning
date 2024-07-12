@@ -33,6 +33,7 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
     |> post(client.token_endpoint, body)
     |> handle_resp([200])
     |> maybe_introspect(client)
+    |> validate_token()
   end
 
   @doc """
@@ -148,6 +149,14 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
       time_remaining >= threshold
     else
       expiration_time
+    end
+  end
+
+  defp validate_token({:ok, token}) do
+    if Map.get(token, "refresh_token") do
+      {:ok, token}
+    else
+      {:error, :no_refresh_token}
     end
   end
 
