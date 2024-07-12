@@ -14,7 +14,12 @@ defmodule Lightning.AuthProviders.OauthHTTPClientTest do
       }
 
       code = "authcode123"
-      response_body = %{"access_token" => "token123", "token_type" => "bearer"}
+
+      response_body = %{
+        "access_token" => "token123",
+        "token_type" => "bearer",
+        "refresh_token" => "refresh_token123"
+      }
 
       expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
         env, _opts

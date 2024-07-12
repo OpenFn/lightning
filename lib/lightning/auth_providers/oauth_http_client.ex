@@ -33,7 +33,7 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
     |> post(client.token_endpoint, body)
     |> handle_resp([200])
     |> maybe_introspect(client)
-    |> validate_token()
+    |> maybe_validate_token()
   end
 
   @doc """
@@ -152,12 +152,16 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
     end
   end
 
-  defp validate_token({:ok, token}) do
+  defp maybe_validate_token({:ok, token} = _response) do
     if Map.get(token, "refresh_token") do
       {:ok, token}
     else
       {:error, :no_refresh_token}
     end
+  end
+
+  defp maybe_validate_token(response) do
+    response
   end
 
   defp maybe_introspect({:error, reason}, _client) do
