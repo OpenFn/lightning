@@ -98,7 +98,7 @@ defmodule LightningWeb.Components.Oauth do
   def success_message(assigns) do
     ~H"""
     <div class="text-sm">
-      <Heroicons.check_circle class="h-4 w-4 text-green-600 inline-block" />
+      <.icon name="hero-check-circle" class="h-4 w-4 text-green-600 inline-block" />
       Success. If your credential is no longer working, you may try to revoke and re-authenticate by clicking
       <.reauthorize_button target={@myself}>
         here
