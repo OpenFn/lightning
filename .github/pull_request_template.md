@@ -1,18 +1,17 @@
-## Validation Steps
+This PR *[adds/changes/fixes]... (A description of your work goes here.)*
 
-_How can a reviewer validate your work?_
+Closes #__
 
-## Notes for the reviewer
+### Validation steps
 
+1. *(How can a reviewer validate your work?)*
 
+### Additional notes for the reviewer
 
-## Related issue
+1. *(Is there anything else the reviewer should know or look out for?)*
 
-Fixes #
+### Pre-submission checklist
 
-## Review checklist
-
-- [ ] I have performed a **self-review** of my code
-- [ ] I have verified that all appropriate **authorization policies** (`:owner`, `:admin`, `:editor`, `:viewer`) have been implemented and tested
-- [ ] If needed, I have updated the **changelog**
-- [ ] Product has **QA'd** this feature
+- [ ] I have performed a **self-review** of my code.
+- [ ] I have implemented and tested all related **authorization policies**. (e.g., `:owner`, `:admin`, `:editor`, `:viewer`)
+- [ ] I have updated the **changelog**.
