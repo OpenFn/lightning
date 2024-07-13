@@ -28,7 +28,7 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
     }
 
     Tesla.client([Tesla.Middleware.FormUrlencoded])
-    |> post(client.revoke_endpoint, body)
+    |> post(client.revocation_endpoint, body)
     |> handle_resp([200])
   end
 
