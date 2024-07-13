@@ -19,6 +19,10 @@ and this project adheres to
 
 ### Changed
 
+- Use the Oauth2 `revocation_endpoint` to revoke token access (1) before
+  attempting to reauthorize and (2) when users schedule a credential for
+  deletion [#2292](https://github.com/OpenFn/lightning/issues/2292)
+
 ### Fixed
 
 ## [v2.7.7] - 2024-07-18
