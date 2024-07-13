@@ -112,6 +112,7 @@ defmodule Lightning.OauthClientsTest do
         client_id: "client_id",
         client_secret: "client_secret",
         authorization_endpoint: "https://www.example.com",
+        revocation_endpoint: "https://www.example.com/revoke",
         token_endpoint: "https://www.example.com",
         user_id: user.id,
         project_oauth_clients: [%{project_id: project.id}]
@@ -249,6 +250,7 @@ defmodule Lightning.OauthClientsTest do
           client_id: "client_id",
           client_secret: "client_secret",
           authorization_endpoint: "https://www.example.com",
+          revocation_endpoint: "https://www.example.com/revoke",
           token_endpoint: "https://www.example.com",
           user_id: user.id,
           global: false,
@@ -306,6 +308,7 @@ defmodule Lightning.OauthClientsTest do
           client_id: "client_id",
           client_secret: "client_secret",
           authorization_endpoint: "https://www.example.com",
+          revocation_endpoint: "https://www.example.com/revoke",
           token_endpoint: "https://www.example.com",
           user_id: user.id,
           global: true

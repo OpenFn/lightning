@@ -203,6 +203,7 @@ defmodule Lightning.Factories do
       authorization_endpoint: "http://example.com/oauth2/authorize",
       token_endpoint: "http://example.com/oauth2/token",
       userinfo_endpoint: "http://example.com/oauth2/userinfo",
+      revocation_endpoint: "http://example.com/oauth2/revoke",
       global: false,
       mandatory_scopes: "scope_1,scope_2",
       optional_scopes: "scope_3,scope_4",

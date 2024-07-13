@@ -11,6 +11,7 @@ defmodule Lightning.Credentials.OauthClientTest do
       authorization_endpoint: "https://example.com/auth",
       token_endpoint: "https://example.com/token",
       userinfo_endpoint: "https://example.com/user",
+      revocation_endpoint: "https://example.com/revoke",
       scopes_doc_url: "https://example.com/scopes"
     }
 
@@ -38,7 +39,8 @@ defmodule Lightning.Credentials.OauthClientTest do
                client_secret: {"can't be blank", [validation: :required]},
                authorization_endpoint:
                  {"can't be blank", [validation: :required]},
-               token_endpoint: {"can't be blank", [validation: :required]}
+               token_endpoint: {"can't be blank", [validation: :required]},
+               revocation_endpoint: {"can't be blank", [validation: :required]}
              ] === changeset.errors
     end
 
