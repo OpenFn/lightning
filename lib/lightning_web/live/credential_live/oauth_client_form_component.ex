@@ -379,7 +379,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
                 <NewInputs.input
                   type="text"
                   field={f[:authorization_endpoint]}
-                  label="Authorization URL"
+                  label="Authorization Endpoint"
                   required="true"
                 />
               </div>
@@ -390,7 +390,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
                 <NewInputs.input
                   type="text"
                   field={f[:token_endpoint]}
-                  label="Token URL"
+                  label="Token Endpoint"
                   required="true"
                 />
               </div>
@@ -400,8 +400,8 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
               <div>
                 <NewInputs.input
                   type="text"
-                  field={f[:revoke_endpoint]}
-                  label="Revoke URL"
+                  field={f[:revocation_endpoint]}
+                  label="Revocation Endpoint"
                   required="true"
                 />
               </div>
@@ -412,7 +412,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
                 <NewInputs.input
                   type="text"
                   field={f[:introspection_endpoint]}
-                  label="Introspection URL"
+                  label="Introspection Endpoint"
                 />
               </div>
             </div>
@@ -422,7 +422,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
                 <NewInputs.input
                   type="text"
                   field={f[:userinfo_endpoint]}
-                  label="UserInfo URL"
+                  label="UserInfo Endpoint"
                 />
               </div>
             </div>

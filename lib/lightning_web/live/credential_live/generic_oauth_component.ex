@@ -247,7 +247,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       :no_authorization_url ->
         {:noreply,
          socket
-         |> put_flash(:error, "Authorization URL not found.")}
+         |> put_flash(:error, "Authorization Endpoint not found.")}
 
       {:error, reason} ->
         {:noreply,

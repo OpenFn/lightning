@@ -3,7 +3,7 @@ defmodule Lightning.Repo.Migrations.AddRevokeEndpointToOauthClients do
 
   def change do
     alter table(:oauth_clients) do
-      add :revoke_endpoint, :string
+      add :revocation_endpoint, :string
     end
   end
 end
