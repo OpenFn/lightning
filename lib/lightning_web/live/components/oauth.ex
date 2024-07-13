@@ -141,6 +141,26 @@ defmodule LightningWeb.Components.Oauth do
     """
   end
 
+  def error_block(%{type: :revoke_failed} = assigns) do
+    ~H"""
+    <div class="rounded-md bg-yellow-50 border border-yellow-200 p-4">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <.icon name="hero-exclamation-triangle" class="h-4 w-4 text-yellow-600" />
+        </div>
+        <div class="ml-3">
+          <h3 class="text-sm font-medium text-yellow-800">Something went wrong.</h3>
+          <div class="mt-2 text-sm text-yellow-700">
+            <p class="text-sm mt-2">
+              Token revocation failed. The token associated with this credential may have already been revoked or expired. Please delete this credential and create a new one.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
   def error_block(%{type: :refresh_failed} = assigns) do
     ~H"""
     <div class="rounded-md bg-yellow-50 border border-yellow-200 p-4">

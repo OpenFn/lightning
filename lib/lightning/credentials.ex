@@ -412,6 +412,8 @@ defmodule Lightning.Credentials do
     })
   end
 
+  defp maybe_revoke_oauth(%Credential{oauth_client_id: nil}), do: :ok
+
   defp maybe_revoke_oauth(%Credential{
          oauth_client_id: oauth_client_id,
          body: body

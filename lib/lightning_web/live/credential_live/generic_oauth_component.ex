@@ -19,7 +19,9 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       :userinfo_failed,
       :code_failed,
       :refresh_failed,
-      :missing_required
+      :missing_required,
+      :no_refresh_token,
+      :revoke_failed
     ]
   }
 
@@ -227,11 +229,9 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   def handle_event("authorize_click", _, socket) do
     credential = Map.get(socket.assigns, :credential)
 
-    with body when not is_nil(body) <- credential && credential.body,
-         selected_client when not is_nil(selected_client) <-
-           socket.assigns.selected_client || :no_oauth_client,
-         authorize_url when not is_nil(authorize_url) <-
-           socket.assigns.authorize_url || :no_authorization_url,
+    with body <- credential && credential.body,
+         selected_client <- socket.assigns.selected_client,
+         authorize_url <- socket.assigns.authorize_url,
          {:ok, _response} <- OauthHTTPClient.revoke_token(selected_client, body) do
       {:noreply,
        socket
@@ -239,20 +239,12 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
        |> push_event("open_authorize_url", %{url: authorize_url})
        |> assign(oauth_progress: :started)}
     else
-      :no_oauth_client ->
-        {:noreply,
-         socket
-         |> put_flash(:error, "OAuth client not found.")}
-
-      :no_authorization_url ->
-        {:noreply,
-         socket
-         |> put_flash(:error, "Authorization Endpoint not found.")}
-
       {:error, reason} ->
-        {:noreply,
-         socket
-         |> put_flash(:error, "Failed to revoke token: #{reason}")}
+        Logger.info(
+          "Failed to revoke the token. Error received from the provider: #{reason}"
+        )
+
+        {:noreply, socket |> assign(oauth_progress: :revoke_failed)}
 
       _ ->
         {:noreply,
