@@ -801,6 +801,13 @@ defmodule LightningWeb.CredentialLiveTest do
       Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
                                                                        _opts ->
         case env.url do
+          "http://example.com/oauth2/revoke" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: Jason.encode!(%{})
+             }}
+
           "http://example.com/oauth2/token" ->
             {:ok,
              %Tesla.Env{
@@ -902,6 +909,13 @@ defmodule LightningWeb.CredentialLiveTest do
       Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
                                                                        _opts ->
         case env.url do
+          "http://example.com/oauth2/revoke" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: Jason.encode!(%{})
+             }}
+
           "http://example.com/oauth2/token" ->
             {:ok,
              %Tesla.Env{
@@ -1487,6 +1501,17 @@ defmodule LightningWeb.CredentialLiveTest do
       assert view.id == subscription_id
       assert view |> element(component_id)
 
+      Mox.expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
+        env, _opts
+        when env.method == :post and
+               env.url == oauth_client.revocation_endpoint ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: Jason.encode!(%{})
+           }}
+      end)
+
       view
       |> element("#authorize-button")
       |> render_click()
@@ -1515,6 +1540,13 @@ defmodule LightningWeb.CredentialLiveTest do
       Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
                                                                        _opts ->
         case env.url do
+          "http://example.com/oauth2/revoke" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: Jason.encode!(%{})
+             }}
+
           "http://example.com/oauth2/token" ->
             {:error, :unauthorized}
 
@@ -1588,6 +1620,13 @@ defmodule LightningWeb.CredentialLiveTest do
       Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
                                                                        _opts ->
         case env.url do
+          "http://example.com/oauth2/revoke" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: Jason.encode!(%{})
+             }}
+
           "http://example.com/oauth2/token" ->
             {:ok,
              %Tesla.Env{
