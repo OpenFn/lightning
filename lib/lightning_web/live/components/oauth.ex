@@ -101,8 +101,8 @@ defmodule LightningWeb.Components.Oauth do
       <Heroicons.check_circle class="h-4 w-4 text-green-600 inline-block" />
       Success. If your credential is no longer working, you may try to revoke and re-authenticate by clicking
       <.reauthorize_button target={@myself}>
-        re-authorize.
-      </.reauthorize_button>
+        here
+      </.reauthorize_button>.
     </div>
     """
   end
