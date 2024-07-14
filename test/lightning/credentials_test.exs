@@ -196,6 +196,31 @@ defmodule Lightning.CredentialsTest do
       )
     end
 
+    test "schedule_credential_deletion/1 revokes token for oauth credentials" do
+      oauth_credential =
+        insert(:credential,
+          name: "My Credential",
+          schema: "oauth",
+          body: %{"access_token" => "super_secret_access_token_123"},
+          user: build(:user),
+          oauth_client: build(:oauth_client)
+        )
+
+      refute oauth_credential.scheduled_deletion
+
+      expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
+        env, _opts
+        when env.method == :post and
+               env.url == "http://example.com/oauth2/revoke" ->
+          {:ok, %Tesla.Env{status: 200, body: Jason.encode!(%{})}}
+      end)
+
+      {:ok, oauth_credential} =
+        Credentials.schedule_credential_deletion(oauth_credential)
+
+      assert oauth_credential.scheduled_deletion
+    end
+
     test "cancel_scheduled_deletion/1 sets scheduled_deletion to nil for a given credential" do
       # Set up a credential with a scheduled_deletion date
       # 1 hour from now, truncated to seconds

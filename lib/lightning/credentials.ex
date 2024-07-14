@@ -422,8 +422,6 @@ defmodule Lightning.Credentials do
     OauthHTTPClient.revoke_token(client, body)
   end
 
-  defp maybe_revoke_oauth(%Credential{}), do: :ok
-
   defp remove_credential_associations(%Credential{id: credential_id}) do
     project_credential_ids_query =
       from(pc in Lightning.Projects.ProjectCredential,
