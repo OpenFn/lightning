@@ -796,6 +796,31 @@ defmodule LightningWeb.CredentialLiveTest do
     end
   end
 
+  # describe "generic oauth credential when user clicks on authorize button" do
+  #   test "when no token exists, revocation is performed and authorization url is opened directly",
+  #        %{
+  #          conn: conn,
+  #          user: user
+  #        } do
+  #     oauth_client = insert(:oauth_client, user: user)
+
+  #     {:ok, view, _html} = live(conn, ~p"/credentials")
+
+  #     view |> select_credential_type(oauth_client.id)
+  #     view |> click_continue()
+
+  #     view
+  #     |> fill_credential(%{
+  #       name: "My Generic OAuth Credential"
+  #     })
+
+  #     view
+  #     |> element("#authorize-button")
+  #     |> render_click()
+
+  #   end
+  # end
+
   describe "generic oauth credential when flow fails" do
     setup do
       Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
@@ -872,6 +897,8 @@ defmodule LightningWeb.CredentialLiveTest do
       view
       |> element("#authorize-button")
       |> render_click()
+
+      assert_push_event(view, "open_authorize_url", %{url: ^authorize_url})
 
       refute view
              |> has_element?("#authorize-button")
