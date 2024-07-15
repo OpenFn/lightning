@@ -809,7 +809,6 @@ defmodule LightningWeb.CredentialLiveTest do
        }}
     end
 
-    @tag :capture_log
     test "renders error when revocation fails",
          %{
            conn: conn,
@@ -948,28 +947,19 @@ defmodule LightningWeb.CredentialLiveTest do
         name: "My Generic OAuth Credential"
       })
 
-      authorize_url =
-        view
-        |> element("#credential-form-new")
-        |> render()
-        |> Floki.parse_fragment!()
-        |> Floki.find("a[phx-click=authorize_click]")
-        |> Floki.attribute("href")
-        |> List.first()
+      view
+      |> with_target("#generic-oauth-component-new")
+      |> render_click("authorize_click", %{})
+
+      assert_push_event(view, "open_authorize_url", %{url: authorize_url})
 
       [subscription_id, mod, component_id] = get_decoded_state(authorize_url)
 
       assert view.id == subscription_id
       assert view |> element(component_id)
 
-      view
-      |> element("#authorize-button")
-      |> render_click()
-
-      assert_push_event(view, "open_authorize_url", %{url: ^authorize_url})
-
       refute view
-             |> has_element?("#authorize-button")
+             |> has_element?("#authorize-button-generic-oauth-component-new")
 
       LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
         id: component_id,
@@ -1060,26 +1050,19 @@ defmodule LightningWeb.CredentialLiveTest do
         name: "My Generic OAuth Credential"
       })
 
-      authorize_url =
-        view
-        |> element("#credential-form-new")
-        |> render()
-        |> Floki.parse_fragment!()
-        |> Floki.find("a[phx-click=authorize_click]")
-        |> Floki.attribute("href")
-        |> List.first()
+      view
+      |> with_target("#generic-oauth-component-new")
+      |> render_click("authorize_click", %{})
+
+      assert_push_event(view, "open_authorize_url", %{url: authorize_url})
 
       [subscription_id, mod, component_id] = get_decoded_state(authorize_url)
 
       assert view.id == subscription_id
       assert view |> element(component_id)
 
-      view
-      |> element("#authorize-button")
-      |> render_click()
-
       refute view
-             |> has_element?("#authorize-button")
+             |> has_element?("#authorize-button-generic-oauth-component-new")
 
       LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
         id: component_id,
@@ -1232,7 +1215,9 @@ defmodule LightningWeb.CredentialLiveTest do
              |> has_element?("#scope_selection_new")
 
       refute view |> has_element?("#re-authorize-banner")
-      assert view |> has_element?("#authorize-button")
+
+      assert view
+             |> has_element?("#authorize-button-generic-oauth-component-new")
 
       oauth_client.optional_scopes
       |> String.split(",")
@@ -1243,7 +1228,9 @@ defmodule LightningWeb.CredentialLiveTest do
       end)
 
       refute view |> has_element?("#re-authorize-banner")
-      assert view |> has_element?("#authorize-button")
+
+      assert view
+             |> has_element?("#authorize-button-generic-oauth-component-new")
     end
 
     test "re-authenticate banner rendered when scopes are changed",
@@ -1498,28 +1485,20 @@ defmodule LightningWeb.CredentialLiveTest do
 
       # Get the state from the authorize url in order to fake the calling
       # off the action in the OidcController
-      authorize_url =
-        index_live
-        |> element("#credential-form-new")
-        |> render()
-        |> Floki.parse_fragment!()
-        |> Floki.find("a[phx-click=authorize_click]")
-        |> Floki.attribute("href")
-        |> List.first()
+      index_live
+      |> with_target("#generic-oauth-component-new")
+      |> render_click("authorize_click", %{})
+
+      assert_push_event(index_live, "open_authorize_url", %{url: authorize_url})
 
       [subscription_id, mod, component_id] = get_decoded_state(authorize_url)
 
       assert index_live.id == subscription_id
       assert index_live |> element(component_id)
 
-      # Click on the 'Authorize with Google button
-      index_live
-      |> element("#authorize-button")
-      |> render_click()
-
       # Once authorizing the button isn't available
       refute index_live
-             |> has_element?("#authorize-button")
+             |> has_element?("#authorize-button-generic-oauth-component-new")
 
       # `handle_info/2` in LightingWeb.CredentialLive.Edit forwards the data
       # as a `send_update/3` call to the GoogleSheets component
@@ -1582,20 +1561,6 @@ defmodule LightningWeb.CredentialLiveTest do
         name: "My Generic OAuth Credential"
       })
 
-      authorize_url =
-        view
-        |> element("#credential-form-new")
-        |> render()
-        |> Floki.parse_fragment!()
-        |> Floki.find("a[phx-click=authorize_click]")
-        |> Floki.attribute("href")
-        |> List.first()
-
-      [subscription_id, mod, component_id] = get_decoded_state(authorize_url)
-
-      assert view.id == subscription_id
-      assert view |> element(component_id)
-
       Mox.expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
         env, _opts
         when env.method == :post and
@@ -1608,11 +1573,18 @@ defmodule LightningWeb.CredentialLiveTest do
       end)
 
       view
-      |> element("#authorize-button")
-      |> render_click()
+      |> with_target("#generic-oauth-component-new")
+      |> render_click("authorize_click", %{})
+
+      assert_push_event(view, "open_authorize_url", %{url: authorize_url})
+
+      [subscription_id, mod, component_id] = get_decoded_state(authorize_url)
+
+      assert view.id == subscription_id
+      assert view |> element(component_id)
 
       refute view
-             |> has_element?("#authorize-button")
+             |> has_element?("#authorize-button-generic-oauth-component-new")
 
       LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
         id: component_id,
@@ -1669,26 +1641,19 @@ defmodule LightningWeb.CredentialLiveTest do
         name: "My Generic OAuth Credential"
       })
 
-      authorize_url =
-        view
-        |> element("#credential-form-new")
-        |> render()
-        |> Floki.parse_fragment!()
-        |> Floki.find("a[phx-click=authorize_click]")
-        |> Floki.attribute("href")
-        |> List.first()
+      view
+      |> with_target("#generic-oauth-component-new")
+      |> render_click("authorize_click", %{})
+
+      assert_push_event(view, "open_authorize_url", %{url: authorize_url})
 
       [subscription_id, mod, component_id] = get_decoded_state(authorize_url)
 
       assert view.id == subscription_id
       assert view |> element(component_id)
 
-      view
-      |> element("#authorize-button")
-      |> render_click()
-
       refute view
-             |> has_element?("#authorize-button")
+             |> has_element?("#authorize-button-generic-oauth-component-new")
 
       LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
         id: component_id,
@@ -1760,26 +1725,19 @@ defmodule LightningWeb.CredentialLiveTest do
         name: "My Generic OAuth Credential"
       })
 
-      authorize_url =
-        view
-        |> element("#credential-form-new")
-        |> render()
-        |> Floki.parse_fragment!()
-        |> Floki.find("a[phx-click=authorize_click]")
-        |> Floki.attribute("href")
-        |> List.first()
+      view
+      |> with_target("#generic-oauth-component-new")
+      |> render_click("authorize_click", %{})
+
+      assert_push_event(view, "open_authorize_url", %{url: authorize_url})
 
       [subscription_id, mod, component_id] = get_decoded_state(authorize_url)
 
       assert view.id == subscription_id
       assert view |> element(component_id)
 
-      view
-      |> element("#authorize-button")
-      |> render_click()
-
       refute view
-             |> has_element?("#authorize-button")
+             |> has_element?("#authorize-button-generic-oauth-component-new")
 
       LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
         id: component_id,
