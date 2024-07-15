@@ -226,7 +226,11 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
      )}
   end
 
-  def handle_event("authorize_click", _, socket) do
+  # TODO: Merge authorize_click and re_authorize_click when removing the old implementation
+  # Both re_authorize_click and authorize_click should be one function and make sure we always use the hook
+  # to open the authorization tab in the browser instead of a link for authorize_click and a hook for re_authorize_click.
+  # But this is expensive to do now without cleaning the implementations of the oauth by removing the old implementation
+  def handle_event("re_authorize_click", _, socket) do
     credential = Map.get(socket.assigns, :credential)
 
     with body <- credential && credential.body,
@@ -245,13 +249,11 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
         )
 
         {:noreply, socket |> assign(oauth_progress: :revoke_failed)}
-
-      _ ->
-        {:noreply,
-         socket
-         |> push_event("open_authorize_url", %{url: socket.assigns.authorize_url})
-         |> assign(oauth_progress: :started)}
     end
+  end
+
+  def handle_event("authorize_click", _, socket) do
+    {:noreply, socket |> assign(oauth_progress: :started)}
   end
 
   def handle_event("check_scope", %{"_target" => [scope]}, socket) do
@@ -564,7 +566,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
             </.text_ping_loader>
             <.authorize_button
               :if={@display_authorize_button}
-              id={@id}
               authorize_url={@authorize_url}
               provider={@selected_client.name}
               myself={@myself}
