@@ -796,30 +796,98 @@ defmodule LightningWeb.CredentialLiveTest do
     end
   end
 
-  # describe "generic oauth credential when user clicks on authorize button" do
-  #   test "when no token exists, revocation is performed and authorization url is opened directly",
-  #        %{
-  #          conn: conn,
-  #          user: user
-  #        } do
-  #     oauth_client = insert(:oauth_client, user: user)
+  describe "Authorizing an oauth credential" do
+    setup do
+      {:ok,
+       token: %{
+         "access_token" => "ya29.a0AVvZ",
+         "refresh_token" => "1//03vpp6Li",
+         "expires_at" => 3600,
+         "token_type" => "Bearer",
+         "id_token" => "eyJhbGciO",
+         "scope" => "scope1 scope2"
+       }}
+    end
 
-  #     {:ok, view, _html} = live(conn, ~p"/credentials")
+    @tag :capture_log
+    test "renders error when revocation fails",
+         %{
+           conn: conn,
+           user: user,
+           token: token
+         } do
+      credential =
+        insert(:credential,
+          user: user,
+          schema: "oauth",
+          body: token,
+          oauth_client: build(:oauth_client, user: user, userinfo_endpoint: nil)
+        )
 
-  #     view |> select_credential_type(oauth_client.id)
-  #     view |> click_continue()
+      Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
+                                                                       _opts ->
+        case env.url do
+          "http://example.com/oauth2/revoke" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: Jason.encode!(%{})
+             }}
 
-  #     view
-  #     |> fill_credential(%{
-  #       name: "My Generic OAuth Credential"
-  #     })
+          "http://example.com/oauth2/token" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: Jason.encode!(token)
+             }}
+        end
+      end)
 
-  #     view
-  #     |> element("#authorize-button")
-  #     |> render_click()
+      {:ok, view, _html} = live(conn, ~p"/credentials")
 
-  #   end
-  # end
+      assert view |> element("#credential-form-#{credential.id}") |> render() =~
+               "Success."
+
+      view
+      |> element("#credential-form-#{credential.id} #re-authorize-button")
+      |> render_click()
+
+      view
+      |> element("#credential-form-#{credential.id} button", "Cancel")
+      |> render_click()
+
+      Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
+                                                                       _opts ->
+        case env.url do
+          "http://example.com/oauth2/revoke" ->
+            {:ok,
+             %Tesla.Env{
+               status: 400,
+               body: Jason.encode!(%{})
+             }}
+
+          "http://example.com/oauth2/token" ->
+            {:ok,
+             %Tesla.Env{
+               status: 400,
+               body: Jason.encode!(%{})
+             }}
+        end
+      end)
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      assert view
+             |> element("#credential-form-#{credential.id}")
+             |> render() =~
+               "Failed retrieving the token from the provider. Please try again"
+
+      assert view
+             |> element("#credential-form-#{credential.id} #re-authorize-button")
+             |> render_click() =~
+               "Token revocation failed. The token associated with this credential may have already been revoked or expired. Please delete this credential and create a new one."
+    end
+  end
 
   describe "generic oauth credential when flow fails" do
     setup do
