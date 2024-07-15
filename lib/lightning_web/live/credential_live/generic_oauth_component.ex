@@ -227,9 +227,10 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   end
 
   # TODO: Merge authorize_click and re_authorize_click when removing the old implementation
-  # Both re_authorize_click and authorize_click should be one function and make sure we always use the hook
-  # to open the authorization tab in the browser instead of a link for authorize_click and a hook for re_authorize_click.
-  # But this is expensive to do now without cleaning the implementations of the oauth by removing the old implementation
+  # Both re_authorize_click and authorize_click should be one function and make sure we
+  # always use the hook to open the authorization tab in the browser instead of a link
+  # for authorize_click and a hook for re_authorize_click. But this is expensive to do
+  # now without cleaning the implementations of the oauth by removing the old implementation
   def handle_event("re_authorize_click", _, socket) do
     credential = Map.get(socket.assigns, :credential)
 
