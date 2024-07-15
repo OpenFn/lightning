@@ -3,6 +3,7 @@ defmodule Lightning.Projects.ProvisionerTest do
 
   alias Lightning.Projects.Provisioner
   alias Lightning.ProjectsFixtures
+  alias Lightning.Workflows.Snapshot
   import Lightning.Factories
   import LightningWeb.CoreComponents, only: [translate_error: 1]
 
@@ -103,6 +104,8 @@ defmodule Lightning.Projects.ProvisionerTest do
              ),
              "Should have both the first and second jobs"
 
+      assert %Snapshot{} = Snapshot.get_current_for(workflow)
+
       project = project |> Lightning.Repo.preload(:project_users)
 
       assert project.project_users
@@ -170,6 +173,13 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       assert project.workflows |> Enum.at(0) |> Map.get(:edges) |> length() == 2
 
+      snapshots_before =
+        Enum.map(project.workflows, fn workflow ->
+          Snapshot.get_current_for(workflow)
+        end)
+
+      assert [%Snapshot{lock_version: 0}] = snapshots_before
+
       third_job_id = Ecto.UUID.generate()
 
       body =
@@ -201,6 +211,13 @@ defmodule Lightning.Projects.ProvisionerTest do
              |> then(fn w -> w.jobs end)
              |> Enum.any?(&(&1.id == third_job_id)),
              "The third job should be added"
+
+      snapshots_after =
+        Enum.map(project.workflows, fn workflow ->
+          Snapshot.get_current_for(workflow)
+        end)
+
+      assert [%Snapshot{lock_version: 1}] = snapshots_after
     end
 
     test "adding a record from another project or workflow", %{

@@ -19,6 +19,7 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.VersionControl.VersionControlUsageLimiter
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.WorkflowUsageLimiter
@@ -49,6 +50,8 @@ defmodule Lightning.Projects.Provisioner do
       |> case do
         {:ok, %{workflows: workflows} = project} ->
           Enum.each(workflows, &Lightning.Workflows.Events.workflow_updated/1)
+          Enum.each(workflows, &Snapshot.get_or_create_latest_for/1)
+
           {:ok, preload_dependencies(project)}
 
         {:error, error} ->
