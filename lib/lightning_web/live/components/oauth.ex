@@ -57,7 +57,7 @@ defmodule LightningWeb.Components.Oauth do
     ~H"""
     <.link
       href={@authorize_url}
-      id="authorize-button"
+      id={"authorize-button-#{@id}"}
       phx-click="authorize_click"
       phx-target={@myself}
       target="_blank"

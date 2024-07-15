@@ -564,6 +564,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
             </.text_ping_loader>
             <.authorize_button
               :if={@display_authorize_button}
+              id={@id}
               authorize_url={@authorize_url}
               provider={@selected_client.name}
               myself={@myself}
