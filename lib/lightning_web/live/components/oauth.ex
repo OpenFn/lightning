@@ -57,7 +57,7 @@ defmodule LightningWeb.Components.Oauth do
     ~H"""
     <.link
       href={@authorize_url}
-      id={"authorize-button-#{@id}"}
+      id="authorize-button"
       phx-click="authorize_click"
       phx-target={@myself}
       target="_blank"
@@ -113,7 +113,7 @@ defmodule LightningWeb.Components.Oauth do
       id={@id}
       href="#"
       phx-target={@target}
-      phx-click="authorize_click"
+      phx-click="re_authorize_click"
       class="hover:underline text-primary-900"
     >
       <%= render_slot(@inner_block) %>
