@@ -194,7 +194,7 @@ defmodule LightningWeb.Components.Oauth do
     """
   end
 
-  def error_block(%{type: :no_refresh_token} = assigns) do
+  def error_block(%{type: :missing_required} = assigns) do
     ~H"""
     <div class="rounded-md bg-yellow-50 border border-yellow-200 p-4">
       <div class="flex">

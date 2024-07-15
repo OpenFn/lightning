@@ -880,7 +880,7 @@ defmodule LightningWeb.CredentialLiveTest do
             id: "generic-oauth-component-new"
           )
 
-        :no_refresh_token === assigns[:oauth_progress]
+        :missing_required === assigns[:oauth_progress]
       end)
 
       refute view |> has_element?("h3", "Test User")

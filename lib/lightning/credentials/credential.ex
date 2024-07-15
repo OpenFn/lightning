@@ -54,6 +54,8 @@ defmodule Lightning.Credentials.Credential do
     if get_field(changeset, :schema) == "oauth" do
       body = get_field(changeset, :body) || %{}
 
+      body = Enum.into(body, %{}, fn {k, v} -> {to_string(k), v} end)
+
       required_fields = ["access_token", "refresh_token"]
       expires_fields = ["expires_in", "expires_at"]
 
