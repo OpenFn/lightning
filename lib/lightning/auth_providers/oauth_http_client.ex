@@ -33,11 +33,6 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
     |> post(client.token_endpoint, body)
     |> handle_resp([200])
     |> maybe_introspect(client)
-    |> maybe_validate_token()
-    #  up here ^^^ you can't `maybe_validate_token` ALONE...
-    # you must validate after merging, since clicking "reauthorize" won't actually
-    # return a `refresh_token` unless the customer has fully revoked privs on the
-    # 3rd party system
   end
 
   @doc """
@@ -154,18 +149,6 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
     else
       expiration_time
     end
-  end
-
-  defp maybe_validate_token({:ok, token} = _response) do
-    if Map.get(token, "refresh_token") do
-      {:ok, token}
-    else
-      {:error, :no_refresh_token}
-    end
-  end
-
-  defp maybe_validate_token(response) do
-    response
   end
 
   defp maybe_introspect({:error, reason}, _client) do

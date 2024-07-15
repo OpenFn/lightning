@@ -52,16 +52,22 @@ defmodule Lightning.Credentials.Credential do
 
   defp validate_oauth(changeset) do
     if get_field(changeset, :schema) == "oauth" do
-      case get_field(changeset, :body) do
-        %{"refresh_token" => _any} ->
-          changeset
+      body = get_field(changeset, :body) || %{}
 
-        _else ->
-          add_error(
-            changeset,
-            :body,
-            "We can't save this credential with a refresh_token."
-          )
+      required_fields = ["access_token", "refresh_token"]
+      expires_fields = ["expires_in", "expires_at"]
+
+      has_required_fields? = Enum.all?(required_fields, &Map.has_key?(body, &1))
+      has_expires_field? = Enum.any?(expires_fields, &Map.has_key?(body, &1))
+
+      if has_required_fields? and has_expires_field? do
+        changeset
+      else
+        add_error(
+          changeset,
+          :body,
+          "Invalid OAuth token. Missing required fields: access_token, refresh_token, and either expires_in or expires_at."
+        )
       end
     else
       changeset
