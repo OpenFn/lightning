@@ -141,8 +141,12 @@ defmodule LightningWeb.WorkflowLive.Components do
           <div
             :if={!is_nil(@form[:concurrency].value)}
             class="hover:cursor-pointer hover:text-slate-400"
+            id="unlock-concurrency"
             phx-click={
-              JS.dispatch("change", to: "input[name='workflow\[concurrency\]']")
+              JS.set_attribute({"value", ""},
+                to: "input[name='workflow\[concurrency\]']"
+              )
+              |> JS.dispatch("change", to: "input[name='workflow\[concurrency\]']")
             }
           >
             <.icon name="hero-lock-closed" class="h4 w-4" />
