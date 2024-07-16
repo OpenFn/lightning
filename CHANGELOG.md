@@ -17,6 +17,11 @@ and this project adheres to
 
 ### Added
 
+- Workflows can now specify concurrency, allowing runs to be executed
+  syncronously or to a maximum concurrency level. Note that this applies to the
+  default FifoRunQueue only.
+  [#2022](https://github.com/OpenFn/lightning/issues/2022)
+
 ### Changed
 
 - Make modal close events configurable
