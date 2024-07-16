@@ -350,11 +350,11 @@ defmodule Lightning.Accounts.UserNotifier do
     """)
   end
 
-  def deliver_project_invitation_email(user, project, token) do
+  def deliver_project_invitation_email(user, project, token, inviter) do
     deliver(user.email, "Join #{project.name} on OpenFn as a collaborator", """
     Hi #{user.first_name},
 
-    #{user.first_name} has invited you to join the #{project.name} project on OpenFn. Since you don't have an account yet, we've set one up for you. Please click the link below to complete your account setup:
+    #{inviter.first_name} has invited you to join the #{project.name} project on OpenFn. Since you don't have an account yet, we've set one up for you. Please click the link below to complete your account setup:
     #{url(LightningWeb.Endpoint, ~p"/users/reset_password/#{token}")}
 
     If you did not request to join this project, please ignore this email.

@@ -33,15 +33,4 @@ defmodule LightningWeb.ProjectLive.InvitedCollaborators do
     |> validate_required([:first_name, :last_name, :email, :role])
     |> validate_format(:email, ~r/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/)
   end
-
-  @spec prepare_for_insertion(%__MODULE__{}, map(), [map(), ...]) ::
-          {:ok, [map(), ...]} | {:error, Ecto.Changeset.t()}
-  def prepare_for_insertion(schema, attrs, _current_project_users) do
-    changeset = changeset(schema, attrs)
-
-    with {:ok, %{collaborators: collaborators}} <-
-           apply_action(changeset, :insert) do
-      {:ok, collaborators}
-    end
-  end
 end

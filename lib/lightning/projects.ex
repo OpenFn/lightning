@@ -700,7 +700,7 @@ defmodule Lightning.Projects do
     {:error, :missing_history_retention_period}
   end
 
-  def invite_collaborators(project, collaborators) do
+  def invite_collaborators(project, collaborators, inviter) do
     Multi.new()
     |> Multi.put(:collaborators, collaborators)
     |> Multi.merge(&register_users/1)
@@ -713,7 +713,7 @@ defmodule Lightning.Projects do
       end
     end)
     |> Multi.run(:build_and_invite_users, fn _repo, changes ->
-      build_tokens_and_send_invitations(changes, project)
+      build_tokens_and_send_invitations(changes, project, inviter)
     end)
     |> Repo.transaction()
     |> case do
@@ -721,7 +721,7 @@ defmodule Lightning.Projects do
         {:ok, changes}
 
       {:error, _op, changeset, _changes} ->
-        changeset
+        {:error, changeset}
     end
   end
 
@@ -750,7 +750,7 @@ defmodule Lightning.Projects do
     end)
   end
 
-  defp build_tokens_and_send_invitations(changes, project) do
+  defp build_tokens_and_send_invitations(changes, project, inviter) do
     tokens =
       Enum.reduce(changes, [], fn
         {{:new_user, email}, user}, acc ->
@@ -776,7 +776,8 @@ defmodule Lightning.Projects do
         UserNotifier.deliver_project_invitation_email(
           user,
           project,
-          encoded_token
+          encoded_token,
+          inviter
         )
       end)
 
