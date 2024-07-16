@@ -11,6 +11,7 @@ defmodule Lightning.Projects.Provisioner do
   import Ecto.Changeset
   import Ecto.Query
 
+  alias Ecto.Multi
   alias Lightning.Accounts.User
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectUser
@@ -41,22 +42,46 @@ defmodule Lightning.Projects.Provisioner do
   end
 
   def import_document(project, user_or_repo_connection, data) do
-    with :ok <- VersionControlUsageLimiter.limit_github_sync(project.id) do
-      project
-      |> preload_dependencies()
-      |> parse_document(data)
-      |> maybe_add_project_user(user_or_repo_connection)
-      |> Repo.insert_or_update()
-      |> case do
-        {:ok, %{workflows: workflows} = project} ->
-          Enum.each(workflows, &Lightning.Workflows.Events.workflow_updated/1)
-          Enum.each(workflows, &Snapshot.get_or_create_latest_for/1)
+    Repo.transact(fn ->
+      with :ok <- VersionControlUsageLimiter.limit_github_sync(project.id),
+           project_changeset <-
+             build_import_changeset(project, user_or_repo_connection, data),
+           {:ok, %{workflows: workflows} = project} <-
+             Repo.insert_or_update(project_changeset),
+           {:ok, _changes} <- create_snapshots(project_changeset, workflows) do
+        Enum.each(workflows, &Lightning.Workflows.Events.workflow_updated/1)
 
-          {:ok, preload_dependencies(project)}
-
-        {:error, error} ->
-          {:error, error}
+        {:ok, preload_dependencies(project)}
       end
+    end)
+  end
+
+  defp build_import_changeset(project, user_or_repo_connection, data) do
+    project
+    |> preload_dependencies()
+    |> parse_document(data)
+    |> maybe_add_project_user(user_or_repo_connection)
+  end
+
+  defp create_snapshots(project_changeset, inserted_workflows) do
+    project_changeset
+    |> get_assoc(:workflows)
+    |> Enum.reject(fn changeset ->
+      changeset.changes == %{} or get_change(changeset, :delete)
+    end)
+    |> Enum.reduce(Multi.new(), fn changeset, multi ->
+      workflow =
+        inserted_workflows
+        |> Enum.find(fn workflow ->
+          workflow.id == get_field(changeset, :id)
+        end)
+
+      Multi.insert(multi, "snapshot_#{workflow.id}", Snapshot.build(workflow))
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, changes} -> {:ok, changes}
+      {:error, _failed_key, changeset, _changes} -> {:error, changeset}
     end
   end
 
@@ -132,6 +157,7 @@ defmodule Lightning.Projects.Provisioner do
   defp workflow_changeset(workflow, attrs) do
     workflow
     |> cast(attrs, [:id, :name, :delete])
+    |> optimistic_lock(:lock_version)
     |> validate_required([:id])
     |> maybe_mark_for_deletion()
     |> validate_extraneous_params()
