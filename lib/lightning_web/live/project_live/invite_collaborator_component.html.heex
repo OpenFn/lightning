@@ -55,8 +55,8 @@
           field={f[:invited_collaborators]}
           prepend={[%InvitedCollaborators.InvitedCollaborator{}]}
         >
-          <div class="flex justify-between">
-            <div class="min-w-1/5">
+          <div class="flex space-x-4">
+            <div class="flex-1">
               <.input
                 type="text"
                 field={cf[:first_name]}
@@ -64,7 +64,7 @@
                 required="true"
               />
             </div>
-            <div class="min-w-1/5">
+            <div class="flex-1">
               <.input
                 type="text"
                 field={cf[:last_name]}
@@ -72,10 +72,10 @@
                 required="true"
               />
             </div>
-            <div class="min-w-1/5">
+            <div class="flex-1">
               <.input type="email" field={cf[:email]} required="true" />
             </div>
-            <div class="min-w-1/4">
+            <div class="flex-1">
               <.input
                 type="select"
                 prompt="Select Role"
@@ -89,7 +89,7 @@
                 required="true"
               />
             </div>
-            <div class="">
+            <div class="flex items-center">
               <input
                 type="hidden"
                 name={"#{f.name}[collaborators_sort][]"}
