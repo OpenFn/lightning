@@ -178,8 +178,7 @@ defmodule Lightning.Projects.ProvisionerTest do
           Snapshot.get_current_for(workflow)
         end)
 
-      # I need some eyes here. It is finding the snapshot to have a value of 1
-      assert [%Snapshot{lock_version: 0}] = snapshots_before
+      assert [%Snapshot{lock_version: 1}] = snapshots_before
 
       third_job_id = Ecto.UUID.generate()
 
@@ -218,7 +217,7 @@ defmodule Lightning.Projects.ProvisionerTest do
           Snapshot.get_current_for(workflow)
         end)
 
-      assert [%Snapshot{lock_version: 1}] = snapshots_after
+      assert [%Snapshot{lock_version: 2}] = snapshots_after
     end
 
     test "adding a record from another project or workflow", %{
