@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Make modal close events configurable
+  [#2298](https://github.com/OpenFn/lightning/issues/2298)
+
 ### Fixed
 
 - Prevent Oauth credentials from being created if they don't have a

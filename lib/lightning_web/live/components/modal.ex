@@ -14,6 +14,8 @@ defmodule LightningWeb.Components.Modal do
   attr :type, :string, default: "default"
   attr :position, :string, default: "relative"
   attr :width, :string, default: "max-w-3xl"
+  attr :close_on_click_away, :boolean, default: true
+  attr :close_on_keydown, :boolean, default: true
   attr :rest, :global
 
   attr :on_close, JS, default: %JS{}
@@ -55,9 +57,9 @@ defmodule LightningWeb.Components.Modal do
             <.focus_wrap
               id={"#{@id}-container"}
               phx-mounted={@show && show_modal(@on_open, @id)}
-              phx-window-keydown={hide_modal(@on_close, @id)}
+              phx-window-keydown={@close_on_keydown && hide_modal(@on_close, @id)}
               phx-key="escape"
-              phx-click-away={hide_modal(@on_close, @id)}
+              phx-click-away={@close_on_click_away && hide_modal(@on_close, @id)}
               class="hidden relative rounded-xl bg-white py-[24px] shadow-lg shadow-zinc-700/10 ring-1 ring-zinc-700/10 transition"
             >
               <header :if={@title != []} class="pl-[24px] pr-[24px]">
