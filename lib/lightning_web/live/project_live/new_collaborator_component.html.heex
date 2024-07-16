@@ -3,7 +3,7 @@
     id={@id}
     show={true}
     on_close={JS.push("toggle_collaborators_modal")}
-    width="min-w-1/2 max-w-xl"
+    width="min-w-1/3 max-w-xl"
   >
     <:title>
       <div class="flex justify-between">
@@ -55,16 +55,18 @@
           field={f[:collaborators]}
           prepend={[%Collaborators.Collaborator{}]}
         >
-          <div class="flex justify-between">
-            <div class="min-w-1/2">
+          <div class="flex items-center space-x-4">
+            <div class="flex-1">
               <.input
                 type="text"
                 field={cf[:email]}
                 placeholder="email@example.com"
                 required="true"
+                class="w-full"
+                display_errors={false}
               />
             </div>
-            <div class="min-w-1/4">
+            <div>
               <.input
                 type="select"
                 prompt="Select Role"
@@ -76,9 +78,10 @@
                   )
                 }
                 required="true"
+                class="w-full"
               />
             </div>
-            <div class="">
+            <div>
               <input
                 type="hidden"
                 name={"#{f.name}[collaborators_sort][]"}
@@ -96,18 +99,19 @@
               </button>
             </div>
           </div>
+          <.error_field field={cf[:email]} />
         </.inputs_for>
 
-        <div class="mt-5">
+        <div class="mt-5 flex justify-start">
           <input type="hidden" name={"#{f.name}[collaborators_drop][]"} />
           <button
             type="button"
             name={"#{f.name}[collaborators_sort][]"}
             value="new"
             phx-click={JS.dispatch("change")}
-            class="inline-flex items-center gap-x-2 rounded-md bg-white px-3.5 py-2.5 text-sm  text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+            class="inline-flex items-center gap-x-2 rounded-md bg-white px-3.5 py-2.5 text-sm text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
           >
-            <Heroicons.plus_circle class="w-5 h-5" /> Add Additonal Collaborator
+            <Heroicons.plus_circle class="w-5 h-5" /> Add Additional Collaborator
           </button>
         </div>
       </div>

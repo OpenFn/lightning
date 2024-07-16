@@ -73,6 +73,20 @@ defmodule LightningWeb.ProjectLive.NewCollaboratorComponent do
     end
   end
 
+  defp error_field(assigns) do
+    ~H"""
+    <.error :for={
+      msg <-
+        Enum.map(
+          @field.errors,
+          &LightningWeb.CoreComponents.translate_error(&1)
+        )
+    }>
+      <%= msg %>
+    </.error>
+    """
+  end
+
   defp prepare_for_insertion(%{assigns: assigns} = socket, params) do
     case Collaborators.prepare_for_insertion(
            assigns.collaborators,

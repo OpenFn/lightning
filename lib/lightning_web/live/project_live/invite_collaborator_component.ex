@@ -74,6 +74,20 @@ defmodule LightningWeb.ProjectLive.InviteCollaboratorComponent do
     end
   end
 
+  defp error_field(assigns) do
+    ~H"""
+    <.error :for={
+      msg <-
+        Enum.map(
+          @field.errors,
+          &LightningWeb.CoreComponents.translate_error(&1)
+        )
+    }>
+      <%= msg %>
+    </.error>
+    """
+  end
+
   defp validate_collaborators(schema, params) do
     changeset = InvitedCollaborators.changeset(schema, params)
 

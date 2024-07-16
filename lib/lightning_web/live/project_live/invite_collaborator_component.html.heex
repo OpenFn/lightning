@@ -55,13 +55,14 @@
           field={f[:invited_collaborators]}
           prepend={[%InvitedCollaborators.InvitedCollaborator{}]}
         >
-          <div class="flex space-x-4">
+          <div class="flex flex-wrap space-x-4">
             <div class="flex-1">
               <.input
                 type="text"
                 field={cf[:first_name]}
                 placeholder="First Name"
                 required="true"
+                class="w-full"
               />
             </div>
             <div class="flex-1">
@@ -70,12 +71,19 @@
                 field={cf[:last_name]}
                 placeholder="Last Name"
                 required="true"
+                class="w-full"
               />
             </div>
             <div class="flex-1">
-              <.input type="email" field={cf[:email]} required="true" />
+              <.input
+                type="email"
+                field={cf[:email]}
+                required="true"
+                class="w-full"
+                display_errors={false}
+              />
             </div>
-            <div class="flex-1">
+            <div>
               <.input
                 type="select"
                 prompt="Select Role"
@@ -87,6 +95,7 @@
                   )
                 }
                 required="true"
+                class="w-full"
               />
             </div>
             <div class="flex items-center">
@@ -107,6 +116,7 @@
               </button>
             </div>
           </div>
+          <.error_field field={cf[:email]} />
         </.inputs_for>
       </div>
       <.modal_footer class="mx-6 mt-6">

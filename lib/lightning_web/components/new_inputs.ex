@@ -153,6 +153,8 @@ defmodule LightningWeb.Components.NewInputs do
 
   attr :class, :string, default: ""
 
+  attr :display_errors, :boolean, default: true
+
   slot :inner_block
 
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
@@ -201,7 +203,7 @@ defmodule LightningWeb.Components.NewInputs do
           class="text-red-500"
         > *</span>
       </label>
-      <.error :for={msg <- @errors}><%= msg %></.error>
+      <.error :for={msg <- @errors} :if={@display_errors}><%= msg %></.error>
     </div>
     """
   end
@@ -238,7 +240,7 @@ defmodule LightningWeb.Components.NewInputs do
           <%= render_slot(@inner_block) %>
         </div>
       </div>
-      <.error :for={msg <- @errors}><%= msg %></.error>
+      <.error :for={msg <- @errors} :if={@display_errors}><%= msg %></.error>
     </div>
     """
   end
@@ -268,7 +270,7 @@ defmodule LightningWeb.Components.NewInputs do
         ]}
         {@rest}
       ><%= Phoenix.HTML.Form.normalize_value("textarea", @value) %></textarea>
-      <.error :for={msg <- @errors}><%= msg %></.error>
+      <.error :for={msg <- @errors} :if={@display_errors}><%= msg %></.error>
     </div>
     """
   end
@@ -322,7 +324,7 @@ defmodule LightningWeb.Components.NewInputs do
           />
         </div>
       </div>
-      <div :if={Enum.any?(@errors)} class="error-space h-6">
+      <div :if={Enum.any?(@errors) and @display_errors} class="error-space h-6">
         <.error :for={msg <- @errors}><%= msg %></.error>
       </div>
     </div>
@@ -380,7 +382,7 @@ defmodule LightningWeb.Components.NewInputs do
         ]}
         {@rest}
       />
-      <div :if={Enum.any?(@errors)} class="error-space h-6">
+      <div :if={Enum.any?(@errors) and @display_errors} class="error-space h-6">
         <.error :for={msg <- @errors}><%= msg %></.error>
       </div>
     </div>
