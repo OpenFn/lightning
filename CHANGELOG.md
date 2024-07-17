@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Invite Non-Registered Users to a Project
+  [#2288](https://github.com/OpenFn/lightning/pull/2288)
+
 ### Changed
 
 ### Fixed
