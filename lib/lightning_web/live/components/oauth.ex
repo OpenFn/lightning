@@ -95,7 +95,7 @@ defmodule LightningWeb.Components.Oauth do
     """
   end
 
-  def success_message(assigns) do
+  def success_message(%{revocation: :available} = assigns) do
     ~H"""
     <div class="text-sm">
       <.icon name="hero-check-circle" class="h-4 w-4 text-green-600 inline-block" />
@@ -103,6 +103,15 @@ defmodule LightningWeb.Components.Oauth do
       <.reauthorize_button id="re-authorize-button" target={@myself}>
         here
       </.reauthorize_button>.
+    </div>
+    """
+  end
+
+  def success_message(%{revocation: :unavailable} = assigns) do
+    ~H"""
+    <div class="text-sm">
+      <.icon name="hero-check-circle" class="h-4 w-4 text-green-600 inline-block" />
+      Success. If your credential is no longer working, you may try to revoke OpenFn access and and re-authenticate. To revoke access, go to the third party apps section of the provider's website or portal.
     </div>
     """
   end
