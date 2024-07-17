@@ -79,7 +79,7 @@ defmodule Lightning.Runs.Query do
         # does the subsequent query's limit clause get applied to the row_number
         # calculated here?
         row_number: row_number() |> over(:row_number),
-        project_name: p.name,
+        project_id: p.id,
         concurrency: w.concurrency
       }
     )

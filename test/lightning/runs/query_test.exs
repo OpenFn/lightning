@@ -204,12 +204,16 @@ defmodule Lightning.Runs.QueryTest do
 
         assert Enum.count(
                  ip,
-                 &match?(%{state: :claimed, project_name: "blue"}, &1)
+                 fn item ->
+                   item.state == :claimed and item.project_id == blue.project.id
+                 end
                ) == 3
 
         assert Enum.count(
                  ip,
-                 &match?(%{state: :claimed, project_name: "red"}, &1)
+                 fn item ->
+                   item.state == :claimed and item.project_id == red.project.id
+                 end
                ) == 1
       end)
       |> Enum.with_index()
@@ -220,7 +224,7 @@ defmodule Lightning.Runs.QueryTest do
               type(ipw.id, :string),
               run.state,
               ipw.row_number,
-              ipw.project_name,
+              ipw.project_id,
               ipw.concurrency
             ]
           )
@@ -270,20 +274,20 @@ defmodule Lightning.Runs.QueryTest do
         |> List.flatten()
         |> Enum.zip_with(
           [
-            %{project_name: "red", row_number: 1, concurrency: 1},
-            %{project_name: "cyan", row_number: 1, concurrency: nil},
-            %{project_name: "cyan", row_number: 2, concurrency: nil},
-            %{project_name: "cyan", row_number: 3, concurrency: nil},
-            %{project_name: "cyan", row_number: 4, concurrency: nil},
-            %{project_name: "cyan", row_number: 5, concurrency: nil},
-            %{project_name: "cyan", row_number: 6, concurrency: nil},
-            %{project_name: "cyan", row_number: 7, concurrency: nil},
-            %{project_name: "cyan", row_number: 8, concurrency: nil},
-            %{project_name: "cyan", row_number: 9, concurrency: nil},
-            %{project_name: "cyan", row_number: 10, concurrency: nil},
-            %{project_name: "blue", row_number: 1, concurrency: 3},
-            %{project_name: "blue", row_number: 2, concurrency: 3},
-            %{project_name: "blue", row_number: 3, concurrency: 3}
+            %{project_id: red.project.id, row_number: 1, concurrency: 1},
+            %{project_id: cyan.project.id, row_number: 1, concurrency: nil},
+            %{project_id: cyan.project.id, row_number: 2, concurrency: nil},
+            %{project_id: cyan.project.id, row_number: 3, concurrency: nil},
+            %{project_id: cyan.project.id, row_number: 4, concurrency: nil},
+            %{project_id: cyan.project.id, row_number: 5, concurrency: nil},
+            %{project_id: cyan.project.id, row_number: 6, concurrency: nil},
+            %{project_id: cyan.project.id, row_number: 7, concurrency: nil},
+            %{project_id: cyan.project.id, row_number: 8, concurrency: nil},
+            %{project_id: cyan.project.id, row_number: 9, concurrency: nil},
+            %{project_id: cyan.project.id, row_number: 10, concurrency: nil},
+            %{project_id: blue.project.id, row_number: 1, concurrency: 3},
+            %{project_id: blue.project.id, row_number: 2, concurrency: 3},
+            %{project_id: blue.project.id, row_number: 3, concurrency: 3}
           ],
           fn run, extra ->
             Map.take(run, [:id, :state]) |> Map.merge(extra)
@@ -322,13 +326,17 @@ defmodule Lightning.Runs.QueryTest do
 
       assert Enum.count(
                window,
-               &match?(%{state: :claimed, project_name: "red"}, &1)
+               fn item ->
+                 item.state == :claimed and item.project_id == red.project.id
+               end
              ) == 1,
              "there should be one claimed run for project red"
 
       assert Enum.count(
                window,
-               &match?(%{state: :claimed, project_name: "cyan"}, &1)
+               fn item ->
+                 item.state == :claimed and item.project_id == cyan.project.id
+               end
              ) == 6,
              "there should be 6 claimed runs for project cyan"
 
@@ -378,6 +386,9 @@ defmodule Lightning.Runs.QueryTest do
       {:ok, [%{id: run_id} = red_run_1]} =
         Lightning.Runs.Queue.claim(1, Query.eligible_for_claim())
 
+      red_project_id = red.project.id
+      green_project_id = green.project.id
+
       Query.in_progress_window()
       |> Repo.all()
       |> then(fn in_progress ->
@@ -385,21 +396,21 @@ defmodule Lightning.Runs.QueryTest do
                  [
                    %{
                      id: ^run_id,
-                     project_name: "red",
+                     project_id: ^red_project_id,
                      state: :claimed,
                      row_number: 1,
                      concurrency: 1
                    },
                    %{
                      id: _,
-                     project_name: "red",
+                     project_id: ^red_project_id,
                      state: :available,
                      row_number: 2,
                      concurrency: 1
                    },
                    %{
                      id: _,
-                     project_name: "green",
+                     project_id: ^green_project_id,
                      state: :available,
                      row_number: 1,
                      concurrency: 2
@@ -413,6 +424,8 @@ defmodule Lightning.Runs.QueryTest do
       {:ok, [%{id: claimed_run_id}]} =
         Lightning.Runs.Queue.claim(1, Query.eligible_for_claim())
 
+      blue_project_id = blue.project.id
+
       Query.in_progress_window()
       |> Repo.all()
       |> then(fn in_progress ->
@@ -421,20 +434,20 @@ defmodule Lightning.Runs.QueryTest do
                    _,
                    %{
                      id: _,
-                     project_name: "red",
+                     project_id: ^red_project_id,
                      state: :available,
                      row_number: 2,
                      concurrency: 1
                    },
                    %{
                      id: ^claimed_run_id,
-                     project_name: "green",
+                     project_id: ^green_project_id,
                      state: :claimed,
                      row_number: 1,
                      concurrency: 2
                    },
                    %{
-                     project_name: "blue",
+                     project_id: ^blue_project_id,
                      state: :available
                    }
                  ],
@@ -463,21 +476,21 @@ defmodule Lightning.Runs.QueryTest do
                  [
                    %{
                      id: ^run_id,
-                     project_name: "red",
+                     project_id: ^red_project_id,
                      state: :claimed,
                      row_number: 1,
                      concurrency: 1
                    },
                    %{
                      id: _,
-                     project_name: "green",
+                     project_id: ^green_project_id,
                      state: :claimed,
                      row_number: 1,
                      concurrency: 2
                    },
                    %{
                      id: _,
-                     project_name: "blue",
+                     project_id: ^blue_project_id,
                      state: :available,
                      row_number: 1,
                      concurrency: 3
