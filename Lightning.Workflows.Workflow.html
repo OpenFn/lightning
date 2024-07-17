@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-9543075A.js"></script>
+    <script src="dist/sidebar_items-4ADD8149.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -242,6 +242,7 @@ triggers and a snapshot needs to made; but the Workflow itself didn't change.</p
 
           <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.Workflows.Workflow{
   __meta__: <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Schema.Metadata.html#t:t/0">Ecto.Schema.Metadata.t</a>(),
+  concurrency: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   delete: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   deleted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   edges: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
@@ -286,7 +287,7 @@ triggers and a snapshot needs to made; but the Workflow itself didn't change.</p
     </a>
     <h1 class="signature" translate="no">request_deletion_changeset(workflow, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L68" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L70" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -308,7 +309,7 @@ triggers and a snapshot needs to made; but the Workflow itself didn't change.</p
     </a>
     <h1 class="signature" translate="no">touch(workflow)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L98" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L100" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -338,7 +339,7 @@ triggers and a snapshot needs to made; but the Workflow itself didn't change.</p
     </a>
     <h1 class="signature" translate="no">validate(changeset)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L59" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L60" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -360,7 +361,7 @@ triggers and a snapshot needs to made; but the Workflow itself didn't change.</p
     </a>
     <h1 class="signature" translate="no">workflow_activated?(changeset)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L80" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L82" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>

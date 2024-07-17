@@ -246,6 +246,8 @@ LightningWeb.ProjectLive.Collaborators.Collaborator.html
 LightningWeb.ProjectLive.Collaborators.html
 LightningWeb.ProjectLive.FormComponent.html
 LightningWeb.ProjectLive.Index.html
+LightningWeb.ProjectLive.InvitedCollaborators.InvitedCollaborator.html
+LightningWeb.ProjectLive.InvitedCollaborators.html
 LightningWeb.ProjectLive.MFARequired.html
 LightningWeb.ProjectLive.Settings.html
 LightningWeb.PromExPlugAuthorization.html
@@ -320,8 +322,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-DB71592F.js
-dist/sidebar_items-9543075A.js
+dist/search_data-81535475.js
+dist/sidebar_items-4ADD8149.js
 index.html
 provisioning.html
 readme.html

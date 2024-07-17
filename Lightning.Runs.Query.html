@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-9543075A.js"></script>
+    <script src="dist/sidebar_items-4ADD8149.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -155,14 +155,34 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#eligible_for_claim/0" translate="no">eligible_for_claim()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Query to return runs that are eligible for claiming.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#in_progress_window/0" translate="no">in_progress_window()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Query to return a list of runs that are either in progress (started or claimed)
+or available.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#lost/0" translate="no">lost()</a>
 
       </div>
 
         <div class="summary-synopsis"><p>Return all runs that have been claimed by a worker before the earliest
 acceptable start time (determined by the run options and grace period) but are
-still incomplete. This indicates that we may have lost contact with the worker
-that was responsible for executing the run.</p></div>
+still incomplete.</p></div>
 
     </div>
 
@@ -179,6 +199,72 @@ that was responsible for executing the run.</p></div>
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
+<section class="detail" id="eligible_for_claim/0">
+
+  <div class="detail-header">
+    <a href="#eligible_for_claim/0" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">eligible_for_claim()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/query.ex#L104" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> eligible_for_claim() :: <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+
+      </div>
+
+<p>Query to return runs that are eligible for claiming.</p><p>Uses <a href="#in_progress_window/0"><code class="inline">in_progress_window/0</code></a> and filters for runs that are either in the
+available state and have not reached the concurrency limit for their workflow.</p><blockquote><h3 id="eligible_for_claim/0-note" class="info section-heading">
+  <a href="#eligible_for_claim/0-note" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Note</span>
+</h3>
+<p>This query does not currently take into account the priority of the run.
+To allow for prioritization, the query should be updated to order by
+priority.</p><pre><code class="makeup elixir" translate="no"><span class="n">eligible_for_claim</span><span class="p" data-group-id="6977090963-1">(</span><span class="p" data-group-id="6977090963-1">)</span><span class="w"> </span><span class="o">|&gt;</span><span class="w"> </span><span class="n">prepend_order_by</span><span class="p" data-group-id="6977090963-2">(</span><span class="p" data-group-id="6977090963-3">[</span><span class="ss">:priority</span><span class="p" data-group-id="6977090963-3">]</span><span class="p" data-group-id="6977090963-2">)</span></code></pre></blockquote>
+  </section>
+</section>
+<section class="detail" id="in_progress_window/0">
+
+  <div class="detail-header">
+    <a href="#in_progress_window/0" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">in_progress_window()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/query.ex#L62" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> in_progress_window() :: <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+
+      </div>
+
+<p>Query to return a list of runs that are either in progress (started or claimed)
+or available.</p><p>The select clause includes:</p><ul><li><code class="inline">id</code>, the id of the run</li><li><code class="inline">state</code>, the state of the run</li><li><code class="inline">row_number</code>, the number of the row in the window, per workflow</li><li><code class="inline">limit</code>, the maximum number of runs that can be claimed for the workflow</li></ul>
+  </section>
+</section>
 <section class="detail" id="lost/0">
 
   <div class="detail-header">
@@ -188,7 +274,7 @@ that was responsible for executing the run.</p></div>
     </a>
     <h1 class="signature" translate="no">lost()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/query.ex#L18" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/query.ex#L20" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -206,7 +292,7 @@ that was responsible for executing the run.</p></div>
 
 <p>Return all runs that have been claimed by a worker before the earliest
 acceptable start time (determined by the run options and grace period) but are
-still incomplete. This indicates that we may have lost contact with the worker
+still incomplete.</p><p>This indicates that we may have lost contact with the worker
 that was responsible for executing the run.</p>
   </section>
 </section>
