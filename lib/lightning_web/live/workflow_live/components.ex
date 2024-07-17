@@ -119,14 +119,14 @@ defmodule LightningWeb.WorkflowLive.Components do
           <div class="mt-2">
             <.label for={@form[:concurrency].id}>
               Maximum Concurrency
+              <Common.tooltip
+                class="inline-block ml-1"
+                id="max-concurrency-tooltip"
+                title="The maximum number of concurrent runs."
+              />
             </.label>
           </div>
-          <div class="flex-grow">
-            <Common.tooltip
-              id="max-concurrency-tooltip"
-              title="The maximum number of concurrent runs."
-            />
-          </div>
+          <div class="flex-grow" />
           <div class="w-24 flex-center">
             <.input_element
               type="number"
