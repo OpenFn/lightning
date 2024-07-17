@@ -1,7 +1,5 @@
 defmodule LightningWeb.ProjectLive.InviteCollaboratorComponent do
   @moduledoc false
-
-  require Logger
   use LightningWeb, :live_component
 
   alias Lightning.Projects
@@ -43,34 +41,33 @@ defmodule LightningWeb.ProjectLive.InviteCollaboratorComponent do
   end
 
   def handle_event("add_collaborators", %{"project" => params}, socket) do
-    with :ok <- limit_adding_users(socket, params) do
-      case validate_collaborators(socket.assigns.collaborators, params) do
-        {:ok, collaborators} ->
-          case Projects.invite_collaborators(
-                 socket.assigns.project,
-                 collaborators,
-                 socket.assigns.current_user
-               ) do
-            {:ok, _result} ->
-              {:noreply,
-               socket
-               |> put_flash(:info, "Invites sent successfully")
-               |> push_navigate(
-                 to:
-                   ~p"/projects/#{socket.assigns.project}/settings#collaboration"
-               )}
+    with :ok <- limit_adding_users(socket, params),
+         {:ok, collaborators} <-
+           InvitedCollaborators.validate_collaborators(
+             socket.assigns.collaborators,
+             params
+           ),
+         {:ok, _result} <-
+           Projects.invite_collaborators(
+             socket.assigns.project,
+             collaborators,
+             socket.assigns.current_user
+           ) do
+      {:noreply,
+       socket
+       |> put_flash(
+         :info,
+         "Invite#{if length(collaborators) > 1, do: "s"} sent successfully"
+       )
+       |> push_navigate(
+         to: ~p"/projects/#{socket.assigns.project}/settings#collaboration"
+       )}
+    else
+      {:error, changeset} ->
+        {:noreply, socket |> assign(:changeset, changeset)}
 
-            {:error, changeset} ->
-              Logger.info(
-                "Error when inviting users to the project #{socket.assigns.project.name}: #{inspect(changeset)}"
-              )
-
-              {:noreply, socket}
-          end
-
-        {:error, changeset} ->
-          {:noreply, socket |> assign(:changeset, changeset)}
-      end
+      _error ->
+        {:noreply, socket}
     end
   end
 
@@ -86,47 +83,6 @@ defmodule LightningWeb.ProjectLive.InviteCollaboratorComponent do
       <%= msg %>
     </.error>
     """
-  end
-
-  defp validate_collaborators(schema, params) do
-    changeset = InvitedCollaborators.changeset(schema, params)
-
-    changeset =
-      if changeset.valid? do
-        collaborators =
-          Ecto.Changeset.get_embed(changeset, :invited_collaborators)
-
-        existing_emails =
-          collaborators
-          |> Enum.map(&Ecto.Changeset.get_field(&1, :email))
-          |> Lightning.Accounts.list_users_by_emails()
-          |> Enum.map(& &1.email)
-
-        collaborators =
-          Enum.map(collaborators, fn collaborator ->
-            collaborator
-            |> Ecto.Changeset.validate_change(:email, fn :email, _email ->
-              if Ecto.Changeset.get_field(collaborator, :email) in existing_emails do
-                [email: "This email is already taken"]
-              else
-                []
-              end
-            end)
-          end)
-
-        Ecto.Changeset.put_embed(
-          changeset,
-          :invited_collaborators,
-          collaborators
-        )
-      else
-        changeset
-      end
-
-    case Ecto.Changeset.apply_action(changeset, :insert) do
-      {:ok, %{invited_collaborators: collaborators}} -> {:ok, collaborators}
-      {:error, changeset} -> {:error, changeset}
-    end
   end
 
   defp limit_adding_users(socket, params) do

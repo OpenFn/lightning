@@ -2204,7 +2204,7 @@ defmodule LightningWeb.ProjectLiveTest do
             ~p"/projects/#{project}/settings#collaboration"
           )
 
-        assert flash["info"] =~ "Collaborators updated successfully!"
+        assert flash["info"] =~ "Collaborators added successfully!"
       end
     end
 

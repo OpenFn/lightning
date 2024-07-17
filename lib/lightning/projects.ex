@@ -2,8 +2,6 @@ defmodule Lightning.Projects do
   @moduledoc """
   The Projects context.
   """
-  alias Lightning.Accounts.UserToken
-
   use Oban.Worker,
     queue: :background,
     max_attempts: 1
@@ -13,6 +11,7 @@ defmodule Lightning.Projects do
   alias Ecto.Multi
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserNotifier
+  alias Lightning.Accounts.UserToken
   alias Lightning.ExportUtils
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.LogLine
