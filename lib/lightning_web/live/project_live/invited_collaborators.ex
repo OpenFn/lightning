@@ -67,12 +67,12 @@ defmodule LightningWeb.ProjectLive.InvitedCollaborators do
     collaborators
     |> Enum.map(&Ecto.Changeset.get_field(&1, :email))
     |> Lightning.Accounts.list_users_by_emails()
-    |> Enum.map(& &1.email)
+    |> Enum.map(fn user -> String.downcase(user.email) end)
   end
 
   defp validate_collaborator_email(collaborator, existing_emails) do
     Ecto.Changeset.validate_change(collaborator, :email, fn :email, email ->
-      if email in existing_emails do
+      if String.downcase(email) in existing_emails do
         [email: "This email is already taken"]
       else
         []

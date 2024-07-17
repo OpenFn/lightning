@@ -43,13 +43,18 @@ defmodule LightningWeb.ProjectLive.Collaborators do
 
         emails = Enum.map(collaborators, &get_field(&1, :email))
 
-        existing_users = Lightning.Accounts.list_users_by_emails(emails)
+        existing_users =
+          Lightning.Accounts.list_users_by_emails(emails)
 
-        existing_emails = Enum.map(existing_users, & &1.email)
+        existing_emails =
+          Enum.map(existing_users, fn user -> String.downcase(user.email) end)
 
         {existing_collaborators, new_collaborators} =
           Enum.split_with(collaborators, fn collaborator ->
-            Enum.member?(existing_emails, get_field(collaborator, :email))
+            Enum.member?(
+              existing_emails,
+              get_field(collaborator, :email) |> String.downcase()
+            )
           end)
 
         updated_collaborators =
@@ -82,7 +87,8 @@ defmodule LightningWeb.ProjectLive.Collaborators do
     Enum.map(collaborators, fn collaborator ->
       existing_user =
         Enum.find(existing_users, fn u ->
-          u.email == get_field(collaborator, :email)
+          String.downcase(u.email) ==
+            get_field(collaborator, :email) |> String.downcase()
         end)
 
       collaborator
