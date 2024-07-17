@@ -149,7 +149,7 @@ defmodule Lightning.SetupUtils do
       Accounts.create_user(%{
         first_name: "Esther",
         last_name: "Editor",
-        email: "editor@openfn.org",
+        email: "EditOr@openfn.org",
         password: "welcome123"
       })
 

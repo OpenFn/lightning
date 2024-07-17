@@ -155,6 +155,7 @@ defmodule Lightning.Accounts.User do
       message: "must have the @ sign and no spaces"
     )
     |> validate_length(:email, max: 160)
+    |> downcase_email()
     |> validate_change(:email, fn :email, email ->
       if Lightning.Repo.exists?(User |> where(email: ^email)) do
         [email: "has already been taken"]
@@ -162,6 +163,13 @@ defmodule Lightning.Accounts.User do
         []
       end
     end)
+  end
+
+  defp downcase_email(changeset) do
+    case get_change(changeset, :email) do
+      nil -> changeset
+      email -> put_change(changeset, :email, String.downcase(email))
+    end
   end
 
   defp validate_password(changeset, opts) do
