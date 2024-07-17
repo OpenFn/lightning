@@ -122,7 +122,7 @@ defmodule LightningWeb.WorkflowLive.Components do
               <Common.tooltip
                 class="inline-block ml-1"
                 id="max-concurrency-tooltip"
-                title="The maximum number of concurrent runs."
+                title="Even if your project supports concurrency, you may LIMIT the number of runs that occur simultaneously for this particular workflow by setting a value here. (Leaving it blank will allow runs to be processed as fast as your resources allow.)"
               />
             </.label>
           </div>
@@ -148,7 +148,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             class="text-xs text-slate-500 italic"
           >
             <%= if @form[:concurrency].value do
-              "Maximum of #{@form[:concurrency].value} run(s) at a time"
+              "No more than #{@form[:concurrency].value} run#{if @form[:concurrency].value == 1, do: "", else: "s"} at a time"
             end %>
           </div>
         </div>
