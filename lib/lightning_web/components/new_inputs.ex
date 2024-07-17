@@ -300,7 +300,8 @@ defmodule LightningWeb.Components.NewInputs do
           {@rest}
         />
         <div class="absolute inset-y-0 right-0 flex items-center pr-3">
-          <Heroicons.eye_slash
+          <.icon
+            name="hero-eye-slash"
             class="h-5 w-5 cursor-pointer"
             id={"show_password_#{@id}"}
             phx-hook="TogglePassword"
@@ -310,7 +311,8 @@ defmodule LightningWeb.Components.NewInputs do
               |> JS.toggle(to: "#show_password_#{@id}")
             }
           />
-          <Heroicons.eye
+          <.icon
+            name="hero-eye"
             class="h-5 w-5 cursor-pointer hidden"
             phx-hook="TogglePassword"
             data-target={@id}
@@ -359,31 +361,60 @@ defmodule LightningWeb.Components.NewInputs do
     ~H"""
     <div phx-feedback-for={@name}>
       <.label :if={@label} for={@id} class="mb-2">
-        <%= @label %><span
-          :if={Map.get(@rest, :required, false)}
-          class="text-red-500"
-        > *</span>
+        <%= @label %>
+        <span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
       </.label>
-      <input
+      <.input_element
         type={@type}
         name={@name}
         id={@id}
+        class={@class}
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
-        class={[
-          "focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
-          "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500",
-          @errors == [] &&
-            "border-slate-300 focus:border-slate-400 focus:outline-indigo-600",
-          @errors != [] &&
-            "border-danger-400 focus:border-danger-400 focus:outline-danger-400",
-          @class
-        ]}
         {@rest}
       />
       <div :if={Enum.any?(@errors)} class="error-space h-6">
         <.error :for={msg <- @errors}><%= msg %></.error>
       </div>
     </div>
+    """
+  end
+
+  @doc """
+  Renders an input element.
+
+  This function is used internally by `input/1` and generally should not
+  be used directly.
+
+  In the case of inputs that are different enough to warrant a new function,
+  this component can be used to maintain style consistency.
+  """
+
+  attr :id, :string, default: nil
+  attr :name, :string, required: true
+  attr :type, :string, required: true
+  attr :value, :any
+  attr :errors, :list, default: []
+  attr :class, :string, default: ""
+  attr :rest, :global
+
+  def input_element(assigns) do
+    ~H"""
+    <input
+      type={@type}
+      name={@name}
+      id={@id}
+      value={@value}
+      class={[
+        "focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
+        "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500",
+        @errors == [] &&
+          "border-slate-300 focus:border-slate-400 focus:outline-indigo-600",
+        @errors != [] &&
+          "border-danger-400 focus:border-danger-400 focus:outline-danger-400",
+        @class
+      ]}
+      {@rest}
+    />
     """
   end
 
@@ -402,6 +433,29 @@ defmodule LightningWeb.Components.NewInputs do
     >
       <%= render_slot(@inner_block) %>
     </label>
+    """
+  end
+
+  @doc """
+  Generic wrapper for rendering error messages in custom input components.
+  """
+  attr :field, Phoenix.HTML.FormField, required: true
+
+  def errors(assigns) do
+    assigns =
+      assigns
+      |> assign(
+        :errors,
+        Enum.map(
+          assigns.field.errors,
+          &LightningWeb.CoreComponents.translate_error(&1)
+        )
+      )
+
+    ~H"""
+    <div :if={Enum.any?(@errors)} class="error-space h-6">
+      <.error :for={msg <- @errors}><%= msg %></.error>
+    </div>
     """
   end
 

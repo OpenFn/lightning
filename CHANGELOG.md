@@ -19,6 +19,11 @@ and this project adheres to
 - Add experimental support for triggers that consume message from a Kafka
   cluster [#1801](https://github.com/OpenFn/lightning/issues/1801)
 
+- Workflows can now specify concurrency, allowing runs to be executed
+  syncronously or to a maximum concurrency level. Note that this applies to the
+  default FifoRunQueue only.
+  [#2022](https://github.com/OpenFn/lightning/issues/2022)
+
 ### Changed
 
 - Make modal close events configurable

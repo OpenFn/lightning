@@ -213,9 +213,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                Lightning.Repo.one(
                  from w in Workflow,
                    where:
-                     w.project_id == ^project.id and
-                       w.name ==
-                         ^workflow_name
+                     w.project_id == ^project.id and w.name == ^workflow_name
                )
 
       assert_patched(
@@ -700,6 +698,98 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                "workflow" => %{"name" => "some new name"}
              })
              |> render_submit() =~ "Workflow saved"
+    end
+
+    test "using the settings panel", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
+        )
+
+      refute has_element?(view, "#workflow-settings-#{workflow.id}")
+
+      view
+      |> element("#toggle-settings")
+      |> render_click()
+
+      path = assert_patch(view)
+      assert path == ~p"/projects/#{project.id}/w/#{workflow.id}?m=settings"
+
+      assert has_element?(view, "#workflow-settings-#{workflow.id}")
+      assert render(view) =~ "Workflow settings"
+
+      assert view
+             |> form("#workflow-form", %{"workflow" => %{"concurrency" => "0"}})
+             |> render_change() =~ "must be greater than or equal to 1"
+
+      assert view |> element("#workflow-form") |> render_submit() =~
+               "Workflow could not be saved"
+
+      assert view
+             |> form("#workflow-form", %{"workflow" => %{"concurrency" => "5"}})
+             |> render_change() =~ "No more than 5 runs at a time"
+
+      assert view |> element("#workflow-form") |> render_submit() =~
+               "Workflow saved"
+
+      assert assert_patch(view) =~
+               ~p"/projects/#{project.id}/w/#{workflow.id}?m=settings"
+
+      assert view
+             |> form("#workflow-form", %{"workflow" => %{"concurrency" => ""}})
+             |> render_change() =~ "Unlimited"
+
+      view |> element("#toggle-settings") |> render()
+
+      view
+      |> element("#toggle-settings")
+      |> render_click()
+
+      refute has_element?(view, "#workflow-settings-#{workflow.id}")
+
+      assert assert_patch(view) == ~p"/projects/#{project.id}/w/#{workflow.id}"
+
+      # bring the settings panel back, so we can test that selecting something
+      # else will close it
+      view
+      |> element("#toggle-settings")
+      |> render_click()
+
+      assert_patch(view)
+
+      job = workflow.jobs |> Enum.at(1)
+
+      view |> select_node(job)
+
+      assert assert_patch(view) ==
+               ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{job.id}"
+
+      refute has_element?(view, "#workflow-settings-#{workflow.id}"),
+             "should not have settings panel present"
+
+      # bring it back again to test the close button
+      view
+      |> element("#toggle-settings")
+      |> render_click()
+
+      refute has_element?(view, "#job-pane-#{job.id}"),
+             "should not have job pane anymore"
+
+      assert assert_patch(view) ==
+               ~p"/projects/#{project.id}/w/#{workflow.id}?m=settings"
+
+      view
+      |> element("#close-panel")
+      |> render_click()
+
+      refute has_element?(view, "#workflow-settings-#{workflow.id}")
+
+      assert assert_patch(view) == ~p"/projects/#{project.id}/w/#{workflow.id}"
     end
 
     test "renders error message when a job has an empty body", %{

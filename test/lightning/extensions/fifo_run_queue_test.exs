@@ -39,11 +39,26 @@ defmodule Lightning.Extensions.FifoRunQueueTest do
           dataclip: params_with_assocs(:dataclip)
         )
 
-      assert {:ok, [%{id: ^run1_id, state: :claimed}]} =
-               FifoRunQueue.claim(1)
+      actual = FifoRunQueue.claim(1)
 
-      assert {:ok, [%{id: ^run2_id, state: :claimed}]} =
-               FifoRunQueue.claim(1)
+      assert match?(
+               {:ok, [%{id: ^run1_id, state: :claimed}]},
+               actual
+             ),
+             """
+             Expected #{run1_id} to be claimed first
+             """
+
+      actual = FifoRunQueue.claim(1)
+
+      assert match?(
+               {:ok, [%{id: ^run2_id, state: :claimed}]},
+               actual
+             ),
+             """
+             Expected #{run2_id} to be claimed second
+             Got: #{inspect(actual)}
+             """
 
       assert {:ok,
               [

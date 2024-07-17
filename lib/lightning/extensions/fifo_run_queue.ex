@@ -9,6 +9,7 @@ defmodule Lightning.Extensions.FifoRunQueue do
 
   alias Ecto.Multi
   alias Lightning.Repo
+  alias Lightning.Runs.Query
   alias Lightning.Runs.Queue
 
   @impl true
@@ -17,8 +18,8 @@ defmodule Lightning.Extensions.FifoRunQueue do
   @impl true
   def claim(demand) do
     fifo_runs_query =
-      Lightning.Run
-      |> order_by([:priority, :inserted_at])
+      Query.eligible_for_claim()
+      |> prepend_order_by([:priority])
 
     Queue.claim(demand, fifo_runs_query)
   end
