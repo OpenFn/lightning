@@ -105,7 +105,8 @@ defmodule Lightning.Runs.Query do
     Run
     |> with_cte("in_progress_window", as: ^in_progress_window())
     |> join(:inner, [r], w in fragment(~s("in_progress_window")),
-      on: r.id == w.id
+      on: r.id == w.id,
+      as: :in_progress_window
     )
     |> where(
       [r, w],
