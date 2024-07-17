@@ -131,19 +131,21 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 name="hero-lock-closed"
                 class="w-5 h-5 place-self-center text-gray-300"
               />
-              <div class="m-auto">
+              <div class="flex flex-row m-auto gap-2">
+                <div>
+                  <.link
+                    patch={
+                      if @selection_mode == "settings",
+                        do: @base_url,
+                        else: "#{@base_url}?m=settings"
+                    }
+                    class="w-5 h-5 place-self-center text-slate-500 hover:text-slate-400 cursor-pointer"
+                    id="toggle-settings"
+                  >
+                    <.icon name="hero-adjustments-vertical" />
+                  </.link>
+                </div>
                 <.offline_indicator />
-                <.link
-                  patch={
-                    if @selection_mode == "settings",
-                      do: @base_url,
-                      else: "#{@base_url}?m=settings"
-                  }
-                  class="w-5 h-5 place-self-center text-slate-500 hover:text-slate-400 cursor-pointer"
-                  id="toggle-settings"
-                >
-                  <.icon name="hero-adjustments-vertical" />
-                </.link>
               </div>
               <.save_workflow_button
                 changeset={@changeset}

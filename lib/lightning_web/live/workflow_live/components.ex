@@ -117,24 +117,27 @@ defmodule LightningWeb.WorkflowLive.Components do
       <div class="col-span-6 @md:col-span-4">
         <div class="flex grid-cols-3">
           <div class="mt-2">
-          <.label for={@form[:concurrency].id}>
-            Maximum Concurrency
-          </.label>
+            <.label for={@form[:concurrency].id}>
+              Maximum Concurrency
+            </.label>
           </div>
           <div class="flex-grow">
-            <Common.tooltip id="max-concurrency-tooltip" title="The maximum number of concurrent runs." />
+            <Common.tooltip
+              id="max-concurrency-tooltip"
+              title="The maximum number of concurrent runs."
+            />
           </div>
           <div class="w-24 flex-center">
             <.input_element
-                type="number"
-                  name={@form[:concurrency].name}
-                  value={
-                    Phoenix.HTML.Form.normalize_value(
-                      "number",
-                      @form[:concurrency].value
-                    )
-                  }
-                  class="w-4 text-right"
+              type="number"
+              name={@form[:concurrency].name}
+              value={
+                Phoenix.HTML.Form.normalize_value(
+                  "number",
+                  @form[:concurrency].value
+                )
+              }
+              class="w-4 text-right"
             />
           </div>
         </div>
