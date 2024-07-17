@@ -41,43 +41,45 @@ defmodule LightningWeb.OauthComponentsTest do
   end
 
   test "rendering error component for various error type" do
-    render_component(
-      &LightningWeb.Components.Oauth.error_block/1,
-      type: :token_failed,
-      authorize_url: "https://www",
-      myself: nil,
-      provider: "Salesforce"
-    ) =~ "Failed retrieving the token from the provider"
+    assert render_component(
+             &LightningWeb.Components.Oauth.error_block/1,
+             type: :token_failed,
+             authorize_url: "https://www",
+             myself: nil,
+             provider: "Salesforce"
+           ) =~ "Failed retrieving the token from the provider"
 
-    render_component(
-      &LightningWeb.Components.Oauth.error_block/1,
-      type: :refresh_failed,
-      authorize_url: "https://www",
-      myself: nil,
-      provider: "Salesforce"
-    ) =~ "Failed renewing your access token"
+    assert render_component(
+             &LightningWeb.Components.Oauth.error_block/1,
+             type: :refresh_failed,
+             authorize_url: "https://www",
+             myself: nil,
+             provider: "Salesforce"
+           ) =~ "Failed renewing your access token"
 
-    render_component(
-      &LightningWeb.Components.Oauth.error_block/1,
-      type: :userinfo_failed,
-      authorize_url: "https://www",
-      myself: nil,
-      provider: "Salesforce"
-    ) =~ "Failed retrieving your information"
+    assert render_component(
+             &LightningWeb.Components.Oauth.error_block/1,
+             type: :userinfo_failed,
+             authorize_url: "https://www",
+             myself: nil,
+             provider: "Salesforce"
+           ) =~
+             "That seemed to work, but we couldn't fetch your user information. You can save your credential now or try again."
 
-    render_component(&LightningWeb.Components.Oauth.error_block/1,
-      type: :code_failed,
-      authorize_url: "https://www",
-      myself: nil,
-      provider: "Salesforce"
-    ) =~ "Failed retrieving authentication code."
+    assert render_component(&LightningWeb.Components.Oauth.error_block/1,
+             type: :code_failed,
+             authorize_url: "https://www",
+             myself: nil,
+             provider: "Salesforce"
+           ) =~ "Failed retrieving authentication code."
 
-    render_component(
-      &LightningWeb.Components.Oauth.error_block/1,
-      type: :no_refresh_token,
-      authorize_url: "https://www",
-      myself: nil,
-      provider: "Salesforce"
-    ) =~ "The token is missing it's"
+    assert render_component(
+             &LightningWeb.Components.Oauth.error_block/1,
+             type: :missing_required,
+             authorize_url: "https://www",
+             myself: nil,
+             provider: "Salesforce"
+           ) =~
+             "We didn't receive a refresh token from this provider. Sometimes this happens if you have already granted access to OpenFn via another credential. If you have another credential, please use that one. If you don't, please revoke OpenFn's access to your provider via the \"third party apps\" section of their website. Once that is done, you can try to reauthorize"
   end
 end

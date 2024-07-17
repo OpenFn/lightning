@@ -19,7 +19,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       :userinfo_failed,
       :code_failed,
       :refresh_failed,
-      :no_refresh_token
+      :missing_required
     ]
   }
 
@@ -145,6 +145,8 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     changeset = Credentials.change_credential(socket.assigns.credential, params)
     credential = Ecto.Changeset.apply_changes(changeset)
 
+    errors = changeset_errors(changeset)
+
     updated_socket =
       socket
       |> assign(:oauth_progress, :token_received)
@@ -152,14 +154,19 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       |> assign(:changeset, changeset)
       |> assign(:credential, credential)
 
-    if socket.assigns.selected_client.userinfo_endpoint do
-      {:noreply,
-       updated_socket
-       |> start_async(:userinfo, fn ->
-         OauthHTTPClient.fetch_userinfo(socket.assigns.selected_client, token)
-       end)}
-    else
-      {:noreply, updated_socket}
+    cond do
+      errors[:body] ->
+        {:noreply, updated_socket |> assign(:oauth_progress, :missing_required)}
+
+      socket.assigns.selected_client.userinfo_endpoint ->
+        {:noreply,
+         updated_socket
+         |> start_async(:userinfo, fn ->
+           OauthHTTPClient.fetch_userinfo(socket.assigns.selected_client, token)
+         end)}
+
+      true ->
+        {:noreply, updated_socket}
     end
   end
 
@@ -175,13 +182,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       "Failed fetching valid token using #{socket.assigns.selected_client.name}. Received error message: #{inspect(error)}"
     )
 
-    case error do
-      :no_refresh_token ->
-        {:noreply, assign(socket, :oauth_progress, :no_refresh_token)}
-
-      _ ->
-        {:noreply, assign(socket, :oauth_progress, :token_failed)}
-    end
+    {:noreply, assign(socket, :oauth_progress, :token_failed)}
   end
 
   def handle_async(:userinfo, {:ok, {:error, error}}, socket) do
@@ -343,6 +344,12 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
         Logger.error("Error checking token freshness: #{reason}")
         socket
     end
+  end
+
+  defp changeset_errors(changeset) do
+    changeset.errors
+    |> Enum.map(fn {field, {message, _opts}} -> {field, message} end)
+    |> Enum.into(%{})
   end
 
   defp process_scopes(scopes_string, delimiter) do

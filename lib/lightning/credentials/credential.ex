@@ -46,7 +46,34 @@ defmodule Lightning.Credentials.Credential do
     |> validate_required([:name, :body, :user_id])
     |> assoc_constraint(:user)
     |> assoc_constraint(:oauth_client)
+    |> validate_oauth()
     |> validate_transfer_ownership()
+  end
+
+  defp validate_oauth(changeset) do
+    if get_field(changeset, :schema) == "oauth" do
+      body = get_field(changeset, :body) || %{}
+
+      body = Enum.into(body, %{}, fn {k, v} -> {to_string(k), v} end)
+
+      required_fields = ["access_token", "refresh_token"]
+      expires_fields = ["expires_in", "expires_at"]
+
+      has_required_fields? = Enum.all?(required_fields, &Map.has_key?(body, &1))
+      has_expires_field? = Enum.any?(expires_fields, &Map.has_key?(body, &1))
+
+      if has_required_fields? and has_expires_field? do
+        changeset
+      else
+        add_error(
+          changeset,
+          :body,
+          "Invalid OAuth token. Missing required fields: access_token, refresh_token, and either expires_in or expires_at."
+        )
+      end
+    else
+      changeset
+    end
   end
 
   defp validate_transfer_ownership(changeset) do

@@ -164,12 +164,28 @@ defmodule Lightning.Factories do
     }
   end
 
-  def credential_factory do
+  def credential_factory(attrs \\ %{}) do
+    schema = Map.get(attrs, :schema, "raw")
+
+    body =
+      case schema do
+        "oauth" ->
+          %{
+            "access_token" => "access_token_#{System.unique_integer()}",
+            "refresh_token" => "refresh_token_#{System.unique_integer()}",
+            "expires_in" => 3600
+          }
+
+        _ ->
+          %{}
+      end
+
     %Lightning.Credentials.Credential{
-      body: %{},
-      schema: "raw",
+      body: body,
+      schema: schema,
       name: sequence(:credential_name, &"credential#{&1}")
     }
+    |> Map.merge(attrs)
   end
 
   def project_credential_factory do

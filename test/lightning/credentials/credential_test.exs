@@ -11,6 +11,29 @@ defmodule Lightning.Credentials.CredentialTest do
       assert errors[:user_id] == ["can't be blank"]
     end
 
+    test "oauth credentials require access_token, refresh_token, and expires_in or expires_at to be valid" do
+      assert_invalid_oauth_credential(%{})
+
+      assert_invalid_oauth_credential(%{"access_token" => "access_token_123"})
+
+      assert_invalid_oauth_credential(%{
+        "access_token" => "access_token_123",
+        "refresh_token" => "refresh_token_123"
+      })
+
+      refute_invalid_oauth_credential(%{
+        "access_token" => "access_token_123",
+        "refresh_token" => "refresh_token_123",
+        "expires_at" => 3245
+      })
+
+      refute_invalid_oauth_credential(%{
+        "access_token" => "access_token_123",
+        "refresh_token" => "refresh_token_123",
+        "expires_in" => 3245
+      })
+    end
+
     test "user_id not valid for transfer" do
       %{id: user_id, first_name: first_name, last_name: last_name} =
         insert(:user, first_name: "Elias", last_name: "BA")
@@ -91,5 +114,30 @@ defmodule Lightning.Credentials.CredentialTest do
 
       refute persisted_body == body
     end
+  end
+
+  defp assert_invalid_oauth_credential(
+         body,
+         message \\ "Invalid OAuth token. Missing required fields: access_token, refresh_token, and either expires_in or expires_at."
+       ) do
+    errors =
+      Credential.changeset(
+        %Credential{name: "oauth credential", schema: "oauth", body: body},
+        %{}
+      )
+      |> errors_on()
+
+    assert errors[:body] == [message]
+  end
+
+  defp refute_invalid_oauth_credential(body) do
+    errors =
+      Credential.changeset(
+        %Credential{name: "oauth credential", schema: "oauth", body: body},
+        %{}
+      )
+      |> errors_on()
+
+    refute errors[:body]
   end
 end
