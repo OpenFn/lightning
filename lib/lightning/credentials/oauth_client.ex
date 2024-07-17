@@ -77,8 +77,7 @@ defmodule Lightning.Credentials.OauthClient do
       :client_id,
       :client_secret,
       :authorization_endpoint,
-      :token_endpoint,
-      :revocation_endpoint
+      :token_endpoint
     ])
     |> Validators.validate_url(:authorization_endpoint)
     |> Validators.validate_url(:token_endpoint)

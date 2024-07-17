@@ -402,7 +402,6 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
                   type="text"
                   field={f[:revocation_endpoint]}
                   label="Revocation Endpoint"
-                  required="true"
                 />
               </div>
             </div>

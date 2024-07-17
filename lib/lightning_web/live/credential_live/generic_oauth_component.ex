@@ -578,7 +578,15 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
               socket={@socket}
               authorize_url={@authorize_url}
             />
-            <.success_message :if={@display_userinfo && !@userinfo} myself={@myself} />
+            <.success_message
+              :if={@display_userinfo && !@userinfo}
+              revocation={
+                if @selected_client && @selected_client.revocation_endpoint,
+                  do: :available,
+                  else: :unavailable
+              }
+              myself={@myself}
+            />
             <.error_block
               :if={@display_error}
               type={@oauth_progress}
