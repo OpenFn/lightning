@@ -1,10 +1,12 @@
 defmodule Lightning.Invocation.QueryTest do
   use Lightning.DataCase, async: true
 
+  alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Query
   alias Lightning.Workflows
   alias Lightning.Workflows.Trigger
 
+  import Ecto.Query
   import Lightning.Factories
 
   test "steps_for/1 with user" do
@@ -81,5 +83,77 @@ defmodule Lightning.Invocation.QueryTest do
     |> Enum.at(0)
     |> Map.get(:steps)
     |> Enum.count()
+  end
+
+  describe "select_as_input/1" do
+    test "with a `http_request` dataclip - nests body and request" do
+      _dataclip =
+        insert(
+          :dataclip,
+          type: :http_request,
+          body: %{"key" => "value"},
+          request: %{"url" => "https://example.com"}
+        )
+
+      query = from(d in Dataclip)
+
+      result =
+        query
+        |> Query.select_as_input()
+        |> Repo.one()
+
+      assert %Dataclip{
+               body: %{
+                 "data" => %{"key" => "value"},
+                 "request" => %{"url" => "https://example.com"}
+               }
+             } = result
+    end
+
+    test "with a `kafka` dataclip - nests body and request" do
+      _dataclip =
+        insert(
+          :dataclip,
+          type: :kafka,
+          body: %{"key" => "value"},
+          request: %{"partition" => 9}
+        )
+
+      query = from(d in Dataclip)
+
+      result =
+        query
+        |> Query.select_as_input()
+        |> Repo.one()
+
+      assert %Dataclip{
+               body: %{
+                 "data" => %{"key" => "value"},
+                 "request" => %{"partition" => 9}
+               }
+             } = result
+    end
+
+    test "dataclip neither `http_request` nor `kafka` - does not nest body" do
+      _dataclip =
+        insert(
+          :dataclip,
+          type: :step_result,
+          body: %{"key" => "value"},
+          request: %{"url" => "https://example.com"}
+        )
+
+      query = from(d in Dataclip)
+
+      result =
+        query
+        |> Query.select_as_input()
+        |> Repo.one()
+
+      assert %Dataclip{
+               body: %{"key" => "value"},
+               request: nil
+             } = result
+    end
   end
 end

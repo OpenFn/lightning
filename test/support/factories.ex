@@ -269,6 +269,37 @@ defmodule Lightning.Factories do
     }
   end
 
+  def trigger_kafka_message_factory do
+    %Lightning.KafkaTriggers.TriggerKafkaMessage{
+      trigger: build(:trigger, type: :kafka),
+      topic: "arb_topic",
+      message_timestamp: System.os_time(:millisecond),
+      metadata: %{},
+      offset: 1001,
+      data: %{some: :data} |> Jason.encode!()
+    }
+  end
+
+  def triggers_kafka_configuration_factory do
+    %Lightning.Workflows.Triggers.KafkaConfiguration{
+      group_id: "arb_group_id",
+      hosts: [
+        ["localhost", "9096"],
+        ["localhost", "9095"],
+        ["localhost", "9094"]
+      ],
+      initial_offset_reset_policy: "earliest",
+      ssl: false,
+      topics: ["arb_topic"]
+    }
+  end
+
+  def trigger_kafka_message_record_factory do
+    %Lightning.KafkaTriggers.TriggerKafkaMessageRecord{
+      topic_partition_offset: "foo_1_1001"
+    }
+  end
+
   # ----------------------------------------------------------------------------
   # Helpers
   # ----------------------------------------------------------------------------

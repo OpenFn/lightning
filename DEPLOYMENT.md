@@ -102,6 +102,16 @@ The following environment variables are required:
 - `OPENAI_API_KEY` - your OpenAI API key.
 - `APOLLO_ENDPOINT` - the endpoint for the OpenFn Apollo AI service.
 
+Lightning workflows can be configured with a trigger that will consume messages
+from a Kafka Cluster. By default this is disabled and you will not see the 
+option to create a Kafka trigger in the UI, nor will the Kafka consumer groups
+be running. 
+
+To enable this feature set the `KAFKA_TRIGGERS_ENABLED` to `yes` and restart
+Lightning. Please note that, if you enable this feature and then create some
+Kafka triggers and then disable the feature, you will not be able to edit any
+triggers created before the feature was disabled.
+
 ### Other config
 
 - `ADAPTORS_PATH` - where you store your locally installed adaptors

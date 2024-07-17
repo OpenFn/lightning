@@ -127,8 +127,9 @@ defmodule Lightning.Runs do
   @doc """
   Returns a run's dataclip formatted for use as state.
 
-  Only `http_request` dataclips are changed, their `body` is nested inside a
-  `"data"` key and `request` data is added as a `"request"` key.
+  Only `http_request` and kafka dataclips are changed,
+  their `body` is nested inside a `"data"` key and `request` data
+  is added as a `"request"` key.
 
   See LightingWeb.RunChannel.handle_in("fetch:dataclip", _, _)
   for more details.
@@ -140,7 +141,7 @@ defmodule Lightning.Runs do
         type(
           fragment(
             """
-            CASE WHEN type = 'http_request'
+            CASE WHEN type IN ('http_request', 'kafka')
             THEN jsonb_build_object('data', ?, 'request', ?)
             ELSE ? END
             """,

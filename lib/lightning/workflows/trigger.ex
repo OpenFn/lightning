@@ -14,6 +14,7 @@ defmodule Lightning.Workflows.Trigger do
   use Lightning.Schema
   import Ecto.Query
 
+  alias Lightning.Workflows.Triggers.KafkaConfiguration
   alias Lightning.Workflows.Workflow
 
   @type t :: %__MODULE__{
@@ -21,7 +22,7 @@ defmodule Lightning.Workflows.Trigger do
           id: Ecto.UUID.t() | nil
         }
 
-  @trigger_types [:webhook, :cron]
+  @trigger_types [:webhook, :cron, :kafka]
 
   @type trigger_type :: :webhook | :cron
   schema "triggers" do
@@ -41,6 +42,8 @@ defmodule Lightning.Workflows.Trigger do
     many_to_many :webhook_auth_methods, Lightning.Workflows.WebhookAuthMethod,
       join_through: "trigger_webhook_auth_methods",
       on_replace: :delete
+
+    embeds_one :kafka_configuration, KafkaConfiguration, on_replace: :update
 
     timestamps()
   end
@@ -64,6 +67,11 @@ defmodule Lightning.Workflows.Trigger do
         :cron_expression,
         :has_auth_method
       ])
+      |> cast_embed(
+        :kafka_configuration,
+        required: false,
+        with: &KafkaConfiguration.changeset/2
+      )
 
     changeset
     |> validate()
@@ -98,11 +106,18 @@ defmodule Lightning.Workflows.Trigger do
       :webhook ->
         changeset
         |> put_change(:cron_expression, nil)
+        |> put_change(:kafka_configuration, nil)
 
       :cron ->
         changeset
         |> put_default(:cron_expression, "0 0 * * *")
         |> validate_cron()
+        |> put_change(:kafka_configuration, nil)
+
+      :kafka ->
+        changeset
+        |> put_change(:cron_expression, nil)
+        |> validate_required([:kafka_configuration])
 
       nil ->
         changeset
@@ -114,7 +129,7 @@ defmodule Lightning.Workflows.Trigger do
     |> get_field(field)
     |> case do
       nil -> changeset |> put_change(field, value)
-      _ -> changeset
+      _value -> changeset
     end
   end
 
@@ -132,5 +147,21 @@ defmodule Lightning.Workflows.Trigger do
               true
             )
       }
+  end
+
+  def kafka_partitions_changeset(
+        %{type: :kafka, kafka_configuration: kafka_configuration} = trigger,
+        partition,
+        timestamp
+      ) do
+    config_changes =
+      kafka_configuration
+      |> KafkaConfiguration.partitions_changeset(partition, timestamp)
+
+    change(trigger, %{kafka_configuration: config_changes})
+  end
+
+  def kafka_partitions_changeset(trigger, _partition, _timestamp) do
+    change(trigger, %{})
   end
 end

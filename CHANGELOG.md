@@ -16,6 +16,8 @@ and this project adheres to
 ## [Unreleased]
 
 ### Added
+- Add experimental support for triggers that consume message from a Kafka
+  cluster [#1801](https://github.com/OpenFn/lightning/issues/1801)
 
 ### Changed
 

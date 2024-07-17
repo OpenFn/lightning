@@ -1,0 +1,38 @@
+version: '3.9'
+
+services:
+  kafka-01:
+    ports:
+      - '127.0.0.1:9092:9092'
+    image: bitnami/kafka:3.4.0
+    hostname: "{{.Node.Hostname}}-{{.Service.Name}}"
+    environment:
+      BITNAMI_DEBUG: ${KAFKA_DEBUG}
+      KAFKA_ENABLE_KRAFT: 'yes'
+      # See https://sleeplessbeastie.eu/2021/10/22/how-to-generate-kafka-cluster-id/ wrt
+      # setting the cluster ID
+      KAFKA_KRAFT_CLUSTER_ID: 'ZGVkMTJkNTRkYjMyNDNkN2'
+      KAFKA_CFG_NODE_ID: 1
+      KAFKA_CFG_BROKER_ID: 1
+      KAFKA_CFG_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://127.0.0.1:9092
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka-01:9093
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      ALLOW_PLAINTEXT_LISTENER: 'yes'
+    volumes:
+      - kafka-01-data:/bitnami/kafka
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: ${KAFKA_MEMORY_LIMIT}
+        reservations:
+          memory: ${KAFKA_MEMORY_RESERVE}
+      restart_policy:
+        condition: on-failure
+
+volumes:
+  kafka-01-data:
