@@ -28,6 +28,8 @@ and this project adheres to
   `refresh_token` [#2289](https://github.com/OpenFn/lightning/pull/2289) and
   send more helpful error data back to the worker during token refresh failure
   [#2135](https://github.com/OpenFn/lightning/issues/2135)
+- Fix CLI deploy not creating snapshots for workflows
+  [#2271](https://github.com/OpenFn/lightning/issues/2271)
 
 ## [v2.7.6] - 2024-07-11
 
