@@ -111,57 +111,41 @@ defmodule LightningWeb.WorkflowLive.Components do
     ~H"""
     <div class="md:grid md:grid-cols-6 md:gap-4 p-2 @container">
       <div class="col-span-6 @md:col-span-4">
-        <.input type="text" label="Name" field={@form[:name]} />
+        <.input type="text" label="Workflow Name" field={@form[:name]} />
       </div>
 
       <div class="col-span-6 @md:col-span-4">
-        <.label for={@form[:concurrency].id}>
-          Concurrency
-        </.label>
-        <p class="text-xs text-slate-500 pb-2">
-          The maximum number of concurrent runs.
-        </p>
-        <div class="flex place-content-between items-center space-x-2">
-          <span class="text-sm">Limit</span>
-          <div class="w-24">
+        <div class="flex grid-cols-3">
+          <div class="mt-2">
+          <.label for={@form[:concurrency].id}>
+            Maximum Concurrency
+          </.label>
+          </div>
+          <div class="flex-grow">
+            <Common.tooltip id="max-concurrency-tooltip" title="The maximum number of concurrent runs." />
+          </div>
+          <div class="w-24 flex-center">
             <.input_element
-              type="number"
-              name={@form[:concurrency].name}
-              value={
-                Phoenix.HTML.Form.normalize_value(
-                  "number",
-                  @form[:concurrency].value
-                )
-              }
-              class="w-4 text-right"
+                type="number"
+                  name={@form[:concurrency].name}
+                  value={
+                    Phoenix.HTML.Form.normalize_value(
+                      "number",
+                      @form[:concurrency].value
+                    )
+                  }
+                  class="w-4 text-right"
             />
           </div>
         </div>
         <div class="flex place-content-between items-center space-x-2 pt-1">
-          <div
-            :if={!is_nil(@form[:concurrency].value)}
-            class="hover:cursor-pointer hover:text-slate-400"
-            id="unlock-concurrency"
-            phx-click={
-              JS.set_attribute({"value", ""},
-                to: "input[name='workflow\[concurrency\]']"
-              )
-              |> JS.dispatch("change", to: "input[name='workflow\[concurrency\]']")
-            }
-          >
-            <.icon name="hero-lock-closed" class="h4 w-4" />
-          </div>
-          <div :if={is_nil(@form[:concurrency].value)}>
-            <.icon name="hero-lock-open" class="h4 w-4" />
-          </div>
           <.errors field={@form[:concurrency]} />
           <div
             :if={Enum.empty?(@form[:concurrency].errors)}
             class="text-xs text-slate-500 italic"
           >
-            <%= case @form[:concurrency].value do
-              nil -> "Unlimited"
-              value -> "Maximum of #{value} run(s) at a time"
+            <%= if @form[:concurrency].value do
+              "Maximum of #{@form[:concurrency].value} run(s) at a time"
             end %>
           </div>
         </div>
