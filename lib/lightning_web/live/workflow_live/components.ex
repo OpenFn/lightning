@@ -109,7 +109,7 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   def workflow_settings(assigns) do
     ~H"""
-    <div class="md:grid md:grid-cols-6 md:gap-4 p-2 @container">
+    <div class="md:grid md:grid-cols-4 md:gap-4 p-2 @container">
       <div class="col-span-6 @md:col-span-4">
         <.input type="text" label="Workflow Name" field={@form[:name]} />
       </div>
