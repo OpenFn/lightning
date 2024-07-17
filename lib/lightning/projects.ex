@@ -241,19 +241,27 @@ defmodule Lightning.Projects do
     end
   end
 
-  @spec update_project_with_users(Project.t(), map()) ::
+  @spec update_project_with_users(Project.t(), map(), boolean()) ::
           {:ok, Project.t()} | {:error, Ecto.Changeset.t()}
-  def update_project_with_users(%Project{} = project, attrs) do
+  def update_project_with_users(
+        %Project{} = project,
+        attrs,
+        notify_users \\ true
+      ) do
     project = Repo.preload(project, :project_users)
 
-    project
-    |> Project.project_with_users_changeset(attrs)
-    |> Repo.update()
-    |> tap(fn result ->
+    result =
+      project
+      |> Project.project_with_users_changeset(attrs)
+      |> Repo.update()
+
+    if notify_users do
       with {:ok, updated_project} <- result do
         schedule_project_addition_emails(project, updated_project)
       end
-    end)
+    end
+
+    result
   end
 
   defp retention_setting_updated?(changeset) do
@@ -296,15 +304,16 @@ defmodule Lightning.Projects do
     |> Repo.update()
   end
 
-  @spec add_project_users(Project.t(), [map(), ...]) ::
+  @spec add_project_users(Project.t(), [map(), ...], boolean()) ::
           {:ok, [ProjectUser.t(), ...]} | {:error, Ecto.Changeset.t()}
-  def add_project_users(project, project_users) do
+  def add_project_users(project, project_users, notify_users \\ true) do
     project = Repo.preload(project, :project_users)
     # include the current list to ensure project owner validations work correctly
     current_users = Enum.map(project.project_users, fn pu -> %{id: pu.id} end)
     params = %{project_users: project_users ++ current_users}
 
-    with {:ok, updated_project} <- update_project_with_users(project, params) do
+    with {:ok, updated_project} <-
+           update_project_with_users(project, params, notify_users) do
       {:ok, updated_project.project_users}
     end
   end
@@ -722,7 +731,7 @@ defmodule Lightning.Projects do
   defp add_users_to_project(changes, project, collaborators) do
     project_users = build_project_users_list(collaborators, changes)
 
-    case add_project_users(project, project_users) do
+    case add_project_users(project, project_users, false) do
       {:ok, project_users} -> {:ok, %{project_users: project_users}}
       {:error, reason} -> {:error, reason}
     end

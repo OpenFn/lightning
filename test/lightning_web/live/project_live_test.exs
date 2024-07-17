@@ -2046,7 +2046,7 @@ defmodule LightningWeb.ProjectLiveTest do
     test "adding a non existent user triggers the invite users process", %{
       conn: conn
     } do
-      project = insert(:project)
+      project = insert(:project, name: "my-project")
 
       {conn, _user} = setup_project_user(conn, project, :owner)
 
@@ -2099,21 +2099,21 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert html =~ "Invite sent successfully"
 
-      assert_email_sent(
-        to: [{"", email}],
-        subject: "You now have access to \"#{project.name}\""
+      refute_email_sent(
+        to: [{"", "nonexists@localtests.com"}],
+        subject: "You now have access to \"my-project\""
       )
 
       assert_email_sent(
-        to: [{"", email}],
-        subject: "Join #{project.name} on OpenFn as a collaborator"
+        to: [{"", "nonexists@localtests.com"}],
+        subject: "Join my-project on OpenFn as a collaborator"
       )
     end
 
     test "inviting an aleady existing user renders an error", %{
       conn: conn
     } do
-      project = insert(:project)
+      project = insert(:project, name: "my-project")
 
       {conn, user} = setup_project_user(conn, project, :owner)
 
@@ -2159,17 +2159,15 @@ defmodule LightningWeb.ProjectLiveTest do
              )
              |> render_submit() =~ "This email is already taken"
 
-      %Swoosh.Email{
-        to: [{"", email}],
-        subject: "You now have access to \"#{project.name}\""
-      }
-      |> assert_email_not_sent()
+      refute_email_sent(
+        to: [{"", "nonexists@localtests.com"}],
+        subject: "You now have access to \"my-project\""
+      )
 
-      %Swoosh.Email{
-        to: [{"", email}],
-        subject: "Join #{project.name} on OpenFn as a collaborator"
-      }
-      |> assert_email_not_sent()
+      refute_email_sent(
+        to: [{"", "nonexists@localtests.com"}],
+        subject: "Join my-project on OpenFn as a collaborator"
+      )
     end
 
     test "adding an existing project user displays an appropriate error message",
