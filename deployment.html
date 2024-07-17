@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-6CD56B1F.js"></script>
+    <script src="dist/sidebar_items-9543075A.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -194,7 +194,13 @@ You can generate this using <code class="inline">mix lightning.gen_encryption_ke
   <span class="text">AI Chat</span>
 </h3>
 <p>🧪 <strong>Experimental</strong></p><p>Lightning can be configured to use an AI chatbot for user interactions.</p><p>See <a href="https://github.com/OpenFn/apollo">openfn/apollo</a> for more information on
-the Apollo AI service.</p><p>The following environment variables are required:</p><ul><li><code class="inline">OPENAI_API_KEY</code> - your OpenAI API key.</li><li><code class="inline">APOLLO_ENDPOINT</code> - the endpoint for the OpenFn Apollo AI service.</li></ul><h3 id="other-config" class="section-heading">
+the Apollo AI service.</p><p>The following environment variables are required:</p><ul><li><code class="inline">OPENAI_API_KEY</code> - your OpenAI API key.</li><li><code class="inline">APOLLO_ENDPOINT</code> - the endpoint for the OpenFn Apollo AI service.</li></ul><p>Lightning workflows can be configured with a trigger that will consume messages
+from a Kafka Cluster. By default this is disabled and you will not see the 
+option to create a Kafka trigger in the UI, nor will the Kafka consumer groups
+be running. </p><p>To enable this feature set the <code class="inline">KAFKA_TRIGGERS_ENABLED</code> to <code class="inline">yes</code> and restart
+Lightning. Please note that, if you enable this feature and then create some
+Kafka triggers and then disable the feature, you will not be able to edit any
+triggers created before the feature was disabled.</p><h3 id="other-config" class="section-heading">
   <a href="#other-config" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>

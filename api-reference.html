@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-6CD56B1F.js"></script>
+    <script src="dist/sidebar_items-9543075A.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -794,6 +794,138 @@ communication issues with the worker.</p></div>
   </div>
 
     <div class="summary-synopsis"><p>The Jobs context.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.KafkaTriggers.html" translate="no">Lightning.KafkaTriggers</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Contains the logic to manage kafka trigger and their associated pipelines.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.KafkaTriggers.DuplicateTrackingCleanupWorker.html" translate="no">Lightning.KafkaTriggers.DuplicateTrackingCleanupWorker</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Repsonsible for cleaing up stale TriggerKafkaMessageRecords entries. 
+TriggerKafkaMessageRecords are used to deduplicate incoming messages from
+a Kafka cluster.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.KafkaTriggers.EventListener.html" translate="no">Lightning.KafkaTriggers.EventListener</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Listens for events related to Kafka triggers and updates the affected pipeline
+process by enabling, reloading or disabling it.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.KafkaTriggers.MessageCandidateSet.html" translate="no">Lightning.KafkaTriggers.MessageCandidateSet</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>A message candidate set is a representative of a group of TriggerKafkaMessages
+that belog to the same trigger and have an identical ttopic and key.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.KafkaTriggers.MessageCandidateSetServer.html" translate="no">Lightning.KafkaTriggers.MessageCandidateSetServer</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Server responsible for maintaining a list of message candidate sets that
+are provided to the worker processes.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.KafkaTriggers.MessageCandidateSetSupervisor.html" translate="no">Lightning.KafkaTriggers.MessageCandidateSetSupervisor</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Starts the server and worker processes responsible for converting messages
+received from Kafka clusters. The sole purpose of this is to ensure that
+messages with the same key (for a given cluster/topic configuration) are 
+processed in the same order they were received.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.KafkaTriggers.MessageCandidateSetWorker.html" translate="no">Lightning.KafkaTriggers.MessageCandidateSetWorker</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Requests a message candidate set from the MessageCandidateSetServer and
+manages the state of the returned candidate set.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.KafkaTriggers.MessageHandling.html" translate="no">Lightning.KafkaTriggers.MessageHandling</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Contains the logic for ensuring that messages are processed in the order
+they are received (within the guarantees provided by Kafka for messages with
+the same key and topic).</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.KafkaTriggers.Pipeline.html" translate="no">Lightning.KafkaTriggers.Pipeline</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Broadway pipeline that processes messages from Kafka clusters and persists
+the received messages if they are not duplicating a previous message.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.KafkaTriggers.PipelineSupervisor.html" translate="no">Lightning.KafkaTriggers.PipelineSupervisor</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Supervisor of the BroadwayKafka pipelines that are created for each enabled
+Kafka trigger.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.KafkaTriggers.Supervisor.html" translate="no">Lightning.KafkaTriggers.Supervisor</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Starts all the processes needed to pull data from Kafka clusters and then
+generate work orders based on the messages received.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.KafkaTriggers.TriggerKafkaMessage.html" translate="no">Lightning.KafkaTriggers.TriggerKafkaMessage</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>This persists a message received from a Kafka cluster.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.KafkaTriggers.TriggerKafkaMessageRecord.html" translate="no">Lightning.KafkaTriggers.TriggerKafkaMessageRecord</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Persists a lightweight represenattion of a message that has been recevied from
+a Kafka cluster, for the purpose of deduplication.</p></div>
 
 </div>
 <div class="summary-row">
@@ -1663,6 +1795,24 @@ their cron schedule, and then running them.</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
+    <a href="Lightning.Workflows.Triggers.Events.html" translate="no">Lightning.Workflows.Triggers.Events</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Responsible for the publishing of and subscription to trigger-related events.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Workflows.Triggers.KafkaConfiguration.html" translate="no">Lightning.Workflows.Triggers.KafkaConfiguration</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Configuration of Kafka Triggers.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
     <a href="Lightning.Workflows.WebhookAuthMethod.html" translate="no">Lightning.Workflows.WebhookAuthMethod</a>
 
   </div>
@@ -2055,6 +2205,13 @@ modal.</p></div>
 <div class="summary-row">
   <div class="summary-signature">
     <a href="LightningWeb.JobLive.JobBuilderComponents.html" translate="no">LightningWeb.JobLive.JobBuilderComponents</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.JobLive.KafkaSetupComponent.html" translate="no">LightningWeb.JobLive.KafkaSetupComponent</a>
 
   </div>
 

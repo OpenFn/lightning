@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-6CD56B1F.js"></script>
+    <script src="dist/sidebar_items-9543075A.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -190,6 +190,14 @@ endpoint is called.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#kafka_partitions_changeset/3" translate="no">kafka_partitions_changeset(trigger, partition, timestamp)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#new/1" translate="no">new(attrs)</a>
 
       </div>
@@ -234,7 +242,7 @@ endpoint is called.</p>
     </a>
     <h1 class="signature" translate="no">t()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L19" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L20" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -257,6 +265,7 @@ endpoint is called.</p>
   has_auth_method: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   id: <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
   inserted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  kafka_configuration: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   type: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   updated_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   webhook_auth_methods: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
@@ -278,7 +287,7 @@ endpoint is called.</p>
     </a>
     <h1 class="signature" translate="no">trigger_type()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L26" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L27" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -309,6 +318,28 @@ endpoint is called.</p>
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
+<section class="detail" id="kafka_partitions_changeset/3">
+
+  <div class="detail-header">
+    <a href="#kafka_partitions_changeset/3" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">kafka_partitions_changeset(trigger, partition, timestamp)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L152" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
 <section class="detail" id="new/1">
 
   <div class="detail-header">
@@ -318,7 +349,7 @@ endpoint is called.</p>
     </a>
     <h1 class="signature" translate="no">new(attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L48" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L51" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -340,7 +371,7 @@ endpoint is called.</p>
     </a>
     <h1 class="signature" translate="no">validate(changeset)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L72" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L80" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -362,7 +393,7 @@ endpoint is called.</p>
     </a>
     <h1 class="signature" translate="no">with_auth_methods_query()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L121" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L136" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
