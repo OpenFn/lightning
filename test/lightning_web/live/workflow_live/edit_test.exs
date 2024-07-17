@@ -732,7 +732,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert view
              |> form("#workflow-form", %{"workflow" => %{"concurrency" => "5"}})
-             |> render_change() =~ "Maximum of 5 run(s) at a time"
+             |> render_change() =~ "No more than 5 runs at a time"
 
       assert view |> element("#workflow-form") |> render_submit() =~
                "Workflow saved"

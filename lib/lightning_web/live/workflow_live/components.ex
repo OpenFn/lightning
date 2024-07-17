@@ -147,8 +147,11 @@ defmodule LightningWeb.WorkflowLive.Components do
             :if={Enum.empty?(@form[:concurrency].errors)}
             class="text-xs text-slate-500 italic"
           >
-            <%= if @form[:concurrency].value do
-              "No more than #{@form[:concurrency].value} run#{if @form[:concurrency].value == 1, do: "", else: "s"} at a time"
+            <%= case @form[:concurrency].value do
+              nil -> "Unlimited (up to max available)"
+              "" -> "Unlimited (up to max available)"
+              1 -> "No more than one run at a time"
+              value -> "No more than #{value} runs at a time"
             end %>
           </div>
         </div>
