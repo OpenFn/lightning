@@ -2043,41 +2043,71 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
-    test "adding a non existent user displays an appropriate error message", %{
+    test "adding a non existent user triggers the invite users process", %{
       conn: conn
     } do
       project = insert(:project)
 
-      for {conn, _user} <- setup_project_users(conn, project, [:owner, :admin]) do
-        {:ok, view, _html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#collaboration"
-          )
+      {conn, _user} = setup_project_user(conn, project, :owner)
 
-        # Open Modal
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#collaboration"
+        )
+
+      # Open Modal
+      view
+      |> element("#show_collaborators_modal_button")
+      |> render_click()
+
+      email = "nonexists@localtests.com"
+
+      refute view |> has_element?("#invite_collaborators_modal_form")
+
+      view
+      |> form("#add_collaborators_modal_form",
+        project: %{
+          "collaborators" => %{
+            "0" => %{"email" => email, "role" => "editor"}
+          }
+        }
+      )
+      |> render_submit()
+
+      assert view |> has_element?("#invite_collaborators_modal_form")
+
+      {:ok, _view, html} =
         view
-        |> element("#show_collaborators_modal_button")
-        |> render_click()
-
-        modal = element(view, "#add_collaborators_modal")
-
-        refute render(modal) =~ "There is no account connected this email"
-        email = "nonexists@localtests.com"
-        refute Lightning.Accounts.get_user_by_email(email)
-
-        # lets submit the form
-
-        view
-        |> form("#add_collaborators_modal_form",
+        |> form("#invite_collaborators_modal_form",
           project: %{
-            "collaborators" => %{"0" => %{"email" => email, "role" => "editor"}}
+            "invited_collaborators" => %{
+              "0" => %{
+                "email" => email,
+                "role" => "editor",
+                "first_name" => "Non",
+                "last_name" => "Exists"
+              }
+            }
           }
         )
         |> render_submit()
+        |> follow_redirect(
+          conn,
+          ~p"/projects/#{project.id}/settings#collaboration"
+        )
 
-        assert render(modal) =~ "There is no account connected this email"
-      end
+      assert html =~ "Invite sent successfully"
+
+      assert_email_sent(
+        to: [{"", email}],
+        subject: "You now have access to \"#{project.name}\""
+      )
+
+      assert_email_sent(
+        to: [{"", email}],
+        subject: "Join #{project.name} on OpenFn as a collaborator"
+      )
     end
 
     test "adding an existing project user displays an appropriate error message",
@@ -2204,7 +2234,7 @@ defmodule LightningWeb.ProjectLiveTest do
             ~p"/projects/#{project}/settings#collaboration"
           )
 
-        assert flash["info"] =~ "Collaborators added successfully!"
+        assert flash["info"] =~ "Collaborators added successfully"
       end
     end
 
