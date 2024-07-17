@@ -704,43 +704,60 @@ defmodule Lightning.Projects do
     Multi.new()
     |> Multi.put(:collaborators, collaborators)
     |> Multi.merge(&register_users/1)
-    |> Multi.run(:add_project_users, fn _repo, changes ->
-      project_users = build_project_users_list(collaborators, changes)
-
-      case add_project_users(project, project_users) do
-        {:ok, project_users} -> {:ok, %{project_users: project_users}}
-        {:error, reason} -> {:error, reason}
-      end
+    |> Multi.run(:add_users_to_project, fn _repo, changes ->
+      add_users_to_project(changes, project, collaborators)
     end)
-    |> Multi.run(:build_and_invite_users, fn _repo, changes ->
-      build_tokens_and_send_invitations(changes, project, inviter)
+    |> Multi.run(:send_invitations, fn _repo, changes ->
+      send_invitations(changes, project, inviter)
     end)
-    |> Repo.transaction()
-    |> case do
-      {:ok, changes} ->
-        {:ok, changes}
+    |> execute_transaction()
+  end
 
-      {:error, _op, changeset, _changes} ->
-        {:error, changeset}
+  defp execute_transaction(%Ecto.Multi{} = multi) do
+    case Repo.transaction(multi) do
+      {:ok, changes} -> {:ok, changes}
+      {:error, _op, changeset, _changes} -> {:error, changeset}
+    end
+  end
+
+  defp add_users_to_project(changes, project, collaborators) do
+    project_users = build_project_users_list(collaborators, changes)
+
+    case add_project_users(project, project_users) do
+      {:ok, project_users} -> {:ok, %{project_users: project_users}}
+      {:error, reason} -> {:error, reason}
     end
   end
 
   defp register_users(%{collaborators: collaborators}) do
     Enum.reduce(collaborators, Multi.new(), fn collaborator, multi ->
       user_params =
-        Map.take(collaborator, [:first_name, :last_name, :email])
-        |> Map.put(
-          :password,
-          :crypto.strong_rand_bytes(12)
-          |> Base.encode64(padding: false)
-        )
+        collaborator
+        |> Map.take([:first_name, :last_name, :email])
+        |> Map.put(:password, generate_random_password())
 
-      data =
-        User.user_registration_changeset(user_params)
-        |> Ecto.Changeset.apply_action!(:insert)
+      case User.user_registration_changeset(user_params)
+           |> Ecto.Changeset.apply_action(:insert) do
+        {:ok, user_data} ->
+          Multi.insert(
+            multi,
+            {:new_user, collaborator.email},
+            struct!(User, user_data)
+          )
 
-      Multi.insert(multi, {:new_user, collaborator.email}, struct!(User, data))
+        {:error, _changeset} ->
+          Multi.error(
+            multi,
+            {:new_user, collaborator.email},
+            :user_registration_failed
+          )
+      end
     end)
+  end
+
+  defp generate_random_password do
+    :crypto.strong_rand_bytes(12)
+    |> Base.encode64(padding: false)
   end
 
   defp build_project_users_list(collaborators, changes) do
@@ -750,40 +767,57 @@ defmodule Lightning.Projects do
     end)
   end
 
-  defp build_tokens_and_send_invitations(changes, project, inviter) do
-    tokens =
-      Enum.reduce(changes, [], fn
-        {{:new_user, email}, user}, acc ->
-          {encoded_token, user_token} =
-            UserToken.build_email_token(user, "reset_password", user.email)
+  defp send_invitations(changes, project, inviter) do
+    case generate_user_tokens(changes) do
+      {:ok, tokens} ->
+        Enum.each(tokens, fn {:encoded_token, email, encoded_token} ->
+          user = find_user_by_email(changes, email)
+          role = find_role_by_email(changes, email)
 
-          case Repo.insert(user_token) do
-            {:ok, _} -> [{:encoded_token, email, encoded_token} | acc]
-            {:error, reason} -> {:error, reason}
-          end
+          UserNotifier.deliver_project_invitation_email(
+            user,
+            inviter,
+            project,
+            role,
+            encoded_token
+          )
+        end)
 
-        _, acc ->
-          acc
-      end)
+        {:ok, :invitations_sent}
 
-    if is_list(tokens) do
-      Enum.each(tokens, fn {:encoded_token, email, encoded_token} ->
-        user =
-          Enum.find_value(changes, fn {key, val} ->
-            if key == {:new_user, email}, do: val, else: nil
-          end)
-
-        UserNotifier.deliver_project_invitation_email(
-          user,
-          project,
-          encoded_token,
-          inviter
-        )
-      end)
-
-      {:ok, tokens}
-    else
-      tokens
+      {:error, reason} ->
+        {:error, reason}
     end
+  end
+
+  defp generate_user_tokens(changes) do
+    Enum.reduce_while(changes, {:ok, []}, fn
+      {{:new_user, email}, user}, {:ok, acc} ->
+        {encoded_token, user_token} =
+          UserToken.build_email_token(user, "reset_password", user.email)
+
+        case Repo.insert(user_token) do
+          {:ok, _} ->
+            {:cont, {:ok, [{:encoded_token, email, encoded_token} | acc]}}
+
+          {:error, reason} ->
+            {:halt, {:error, reason}}
+        end
+
+      _, acc ->
+        {:cont, acc}
+    end)
+  end
+
+  defp find_user_by_email(changes, email) do
+    Enum.find_value(changes, fn {key, val} ->
+      if key == {:new_user, email}, do: val
+    end)
+  end
+
+  defp find_role_by_email(changes, email) do
+    Enum.find_value(changes[:collaborators], fn collaborator ->
+      if collaborator.email == email, do: collaborator.role
+    end)
   end
 end
