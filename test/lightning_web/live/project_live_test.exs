@@ -2110,6 +2110,68 @@ defmodule LightningWeb.ProjectLiveTest do
       )
     end
 
+    test "inviting an aleady existing user renders an error", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      {conn, user} = setup_project_user(conn, project, :owner)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#collaboration"
+        )
+
+      # Open Modal
+      view
+      |> element("#show_collaborators_modal_button")
+      |> render_click()
+
+      email = "nonexists@localtests.com"
+
+      refute view |> has_element?("#invite_collaborators_modal_form")
+
+      view
+      |> form("#add_collaborators_modal_form",
+        project: %{
+          "collaborators" => %{
+            "0" => %{"email" => email, "role" => "editor"}
+          }
+        }
+      )
+      |> render_submit()
+
+      assert view |> has_element?("#invite_collaborators_modal_form")
+
+      assert view
+             |> form("#invite_collaborators_modal_form",
+               project: %{
+                 "invited_collaborators" => %{
+                   "0" => %{
+                     "email" => user.email,
+                     "role" => "editor",
+                     "first_name" => "Non",
+                     "last_name" => "Exists"
+                   }
+                 }
+               }
+             )
+             |> render_submit() =~ "This email is already taken"
+
+      %Swoosh.Email{
+        to: [{"", email}],
+        subject: "You now have access to \"#{project.name}\""
+      }
+      |> assert_email_not_sent()
+
+      %Swoosh.Email{
+        to: [{"", email}],
+        subject: "Join #{project.name} on OpenFn as a collaborator"
+      }
+      |> assert_email_not_sent()
+    end
+
     test "adding an existing project user displays an appropriate error message",
          %{
            conn: conn
