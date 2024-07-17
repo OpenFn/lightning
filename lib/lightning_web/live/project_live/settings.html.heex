@@ -586,6 +586,15 @@
                 project={@project}
                 project_users={@project_users}
               />
+              <.live_component
+                :if={@can_add_project_user && @show_invite_collaborators_modal}
+                module={LightningWeb.ProjectLive.InviteCollaboratorComponent}
+                id="invite_collaborators_modal"
+                project={@project}
+                project_users={@project_users}
+                collaborators={@collaborators_to_invite}
+                current_user={@current_user}
+              />
             </div>
           </div>
           <.table id="collaborators">

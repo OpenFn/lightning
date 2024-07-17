@@ -24,6 +24,9 @@ and this project adheres to
   default FifoRunQueue only.
   [#2022](https://github.com/OpenFn/lightning/issues/2022)
 
+- Invite Non-Registered Users to a Project
+  [#2288](https://github.com/OpenFn/lightning/pull/2288)
+
 ### Changed
 
 - Make modal close events configurable

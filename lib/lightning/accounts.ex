@@ -110,7 +110,11 @@ defmodule Lightning.Accounts do
   Returns the list of users with the given emails
   """
   def list_users_by_emails(emails) do
-    query = from u in User, where: u.email in ^emails
+    lowercase_emails = Enum.map(emails, &String.downcase/1)
+
+    query =
+      from u in User, where: fragment("LOWER(?)", u.email) in ^lowercase_emails
+
     Repo.all(query)
   end
 

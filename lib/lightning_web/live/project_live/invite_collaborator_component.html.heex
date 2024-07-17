@@ -2,17 +2,17 @@
   <.modal
     id={@id}
     show={true}
-    on_close={JS.push("toggle_collaborators_modal")}
-    width="min-w-1/3 max-w-xl"
+    on_close={JS.push("toggle_invite_collaborators_modal")}
+    width="min-w-1/2 max-w-xl"
   >
     <:title>
       <div class="flex justify-between">
         <span class="font-bold">
-          Add new collaborator(s)
+          Invite new user(s) to join OpenFn
         </span>
 
         <button
-          phx-click="toggle_collaborators_modal"
+          phx-click="toggle_invite_collaborators_modal"
           type="button"
           class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
           aria-label={gettext("close")}
@@ -24,7 +24,7 @@
     </:title>
     <:subtitle>
       <span class="text-xs">
-        Enter the email address and role of new collaborator(s) to invite them to this project
+        The following users don't have OpenFn accounts, you can invite them to join and grant access to this project
       </span>
     </:subtitle>
 
@@ -52,15 +52,32 @@
         </div>
         <.inputs_for
           :let={cf}
-          field={f[:collaborators]}
-          prepend={[%Collaborators.Collaborator{}]}
+          field={f[:invited_collaborators]}
+          prepend={[%InvitedCollaborators.InvitedCollaborator{}]}
         >
-          <div class="flex items-center space-x-4">
+          <div class="flex flex-wrap space-x-4">
             <div class="flex-1">
               <.input
                 type="text"
+                field={cf[:first_name]}
+                placeholder="First Name"
+                required="true"
+                class="w-full"
+              />
+            </div>
+            <div class="flex-1">
+              <.input
+                type="text"
+                field={cf[:last_name]}
+                placeholder="Last Name"
+                required="true"
+                class="w-full"
+              />
+            </div>
+            <div class="flex-1">
+              <.input
+                type="email"
                 field={cf[:email]}
-                placeholder="email@example.com"
                 required="true"
                 class="w-full"
                 display_errors={false}
@@ -81,14 +98,14 @@
                 class="w-full"
               />
             </div>
-            <div>
+            <div class="flex items-center">
               <input
                 type="hidden"
                 name={"#{f.name}[collaborators_sort][]"}
                 value={cf.index}
               />
               <button
-                :if={Enum.count(f[:collaborators].value) > 1}
+                :if={Enum.count(f[:invited_collaborators].value) > 1}
                 type="button"
                 name={"#{f.name}[collaborators_drop][]"}
                 value={cf.index}
@@ -101,19 +118,6 @@
           </div>
           <.error_field field={cf[:email]} />
         </.inputs_for>
-
-        <div class="mt-5 flex justify-start">
-          <input type="hidden" name={"#{f.name}[collaborators_drop][]"} />
-          <button
-            type="button"
-            name={"#{f.name}[collaborators_sort][]"}
-            value="new"
-            phx-click={JS.dispatch("change")}
-            class="inline-flex items-center gap-x-2 rounded-md bg-white px-3.5 py-2.5 text-sm text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-          >
-            <Heroicons.plus_circle class="w-5 h-5" /> Add Additional Collaborator
-          </button>
-        </div>
       </div>
       <.modal_footer class="mx-6 mt-6">
         <div class="flex flex-row-reverse gap-4">
@@ -123,13 +127,14 @@
             phx-disable-with="Adding..."
             disabled={!@changeset.valid? || !is_nil(@error)}
           >
-            Save Collaborator<%= if(Enum.count(f[:collaborators].value) > 1,
+            Invite new user<%= if(
+              Enum.count(f[:invited_collaborators].value) > 1,
               do: "s"
             ) %>
           </.button>
           <button
             type="button"
-            phx-click="toggle_collaborators_modal"
+            phx-click="toggle_invite_collaborators_modal"
             class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
           >
             Cancel

@@ -11,6 +11,7 @@ defmodule Lightning.Projects do
   alias Ecto.Multi
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserNotifier
+  alias Lightning.Accounts.UserToken
   alias Lightning.ExportUtils
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.LogLine
@@ -240,19 +241,27 @@ defmodule Lightning.Projects do
     end
   end
 
-  @spec update_project_with_users(Project.t(), map()) ::
+  @spec update_project_with_users(Project.t(), map(), boolean()) ::
           {:ok, Project.t()} | {:error, Ecto.Changeset.t()}
-  def update_project_with_users(%Project{} = project, attrs) do
+  def update_project_with_users(
+        %Project{} = project,
+        attrs,
+        notify_users \\ true
+      ) do
     project = Repo.preload(project, :project_users)
 
-    project
-    |> Project.project_with_users_changeset(attrs)
-    |> Repo.update()
-    |> tap(fn result ->
+    result =
+      project
+      |> Project.project_with_users_changeset(attrs)
+      |> Repo.update()
+
+    if notify_users do
       with {:ok, updated_project} <- result do
         schedule_project_addition_emails(project, updated_project)
       end
-    end)
+    end
+
+    result
   end
 
   defp retention_setting_updated?(changeset) do
@@ -295,15 +304,16 @@ defmodule Lightning.Projects do
     |> Repo.update()
   end
 
-  @spec add_project_users(Project.t(), [map(), ...]) ::
+  @spec add_project_users(Project.t(), [map(), ...], boolean()) ::
           {:ok, [ProjectUser.t(), ...]} | {:error, Ecto.Changeset.t()}
-  def add_project_users(project, project_users) do
+  def add_project_users(project, project_users, notify_users \\ true) do
     project = Repo.preload(project, :project_users)
     # include the current list to ensure project owner validations work correctly
     current_users = Enum.map(project.project_users, fn pu -> %{id: pu.id} end)
     params = %{project_users: project_users ++ current_users}
 
-    with {:ok, updated_project} <- update_project_with_users(project, params) do
+    with {:ok, updated_project} <-
+           update_project_with_users(project, params, notify_users) do
       {:ok, updated_project.project_users}
     end
   end
@@ -696,5 +706,126 @@ defmodule Lightning.Projects do
 
   defp delete_history_for(_project) do
     {:error, :missing_history_retention_period}
+  end
+
+  def invite_collaborators(project, collaborators, inviter) do
+    Multi.new()
+    |> Multi.put(:collaborators, collaborators)
+    |> Multi.merge(&register_users/1)
+    |> Multi.run(:add_users_to_project, fn _repo, changes ->
+      add_users_to_project(changes, project, collaborators)
+    end)
+    |> Multi.run(:send_invitations, fn _repo, changes ->
+      send_invitations(changes, project, inviter)
+    end)
+    |> execute_transaction()
+  end
+
+  defp execute_transaction(%Ecto.Multi{} = multi) do
+    case Repo.transaction(multi) do
+      {:ok, changes} -> {:ok, changes}
+      {:error, _op, changeset, _changes} -> {:error, changeset}
+    end
+  end
+
+  defp add_users_to_project(changes, project, collaborators) do
+    project_users = build_project_users_list(collaborators, changes)
+
+    case add_project_users(project, project_users, false) do
+      {:ok, project_users} -> {:ok, %{project_users: project_users}}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp register_users(%{collaborators: collaborators}) do
+    Enum.reduce(collaborators, Multi.new(), fn collaborator, multi ->
+      user_params =
+        collaborator
+        |> Map.take([:first_name, :last_name, :email])
+        |> Map.put(:password, generate_random_password())
+
+      case User.user_registration_changeset(user_params)
+           |> Ecto.Changeset.apply_action(:insert) do
+        {:ok, user_data} ->
+          Multi.insert(
+            multi,
+            {:new_user, collaborator.email},
+            struct!(User, user_data)
+          )
+
+        {:error, _changeset} ->
+          Multi.error(
+            multi,
+            {:new_user, collaborator.email},
+            :user_registration_failed
+          )
+      end
+    end)
+  end
+
+  defp generate_random_password do
+    :crypto.strong_rand_bytes(12)
+    |> Base.encode64(padding: false)
+  end
+
+  defp build_project_users_list(collaborators, changes) do
+    Enum.map(collaborators, fn collaborator ->
+      user = changes[{:new_user, collaborator.email}]
+      %{role: collaborator.role, user_id: user.id}
+    end)
+  end
+
+  defp send_invitations(changes, project, inviter) do
+    case generate_user_tokens(changes) do
+      {:ok, tokens} ->
+        Enum.each(tokens, fn {:encoded_token, email, encoded_token} ->
+          user = find_user_by_email(changes, email)
+          role = find_role_by_email(changes, email)
+
+          UserNotifier.deliver_project_invitation_email(
+            user,
+            inviter,
+            project,
+            role,
+            encoded_token
+          )
+        end)
+
+        {:ok, :invitations_sent}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp generate_user_tokens(changes) do
+    Enum.reduce_while(changes, {:ok, []}, fn
+      {{:new_user, email}, user}, {:ok, acc} ->
+        {encoded_token, user_token} =
+          UserToken.build_email_token(user, "reset_password", user.email)
+
+        case Repo.insert(user_token) do
+          {:ok, _} ->
+            {:cont, {:ok, [{:encoded_token, email, encoded_token} | acc]}}
+
+          {:error, reason} ->
+            {:halt, {:error, reason}}
+        end
+
+      _, acc ->
+        {:cont, acc}
+    end)
+  end
+
+  defp find_user_by_email(changes, email) do
+    Enum.find_value(changes, fn {key, val} ->
+      if key == {:new_user, email}, do: val
+    end)
+  end
+
+  defp find_role_by_email(changes, email) do
+    Enum.find_value(changes[:collaborators], fn collaborator ->
+      if collaborator.email == email, do: collaborator.role
+    end)
   end
 end
