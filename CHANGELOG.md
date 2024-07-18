@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix work order URL in failure alerts
+  [#2305](https://github.com/OpenFn/lightning/pull/2305)
+
 ## [v2.7.7] - 2024-07-18
 
 ### Added
