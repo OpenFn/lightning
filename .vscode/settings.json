@@ -1,7 +1,7 @@
 {
   "[elixir]": {
     "editor.trimAutoWhitespace": true,
-    "editor.defaultFormatter": "JakeBecker.elixir-ls"
+    "editor.defaultFormatter": "animus-coop.vscode-elixir-mix-formatter"
   },
   "[phoenix-heex]": {
     "editor.defaultFormatter": "JakeBecker.elixir-ls"
