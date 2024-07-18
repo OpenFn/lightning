@@ -20,7 +20,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       :code_failed,
       :refresh_failed,
       :missing_required,
-      :no_refresh_token,
       :revoke_failed
     ]
   }
