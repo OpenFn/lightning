@@ -46,7 +46,10 @@ defmodule Lightning.FailureAlerter do
       Application.fetch_env!(:lightning, __MODULE__)
 
     run_url =
-      LightningWeb.RouteHelpers.show_run_url(project_id, run_id)
+      url(
+        LightningWeb.Endpoint,
+        ~p"/projects/#{project_id}/runs/#{run_id}"
+      )
 
     work_order_url =
       url(
