@@ -419,7 +419,10 @@ defmodule Lightning.Credentials do
          body: body
        }) do
     client = Repo.get(OauthClient, oauth_client_id)
-    OauthHTTPClient.revoke_token(client, body)
+
+    if client.revocation_endpoint do
+      OauthHTTPClient.revoke_token(client, body)
+    end
   end
 
   defp remove_credential_associations(%Credential{id: credential_id}) do
