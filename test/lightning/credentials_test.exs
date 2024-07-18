@@ -201,7 +201,11 @@ defmodule Lightning.CredentialsTest do
         insert(:credential,
           name: "My Credential",
           schema: "oauth",
-          body: %{"access_token" => "super_secret_access_token_123"},
+          body: %{
+            "access_token" => "super_secret_access_token_123",
+            "refresh_token" => "super_secret_refresh_token_123",
+            "expires_in" => 3000
+          },
           user: build(:user),
           oauth_client: build(:oauth_client)
         )

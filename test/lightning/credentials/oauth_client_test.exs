@@ -39,8 +39,7 @@ defmodule Lightning.Credentials.OauthClientTest do
                client_secret: {"can't be blank", [validation: :required]},
                authorization_endpoint:
                  {"can't be blank", [validation: :required]},
-               token_endpoint: {"can't be blank", [validation: :required]},
-               revocation_endpoint: {"can't be blank", [validation: :required]}
+               token_endpoint: {"can't be blank", [validation: :required]}
              ] === changeset.errors
     end
 
