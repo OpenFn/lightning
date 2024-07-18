@@ -85,6 +85,9 @@ defmodule Lightning.Workflows.Edge do
     |> validate_source_condition()
     |> validate_js_condition()
     |> validate_different_nodes()
+    |> validate_format(:condition_label, ~r/^[a-zA-Z0-9_\- ]*$/,
+      message: "condition label has invalid format"
+    )
   end
 
   defp validate_has_source(changeset) do

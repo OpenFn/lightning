@@ -65,6 +65,9 @@ defmodule Lightning.Workflows.Workflow do
     |> unique_constraint([:name, :project_id],
       message: "a workflow with this name already exists in this project."
     )
+    |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/,
+      message: "workflow name has invalid format"
+    )
   end
 
   def request_deletion_changeset(workflow, attrs) do
