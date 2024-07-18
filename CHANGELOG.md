@@ -16,14 +16,21 @@ and this project adheres to
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+## [v2.7.7] - 2024-07-18
+
+### Added
+
 - Add experimental support for triggers that consume message from a Kafka
   cluster [#1801](https://github.com/OpenFn/lightning/issues/1801)
-
 - Workflows can now specify concurrency, allowing runs to be executed
   syncronously or to a maximum concurrency level. Note that this applies to the
   default FifoRunQueue only.
   [#2022](https://github.com/OpenFn/lightning/issues/2022)
-
 - Invite Non-Registered Users to a Project
   [#2288](https://github.com/OpenFn/lightning/pull/2288)
 
