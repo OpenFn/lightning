@@ -49,7 +49,10 @@ defmodule Lightning.FailureAlerter do
       LightningWeb.RouteHelpers.show_run_url(project_id, run_id)
 
     work_order_url =
-      ~p"/projects/#{project_id}/history?filters[workorder_id]=#{work_order_id}"
+      url(
+        LightningWeb.Endpoint,
+        ~p"/projects/#{project_id}/history?filters[workorder_id]=#{work_order_id}"
+      )
 
     # rate limiting per workflow AND user
     bucket_key = "#{workflow_id}::#{recipient.id}"
