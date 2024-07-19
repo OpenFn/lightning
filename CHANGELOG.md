@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Enable End to End Integration tests
+  [#2187](https://github.com/OpenFn/lightning/issues/2187)
+
 ### Fixed
 
 - Fix work order URL in failure alerts

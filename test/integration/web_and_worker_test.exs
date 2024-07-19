@@ -4,6 +4,7 @@ defmodule Lightning.WebAndWorkerTest do
 
   import Lightning.JobsFixtures
   import Lightning.Factories
+  import Mox
 
   alias Lightning.Run
   alias Lightning.Runs
@@ -15,7 +16,19 @@ defmodule Lightning.WebAndWorkerTest do
 
   require Run
 
+  setup :set_mox_from_context
+  setup :verify_on_exit!
+
   setup_all context do
+    Mox.stub_with(Lightning.MockConfig, Lightning.Config.API)
+    Mox.stub_with(LightningMock, Lightning.API)
+    Mox.stub_with(Lightning.Tesla.Mock, Tesla.Adapter.Hackney)
+
+    Mox.stub_with(
+      Lightning.Extensions.MockUsageLimiter,
+      Lightning.Extensions.UsageLimiter
+    )
+
     start_runtime_manager(context)
   end
 
@@ -29,8 +42,16 @@ defmodule Lightning.WebAndWorkerTest do
     } do
       project = insert(:project)
 
-      %{triggers: [%{id: webhook_trigger_id}]} =
+      %{triggers: [%{id: webhook_trigger_id}], edges: edges} =
         insert(:complex_workflow, project: project)
+
+      # ensure the workflow has parallel jobs. Eliminate the branching edge
+      branching_edge =
+        Enum.find(edges, fn edge -> edge.condition_type == :on_job_failure end)
+
+      branching_edge
+      |> Ecto.Changeset.change(%{condition_type: :on_job_success})
+      |> Repo.update!()
 
       # Post to webhook
       webhook_body = %{"x" => 1}
@@ -218,13 +239,16 @@ defmodule Lightning.WebAndWorkerTest do
                &(&1.source == "R/T" and &1.message =~ "Operation 1 complete in")
              )
 
-      version_logs =
-        lines
-        |> Enum.find(fn l -> l.source == "VER" end)
-        |> Map.get(:message)
+      {:ok, version_logs} =
+        Repo.transaction(fn ->
+          run
+          |> Runs.get_log_lines()
+          |> Enum.find(fn l -> l.source == "VER" end)
+          |> Map.get(:message)
+        end)
 
       assert version_logs =~ "▸ node.js                  18.17"
-      assert version_logs =~ "▸ worker                   1.1"
+      assert version_logs =~ "▸ worker                   1.3"
       assert version_logs =~ "▸ @openfn/language-http    3.1.12"
 
       expected_lines =
