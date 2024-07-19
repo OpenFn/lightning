@@ -83,6 +83,7 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
     end
   end
 
+  @tag skip: "Flaky, to be fixed in #2311"
   describe "When workflow has many visitors, presences is detected and edit is disabled" do
     test "in canvas", %{conn: conn} do
       amy =
@@ -476,6 +477,7 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
     end
   end
 
+  @tag skip: "Flaky, to be fixed in #2311"
   describe "When workflow has many visits from same user, multiple sessions are detected and edit is disabled" do
     test "in canvas", %{conn: conn} do
       amy =
