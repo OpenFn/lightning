@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Standardized top bars across the UI with a navigable breadcrumbs interface
+  [#2299](https://github.com/OpenFn/lightning/pull/2299)
+
 ### Fixed
 
 - Fix work order URL in failure alerts
