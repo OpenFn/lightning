@@ -11,6 +11,11 @@ defmodule Lightning.CliDeployTest do
 
   @cli_path Application.app_dir(:lightning, "priv/openfn/bin/openfn")
 
+  @required_env [
+    {"OPENFN_ENDPOINT", nil},
+    {"OPENFN_API_KEY", nil}
+  ]
+
   @moduletag tmp_dir: true, integration: true
 
   setup :set_mox_from_context
@@ -61,7 +66,8 @@ defmodule Lightning.CliDeployTest do
       {logs, _exit_code} =
         System.cmd(
           @cli_path,
-          ["pull", project.id, "-c", config_path]
+          ["pull", project.id, "-c", config_path],
+          env: @required_env
         )
 
       assert logs =~ "Failed to authorize request with endpoint"
@@ -76,7 +82,8 @@ defmodule Lightning.CliDeployTest do
       # Try to pull with a project user
       System.cmd(
         @cli_path,
-        ["pull", project.id, "-c", config_path]
+        ["pull", project.id, "-c", config_path],
+        env: @required_env
       )
 
       # Check result
@@ -114,7 +121,11 @@ defmodule Lightning.CliDeployTest do
       user |> Ecto.Changeset.change(%{role: :user}) |> Lightning.Repo.update!()
 
       {logs, _} =
-        System.cmd(@cli_path, ["deploy", "-c", config_path, "--no-confirm"])
+        System.cmd(
+          @cli_path,
+          ["deploy", "-c", config_path, "--no-confirm"],
+          env: @required_env
+        )
 
       assert logs =~ "Failed to authorize request with endpoint"
       assert logs =~ "403 Forbidden"
@@ -127,7 +138,11 @@ defmodule Lightning.CliDeployTest do
       |> Ecto.Changeset.change(%{role: :superuser})
       |> Lightning.Repo.update!()
 
-      System.cmd(@cli_path, ["deploy", "-c", config_path, "--no-confirm"])
+      System.cmd(
+        @cli_path,
+        ["deploy", "-c", config_path, "--no-confirm"],
+        env: @required_env
+      )
 
       assert [project] =
                Lightning.Repo.all(Lightning.Projects.Project)
@@ -207,7 +222,8 @@ defmodule Lightning.CliDeployTest do
 
       System.cmd(
         @cli_path,
-        ["pull", project.id, "-c", config_path]
+        ["pull", project.id, "-c", config_path],
+        env: @required_env
       )
 
       # Lets use the updated spec
@@ -225,7 +241,8 @@ defmodule Lightning.CliDeployTest do
 
       System.cmd(
         @cli_path,
-        ["deploy", project.id, "-c", config_path, "--no-confirm"]
+        ["deploy", project.id, "-c", config_path, "--no-confirm"],
+        env: @required_env
       )
 
       updated_project = Lightning.Repo.reload(project)
