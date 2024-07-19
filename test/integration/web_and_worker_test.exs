@@ -42,8 +42,15 @@ defmodule Lightning.WebAndWorkerTest do
     } do
       project = insert(:project)
 
-      %{triggers: [%{id: webhook_trigger_id}]} =
+      %{triggers: [%{id: webhook_trigger_id}], edges: edges} =
         insert(:complex_workflow, project: project)
+
+      branching_edge =
+        Enum.find(edges, fn edge -> edge.condition_type == :on_job_failure end)
+
+      branching_edge
+      |> Ecto.Changeset.change(%{condition_type: :on_job_success})
+      |> Repo.update!()
 
       # Post to webhook
       webhook_body = %{"x" => 1}
