@@ -13,7 +13,8 @@ defmodule Lightning.CliDeployTest do
 
   @required_env [
     {"OPENFN_ENDPOINT", nil},
-    {"OPENFN_API_KEY", nil}
+    {"OPENFN_API_KEY", nil},
+    {"NODE_OPTIONS", "--dns-result-order=ipv4first"}
   ]
 
   @moduletag tmp_dir: true, integration: true
