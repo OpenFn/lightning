@@ -45,6 +45,7 @@ defmodule Lightning.WebAndWorkerTest do
       %{triggers: [%{id: webhook_trigger_id}], edges: edges} =
         insert(:complex_workflow, project: project)
 
+      # ensure the workflow has parallel jobs. Eliminate the branching edge
       branching_edge =
         Enum.find(edges, fn edge -> edge.condition_type == :on_job_failure end)
 
