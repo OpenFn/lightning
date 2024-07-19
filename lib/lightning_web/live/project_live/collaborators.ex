@@ -87,8 +87,7 @@ defmodule LightningWeb.ProjectLive.Collaborators do
     Enum.map(collaborators, fn collaborator ->
       existing_user =
         Enum.find(existing_users, fn u ->
-          String.downcase(u.email) ==
-            get_field(collaborator, :email) |> String.downcase()
+          u.email == String.downcase(get_field(collaborator, :email))
         end)
 
       collaborator

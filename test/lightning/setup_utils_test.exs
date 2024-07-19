@@ -247,7 +247,7 @@ defmodule Lightning.SetupUtilsTest do
       assert %{
                super_user: nil,
                admin: %User{first_name: "Amy"},
-               editor: %User{first_name: "Esther"},
+               editor: %User{first_name: "Esther", email: "editor@openfn.org"},
                viewer: %User{first_name: "Vikram"}
              } =
                users
