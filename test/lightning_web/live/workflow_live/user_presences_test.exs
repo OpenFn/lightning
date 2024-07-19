@@ -83,8 +83,8 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
     end
   end
 
-  @tag skip: "Flaky, to be fixed in #2311"
   describe "When workflow has many visitors, presences is detected and edit is disabled" do
+    @tag skip: "Flaky, to be fixed in #2311"
     test "in canvas", %{conn: conn} do
       amy =
         insert(:user,
@@ -297,6 +297,7 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
       )
     end
 
+    @tag skip: "Flaky, to be fixed in #2311"
     test "in inspector", %{conn: conn} do
       amy =
         insert(:user,
@@ -477,8 +478,8 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
     end
   end
 
-  @tag skip: "Flaky, to be fixed in #2311"
   describe "When workflow has many visits from same user, multiple sessions are detected and edit is disabled" do
+    @tag skip: "Flaky, to be fixed in #2311"
     test "in canvas", %{conn: conn} do
       amy =
         insert(:user,
@@ -530,6 +531,7 @@ defmodule LightningWeb.WorkflowLive.UserPresencesTest do
       )
     end
 
+    @tag skip: "Flaky, to be fixed in #2311"
     test "in inspector", %{conn: conn} do
       amy =
         insert(:user,
