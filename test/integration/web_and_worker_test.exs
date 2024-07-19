@@ -4,6 +4,7 @@ defmodule Lightning.WebAndWorkerTest do
 
   import Lightning.JobsFixtures
   import Lightning.Factories
+  import Mox
 
   alias Lightning.Run
   alias Lightning.Runs
@@ -15,7 +16,19 @@ defmodule Lightning.WebAndWorkerTest do
 
   require Run
 
+  setup :set_mox_from_context
+  setup :verify_on_exit!
+
   setup_all context do
+    Mox.stub_with(Lightning.MockConfig, Lightning.Config.API)
+    Mox.stub_with(LightningMock, Lightning.API)
+    Mox.stub_with(Lightning.Tesla.Mock, Tesla.Adapter.Hackney)
+
+    Mox.stub_with(
+      Lightning.Extensions.MockUsageLimiter,
+      Lightning.Extensions.UsageLimiter
+    )
+
     start_runtime_manager(context)
   end
 
@@ -218,10 +231,13 @@ defmodule Lightning.WebAndWorkerTest do
                &(&1.source == "R/T" and &1.message =~ "Operation 1 complete in")
              )
 
-      version_logs =
-        lines
-        |> Enum.find(fn l -> l.source == "VER" end)
-        |> Map.get(:message)
+      {:ok, version_logs} =
+        Repo.transaction(fn ->
+          run
+          |> Runs.get_log_lines()
+          |> Enum.find(fn l -> l.source == "VER" end)
+          |> Map.get(:message)
+        end)
 
       assert version_logs =~ "▸ node.js                  18.17"
       assert version_logs =~ "▸ worker                   1.1"

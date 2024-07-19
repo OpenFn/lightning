@@ -5,12 +5,29 @@ defmodule Lightning.CliDeployTest do
   require Logger
 
   import Lightning.Factories
+  import Mox
 
   alias Lightning.Accounts
 
   @cli_path Application.app_dir(:lightning, "priv/openfn/bin/openfn")
 
   @moduletag tmp_dir: true, integration: true
+
+  setup :set_mox_from_context
+  setup :verify_on_exit!
+
+  setup do
+    Mox.stub_with(Lightning.MockConfig, Lightning.Config.API)
+    Mox.stub_with(LightningMock, Lightning.API)
+    Mox.stub_with(Lightning.Tesla.Mock, Tesla.Adapter.Hackney)
+
+    Mox.stub_with(
+      Lightning.Extensions.MockUsageLimiter,
+      Lightning.Extensions.UsageLimiter
+    )
+
+    :ok
+  end
 
   describe "The openfn CLI can be used to" do
     setup %{tmp_dir: tmp_dir} do
