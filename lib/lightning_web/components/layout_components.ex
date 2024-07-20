@@ -21,25 +21,17 @@ defmodule LightningWeb.LayoutComponents do
         {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
       ) %>
     <% else %>
-      <%= if assigns[:projects] do %>
+      <%= if assigns[:project] do %>
         <Menu.projects_dropdown
           projects={assigns[:projects]}
           selected_project={assigns[:project]}
         />
-      <% else %>
-        <div class="p-2 mb-4 mt-4 text-center text-primary-300 bg-primary-800">
-          <span class="inline-block align-middle text-sm">
-            You don't have access to any projects
-          </span>
-        </div>
-      <% end %>
-
-      <%= if assigns[:project] do %>
         <Menu.project_items
           project_id={@project.id}
           active_menu_item={@active_menu_item}
         />
       <% else %>
+        <div class="my-4"></div>
         <Menu.profile_items active_menu_item={@active_menu_item} />
       <% end %>
     <% end %>
@@ -116,7 +108,7 @@ defmodule LightningWeb.LayoutComponents do
 
               <%!-- If a project is scoped, we automatically generate the base crumbs --%>
               <%= if @project do %>
-                <.breadcrumb>
+                <.breadcrumb path="/projects">
                   <:label>Projects</:label>
                 </.breadcrumb>
                 <.breadcrumb path={"/projects/#{@project.id}/w"}>
@@ -239,13 +231,13 @@ defmodule LightningWeb.LayoutComponents do
           />
         </svg>
         <%= if @path do %>
-          <a
-            href={@path}
+          <.link
+            patch={@path}
             class="flex ml-4 text-sm font-medium text-gray-500 hover:text-gray-700"
             aria-current="page"
           >
             <%= if assigns[:label], do: render_slot(@label) %>
-          </a>
+          </.link>
         <% else %>
           <span class="flex ml-4 text-sm font-medium text-gray-500">
             <%= if assigns[:label], do: render_slot(@label) %>

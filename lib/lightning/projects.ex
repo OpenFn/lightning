@@ -465,7 +465,8 @@ defmodule Lightning.Projects do
     from(p in Project,
       join: pu in assoc(p, :project_users),
       where: pu.user_id == ^user_id and is_nil(p.scheduled_deletion),
-      order_by: p.name
+      order_by: p.name,
+      preload: [:project_users, :workflows]
     )
   end
 

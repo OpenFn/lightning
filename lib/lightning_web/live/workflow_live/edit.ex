@@ -69,7 +69,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         <LayoutComponents.header
           current_user={@current_user}
           project={@project}
-          breadcrumbs={[{"Workflows", "/"}]}
+          breadcrumbs={[{"Workflows", "/projects/#{@project.id}/w"}]}
         >
           <:title>
             <%= @page_title %>
