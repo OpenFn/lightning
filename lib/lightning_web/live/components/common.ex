@@ -16,17 +16,17 @@ defmodule LightningWeb.Components.Common do
 
   def alert(assigns) do
     color = case assigns.type do
-      "info" -> "blue"
       "success" -> "green"
       "warning" -> "yellow"
       "error" -> "red"
+      _info -> "blue"
     end
 
     icon = case assigns.type do
-      "info" -> "hero-exclamation-triangle-solid"
       "success" -> "hero-check-circle-solid"
       "warning" -> "hero-exclamation-triangle-solid"
       "error" -> "hero-x-circle-solid"
+      _info -> "hero-information-circle-solid"
     end
 
     assigns = assign(assigns, color: color, icon: icon)
