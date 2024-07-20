@@ -44,13 +44,13 @@ defmodule LightningWeb.OauthComponentsTest do
     assert render_component(&LightningWeb.Components.Oauth.success_message/1,
              revocation: :unavailable
            ) =~
-             "Success. If your credential is no longer working, you may try to revoke OpenFn access and and re-authenticate. To revoke access, go to the third party apps section of the provider's website or portal."
+             "Success. If your credential is no longer working, you may try to revoke OpenFn access and and reauthenticate. To revoke access, go to the third party apps section of the provider's website or portal."
 
     assert render_component(&LightningWeb.Components.Oauth.success_message/1,
              revocation: :available,
              myself: nil
            ) =~
-             "Success. If your credential is no longer working, you may try to revoke and re-authenticate by clicking"
+             "Success. If your credential is no longer working, you may try to revoke and reauthenticate by clicking"
 
     assert render_component(
              &LightningWeb.Components.Oauth.error_block/1,

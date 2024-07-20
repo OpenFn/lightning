@@ -139,7 +139,7 @@ defmodule LightningWeb.UserAuth do
   end
 
   @doc """
-  Re-Authenticates the user by using the sudo token
+  Reauthenticate the user by using the sudo token
   """
   def reauth_sudo_mode(conn, _opts) do
     conn = ensure_sudo_token(conn)
@@ -267,7 +267,7 @@ defmodule LightningWeb.UserAuth do
   end
 
   @doc """
-  Used for routes that require the user to be re-authenticated.
+  Used for routes that require the user to be reauthenticated.
   """
   def require_sudo_user(conn, _opts) do
     if conn.assigns[:sudo_mode?] do
@@ -313,7 +313,7 @@ defmodule LightningWeb.UserAuth do
   end
 
   @doc """
-  Used for LiveView routes that require the user to be re-authenticated.
+  Used for LiveView routes that require the user to be reauthenticated.
   """
   def on_mount(:ensure_sudo, _params, session, socket) do
     socket = mount_sudo_mode(session, socket)

@@ -1213,7 +1213,7 @@ defmodule LightningWeb.CredentialLiveTest do
              end)
     end
 
-    test "re-authenticate banner is not rendered the first time we pick permissions",
+    test "reauthenticate banner is not rendered the first time we pick permissions",
          %{
            conn: conn,
            user: user
@@ -1247,7 +1247,7 @@ defmodule LightningWeb.CredentialLiveTest do
              |> has_element?("#authorize-button")
     end
 
-    test "re-authenticate banner rendered when scopes are changed",
+    test "reauthenticate banner rendered when scopes are changed",
          %{
            conn: conn,
            user: user
@@ -1822,7 +1822,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
     # TODO - remove entirely once `salesforce_oauth` is removed.
     @tag :skip
-    test "re-authenticate banner is not rendered the first time we pick permissions",
+    test "reauthenticate banner is not rendered the first time we pick permissions",
          %{
            bypass: bypass,
            conn: conn,
@@ -1854,7 +1854,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
     # TODO - remove entirely once `salesforce_oauth` is removed.
     @tag :skip
-    test "re-authenticate banner rendered when scopes are changed",
+    test "reauthenticate banner rendered when scopes are changed",
          %{
            bypass: bypass,
            conn: conn,
