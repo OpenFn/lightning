@@ -11,20 +11,50 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetSupervisorTest do
     end
   end
 
-  describe ".init/1" do
+  describe ".init/1 without worker count" do
     setup do
       pid = start_supervised!(MessageCandidateSetSupervisor)
 
       %{pid: pid}
     end
 
-    test "starts the server and a single worker", %{pid: pid} do
-      assert {:ok, _} = MessageCandidateSetSupervisor.init([])
-
+    test "starts server, and single worker", %{pid: pid} do
       assert [
                {
-                 MessageCandidateSetWorker,
+                 "mcs_worker_0",
                  _w_pid,
+                 :worker,
+                 [MessageCandidateSetWorker]
+               },
+               {
+                 MessageCandidateSetServer,
+                 _s_pid,
+                 :worker,
+                 [MessageCandidateSetServer]
+               }
+             ] = Supervisor.which_children(pid)
+    end
+  end
+
+  describe ".init/1 with worker count" do
+    setup do
+      pid =
+        start_supervised!({MessageCandidateSetSupervisor, number_of_workers: 2})
+
+      %{pid: pid}
+    end
+
+    test "starts server, and requested number of workers", %{pid: pid} do
+      assert [
+               {
+                 "mcs_worker_1",
+                 _w2_pid,
+                 :worker,
+                 [MessageCandidateSetWorker]
+               },
+               {
+                 "mcs_worker_0",
+                 _w1_pid,
                  :worker,
                  [MessageCandidateSetWorker]
                },

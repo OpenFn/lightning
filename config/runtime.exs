@@ -513,6 +513,8 @@ config :lightning, :usage_tracking,
 config :lightning, :kafka_triggers,
   enabled: env!("KAFKA_TRIGGERS_ENABLED", &Utils.ensure_boolean/1, false),
   duplicate_tracking_retention_seconds:
-    env!("KAFKA_DUPLICATE_TRACKING_RETENTION_SECONDS", :integer, 3600)
+    env!("KAFKA_DUPLICATE_TRACKING_RETENTION_SECONDS", :integer, 3600),
+  number_of_message_candidate_set_workers:
+    env!("KAFKA_NUMBER_OF_MESSAGE_CANDIDATE_SET_WORKERS", :integer, 1)
 
 # ==============================================================================

@@ -102,6 +102,10 @@ The following environment variables are required:
 - `OPENAI_API_KEY` - your OpenAI API key.
 - `APOLLO_ENDPOINT` - the endpoint for the OpenFn Apollo AI service.
 
+### Kafka Triggers
+
+🧪 **Experimental**
+
 Lightning workflows can be configured with a trigger that will consume messages
 from a Kafka Cluster. By default this is disabled and you will not see the 
 option to create a Kafka trigger in the UI, nor will the Kafka consumer groups
@@ -111,6 +115,16 @@ To enable this feature set the `KAFKA_TRIGGERS_ENABLED` to `yes` and restart
 Lightning. Please note that, if you enable this feature and then create some
 Kafka triggers and then disable the feature, you will not be able to edit any
 triggers created before the feature was disabled.
+
+Kafka triggers currently rely on the existence of Message Canididate Sets. These
+are a temporary measure to ensure that message sequence for messages with
+identical keys are preserved. As part of this mechanism, Lightning uses
+a MessageCandidatSetWorker to convert messages into WorkOrders. By default, there
+is only one worker process, but the number of workers can be increased by setting
+`KAFKA_NUMBER_OF_MESSAGE_CANDIDATE_SET_WORKERS`. Increasing this may increase the
+rate at which messages received by Kafka are converted to WorkOrders. If you find
+that you have a large number of records in the `trigger_kafka_messages` table,
+then increasing the number of workers may help to reduce this backlog.
 
 ### Other config
 
