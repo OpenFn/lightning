@@ -13,11 +13,21 @@ defmodule Lightning.KafkaTriggers.Supervisor do
   def init(_init_arg) do
     enabled = Application.get_env(:lightning, :kafka_triggers)[:enabled]
 
+    number_of_workers =
+      Application.get_env(:lightning, :kafka_triggers)[
+        :number_of_message_candidate_set_workers
+      ]
+
     children =
       if enabled do
         [
-          {
-            Lightning.KafkaTriggers.MessageCandidateSetSupervisor,
+          %{
+            id: Lightning.KafkaTriggers.MessageCandidateSetSupervisor,
+            start: {
+              Lightning.KafkaTriggers.MessageCandidateSetSupervisor,
+              :start_link,
+              [[number_of_workers: number_of_workers]]
+            },
             type: :supervisor
           },
           {
