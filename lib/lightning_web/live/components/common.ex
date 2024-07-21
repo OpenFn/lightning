@@ -14,20 +14,27 @@ defmodule LightningWeb.Components.Common do
   attr :action_position, :atom, default: :right
   attr :actions, :list, default: []
 
+  @doc """
+  Use an alert to convey critical information about the state of a specific
+  system or artifact (a credential, a job, a workflow, etc.) and provide a type
+  to indicate whether the alert is info, success, warning, or error.
+  """
   def alert(assigns) do
-    color = case assigns.type do
-      "success" -> "green"
-      "warning" -> "yellow"
-      "error" -> "red"
-      _info -> "blue"
-    end
+    color =
+      case assigns.type do
+        "success" -> "green"
+        "warning" -> "yellow"
+        "error" -> "red"
+        _info -> "blue"
+      end
 
-    icon = case assigns.type do
-      "success" -> "hero-check-circle-solid"
-      "warning" -> "hero-exclamation-triangle-solid"
-      "error" -> "hero-x-circle-solid"
-      _info -> "hero-information-circle-solid"
-    end
+    icon =
+      case assigns.type do
+        "success" -> "hero-check-circle-solid"
+        "warning" -> "hero-exclamation-triangle-solid"
+        "error" -> "hero-x-circle-solid"
+        _info -> "hero-information-circle-solid"
+      end
 
     assigns = assign(assigns, color: color, icon: icon)
 
@@ -37,18 +44,26 @@ defmodule LightningWeb.Components.Common do
         <div class="flex-shrink-0">
           <.icon name={@icon} class={"h-5 w-5 text-#{@color}-400"} />
         </div>
-          <div class={["ml-3", assigns[:link_right] && "flex-1 md:flex md:justify-between"]}>
+        <div class={[
+          "ml-3",
+          assigns[:link_right] && "flex-1 md:flex md:justify-between"
+        ]}>
           <%= if @header do %>
-            <h3  class={"text-sm font-medium text-#{@color}-800"}><%= @header %></h3>
+            <h3 class={"text-sm font-medium text-#{@color}-800"}><%= @header %></h3>
             <div class={"mt-2 text-sm text-#{@color}-700"}>
               <%= render_slot(@message) %>
             </div>
           <% else %>
-            <%= render_slot(@message) %>
+            <div class={"text-sm text-#{@color}-700"}>
+              <%= render_slot(@message) %>
+            </div>
           <% end %>
           <%= if assigns[:link_right] do %>
             <p class="mt-3 text-sm md:ml-6 md:mt-0">
-              <a href={@link_right.target} class={"whitespace-nowrap font-medium text-#{@color}-700 hover:text-#{@color}-600"}>
+              <a
+                href={@link_right.target}
+                class={"whitespace-nowrap font-medium text-#{@color}-700 hover:text-#{@color}-600"}
+              >
                 <%= @link_right.text %>
                 <span aria-hidden="true"> &rarr;</span>
               </a>
@@ -57,22 +72,21 @@ defmodule LightningWeb.Components.Common do
           <% else %>
             <div :if={@actions} class={["mt-4"]}>
               <div class="-mx-2 -my-1.5 flex">
-              <%= for item <- @actions do %>
-                <%= case item do %>
-                  <% {text, click, target} -> %>
-                    <button
-                      type="button"
-                      phx-click={click}
-                      phx-target={target}
-                      class={"rounded-md bg-#{@color}-50 px-2 py-1.5 text-sm font-medium text-#{@color}-800 hover:bg-#{@color}-100 focus:outline-none focus:ring-2 focus:ring-#{@color}-600 focus:ring-offset-2 focus:ring-offset-#{@color}-50"}
-                    >
-                      <%= text %>
-                    </button>
-
-                  <% element -> %>
-                    <%= element %>
+                <%= for item <- @actions do %>
+                  <%= case item do %>
+                    <% {text, click, target} -> %>
+                      <button
+                        type="button"
+                        phx-click={click}
+                        phx-target={target}
+                        class={"rounded-md bg-#{@color}-50 px-2 py-1.5 text-sm font-medium text-#{@color}-800 hover:bg-#{@color}-100 focus:outline-none focus:ring-2 focus:ring-#{@color}-600 focus:ring-offset-2 focus:ring-offset-#{@color}-50"}
+                      >
+                        <%= text %>
+                      </button>
+                    <% element -> %>
+                      <%= element %>
                   <% end %>
-              <% end %>
+                <% end %>
               </div>
             </div>
           <% end %>

@@ -97,13 +97,36 @@ defmodule LightningWeb.Components.Oauth do
     """
   end
 
+  defp reauthorize_button(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:class, fn -> "" end)
+      |> assign(:button_class, "link #{assigns.class}")
+
+    ~H"""
+    <button
+      id={@id}
+      phx-target={@target}
+      phx-click="re_authorize_click"
+      class={@button_class}
+    >
+      <%= render_slot(@inner_block) %>
+    </button>
+    """
+  end
+
   def success_message(%{revocation: :available} = assigns) do
     ~H"""
     <Common.alert type="success">
       <:message>
-        Success. If your credential is no longer working, you may try to revoke and reauthenticate by clicking
-        <.reauthorize_button id="re-authorize-button" target={@myself}>
-          here.
+        Success. If your credential is no longer working, you may try to revoke
+        and reauthenticate by clicking
+        <.reauthorize_button
+          id="re-authorize-button"
+          class="link-success"
+          target={@myself}
+        >
+          here <span aria-hidden="true"> &rarr;</span>
         </.reauthorize_button>
       </:message>
     </Common.alert>
@@ -114,23 +137,11 @@ defmodule LightningWeb.Components.Oauth do
     ~H"""
     <Common.alert type="success">
       <:message>
-        Success. If your credential is no longer working, you may try to revoke OpenFn access and and reauthenticate. To revoke access, go to the third party apps section of the provider's website or portal.
+        Success. If your credential is no longer working, you may try to revoke
+        OpenFn access and and reauthenticate. To revoke access, go to the third
+        party apps section of the provider's website or portal.
       </:message>
     </Common.alert>
-    """
-  end
-
-  defp reauthorize_button(assigns) do
-    ~H"""
-    <.link
-      id={@id}
-      href="#"
-      phx-target={@target}
-      phx-click="re_authorize_click"
-      class="hover:underline text-primary-900"
-    >
-      <%= render_slot(@inner_block) %>
-    </.link>
     """
   end
 
@@ -138,9 +149,13 @@ defmodule LightningWeb.Components.Oauth do
     ~H"""
     <Common.alert type="warning" header="Something went wrong.">
       <:message>
-      Failed retrieving the token from the provider. Please try again
-        <.reauthorize_button id="re-authorize-button" target={@myself}>
-          here
+        Failed retrieving the token from the provider. Please try again
+        <.reauthorize_button
+          id="re-authorize-button"
+          class="link-warning"
+          target={@myself}
+        >
+          here <span aria-hidden="true"> &rarr;</span>
         </.reauthorize_button>
       </:message>
     </Common.alert>
@@ -151,9 +166,9 @@ defmodule LightningWeb.Components.Oauth do
     ~H"""
     <Common.alert type="danger" header="Something went wrong.">
       <:message>
-      Token revocation failed. The token associated with this credential may
-      have already been revoked or expired. Please delete this credential and
-      create a new one.
+        Token revocation failed. The token associated with this credential may
+        have already been revoked or expired. Please delete this credential and
+        create a new one.
       </:message>
     </Common.alert>
     """
@@ -164,8 +179,12 @@ defmodule LightningWeb.Components.Oauth do
     <Common.alert type="warning" header="Something went wrong.">
       <:message>
         Failed renewing your access token. Please request a new token by clicking
-        <.reauthorize_button id="re-authorize-button" target={@myself}>
-          here
+        <.reauthorize_button
+          id="re-authorize-button"
+          class="link-warning"
+          target={@myself}
+        >
+          here <span aria-hidden="true"> &rarr;</span>
         </.reauthorize_button>
       </:message>
     </Common.alert>
@@ -174,13 +193,17 @@ defmodule LightningWeb.Components.Oauth do
 
   def error_block(%{type: :userinfo_failed} = assigns) do
     ~H"""
-    <Common.alert
-      type="info"
-      actions={[{"Try again", "try_userinfo_again", @myself}]}
-    >
+    <Common.alert type="info">
       <:message>
-      That seemed to work, but we couldn't fetch your user information. You can
-      save your credential now or try again.
+        That worked, but we couldn't fetch your user information. You can save
+        your credential now or
+        <button
+          class="link link-info"
+          phx-click="try_userinfo_again"
+          phx-target={@myself}
+        >
+          try again <span aria-hidden="true"> &rarr;</span>
+        </button>
       </:message>
     </Common.alert>
     """
@@ -190,13 +213,18 @@ defmodule LightningWeb.Components.Oauth do
     ~H"""
     <Common.alert type="danger" header="Missing refresh token">
       <:message>
-      We didn't receive a refresh token from this provider. Sometimes this happens
-      if you have already granted access to OpenFn via another credential. If you
-      have another credential, please use that one. If you don't, please revoke
-      OpenFn's access to your provider via the "third party apps" section of their
-      website. Once that is done, you can try to reauthorize
-        <.reauthorize_button id="re-authorize-button" target={@myself}>
-          here
+        We didn't receive a refresh token from this provider. Sometimes this
+        happens if you have already granted access to OpenFn via another
+        credential. If you have another credential, please use that one. If you
+        don't, please revoke OpenFn's access to your provider via the "third
+        party apps" section of their website. Once that is done, you can try to
+        reauthorize
+        <.reauthorize_button
+          id="re-authorize-button"
+          class="link-danger"
+          target={@myself}
+        >
+          here <span aria-hidden="true"> &rarr;</span>
         </.reauthorize_button>
       </:message>
     </Common.alert>
@@ -208,8 +236,12 @@ defmodule LightningWeb.Components.Oauth do
     <Common.alert type="danger" header="Something went wrong.">
       <:message>
         Failed retrieving authentication code. Please reauthorize
-        <.reauthorize_button id="re-authorize-button" target={@myself}>
-          here
+        <.reauthorize_button
+          id="re-authorize-button"
+          class="link-danger"
+          target={@myself}
+        >
+          here <span aria-hidden="true"> &rarr;</span>
         </.reauthorize_button>
       </:message>
     </Common.alert>
@@ -220,7 +252,8 @@ defmodule LightningWeb.Components.Oauth do
     ~H"""
     <Common.alert type="danger" header="OAuth client not found">
       <:message>
-      The associated Oauth client for this credential cannot be found. Create a new client or contact your administrator.
+        The associated Oauth client for this credential cannot be found. Create
+        a new client or contact your administrator.
       </:message>
     </Common.alert>
     """
@@ -228,12 +261,17 @@ defmodule LightningWeb.Components.Oauth do
 
   def reauthorize_banner(assigns) do
     ~H"""
-    <Common.alert type="info">
+    <Common.alert type="warning" header="Reauthentication required">
       <:message>
-      Please reauthenticate to save your credential with the updated scopes by clicking
-      <.reauthorize_button id="re-authorize-button" target={@myself}>
-        here <span aria-hidden="true"> &rarr;</span>
-      </.reauthorize_button>
+        Please reauthenticate to save your credential with the updated scopes by
+        clicking
+        <.reauthorize_button
+          id="re-authorize-button"
+          class="link-warning"
+          target={@myself}
+        >
+          here <span aria-hidden="true"> &rarr;</span>
+        </.reauthorize_button>
       </:message>
     </Common.alert>
     """
