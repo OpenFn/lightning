@@ -1,7 +1,8 @@
-defmodule LightningWeb.ProjectLive.NewProjectModal do
+defmodule LightningWeb.DashboardLive.NewProjectModal do
+  use LightningWeb, :live_component
+
   alias Lightning.Projects
   alias Lightning.Projects.Project
-  use LightningWeb, :live_component
 
   @impl true
   def update(assigns, socket) do

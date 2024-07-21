@@ -14,8 +14,7 @@ defmodule LightningWeb.DashboardLiveTest do
     } do
       {:ok, _view, html} = live(conn, ~p"/")
 
-      assert html =~
-               "No projects found. If this seems odd, contact your instance administrator."
+      assert html =~ "No projects found. Create a new one."
 
       assert html =~ "User Profile"
       assert html =~ "Credentials"
@@ -36,22 +35,6 @@ defmodule LightningWeb.DashboardLiveTest do
              |> element("nav#side-menu a", "Credentials")
              |> render_click()
              |> follow_redirect(conn, ~p"/credentials")
-    end
-  end
-
-  describe "Index redirects to show" do
-    setup :register_and_log_in_user
-    setup :create_project_for_current_user
-
-    test "User is assigned a project, should redirect", %{
-      conn: conn,
-      project: project
-    } do
-      {:ok, _view, html} =
-        live(conn, ~p"/")
-        |> follow_redirect(conn, ~p"/projects/#{project.id}/w")
-
-      assert html =~ "Create new workflow"
     end
   end
 end

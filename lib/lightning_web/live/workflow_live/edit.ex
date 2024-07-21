@@ -1019,7 +1019,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         id: Ecto.UUID.generate()
       })
     end
-    |> assign(page_title: "New Workflow")
+    |> assign(page_title: params["name"])
   end
 
   def apply_action(socket, :edit, %{"id" => workflow_id} = params) do

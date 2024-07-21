@@ -12,7 +12,7 @@ defmodule LightningWeb.MFARequiredLiveTest do
       {:ok, view, html} = live(conn, "/mfa_required")
 
       assert html =~
-               "This project requires all members to enabled multi-factor authentication"
+               "This project requires all members to use multi-factor authentication."
 
       assert view |> element(~s{[href="/profile"]}) |> has_element?()
     end

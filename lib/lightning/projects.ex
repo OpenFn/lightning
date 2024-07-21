@@ -460,19 +460,44 @@ defmodule Lightning.Projects do
     |> Repo.all()
   end
 
-  @spec projects_for_user_query(user :: User.t()) :: Ecto.Queryable.t()
-  def projects_for_user_query(%User{id: user_id}) do
+  @doc """
+  Builds a query to retrieve projects associated with a user.
+
+  ## Parameters
+    - user: The user struct for which projects are being queried.
+    - opts: Keyword list of options including :include for associations to preload.
+
+  ## Returns
+    - An Ecto queryable struct to fetch projects.
+  """
+  @spec projects_for_user_query(user :: User.t(), opts :: keyword()) ::
+          Ecto.Queryable.t()
+  def projects_for_user_query(%User{id: user_id}, opts \\ []) do
+    include = Keyword.get(opts, :include, [])
+
     from(p in Project,
       join: pu in assoc(p, :project_users),
       where: pu.user_id == ^user_id and is_nil(p.scheduled_deletion),
       order_by: p.name,
-      preload: [:project_users, :workflows]
+      preload: ^include
     )
   end
 
-  @spec get_projects_for_user(user :: User.t()) :: [Project.t()]
-  def get_projects_for_user(user) do
-    projects_for_user_query(user)
+  @doc """
+  Fetches projects for a given user from the database.
+
+  ## Parameters
+    - user: The user struct for which projects are being queried.
+    - opts: Keyword list of options including :include for associations to preload.
+
+  ## Returns
+    - A list of projects associated with the user.
+  """
+  @spec get_projects_for_user(user :: User.t(), opts :: keyword()) :: [
+          Project.t()
+        ]
+  def get_projects_for_user(%User{} = user, opts \\ []) do
+    projects_for_user_query(user, opts)
     |> Repo.all()
   end
 
