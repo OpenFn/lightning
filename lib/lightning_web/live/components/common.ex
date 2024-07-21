@@ -6,6 +6,7 @@ defmodule LightningWeb.Components.Common do
 
   alias Phoenix.LiveView.JS
 
+  attr :id, :string, default: "alert"
   attr :type, :string, required: true
   attr :header, :string, default: nil
   slot :message
@@ -39,7 +40,7 @@ defmodule LightningWeb.Components.Common do
     assigns = assign(assigns, color: color, icon: icon)
 
     ~H"""
-    <div class={"rounded-md bg-#{@color}-50 p-4"}>
+    <div id={@id} class={"rounded-md bg-#{@color}-50 p-4"}>
       <div class="flex">
         <div class="flex-shrink-0">
           <.icon name={@icon} class={"h-5 w-5 text-#{@color}-400"} />

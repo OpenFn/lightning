@@ -75,7 +75,7 @@ defmodule LightningWeb.OauthComponentsTest do
              myself: nil,
              provider: "Salesforce"
            ) =~
-             "That seemed to work, but we couldn't fetch your user information. You can save your credential now or try again."
+             "That worked, but we couldn't fetch your user information. You can save your credential now or"
 
     assert render_component(&LightningWeb.Components.Oauth.error_block/1,
              type: :code_failed,
