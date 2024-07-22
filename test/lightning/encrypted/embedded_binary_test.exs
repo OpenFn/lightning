@@ -1,14 +1,14 @@
-defmodule Lightning.Encrypted.BinaryTest do
+defmodule Lightning.Encrypted.EmbeddedBinaryTest do
   use Lightning.DataCase, async: true
 
-  alias Lightning.Encrypted.Binary
+  alias Lightning.Encrypted.EmbeddedBinary
 
   test "dump/1 with nil input" do
-    assert {:ok, nil} = Binary.dump(nil)
+    assert {:ok, nil} = EmbeddedBinary.dump(nil)
   end
 
   test "load/1 with nil input" do
-    assert {:ok, nil} = Binary.load(nil)
+    assert {:ok, nil} = EmbeddedBinary.load(nil)
   end
 
   test "dump/1 and load/1 round-trip with non-trivial input" do
@@ -16,13 +16,13 @@ defmodule Lightning.Encrypted.BinaryTest do
       %{foo: "bar"}
       |> Jason.encode!()
 
-    assert {:ok, encoded} = Binary.dump(input)
+    assert {:ok, encoded} = EmbeddedBinary.dump(input)
 
     refute encoded == input
 
     assert {:ok, _encrypted} = Base.decode64(encoded)
 
-    assert {:ok, decrypted} = Binary.load(encoded)
+    assert {:ok, decrypted} = EmbeddedBinary.load(encoded)
 
     assert decrypted == input
   end

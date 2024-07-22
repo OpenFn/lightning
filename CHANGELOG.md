@@ -26,6 +26,8 @@ and this project adheres to
 
 - Fix work order URL in failure alerts
   [#2305](https://github.com/OpenFn/lightning/pull/2305)
+- Fix error when handling existing encrypted credentials
+  [#2316](https://github.com/OpenFn/lightning/issues/2316)
 
 ## [v2.7.7] - 2024-07-18
 
