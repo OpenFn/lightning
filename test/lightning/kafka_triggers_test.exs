@@ -433,6 +433,11 @@ defmodule Lightning.KafkaTriggersTest do
 
   describe ".generate_pipeline_child_spec/1" do
     test "generates a child spec based on a kafka trigger" do
+      number_of_consumers =
+        Application.get_env(:lightning, :kafka_triggers)[:number_of_consumers]
+
+      assert number_of_consumers != nil
+
       trigger =
         insert(
           :trigger,
@@ -441,13 +446,24 @@ defmodule Lightning.KafkaTriggersTest do
           enabled: true
         )
 
-      expected_child_spec = child_spec(trigger: trigger, index: 1)
+      expected_child_spec =
+        child_spec(
+          trigger: trigger,
+          index: 1,
+          number_of_consumers: number_of_consumers
+        )
+
       actual_child_spec = KafkaTriggers.generate_pipeline_child_spec(trigger)
 
       assert actual_child_spec == expected_child_spec
     end
 
     test "generates a child spec based on a kafka trigger that has no auth" do
+      number_of_consumers =
+        Application.get_env(:lightning, :kafka_triggers)[:number_of_consumers]
+
+      assert number_of_consumers != nil
+
       trigger =
         insert(
           :trigger,
@@ -456,7 +472,14 @@ defmodule Lightning.KafkaTriggersTest do
           enabled: true
         )
 
-      expected_child_spec = child_spec(trigger: trigger, index: 1, sasl: false)
+      expected_child_spec =
+        child_spec(
+          trigger: trigger,
+          index: 1,
+          sasl: false,
+          number_of_consumers: number_of_consumers
+        )
+
       actual_child_spec = KafkaTriggers.generate_pipeline_child_spec(trigger)
 
       assert actual_child_spec == expected_child_spec
@@ -754,6 +777,13 @@ defmodule Lightning.KafkaTriggersTest do
     sasl = opts |> Keyword.get(:sasl, true)
     ssl = opts |> Keyword.get(:ssl, true)
 
+    number_of_consumers =
+      opts
+      |> Keyword.get(
+        :number_of_consumers,
+        Application.get_env(:lightning, :kafka_triggers)[:number_of_consumers]
+      )
+
     offset_timestamp = "171524976732#{index}" |> String.to_integer()
 
     %{
@@ -763,6 +793,7 @@ defmodule Lightning.KafkaTriggersTest do
         :start_link,
         [
           [
+            number_of_consumers: number_of_consumers,
             connect_timeout: (30 + index) * 1000,
             group_id: "lightning-#{index}",
             hosts: [{"host-#{index}", 9092}, {"other-host-#{index}", 9093}],

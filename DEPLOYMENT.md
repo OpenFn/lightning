@@ -142,6 +142,11 @@ The MessageCandidateSetWorker has two configurable processing delays:
   set by configuring the `KAFKA_NO_MESSAGE_CANDIDATE_SET_DELAY_MILLISECONDS`
   environment variable. The default value is currently 10000ms.
 
+The number of Kafka consumers in the consumer group can be modified by setting
+the `KAFKA_NUMBER_OF_CONSUMERS` environment variable. The default value is
+currently 1. The optimal setting is one consumer per topic partition. NOTE:
+This setting will move to KafkaConfiguration as it will be trigger-specific.
+
 ### Other config
 
 - `ADAPTORS_PATH` - where you store your locally installed adaptors

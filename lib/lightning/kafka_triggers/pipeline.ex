@@ -15,6 +15,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
   require Logger
 
   def start_link(opts) do
+    number_of_consumers = opts |> Keyword.get(:number_of_consumers)
     trigger_id = opts |> Keyword.get(:trigger_id)
 
     Broadway.start_link(__MODULE__,
@@ -27,7 +28,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
           BroadwayKafka.Producer,
           build_producer_opts(opts)
         },
-        concurrency: 1
+        concurrency: number_of_consumers
       ],
       processors: [
         default: [
