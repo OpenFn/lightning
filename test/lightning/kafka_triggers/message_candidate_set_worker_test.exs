@@ -6,40 +6,63 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetWorkerTest do
   alias Lightning.KafkaTriggers.TriggerKafkaMessage
   alias Lightning.WorkOrder
 
+  setup do
+    %{state: [no_set_delay: 200, next_set_delay: 100]}
+  end
+
   describe ".start_link/1" do
-    test "successfully starts the worker with empty state" do
-      assert _pid = start_supervised!(MessageCandidateSetWorker)
+    test "successfully starts the worker with options", %{
+      state: opts
+    } do
+      assert pid = start_supervised!({MessageCandidateSetWorker, opts})
+
+      assert :sys.get_state(pid) == opts
     end
   end
 
   describe ".init/1" do
-    test "successfully starts the worker with empty state" do
-      {:ok, []} = MessageCandidateSetWorker.init([])
+    test "successfully starts the worker with requested state", %{
+      state: state
+    } do
+      assert {:ok, ^state} = MessageCandidateSetWorker.init(state)
     end
 
-    test "queues a message to trigger a request to request a candidate set" do
-      MessageCandidateSetWorker.init([])
+    test "enqueues a message to trigger a request for a candidate set", %{
+      state: state
+    } do
+      MessageCandidateSetWorker.init(state)
 
-      assert_receive :request_candidate_set, 1500
+      assert_receive :request_candidate_set, 1100
     end
   end
 
-  describe ".handle_info :requst_candidate_set - no candidate set available" do
+  describe ".handle_info :request_candidate_set - no candidate set available" do
     setup do
       {:ok, _server_pid} = start_supervised(MessageCandidateSetServer)
 
       :ok
     end
 
-    test "it enqueues a request to trigger the action after a delay" do
-      MessageCandidateSetWorker.handle_info(:request_candidate_set, [])
+    test "enqueues a request to repeat the lookup after a delay" do
+      delay = 100
 
-      assert_receive :request_candidate_set, 2500
+      state = [no_set_delay: delay, next_set_delay: delay * 10]
+
+      MessageCandidateSetWorker.handle_info(:request_candidate_set, state)
+
+      assert_receive :request_candidate_set, delay + 100
+    end
+
+    test "returns the passed in state", %{state: state} do
+      response =
+        MessageCandidateSetWorker.handle_info(:request_candidate_set, state)
+
+      assert response == {:noreply, state}
     end
   end
 
   describe ".handle_info :request_candidate_set - candidate set available" do
-    setup do
+    setup context do
       message =
         insert(
           :trigger_kafka_message,
@@ -49,15 +72,14 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetWorkerTest do
 
       {:ok, _server_pid} = start_supervised(MessageCandidateSetServer)
 
-      %{
-        message: message
-      }
+      context |> Map.merge(%{message: message})
     end
 
     test "processes the candidate for the candidate set", %{
-      message: message
+      message: message,
+      state: state
     } do
-      MessageCandidateSetWorker.handle_info(:request_candidate_set, [])
+      MessageCandidateSetWorker.handle_info(:request_candidate_set, state)
 
       assert %{work_order: %WorkOrder{}} =
                TriggerKafkaMessage
@@ -65,10 +87,21 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetWorkerTest do
                |> Repo.preload(:work_order)
     end
 
-    test "it enqueues a request to trigger the action after a delay" do
-      MessageCandidateSetWorker.handle_info(:request_candidate_set, [])
+    test "enqueues a request to trigger the action after a delay" do
+      delay = 100
 
-      assert_receive :request_candidate_set, 1500
+      state = [no_set_delay: delay * 10, next_set_delay: delay]
+
+      MessageCandidateSetWorker.handle_info(:request_candidate_set, state)
+
+      assert_receive :request_candidate_set, delay + 100
+    end
+
+    test "returns the passed in state", %{state: state} do
+      response =
+        MessageCandidateSetWorker.handle_info(:request_candidate_set, state)
+
+      assert response == {:noreply, state}
     end
   end
 end

@@ -67,4 +67,40 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetSupervisorTest do
              ] = Supervisor.which_children(pid)
     end
   end
+
+  describe ".generate_worker_specs/1" do
+    test "generates the requested number of worker specs" do
+      no_set_delay =
+        Application.get_env(:lightning, :kafka_triggers)[
+          :no_message_candidate_set_delay_milliseconds
+        ]
+
+      next_set_delay =
+        Application.get_env(:lightning, :kafka_triggers)[
+          :next_message_candidate_set_delay_milliseconds
+        ]
+
+      assert no_set_delay != nil
+      assert next_set_delay != nil
+
+      expected = [
+        Supervisor.child_spec(
+          {
+            MessageCandidateSetWorker,
+            [no_set_delay: no_set_delay, next_set_delay: next_set_delay]
+          },
+          id: "mcs_worker_0"
+        ),
+        Supervisor.child_spec(
+          {
+            MessageCandidateSetWorker,
+            [no_set_delay: no_set_delay, next_set_delay: next_set_delay]
+          },
+          id: "mcs_worker_1"
+        )
+      ]
+
+      assert MessageCandidateSetSupervisor.generate_worker_specs(2) == expected
+    end
+  end
 end
