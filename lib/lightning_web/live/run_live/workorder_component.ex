@@ -197,7 +197,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                   ~p"/projects/#{@work_order.workflow.project_id}/history?filters[workorder_id]=#{@work_order.id}"
                 }>
                   <span
-                    class="link link-plain text-xs text-ellipsis font-mono inline-block"
+                    class="link font-normal text-xs text-ellipsis font-mono inline-block"
                     title={@work_order.id}
                   >
                     <%= display_short_uuid(@work_order.id) %>
