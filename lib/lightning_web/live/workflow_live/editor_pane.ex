@@ -78,6 +78,8 @@ defmodule LightningWeb.WorkflowLive.EditorPane do
     {:noreply, socket}
   end
 
+  # NOTE: This is dead code and should probably be removed. All events are
+  # being handled by 'push-change' in the parent liveview
   def handle_event("job_body_changed", %{"source" => source}, socket) do
     params =
       {socket.assigns.form[:body].name, source}

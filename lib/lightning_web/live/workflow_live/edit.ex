@@ -330,7 +330,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     >
                       <.button
                         type="button"
-                        class="rounded-l-none pr-1 pl-1 focus:ring-inset"
+                        class="h-full rounded-l-none pr-1 pl-1 focus:ring-inset"
                         id="option-menu-button"
                         aria-expanded="true"
                         aria-haspopup="true"
@@ -1407,14 +1407,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("push-change", %{"patches" => patches}, socket) do
-    %{workflow: workflow, snapshot: snapshot} = socket.assigns
     # Apply the incoming patches to the current workflow params producing a new
     # set of params.
     {:ok, params} =
       WorkflowParams.apply_patches(socket.assigns.workflow_params, patches)
 
     version_type =
-      if snapshot == nil or workflow.lock_version == snapshot.lock_version do
+      if socket.assigns.snapshot_version_tag == "latest" do
         :workflow
       else
         :snapshot
@@ -1610,11 +1609,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   @impl true
-  def handle_info({"form_changed", %{"workflow" => params}}, socket) do
+  def handle_info({"form_changed", %{"workflow" => params}} = event, socket) do
+    dbg(event)
     {:noreply, handle_new_params(socket, params, :workflow)}
   end
 
-  def handle_info({"form_changed", %{"snapshot" => params}}, socket) do
+  def handle_info({"form_changed", %{"snapshot" => params}} = event, socket) do
+    dbg(event)
     {:noreply, handle_new_params(socket, params, :snapshot)}
   end
 
