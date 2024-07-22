@@ -237,11 +237,13 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
          selected_client <- socket.assigns.selected_client,
          authorize_url <- socket.assigns.authorize_url,
          {:ok, _response} <- OauthHTTPClient.revoke_token(selected_client, body) do
-      {:noreply,
-       socket
-       |> assign(code: nil)
-       |> push_event("open_authorize_url", %{url: authorize_url})
-       |> assign(oauth_progress: :started)}
+      {
+        :noreply,
+        socket
+        |> assign(code: nil)
+        |> push_event("open_authorize_url", %{url: authorize_url})
+        |> assign(oauth_progress: :started)
+      }
     else
       {:error, reason} ->
         Logger.info(

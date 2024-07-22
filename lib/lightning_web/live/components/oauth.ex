@@ -106,6 +106,7 @@ defmodule LightningWeb.Components.Oauth do
     ~H"""
     <button
       id={@id}
+      type="button"
       phx-target={@target}
       phx-click="re_authorize_click"
       class={@button_class}

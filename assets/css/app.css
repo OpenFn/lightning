@@ -286,6 +286,7 @@ div.line-num::before {
       underline-offset-2
       hover:underline hover:underline-offset-2
       whitespace-nowrap
+      inline-block
       font-medium
       text-indigo-400 hover:text-indigo-500;
   }

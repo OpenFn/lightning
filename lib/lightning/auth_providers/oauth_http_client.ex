@@ -27,7 +27,10 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
       client_secret: client.client_secret
     }
 
-    Tesla.client([Tesla.Middleware.FormUrlencoded])
+    Tesla.client([
+      Tesla.Middleware.FormUrlencoded,
+      Tesla.Middleware.FollowRedirects
+    ])
     |> post(client.revocation_endpoint, body)
     |> handle_resp([200])
   end
@@ -202,17 +205,27 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
     |> handle_resp([200])
   end
 
-  defp handle_resp(result, success_statuses) do
-    case result do
-      {:ok, %Tesla.Env{status: status, body: body}} ->
-        if status in success_statuses do
-          Jason.decode(body)
-        else
-          {:error, "#{inspect(body)}"}
-        end
+  defp handle_resp(
+         {:ok, %Tesla.Env{status: status, body: body}},
+         expected_statuses
+       ) do
+    if status in expected_statuses do
+      case body do
+        "" ->
+          {:ok, %{}}
 
-      {:error, reason} ->
-        {:error, "#{inspect(reason)}"}
+        _ ->
+          case Jason.decode(body) do
+            {:ok, decoded_body} -> {:ok, decoded_body}
+            {:error, reason} -> {:error, reason}
+          end
+      end
+    else
+      {:error, inspect(body)}
     end
+  end
+
+  defp handle_resp({:error, reason}, _expected_statuses) do
+    {:error, inspect(reason)}
   end
 end
