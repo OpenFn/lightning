@@ -1279,7 +1279,6 @@ defmodule LightningWeb.CredentialLiveTest do
              |> has_element?("#scope_selection_new")
 
       refute index_live |> has_element?("#re-authorize-banner")
-      refute index_live |> has_element?("#re-authorize-button")
 
       oauth_client.optional_scopes
       |> String.split(",")
@@ -1290,7 +1289,7 @@ defmodule LightningWeb.CredentialLiveTest do
       end)
 
       assert index_live |> has_element?("#re-authorize-banner")
-      assert index_live |> has_element?("#re-authorize-button")
+      assert index_live |> has_element?("#authorize-button")
     end
 
     test "correctly renders a valid existing token", %{
