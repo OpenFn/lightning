@@ -511,9 +511,10 @@ config :lightning, :usage_tracking,
   daily_batch_size: env!("USAGE_TRACKING_DAILY_BATCH_SIZE", :integer, 10)
 
 config :lightning, :kafka_triggers,
-  enabled: env!("KAFKA_TRIGGERS_ENABLED", &Utils.ensure_boolean/1, false),
+  consumer_concurrency: env!("KAFKA_CONSUMER_CONCURRENCY", :integer, 10),
   duplicate_tracking_retention_seconds:
     env!("KAFKA_DUPLICATE_TRACKING_RETENTION_SECONDS", :integer, 3600),
+  enabled: env!("KAFKA_TRIGGERS_ENABLED", &Utils.ensure_boolean/1, false),
   next_message_candidate_set_delay_milliseconds:
     env!(
       "KAFKA_NEXT_MESSAGE_CANDIDATE_SET_DELAY_MILLISECONDS",

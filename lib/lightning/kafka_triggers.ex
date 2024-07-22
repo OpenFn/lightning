@@ -123,6 +123,9 @@ defmodule Lightning.KafkaTriggers do
 
     offset_reset_policy = determine_offset_reset_policy(trigger)
 
+    concurrency =
+      Application.get_env(:lightning, :kafka_triggers)[:consumer_concurrency]
+
     %{
       id: trigger.id,
       start: {
@@ -130,6 +133,7 @@ defmodule Lightning.KafkaTriggers do
         :start_link,
         [
           [
+            concurrency: concurrency,
             connect_timeout: connect_timeout * 1000,
             group_id: group_id,
             hosts: hosts,
