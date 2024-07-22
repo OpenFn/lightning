@@ -142,6 +142,11 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
   @impl true
   def handle_async(:token, {:ok, {:ok, token}}, socket) do
+    token =
+      socket.assigns.changeset.params
+      |> Map.get("body", %{})
+      |> Map.merge(token)
+
     params = Map.put(socket.assigns.changeset.params, "body", token)
     changeset = Credentials.change_credential(socket.assigns.credential, params)
     credential = Ecto.Changeset.apply_changes(changeset)
