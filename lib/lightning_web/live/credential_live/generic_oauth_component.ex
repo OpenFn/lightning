@@ -601,7 +601,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
               }
               myself={@myself}
             />
-            <.error_block
+            <.alert_block
               :if={@display_error}
               type={@oauth_progress}
               myself={@myself}

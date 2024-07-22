@@ -153,7 +153,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
         userinfo={@userinfo.result}
         authorize_url={@authorize_url}
       />
-      <.error_block
+      <.alert_block
         :if={@display_error}
         type={@oauth_progress}
         myself={@myself}

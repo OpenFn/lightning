@@ -53,7 +53,7 @@ defmodule LightningWeb.OauthComponentsTest do
              "Success. If your credential is no longer working, you may try to revoke and reauthenticate by clicking"
 
     assert render_component(
-             &LightningWeb.Components.Oauth.error_block/1,
+             &LightningWeb.Components.Oauth.alert_block/1,
              type: :token_failed,
              authorize_url: "https://www",
              myself: nil,
@@ -61,7 +61,7 @@ defmodule LightningWeb.OauthComponentsTest do
            ) =~ "Failed retrieving the token from the provider"
 
     assert render_component(
-             &LightningWeb.Components.Oauth.error_block/1,
+             &LightningWeb.Components.Oauth.alert_block/1,
              type: :refresh_failed,
              authorize_url: "https://www",
              myself: nil,
@@ -69,7 +69,7 @@ defmodule LightningWeb.OauthComponentsTest do
            ) =~ "Failed renewing your access token"
 
     assert render_component(
-             &LightningWeb.Components.Oauth.error_block/1,
+             &LightningWeb.Components.Oauth.alert_block/1,
              type: :userinfo_failed,
              authorize_url: "https://www",
              myself: nil,
@@ -77,7 +77,7 @@ defmodule LightningWeb.OauthComponentsTest do
            ) =~
              "That worked, but we couldn't fetch your user information. You can save your credential now or"
 
-    assert render_component(&LightningWeb.Components.Oauth.error_block/1,
+    assert render_component(&LightningWeb.Components.Oauth.alert_block/1,
              type: :code_failed,
              authorize_url: "https://www",
              myself: nil,
@@ -85,13 +85,13 @@ defmodule LightningWeb.OauthComponentsTest do
            ) =~ "Failed retrieving authentication code."
 
     assert render_component(
-             &LightningWeb.Components.Oauth.error_block/1,
+             &LightningWeb.Components.Oauth.alert_block/1,
              type: :revoke_failed
            ) =~
              "Token revocation failed. The token associated with this credential may have already been revoked or expired. Please delete this credential and create a new one."
 
     assert render_component(
-             &LightningWeb.Components.Oauth.error_block/1,
+             &LightningWeb.Components.Oauth.alert_block/1,
              type: :missing_required,
              authorize_url: "https://www",
              myself: nil,

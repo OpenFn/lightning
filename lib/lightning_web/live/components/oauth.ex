@@ -143,7 +143,7 @@ defmodule LightningWeb.Components.Oauth do
     """
   end
 
-  def error_block(%{type: :token_failed} = assigns) do
+  def alert_block(%{type: :token_failed} = assigns) do
     ~H"""
     <Common.alert type="warning" header="Something went wrong.">
       <:message>
@@ -162,7 +162,7 @@ defmodule LightningWeb.Components.Oauth do
     """
   end
 
-  def error_block(%{type: :revoke_failed} = assigns) do
+  def alert_block(%{type: :revoke_failed} = assigns) do
     ~H"""
     <Common.alert type="danger" header="Something went wrong.">
       <:message>
@@ -174,7 +174,7 @@ defmodule LightningWeb.Components.Oauth do
     """
   end
 
-  def error_block(%{type: :refresh_failed} = assigns) do
+  def alert_block(%{type: :refresh_failed} = assigns) do
     ~H"""
     <Common.alert type="warning" header="Something went wrong.">
       <:message>
@@ -193,7 +193,7 @@ defmodule LightningWeb.Components.Oauth do
     """
   end
 
-  def error_block(%{type: :userinfo_failed} = assigns) do
+  def alert_block(%{type: :userinfo_failed} = assigns) do
     ~H"""
     <Common.alert type="info">
       <:message>
@@ -213,8 +213,7 @@ defmodule LightningWeb.Components.Oauth do
     """
   end
 
-  # TODO: This is not an error_block, we should instead introduce a loader for the different OAuth state alerts
-  def error_block(%{type: :fetching_userinfo} = assigns) do
+  def alert_block(%{type: :fetching_userinfo} = assigns) do
     ~H"""
     <.text_ping_loader>
       Attempting to fetch user information from your OAuth provider
@@ -222,7 +221,7 @@ defmodule LightningWeb.Components.Oauth do
     """
   end
 
-  def error_block(%{type: :missing_required} = assigns) do
+  def alert_block(%{type: :missing_required} = assigns) do
     ~H"""
     <Common.alert type="danger" header="Missing refresh token">
       <:message>
@@ -241,7 +240,7 @@ defmodule LightningWeb.Components.Oauth do
     """
   end
 
-  def error_block(%{type: :code_failed} = assigns) do
+  def alert_block(%{type: :code_failed} = assigns) do
     ~H"""
     <Common.alert type="danger" header="Something went wrong.">
       <:message>
