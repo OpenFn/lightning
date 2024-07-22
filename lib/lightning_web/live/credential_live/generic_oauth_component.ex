@@ -258,6 +258,17 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     {:noreply, socket |> assign(oauth_progress: :started)}
   end
 
+  def handle_event("try_userinfo_again", _, socket) do
+    {:noreply,
+     socket
+     |> start_async(:userinfo, fn ->
+       OauthHTTPClient.fetch_userinfo(
+         socket.assigns.selected_client,
+         socket.assigns.credential.body
+       )
+     end)}
+  end
+
   def handle_event("check_scope", %{"_target" => [scope]}, socket) do
     selected_scopes =
       if Enum.member?(socket.assigns.selected_scopes, scope) do
