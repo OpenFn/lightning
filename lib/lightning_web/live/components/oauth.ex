@@ -223,17 +223,28 @@ defmodule LightningWeb.Components.Oauth do
 
   def alert_block(%{type: :missing_required} = assigns) do
     ~H"""
-    <Common.alert type="danger" header="Missing refresh token">
+    <Common.alert
+      type="danger"
+      header="Missing refresh token"
+      actions={[
+        %{
+          id: "re-authorize-button",
+          target: @myself,
+          click: "re_authorize_click",
+          text: "Reauthorize"
+        },
+        %{
+          id: "authorize-button",
+          target: @myself,
+          click: "authorize_click",
+          text: "Authorize"
+        }
+      ]}
+    >
       <:message>
         <p>
-          We didn't receive a refresh token from this provider. Sometimes this happens if you have already granted access to OpenFn via another credential. If you have another credential, please use that one. If you don't, please revoke OpenFn's access to your provider via the "third party apps" section of their website. Once that is done, you can try to reauthorize
-          <.reauthorize_button
-            id="re-authorize-button"
-            class="link-danger"
-            target={@myself}
-          >
-            here <span aria-hidden="true"> &rarr;</span>
-          </.reauthorize_button>
+          We didn't receive a refresh token from this provider. Sometimes this happens if you have already granted access to OpenFn via another credential. If you have another credential, please use that one. If you don't, please revoke OpenFn's access to your provider. via the "third party apps" section of their website.
+          Once that is done, you can try to reauthorize.
         </p>
       </:message>
     </Common.alert>

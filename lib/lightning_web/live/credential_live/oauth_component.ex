@@ -158,6 +158,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
         type={@oauth_progress}
         myself={@myself}
         provider={@provider}
+        revocation_endpoint={nil}
         authorize_url={@authorize_url}
       />
     </fieldset>
