@@ -8,6 +8,7 @@ defmodule LightningWeb.Components.Common do
 
   attr :id, :string, default: "alert"
   attr :type, :string, required: true
+  attr :class, :string, default: ""
   attr :header, :string, default: nil
   slot :message
   attr :link_right, :map, required: false, default: nil
@@ -37,13 +38,18 @@ defmodule LightningWeb.Components.Common do
         _info -> "hero-information-circle-solid"
       end
 
-    assigns = assign(assigns, color: color, icon: icon)
+    assigns =
+      assign(assigns,
+        color: color,
+        icon: icon,
+        class: assigns.class
+      )
 
     ~H"""
-    <div id={@id} class={"rounded-md bg-#{@color}-50 p-4"}>
+    <div id={@id} class={"rounded-md bg-#{@color}-50 p-4 #{@class}"}>
       <div class="flex">
         <div class="flex-shrink-0">
-          <.icon name={@icon} class={"h-5 w-5 text-#{@color}-400"} />
+          <.icon name={@icon} class={"mb-1 h-5 w-5 text-#{@color}-400"} />
         </div>
         <div class={[
           "ml-3",

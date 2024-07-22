@@ -279,22 +279,30 @@ div.line-num::before {
   }
 }
 
-.link {
-  @apply underline whitespace-nowrap font-medium text-indigo-700 hover:text-indigo-600
-}
+@layer components {
+  .link {
+    @apply cursor-pointer
+      /* underline */
+      underline-offset-2
+      hover:underline hover:underline-offset-2
+      whitespace-nowrap
+      font-medium
+      text-indigo-400 hover:text-indigo-500;
+  }
 
-.link-info {
-  @apply text-blue-700 hover:text-blue-600
-}
+  .link-info {
+    @apply text-blue-700 hover:text-blue-600;
+  }
 
-.link-danger {
-  @apply text-red-700 hover:text-red-600;
-}
+  .link-danger {
+    @apply text-red-700 hover:text-red-600;
+  }
 
-.link-success {
-  @apply text-green-700 hover:text-green-600
-}
+  .link-success {
+    @apply text-green-700 hover:text-green-600;
+  }
 
-.link-warning {
-  @apply text-yellow-700 hover:text-yellow-600
+  .link-warning {
+    @apply text-yellow-700 hover:text-yellow-600;
+  }
 }

@@ -328,7 +328,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                     id="addAuthenticationLink"
                     href="#"
                     class={[
-                      "text-indigo-400 underline not-italic inline-flex items-center",
+                      "link not-italic inline-flex items-center",
                       if(
                         @action == :new or !@can_write_webhook_auth_method or
                           @disabled,
@@ -513,7 +513,7 @@ defmodule LightningWeb.WorkflowLive.Components do
               <p class="">
                 Check
                 <a
-                  class="text-indigo-700 hover:underline"
+                  class="link"
                   href="https://docs.openfn.org/documentation/build/paths#writing-javascript-expressions-for-custom-path-conditions"
                   target="_blank"
                 >

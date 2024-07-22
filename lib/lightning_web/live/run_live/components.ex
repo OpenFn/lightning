@@ -347,7 +347,7 @@ defmodule LightningWeb.RunLive.Components do
               navigate={
                 ~p"/projects/#{@project_id}/runs/#{@run}?#{%{step: @step.id}}"
               }
-              class="hover:underline hover:underline-offset-2"
+              class="link text-gray-500 no-underline"
             >
               <span><%= @job.name %></span>
             </.link>
@@ -478,7 +478,7 @@ defmodule LightningWeb.RunLive.Components do
   def zero_persistence_action_message(project_id, can_edit_retention) do
     if can_edit_retention do
       """
-      <a href="#{~p"/projects/#{project_id}/settings#data-storage"}" class="underline text-blue-400">
+      <a href="#{~p"/projects/#{project_id}/settings#data-storage"}" class="link">
       Go to data storage settings
       </a>
       """

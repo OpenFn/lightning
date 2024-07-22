@@ -22,7 +22,7 @@ const DocsLink = ({ specifier }: { specifier: string }) => {
       <div>
         External docs:
         <a
-          className="text-indigo-400 underline underline-offset-2 hover:text-indigo-500 ml-2"
+          className="link ml-2"
           href={`https://docs.openfn.org/adaptors/packages/${name}-docs`}
           target="_blank"
         >
@@ -32,7 +32,7 @@ const DocsLink = ({ specifier }: { specifier: string }) => {
       <div>
         Source code:
         <a
-          className="text-indigo-400 underline underline-offset-2 hover:text-indigo-500 ml-2"
+          className="link ml-2"
           href={srcLink}
           target="_blank"
         >

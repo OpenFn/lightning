@@ -62,7 +62,7 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
                 <span
                   id="toggle_dataclip_selector_button"
                   phx-click="toggle_wiped_dataclip_selector"
-                  class="underline inline-block text-blue-400 hover:text-blue-600 cursor-pointer"
+                  class="link"
                 >
                   click here
                 </span>

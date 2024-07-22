@@ -74,7 +74,7 @@
                 href={
                   ~p"/users/two-factor?authentication_type=#{invert_chosen_type(@authentication_type)}&user[remember_me]=#{@remember_me || false}"
                 }
-                class="font-medium text-blue-600 dark:text-blue-500 hover:underline"
+                class="link font-medium"
               >
                 <%= if @authentication_type == :totp do %>
                   Use your backup code
