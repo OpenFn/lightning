@@ -162,7 +162,9 @@ and this project adheres to
   <span class="text">Fixed</span>
 </h3>
 <ul><li>Fix work order URL in failure alerts
-<a href="https://github.com/OpenFn/lightning/pull/2305">#2305</a></li></ul><h2 id="v2-7-7-2024-07-18" class="section-heading">
+<a href="https://github.com/OpenFn/lightning/pull/2305">#2305</a></li><li>Fix job editor switches to the snapshot version when body is changed
+<a href="https://github.com/OpenFn/lightning/issues/2306">#2306</a></li><li>Fix misaligned &quot;Retry from here&quot; button on inspector page
+<a href="https://github.com/OpenFn/lightning/issues/2308">#2308</a></li></ul><h2 id="v2-7-7-2024-07-18" class="section-heading">
   <a href="#v2-7-7-2024-07-18" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -1849,7 +1851,7 @@ work orders up to <code class="inline">v0.10.0</code>, though the granularity of
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="4379962087-1">(</span><span class="p" data-group-id="4379962087-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="5647622956-1">(</span><span class="p" data-group-id="5647622956-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added-31" class="section-heading">
