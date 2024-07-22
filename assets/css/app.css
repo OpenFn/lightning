@@ -290,6 +290,11 @@ div.line-num::before {
       text-indigo-400 hover:text-indigo-500;
   }
 
+  .link-plain {
+    @apply font-normal
+     text-gray-800;
+  }
+
   .link-info {
     @apply text-blue-700 hover:text-blue-600;
   }

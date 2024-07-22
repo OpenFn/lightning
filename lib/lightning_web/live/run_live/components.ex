@@ -347,7 +347,7 @@ defmodule LightningWeb.RunLive.Components do
               navigate={
                 ~p"/projects/#{@project_id}/runs/#{@run}?#{%{step: @step.id}}"
               }
-              class="link text-gray-500 no-underline"
+              class="link text-gray-800 font-normal no-underline"
             >
               <span><%= @job.name %></span>
             </.link>
