@@ -97,6 +97,25 @@ defmodule LightningWeb.OauthComponentsTest do
              myself: nil,
              provider: "Salesforce"
            ) =~
-             "We didn't receive a refresh token from this provider. Sometimes this happens if you have already granted access to OpenFn via another credential. If you have another credential, please use that one. If you don't, please revoke OpenFn's access to your provider via the \"third party apps\" section of their website. Once that is done, you can try to reauthorize"
+             "We didn't receive a refresh token from this provider. Sometimes this happens if you have already granted access to OpenFn via another credential."
+
+    assert render_component(
+             &LightningWeb.Components.Oauth.alert_block/1,
+             type: :missing_required,
+             authorize_url: "https://www",
+             revocation_url: "https://www",
+             myself: nil,
+             provider: "Salesforce"
+           ) =~
+             "re_authorize_click"
+
+    assert render_component(
+             &LightningWeb.Components.Oauth.alert_block/1,
+             type: :missing_required,
+             authorize_url: "https://www",
+             myself: nil,
+             provider: "Salesforce"
+           ) =~
+             "authorize_click"
   end
 end
