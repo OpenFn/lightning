@@ -21,12 +21,15 @@ defmodule LightningWeb.DashboardLive.Index do
   end
 
   @impl true
-  def handle_params(_params, _url, socket) do
+  def handle_params(_params, url, socket) do
+    return_to = url |> URI.parse() |> Map.get(:path)
+
     {:noreply,
      socket
      |> assign(
        page_title: "Projects",
-       active_menu_item: :projects
+       active_menu_item: :projects,
+       return_to: return_to
      )}
   end
 
@@ -126,7 +129,7 @@ defmodule LightningWeb.DashboardLive.Index do
             id="new-project-modal"
             module={LightningWeb.DashboardLive.NewProjectModal}
             current_user={@current_user}
-            return_to={~p"/projects"}
+            return_to={@return_to}
           />
         </div>
       </LayoutComponents.centered>

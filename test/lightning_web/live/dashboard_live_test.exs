@@ -1,4 +1,5 @@
 defmodule LightningWeb.DashboardLiveTest do
+  alias Lightning.Projects.Project
   use LightningWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
@@ -54,8 +55,7 @@ defmodule LightningWeb.DashboardLiveTest do
     end
 
     test "User's projects are listed", %{conn: conn, user: user} do
-      project_1 =
-        insert(:project, project_users: [%{user: user, role: :owner}])
+      project_1 = insert(:project, project_users: [%{user: user, role: :owner}])
 
       project_2 =
         insert(:project,
@@ -66,9 +66,7 @@ defmodule LightningWeb.DashboardLiveTest do
         )
 
       project_3 =
-        insert(:project,
-          project_users: [%{user: build(:user), role: :owner}]
-        )
+        insert(:project, project_users: [%{user: build(:user), role: :owner}])
 
       insert_list(2, :simple_workflow, project: project_1)
 
@@ -78,55 +76,88 @@ defmodule LightningWeb.DashboardLiveTest do
 
       [project_1, project_2]
       |> Enum.each(fn project ->
-        assert view |> has_element?("tr#projects-table-row-#{project.id}")
+        assert has_element?(view, "tr#projects-table-row-#{project.id}")
 
-        assert view
-               |> has_element?(
+        assert has_element?(
+                 view,
                  "tr#projects-table-row-#{project.id} > td:nth-child(1) > a[href='/projects/#{project.id}/w']",
                  project.name
                )
 
-        assert view
-               |> has_element?(
+        role =
+          project
+          |> Repo.preload(:project_users)
+          |> Map.get(:project_users)
+          |> Enum.find(fn pu -> pu.user_id == user.id end)
+          |> Map.get(:role)
+          |> Atom.to_string()
+          |> String.capitalize()
+
+        assert has_element?(
+                 view,
                  "tr#projects-table-row-#{project.id} > td:nth-child(2)",
-                 project
-                 |> Repo.preload(:project_users)
-                 |> Map.get(:project_users)
-                 |> Enum.find(fn pu -> pu.user_id == user.id end)
-                 |> Map.get(:role)
-                 |> Atom.to_string()
-                 |> String.capitalize()
+                 role
                )
 
-        assert view
-               |> has_element?(
+        workflow_count =
+          project
+          |> Repo.preload(:workflows)
+          |> Map.get(:workflows)
+          |> Enum.count()
+          |> to_string()
+
+        assert has_element?(
+                 view,
                  "tr#projects-table-row-#{project.id} > td:nth-child(3)",
-                 project
-                 |> Repo.preload(:workflows)
-                 |> Map.get(:workflows)
-                 |> Enum.count()
-                 |> to_string()
+                 workflow_count
                )
 
-        assert view
-               |> has_element?(
+        collaborator_count =
+          project
+          |> Repo.preload(:project_users)
+          |> Map.get(:project_users)
+          |> Enum.count()
+          |> to_string()
+
+        assert has_element?(
+                 view,
                  "tr#projects-table-row-#{project.id} > td:nth-child(4) > a[href='/projects/#{project.id}/settings#collaboration']",
-                 project
-                 |> Repo.preload(:project_users)
-                 |> Map.get(:project_users)
-                 |> Enum.count()
-                 |> to_string()
+                 collaborator_count
                )
 
-        assert view
-               |> has_element?(
+        formatted_date =
+          Lightning.Helpers.format_date(project.updated_at, "%d/%b/%Y %H:%M:%S")
+
+        assert has_element?(
+                 view,
                  "tr#projects-table-row-#{project.id} > td:nth-child(5)",
-                 Lightning.Helpers.format_date(
-                   project.updated_at,
-                   "%d/%b/%Y %H:%M:%S"
-                 )
+                 formatted_date
                )
       end)
+    end
+
+    test "User can create a new project", %{conn: conn, user: _user} do
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      Repo.all(Project) |> IO.inspect()
+
+      # assert
+      view
+      |> form("#project-form",
+        project: %{
+          raw_name: "My Awesome Project",
+          description: "This is a really awesome project for testing purposes"
+        }
+      )
+      |> render_change() |> IO.puts()
+      # |> follow_redirect(conn, ~p"/")
+
+      # |> IO.puts() =~ "Project created successfully"
+
+      view
+      |> form("#project-form") |> render_submit()
+
+      Repo.all(Project) |> IO.inspect()
     end
   end
 end
