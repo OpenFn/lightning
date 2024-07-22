@@ -229,8 +229,9 @@ defmodule LightningWeb.Components.Oauth do
           We didn't receive a refresh token from this provider. Sometimes this happens if you have already granted access to OpenFn via another credential. If you have another credential, please use that one.
         </p>
         <p>
-          If you don't have another credential, please revoke OpenFn's access to your provider
+          If you don't have another credential, please
           <%= if assigns[:revocation_url] do %>
+            reauthorize OpenFn's access to your provider
             <.reauthorize_button
               id="re-authorize-button"
               class="link-danger"
@@ -239,8 +240,7 @@ defmodule LightningWeb.Components.Oauth do
               here <span aria-hidden="true"> &rarr;</span>
             </.reauthorize_button>
           <% else %>
-            via the "third party apps" section of their website.
-            Once that is done, you can try to reauthorize
+            revoke OpenFn's access to your provider via the "third party apps" section of their website. Once that is done, you can try to reauthorize
             <button
               id="authorize-button"
               type="button"
