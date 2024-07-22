@@ -270,18 +270,13 @@ defmodule LightningWeb.Components.Oauth do
       id="re-authorize-banner"
       type="warning"
       header="Reauthentication required"
+      actions={[
+        {"Reauthenticate with #{@client.name}", "re_authorize_click", @myself}
+      ]}
     >
       <:message>
         <p>
-          Please reauthenticate to save your credential with the updated scopes by
-          clicking
-          <.reauthorize_button
-            id="re-authorize-button"
-            class="link-warning"
-            target={@myself}
-          >
-            here <span aria-hidden="true"> &rarr;</span>
-          </.reauthorize_button>
+          You've changed the scopes (i.e., permissions) on this credential. To save, you must first reauthenticate with your OAuth2 client.
         </p>
       </:message>
     </Common.alert>
