@@ -201,6 +201,7 @@ defmodule LightningWeb.Components.Oauth do
           That worked, but we couldn't fetch your user information. You can save your credential now or
           <button
             class="link link-info"
+            type="button"
             phx-click="try_userinfo_again"
             phx-target={@myself}
           >
