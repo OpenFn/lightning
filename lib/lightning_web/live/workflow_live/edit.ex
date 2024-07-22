@@ -1609,13 +1609,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   @impl true
-  def handle_info({"form_changed", %{"workflow" => params}} = event, socket) do
-    dbg(event)
+  def handle_info({"form_changed", %{"workflow" => params}}, socket) do
     {:noreply, handle_new_params(socket, params, :workflow)}
   end
 
-  def handle_info({"form_changed", %{"snapshot" => params}} = event, socket) do
-    dbg(event)
+  def handle_info({"form_changed", %{"snapshot" => params}}, socket) do
     {:noreply, handle_new_params(socket, params, :snapshot)}
   end
 
