@@ -280,9 +280,9 @@ defmodule LightningWeb.Components.Oauth do
       header="Reauthentication required"
       actions={[
         %{
-          id: "re-authorize-button",
+          id: "authorize-button",
           text: "Reauthenticate with #{@provider}",
-          click: "re_authorize_click",
+          click: "authorize_click",
           target: @myself
         }
       ]}

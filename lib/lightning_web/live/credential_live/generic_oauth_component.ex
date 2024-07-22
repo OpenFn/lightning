@@ -255,7 +255,11 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   end
 
   def handle_event("authorize_click", _, socket) do
-    {:noreply, socket |> assign(oauth_progress: :started)}
+    {:noreply,
+     socket
+     |> assign(code: nil)
+     |> push_event("open_authorize_url", %{url: socket.assigns.authorize_url})
+     |> assign(oauth_progress: :started)}
   end
 
   def handle_event("try_userinfo_again", _, socket) do
