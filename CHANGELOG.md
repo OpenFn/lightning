@@ -26,6 +26,8 @@ and this project adheres to
 
 - Fix work order URL in failure alerts
   [#2305](https://github.com/OpenFn/lightning/pull/2305)
+- Fix error when handling existing encrypted credentials
+  [#2316](https://github.com/OpenFn/lightning/issues/2316)
 - Fix job editor switches to the snapshot version when body is changed
   [#2306](https://github.com/OpenFn/lightning/issues/2306)
 - Fix misaligned "Retry from here" button on inspector page
