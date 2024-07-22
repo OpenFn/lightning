@@ -261,6 +261,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   def handle_event("try_userinfo_again", _, socket) do
     {:noreply,
      socket
+     |> assign(:oauth_progress, :fetching_userinfo)
      |> start_async(:userinfo, fn ->
        OauthHTTPClient.fetch_userinfo(
          socket.assigns.selected_client,

@@ -213,6 +213,15 @@ defmodule LightningWeb.Components.Oauth do
     """
   end
 
+  # TODO: This is not an error_block, we should instead introduce a loader for the different OAuth state alerts
+  def error_block(%{type: :fetching_userinfo} = assigns) do
+    ~H"""
+    <.text_ping_loader>
+      Attempting to fetch user information from your OAuth provider
+    </.text_ping_loader>
+    """
+  end
+
   def error_block(%{type: :missing_required} = assigns) do
     ~H"""
     <Common.alert type="danger" header="Missing refresh token">
