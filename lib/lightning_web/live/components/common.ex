@@ -26,7 +26,7 @@ defmodule LightningWeb.Components.Common do
       case assigns.type do
         "success" -> "green"
         "warning" -> "yellow"
-        "error" -> "red"
+        "danger" -> "red"
         _info -> "blue"
       end
 
