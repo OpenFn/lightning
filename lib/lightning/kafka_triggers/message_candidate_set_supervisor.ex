@@ -25,9 +25,22 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetSupervisor do
   end
 
   def generate_worker_specs(number_of_workers) do
+    no_set_delay =
+      Application.get_env(:lightning, :kafka_triggers)[
+        :no_message_candidate_set_delay_milliseconds
+      ]
+
+    next_set_delay =
+      Application.get_env(:lightning, :kafka_triggers)[
+        :next_message_candidate_set_delay_milliseconds
+      ]
+
     0..(number_of_workers - 1)
     |> Enum.map(fn index ->
-      {MessageCandidateSetWorker, []}
+      {
+        MessageCandidateSetWorker,
+        [no_set_delay: no_set_delay, next_set_delay: next_set_delay]
+      }
       |> Supervisor.child_spec(id: "mcs_worker_#{index}")
     end)
   end

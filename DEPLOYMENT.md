@@ -111,20 +111,36 @@ from a Kafka Cluster. By default this is disabled and you will not see the
 option to create a Kafka trigger in the UI, nor will the Kafka consumer groups
 be running. 
 
-To enable this feature set the `KAFKA_TRIGGERS_ENABLED` to `yes` and restart
-Lightning. Please note that, if you enable this feature and then create some
-Kafka triggers and then disable the feature, you will not be able to edit any
-triggers created before the feature was disabled.
+To enable this feature set the `KAFKA_TRIGGERS_ENABLED` environment variable 
+to `yes` and restart Lightning. Please note that, if you enable this feature
+and then create some Kafka triggers and then disable the feature, you will not
+be able to edit any triggers created before the feature was disabled.
 
-Kafka triggers currently rely on the existence of Message Canididate Sets. These
+#### Performance Tuning
+
+Kafka triggers currently rely on the existence of Message Candidate Sets. These
 are a temporary measure to ensure that message sequence for messages with
 identical keys are preserved. As part of this mechanism, Lightning uses
-a MessageCandidatSetWorker to convert messages into WorkOrders. By default, there
-is only one worker process, but the number of workers can be increased by setting
-`KAFKA_NUMBER_OF_MESSAGE_CANDIDATE_SET_WORKERS`. Increasing this may increase the
-rate at which messages received by Kafka are converted to WorkOrders. If you find
-that you have a large number of records in the `trigger_kafka_messages` table,
-then increasing the number of workers may help to reduce this backlog.
+a MessageCandidateSetWorker to convert messages into WorkOrders.
+
+By default, there is only one worker process, but the number of workers can be
+increased by setting the `KAFKA_NUMBER_OF_MESSAGE_CANDIDATE_SET_WORKERS`
+environment variable. Increasing this may increase the rate at which messages
+received by Kafka are converted to WorkOrders. If you find that you have a
+large number of records in the `trigger_kafka_messages` table, then increasing
+the number of workers may help to reduce this backlog.
+
+The MessageCandidateSetWorker has two configurable processing delays:
+
+- The delay before the worker requests the next Message Candidate Set for
+  consideration after it has finished processing the current Message Candidate
+  Set. This can be set by configuring the
+  `KAFKA_NEXT_MESSAGE_CANDIDATE_SET_DELAY_MILLISECONDS` environment variable. The
+  default value is currently 250ms.
+- The delay before the worker requests the next Message Candidate Set for
+  consideration when there are no Message Candidate Sets available. This can be
+  set by configuring the `KAFKA_NO_MESSAGE_CANDIDATE_SET_DELAY_MILLISECONDS`
+  environment variable. The default value is currently 10000ms.
 
 ### Other config
 
