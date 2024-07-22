@@ -81,8 +81,9 @@ defmodule LightningWeb.Components.Common do
               <div class="-mx-2 -my-1.5 flex">
                 <%= for item <- @actions do %>
                   <%= case item do %>
-                    <% {text, click, target} -> %>
+                    <% %{id: id, text: text, click: click, target: target} -> %>
                       <button
+                        id={id}
                         type="button"
                         phx-click={click}
                         phx-target={target}

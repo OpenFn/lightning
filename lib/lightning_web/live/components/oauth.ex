@@ -271,7 +271,12 @@ defmodule LightningWeb.Components.Oauth do
       type="warning"
       header="Reauthentication required"
       actions={[
-        {"Reauthenticate with #{@client.name}", "re_authorize_click", @myself}
+        %{
+          id: "re-authorize-button",
+          text: "Reauthenticate with #{@provider}",
+          click: "re_authorize_click",
+          target: @myself
+        }
       ]}
     >
       <:message>

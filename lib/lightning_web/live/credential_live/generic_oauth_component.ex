@@ -555,7 +555,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
           >
             <.reauthorize_banner
               :if={@display_reauthorize_banner}
-              client={@selected_client}
+              provider={@selected_client.name}
               authorize_url={@authorize_url}
               myself={@myself}
             />
