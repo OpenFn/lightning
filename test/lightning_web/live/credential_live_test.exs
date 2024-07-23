@@ -884,7 +884,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert view
              |> element("#credential-form-#{credential.id} #re-authorize-button")
              |> render_click() =~
-               "Token revocation failed. The token associated with this credential may have already been revoked or expired. Please delete this credential and create a new one."
+               "Token revocation failed. The token associated with this credential may have already been revoked or expired. You may try to authorize again, or delete this credential and create a new one"
     end
   end
 

@@ -86,9 +86,10 @@ defmodule LightningWeb.OauthComponentsTest do
 
     assert render_component(
              &LightningWeb.Components.Oauth.alert_block/1,
-             type: :revoke_failed
+             type: :revoke_failed,
+             myself: nil
            ) =~
-             "Token revocation failed. The token associated with this credential may have already been revoked or expired. Please delete this credential and create a new one."
+             "Token revocation failed. The token associated with this credential may have already been revoked or expired. You may try to authorize again, or delete this credential and create a new one."
 
     assert render_component(
              &LightningWeb.Components.Oauth.alert_block/1,
