@@ -112,14 +112,13 @@
       <:actions :let={credential}>
         <div :if={credential.user_id == @current_user.id}>
           <span>
-            <.link phx-click={
-              show_modal("edit-credential-#{credential.id}-modal")
-            }>
+            <.link phx-click="show_modal" phx-value-id={credential.id}>
               Edit
             </.link>
           </span>
           | <.delete_action socket={@socket} credential={credential} />
           <.live_component
+            :if={@show_credential_id == credential.id}
             id={"edit-credential-#{credential.id}-modal"}
             module={LightningWeb.CredentialLive.CredentialFormComponent}
             action={:edit}
