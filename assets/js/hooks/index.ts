@@ -21,6 +21,7 @@ export {
 export const OpenAuthorizeUrl = {
   mounted() {
     this.handleEvent('open_authorize_url', ({ url }: { url: string }) => {
+      console.log('i got called!');
       window.open(url, '_blank');
     });
   },

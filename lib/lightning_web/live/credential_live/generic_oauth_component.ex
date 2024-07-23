@@ -149,7 +149,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
     params = Map.put(socket.assigns.changeset.params, "body", token)
     changeset = Credentials.change_credential(socket.assigns.credential, params)
-    credential = Ecto.Changeset.apply_changes(changeset)
 
     errors = changeset_errors(changeset)
 
@@ -158,7 +157,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       |> assign(:oauth_progress, :token_received)
       |> assign(:scopes_changed, false)
       |> assign(:changeset, changeset)
-      |> assign(:credential, credential)
 
     cond do
       errors[:body] ->
@@ -238,6 +236,10 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   def handle_event("re_authorize_click", _, socket) do
     credential = Map.get(socket.assigns, :credential)
 
+    IO.inspect(socket.assigns.authorize_url,
+      label: "in re-auth, does the authorize_url have the new scopes?"
+    )
+
     with body <- credential && credential.body,
          selected_client <- socket.assigns.selected_client,
          authorize_url <- socket.assigns.authorize_url,
@@ -260,6 +262,10 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   end
 
   def handle_event("authorize_click", _, socket) do
+    IO.inspect(socket.assigns.authorize_url,
+      label: "in auth, does the authorize_url have the new scopes?"
+    )
+
     {:noreply,
      socket
      |> assign(code: nil)

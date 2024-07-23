@@ -175,7 +175,10 @@ defmodule Lightning.Credentials do
 
   """
   def update_credential(%Credential{} = credential, attrs) do
-    changeset = credential |> change_credential(attrs) |> cast_body_change()
+    changeset =
+      credential
+      |> change_credential(attrs)
+      |> cast_body_change()
 
     Multi.new()
     |> Multi.update(:credential, changeset)
@@ -186,6 +189,9 @@ defmodule Lightning.Credentials do
         {:error, changeset}
 
       {:ok, %{credential: credential}} ->
+        Lightning.Repo.get(Lightning.Credentials.Credential, credential.id)
+        |> Map.get(:body)
+
         {:ok, credential}
     end
   end
