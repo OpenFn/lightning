@@ -5,39 +5,36 @@ defmodule Lightning.KafkaTriggers.MessageServer do
   """
   use GenServer
 
-  # alias Lightning.KafkaTriggers.MessageHandling
+  alias Lightning.KafkaTriggers.MessageHandling
 
   def start_link(_opts) do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 
-  # def next_candidate_set do
-  #   GenServer.call(__MODULE__, :next_candidate_set)
-  # end
+  def next_message do
+    GenServer.call(__MODULE__, :next_message)
+  end
 
   @impl true
   def init(_opts) do
     {:ok, []}
   end
 
-  # @impl true
-  # def handle_call(:next_candidate_set, _from, current_sets) do
-  #   {candidate_set, remaining_sets} = pop_candidate(current_sets)
-  #
-  #   {:reply, candidate_set, remaining_sets}
-  # end
-  #
-  # defp pop_candidate([]) do
-  #   case MessageHandling.find_message_candidate_sets() do
-  #     [candidate_set | remaining_sets] ->
-  #       {candidate_set, remaining_sets}
-  #
-  #     [] ->
-  #       {nil, []}
-  #   end
-  # end
-  #
-  # defp pop_candidate([candidate_set | remaining_sets]) do
-  #   {candidate_set, remaining_sets}
-  # end
+  @impl true
+  def handle_call(:next_message, _from, current_messages) do
+    {message, remaining_messages} = pop_message(current_messages)
+
+    {:reply, message, remaining_messages}
+  end
+
+  defp pop_message([]) do
+    case MessageHandling.find_nil_key_message_ids() do
+      [] -> {nil, []}
+      result -> pop_message(result)
+    end
+  end
+
+  defp pop_message([message | remaining_messages]) do
+    {message, remaining_messages}
+  end
 end

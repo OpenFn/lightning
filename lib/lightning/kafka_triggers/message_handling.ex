@@ -33,6 +33,12 @@ defmodule Lightning.KafkaTriggers.MessageHandling do
     end)
   end
 
+  def find_nil_key_message_ids() do
+    query = from t in TriggerKafkaMessage, where: is_nil(t.key), select: t.id
+
+    query |> Repo.all()
+  end
+
   def process_candidate_for(%MessageCandidateSet{} = candidate_set) do
     Repo.transaction(fn ->
       candidate_set

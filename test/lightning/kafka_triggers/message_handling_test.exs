@@ -98,6 +98,36 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
     end
   end
 
+  describe ".find_nil_key_message_ids/0" do
+    setup do
+      message_1 = insert(:trigger_kafka_message, topic: "topic-1", key: nil)
+      message_2 = insert(:trigger_kafka_message, topic: "topic-2", key: nil)
+
+      _not_nil_key_message =
+        insert(
+          :trigger_kafka_message,
+          topic: "topic-3",
+          key: "not-nil"
+        )
+
+      %{
+        message_1: message_1,
+        message_2: message_2
+      }
+    end
+
+    test "returns the ids of all TriggerKafkaMessage instances with nil keys", %{
+      message_1: message_1,
+      message_2: message_2
+    } do
+      expected = [message_1.id, message_2.id] |> Enum.sort()
+
+      result = MessageHandling.find_nil_key_message_ids()
+
+      assert result |> Enum.sort() == expected
+    end
+  end
+
   describe ".process_candidate_for/1" do
     setup do
       trigger = insert(:trigger, type: :kafka)
