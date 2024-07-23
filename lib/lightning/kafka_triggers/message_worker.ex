@@ -5,34 +5,34 @@ defmodule Lightning.KafkaTriggers.MessageWorker do
   """
   use GenServer
 
-  # alias Lightning.KafkaTriggers.MessageCandidateSetServer
-  # alias Lightning.KafkaTriggers.MessageHandling
+  alias Lightning.KafkaTriggers.MessageServer
+  alias Lightning.KafkaTriggers.MessageHandling
 
-  def start_link(_opts) do
-    GenServer.start_link(__MODULE__, [])
+  def start_link(opts) do
+    GenServer.start_link(__MODULE__, opts)
   end
 
   @impl true
-  def init(_opts) do
-    # Process.send_after(self(), :request_candidate_set, 1000)
+  def init(opts) do
+    Process.send_after(self(), :request_message, 1000)
 
-    {:ok, []}
+    {:ok, opts}
   end
 
-  # @impl true
-  # def handle_info(:request_candidate_set, state) do
+  @impl true
+  def handle_info(:request_message, state) do
   #   next_set_delay = Keyword.fetch!(state, :next_set_delay)
-  #   no_set_delay = Keyword.fetch!(state, :no_set_delay)
-  #
-  #   case MessageCandidateSetServer.next_candidate_set() do
-  #     nil ->
-  #       Process.send_after(self(), :request_candidate_set, no_set_delay)
-  #
-  #     candidate_set ->
-  #       MessageHandling.process_candidate_for(candidate_set)
+    no_message_delay = Keyword.fetch!(state, :no_set_delay)
+
+    case MessageServer.next_message() do
+      nil ->
+        Process.send_after(self(), :request_message, no_message_delay)
+
+      message_id ->
+        MessageHandling.process_message_for(message_id)
   #       Process.send_after(self(), :request_candidate_set, next_set_delay)
-  #   end
-  #
-  #   {:noreply, state}
-  # end
+    end
+
+    {:noreply, state}
+  end
 end

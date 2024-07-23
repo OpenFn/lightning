@@ -63,6 +63,10 @@ defmodule Lightning.KafkaTriggers.MessageHandling do
     :ok
   end
 
+  def process_message_for(message_id) do
+
+  end
+
   defp create_work_order(candidate) do
     %{
       data: data,
