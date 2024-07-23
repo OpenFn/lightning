@@ -197,20 +197,46 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     {:noreply, assign(socket, :oauth_progress, :userinfo_failed)}
   end
 
+  defp maybe_update_body(nil, _additional_params) do
+    nil
+  end
+
+  defp maybe_update_body(body, additional_params) do
+    Map.merge(body, additional_params)
+  end
+
+  defp prepare_params(credential_params, additional_params) do
+    Map.merge(credential_params, additional_params)
+  end
+
   @impl true
   def handle_event(
         "validate",
         %{"credential" => credential_params} = _params,
         socket
       ) do
+    changeset = socket.assigns.changeset
+    body = Ecto.Changeset.get_field(changeset, :body, %{})
+    user_id = Ecto.Changeset.get_field(changeset, :user_id)
+    api_version = Map.get(credential_params, "api_version")
+    selected_client_id = socket.assigns.selected_client.id
+
+    updated_body = maybe_update_body(body, %{"apiVersion" => api_version})
+
+    updated_credential_params =
+      prepare_params(credential_params, %{
+        "user_id" => user_id,
+        "schema" => "oauth",
+        "body" => updated_body,
+        "oauth_client_id" => selected_client_id
+      })
+
     changeset =
       Credentials.change_credential(
         socket.assigns.credential,
-        Map.put(credential_params, "schema", "oauth")
+        updated_credential_params
       )
       |> Map.put(:action, :validate)
-
-    api_version = Map.get(credential_params, "api_version", nil)
 
     available_projects =
       Helpers.filter_available_projects(
