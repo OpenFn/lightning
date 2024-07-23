@@ -23,6 +23,7 @@ defmodule Lightning.KafkaTriggers.MessageHandling do
   def find_message_candidate_sets do
     query =
       from t in TriggerKafkaMessage,
+        where: not is_nil(t.key),
         select: [t.trigger_id, t.topic, t.key],
         distinct: [t.trigger_id, t.topic, t.key]
 

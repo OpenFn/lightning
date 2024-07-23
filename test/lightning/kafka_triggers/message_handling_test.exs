@@ -21,7 +21,7 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
   alias Lightning.WorkOrder
 
   describe ".find_message_candidate_sets" do
-    test "returns all distinct combinations of trigger, topic, key" do
+    test "returns distinct combinations of trigger, topic, non-nil key" do
       trigger_1 = insert(:trigger, type: :kafka)
       trigger_2 = insert(:trigger, type: :kafka)
 
@@ -75,13 +75,13 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
 
       sets = MessageHandling.find_message_candidate_sets()
 
-      assert sets |> Enum.count() == 5
+      assert sets |> Enum.count() == 4
 
       assert [%{trigger_id: _, topic: _, key: _} | _other] = sets
 
       assert sets |> number_of_sets_for(message) == 1
       assert sets |> number_of_sets_for(different_key) == 1
-      assert sets |> number_of_sets_for(nil_key) == 1
+      assert sets |> number_of_sets_for(nil_key) == 0
       assert sets |> number_of_sets_for(different_topic) == 1
       assert sets |> number_of_sets_for(different_trigger) == 1
     end
