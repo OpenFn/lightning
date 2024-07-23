@@ -257,10 +257,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   end
 
   def handle_event("authorize_click", _, socket) do
-    IO.inspect(socket.assigns.authorize_url,
-      label: "in auth, does the authorize_url have the new scopes?"
-    )
-
     {:noreply,
      socket
      |> assign(code: nil)
