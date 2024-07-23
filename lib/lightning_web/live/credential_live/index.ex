@@ -19,7 +19,8 @@ defmodule LightningWeb.CredentialLive.Index do
        oauth_clients: list_clients(socket.assigns.current_user),
        active_menu_item: :credentials,
        selected_credential_type: nil,
-       page_title: "Credentials"
+       page_title: "Credentials",
+       show_credential_id: nil
      )}
   end
 
@@ -80,6 +81,15 @@ defmodule LightningWeb.CredentialLive.Index do
      |> put_flash(:info, "Oauth client deleted successfully!")
      |> assign(:oauth_clients, list_clients(socket.assigns.current_user))
      |> push_patch(to: ~p"/credentials")}
+  end
+
+  def handle_event("show_modal", %{"id" => id}, socket) do
+    show_modal("edit-credential-#{id}-modal")
+    {:noreply, assign(socket, show_credential_id: id)}
+  end
+
+  def handle_event("hide_modal", _params, socket) do
+    {:noreply, assign(socket, show_credential_id: nil)}
   end
 
   @doc """

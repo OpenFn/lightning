@@ -257,6 +257,8 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   end
 
   def handle_event("authorize_click", _, socket) do
+    IO.inspect(socket.assigns.authorize_url)
+
     {:noreply,
      socket
      |> assign(code: nil)
