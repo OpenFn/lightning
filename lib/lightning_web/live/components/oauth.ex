@@ -164,10 +164,21 @@ defmodule LightningWeb.Components.Oauth do
 
   def alert_block(%{type: :revoke_failed} = assigns) do
     ~H"""
-    <Common.alert type="danger" header="Something went wrong.">
+    <Common.alert
+      type="danger"
+      header="Something went wrong."
+      actions={[
+        %{
+          id: "authorize-button",
+          text: "Authorize again",
+          target: @myself,
+          click: "authorize_click"
+        }
+      ]}
+    >
       <:message>
         <p>
-          Token revocation failed. The token associated with this credential may have already been revoked or expired. Please delete this credential and create a new one.
+          Token revocation failed. The token associated with this credential may have already been revoked or expired. You may try to authorize again, or delete this credential and create a new one.
         </p>
       </:message>
     </Common.alert>
