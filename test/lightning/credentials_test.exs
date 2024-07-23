@@ -400,6 +400,38 @@ defmodule Lightning.CredentialsTest do
   end
 
   describe "update_credential/2" do
+    test "updates an Oauth credential with new scopes" do
+      credential =
+        credential_fixture(
+          body: %{
+            "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
+            "expires_at" => 10_000,
+            "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
+            "scope" => "email calendar chat"
+          },
+          schema: "oauth"
+        )
+
+      update_attrs = %{
+        body: %{
+          "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
+          "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
+          "expires_at" => 10_000,
+          "scope" => "email calendar"
+        }
+      }
+
+      assert {:ok, %Credential{} = credential} =
+               Credentials.update_credential(credential, update_attrs)
+
+      assert credential.body == %{
+               "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
+               "expires_at" => 10000,
+               "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
+               "scope" => "email calendar"
+             }
+    end
+
     test "succeeds with valid data and associating with new project" do
       user = insert(:user)
 

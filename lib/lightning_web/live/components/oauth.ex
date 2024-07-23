@@ -230,7 +230,7 @@ defmodule LightningWeb.Components.Oauth do
         </p>
         <p>
           If you don't have another credential, please
-          <%= if assigns[:revocation_url] do %>
+          <%= if assigns[:revocation_endpoint] do %>
             reauthorize OpenFn's access to your provider
             <.reauthorize_button
               id="re-authorize-button"
@@ -290,6 +290,22 @@ defmodule LightningWeb.Components.Oauth do
   end
 
   def reauthorize_banner(assigns) do
+    # TODO - consider https://github.com/OpenFn/lightning/issues/2320
+    # click =
+    #   if assigns[:revocation_endpoint],
+    #     do: "re_authorize_click",
+    #     else: "authorize_click"
+
+    # id =
+    #   if assigns[:revocation_endpoint],
+    #     do: "re-authorize-button",
+    #     else: "authorize-button"
+
+    # assigns =
+    #   assigns
+    #   |> assign(:click, click)
+    #   |> assign(:id, id)
+
     ~H"""
     <Common.alert
       id="re-authorize-banner"

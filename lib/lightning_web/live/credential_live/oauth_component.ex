@@ -128,6 +128,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
       <.reauthorize_banner
         :if={@display_reauthorize_banner}
         provider="provider"
+        revocation_endpoint={nil}
         authorize_url={@authorize_url}
         myself={@myself}
       />
