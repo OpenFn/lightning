@@ -234,14 +234,9 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   # for authorize_click and a hook for re_authorize_click. But this is expensive to do
   # now without cleaning the implementations of the oauth by removing the old implementation
   def handle_event("re_authorize_click", _, socket) do
-    credential = Map.get(socket.assigns, :credential)
+    body = Ecto.Changeset.fetch_field!(socket.assigns.changeset, :body)
 
-    IO.inspect(socket.assigns.authorize_url,
-      label: "in re-auth, does the authorize_url have the new scopes?"
-    )
-
-    with body <- credential && credential.body,
-         selected_client <- socket.assigns.selected_client,
+    with selected_client <- socket.assigns.selected_client,
          authorize_url <- socket.assigns.authorize_url,
          {:ok, _response} <- OauthHTTPClient.revoke_token(selected_client, body) do
       {
@@ -274,13 +269,15 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   end
 
   def handle_event("try_userinfo_again", _, socket) do
+    body = Ecto.Changeset.fetch_field!(socket.assigns.changeset, :body)
+
     {:noreply,
      socket
      |> assign(:oauth_progress, :fetching_userinfo)
      |> start_async(:userinfo, fn ->
        OauthHTTPClient.fetch_userinfo(
          socket.assigns.selected_client,
-         socket.assigns.credential.body
+         body
        )
      end)}
   end
