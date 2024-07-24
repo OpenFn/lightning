@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-45FE1CBF.js"></script>
+    <script src="dist/sidebar_items-F84D61A4.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -194,13 +194,37 @@ You can generate this using <code class="inline">mix lightning.gen_encryption_ke
   <span class="text">AI Chat</span>
 </h3>
 <p>🧪 <strong>Experimental</strong></p><p>Lightning can be configured to use an AI chatbot for user interactions.</p><p>See <a href="https://github.com/OpenFn/apollo">openfn/apollo</a> for more information on
-the Apollo AI service.</p><p>The following environment variables are required:</p><ul><li><code class="inline">OPENAI_API_KEY</code> - your OpenAI API key.</li><li><code class="inline">APOLLO_ENDPOINT</code> - the endpoint for the OpenFn Apollo AI service.</li></ul><p>Lightning workflows can be configured with a trigger that will consume messages
+the Apollo AI service.</p><p>The following environment variables are required:</p><ul><li><code class="inline">OPENAI_API_KEY</code> - your OpenAI API key.</li><li><code class="inline">APOLLO_ENDPOINT</code> - the endpoint for the OpenFn Apollo AI service.</li></ul><h3 id="kafka-triggers" class="section-heading">
+  <a href="#kafka-triggers" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Kafka Triggers</span>
+</h3>
+<p>🧪 <strong>Experimental</strong></p><p>Lightning workflows can be configured with a trigger that will consume messages
 from a Kafka Cluster. By default this is disabled and you will not see the 
 option to create a Kafka trigger in the UI, nor will the Kafka consumer groups
-be running. </p><p>To enable this feature set the <code class="inline">KAFKA_TRIGGERS_ENABLED</code> to <code class="inline">yes</code> and restart
-Lightning. Please note that, if you enable this feature and then create some
-Kafka triggers and then disable the feature, you will not be able to edit any
-triggers created before the feature was disabled.</p><h3 id="other-config" class="section-heading">
+be running. </p><p>To enable this feature set the <code class="inline">KAFKA_TRIGGERS_ENABLED</code> environment variable 
+to <code class="inline">yes</code> and restart Lightning. Please note that, if you enable this feature
+and then create some Kafka triggers and then disable the feature, you will not
+be able to edit any triggers created before the feature was disabled.</p><h4>Performance Tuning</h4><p>Kafka triggers currently rely on the existence of Message Candidate Sets. These
+are a temporary measure to ensure that message sequence for messages with
+identical keys are preserved. As part of this mechanism, Lightning uses
+a MessageCandidateSetWorker to convert messages into WorkOrders.</p><p>By default, there is only one worker process, but the number of workers can be
+increased by setting the <code class="inline">KAFKA_NUMBER_OF_MESSAGE_CANDIDATE_SET_WORKERS</code>
+environment variable. Increasing this may increase the rate at which messages
+received by Kafka are converted to WorkOrders. If you find that you have a
+large number of records in the <code class="inline">trigger_kafka_messages</code> table, then increasing
+the number of workers may help to reduce this backlog.</p><p>The MessageCandidateSetWorker has two configurable processing delays:</p><ul><li>The delay before the worker requests the next Message Candidate Set for
+consideration after it has finished processing the current Message Candidate
+Set. This can be set by configuring the
+<code class="inline">KAFKA_NEXT_MESSAGE_CANDIDATE_SET_DELAY_MILLISECONDS</code> environment variable. The
+default value is currently 250ms.</li><li>The delay before the worker requests the next Message Candidate Set for
+consideration when there are no Message Candidate Sets available. This can be
+set by configuring the <code class="inline">KAFKA_NO_MESSAGE_CANDIDATE_SET_DELAY_MILLISECONDS</code>
+environment variable. The default value is currently 10000ms.</li></ul><p>The number of Kafka consumers in the consumer group can be modified by setting
+the <code class="inline">KAFKA_NUMBER_OF_CONSUMERS</code> environment variable. The default value is
+currently 1. The optimal setting is one consumer per topic partition. NOTE:
+This setting will move to KafkaConfiguration as it will be trigger-specific.</p><h3 id="other-config" class="section-heading">
   <a href="#other-config" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
