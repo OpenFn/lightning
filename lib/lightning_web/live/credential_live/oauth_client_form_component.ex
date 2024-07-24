@@ -336,7 +336,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="mt-10 sm:mt-0">
+    <div class="text-left mt-10 sm:mt-0">
       <.modal id={@id} width="w-[32rem] lg:w-[44rem]">
         <:title>
           <div class="flex justify-between">

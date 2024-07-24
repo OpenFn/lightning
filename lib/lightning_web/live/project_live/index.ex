@@ -88,16 +88,17 @@ defmodule LightningWeb.ProjectLive.Index do
         <.link
           id={"cancel-deletion-#{@project.id}"}
           href="#"
+          class="table-action"
           phx-click="cancel_deletion"
           phx-value-id={@project.id}
         >
           Cancel deletion
         </.link>
       </span>
-      |
       <span>
         <.link
           id={"delete-now-#{@project.id}"}
+          class="table-action"
           navigate={~p"/settings/projects/#{@project.id}/delete"}
         >
           Delete now
@@ -109,6 +110,7 @@ defmodule LightningWeb.ProjectLive.Index do
       <span>
         <.link
           id={"delete-#{@project.id}"}
+          class="table-action"
           navigate={Routes.project_index_path(@socket, :delete, @project)}
         >
           Delete

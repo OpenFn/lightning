@@ -122,6 +122,7 @@ defmodule LightningWeb.CredentialLive.Index do
       <span>
         <.link
           id={"cancel-deletion-#{@credential.id}"}
+          class="table-action"
           href="#"
           phx-click="cancel_deletion"
           phx-value-id={@credential.id}
@@ -129,10 +130,10 @@ defmodule LightningWeb.CredentialLive.Index do
           Cancel deletion
         </.link>
       </span>
-      |
       <span>
         <.link
           id={"delete-now-#{@credential.id}"}
+          class="table-action"
           navigate={~p"/credentials/#{@credential.id}/delete"}
         >
           Delete now
@@ -144,6 +145,7 @@ defmodule LightningWeb.CredentialLive.Index do
       <span>
         <.link
           id={"delete-#{@credential.id}"}
+          class="table-action"
           navigate={~p"/credentials/#{@credential.id}/delete"}
         >
           Delete

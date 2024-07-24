@@ -385,7 +385,9 @@ defmodule LightningWeb.Components.Credentials do
             <.th>Projects with access</.th>
             <.th>Type</.th>
             <.th>Production</.th>
-            <.th>Actions</.th>
+            <.th>
+              <span class="sr-only">Actions</span>
+            </.th>
           </.tr>
 
           <.tr
@@ -393,18 +395,20 @@ defmodule LightningWeb.Components.Credentials do
             id={"#{@id}-#{credential.id}"}
             class="hover:bg-gray-100 transition-colors duration-200"
           >
-            <.td class="break-words max-w-[15rem] flex items-center">
-              <%= credential.name %>
-              <%= if credential.schema == "oauth" and !credential.oauth_client_id do %>
-                <span
-                  id={"#{credential.id}-client-not-found-tooltip"}
-                  phx-hook="Tooltip"
-                  aria-label="OAuth client not found"
-                  data-allow-html="true"
-                >
-                  <Heroicons.exclamation_triangle class="h-5 w-5 ml-2" />
-                </span>
-              <% end %>
+            <.td class="break-words max-w-[15rem]">
+              <div class="flex-auto items-center">
+                <%= credential.name %>
+                <%= if credential.schema == "oauth" and !credential.oauth_client_id do %>
+                  <span
+                    id={"#{credential.id}-client-not-found-tooltip"}
+                    phx-hook="Tooltip"
+                    aria-label="OAuth client not found"
+                    data-allow-html="true"
+                  >
+                    <.icon name="hero-exclamation-triangle" class="h-5 w-5 ml-2" />
+                  </span>
+                <% end %>
+              </div>
             </.td>
             <.td class="break-words max-w-[25rem]">
               <%= for project_name <- credential.project_names do %>
@@ -424,7 +428,7 @@ defmodule LightningWeb.Components.Credentials do
                 </div>
               <% end %>
             </.td>
-            <.td>
+            <.td class="text-right">
               <%= render_slot(@actions, credential) %>
             </.td>
           </.tr>
@@ -458,7 +462,7 @@ defmodule LightningWeb.Components.Credentials do
             <.th>Name</.th>
             <.th>Projects With Access</.th>
             <.th>Authorization URL</.th>
-            <.th>Actions</.th>
+            <.th><span class="sr-only">Actions</span></.th>
           </.tr>
 
           <.tr
@@ -477,7 +481,7 @@ defmodule LightningWeb.Components.Credentials do
             <.td class="break-words max-w-[21rem]">
               <%= client.authorization_endpoint %>
             </.td>
-            <.td>
+            <.td class="text-right">
               <%= render_slot(@actions, client) %>
             </.td>
           </.tr>

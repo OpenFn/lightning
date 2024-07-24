@@ -253,16 +253,17 @@
           <:actions :let={client}>
             <div :if={client.user_id == @current_user.id}>
               <span>
-                <.link phx-click={
-                  show_modal("edit-oauth-client-#{client.id}-modal")
-                }>
+                <.link
+                  class="table-action"
+                  phx-click={show_modal("edit-oauth-client-#{client.id}-modal")}
+                >
                   Edit
                 </.link>
               </span>
-              |
               <span>
                 <.link
                   id={"delete-oauth-client-#{client.id}-button"}
+                  class="table-action"
                   phx-click={
                     show_modal("delete_oauth_client_#{client.id}_modal")
                   }
@@ -312,17 +313,22 @@
           <:actions :let={credential}>
             <div :if={credential.user_id == @current_user.id}>
               <span>
-                <.link phx-click={
-                  show_modal("edit-credential-#{credential.id}-modal")
-                }>
+                <.link
+                  class="table-action"
+                  phx-click={
+                    show_modal("edit-credential-#{credential.id}-modal")
+                  }
+                >
                   Edit
                 </.link>
               </span>
-              |
               <span>
-                <.link phx-click={
-                  show_modal("delete_credential_#{credential.id}_modal")
-                }>
+                <.link
+                  class="table-action"
+                  phx-click={
+                    show_modal("delete_credential_#{credential.id}_modal")
+                  }
+                >
                   Delete
                 </.link>
               </span>
@@ -476,7 +482,7 @@
               <a
                 id={"edit_auth_method_link_#{auth_method.id}"}
                 href="#"
-                class="text-indigo-600 hover:text-indigo-900"
+                class="table-action"
                 phx-click={show_modal("edit_auth_#{auth_method.id}_modal")}
               >
                 Edit
@@ -501,7 +507,7 @@
               <a
                 id={"edit_auth_method_link_#{auth_method.id}"}
                 href="#"
-                class="cursor-not-allowed text-indigo-300"
+                class="table-action"
               >
                 Edit
               </a>
@@ -512,7 +518,7 @@
               <a
                 id={"delete_auth_method_link_#{auth_method.id}"}
                 href="#"
-                class="text-red-600 hover:text-red-800"
+                class="link link-danger"
                 phx-click={show_modal("delete_auth_#{auth_method.id}_modal")}
               >
                 Delete
@@ -603,7 +609,7 @@
               <.th>Role</.th>
               <.th>Failure Alert</.th>
               <.th>Digest</.th>
-              <.th>Actions</.th>
+              <.th><span class="sr-only">Actions</span></.th>
             </.tr>
 
             <%= for project_user <- @project_users do %>
@@ -632,7 +638,7 @@
                     project_user={project_user}
                   />
                 </.td>
-                <.td>
+                <.td class="text-right">
                   <.button
                     id={"remove_project_user_#{project_user.id}_button"}
                     type="button"
@@ -654,7 +660,7 @@
                       )
                     }
                   >
-                    <Heroicons.minus_circle class="w-5 h-5" />
+                    <.icon name="hero-minus-circle" class="w-5 h-5" />
                     Remove Collaborator
                   </.button>
                   <.confirm_user_removal_modal

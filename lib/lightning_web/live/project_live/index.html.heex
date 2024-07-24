@@ -38,7 +38,7 @@
           <.th>Created At</.th>
           <.th>Description</.th>
           <.th>Scheduled Deletion</.th>
-          <.th>Actions</.th>
+          <.th><span class="sr-only">Actions</span></.th>
         </.tr>
         <%= for project <- @projects do %>
           <.tr id={"project-#{project.id}"}>
@@ -46,14 +46,17 @@
             <.td><%= project.inserted_at %></.td>
             <.td><%= project.description %></.td>
             <.td><%= project.scheduled_deletion %></.td>
-            <.td>
+            <.td class="text-right">
               <span>
-                <.link navigate={
-                  Routes.project_index_path(@socket, :edit, project.id)
-                }>
+                <.link
+                  class="table-action"
+                  navigate={
+                    Routes.project_index_path(@socket, :edit, project.id)
+                  }
+                >
                   Edit
                 </.link>
-                | <.delete_action socket={@socket} project={project} />
+                <.delete_action socket={@socket} project={project} />
               </span>
             </.td>
           </.tr>
