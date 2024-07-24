@@ -1366,6 +1366,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
            |> assign_workflow(workflow, snapshot)
            |> put_flash(:info, "Workflow saved")
            |> push_patches_applied(initial_params)
+           |> then(fn socket ->
+             if socket.assigns.live_action == :new do
+               push_event(socket, "workflow_created", %{id: workflow.id})
+             else
+               socket
+             end
+           end)
            |> push_patch(
              to: ~p"/projects/#{project.id}/w/#{workflow.id}?#{query_params}",
              replace: true
