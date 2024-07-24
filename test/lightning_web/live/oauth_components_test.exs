@@ -104,7 +104,7 @@ defmodule LightningWeb.OauthComponentsTest do
              &LightningWeb.Components.Oauth.alert_block/1,
              type: :missing_required,
              authorize_url: "https://www",
-             revocation_url: "https://www",
+             revocation_endpoint: "https://www",
              myself: nil,
              provider: "Salesforce"
            ) =~
