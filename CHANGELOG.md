@@ -19,14 +19,16 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v2.7.9] - 2024-07-24
+
+### Changed
+
 - CSS - standardized some more tailwind components
   [PR#2324](https://github.com/OpenFn/lightning/pull/2324)
 
-### Fixed
-
 ## [v2.7.8] - 2024-07-24
-
-### Added
 
 ### Changed
 

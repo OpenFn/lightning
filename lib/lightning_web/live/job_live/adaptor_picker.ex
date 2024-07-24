@@ -14,7 +14,7 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="grid grid-cols-4 gap-2 @container">
+    <div class="grid grid-cols-4 gap-2 @container items-end">
       <div class="col-span-4 @md:col-span-2">
         <Form.label_field
           form={:adaptor_picker}
