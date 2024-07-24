@@ -5,15 +5,15 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.30.9">
-    <meta name="project" content="Lightning v2.7.8">
+    <meta name="project" content="Lightning v2.7.9">
 
-    <title>Lightning.Runs.Query — Lightning v2.7.8</title>
+    <title>Lightning.Runs.Query — Lightning v2.7.9</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-C5F05E4B.js"></script>
+    <script src="dist/sidebar_items-FC9BAD90.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -72,7 +72,7 @@
 Lightning
       </a>
       <div class="sidebar-projectVersion" translate="no">
-        v2.7.8
+        v2.7.9
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -131,7 +131,7 @@ Pages
     </a>
 
   <span translate="no">Lightning.Runs.Query</span> 
-  <small class="app-vsn" translate="no">(Lightning v2.7.8)</small>
+  <small class="app-vsn" translate="no">(Lightning v2.7.9)</small>
 
 </h1>
 
@@ -233,7 +233,7 @@ available state and have not reached the concurrency limit for their workflow.</
 </h3>
 <p>This query does not currently take into account the priority of the run.
 To allow for prioritization, the query should be updated to order by
-priority.</p><pre><code class="makeup elixir" translate="no"><span class="n">eligible_for_claim</span><span class="p" data-group-id="4316642549-1">(</span><span class="p" data-group-id="4316642549-1">)</span><span class="w"> </span><span class="o">|&gt;</span><span class="w"> </span><span class="n">prepend_order_by</span><span class="p" data-group-id="4316642549-2">(</span><span class="p" data-group-id="4316642549-3">[</span><span class="ss">:priority</span><span class="p" data-group-id="4316642549-3">]</span><span class="p" data-group-id="4316642549-2">)</span></code></pre></blockquote>
+priority.</p><pre><code class="makeup elixir" translate="no"><span class="n">eligible_for_claim</span><span class="p" data-group-id="8072870519-1">(</span><span class="p" data-group-id="8072870519-1">)</span><span class="w"> </span><span class="o">|&gt;</span><span class="w"> </span><span class="n">prepend_order_by</span><span class="p" data-group-id="8072870519-2">(</span><span class="p" data-group-id="8072870519-3">[</span><span class="ss">:priority</span><span class="p" data-group-id="8072870519-3">]</span><span class="p" data-group-id="8072870519-2">)</span></code></pre></blockquote>
   </section>
 </section>
 <section class="detail" id="in_progress_window/0">
