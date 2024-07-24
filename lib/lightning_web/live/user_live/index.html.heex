@@ -46,11 +46,14 @@
           <.td><%= user.scheduled_deletion %></.td>
           <.td>
             <span>
-              <.link navigate={Routes.user_edit_path(@socket, :edit, user)}>
+              <.link
+                class="table-action"
+                navigate={Routes.user_edit_path(@socket, :edit, user)}
+              >
                 Edit
               </.link>
             </span>
-            | <.delete_action socket={@socket} user={user} />
+            <.delete_action socket={@socket} user={user} />
           </.td>
         </.tr>
       <% end %>

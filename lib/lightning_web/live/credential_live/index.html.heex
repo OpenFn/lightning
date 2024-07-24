@@ -54,17 +54,16 @@
         <div :if={client.user_id == @current_user.id}>
           <span>
             <.link
-              class="link"
+              class="table-action"
               phx-click={show_modal("edit-oauth-client-#{client.id}-modal")}
             >
               Edit
             </.link>
           </span>
-          |
           <span>
             <.link
               id={"delete-oauth-client-#{client.id}-button"}
-              class="link"
+              class="table-action"
               phx-click={show_modal("delete_oauth_client_#{client.id}_modal")}
             >
               Delete
@@ -112,13 +111,14 @@
       <:actions :let={credential}>
         <div :if={credential.user_id == @current_user.id}>
           <span>
-            <.link phx-click={
-              show_modal("edit-credential-#{credential.id}-modal")
-            }>
+            <.link
+              class="table-action"
+              phx-click={show_modal("edit-credential-#{credential.id}-modal")}
+            >
               Edit
             </.link>
           </span>
-          | <.delete_action socket={@socket} credential={credential} />
+          <.delete_action socket={@socket} credential={credential} />
           <.live_component
             id={"edit-credential-#{credential.id}-modal"}
             module={LightningWeb.CredentialLive.CredentialFormComponent}

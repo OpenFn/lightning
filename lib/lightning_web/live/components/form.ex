@@ -229,6 +229,7 @@ defmodule LightningWeb.Components.Form do
       text-sm
       font-medium
       text-secondary-700
+      mb-1
     ]
 
     error_classes = ~w[
@@ -377,7 +378,7 @@ defmodule LightningWeb.Components.Form do
 
     ~H"""
     <%= if assigns[:tooltip] do %>
-      <div class="flex flex-row">
+      <div class="flex flex-row items-end">
         <%= Phoenix.HTML.Form.label(@form, @field, @opts) do %>
           <div class="flex items-center">
             <%= @title %>

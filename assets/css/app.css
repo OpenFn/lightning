@@ -312,3 +312,26 @@ div.line-num::before {
     @apply text-yellow-700 hover:text-yellow-600;
   }
 }
+
+@layer components {
+  .table-action {
+    @apply inline-flex
+    items-center
+    rounded-md
+    bg-white
+    mx-0.5
+    px-2.5
+    py-1.5
+    text-sm
+    font-semibold
+    text-gray-900
+    shadow-sm
+    ring-1
+    ring-inset
+    ring-gray-300
+    hover:bg-gray-50
+    disabled:cursor-not-allowed
+    disabled:opacity-30
+    disabled:hover:bg-white;
+  }
+}

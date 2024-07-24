@@ -305,7 +305,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       end)
 
     ~H"""
-    <div class="text-xs">
+    <div class="text-xs text-left">
       <.modal id={@id} width="xl:min-w-1/3 min-w-1/2 max-w-full">
         <:title>
           <div class="flex justify-between">
@@ -384,7 +384,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
   def render(%{page: :second, schema: "oauth"} = assigns) do
     ~H"""
-    <div class="mt-10 sm:mt-0">
+    <div class="text-left mt-10 sm:mt-0">
       <.modal id={@id} width="xl:min-w-1/3 min-w-1/2 w-[300px]">
         <:title>
           <div class="flex justify-between">
@@ -425,7 +425,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
   def render(%{page: :second} = assigns) do
     ~H"""
-    <div class="mt-10 sm:mt-0">
+    <div class="text-left mt-10 sm:mt-0">
       <.modal id={@id} width="xl:min-w-1/3 min-w-1/2 w-[300px]">
         <:title>
           <div class="flex justify-between">
