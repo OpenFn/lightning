@@ -19,6 +19,14 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v2.7.8] - 2024-07-24
+
+### Added
+
+### Changed
+
 - Enable End to End Integration tests
   [#2187](https://github.com/OpenFn/lightning/issues/2187)
 - Make selected Kafka trigger parameters configurable via ENV vars.
