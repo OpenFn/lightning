@@ -123,6 +123,9 @@ defmodule Lightning.KafkaTriggers do
 
     offset_reset_policy = determine_offset_reset_policy(trigger)
 
+    number_of_consumers =
+      Application.get_env(:lightning, :kafka_triggers)[:number_of_consumers]
+
     %{
       id: trigger.id,
       start: {
@@ -130,6 +133,7 @@ defmodule Lightning.KafkaTriggers do
         :start_link,
         [
           [
+            number_of_consumers: number_of_consumers,
             connect_timeout: connect_timeout * 1000,
             group_id: group_id,
             hosts: hosts,

@@ -10,17 +10,38 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetSupervisor do
   alias Lightning.KafkaTriggers.MessageCandidateSetServer
   alias Lightning.KafkaTriggers.MessageCandidateSetWorker
 
-  def start_link(_opts) do
-    Supervisor.start_link(__MODULE__, [])
+  def start_link(opts) do
+    Supervisor.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
   @impl true
-  def init(_opts) do
-    children = [
-      MessageCandidateSetServer,
-      MessageCandidateSetWorker
-    ]
+  def init(opts) do
+    number_of_workers = Keyword.get(opts, :number_of_workers, 1)
+
+    children =
+      [MessageCandidateSetServer] ++ generate_worker_specs(number_of_workers)
 
     Supervisor.init(children, strategy: :one_for_one)
+  end
+
+  def generate_worker_specs(number_of_workers) do
+    no_set_delay =
+      Application.get_env(:lightning, :kafka_triggers)[
+        :no_message_candidate_set_delay_milliseconds
+      ]
+
+    next_set_delay =
+      Application.get_env(:lightning, :kafka_triggers)[
+        :next_message_candidate_set_delay_milliseconds
+      ]
+
+    0..(number_of_workers - 1)
+    |> Enum.map(fn index ->
+      {
+        MessageCandidateSetWorker,
+        [no_set_delay: no_set_delay, next_set_delay: next_set_delay]
+      }
+      |> Supervisor.child_spec(id: "mcs_worker_#{index}")
+    end)
   end
 end

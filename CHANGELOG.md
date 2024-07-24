@@ -21,6 +21,8 @@ and this project adheres to
 
 - Enable End to End Integration tests
   [#2187](https://github.com/OpenFn/lightning/issues/2187)
+- Make selected Kafka trigger parameters configurable via ENV vars.
+  [#2315](https://github.com/OpenFn/lightning/issues/2315)
 - Use the Oauth2 `revocation_endpoint` to revoke token access (1) before
   attempting to reauthorize and (2) when users schedule a credential for
   deletion [#2314](https://github.com/OpenFn/lightning/issues/2314)
