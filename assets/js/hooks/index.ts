@@ -18,6 +18,14 @@ export {
   TabbedPanels,
 };
 
+export const OpenAuthorizeUrl = {
+  mounted() {
+    this.handleEvent('open_authorize_url', ({ url }: { url: string }) => {
+      window.open(url, '_blank');
+    });
+  },
+} as PhoenixHook;
+
 export const EditScope = {
   mounted() {
     this.el.addEventListener('dblclick', _e => {

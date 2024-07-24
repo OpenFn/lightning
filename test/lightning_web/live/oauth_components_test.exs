@@ -41,8 +41,19 @@ defmodule LightningWeb.OauthComponentsTest do
   end
 
   test "rendering error component for various error type" do
+    assert render_component(&LightningWeb.Components.Oauth.success_message/1,
+             revocation: :unavailable
+           ) =~
+             "Success. If your credential is no longer working, you may try to revoke OpenFn access and and reauthenticate. To revoke access, go to the third party apps section of the provider's website or portal."
+
+    assert render_component(&LightningWeb.Components.Oauth.success_message/1,
+             revocation: :available,
+             myself: nil
+           ) =~
+             "Success. If your credential is no longer working, you may try to revoke and reauthenticate by clicking"
+
     assert render_component(
-             &LightningWeb.Components.Oauth.error_block/1,
+             &LightningWeb.Components.Oauth.alert_block/1,
              type: :token_failed,
              authorize_url: "https://www",
              myself: nil,
@@ -50,7 +61,7 @@ defmodule LightningWeb.OauthComponentsTest do
            ) =~ "Failed retrieving the token from the provider"
 
     assert render_component(
-             &LightningWeb.Components.Oauth.error_block/1,
+             &LightningWeb.Components.Oauth.alert_block/1,
              type: :refresh_failed,
              authorize_url: "https://www",
              myself: nil,
@@ -58,15 +69,15 @@ defmodule LightningWeb.OauthComponentsTest do
            ) =~ "Failed renewing your access token"
 
     assert render_component(
-             &LightningWeb.Components.Oauth.error_block/1,
+             &LightningWeb.Components.Oauth.alert_block/1,
              type: :userinfo_failed,
              authorize_url: "https://www",
              myself: nil,
              provider: "Salesforce"
            ) =~
-             "That seemed to work, but we couldn't fetch your user information. You can save your credential now or try again."
+             "That worked, but we couldn't fetch your user information. You can save your credential now or"
 
-    assert render_component(&LightningWeb.Components.Oauth.error_block/1,
+    assert render_component(&LightningWeb.Components.Oauth.alert_block/1,
              type: :code_failed,
              authorize_url: "https://www",
              myself: nil,
@@ -74,12 +85,38 @@ defmodule LightningWeb.OauthComponentsTest do
            ) =~ "Failed retrieving authentication code."
 
     assert render_component(
-             &LightningWeb.Components.Oauth.error_block/1,
+             &LightningWeb.Components.Oauth.alert_block/1,
+             type: :revoke_failed,
+             myself: nil
+           ) =~
+             "Token revocation failed. The token associated with this credential may have already been revoked or expired. You may try to authorize again, or delete this credential and create a new one."
+
+    assert render_component(
+             &LightningWeb.Components.Oauth.alert_block/1,
              type: :missing_required,
              authorize_url: "https://www",
              myself: nil,
              provider: "Salesforce"
            ) =~
-             "We didn't receive a refresh token from this provider. Sometimes this happens if you have already granted access to OpenFn via another credential. If you have another credential, please use that one. If you don't, please revoke OpenFn's access to your provider via the \"third party apps\" section of their website. Once that is done, you can try to reauthorize"
+             "We didn't receive a refresh token from this provider. Sometimes this happens if you have already granted access to OpenFn via another credential."
+
+    assert render_component(
+             &LightningWeb.Components.Oauth.alert_block/1,
+             type: :missing_required,
+             authorize_url: "https://www",
+             revocation_endpoint: "https://www",
+             myself: nil,
+             provider: "Salesforce"
+           ) =~
+             "re_authorize_click"
+
+    assert render_component(
+             &LightningWeb.Components.Oauth.alert_block/1,
+             type: :missing_required,
+             authorize_url: "https://www",
+             myself: nil,
+             provider: "Salesforce"
+           ) =~
+             "authorize_click"
   end
 end

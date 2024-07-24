@@ -127,6 +127,8 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
       </div>
       <.reauthorize_banner
         :if={@display_reauthorize_banner}
+        provider="provider"
+        revocation_endpoint={nil}
         authorize_url={@authorize_url}
         myself={@myself}
       />
@@ -152,11 +154,12 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
         userinfo={@userinfo.result}
         authorize_url={@authorize_url}
       />
-      <.error_block
+      <.alert_block
         :if={@display_error}
         type={@oauth_progress}
         myself={@myself}
         provider={@provider}
+        revocation_endpoint={nil}
         authorize_url={@authorize_url}
       />
     </fieldset>

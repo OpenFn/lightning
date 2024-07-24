@@ -41,7 +41,7 @@
         Can't find the right installation or repository?
         <.link
           target="_blank"
-          class="text-indigo-600 hover:underline"
+          class="link"
           href={"https://github.com/apps/#{github_config()[:app_name]}"}
         >
           Create/update GitHub installations or modify permissions.
@@ -149,7 +149,7 @@
           <.link
             href={"https://www.github.com/" <> @project_repo_connection.repo}
             target="_blank"
-            class="hover:underline text-primary-600"
+            class="link"
           >
             <%= @project_repo_connection.repo %>
           </.link>
@@ -199,7 +199,7 @@
       No longer need to sync this project?
       <.link
         href="#"
-        class="hover:underline text-red-600"
+        class="link link-danger"
         phx-click={show_modal("remove_connection_modal")}
         phx-target={@myself}
       >

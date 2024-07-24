@@ -18,6 +18,7 @@ defmodule Lightning.Credentials do
   alias Lightning.Credentials
   alias Lightning.Credentials.Audit
   alias Lightning.Credentials.Credential
+  alias Lightning.Credentials.OauthClient
   alias Lightning.Credentials.SchemaDocument
   alias Lightning.Credentials.SensitiveValues
   alias Lightning.Projects.Project
@@ -174,7 +175,10 @@ defmodule Lightning.Credentials do
 
   """
   def update_credential(%Credential{} = credential, attrs) do
-    changeset = credential |> change_credential(attrs) |> cast_body_change()
+    changeset =
+      credential
+      |> change_credential(attrs)
+      |> cast_body_change()
 
     Multi.new()
     |> Multi.update(:credential, changeset)
@@ -185,6 +189,9 @@ defmodule Lightning.Credentials do
         {:error, changeset}
 
       {:ok, %{credential: credential}} ->
+        Lightning.Repo.get(Lightning.Credentials.Credential, credential.id)
+        |> Map.get(:body)
+
         {:ok, credential}
     end
   end
@@ -390,6 +397,7 @@ defmodule Lightning.Credentials do
     case Repo.update(changeset) do
       {:ok, updated_credential} ->
         remove_credential_associations(updated_credential)
+        maybe_revoke_oauth(updated_credential)
         notify_owner(updated_credential)
         {:ok, updated_credential}
 
@@ -408,6 +416,19 @@ defmodule Lightning.Credentials do
     |> update_credential(%{
       scheduled_deletion: nil
     })
+  end
+
+  defp maybe_revoke_oauth(%Credential{oauth_client_id: nil}), do: :ok
+
+  defp maybe_revoke_oauth(%Credential{
+         oauth_client_id: oauth_client_id,
+         body: body
+       }) do
+    client = Repo.get(OauthClient, oauth_client_id)
+
+    if client.revocation_endpoint do
+      OauthHTTPClient.revoke_token(client, body)
+    end
   end
 
   defp remove_credential_associations(%Credential{id: credential_id}) do

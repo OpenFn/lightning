@@ -41,7 +41,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                         navigate={
                           ~p"/projects/#{@project}/history?#{%{filters: %{workorder_id: run.work_order_id}}}"
                         }
-                        class="hover:underline hover:text-primary-900"
+                        class="link link-plain"
                       >
                         <span class="whitespace-nowrap text-ellipsis">
                           <%= display_short_uuid(run.work_order_id) %>
@@ -60,7 +60,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                         patch={
                           ~p"/projects/#{@project}/runs/#{run}?step=#{@selected_step_id || ""}"
                         }
-                        class="hover:underline hover:text-primary-900 whitespace-nowrap text-ellipsis"
+                        class="link link-plain text-ellipsis"
                       >
                         <span class="whitespace-nowrap text-ellipsis">
                           <%= display_short_uuid(run.id) %>

@@ -76,7 +76,6 @@ defmodule LightningWeb.RunLive.Show do
           <:failed :let={_reason}>
             there was an error loading the run
           </:failed>
-
           <div class="flex gap-x-6 @5xl/main:flex-row flex-col h-full">
             <div class="@5xl/main:basis-1/3 flex gap-y-6 @5xl/main:flex-col flex-row">
               <.detail_list
@@ -90,7 +89,7 @@ defmodule LightningWeb.RunLive.Show do
                       navigate={
                         ~p"/projects/#{@project}/w/#{@workflow.id}?v=#{run.snapshot.lock_version}"
                       }
-                      class="hover:underline hover:text-primary-900 whitespace-nowrap text-ellipsis"
+                      class="link link-plain text-ellipsis"
                     >
                       <span class="whitespace-nowrap text-ellipsis">
                         <%= @workflow.name %>
@@ -106,7 +105,7 @@ defmodule LightningWeb.RunLive.Show do
                       navigate={
                         ~p"/projects/#{@project}/history?#{%{filters: %{workorder_id: run.work_order_id}}}"
                       }
-                      class="hover:underline hover:text-primary-900 whitespace-nowrap text-ellipsis"
+                      class="link link-plain text-ellipsis"
                     >
                       <span class="whitespace-nowrap text-ellipsis">
                         <%= display_short_uuid(run.work_order_id) %>

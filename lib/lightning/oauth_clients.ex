@@ -116,7 +116,7 @@ defmodule Lightning.OauthClients do
 
   ## Parameters
     - attrs: Map containing attributes for the new OAuth client.
-      Required fields: `name`, `authorization_endpoint`, `token_endpoint`, `client_id`, `client_secret`.
+      Required fields: `name`, `authorization_endpoint`, `token_endpoint`, `revocation_endpoint`, `client_id`, `client_secret`.
 
   ## Returns
     - `{:ok, oauth_client}` if the client is created successfully.
