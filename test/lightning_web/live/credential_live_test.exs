@@ -796,11 +796,110 @@ defmodule LightningWeb.CredentialLiveTest do
     end
   end
 
+  describe "Authorizing an oauth credential" do
+    setup do
+      {:ok,
+       token: %{
+         "access_token" => "ya29.a0AVvZ",
+         "refresh_token" => "1//03vpp6Li",
+         "expires_at" => 3600,
+         "token_type" => "Bearer",
+         "id_token" => "eyJhbGciO",
+         "scope" => "scope1 scope2"
+       }}
+    end
+
+    test "renders error when revocation fails",
+         %{
+           conn: conn,
+           user: user,
+           token: token
+         } do
+      credential =
+        insert(:credential,
+          user: user,
+          schema: "oauth",
+          body: token,
+          oauth_client: build(:oauth_client, user: user, userinfo_endpoint: nil)
+        )
+
+      Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
+                                                                       _opts ->
+        case env.url do
+          "http://example.com/oauth2/revoke" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: Jason.encode!(%{})
+             }}
+
+          "http://example.com/oauth2/token" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: Jason.encode!(token)
+             }}
+        end
+      end)
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      assert view |> element("#credential-form-#{credential.id}") |> render() =~
+               "Success."
+
+      view
+      |> element("#credential-form-#{credential.id} #re-authorize-button")
+      |> render_click()
+
+      view
+      |> element("#credential-form-#{credential.id} button", "Cancel")
+      |> render_click()
+
+      Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
+                                                                       _opts ->
+        case env.url do
+          "http://example.com/oauth2/revoke" ->
+            {:ok,
+             %Tesla.Env{
+               status: 400,
+               body: Jason.encode!(%{})
+             }}
+
+          "http://example.com/oauth2/token" ->
+            {:ok,
+             %Tesla.Env{
+               status: 400,
+               body: Jason.encode!(%{})
+             }}
+        end
+      end)
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      assert view
+             |> element("#credential-form-#{credential.id}")
+             |> render() =~
+               "Failed retrieving the token from the provider. Please try again"
+
+      assert view
+             |> element("#credential-form-#{credential.id} #re-authorize-button")
+             |> render_click() =~
+               "Token revocation failed. The token associated with this credential may have already been revoked or expired. You may try to authorize again, or delete this credential and create a new one"
+    end
+  end
+
   describe "generic oauth credential when flow fails" do
     setup do
       Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
                                                                        _opts ->
         case env.url do
+          "http://example.com/oauth2/revoke" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: Jason.encode!(%{})
+             }}
+
           "http://example.com/oauth2/token" ->
             {:ok,
              %Tesla.Env{
@@ -902,6 +1001,13 @@ defmodule LightningWeb.CredentialLiveTest do
       Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
                                                                        _opts ->
         case env.url do
+          "http://example.com/oauth2/revoke" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: Jason.encode!(%{})
+             }}
+
           "http://example.com/oauth2/token" ->
             {:ok,
              %Tesla.Env{
@@ -1107,7 +1213,7 @@ defmodule LightningWeb.CredentialLiveTest do
              end)
     end
 
-    test "re-authenticate banner is not rendered the first time we pick permissions",
+    test "reauthenticate banner is not rendered the first time we pick permissions",
          %{
            conn: conn,
            user: user
@@ -1123,7 +1229,9 @@ defmodule LightningWeb.CredentialLiveTest do
              |> has_element?("#scope_selection_new")
 
       refute view |> has_element?("#re-authorize-banner")
-      assert view |> has_element?("#authorize-button")
+
+      assert view
+             |> has_element?("#authorize-button")
 
       oauth_client.optional_scopes
       |> String.split(",")
@@ -1134,10 +1242,12 @@ defmodule LightningWeb.CredentialLiveTest do
       end)
 
       refute view |> has_element?("#re-authorize-banner")
-      assert view |> has_element?("#authorize-button")
+
+      assert view
+             |> has_element?("#authorize-button")
     end
 
-    test "re-authenticate banner rendered when scopes are changed",
+    test "reauthenticate banner rendered when scopes are changed",
          %{
            conn: conn,
            user: user
@@ -1169,7 +1279,6 @@ defmodule LightningWeb.CredentialLiveTest do
              |> has_element?("#scope_selection_new")
 
       refute index_live |> has_element?("#re-authorize-banner")
-      refute index_live |> has_element?("#re-authorize-button")
 
       oauth_client.optional_scopes
       |> String.split(",")
@@ -1180,7 +1289,7 @@ defmodule LightningWeb.CredentialLiveTest do
       end)
 
       assert index_live |> has_element?("#re-authorize-banner")
-      assert index_live |> has_element?("#re-authorize-button")
+      assert index_live |> has_element?("#authorize-button")
     end
 
     test "correctly renders a valid existing token", %{
@@ -1272,7 +1381,7 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, view, html} = live(conn, ~p"/credentials")
 
       assert html =~ credential.name
-      refute view |> has_element?("h3", "Oauth client not found.")
+      refute view |> has_element?("h3", "Oauth client not found")
 
       refute view
              |> has_element?(
@@ -1284,7 +1393,7 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, view, html} = live(conn, ~p"/credentials")
 
       assert html =~ credential.name
-      assert view |> has_element?("h3", "OAuth client not found.")
+      assert view |> has_element?("h3", "OAuth client not found")
 
       assert view
              |> has_element?("span##{credential.id}-client-not-found-tooltip")
@@ -1387,8 +1496,6 @@ defmodule LightningWeb.CredentialLiveTest do
         api_version: "34"
       })
 
-      # Get the state from the authorize url in order to fake the calling
-      # off the action in the OidcController
       authorize_url =
         index_live
         |> element("#credential-form-new")
@@ -1403,12 +1510,10 @@ defmodule LightningWeb.CredentialLiveTest do
       assert index_live.id == subscription_id
       assert index_live |> element(component_id)
 
-      # Click on the 'Authorize with Google button
       index_live
       |> element("#authorize-button")
       |> render_click()
 
-      # Once authorizing the button isn't available
       refute index_live
              |> has_element?("#authorize-button")
 
@@ -1473,6 +1578,17 @@ defmodule LightningWeb.CredentialLiveTest do
         name: "My Generic OAuth Credential"
       })
 
+      Mox.expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
+        env, _opts
+        when env.method == :post and
+               env.url == oauth_client.revocation_endpoint ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: Jason.encode!(%{})
+           }}
+      end)
+
       authorize_url =
         view
         |> element("#credential-form-new")
@@ -1515,6 +1631,13 @@ defmodule LightningWeb.CredentialLiveTest do
       Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
                                                                        _opts ->
         case env.url do
+          "http://example.com/oauth2/revoke" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: Jason.encode!(%{})
+             }}
+
           "http://example.com/oauth2/token" ->
             {:error, :unauthorized}
 
@@ -1588,6 +1711,13 @@ defmodule LightningWeb.CredentialLiveTest do
       Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
                                                                        _opts ->
         case env.url do
+          "http://example.com/oauth2/revoke" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: Jason.encode!(%{})
+             }}
+
           "http://example.com/oauth2/token" ->
             {:ok,
              %Tesla.Env{
@@ -1664,8 +1794,10 @@ defmodule LightningWeb.CredentialLiveTest do
       assert view
              |> has_element?(
                "p",
-               "That seemed to work, but we couldn't fetch your user information. You can save your credential now or try again."
+               "That worked, but we couldn't fetch your user information. You can save your credential now or"
              )
+
+      assert has_element?(view, "button", "try again")
     end
   end
 
@@ -1691,7 +1823,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
     # TODO - remove entirely once `salesforce_oauth` is removed.
     @tag :skip
-    test "re-authenticate banner is not rendered the first time we pick permissions",
+    test "reauthenticate banner is not rendered the first time we pick permissions",
          %{
            bypass: bypass,
            conn: conn,
@@ -1723,7 +1855,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
     # TODO - remove entirely once `salesforce_oauth` is removed.
     @tag :skip
-    test "re-authenticate banner rendered when scopes are changed",
+    test "reauthenticate banner rendered when scopes are changed",
          %{
            bypass: bypass,
            conn: conn,
@@ -1925,8 +2057,10 @@ defmodule LightningWeb.CredentialLiveTest do
       assert edit_live
              |> has_element?(
                "p",
-               "That seemed to work, but we couldn't fetch your user information. You can save your credential now or try again."
+               "That worked, but we couldn't fetch your user information. You can save your credential now or"
              )
+
+      assert has_element?(edit_live, "button", "try again")
 
       # Now respond with success
       expect_userinfo(
@@ -1937,7 +2071,7 @@ defmodule LightningWeb.CredentialLiveTest do
         """
       )
 
-      edit_live |> element("a", "Try again") |> render_click()
+      edit_live |> element("button", "try again") |> render_click()
 
       assert wait_for_assigns(edit_live, :userinfo_received, credential.id)
 
@@ -2348,8 +2482,10 @@ defmodule LightningWeb.CredentialLiveTest do
       assert edit_live
              |> has_element?(
                "p",
-               "That seemed to work, but we couldn't fetch your user information. You can save your credential now or try again."
+               "That worked, but we couldn't fetch your user information. You can save your credential now or"
              )
+
+      assert has_element?(edit_live, "button", "try again")
 
       # Now respond with success
       expect_userinfo(
@@ -2360,7 +2496,7 @@ defmodule LightningWeb.CredentialLiveTest do
         """
       )
 
-      edit_live |> element("a", "Try again") |> render_click()
+      edit_live |> element("button", "try again") |> render_click()
 
       assert wait_for_assigns(edit_live, :userinfo_received, credential.id)
 

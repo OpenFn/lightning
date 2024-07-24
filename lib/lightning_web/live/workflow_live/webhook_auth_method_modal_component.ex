@@ -302,7 +302,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
                 navigate={
                   ~p"/projects/#{assigns.webhook_auth_method.project_id}/settings#webhook_security"
                 }
-                class="flex-1 rounded-md text-primary-700 hover:text-primary-900 underline"
+                class="link flex-1 rounded-md"
                 role="button"
                 target="_blank"
               >
@@ -358,13 +358,13 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
       </p>
       <ul class="list-disc pl-5 mb-4">
         <%= for trigger <- assigns.webhook_auth_method.triggers do %>
-          <li class="mb-2 text-primary-700 underline cursor-pointer">
+          <li class="mb-2">
             <.link
               id={"linked-trigger-#{trigger.id}"}
               navigate={
                 ~p"/projects/#{assigns.webhook_auth_method.project_id}/w/#{trigger.workflow.id}?s=#{trigger.id}"
               }
-              class="flex-1 rounded-md text-primary-700 hover:text-primary-900 underline"
+              class="link flex-1 rounded-md"
               role="button"
               target="_blank"
             >
@@ -458,7 +458,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
         <div class="flex flex-wrap items-center">
           <.link
             href="#"
-            class="inline-flex content-center text-primary-700 hover:text-primary-800 underline text-md font-semibold"
+            class="link inline-flex content-center text-md font-semibold"
             phx-click="new_auth_method"
             phx-target={@myself}
           >

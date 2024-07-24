@@ -19,7 +19,8 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       :userinfo_failed,
       :code_failed,
       :refresh_failed,
-      :missing_required
+      :missing_required,
+      :revoke_failed
     ]
   }
 
@@ -116,7 +117,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   end
 
   def update(%{code: code} = _assigns, socket) do
-    if Map.get(socket.assigns, :code, false) do
+    if Map.get(socket.assigns, :code) do
       {:ok, socket}
     else
       client = socket.assigns.selected_client
@@ -141,9 +142,13 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
   @impl true
   def handle_async(:token, {:ok, {:ok, token}}, socket) do
+    token =
+      socket.assigns.changeset.params
+      |> Map.get("body", %{})
+      |> Map.merge(token)
+
     params = Map.put(socket.assigns.changeset.params, "body", token)
     changeset = Credentials.change_credential(socket.assigns.credential, params)
-    credential = Ecto.Changeset.apply_changes(changeset)
 
     errors = changeset_errors(changeset)
 
@@ -152,7 +157,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       |> assign(:oauth_progress, :token_received)
       |> assign(:scopes_changed, false)
       |> assign(:changeset, changeset)
-      |> assign(:credential, credential)
 
     cond do
       errors[:body] ->
@@ -193,20 +197,46 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     {:noreply, assign(socket, :oauth_progress, :userinfo_failed)}
   end
 
+  defp maybe_update_body(nil, _additional_params) do
+    nil
+  end
+
+  defp maybe_update_body(body, additional_params) do
+    Map.merge(body, additional_params)
+  end
+
+  defp prepare_params(credential_params, additional_params) do
+    Map.merge(credential_params, additional_params)
+  end
+
   @impl true
   def handle_event(
         "validate",
         %{"credential" => credential_params} = _params,
         socket
       ) do
+    changeset = socket.assigns.changeset
+    body = Ecto.Changeset.get_field(changeset, :body, %{})
+    user_id = Ecto.Changeset.get_field(changeset, :user_id)
+    api_version = Map.get(credential_params, "api_version")
+    selected_client_id = socket.assigns.selected_client.id
+
+    updated_body = maybe_update_body(body, %{"apiVersion" => api_version})
+
+    updated_credential_params =
+      prepare_params(credential_params, %{
+        "user_id" => user_id,
+        "schema" => "oauth",
+        "body" => updated_body,
+        "oauth_client_id" => selected_client_id
+      })
+
     changeset =
       Credentials.change_credential(
         socket.assigns.credential,
-        Map.put(credential_params, "schema", "oauth")
+        updated_credential_params
       )
       |> Map.put(:action, :validate)
-
-    api_version = Map.get(credential_params, "api_version", nil)
 
     available_projects =
       Helpers.filter_available_projects(
@@ -224,9 +254,54 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
      )}
   end
 
-  @impl true
+  # TODO: Merge authorize_click and re_authorize_click when removing the old implementation
+  # Both re_authorize_click and authorize_click should be one function and make sure we
+  # always use the hook to open the authorization tab in the browser instead of a link
+  # for authorize_click and a hook for re_authorize_click. But this is expensive to do
+  # now without cleaning the implementations of the oauth by removing the old implementation
+  def handle_event("re_authorize_click", _, socket) do
+    body = Ecto.Changeset.fetch_field!(socket.assigns.changeset, :body)
+
+    with selected_client <- socket.assigns.selected_client,
+         authorize_url <- socket.assigns.authorize_url,
+         {:ok, _response} <- OauthHTTPClient.revoke_token(selected_client, body) do
+      {
+        :noreply,
+        socket
+        |> assign(code: nil)
+        |> push_event("open_authorize_url", %{url: authorize_url})
+        |> assign(oauth_progress: :started)
+      }
+    else
+      {:error, reason} ->
+        Logger.info(
+          "Failed to revoke the token. Error received from the provider: #{reason}"
+        )
+
+        {:noreply, socket |> assign(oauth_progress: :revoke_failed)}
+    end
+  end
+
   def handle_event("authorize_click", _, socket) do
-    {:noreply, socket |> assign(oauth_progress: :started)}
+    {:noreply,
+     socket
+     |> assign(code: nil)
+     |> push_event("open_authorize_url", %{url: socket.assigns.authorize_url})
+     |> assign(oauth_progress: :started)}
+  end
+
+  def handle_event("try_userinfo_again", _, socket) do
+    body = Ecto.Changeset.fetch_field!(socket.assigns.changeset, :body)
+
+    {:noreply,
+     socket
+     |> assign(:oauth_progress, :fetching_userinfo)
+     |> start_async(:userinfo, fn ->
+       OauthHTTPClient.fetch_userinfo(
+         socket.assigns.selected_client,
+         body
+       )
+     end)}
   end
 
   def handle_event("check_scope", %{"_target" => [scope]}, socket) do
@@ -519,9 +594,15 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
             />
           </div>
 
-          <div class="space-y-4 my-10">
+          <div
+            id={"#{@id}-feedback"}
+            phx-hook="OpenAuthorizeUrl"
+            class="space-y-4 my-10"
+          >
             <.reauthorize_banner
               :if={@display_reauthorize_banner}
+              provider={@selected_client.name}
+              revocation_endpoint={@selected_client.revocation_endpoint}
               authorize_url={@authorize_url}
               myself={@myself}
             />
@@ -540,16 +621,26 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
               myself={@myself}
             />
             <.userinfo
-              :if={@display_userinfo && @selected_client}
+              :if={@display_userinfo && @userinfo}
               myself={@myself}
               userinfo={@userinfo}
               socket={@socket}
               authorize_url={@authorize_url}
             />
-            <.error_block
+            <.success_message
+              :if={@display_userinfo && !@userinfo}
+              revocation={
+                if @selected_client && @selected_client.revocation_endpoint,
+                  do: :available,
+                  else: :unavailable
+              }
+              myself={@myself}
+            />
+            <.alert_block
               :if={@display_error}
               type={@oauth_progress}
               myself={@myself}
+              revocation_endpoint={@selected_client.revocation_endpoint}
               provider={@selected_client.name}
               authorize_url={@authorize_url}
             />
@@ -653,7 +744,8 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   end
 
   defp display_userinfo?(oauth_progress, display_reauthorize_banner) do
-    oauth_progress == :userinfo_received && !display_reauthorize_banner
+    oauth_progress in [:userinfo_received, :token_received] &&
+      !display_reauthorize_banner
   end
 
   defp display_error?(oauth_progress, display_reauthorize_banner) do

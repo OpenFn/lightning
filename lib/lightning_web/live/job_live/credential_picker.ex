@@ -43,7 +43,7 @@ defmodule LightningWeb.JobLive.CredentialPicker do
         <button
           id="new-credential-button"
           type="button"
-          class="text-indigo-400 underline underline-offset-2 hover:text-indigo-500 text-xs"
+          class="link text-xs"
           phx-click={show_modal("new-credential-modal")}
           phx-target={@myself}
         >

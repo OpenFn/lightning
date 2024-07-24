@@ -21,6 +21,14 @@ and this project adheres to
 
 - Enable End to End Integration tests
   [#2187](https://github.com/OpenFn/lightning/issues/2187)
+- Use the Oauth2 `revocation_endpoint` to revoke token access (1) before
+  attempting to reauthorize and (2) when users schedule a credential for
+  deletion [#2314](https://github.com/OpenFn/lightning/issues/2314)
+- Standardized tailwind alerts
+  [#2314](https://github.com/OpenFn/lightning/issues/2314)
+- Standardized `link` tailwind style (and provided `link-plain`, `link-info`,
+  `link-error`, and `link-warning`)
+  [#2314](https://github.com/OpenFn/lightning/issues/2314)
 
 ### Fixed
 

@@ -207,7 +207,7 @@ defmodule LightningWeb.Components.Viewers do
           You can’t rerun this work order, but you can change
           <.link
             navigate={~p"/projects/#{@project_id}/settings#data-storage"}
-            class="underline inline-block text-blue-400 hover:text-blue-600"
+            class="link"
           >
             this policy
           </.link>
@@ -217,7 +217,7 @@ defmodule LightningWeb.Components.Viewers do
           <span
             id="zero-persistence-admins-tooltip"
             phx-hook="Tooltip"
-            class="underline inline-block text-blue-400"
+            class="link inline-block"
             aria-label={Enum.join(@admin_contacts, ", ")}
           >
             project admins

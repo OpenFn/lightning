@@ -290,7 +290,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
             navigate={
               ~p"/projects/#{@project}/history?#{%{filters: @pending_filters}}"
             }
-            class="text-indigo-700 hover:underline"
+            class="link"
           >
             (<%= @metrics.work_order_metrics.pending %> pending)
           </.link>
@@ -318,7 +318,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
             navigate={
               ~p"/projects/#{@project}/history?#{%{filters: @failed_filters}}"
             }
-            class="text-indigo-700 hover:underline"
+            class="link"
           >
             View all
           </.link>

@@ -197,10 +197,8 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                   ~p"/projects/#{@work_order.workflow.project_id}/history?filters[workorder_id]=#{@work_order.id}"
                 }>
                   <span
+                    class="link font-normal text-xs text-ellipsis font-mono inline-block"
                     title={@work_order.id}
-                    class="font-normal text-xs whitespace-nowrap text-ellipsis
-                rounded-md font-mono text-indigo-400 hover:underline inline-block
-                underline-offset-2 hover:text-indigo-500"
                   >
                     <%= display_short_uuid(@work_order.id) %>
                   </span>
@@ -262,10 +260,8 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                   <.link navigate={~p"/projects/#{@project.id}/runs/#{run.id}"}>
                     <span
                       title={run.id}
-                      class="font-normal text-xs whitespace-nowrap text-ellipsis
-                            inline-block rounded-md font-mono
-                            text-indigo-400 hover:underline underline-offset-2
-                            hover:text-indigo-500"
+                      class="link font-normal text-xs whitespace-nowrap text-ellipsis
+                            inline-block rounded-md font-mono"
                     >
                       <%= display_short_uuid(run.id) %>
                     </span>
@@ -346,9 +342,8 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
       >
         <span
           title={@work_order.dataclip_id}
-          class="font-normal text-xs whitespace-nowrap text-ellipsis
-                rounded-md font-mono text-indigo-400 hover:underline
-                underline-offset-2 hover:text-indigo-500"
+          class="link font-normal text-xs whitespace-nowrap text-ellipsis
+                rounded-md font-mono"
         >
           <%= display_short_uuid(@work_order.dataclip_id) %>
         </span>

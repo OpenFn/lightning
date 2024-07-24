@@ -2,6 +2,8 @@ defmodule LightningWeb.Components.Oauth do
   @moduledoc false
   use LightningWeb, :component
 
+  alias LightningWeb.Components.Common
+
   attr :id, :string, required: true
   attr :on_change, :any, required: true
   attr :target, :any, required: true
@@ -89,219 +91,252 @@ defmodule LightningWeb.Components.Oauth do
           <p class="text-sm text-gray-500">
             <a href="#"><%= @userinfo["email"] %></a>
           </p>
-          <div class="text-sm mt-2">
-            Success. If your credential stops working, you may try to
-            <.link
-              href={@authorize_url}
-              target="_blank"
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  defp reauthorize_button(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:class, fn -> "" end)
+      |> assign(:button_class, "link #{assigns.class}")
+
+    ~H"""
+    <button
+      id={@id}
+      type="button"
+      phx-target={@target}
+      phx-click="re_authorize_click"
+      class={@button_class}
+    >
+      <%= render_slot(@inner_block) %>
+    </button>
+    """
+  end
+
+  def success_message(%{revocation: :available} = assigns) do
+    ~H"""
+    <Common.alert type="success">
+      <:message>
+        Success. If your credential is no longer working, you may try to revoke and reauthenticate by clicking
+        <.reauthorize_button
+          id="re-authorize-button"
+          class="link-success"
+          target={@myself}
+        >
+          here <span aria-hidden="true"> &rarr;</span>
+        </.reauthorize_button>
+      </:message>
+    </Common.alert>
+    """
+  end
+
+  def success_message(%{revocation: :unavailable} = assigns) do
+    ~H"""
+    <Common.alert type="success">
+      <:message>
+        Success. If your credential is no longer working, you may try to revoke OpenFn access and and reauthenticate. To revoke access, go to the third party apps section of the provider's website or portal.
+      </:message>
+    </Common.alert>
+    """
+  end
+
+  def alert_block(%{type: :token_failed} = assigns) do
+    ~H"""
+    <Common.alert type="warning" header="Something went wrong.">
+      <:message>
+        <p>
+          Failed retrieving the token from the provider. Please try again
+          <.reauthorize_button
+            id="re-authorize-button"
+            class="link-warning"
+            target={@myself}
+          >
+            here <span aria-hidden="true"> &rarr;</span>
+          </.reauthorize_button>
+        </p>
+      </:message>
+    </Common.alert>
+    """
+  end
+
+  def alert_block(%{type: :revoke_failed} = assigns) do
+    ~H"""
+    <Common.alert
+      type="danger"
+      header="Something went wrong."
+      actions={[
+        %{
+          id: "authorize-button",
+          text: "Authorize again",
+          target: @myself,
+          click: "authorize_click"
+        }
+      ]}
+    >
+      <:message>
+        <p>
+          Token revocation failed. The token associated with this credential may have already been revoked or expired. You may try to authorize again, or delete this credential and create a new one.
+        </p>
+      </:message>
+    </Common.alert>
+    """
+  end
+
+  def alert_block(%{type: :refresh_failed} = assigns) do
+    ~H"""
+    <Common.alert type="warning" header="Something went wrong.">
+      <:message>
+        <p>
+          Failed renewing your access token. Please request a new token by clicking
+          <.reauthorize_button
+            id="re-authorize-button"
+            class="link-warning"
+            target={@myself}
+          >
+            here <span aria-hidden="true"> &rarr;</span>
+          </.reauthorize_button>
+        </p>
+      </:message>
+    </Common.alert>
+    """
+  end
+
+  def alert_block(%{type: :userinfo_failed} = assigns) do
+    ~H"""
+    <Common.alert type="info">
+      <:message>
+        <p>
+          That worked, but we couldn't fetch your user information. You can save your credential now or
+          <button
+            class="link link-info"
+            type="button"
+            phx-click="try_userinfo_again"
+            phx-target={@myself}
+          >
+            try again <span aria-hidden="true"> &rarr;</span>
+          </button>
+        </p>
+      </:message>
+    </Common.alert>
+    """
+  end
+
+  def alert_block(%{type: :fetching_userinfo} = assigns) do
+    ~H"""
+    <.text_ping_loader>
+      Attempting to fetch user information from your OAuth provider
+    </.text_ping_loader>
+    """
+  end
+
+  def alert_block(%{type: :missing_required} = assigns) do
+    ~H"""
+    <Common.alert type="danger" header="Missing refresh token" actions={[]}>
+      <:message>
+        <p>
+          We didn't receive a refresh token from this provider. Sometimes this happens if you have already granted access to OpenFn via another credential. If you have another credential, please use that one.
+        </p>
+        <p>
+          If you don't have another credential, please
+          <%= if assigns[:revocation_endpoint] do %>
+            reauthorize OpenFn's access to your provider
+            <.reauthorize_button
+              id="re-authorize-button"
+              class="link-danger"
+              target={@myself}
+            >
+              here <span aria-hidden="true"> &rarr;</span>
+            </.reauthorize_button>
+          <% else %>
+            revoke OpenFn's access to your provider via the "third party apps" section of their website. Once that is done, you can try to reauthorize
+            <button
+              id="authorize-button"
+              type="button"
               phx-target={@myself}
               phx-click="authorize_click"
-              class="hover:underline text-primary-900"
+              class="link link-danger"
             >
-              re-authorize.
-            </.link>
-          </div>
-        </div>
-      </div>
-    </div>
+              here <span aria-hidden="true"> &rarr;</span>
+            </button>
+          <% end %>
+        </p>
+      </:message>
+    </Common.alert>
     """
   end
 
-  def error_block(%{type: :token_failed} = assigns) do
+  def alert_block(%{type: :code_failed} = assigns) do
     ~H"""
-    <div class="rounded-md bg-yellow-50 border border-yellow-200 p-4">
-      <div class="flex">
-        <div class="flex-shrink-0">
-          <Heroicons.exclamation_triangle class="h-5 w-5 text-yellow-400" />
-        </div>
-        <div class="ml-3">
-          <h3 class="text-sm font-medium text-yellow-800">Something went wrong.</h3>
-          <div class="mt-2 text-sm text-yellow-700">
-            <p class="text-sm mt-2">
-              Failed retrieving the token from the provider. Please try again
-              <.link
-                href={@authorize_url}
-                target="_blank"
-                phx-target={@myself}
-                phx-click="authorize_click"
-                class="hover:underline text-primary-900"
-              >
-                here
-                <Heroicons.arrow_top_right_on_square class="h-4 w-4 text-indigo-600 inline-block" />.
-              </.link>
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
-  def error_block(%{type: :refresh_failed} = assigns) do
-    ~H"""
-    <div class="rounded-md bg-yellow-50 border border-yellow-200 p-4">
-      <div class="flex">
-        <div class="flex-shrink-0">
-          <Heroicons.exclamation_triangle class="h-5 w-5 text-yellow-400" />
-        </div>
-        <div class="ml-3">
-          <h3 class="text-sm font-medium text-yellow-800">Something went wrong.</h3>
-          <div class="mt-2 text-sm text-yellow-700">
-            <p class="text-sm mt-2">
-              Failed renewing your access token. Please request a new token by clicking
-              <.link
-                href={@authorize_url}
-                target="_blank"
-                phx-target={@myself}
-                phx-click="authorize_click"
-                class="hover:underline text-primary-900"
-              >
-                here
-                <Heroicons.arrow_top_right_on_square class="h-4 w-4 text-indigo-600 inline-block" />.
-              </.link>
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
-  def error_block(%{type: :userinfo_failed} = assigns) do
-    ~H"""
-    <div class="rounded-md bg-blue-50 p-4">
-      <div class="flex">
-        <div class="flex-shrink-0">
-          <Heroicons.exclamation_triangle class="h-5 w-5 text-blue-400" />
-        </div>
-        <div class="ml-3 flex-1 md:flex md:justify-between">
-          <p class="text-sm text-blue-700">
-            That seemed to work, but we couldn't fetch your user information. You can save your credential now or try again.
-          </p>
-          <p class="mt-3 text-sm md:ml-6 md:mt-0">
-            <a
-              href="#"
-              class="whitespace-nowrap font-medium text-blue-700 hover:text-blue-600"
-              phx-click="try_userinfo_again"
-              phx-target={@myself}
-            >
-              Try again <span aria-hidden="true"> &rarr;</span>
-            </a>
-          </p>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
-  def error_block(%{type: :missing_required} = assigns) do
-    ~H"""
-    <div class="rounded-md bg-yellow-50 border border-yellow-200 p-4">
-      <div class="flex">
-        <div class="flex-shrink-0">
-          <Heroicons.exclamation_triangle class="h-5 w-5 text-yellow-400" />
-        </div>
-        <div class="ml-3">
-          <h3 class="text-sm font-medium text-yellow-800">Missing refresh token</h3>
-          <div class="mt-2 text-sm text-yellow-700">
-            <p class="text-sm mt-2">
-              We didn't receive a refresh token from this provider. Sometimes this happens if you have already granted access to OpenFn via another credential. If you have another credential, please use that one. If you don't, please revoke OpenFn's access to your provider via the "third party apps" section of their website. Once that is done, you can try to reauthorize
-              <.link
-                href={@authorize_url}
-                target="_blank"
-                phx-target={@myself}
-                phx-click="authorize_click"
-                class="hover:underline text-primary-900"
-              >
-                here
-                <Heroicons.arrow_top_right_on_square class="h-4 w-4 text-indigo-600 inline-block" />.
-              </.link>
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
-  def error_block(%{type: :code_failed} = assigns) do
-    ~H"""
-    <div class="rounded-md bg-yellow-50 border border-yellow-200 p-4">
-      <div class="flex">
-        <div class="flex-shrink-0">
-          <Heroicons.exclamation_triangle class="h-5 w-5 text-yellow-400" />
-        </div>
-        <div class="ml-3">
-          <h3 class="text-sm font-medium text-yellow-800">Something went wrong.</h3>
-          <div class="mt-2 text-sm text-yellow-700">
-            <p class="text-sm mt-2">
-              Failed retrieving authentication code. Please reauthorize <.link
-                href={@authorize_url}
-                target="_blank"
-                phx-target={@myself}
-                phx-click="authorize_click"
-                class="hover:underline text-primary-900"
-              >
-            here
-            <Heroicons.arrow_top_right_on_square class="h-4 w-4 text-indigo-600 inline-block" />.
-          </.link>.
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
+    <Common.alert type="danger" header="Something went wrong.">
+      <:message>
+        <p>
+          Failed retrieving authentication code. Please reauthorize
+          <.reauthorize_button
+            id="re-authorize-button"
+            class="link-danger"
+            target={@myself}
+          >
+            here <span aria-hidden="true"> &rarr;</span>
+          </.reauthorize_button>
+        </p>
+      </:message>
+    </Common.alert>
     """
   end
 
   def missing_client_warning(assigns) do
     ~H"""
-    <div class="rounded-md bg-red-50 p-4 mb-4">
-      <div class="flex">
-        <div class="flex-shrink-0">
-          <Heroicons.exclamation_triangle class="h-5 w-5 text-red-400" />
-        </div>
-        <div class="ml-3">
-          <h3 class="text-sm font-medium text-red-800">OAuth client not found.</h3>
-          <div class="mt-2 text-sm text-red-700">
-            <p>
-              The associated Oauth client for this credential cannot be found. Create a new client or contact your administrator.
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
+    <Common.alert type="danger" header="OAuth client not found">
+      <:message>
+        <p>
+          The associated Oauth client for this credential cannot be found. Create
+          a new client or contact your administrator.
+        </p>
+      </:message>
+    </Common.alert>
     """
   end
 
   def reauthorize_banner(assigns) do
+    # TODO - consider https://github.com/OpenFn/lightning/issues/2320
+    # click =
+    #   if assigns[:revocation_endpoint],
+    #     do: "re_authorize_click",
+    #     else: "authorize_click"
+
+    # id =
+    #   if assigns[:revocation_endpoint],
+    #     do: "re-authorize-button",
+    #     else: "authorize-button"
+
+    # assigns =
+    #   assigns
+    #   |> assign(:click, click)
+    #   |> assign(:id, id)
+
     ~H"""
-    <div
+    <Common.alert
       id="re-authorize-banner"
-      class="rounded-md bg-blue-50 border border-blue-100 p-2 mt-5"
+      type="warning"
+      header="Reauthentication required"
+      actions={[
+        %{
+          id: "authorize-button",
+          text: "Reauthenticate with #{@provider}",
+          click: "authorize_click",
+          target: @myself
+        }
+      ]}
     >
-      <div class="flex">
-        <div class="flex-shrink-0">
-          <Heroicons.information_circle class="h-5 w-5 text-blue-400" />
-        </div>
-        <div class="ml-3 flex-1 md:flex md:justify-between">
-          <p class="text-sm text-slate-700">
-            Please re-authenticate to save your credential with the updated scopes
-          </p>
-          <p class="mt-3 text-sm md:ml-6 md:mt-0">
-            <.link
-              href={@authorize_url}
-              id="re-authorize-button"
-              target="_blank"
-              class="whitespace-nowrap font-medium text-blue-700 hover:text-blue-600"
-              phx-click="authorize_click"
-              phx-target={@myself}
-            >
-              Re-authenticate <span aria-hidden="true"> &rarr;</span>
-            </.link>
-          </p>
-        </div>
-      </div>
-    </div>
+      <:message>
+        <p>
+          You've changed the scopes (i.e., permissions) on this credential. To save, you must first reauthenticate with your OAuth2 client.
+        </p>
+      </:message>
+    </Common.alert>
     """
   end
 end

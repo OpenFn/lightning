@@ -44,7 +44,7 @@
           href="#"
           phx-click="show-mfa-options"
           phx-target={@myself}
-          class="font-medium text-blue-600 dark:text-blue-500 hover:underline"
+          class="link font-medium"
         >
           Setup another device instead
         </a>
@@ -156,11 +156,7 @@
         </div>
         <p class="mt-2 max-w-4xl text-sm text-gray-500">
           Unable to scan? You can use
-          <a
-            href="#"
-            class="font-medium text-blue-600 dark:text-blue-500 hover:underline"
-            phx-click={show_modal("mfa-secret-modal")}
-          >
+          <a href="#" class="link" phx-click={show_modal("mfa-secret-modal")}>
             this secret key
           </a>
           to manually configure your authenticator app.
