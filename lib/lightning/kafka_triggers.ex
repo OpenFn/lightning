@@ -50,7 +50,7 @@ defmodule Lightning.KafkaTriggers do
   defp initial_policy(%{initial_offset_reset_policy: initial_policy}) do
     cond do
       initial_policy in ["earliest", "latest"] ->
-        initial_policy |> String.to_existing_atom()
+        initial_policy |> String.to_atom()
 
       String.match?(initial_policy, ~r/^\d+$/) ->
         {timestamp, _remainder} = Integer.parse(initial_policy)
