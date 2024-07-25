@@ -5,6 +5,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
   import ExUnit.CaptureLog
 
   alias Ecto.Changeset
+  alias Lightning.KafkaTriggers
   alias Lightning.KafkaTriggers.TriggerKafkaMessage
   alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
   alias Lightning.KafkaTriggers.Pipeline
@@ -24,6 +25,10 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       topics = ["my_topic"]
       trigger_id = :my_trigger_id
 
+      rate_limit =
+        %{interval: interval, messages_per_interval: allowed_messages} =
+        KafkaTriggers.convert_rate_limit()
+
       with_mock Broadway,
         start_link: fn _module, _opts -> {:ok, "fake-pid"} end do
         Pipeline.start_link(
@@ -32,6 +37,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
           hosts: hosts,
           number_of_consumers: number_of_consumers,
           offset_reset_policy: offset_reset_policy,
+          rate_limit: rate_limit,
           sasl: sasl,
           ssl: ssl,
           topics: topics,
@@ -60,7 +66,11 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
                          offset_reset_policy: offset_reset_policy
                        ]
                      },
-                     concurrency: number_of_consumers
+                     concurrency: number_of_consumers,
+                     rate_limiting: [
+                       allowed_messages: allowed_messages,
+                       interval: interval
+                     ]
                    ],
                    processors: [
                      default: [
@@ -84,6 +94,10 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       topics = ["my_topic"]
       trigger_id = :my_trigger_id
 
+      rate_limit =
+        %{interval: interval, messages_per_interval: allowed_messages} =
+        KafkaTriggers.convert_rate_limit()
+
       with_mock Broadway,
         start_link: fn _module, _opts -> {:ok, "fake-pid"} end do
         Pipeline.start_link(
@@ -92,6 +106,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
           hosts: hosts,
           number_of_consumers: number_of_consumers,
           offset_reset_policy: offset_reset_policy,
+          rate_limit: rate_limit,
           sasl: sasl,
           ssl: ssl,
           topics: topics,
@@ -119,7 +134,11 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
                          offset_reset_policy: offset_reset_policy
                        ]
                      },
-                     concurrency: number_of_consumers
+                     concurrency: number_of_consumers,
+                     rate_limiting: [
+                       allowed_messages: allowed_messages,
+                       interval: interval
+                     ]
                    ],
                    processors: [
                      default: [

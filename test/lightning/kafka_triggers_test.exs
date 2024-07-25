@@ -1,6 +1,7 @@
 defmodule Lightning.KafkaTriggersTest do
   use LightningWeb.ConnCase, async: false
 
+  import Lightning.ApplicationHelpers, only: [put_temporary_env: 3]
   import Lightning.Factories
   import Mock
 
@@ -771,6 +772,32 @@ defmodule Lightning.KafkaTriggersTest do
     end
   end
 
+  describe "convert_rate_limit" do
+    test "converts rate limit to an integer rate per ten seconds" do
+      put_temporary_env(
+        :lightning,
+        :kafka_triggers,
+        number_of_messages_per_second: 0.5
+      )
+
+      expected = %{interval: 10_000, messages_per_interval: 5}
+
+      assert KafkaTriggers.convert_rate_limit() == expected
+    end
+
+    test "rounds down the number of messages when converting" do
+      put_temporary_env(
+        :lightning,
+        :kafka_triggers,
+        number_of_messages_per_second: 0.59
+      )
+
+      expected = %{interval: 10_000, messages_per_interval: 5}
+
+      assert KafkaTriggers.convert_rate_limit() == expected
+    end
+  end
+
   defp child_spec(opts) do
     trigger = opts |> Keyword.get(:trigger)
     index = opts |> Keyword.get(:index)
@@ -798,10 +825,11 @@ defmodule Lightning.KafkaTriggersTest do
             group_id: "lightning-#{index}",
             hosts: [{"host-#{index}", 9092}, {"other-host-#{index}", 9093}],
             offset_reset_policy: {:timestamp, offset_timestamp},
-            trigger_id: trigger.id |> String.to_atom(),
+            rate_limit: KafkaTriggers.convert_rate_limit(),
             sasl: sasl_config(index, sasl),
             ssl: ssl,
-            topics: ["topic-#{index}-1", "topic-#{index}-2"]
+            topics: ["topic-#{index}-1", "topic-#{index}-2"],
+            trigger_id: trigger.id |> String.to_atom()
           ]
         ]
       }

@@ -528,6 +528,8 @@ config :lightning, :kafka_triggers,
     ),
   number_of_consumers: env!("KAFKA_NUMBER_OF_CONSUMERS", :integer, 1),
   number_of_message_candidate_set_workers:
-    env!("KAFKA_NUMBER_OF_MESSAGE_CANDIDATE_SET_WORKERS", :integer, 1)
+    env!("KAFKA_NUMBER_OF_MESSAGE_CANDIDATE_SET_WORKERS", :integer, 1),
+  number_of_messages_per_second:
+    env!("KAFKA_NUMBER_OF_MESSAGES_PER_SECOND", :float, 1)
 
 # ==============================================================================
