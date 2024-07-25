@@ -20,6 +20,8 @@ and this project adheres to
 ### Changed
 
 ### Fixed
+- Fix an intermittent bug when trying to intern Kafka offset reset policy.
+  [#2327](https://github.com/OpenFn/lightning/issues/2327)
 
 ## [v2.7.9] - 2024-07-24
 
