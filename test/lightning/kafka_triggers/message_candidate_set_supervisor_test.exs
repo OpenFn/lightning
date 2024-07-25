@@ -1,9 +1,11 @@
 defmodule Lightning.KafkaTriggers.MessageCandidateSetSupervisorTest do
   use Lightning.DataCase, async: false
 
+  alias Lightning.KafkaTriggers.MessageServer
   alias Lightning.KafkaTriggers.MessageCandidateSetServer
   alias Lightning.KafkaTriggers.MessageCandidateSetSupervisor
   alias Lightning.KafkaTriggers.MessageCandidateSetWorker
+  alias Lightning.KafkaTriggers.MessageWorker
 
   describe ".start_link/1" do
     test "successfully starts the supervisor" do
@@ -18,17 +20,29 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetSupervisorTest do
       %{pid: pid}
     end
 
-    test "starts server, and single worker", %{pid: pid} do
+    test "starts single server and single worker per type", %{pid: pid} do
       assert [
                {
+                 "message_worker_0",
+                 _w2_pid,
+                 :worker,
+                 [MessageWorker]
+               },
+               {
+                 MessageServer,
+                 _s2_pid,
+                 :worker,
+                 [MessageServer]
+               },
+               {
                  "mcs_worker_0",
-                 _w_pid,
+                 _w1_pid,
                  :worker,
                  [MessageCandidateSetWorker]
                },
                {
                  MessageCandidateSetServer,
-                 _s_pid,
+                 _s1_pid,
                  :worker,
                  [MessageCandidateSetServer]
                }
@@ -47,6 +61,24 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetSupervisorTest do
     test "starts server, and requested number of workers", %{pid: pid} do
       assert [
                {
+                 "message_worker_1",
+                 _w4_pid,
+                 :worker,
+                 [MessageWorker]
+               },
+               {
+                 "message_worker_0",
+                 _w3_pid,
+                 :worker,
+                 [MessageWorker]
+               },
+               {
+                 MessageServer,
+                 _s2_pid,
+                 :worker,
+                 [MessageServer]
+               },
+               {
                  "mcs_worker_1",
                  _w2_pid,
                  :worker,
@@ -60,7 +92,7 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetSupervisorTest do
                },
                {
                  MessageCandidateSetServer,
-                 _s_pid,
+                 _s1_pid,
                  :worker,
                  [MessageCandidateSetServer]
                }
@@ -68,8 +100,8 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetSupervisorTest do
     end
   end
 
-  describe ".generate_worker_specs/1" do
-    test "generates the requested number of worker specs" do
+  describe "generate_child_specs/2 - MessageCandidateSetServer" do
+    test "generates server spec and requested number of worker specs" do
       no_set_delay =
         Application.get_env(:lightning, :kafka_triggers)[
           :no_message_candidate_set_delay_milliseconds
@@ -84,6 +116,7 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetSupervisorTest do
       assert next_set_delay != nil
 
       expected = [
+        MessageCandidateSetServer,
         Supervisor.child_spec(
           {
             MessageCandidateSetWorker,
@@ -100,7 +133,52 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetSupervisorTest do
         )
       ]
 
-      assert MessageCandidateSetSupervisor.generate_worker_specs(2) == expected
+      result =
+        MessageCandidateSetServer
+        |> MessageCandidateSetSupervisor.generate_child_specs(2)
+
+      assert result == expected
+    end
+  end
+
+  describe "generate_child_specs/2 - MessageServer" do
+    test "generates server spec and requested number of worker specs" do
+      no_set_delay =
+        Application.get_env(:lightning, :kafka_triggers)[
+          :no_message_candidate_set_delay_milliseconds
+        ]
+
+      next_set_delay =
+        Application.get_env(:lightning, :kafka_triggers)[
+          :next_message_candidate_set_delay_milliseconds
+        ]
+
+      assert no_set_delay != nil
+      assert next_set_delay != nil
+
+      expected = [
+        MessageServer,
+        Supervisor.child_spec(
+          {
+            MessageWorker,
+            [no_set_delay: no_set_delay, next_set_delay: next_set_delay]
+          },
+          id: "message_worker_0"
+        ),
+        Supervisor.child_spec(
+          {
+            MessageWorker,
+            [no_set_delay: no_set_delay, next_set_delay: next_set_delay]
+          },
+          id: "message_worker_1"
+        )
+      ]
+
+      result =
+        MessageServer
+        |> MessageCandidateSetSupervisor.generate_child_specs(2)
+
+      assert result == expected
     end
   end
 end

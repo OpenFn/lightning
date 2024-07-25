@@ -21,7 +21,7 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
   alias Lightning.WorkOrder
 
   describe ".find_message_candidate_sets" do
-    test "returns all distinct combinations of trigger, topic, key" do
+    test "returns distinct combinations of trigger, topic, non-nil key" do
       trigger_1 = insert(:trigger, type: :kafka)
       trigger_2 = insert(:trigger, type: :kafka)
 
@@ -75,13 +75,13 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
 
       sets = MessageHandling.find_message_candidate_sets()
 
-      assert sets |> Enum.count() == 5
+      assert sets |> Enum.count() == 4
 
       assert [%{trigger_id: _, topic: _, key: _} | _other] = sets
 
       assert sets |> number_of_sets_for(message) == 1
       assert sets |> number_of_sets_for(different_key) == 1
-      assert sets |> number_of_sets_for(nil_key) == 1
+      assert sets |> number_of_sets_for(nil_key) == 0
       assert sets |> number_of_sets_for(different_topic) == 1
       assert sets |> number_of_sets_for(different_trigger) == 1
     end
@@ -95,6 +95,36 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
         _ ->
           false
       end)
+    end
+  end
+
+  describe ".find_nil_key_message_ids/0" do
+    setup do
+      message_1 = insert(:trigger_kafka_message, topic: "topic-1", key: nil)
+      message_2 = insert(:trigger_kafka_message, topic: "topic-2", key: nil)
+
+      _not_nil_key_message =
+        insert(
+          :trigger_kafka_message,
+          topic: "topic-3",
+          key: "not-nil"
+        )
+
+      %{
+        message_1: message_1,
+        message_2: message_2
+      }
+    end
+
+    test "returns the ids of all TriggerKafkaMessage instances with nil keys", %{
+      message_1: message_1,
+      message_2: message_2
+    } do
+      expected = [message_1.id, message_2.id] |> Enum.sort()
+
+      result = MessageHandling.find_nil_key_message_ids()
+
+      assert result |> Enum.sort() == expected
     end
   end
 
@@ -380,6 +410,7 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
       message_2: message_2,
       other_message: other_message
     } do
+      # Link a WorkOrder
       assert MessageHandling.process_candidate_for(candidate_set) == :ok
 
       assert MessageHandling.process_candidate_for(candidate_set) == :ok
@@ -647,6 +678,284 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
     def states_other_than_success do
       ([:rejected, :pending, :running] ++ Run.final_states())
       |> Enum.reject(&(&1 == :success))
+    end
+  end
+
+  describe ".process_message_for/1" do
+    setup do
+      trigger = insert(:trigger, type: :kafka)
+
+      other_message =
+        insert(
+          :trigger_kafka_message,
+          key: nil,
+          offset: 1,
+          topic: "other-test-topic",
+          work_order: nil
+        )
+
+      message =
+        insert(
+          :trigger_kafka_message,
+          data: %{triggers: :test} |> Jason.encode!(),
+          key: "test-key",
+          metadata: %{
+            offset: 1,
+            partition: 1,
+            topic: "test-topic"
+          },
+          offset: 1,
+          processing_data: %{"existing" => "data"},
+          trigger: trigger,
+          topic: "test-topic",
+          work_order: nil
+        )
+
+      %{
+        message: message,
+        other_message: other_message
+      }
+    end
+
+    setup [:stub_usage_limiter_ok, :verify_on_exit!]
+
+    test "returns :ok, does nothing if message does not exist", %{
+      message: message
+    } do
+      message |> Repo.delete!()
+
+      assert MessageHandling.process_message_for(message.id) == :ok
+    end
+
+    test "links to a work_order if message is not already linked", %{
+      message: message
+    } do
+      %{trigger: %{workflow: workflow} = trigger} = message
+      project_id = workflow.project_id
+
+      assert MessageHandling.process_message_for(message.id) == :ok
+
+      %{work_order: work_order} =
+        TriggerKafkaMessage
+        |> Repo.get(message.id)
+        |> Repo.preload(
+          work_order: [
+            [dataclip: Invocation.Query.dataclip_with_body()],
+            :runs,
+            trigger: [workflow: [:project]],
+            workflow: [:project]
+          ]
+        )
+
+      expected_body = %{
+        "data" => %{
+          "triggers" => "test"
+        },
+        "request" => %{
+          "offset" => 1,
+          "partition" => 1,
+          "topic" => "test-topic"
+        }
+      }
+
+      assert %WorkOrder{
+               dataclip: %{
+                 body: ^expected_body,
+                 project_id: ^project_id,
+                 type: :kafka
+               },
+               state: :pending,
+               trigger: ^trigger,
+               workflow: ^workflow
+             } = work_order
+    end
+
+    test "creates a rejected work order if run creation is constrained", %{
+      message: message
+    } do
+      %{trigger: %{workflow: workflow} = trigger} = message
+      project_id = workflow.project_id
+
+      action = %Action{type: :new_run}
+      context = %Context{project_id: project_id}
+
+      Mox.stub(MockUsageLimiter, :limit_action, fn ^action, ^context ->
+        {:error, :too_many_runs,
+         %Message{text: "Too many runs in the last minute"}}
+      end)
+
+      assert MessageHandling.process_message_for(message.id) == :ok
+
+      %{work_order: work_order} =
+        TriggerKafkaMessage
+        |> Repo.get(message.id)
+        |> Repo.preload(
+          work_order: [
+            [dataclip: Invocation.Query.dataclip_with_body()],
+            :runs,
+            trigger: [workflow: [:project]],
+            workflow: [:project]
+          ]
+        )
+
+      expected_body = %{
+        "data" => %{
+          "triggers" => "test"
+        },
+        "request" => %{
+          "offset" => 1,
+          "partition" => 1,
+          "topic" => "test-topic"
+        }
+      }
+
+      assert %WorkOrder{
+               dataclip: %{
+                 body: ^expected_body,
+                 project_id: ^project_id,
+                 type: :kafka
+               },
+               state: :rejected,
+               trigger: ^trigger,
+               workflow: ^workflow
+             } = work_order
+    end
+
+    test "does not create a workorder if workorder creation is constrained", %{
+      message: message
+    } do
+      %{trigger: %{workflow: workflow}} = message
+      project_id = workflow.project_id
+
+      action = %Action{type: :new_run}
+      context = %Context{project_id: project_id}
+
+      Mox.stub(MockUsageLimiter, :limit_action, fn ^action, ^context ->
+        {:error, :runs_hard_limit,
+         %Lightning.Extensions.Message{text: "Runs limit exceeded"}}
+      end)
+
+      expected =
+        message.processing_data
+        |> Map.merge(%{"errors" => ["Runs limit exceeded"]})
+
+      assert MessageHandling.process_message_for(message.id) == :ok
+
+      %{work_order_id: nil, processing_data: processing_data} =
+        TriggerKafkaMessage
+        |> Repo.get(message.id)
+
+      assert processing_data == expected
+    end
+
+    test "message - no workorder - not JSON - error message - no creation", %{
+      message: message
+    } do
+      message
+      |> TriggerKafkaMessage.changeset(%{data: "not a JSON object"})
+      |> Repo.update!()
+
+      expected =
+        message.processing_data
+        |> Map.merge(%{"errors" => ["Data is not a JSON object"]})
+
+      assert MessageHandling.process_message_for(message.id) == :ok
+
+      %{work_order_id: nil, processing_data: processing_data} =
+        TriggerKafkaMessage
+        |> Repo.get(message.id)
+
+      assert processing_data == expected
+    end
+
+    test "message - no workorder - not a map - error message - no creation", %{
+      message: message
+    } do
+      message
+      |> TriggerKafkaMessage.changeset(%{data: "\"not a JSON object\""})
+      |> Repo.update!()
+
+      expected =
+        message.processing_data
+        |> Map.merge(%{"errors" => ["Data is not a JSON object"]})
+
+      assert MessageHandling.process_message_for(message.id) == :ok
+
+      %{work_order_id: nil, processing_data: processing_data} =
+        TriggerKafkaMessage
+        |> Repo.get(message.id)
+
+      assert processing_data == expected
+    end
+
+    test "message - no workorder - valid data - has errors - no creation", %{
+      message: message
+    } do
+      message
+      |> TriggerKafkaMessage.changeset(%{
+        processing_data: %{
+          "errors" => ["Anything"],
+          "other" => ["Stuff"]
+        }
+      })
+      |> Repo.update!()
+
+      assert MessageHandling.process_message_for(message.id) == :ok
+
+      assert %{work_order_id: nil} =
+               TriggerKafkaMessage |> Repo.get(message.id)
+    end
+
+    test "if message has successful work_order, deletes candidate", %{
+      message: message,
+      other_message: other_message
+    } do
+      MessageHandling.process_message_for(message.id)
+
+      updated_message_1 =
+        TriggerKafkaMessage
+        |> Repo.get(message.id)
+        |> Repo.preload(:work_order)
+
+      %{work_order: work_order} = updated_message_1
+
+      work_order
+      |> WorkOrder.changeset(%{state: :success})
+      |> Repo.update()
+
+      assert MessageHandling.process_message_for(message.id) == :ok
+
+      assert TriggerKafkaMessage |> Repo.get(message.id) == nil
+      assert TriggerKafkaMessage |> Repo.get(other_message.id) != nil
+    end
+
+    test "if message does not have successful work_order, does not delete", %{
+      message: message,
+      other_message: other_message
+    } do
+      # Link a WorkOrder
+      assert MessageHandling.process_message_for(message.id) == :ok
+
+      assert MessageHandling.process_message_for(message.id) == :ok
+
+      assert TriggerKafkaMessage |> Repo.get(message.id) != nil
+      assert TriggerKafkaMessage |> Repo.get(other_message.id) != nil
+    end
+
+    test "rolls back if an error occurs", %{
+      message: message
+    } do
+      with_mock(
+        TriggerKafkaMessage,
+        [:passthrough],
+        changeset: fn _message, _changes -> raise "rollback" end
+      ) do
+        assert_raise RuntimeError, ~r/rollback/, fn ->
+          MessageHandling.process_message_for(message.id)
+        end
+      end
+
+      assert WorkOrder |> Repo.all() == []
     end
   end
 

@@ -23,6 +23,7 @@ defmodule Lightning.KafkaTriggers.MessageHandling do
   def find_message_candidate_sets do
     query =
       from t in TriggerKafkaMessage,
+        where: not is_nil(t.key),
         select: [t.trigger_id, t.topic, t.key],
         distinct: [t.trigger_id, t.topic, t.key]
 
@@ -31,6 +32,12 @@ defmodule Lightning.KafkaTriggers.MessageHandling do
     |> Enum.map(fn [trigger_id, topic, key] ->
       %MessageCandidateSet{trigger_id: trigger_id, topic: topic, key: key}
     end)
+  end
+
+  def find_nil_key_message_ids do
+    query = from t in TriggerKafkaMessage, where: is_nil(t.key), select: t.id
+
+    query |> Repo.all()
   end
 
   def process_candidate_for(%MessageCandidateSet{} = candidate_set) do
@@ -48,6 +55,34 @@ defmodule Lightning.KafkaTriggers.MessageHandling do
 
         candidate = %{work_order: nil} ->
           create_work_order(candidate)
+
+        candidate ->
+          maybe_delete_candidate(candidate)
+      end
+    end)
+
+    :ok
+  end
+
+  def process_message_for(message_id) do
+    Repo.transaction(fn ->
+      query =
+        from t in TriggerKafkaMessage,
+          where: t.id == ^message_id,
+          preload: [:work_order, trigger: [:workflow]]
+
+      query
+      |> lock("FOR UPDATE SKIP LOCKED")
+      |> Repo.one()
+      |> case do
+        nil ->
+          nil
+
+        %{processing_data: %{"errors" => _errors}} ->
+          nil
+
+        message = %{work_order: nil} ->
+          create_work_order(message)
 
         candidate ->
           maybe_delete_candidate(candidate)

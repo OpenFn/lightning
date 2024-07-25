@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- A rudimentary optimisation for Kafka messages that do not have a key as the
+  sequence of these messages can not be guaranteed.
+  [#2323](https://github.com/OpenFn/lightning/issues/2323)
+
 ### Changed
 
 ### Fixed
