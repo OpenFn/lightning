@@ -1366,13 +1366,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
            |> assign_workflow(workflow, snapshot)
            |> put_flash(:info, "Workflow saved")
            |> push_patches_applied(initial_params)
-           |> then(fn socket ->
-             if socket.assigns.live_action == :new do
-               push_event(socket, "workflow_created", %{id: workflow.id})
-             else
-               socket
-             end
-           end)
+           |> maybe_push_workflow_created(workflow)
            |> push_patch(
              to: ~p"/projects/#{project.id}/w/#{workflow.id}?#{query_params}",
              replace: true
@@ -2021,6 +2015,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     socket
     |> push_event("patches-applied", %{patches: patches})
+  end
+
+  defp maybe_push_workflow_created(socket, workflow) do
+    if socket.assigns.live_action == :new do
+      push_event(socket, "workflow_created", %{id: workflow.id})
+    else
+      socket
+    end
   end
 
   # In situations where a new job is added, specifically by the WorkflowDiagram
