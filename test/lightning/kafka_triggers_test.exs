@@ -439,6 +439,11 @@ defmodule Lightning.KafkaTriggersTest do
 
       assert number_of_consumers != nil
 
+      number_of_processors =
+        Application.get_env(:lightning, :kafka_triggers)[:number_of_processors]
+
+      assert number_of_processors != nil
+
       trigger =
         insert(
           :trigger,
@@ -451,7 +456,8 @@ defmodule Lightning.KafkaTriggersTest do
         child_spec(
           trigger: trigger,
           index: 1,
-          number_of_consumers: number_of_consumers
+          number_of_consumers: number_of_consumers,
+          number_of_processors: number_of_processors
         )
 
       actual_child_spec = KafkaTriggers.generate_pipeline_child_spec(trigger)
@@ -464,6 +470,11 @@ defmodule Lightning.KafkaTriggersTest do
         Application.get_env(:lightning, :kafka_triggers)[:number_of_consumers]
 
       assert number_of_consumers != nil
+
+      number_of_processors =
+        Application.get_env(:lightning, :kafka_triggers)[:number_of_processors]
+
+      assert number_of_processors != nil
 
       trigger =
         insert(
@@ -478,7 +489,8 @@ defmodule Lightning.KafkaTriggersTest do
           trigger: trigger,
           index: 1,
           sasl: false,
-          number_of_consumers: number_of_consumers
+          number_of_consumers: number_of_consumers,
+          number_of_processors: number_of_processors
         )
 
       actual_child_spec = KafkaTriggers.generate_pipeline_child_spec(trigger)
@@ -811,6 +823,13 @@ defmodule Lightning.KafkaTriggersTest do
         Application.get_env(:lightning, :kafka_triggers)[:number_of_consumers]
       )
 
+    number_of_processors =
+      opts
+      |> Keyword.get(
+        :number_of_processors,
+        Application.get_env(:lightning, :kafka_triggers)[:number_of_processors]
+      )
+
     offset_timestamp = "171524976732#{index}" |> String.to_integer()
 
     %{
@@ -820,10 +839,11 @@ defmodule Lightning.KafkaTriggersTest do
         :start_link,
         [
           [
-            number_of_consumers: number_of_consumers,
             connect_timeout: (30 + index) * 1000,
             group_id: "lightning-#{index}",
             hosts: [{"host-#{index}", 9092}, {"other-host-#{index}", 9093}],
+            number_of_consumers: number_of_consumers,
+            number_of_processors: number_of_processors,
             offset_reset_policy: {:timestamp, offset_timestamp},
             rate_limit: KafkaTriggers.convert_rate_limit(),
             sasl: sasl_config(index, sasl),

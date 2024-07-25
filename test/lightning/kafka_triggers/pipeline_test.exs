@@ -18,6 +18,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       group_id = "my_group"
       hosts = [{"localhost", 9092}]
       number_of_consumers = 5
+      number_of_processors = 11
       offset_reset_policy = :latest
       sasl = {:plain, "my_username", "my_secret"}
       sasl_expected = {:plain, "my_username", "my_secret"}
@@ -36,6 +37,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
           group_id: group_id,
           hosts: hosts,
           number_of_consumers: number_of_consumers,
+          number_of_processors: number_of_processors,
           offset_reset_policy: offset_reset_policy,
           rate_limit: rate_limit,
           sasl: sasl,
@@ -74,7 +76,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
                    ],
                    processors: [
                      default: [
-                       concurrency: 10
+                       concurrency: number_of_processors
                      ]
                    ],
                    batchers: []
@@ -88,6 +90,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       group_id = "my_group"
       hosts = [{"localhost", 9092}]
       number_of_consumers = 5
+      number_of_processors = 11
       offset_reset_policy = :latest
       sasl = nil
       ssl = true
@@ -105,6 +108,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
           group_id: group_id,
           hosts: hosts,
           number_of_consumers: number_of_consumers,
+          number_of_processors: number_of_processors,
           offset_reset_policy: offset_reset_policy,
           rate_limit: rate_limit,
           sasl: sasl,
@@ -142,7 +146,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
                    ],
                    processors: [
                      default: [
-                       concurrency: 10
+                       concurrency: number_of_processors
                      ]
                    ],
                    batchers: []

@@ -16,6 +16,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
 
   def start_link(opts) do
     number_of_consumers = opts |> Keyword.get(:number_of_consumers)
+    number_of_processors = opts |> Keyword.get(:number_of_processors)
     trigger_id = opts |> Keyword.get(:trigger_id)
 
     %{interval: interval, messages_per_interval: allowed_messages} =
@@ -40,7 +41,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
       ],
       processors: [
         default: [
-          concurrency: 10
+          concurrency: number_of_processors
         ]
       ],
       batchers: []

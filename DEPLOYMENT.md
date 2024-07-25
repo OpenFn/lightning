@@ -153,6 +153,12 @@ to a value of less than 1 (minimum 0.1) and will converted (and rounded-down) to
 an integer value of messages over a 10-second interval (e.g. 0.15 becomes 1 
 message every 10 seconds). The default value is 1.
 
+Processing concurrency within the Kafka Broadway pipeline is controlled by the
+`KAFKA_NUMBER_OF_PROCESSORS` environment variable. Modifying this, modifies the
+number of processors that are downstream of the Kafka consumer, so an increase
+in this value should inrcease throughput (when factoring in the rate limit set
+by `KAFKA_NUMBER_OF_MESSAGES_PER_SECOND`). The default value is 1.
+
 ### Other config
 
 - `ADAPTORS_PATH` - where you store your locally installed adaptors

@@ -126,6 +126,9 @@ defmodule Lightning.KafkaTriggers do
     number_of_consumers =
       Application.get_env(:lightning, :kafka_triggers)[:number_of_consumers]
 
+    number_of_processors =
+      Application.get_env(:lightning, :kafka_triggers)[:number_of_processors]
+
     %{
       id: trigger.id,
       start: {
@@ -133,10 +136,11 @@ defmodule Lightning.KafkaTriggers do
         :start_link,
         [
           [
-            number_of_consumers: number_of_consumers,
             connect_timeout: connect_timeout * 1000,
             group_id: group_id,
             hosts: hosts,
+            number_of_consumers: number_of_consumers,
+            number_of_processors: number_of_processors,
             offset_reset_policy: offset_reset_policy,
             rate_limit: convert_rate_limit(),
             sasl: sasl,
