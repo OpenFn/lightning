@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-FC9BAD90.js"></script>
+    <script src="dist/sidebar_items-38B07ED2.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -853,9 +853,9 @@ are provided to the worker processes.</p></div>
   </div>
 
     <div class="summary-synopsis"><p>Starts the server and worker processes responsible for converting messages
-received from Kafka clusters. The sole purpose of this is to ensure that
-messages with the same key (for a given cluster/topic configuration) are 
-processed in the same order they were received.</p></div>
+received from Kafka clusters. There are two sets of workers and servers. This
+is to accommodate messages that have keys (grouped into MessageCandidateSets) 
+ans those that do not, which are processed individually.</p></div>
 
 </div>
 <div class="summary-row">
@@ -877,6 +877,26 @@ manages the state of the returned candidate set.</p></div>
     <div class="summary-synopsis"><p>Contains the logic for ensuring that messages are processed in the order
 they are received (within the guarantees provided by Kafka for messages with
 the same key and topic).</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.KafkaTriggers.MessageServer.html" translate="no">Lightning.KafkaTriggers.MessageServer</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Server responsible for maintaining a list of messages with nil keys that
+are provided to the worker processes.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.KafkaTriggers.MessageWorker.html" translate="no">Lightning.KafkaTriggers.MessageWorker</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Requests a message from the MessageServer and manages the state of the
+returned message.</p></div>
 
 </div>
 <div class="summary-row">

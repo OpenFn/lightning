@@ -76,6 +76,8 @@ Lightning.KafkaTriggers.MessageCandidateSetServer.html
 Lightning.KafkaTriggers.MessageCandidateSetSupervisor.html
 Lightning.KafkaTriggers.MessageCandidateSetWorker.html
 Lightning.KafkaTriggers.MessageHandling.html
+Lightning.KafkaTriggers.MessageServer.html
+Lightning.KafkaTriggers.MessageWorker.html
 Lightning.KafkaTriggers.Pipeline.html
 Lightning.KafkaTriggers.PipelineSupervisor.html
 Lightning.KafkaTriggers.Supervisor.html
@@ -322,8 +324,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-8B01A109.js
-dist/sidebar_items-FC9BAD90.js
+dist/search_data-F6DBBDCB.js
+dist/sidebar_items-38B07ED2.js
 index.html
 provisioning.html
 readme.html
