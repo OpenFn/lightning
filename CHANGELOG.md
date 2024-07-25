@@ -17,13 +17,20 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.7.10]
+
+### Added
+
 - A rudimentary optimisation for Kafka messages that do not have a key as the
   sequence of these messages can not be guaranteed.
   [#2323](https://github.com/OpenFn/lightning/issues/2323)
 
-### Changed
-
 ### Fixed
+
 - Fix an intermittent bug when trying to intern Kafka offset reset policy.
   [#2327](https://github.com/OpenFn/lightning/issues/2327)
 
