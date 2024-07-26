@@ -123,8 +123,11 @@ defmodule Lightning.KafkaTriggers do
 
     offset_reset_policy = determine_offset_reset_policy(trigger)
 
-    number_of_consumers = Lightning.Config.kafka_number_of_consumers()
-    number_of_processors = Lightning.Config.kafka_number_of_processors()
+    number_of_consumers =
+      Application.get_env(:lightning, :kafka_triggers)[:number_of_consumers]
+
+    number_of_processors =
+      Application.get_env(:lightning, :kafka_triggers)[:number_of_processors]
 
     %{
       id: trigger.id,
@@ -205,7 +208,10 @@ defmodule Lightning.KafkaTriggers do
   end
 
   def convert_rate_limit do
-    per_second = Lightning.Config.kafka_number_of_messages_per_second()
+    per_second =
+      Application.get_env(:lightning, :kafka_triggers)[
+        :number_of_messages_per_second
+      ]
 
     seconds_in_interval = 10
 

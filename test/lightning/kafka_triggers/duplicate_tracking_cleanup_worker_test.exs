@@ -7,7 +7,10 @@ defmodule Lightning.KafkaTriggers.DuplicateTrackingCleanupWorkerTest do
 
   setup do
     retention_period =
-      Lightning.Config.kafka_duplicate_tracking_retention_seconds()
+      Application.get_env(
+        :lightning,
+        :kafka_triggers
+      )[:duplicate_tracking_retention_seconds]
 
     now = DateTime.utc_now()
     retain_offset = -retention_period + 2

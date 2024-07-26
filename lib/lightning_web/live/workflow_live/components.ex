@@ -243,7 +243,7 @@ defmodule LightningWeb.WorkflowLive.Components do
         label="Trigger type"
         class=""
         options={
-          if Lightning.Config.kafka_triggers_enabled?() do
+          if Application.get_env(:lightning, :kafka_triggers)[:enabled] do
             [
               "Cron Schedule (UTC)": "cron",
               "Kafka Consumer": "kafka",
