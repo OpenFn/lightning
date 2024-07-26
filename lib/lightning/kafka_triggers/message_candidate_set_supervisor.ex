@@ -2,7 +2,7 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetSupervisor do
   @moduledoc """
   Starts the server and worker processes responsible for converting messages
   received from Kafka clusters. The sole purpose of this is to ensure that
-  messages with the same key (for a given cluster/topic configuration) are 
+  messages with the same key (for a given cluster/topic configuration) are
   processed in the same order they were received.
   """
   use Supervisor
@@ -26,14 +26,10 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetSupervisor do
 
   def generate_worker_specs(number_of_workers) do
     no_set_delay =
-      Application.get_env(:lightning, :kafka_triggers)[
-        :no_message_candidate_set_delay_milliseconds
-      ]
+      Lightning.Config.kafka_no_message_candidate_set_delay_milliseconds()
 
     next_set_delay =
-      Application.get_env(:lightning, :kafka_triggers)[
-        :next_message_candidate_set_delay_milliseconds
-      ]
+      Lightning.Config.kafka_next_message_candidate_set_delay_milliseconds()
 
     0..(number_of_workers - 1)
     |> Enum.map(fn index ->
