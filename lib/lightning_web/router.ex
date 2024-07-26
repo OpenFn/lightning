@@ -182,7 +182,7 @@ defmodule LightningWeb.Router do
       live "/profile/tokens", TokensLive.Index, :index
       live "/profile/tokens/:id/delete", TokensLive.Index, :delete
 
-      live "/", DashboardLive.Index, :index
+      get "/", Plugs.Redirect, to: "/projects"
       live "/projects", DashboardLive.Index, :index
     end
   end

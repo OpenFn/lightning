@@ -11,7 +11,7 @@ defmodule LightningWeb.DashboardLiveTest do
     test "User is assigned no project", %{
       conn: conn
     } do
-      {:ok, _view, html} = live(conn, ~p"/")
+      {:ok, _view, html} = live(conn, ~p"/projects")
 
       assert html =~ "No projects found. Create a new one."
 
@@ -22,7 +22,7 @@ defmodule LightningWeb.DashboardLiveTest do
     test "Side menu has credentials and user profile navigation", %{
       conn: conn
     } do
-      {:ok, index_live, _html} = live(conn, ~p"/")
+      {:ok, index_live, _html} = live(conn, ~p"/projects")
 
       assert index_live
              |> has_element?("nav#side-menu a[href='/projects']", "Projects")
@@ -70,7 +70,7 @@ defmodule LightningWeb.DashboardLiveTest do
 
       insert_list(2, :simple_workflow, project: project_1)
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/projects")
 
       refute has_element?(view, "#projects-table-row-#{project_3.id}")
 
@@ -137,7 +137,7 @@ defmodule LightningWeb.DashboardLiveTest do
     end
 
     test "User can create a new project", %{conn: conn, user: _user} do
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/projects")
 
       Repo.all(Project) |> IO.inspect()
 
@@ -149,13 +149,14 @@ defmodule LightningWeb.DashboardLiveTest do
           description: "This is a really awesome project for testing purposes"
         }
       )
-      |> render_change() |> IO.puts()
+      |> render_change()
+      |> IO.puts()
+
       # |> follow_redirect(conn, ~p"/")
 
       # |> IO.puts() =~ "Project created successfully"
 
-      view
-      |> form("#project-form") |> render_submit()
+      view |> form("#project-form") |> render_submit()
 
       Repo.all(Project) |> IO.inspect()
     end

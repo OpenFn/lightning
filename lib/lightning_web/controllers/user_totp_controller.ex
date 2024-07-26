@@ -35,7 +35,7 @@ defmodule LightningWeb.UserTOTPController do
       conn
     else
       conn
-      |> redirect(to: "/")
+      |> redirect(to: "/projects")
       |> halt()
     end
   end

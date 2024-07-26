@@ -10,7 +10,7 @@ defmodule LightningWeb.Plugs.FirstSetup do
 
   def call(%{request_path: "/first_setup"} = conn, _opts) do
     if Accounts.has_one_superuser?() do
-      conn |> redirect(to: "/") |> halt()
+      conn |> redirect(to: "/projects") |> halt()
     else
       conn
     end

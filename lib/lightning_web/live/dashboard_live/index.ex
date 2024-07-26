@@ -1,20 +1,15 @@
 defmodule LightningWeb.DashboardLive.Index do
   use LightningWeb, :live_view
 
+  alias Lightning.Accounts.User
   alias Lightning.Projects
+  alias Lightning.Projects.Project
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
   @impl true
   def mount(_params, _session, socket) do
-    projects =
-      socket.assigns.current_user
-      |> Projects.get_projects_for_user(
-        include: [
-          :project_users,
-          :workflows
-        ]
-      )
+    projects = projects_for_user(socket.assigns.current_user)
 
     {:ok,
      socket |> assign(:projects, projects) |> assign(active_menu_item: :projects)}
@@ -33,12 +28,25 @@ defmodule LightningWeb.DashboardLive.Index do
      )}
   end
 
-  defp project_role(user, project) do
-    project.project_users
-    |> Enum.find(fn project_user -> project_user.user_id == user.id end)
+  defp project_role(
+         %User{id: user_id} = _user,
+         %Project{project_users: project_users} = _project
+       ) do
+    project_users
+    |> Enum.find(fn pu -> pu.user_id == user_id end)
     |> Map.get(:role)
     |> Atom.to_string()
     |> String.capitalize()
+  end
+
+  defp projects_for_user(%User{} = user) do
+    Projects.get_projects_for_user(
+      user,
+      include: [
+        :project_users,
+        :workflows
+      ]
+    )
   end
 
   @impl true
@@ -127,7 +135,7 @@ defmodule LightningWeb.DashboardLive.Index do
           <% end %>
           <.live_component
             id="new-project-modal"
-            module={LightningWeb.DashboardLive.NewProjectModal}
+            module={LightningWeb.DashboardLive.ProjectCreationModal}
             current_user={@current_user}
             return_to={@return_to}
           />

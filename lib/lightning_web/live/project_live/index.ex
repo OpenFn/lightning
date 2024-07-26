@@ -19,7 +19,7 @@ defmodule LightningWeb.ProjectLive.Index do
     else
       {:ok,
        put_flash(socket, :nav, :no_access)
-       |> push_redirect(to: "/")}
+       |> push_redirect(to: "/projects")}
     end
   end
 

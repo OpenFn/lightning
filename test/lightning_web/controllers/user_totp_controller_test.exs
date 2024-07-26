@@ -68,7 +68,7 @@ defmodule LightningWeb.UserTOTPControllerTest do
       assert conn
              |> delete_session(@totp_session)
              |> get(Routes.user_totp_path(conn, :new))
-             |> redirected_to() == "/"
+             |> redirected_to() == "/projects"
     end
   end
 
