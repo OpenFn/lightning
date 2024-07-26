@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-0747FF0F.js"></script>
+    <script src="dist/sidebar_items-AB2E9DD5.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -224,7 +224,15 @@ set by configuring the <code class="inline">KAFKA_NO_MESSAGE_CANDIDATE_SET_DELAY
 environment variable. The default value is currently 10000ms.</li></ul><p>The number of Kafka consumers in the consumer group can be modified by setting
 the <code class="inline">KAFKA_NUMBER_OF_CONSUMERS</code> environment variable. The default value is
 currently 1. The optimal setting is one consumer per topic partition. NOTE:
-This setting will move to KafkaConfiguration as it will be trigger-specific.</p><h3 id="other-config" class="section-heading">
+This setting will move to KafkaConfiguration as it will be trigger-specific.</p><p>The number of messages that the Kafka consumer will forward is rate-limited by
+the <code class="inline">KAFKA_NUMBER_OF_MESSAGES_PER_SECOND</code> environment variable. This can be set
+to a value of less than 1 (minimum 0.1) and will converted (and rounded-down) to
+an integer value of messages over a 10-second interval (e.g. 0.15 becomes 1 
+message every 10 seconds). The default value is 1.</p><p>Processing concurrency within the Kafka Broadway pipeline is controlled by the
+<code class="inline">KAFKA_NUMBER_OF_PROCESSORS</code> environment variable. Modifying this, modifies the
+number of processors that are downstream of the Kafka consumer, so an increase
+in this value should inrcease throughput (when factoring in the rate limit set
+by <code class="inline">KAFKA_NUMBER_OF_MESSAGES_PER_SECOND</code>). The default value is 1.</p><h3 id="other-config" class="section-heading">
   <a href="#other-config" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
