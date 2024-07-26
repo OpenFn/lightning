@@ -283,7 +283,7 @@ defmodule LightningWeb.UserLiveTest do
     } do
       {:ok, _index_live, html} =
         live(conn, Routes.user_index_path(conn, :index))
-        |> follow_redirect(conn, "/")
+        |> follow_redirect(conn, "/projects")
 
       assert html =~ "Sorry, you don&#39;t have access to that."
     end
@@ -294,7 +294,7 @@ defmodule LightningWeb.UserLiveTest do
     } do
       {:ok, _index_live, html} =
         live(conn, Routes.user_edit_path(conn, :edit, user.id))
-        |> follow_redirect(conn, "/")
+        |> follow_redirect(conn, "/projects")
 
       assert html =~ "Sorry, you don&#39;t have access to that."
     end

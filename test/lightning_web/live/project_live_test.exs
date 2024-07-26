@@ -536,7 +536,8 @@ defmodule LightningWeb.ProjectLiveTest do
              |> has_element?()
 
       assert live(conn, ~p"/projects/#{project_3}/w") ==
-               {:error, {:redirect, %{flash: %{"nav" => :not_found}, to: "/projects"}}}
+               {:error,
+                {:redirect, %{flash: %{"nav" => :not_found}, to: "/projects"}}}
     end
   end
 

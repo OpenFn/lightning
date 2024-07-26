@@ -1,5 +1,4 @@
 defmodule LightningWeb.DashboardLiveTest do
-  alias Lightning.Projects.Project
   use LightningWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
@@ -136,12 +135,12 @@ defmodule LightningWeb.DashboardLiveTest do
       end)
     end
 
-    test "User can create a new project", %{conn: conn, user: _user} do
+    test "User can create a new project", %{conn: conn, user: user} do
       {:ok, view, _html} = live(conn, ~p"/projects")
 
-      Repo.all(Project) |> IO.inspect()
+      projects_before = Lightning.Projects.get_projects_for_user(user)
+      assert projects_before |> Enum.count() == 0
 
-      # assert
       view
       |> form("#project-form",
         project: %{
@@ -150,15 +149,23 @@ defmodule LightningWeb.DashboardLiveTest do
         }
       )
       |> render_change()
-      |> IO.puts()
 
-      # |> follow_redirect(conn, ~p"/")
-
-      # |> IO.puts() =~ "Project created successfully"
+      assert view
+             |> has_element?("input[type='hidden'][value='my-awesome-project']")
 
       view |> form("#project-form") |> render_submit()
 
-      Repo.all(Project) |> IO.inspect()
+      projects_after = Lightning.Projects.get_projects_for_user(user)
+      assert projects_after |> Enum.count() == 1
+
+      project = List.first(projects_after)
+
+      {:ok, view, _html} = live(conn, ~p"/projects")
+
+      assert has_element?(
+               view,
+               "tr#projects-table-row-#{project.id}"
+             )
     end
   end
 end

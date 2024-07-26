@@ -40,7 +40,7 @@ defmodule LightningWeb.FirstSetupLiveTest do
         |> render_submit()
         |> follow_redirect(conn)
 
-      assert "/" = redirected_path = redirected_to(conn, 302)
+      assert "/projects" = redirected_path = redirected_to(conn, 302)
 
       html =
         get(recycle(conn), redirected_path)

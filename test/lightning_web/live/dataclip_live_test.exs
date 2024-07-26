@@ -55,7 +55,8 @@ defmodule LightningWeb.DataclipLiveTest do
         )
 
       assert error ==
-               {:error, {:redirect, %{flash: %{"nav" => :not_found}, to: "/projects"}}}
+               {:error,
+                {:redirect, %{flash: %{"nav" => :not_found}, to: "/projects"}}}
     end
   end
 end

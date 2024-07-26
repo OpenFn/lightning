@@ -24,7 +24,8 @@ defmodule LightningWeb.MFARequiredLiveTest do
       user = insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
       conn = setup_project_user(conn, project, user, :editor)
 
-      assert {:error, {:redirect, %{to: "/projects"}}} = live(conn, "/mfa_required")
+      assert {:error, {:redirect, %{to: "/projects"}}} =
+               live(conn, "/mfa_required")
     end
   end
 end

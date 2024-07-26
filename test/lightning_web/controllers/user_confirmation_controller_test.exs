@@ -113,7 +113,7 @@ defmodule LightningWeb.UserConfirmationControllerTest do
         |> log_in_user(user)
         |> post(Routes.user_confirmation_path(conn, :update, encoded_token))
 
-      assert redirected_to(conn) == "/"
+      assert redirected_to(conn) == "/projects"
       refute Phoenix.Flash.get(conn.assigns.flash, :error)
     end
 
@@ -168,7 +168,7 @@ defmodule LightningWeb.UserConfirmationControllerTest do
       conn =
         get(conn, Routes.user_confirmation_path(conn, :confirm_email, token))
 
-      assert redirected_to(conn) == "/"
+      assert redirected_to(conn) == "/projects"
 
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
                "Email change link is invalid or it has expired."
