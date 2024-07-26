@@ -1,9 +1,9 @@
 defmodule Lightning.KafkaTriggersTest do
   use LightningWeb.ConnCase, async: false
 
-  import Lightning.ApplicationHelpers, only: [put_temporary_env: 3]
   import Lightning.Factories
   import Mock
+  import Mox
 
   require Lightning.Run
 
@@ -434,13 +434,11 @@ defmodule Lightning.KafkaTriggersTest do
 
   describe ".generate_pipeline_child_spec/1" do
     test "generates a child spec based on a kafka trigger" do
-      number_of_consumers =
-        Application.get_env(:lightning, :kafka_triggers)[:number_of_consumers]
+      number_of_consumers = Lightning.Config.kafka_number_of_consumers()
 
       assert number_of_consumers != nil
 
-      number_of_processors =
-        Application.get_env(:lightning, :kafka_triggers)[:number_of_processors]
+      number_of_processors = Lightning.Config.kafka_number_of_processors()
 
       assert number_of_processors != nil
 
@@ -466,13 +464,11 @@ defmodule Lightning.KafkaTriggersTest do
     end
 
     test "generates a child spec based on a kafka trigger that has no auth" do
-      number_of_consumers =
-        Application.get_env(:lightning, :kafka_triggers)[:number_of_consumers]
+      number_of_consumers = Lightning.Config.kafka_number_of_consumers()
 
       assert number_of_consumers != nil
 
-      number_of_processors =
-        Application.get_env(:lightning, :kafka_triggers)[:number_of_processors]
+      number_of_processors = Lightning.Config.kafka_number_of_processors()
 
       assert number_of_processors != nil
 
@@ -785,12 +781,12 @@ defmodule Lightning.KafkaTriggersTest do
   end
 
   describe "convert_rate_limit" do
+    setup :verify_on_exit!
+
     test "converts rate limit to an integer rate per ten seconds" do
-      put_temporary_env(
-        :lightning,
-        :kafka_triggers,
-        number_of_messages_per_second: 0.5
-      )
+      expect(Lightning.MockConfig, :kafka_number_of_messages_per_second, fn ->
+        0.5
+      end)
 
       expected = %{interval: 10_000, messages_per_interval: 5}
 
@@ -798,11 +794,9 @@ defmodule Lightning.KafkaTriggersTest do
     end
 
     test "rounds down the number of messages when converting" do
-      put_temporary_env(
-        :lightning,
-        :kafka_triggers,
-        number_of_messages_per_second: 0.59
-      )
+      expect(Lightning.MockConfig, :kafka_number_of_messages_per_second, fn ->
+        0.59
+      end)
 
       expected = %{interval: 10_000, messages_per_interval: 5}
 
@@ -820,14 +814,14 @@ defmodule Lightning.KafkaTriggersTest do
       opts
       |> Keyword.get(
         :number_of_consumers,
-        Application.get_env(:lightning, :kafka_triggers)[:number_of_consumers]
+        Lightning.Config.kafka_number_of_consumers()
       )
 
     number_of_processors =
       opts
       |> Keyword.get(
         :number_of_processors,
-        Application.get_env(:lightning, :kafka_triggers)[:number_of_processors]
+        Lightning.Config.kafka_number_of_processors()
       )
 
     offset_timestamp = "171524976732#{index}" |> String.to_integer()

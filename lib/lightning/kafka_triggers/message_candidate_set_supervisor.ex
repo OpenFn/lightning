@@ -2,8 +2,8 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetSupervisor do
   @moduledoc """
   Starts the server and worker processes responsible for converting messages
   received from Kafka clusters. There are two sets of workers and servers. This
-  is to accommodate messages that have keys (grouped into MessageCandidateSets) 
-  ans those that do not, which are processed individually.
+  is to accommodate messages that have keys (grouped into MessageCandidateSets)
+  and those that do not, which are processed individually.
   """
   use Supervisor
 
@@ -40,14 +40,10 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetSupervisor do
       end
 
     no_set_delay =
-      Application.get_env(:lightning, :kafka_triggers)[
-        :no_message_candidate_set_delay_milliseconds
-      ]
+      Lightning.Config.kafka_no_message_candidate_set_delay_milliseconds()
 
     next_set_delay =
-      Application.get_env(:lightning, :kafka_triggers)[
-        :next_message_candidate_set_delay_milliseconds
-      ]
+      Lightning.Config.kafka_next_message_candidate_set_delay_milliseconds()
 
     workers =
       0..(number_of_workers - 1)

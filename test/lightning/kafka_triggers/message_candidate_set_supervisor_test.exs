@@ -7,6 +7,15 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetSupervisorTest do
   alias Lightning.KafkaTriggers.MessageCandidateSetWorker
   alias Lightning.KafkaTriggers.MessageWorker
 
+  import Mox
+
+  setup :set_mox_global
+
+  setup do
+    stub_with(Lightning.MockConfig, Lightning.Config.API)
+    :ok
+  end
+
   describe ".start_link/1" do
     test "successfully starts the supervisor" do
       assert _pid = start_supervised!(MessageCandidateSetSupervisor)
@@ -103,14 +112,10 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetSupervisorTest do
   describe "generate_child_specs/2 - MessageCandidateSetServer" do
     test "generates server spec and requested number of worker specs" do
       no_set_delay =
-        Application.get_env(:lightning, :kafka_triggers)[
-          :no_message_candidate_set_delay_milliseconds
-        ]
+        Lightning.Config.kafka_no_message_candidate_set_delay_milliseconds()
 
       next_set_delay =
-        Application.get_env(:lightning, :kafka_triggers)[
-          :next_message_candidate_set_delay_milliseconds
-        ]
+        Lightning.Config.kafka_next_message_candidate_set_delay_milliseconds()
 
       assert no_set_delay != nil
       assert next_set_delay != nil

@@ -11,12 +11,10 @@ defmodule Lightning.KafkaTriggers.Supervisor do
 
   @impl true
   def init(_init_arg) do
-    enabled = Application.get_env(:lightning, :kafka_triggers)[:enabled]
+    enabled = Lightning.Config.kafka_triggers_enabled?()
 
     number_of_workers =
-      Application.get_env(:lightning, :kafka_triggers)[
-        :number_of_message_candidate_set_workers
-      ]
+      Lightning.Config.kafka_number_of_message_candidate_set_workers()
 
     children =
       if enabled do
