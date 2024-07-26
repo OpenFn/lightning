@@ -145,7 +145,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
             <% end %>
           </div>
           <div class="mr-2 invisible group-hover:visible pt-2">
-            <div :if={@can_delete_workflow}>
+            <div :if={@can_delete_workflow} class="py-0.5">
               <.link
                 href="#"
                 class="table-action"

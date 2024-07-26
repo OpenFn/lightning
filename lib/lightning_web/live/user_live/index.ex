@@ -70,6 +70,7 @@ defmodule LightningWeb.UserLive.Index do
           href="#"
           phx-click="cancel_deletion"
           phx-value-id={@user.id}
+          class="table-action"
         >
           Cancel deletion
         </.link>
@@ -78,6 +79,7 @@ defmodule LightningWeb.UserLive.Index do
       <span>
         <.link
           id={"delete-now-#{@user.id}"}
+          class="table-action"
           navigate={Routes.user_index_path(@socket, :delete, @user)}
         >
           Delete now
@@ -89,6 +91,7 @@ defmodule LightningWeb.UserLive.Index do
       <span>
         <.link
           id={"delete-#{@user.id}"}
+          class="table-action"
           navigate={Routes.user_index_path(@socket, :delete, @user)}
         >
           Delete

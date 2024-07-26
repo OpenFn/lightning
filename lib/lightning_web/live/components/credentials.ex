@@ -428,7 +428,7 @@ defmodule LightningWeb.Components.Credentials do
                 </div>
               <% end %>
             </.td>
-            <.td class="text-right">
+            <.td class="text-right py-0.5">
               <%= render_slot(@actions, credential) %>
             </.td>
           </.tr>
@@ -481,7 +481,7 @@ defmodule LightningWeb.Components.Credentials do
             <.td class="break-words max-w-[21rem]">
               <%= client.authorization_endpoint %>
             </.td>
-            <.td class="text-right">
+            <.td class="text-right py-0.5">
               <%= render_slot(@actions, client) %>
             </.td>
           </.tr>
