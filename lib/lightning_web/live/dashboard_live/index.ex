@@ -122,10 +122,15 @@ defmodule LightningWeb.DashboardLive.Index do
                   </.link>
                 </.td>
                 <.td>
-                  <%= Lightning.Helpers.format_date(
-                    project.updated_at,
-                    "%d/%b/%Y %H:%M:%S"
-                  ) %>
+                  <.link
+                    class="text-gray-800"
+                    href={~p"/projects/#{project.id}/history"}
+                  >
+                    <%= Lightning.Helpers.format_date(
+                      project.updated_at,
+                      "%d/%b/%Y %H:%M:%S"
+                    ) %>
+                  </.link>
                 </.td>
               </.tr>
             </.table>

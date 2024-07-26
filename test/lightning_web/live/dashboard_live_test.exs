@@ -129,7 +129,7 @@ defmodule LightningWeb.DashboardLiveTest do
 
         assert has_element?(
                  view,
-                 "tr#projects-table-row-#{project.id} > td:nth-child(5)",
+                 "tr#projects-table-row-#{project.id} > td:nth-child(5) > a[href='/projects/#{project.id}/history']",
                  formatted_date
                )
       end)
