@@ -758,7 +758,7 @@ defmodule LightningWeb.WorkflowLive.Components do
         </.td>
         <.td
           :if={@action != []}
-          class="text-right px-4 hover-content font-normal opacity-0 transition-opacity duration-300 whitespace-nowrap"
+          class="text-right px-4 hover-content font-normal opacity-0 transition-opacity duration-300 whitespace-nowrap py-0.5"
         >
           <div :for={action <- @action} class="flex items-center inline-flex gap-x-2">
             <%= render_slot(action, auth_method) %>

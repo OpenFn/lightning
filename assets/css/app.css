@@ -317,11 +317,12 @@ div.line-num::before {
   .table-action {
     @apply inline-flex
     items-center
-    rounded-md
+    rounded
     bg-white
     mx-0.5
-    px-2.5
-    py-1.5
+    my-0.5
+    px-2
+    py-1
     text-sm
     font-semibold
     text-gray-900

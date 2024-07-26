@@ -99,7 +99,7 @@ defmodule LightningWeb.CoreComponents do
               <%= render_slot(col, row) %>
             </td>
             <td :if={@action != []} class="p-0 w-14">
-              <div class="relative whitespace-nowrap py-4 text-right text-sm font-medium">
+              <div class="relative whitespace-nowrap py-2 text-right text-sm font-medium">
                 <span
                   :for={action <- @action}
                   class="relative ml-4 font-semibold leading-6 text-zinc-900 hover:text-zinc-700"
