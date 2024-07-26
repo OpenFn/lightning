@@ -1360,6 +1360,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
           {:noreply,
            socket
+           |> assign(page_title: workflow.name)
            |> assign_workflow(workflow, snapshot)
            |> put_flash(:info, "Workflow saved")
            |> push_patches_applied(initial_params)
