@@ -16,12 +16,22 @@ and this project adheres to
 ## [Unreleased]
 
 ### Added
-- Expose more Kafka configuration at instance-level.
-  [#2329](https://github.com/OpenFn/lightning/issues/2329)
 
 ### Changed
 
 ### Fixed
+
+## [v2.7.11] - 2024-07-26
+
+### Added
+
+- Expose more Kafka configuration at instance-level.
+  [#2329](https://github.com/OpenFn/lightning/issues/2329)
+
+### Fixed
+
+- Table action css tweaks
+  [#2333](https://github.com/OpenFn/lightning/issues/2333)
 
 ## [v2.7.10]
 
