@@ -78,7 +78,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
           <div class="grid grid-cols-3 gap-1">
             <.monthday_field
               target={@myself}
-              values={@initial_values["minutes"]}
+              values={@initial_values["monthdays"]}
               selected={Map.get(@cron_data, :monthday, "01")}
               disabled={@disabled}
             />
