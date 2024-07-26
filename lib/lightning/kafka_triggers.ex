@@ -126,6 +126,9 @@ defmodule Lightning.KafkaTriggers do
     number_of_consumers =
       Application.get_env(:lightning, :kafka_triggers)[:number_of_consumers]
 
+    number_of_processors =
+      Application.get_env(:lightning, :kafka_triggers)[:number_of_processors]
+
     %{
       id: trigger.id,
       start: {
@@ -133,16 +136,18 @@ defmodule Lightning.KafkaTriggers do
         :start_link,
         [
           [
-            number_of_consumers: number_of_consumers,
             connect_timeout: connect_timeout * 1000,
             group_id: group_id,
             hosts: hosts,
+            number_of_consumers: number_of_consumers,
+            number_of_processors: number_of_processors,
             offset_reset_policy: offset_reset_policy,
-            # sobelow_skip ["StringToAtom"]
-            trigger_id: trigger.id |> String.to_atom(),
+            rate_limit: convert_rate_limit(),
             sasl: sasl,
             ssl: ssl,
-            topics: topics
+            topics: topics,
+            # sobelow_skip ["StringToAtom"]
+            trigger_id: trigger.id |> String.to_atom()
           ]
         ]
       }
@@ -200,5 +205,18 @@ defmodule Lightning.KafkaTriggers do
         Supervisor.terminate_child(supervisor, trigger.id)
         Supervisor.delete_child(supervisor, trigger.id)
     end
+  end
+
+  def convert_rate_limit do
+    per_second =
+      Application.get_env(:lightning, :kafka_triggers)[
+        :number_of_messages_per_second
+      ]
+
+    seconds_in_interval = 10
+
+    messages_per_interval = (per_second * seconds_in_interval) |> trunc()
+
+    %{interval: 10_000, messages_per_interval: messages_per_interval}
   end
 end

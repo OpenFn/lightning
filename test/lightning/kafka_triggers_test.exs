@@ -1,6 +1,7 @@
 defmodule Lightning.KafkaTriggersTest do
   use LightningWeb.ConnCase, async: false
 
+  import Lightning.ApplicationHelpers, only: [put_temporary_env: 3]
   import Lightning.Factories
   import Mock
 
@@ -438,6 +439,11 @@ defmodule Lightning.KafkaTriggersTest do
 
       assert number_of_consumers != nil
 
+      number_of_processors =
+        Application.get_env(:lightning, :kafka_triggers)[:number_of_processors]
+
+      assert number_of_processors != nil
+
       trigger =
         insert(
           :trigger,
@@ -450,7 +456,8 @@ defmodule Lightning.KafkaTriggersTest do
         child_spec(
           trigger: trigger,
           index: 1,
-          number_of_consumers: number_of_consumers
+          number_of_consumers: number_of_consumers,
+          number_of_processors: number_of_processors
         )
 
       actual_child_spec = KafkaTriggers.generate_pipeline_child_spec(trigger)
@@ -463,6 +470,11 @@ defmodule Lightning.KafkaTriggersTest do
         Application.get_env(:lightning, :kafka_triggers)[:number_of_consumers]
 
       assert number_of_consumers != nil
+
+      number_of_processors =
+        Application.get_env(:lightning, :kafka_triggers)[:number_of_processors]
+
+      assert number_of_processors != nil
 
       trigger =
         insert(
@@ -477,7 +489,8 @@ defmodule Lightning.KafkaTriggersTest do
           trigger: trigger,
           index: 1,
           sasl: false,
-          number_of_consumers: number_of_consumers
+          number_of_consumers: number_of_consumers,
+          number_of_processors: number_of_processors
         )
 
       actual_child_spec = KafkaTriggers.generate_pipeline_child_spec(trigger)
@@ -771,6 +784,32 @@ defmodule Lightning.KafkaTriggersTest do
     end
   end
 
+  describe "convert_rate_limit" do
+    test "converts rate limit to an integer rate per ten seconds" do
+      put_temporary_env(
+        :lightning,
+        :kafka_triggers,
+        number_of_messages_per_second: 0.5
+      )
+
+      expected = %{interval: 10_000, messages_per_interval: 5}
+
+      assert KafkaTriggers.convert_rate_limit() == expected
+    end
+
+    test "rounds down the number of messages when converting" do
+      put_temporary_env(
+        :lightning,
+        :kafka_triggers,
+        number_of_messages_per_second: 0.59
+      )
+
+      expected = %{interval: 10_000, messages_per_interval: 5}
+
+      assert KafkaTriggers.convert_rate_limit() == expected
+    end
+  end
+
   defp child_spec(opts) do
     trigger = opts |> Keyword.get(:trigger)
     index = opts |> Keyword.get(:index)
@@ -784,6 +823,13 @@ defmodule Lightning.KafkaTriggersTest do
         Application.get_env(:lightning, :kafka_triggers)[:number_of_consumers]
       )
 
+    number_of_processors =
+      opts
+      |> Keyword.get(
+        :number_of_processors,
+        Application.get_env(:lightning, :kafka_triggers)[:number_of_processors]
+      )
+
     offset_timestamp = "171524976732#{index}" |> String.to_integer()
 
     %{
@@ -793,15 +839,17 @@ defmodule Lightning.KafkaTriggersTest do
         :start_link,
         [
           [
-            number_of_consumers: number_of_consumers,
             connect_timeout: (30 + index) * 1000,
             group_id: "lightning-#{index}",
             hosts: [{"host-#{index}", 9092}, {"other-host-#{index}", 9093}],
+            number_of_consumers: number_of_consumers,
+            number_of_processors: number_of_processors,
             offset_reset_policy: {:timestamp, offset_timestamp},
-            trigger_id: trigger.id |> String.to_atom(),
+            rate_limit: KafkaTriggers.convert_rate_limit(),
             sasl: sasl_config(index, sasl),
             ssl: ssl,
-            topics: ["topic-#{index}-1", "topic-#{index}-2"]
+            topics: ["topic-#{index}-1", "topic-#{index}-2"],
+            trigger_id: trigger.id |> String.to_atom()
           ]
         ]
       }

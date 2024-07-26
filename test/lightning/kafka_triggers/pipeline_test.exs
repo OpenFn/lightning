@@ -5,6 +5,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
   import ExUnit.CaptureLog
 
   alias Ecto.Changeset
+  alias Lightning.KafkaTriggers
   alias Lightning.KafkaTriggers.TriggerKafkaMessage
   alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
   alias Lightning.KafkaTriggers.Pipeline
@@ -17,12 +18,17 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       group_id = "my_group"
       hosts = [{"localhost", 9092}]
       number_of_consumers = 5
+      number_of_processors = 11
       offset_reset_policy = :latest
       sasl = {:plain, "my_username", "my_secret"}
       sasl_expected = {:plain, "my_username", "my_secret"}
       ssl = true
       topics = ["my_topic"]
       trigger_id = :my_trigger_id
+
+      rate_limit =
+        %{interval: interval, messages_per_interval: allowed_messages} =
+        KafkaTriggers.convert_rate_limit()
 
       with_mock Broadway,
         start_link: fn _module, _opts -> {:ok, "fake-pid"} end do
@@ -31,7 +37,9 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
           group_id: group_id,
           hosts: hosts,
           number_of_consumers: number_of_consumers,
+          number_of_processors: number_of_processors,
           offset_reset_policy: offset_reset_policy,
+          rate_limit: rate_limit,
           sasl: sasl,
           ssl: ssl,
           topics: topics,
@@ -60,11 +68,15 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
                          offset_reset_policy: offset_reset_policy
                        ]
                      },
-                     concurrency: number_of_consumers
+                     concurrency: number_of_consumers,
+                     rate_limiting: [
+                       allowed_messages: allowed_messages,
+                       interval: interval
+                     ]
                    ],
                    processors: [
                      default: [
-                       concurrency: 10
+                       concurrency: number_of_processors
                      ]
                    ],
                    batchers: []
@@ -78,11 +90,16 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       group_id = "my_group"
       hosts = [{"localhost", 9092}]
       number_of_consumers = 5
+      number_of_processors = 11
       offset_reset_policy = :latest
       sasl = nil
       ssl = true
       topics = ["my_topic"]
       trigger_id = :my_trigger_id
+
+      rate_limit =
+        %{interval: interval, messages_per_interval: allowed_messages} =
+        KafkaTriggers.convert_rate_limit()
 
       with_mock Broadway,
         start_link: fn _module, _opts -> {:ok, "fake-pid"} end do
@@ -91,7 +108,9 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
           group_id: group_id,
           hosts: hosts,
           number_of_consumers: number_of_consumers,
+          number_of_processors: number_of_processors,
           offset_reset_policy: offset_reset_policy,
+          rate_limit: rate_limit,
           sasl: sasl,
           ssl: ssl,
           topics: topics,
@@ -119,11 +138,15 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
                          offset_reset_policy: offset_reset_policy
                        ]
                      },
-                     concurrency: number_of_consumers
+                     concurrency: number_of_consumers,
+                     rate_limiting: [
+                       allowed_messages: allowed_messages,
+                       interval: interval
+                     ]
                    ],
                    processors: [
                      default: [
-                       concurrency: 10
+                       concurrency: number_of_processors
                      ]
                    ],
                    batchers: []

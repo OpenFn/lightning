@@ -16,6 +16,8 @@ and this project adheres to
 ## [Unreleased]
 
 ### Added
+- Expose more Kafka configuration at instance-level.
+  [#2329](https://github.com/OpenFn/lightning/issues/2329)
 
 ### Changed
 
