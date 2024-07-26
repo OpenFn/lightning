@@ -167,5 +167,27 @@ defmodule LightningWeb.DashboardLiveTest do
                "tr#projects-table-row-#{project.id}"
              )
     end
+
+    test "When the user closes the modal without submitting the form, the project won't be created",
+         %{conn: conn, user: user} do
+      {:ok, view, _html} = live(conn, ~p"/projects")
+
+      projects_before = Lightning.Projects.get_projects_for_user(user)
+      assert projects_before |> Enum.count() == 0
+
+      view
+      |> form("#project-form",
+        project: %{
+          raw_name: "My Awesome Project",
+          description: "This is a really awesome project for testing purposes"
+        }
+      )
+      |> render_change()
+
+      view |> element("#cancel-project-creation") |> render_click()
+
+      projects_after = Lightning.Projects.get_projects_for_user(user)
+      assert projects_after |> Enum.count() == 0
+    end
   end
 end

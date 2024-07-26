@@ -133,7 +133,7 @@ defmodule LightningWeb.DashboardLive.ProjectCreationModal do
                 Create project
               </button>
               <button
-                id="cancel-credential-type-picker"
+                id="cancel-project-creation"
                 type="button"
                 phx-click="close_modal"
                 phx-target={@myself}
