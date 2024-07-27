@@ -1,8 +1,8 @@
 defmodule LightningWeb.DashboardLive.Components do
   use LightningWeb, :component
 
-  alias Lightning.Projects.Project
   alias Lightning.Accounts.User
+  alias Lightning.Projects.Project
 
   defp project_role(
          %User{id: user_id} = _user,

@@ -1,10 +1,10 @@
 defmodule LightningWeb.DashboardLive.Index do
   use LightningWeb, :live_view
 
+  import LightningWeb.DashboardLive.Components
+
   alias Lightning.Accounts.User
   alias Lightning.Projects
-
-  import LightningWeb.DashboardLive.Components
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
