@@ -465,7 +465,7 @@ defmodule Lightning.Projects do
 
   ## Parameters
     - user: The user struct for which projects are being queried.
-    - opts: Keyword list of options including :include for associations to preload.
+    - opts: Keyword list of options including :include for associations to preload and :order_by for sorting.
 
   ## Returns
     - An Ecto queryable struct to fetch projects.
@@ -474,11 +474,12 @@ defmodule Lightning.Projects do
           Ecto.Queryable.t()
   def projects_for_user_query(%User{id: user_id}, opts \\ []) do
     include = Keyword.get(opts, :include, [])
+    order_by = Keyword.get(opts, :order_by, asc: :name)
 
     from(p in Project,
       join: pu in assoc(p, :project_users),
       where: pu.user_id == ^user_id and is_nil(p.scheduled_deletion),
-      order_by: p.name,
+      order_by: ^order_by,
       preload: ^include
     )
   end
@@ -487,11 +488,11 @@ defmodule Lightning.Projects do
   Fetches projects for a given user from the database.
 
   ## Parameters
-    - user: The user struct for which projects are being queried.
-    - opts: Keyword list of options including :include for associations to preload.
+  - user: The user struct for which projects are being queried.
+  - opts: Keyword list of options including :include for associations to preload and :order_by for sorting.
 
   ## Returns
-    - A list of projects associated with the user.
+  - A list of projects associated with the user.
   """
   @spec get_projects_for_user(user :: User.t(), opts :: keyword()) :: [
           Project.t()

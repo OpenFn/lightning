@@ -12,7 +12,13 @@ defmodule LightningWeb.DashboardLive.Index do
   def mount(_params, _session, socket) do
     projects = projects_for_user(socket.assigns.current_user)
 
-    {:ok, assign(socket, projects: projects, active_menu_item: :projects)}
+    {:ok,
+     assign(socket,
+       projects: projects,
+       active_menu_item: :projects,
+       name_sort_direction: :asc,
+       activity_sort_direction: :asc
+     )}
   end
 
   @impl true
@@ -21,8 +27,47 @@ defmodule LightningWeb.DashboardLive.Index do
      assign(socket, page_title: "Projects", active_menu_item: :projects)}
   end
 
-  defp projects_for_user(%User{} = user) do
-    Projects.get_projects_for_user(user, include: [:project_users, :workflows])
+  @impl true
+  def handle_event("sort_by_name", _params, socket) do
+    sort_direction = switch_sort_direction(socket.assigns.name_sort_direction)
+
+    projects =
+      projects_for_user(socket.assigns.current_user,
+        order_by: [{sort_direction, :name}]
+      )
+
+    {:noreply,
+     assign(socket, projects: projects, name_sort_direction: sort_direction)}
+  end
+
+  def handle_event("sort_by_activity", _params, socket) do
+    sort_direction =
+      switch_sort_direction(socket.assigns.activity_sort_direction)
+
+    projects =
+      projects_for_user(socket.assigns.current_user,
+        order_by: [{sort_direction, :updated_at}]
+      )
+
+    {:noreply,
+     assign(socket, projects: projects, activity_sort_direction: sort_direction)}
+  end
+
+  defp switch_sort_direction(sort_type) do
+    case sort_type do
+      :asc -> :desc
+      :desc -> :asc
+    end
+  end
+
+  defp projects_for_user(%User{} = user, opts \\ []) do
+    include = Keyword.get(opts, :include, [:project_users, :workflows])
+    order_by = Keyword.get(opts, :order_by, asc: :name)
+
+    Projects.get_projects_for_user(user,
+      include: include,
+      order_by: order_by
+    )
   end
 
   @impl true
@@ -36,7 +81,12 @@ defmodule LightningWeb.DashboardLive.Index do
       </:header>
       <LayoutComponents.centered>
         <div class="w-full">
-          <.user_projects_table projects={@projects} user={@current_user}>
+          <.user_projects_table
+            projects={@projects}
+            user={@current_user}
+            name_direction={@name_sort_direction}
+            activity_direction={@activity_sort_direction}
+          >
             <:empty_state>
               <button
                 type="button"

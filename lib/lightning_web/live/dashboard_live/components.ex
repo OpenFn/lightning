@@ -27,10 +27,14 @@ defmodule LightningWeb.DashboardLive.Components do
   end
 
   def user_projects_table(assigns) do
+    next_sort_icon = %{asc: "hero-chevron-down", desc: "hero-chevron-up"}
+
     assigns =
       assign(assigns,
         projects_count: assigns.projects |> Enum.count(),
-        empty?: assigns.projects |> Enum.empty?()
+        empty?: assigns.projects |> Enum.empty?(),
+        name_sort_icon: next_sort_icon[assigns.name_direction],
+        activity_sort_icon: next_sort_icon[assigns.activity_direction]
       )
 
     ~H"""
@@ -45,11 +49,31 @@ defmodule LightningWeb.DashboardLive.Components do
       </div>
       <.table id="projects-table">
         <.tr>
-          <.th>Name</.th>
+          <.th>
+            <div class="group inline-flex items-center">
+              Name
+              <span
+                phx-click="sort_by_name"
+                class="cursor-pointer align-middle ml-2 flex-none rounded text-gray-400 group-hover:visible group-focus:visible"
+              >
+                <.icon name={@name_sort_icon} />
+              </span>
+            </div>
+          </.th>
           <.th>Role</.th>
           <.th>Workflows</.th>
           <.th>Collaborators</.th>
-          <.th>Last Activity</.th>
+          <.th>
+            <div class="group inline-flex items-center">
+              Last Activity
+              <span
+                phx-click="sort_by_activity"
+                class="cursor-pointer align-middle ml-2 flex-none rounded text-gray-400 group-hover:visible group-focus:visible"
+              >
+                <.icon name={@activity_sort_icon} />
+              </span>
+            </div>
+          </.th>
         </.tr>
 
         <.tr
