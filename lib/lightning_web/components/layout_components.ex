@@ -22,7 +22,7 @@ defmodule LightningWeb.LayoutComponents do
       ) %>
     <% else %>
       <Menu.projects_dropdown
-        projects={assigns[:projects]}
+        projects={assigns[:projects] || []}
         selected_project={assigns[:project]}
       />
       <%= if assigns[:project] do %>
