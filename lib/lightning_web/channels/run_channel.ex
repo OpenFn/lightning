@@ -179,11 +179,31 @@ defmodule LightningWeb.RunChannel do
   end
 
   def handle_in("step:complete", payload, socket) do
+    max_size = Application.get_env(:lightning, :max_dataclip_size_bytes)
+
+    payload_size =
+      Map.get(payload, "output_dataclip")
+      |> :erlang.term_to_binary()
+      |> byte_size()
+
+    safe_payload =
+      if(payload_size > max_size) do
+        Logger.warning(fn ->
+          "Dataclip for run #{socket.assigns.run.id} too big. Dropping it."
+        end)
+
+        payload
+        |> Map.delete("output_dataclip")
+        |> Map.delete("output_dataclip_id")
+      else
+        payload
+      end
+
     %{
       "run_id" => socket.assigns.run.id,
       "project_id" => socket.assigns.project_id
     }
-    |> Enum.into(payload)
+    |> Enum.into(safe_payload)
     |> Runs.complete_step(socket.assigns.run.options)
     |> case do
       {:error, changeset} ->
