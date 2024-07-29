@@ -82,7 +82,10 @@ defmodule LightningWeb.DashboardLive.Components do
           class="hover:bg-gray-100 transition-colors duration-200"
         >
           <.td class="flex items-center">
-            <.link class="break-words max-w-[15rem] text-gray-800" href={~p"/projects/#{project.id}/w"}>
+            <.link
+              class="break-words max-w-[15rem] text-gray-800"
+              href={~p"/projects/#{project.id}/w"}
+            >
               <%= project.name %>
             </.link>
           </.td>
