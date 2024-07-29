@@ -101,7 +101,10 @@ defmodule LightningWeb.DashboardLive.Components do
             </.link>
           </.td>
           <.td>
-            <.link class="text-gray-800" href={~p"/projects/#{project.id}/history"}>
+            <.link
+              class="text-primary-700"
+              href={~p"/projects/#{project.id}/history"}
+            >
               <%= Lightning.Helpers.format_date(
                 project.updated_at,
                 "%d/%b/%Y %H:%M:%S"

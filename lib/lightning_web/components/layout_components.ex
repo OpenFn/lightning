@@ -21,17 +21,16 @@ defmodule LightningWeb.LayoutComponents do
         {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
       ) %>
     <% else %>
+      <Menu.projects_dropdown
+        projects={assigns[:projects]}
+        selected_project={assigns[:project]}
+      />
       <%= if assigns[:project] do %>
-        <Menu.projects_dropdown
-          projects={assigns[:projects]}
-          selected_project={assigns[:project]}
-        />
         <Menu.project_items
           project_id={@project.id}
           active_menu_item={@active_menu_item}
         />
       <% else %>
-        <div class="my-4"></div>
         <Menu.profile_items active_menu_item={@active_menu_item} />
       <% end %>
     <% end %>
