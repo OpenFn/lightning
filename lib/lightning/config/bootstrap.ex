@@ -307,11 +307,16 @@ defmodule Lightning.Config.Bootstrap do
       disable_db_ssl = env!("DISABLE_DB_SSL", &Utils.ensure_boolean/1, false)
 
       config :lightning, Lightning.Repo,
-        ssl: not disable_db_ssl,
-        # TODO: determine why we see this certs verification warn for the repo conn
-        # ssl_opts: [log_level: :error],
         url: database_url,
         socket_options: maybe_ipv6
+
+      if disable_db_ssl do
+        config :thunderbolt, Thunderbolt.Repo, ssl: false
+      else
+        ssl_opts = [verify: :verify_none]
+
+        config :thunderbolt, Thunderbolt.Repo, ssl_opts: ssl_opts, ssl: true
+      end
 
       # The secret key base is used to sign/encrypt cookies and other secrets.
       # A default value is used in config/dev.exs and config/test.exs but you
