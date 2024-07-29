@@ -89,13 +89,13 @@ defmodule LightningWeb.DashboardLiveTest do
           |> Map.get(:project_users)
           |> Enum.find(fn pu -> pu.user_id == user.id end)
           |> Map.get(:role)
-          |> Atom.to_string()
-          |> String.capitalize()
 
         assert has_element?(
                  view,
                  "tr#projects-table-row-#{project.id} > td:nth-child(2)",
                  role
+                 |> Atom.to_string()
+                 |> String.capitalize()
                )
 
         workflow_count =
@@ -103,12 +103,11 @@ defmodule LightningWeb.DashboardLiveTest do
           |> Repo.preload(:workflows)
           |> Map.get(:workflows)
           |> Enum.count()
-          |> to_string()
 
         assert has_element?(
                  view,
                  "tr#projects-table-row-#{project.id} > td:nth-child(3)",
-                 workflow_count
+                 workflow_count |> to_string()
                )
 
         collaborator_count =
@@ -116,12 +115,11 @@ defmodule LightningWeb.DashboardLiveTest do
           |> Repo.preload(:project_users)
           |> Map.get(:project_users)
           |> Enum.count()
-          |> to_string()
 
         assert has_element?(
                  view,
                  "tr#projects-table-row-#{project.id} > td:nth-child(4) > a[href='/projects/#{project.id}/settings#collaboration']",
-                 collaborator_count
+                 collaborator_count |> to_string()
                )
 
         formatted_date =
@@ -189,5 +187,116 @@ defmodule LightningWeb.DashboardLiveTest do
       projects_after = Lightning.Projects.get_projects_for_user(user)
       assert projects_after |> Enum.count() == 0
     end
+
+    test "Users can sort the project table by name", %{conn: conn, user: user} do
+      projects =
+        insert_list(3, :project,
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/projects")
+
+      # By default, projects are sorted by name ascending
+      projects_sorted_by_name = get_sorted_projects_by_name(projects)
+      html = render(view)
+      project_names_from_html = extract_project_names_from_html(html)
+
+      assert project_names_from_html == projects_sorted_by_name
+
+      # Click to sort by name descending
+      view |> element("span[phx-click='sort_by_name']") |> render_click()
+
+      projects_sorted_by_name_desc = get_sorted_projects_by_name(projects, :desc)
+      html = render(view)
+      project_names_from_html = extract_project_names_from_html(html)
+
+      assert project_names_from_html == projects_sorted_by_name_desc
+    end
+
+    test "Users can sort the project table by last activity", %{
+      conn: conn,
+      user: user
+    } do
+      projects =
+        insert_list(3, :project,
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/projects")
+
+      # By default, projects are sorted by last activity ascending
+      projects_sorted_by_last_activity =
+        get_sorted_projects_by_last_activity(projects)
+        |> Enum.map(fn date ->
+          Lightning.Helpers.format_date(
+            date,
+            "%d/%b/%Y %H:%M:%S"
+          )
+        end)
+
+      html = render(view)
+
+      project_last_activities_from_html =
+        extract_project_last_activities_from_html(html)
+
+      assert project_last_activities_from_html ==
+               projects_sorted_by_last_activity
+
+      # Click to sort by last activity descending
+      view |> element("span[phx-click='sort_by_activity']") |> render_click()
+
+      projects_sorted_by_last_activity_desc =
+        get_sorted_projects_by_last_activity(projects, :desc)
+        |> Enum.map(fn date ->
+          Lightning.Helpers.format_date(
+            date,
+            "%d/%b/%Y %H:%M:%S"
+          )
+        end)
+
+      html = render(view)
+
+      project_last_activities_from_html =
+        extract_project_last_activities_from_html(html)
+
+      assert project_last_activities_from_html ==
+               projects_sorted_by_last_activity_desc
+    end
+  end
+
+  defp get_sorted_projects_by_name(projects, order \\ :asc) do
+    projects
+    |> Enum.sort_by(fn project -> project.name end, order)
+    |> Enum.map(& &1.name)
+  end
+
+  defp get_sorted_projects_by_last_activity(projects, order \\ :asc) do
+    projects
+    |> Enum.sort_by(fn project -> project.updated_at end, order)
+    |> Enum.map(& &1.updated_at)
+  end
+
+  defp extract_project_names_from_html(html) do
+    html
+    |> Floki.parse_document!()
+    |> Floki.find("#projects-table tr")
+    |> Enum.map(fn tr ->
+      Floki.find(tr, "td:nth-child(1) a")
+      |> Floki.text()
+      |> String.trim()
+    end)
+    |> Enum.reject(&(&1 == ""))
+  end
+
+  defp extract_project_last_activities_from_html(html) do
+    html
+    |> Floki.parse_document!()
+    |> Floki.find("#projects-table tr")
+    |> Enum.map(fn tr ->
+      Floki.find(tr, "td:nth-child(5) a")
+      |> Floki.text()
+      |> String.trim()
+    end)
+    |> Enum.reject(&(&1 == ""))
   end
 end
