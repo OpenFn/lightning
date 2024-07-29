@@ -18,7 +18,7 @@ defmodule LightningWeb.DashboardLive.ProjectCreationModal do
 
   @impl true
   def handle_event("close_modal", _, socket) do
-    {:noreply, push_patch(socket, to: socket.assigns.return_to)}
+    {:noreply, push_event(socket, "close_modal", %{})}
   end
 
   def handle_event("validate", %{"project" => project_params}, socket) do
