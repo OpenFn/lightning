@@ -18,7 +18,7 @@ defmodule LightningWeb.DashboardLive.ProjectCreationModal do
 
   @impl true
   def handle_event("close_modal", _, socket) do
-    {:noreply, push_event(socket, "close_modal", %{})}
+    {:noreply, socket |> push_navigate(to: socket.assigns.return_to)}
   end
 
   def handle_event("validate", %{"project" => project_params}, socket) do
@@ -53,7 +53,7 @@ defmodule LightningWeb.DashboardLive.ProjectCreationModal do
          socket
          |> put_flash(:info, "Project created successfully")
          |> assign(project: project)
-         |> push_redirect(to: return_to)}
+         |> push_navigate(to: return_to)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :project_changeset, changeset)}
