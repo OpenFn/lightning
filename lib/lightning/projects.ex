@@ -27,6 +27,7 @@ defmodule Lightning.Projects do
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.Snapshot
   alias Lightning.WorkOrder
 
   require Logger
@@ -558,12 +559,15 @@ defmodule Lightning.Projects do
       {:ok, string}
 
   """
-  @spec export_project(:yaml, Ecto.UUID.t(), [Ecto.UUID.t(), ...] | nil) ::
+  @spec export_project(atom(), Ecto.UUID.t(), [Ecto.UUID.t()] | nil) ::
           {:ok, binary}
-  def export_project(:yaml, project_id, snapshots \\ nil) do
-    {:ok, yaml} = ExportUtils.generate_new_yaml(project_id, snapshots)
+  def export_project(:yaml, project_id, snapshot_ids \\ nil) do
+    project = get_project!(project_id)
 
-    {:ok, yaml}
+    snapshots =
+      if snapshot_ids, do: Snapshot.get_all_by_ids(snapshot_ids), else: nil
+
+    {:ok, _yaml} = ExportUtils.generate_new_yaml(project, snapshots)
   end
 
   @doc """

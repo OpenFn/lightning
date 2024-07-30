@@ -235,11 +235,11 @@ defmodule Lightning.ExportUtils do
     |> to_workflow_yaml_tree(workflow)
   end
 
-  def generate_new_yaml(project_id, snapshots \\ nil)
+  @spec generate_new_yaml(Projects.Project.t(), [Snapshot.t()] | nil) ::
+          {:ok, binary()}
+  def generate_new_yaml(project, snapshots \\ nil)
 
-  def generate_new_yaml(project_id, nil) do
-    project = Projects.get_project!(project_id)
-
+  def generate_new_yaml(project, nil) do
     yaml =
       project
       |> Workflows.get_workflows_for()
@@ -249,13 +249,10 @@ defmodule Lightning.ExportUtils do
     {:ok, yaml}
   end
 
-  def generate_new_yaml(project_id, snapshots) when is_list(snapshots) do
-    project = Projects.get_project!(project_id)
-
+  def generate_new_yaml(project, snapshots) when is_list(snapshots) do
     yaml =
       snapshots
-      |> Snapshot.get_all_by_ids()
-      |> Enum.sort_by(fn s -> s.name end)
+      |> Enum.sort_by(& &1.name)
       |> build_yaml_tree(project)
       |> to_new_yaml()
 
