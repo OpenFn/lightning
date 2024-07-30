@@ -37,6 +37,12 @@ config :lightning, Lightning.Extensions,
   account_hook: Lightning.Extensions.AccountHook,
   project_hook: Lightning.Extensions.ProjectHook
 
+config :lightning, Lightning.Extensions.Routing,
+  session_opts: [on_mount: LightningWeb.InitAssigns],
+  routes: [
+    {"/projects", LightningWeb.DashboardLive.Index, :index, []}
+  ]
+
 # TODO: don't use this value in production
 config :joken, default_signer: "secret"
 
