@@ -54,10 +54,10 @@ defmodule LightningWeb.UserAuthTest do
   end
 
   describe "redirect_with_return_to/2" do
-    test "redirects to / by default", %{conn: conn} do
+    test "redirects to /projects by default", %{conn: conn} do
       assert conn
              |> UserAuth.redirect_with_return_to()
-             |> redirected_to() == "/"
+             |> redirected_to() == "/projects"
     end
 
     test "redirects to the configured path", %{conn: conn} do
@@ -181,7 +181,7 @@ defmodule LightningWeb.UserAuthTest do
         |> UserAuth.redirect_if_user_is_authenticated([])
 
       assert conn.halted
-      assert redirected_to(conn) == "/"
+      assert redirected_to(conn) == "/projects"
     end
 
     test "does not redirect if user is not authenticated", %{conn: conn} do
@@ -452,7 +452,7 @@ defmodule LightningWeb.UserAuthTest do
 
       assert conn.halted
       assert Phoenix.Flash.get(conn.assigns.flash, :nav) == :no_access_no_back
-      assert conn |> redirected_to() == "/"
+      assert conn |> redirected_to() == "/projects"
     end
 
     test "returns 403 if user is not superuser and json request ", %{

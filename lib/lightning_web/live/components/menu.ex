@@ -43,6 +43,9 @@ defmodule LightningWeb.Components.Menu do
 
   def profile_items(assigns) do
     ~H"""
+    <.menu_item to={~p"/projects"} active={@active_menu_item == :projects}>
+      <Heroicons.folder class="h-5 w-5 inline-block mr-2" /> Projects
+    </.menu_item>
     <.menu_item to={~p"/profile"} active={@active_menu_item == :profile}>
       <Heroicons.user_circle class="h-5 w-5 inline-block mr-2" /> User Profile
     </.menu_item>

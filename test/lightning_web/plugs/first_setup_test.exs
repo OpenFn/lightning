@@ -9,11 +9,11 @@ defmodule LightningWeb.Plugs.FirstSetupTest do
     assert redirected_to(conn) == "/first_setup"
   end
 
-  test "doesn't redirect when there is a first user", context do
+  test "redirects to /projects when there is a first user", context do
     %{conn: conn} = register_and_log_in_user(context)
     conn = conn |> FirstSetup.call(%{}) |> get("/")
 
     assert conn.request_path == "/"
-    assert conn.status != 302
+    assert conn.status == 302
   end
 end

@@ -17,7 +17,7 @@ defmodule LightningWeb.ProjectLive.MFARequired do
     %{current_user: current_user} = socket.assigns
 
     if current_user.mfa_enabled do
-      {:halt, redirect(socket, to: "/")}
+      {:halt, redirect(socket, to: "/projects")}
     else
       {:cont, socket}
     end

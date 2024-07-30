@@ -51,7 +51,7 @@ defmodule LightningWeb.OidcControllerTest do
         |> log_in_user(user)
         |> get(Routes.oidc_path(conn, :show, handler.name))
 
-      assert redirected_to(conn) == "/"
+      assert redirected_to(conn) == "/projects"
     end
 
     test "renders a 404 when a provider is missing", %{conn: conn} do
@@ -81,7 +81,7 @@ defmodule LightningWeb.OidcControllerTest do
           Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
         )
 
-      assert redirected_to(conn) == "/"
+      assert redirected_to(conn) == "/projects"
     end
 
     test "logs the person in but marks totp as pending for users wth MFA enabled",

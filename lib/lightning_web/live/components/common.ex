@@ -123,7 +123,7 @@ defmodule LightningWeb.Components.Common do
       <span
         id={@id}
         {if @has_tooltip?, do: ["phx-hook": "Tooltip", "data-placement": "bottom", "aria-label": @tooltip], else: []}
-        class={"inline-flex items-center rounded-md px-2 py-1 text-xs font-medium #{@styles}"}
+        class={"inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium #{@styles}"}
       >
         <%= @version %>
       </span>

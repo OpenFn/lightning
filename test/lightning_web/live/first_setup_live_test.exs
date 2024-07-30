@@ -40,7 +40,7 @@ defmodule LightningWeb.FirstSetupLiveTest do
         |> render_submit()
         |> follow_redirect(conn)
 
-      assert "/" = redirected_path = redirected_to(conn, 302)
+      assert "/projects" = redirected_path = redirected_to(conn, 302)
 
       html =
         get(recycle(conn), redirected_path)
@@ -51,7 +51,7 @@ defmodule LightningWeb.FirstSetupLiveTest do
     end
 
     test "will redirect with a warning when a user already exists", %{conn: conn} do
-      assert {:error, {:redirect, %{flash: %{}, to: "/"}}} ==
+      assert {:error, {:redirect, %{flash: %{}, to: "/projects"}}} ==
                live(conn, Routes.first_setup_superuser_path(conn, :show))
     end
   end

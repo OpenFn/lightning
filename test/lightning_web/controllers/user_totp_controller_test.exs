@@ -68,7 +68,7 @@ defmodule LightningWeb.UserTOTPControllerTest do
       assert conn
              |> delete_session(@totp_session)
              |> get(Routes.user_totp_path(conn, :new))
-             |> redirected_to() == "/"
+             |> redirected_to() == "/projects"
     end
   end
 
@@ -81,7 +81,7 @@ defmodule LightningWeb.UserTOTPControllerTest do
           "user" => %{"code" => code, "authentication_type" => "totp"}
         })
 
-      assert redirected_to(conn) == "/"
+      assert redirected_to(conn) == "/projects"
       assert get_session(conn, @totp_session) == nil
     end
 
@@ -97,7 +97,7 @@ defmodule LightningWeb.UserTOTPControllerTest do
           }
         })
 
-      assert redirected_to(conn) == "/"
+      assert redirected_to(conn) == "/projects"
       assert get_session(conn, @totp_session) == nil
       assert conn.resp_cookies["_lightning_web_user_remember_me"]
     end
@@ -141,7 +141,7 @@ defmodule LightningWeb.UserTOTPControllerTest do
           }
         })
 
-      assert redirected_to(conn) == "/"
+      assert redirected_to(conn) == "/projects"
       assert get_session(conn, @totp_session) == nil
     end
 
@@ -157,7 +157,7 @@ defmodule LightningWeb.UserTOTPControllerTest do
           }
         })
 
-      assert redirected_to(conn) == "/"
+      assert redirected_to(conn) == "/projects"
       assert get_session(conn, @totp_session) == nil
       assert conn.resp_cookies["_lightning_web_user_remember_me"]
     end
