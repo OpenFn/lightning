@@ -206,6 +206,9 @@ defmodule Lightning.MixProject do
         Accounts: [
           ~r/Lightning.Accounts/
         ],
+        Config: [
+          ~r/Lightning.Config/
+        ],
         Runs: [
           ~r/Lightning.Runs/
         ],
@@ -241,7 +244,8 @@ defmodule Lightning.MixProject do
           ~r/LightningWeb/
         ],
         Other: [
-          ~r/Lightning.Graph/
+          ~r/Lightning.Graph/,
+          ~r/Lightning./
         ]
       ]
     ]

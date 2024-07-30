@@ -24,6 +24,9 @@ and this project adheres to
 - Use snapshots when initiating Github Sync
   [#1827](https://github.com/OpenFn/lightning/issues/1827)
 
+- Move runtime logic into module
+  [#2338](https://github.com/OpenFn/lightning/pull/2338)
+
 ### Fixed
 
 ## [v2.7.11] - 2024-07-26
