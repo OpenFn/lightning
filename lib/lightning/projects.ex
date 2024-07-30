@@ -25,9 +25,9 @@ defmodule Lightning.Projects do
   alias Lightning.RunStep
   alias Lightning.Services.ProjectHook
   alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
-  alias Lightning.Workflows.Snapshot
   alias Lightning.WorkOrder
 
   require Logger
