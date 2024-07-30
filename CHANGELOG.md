@@ -18,6 +18,8 @@ and this project adheres to
 ### Added
 
 ### Changed
+- Make root layout configurable
+  [#2310](https://github.com/OpenFn/lightning/pull/2310)
 
 ### Fixed
 
