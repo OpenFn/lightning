@@ -213,6 +213,9 @@ LightningWeb.CredentialLive.JsonSchemaBodyComponent.html
 LightningWeb.CredentialLive.OauthClientFormComponent.html
 LightningWeb.CredentialLive.OauthComponent.html
 LightningWeb.CredentialLive.RawBodyComponent.html
+LightningWeb.DashboardLive.Components.html
+LightningWeb.DashboardLive.Index.html
+LightningWeb.DashboardLive.ProjectCreationModal.html
 LightningWeb.DataclipController.html
 LightningWeb.DataclipLive.FormComponent.html
 LightningWeb.DataclipLive.Show.html
@@ -241,6 +244,7 @@ LightningWeb.Pagination.html
 LightningWeb.PlugConfigs.html
 LightningWeb.Plugs.BlockRoutes.html
 LightningWeb.Plugs.FirstSetup.html
+LightningWeb.Plugs.Redirect.html
 LightningWeb.Plugs.WebhookAuth.html
 LightningWeb.ProfileLive.Edit.html
 LightningWeb.ProfileLive.FormComponent.html
@@ -325,8 +329,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-0F50B222.js
-dist/sidebar_items-EB75C0EB.js
+dist/search_data-068D2EBD.js
+dist/sidebar_items-7B01AAD4.js
 index.html
 provisioning.html
 readme.html
