@@ -15,14 +15,14 @@ defmodule Lightning.Config.Bootstrap do
   > from the `.env`, `.env.<config_env>`, and `.env.<config_env>.override` files.
   > It also sources the system environment variables.
   >
-  > Calling `setup/0` without calling `source_envs/0` or `Dotenvy.source/2`
+  > Calling `configure/0` without calling `source_envs/0` or `Dotenvy.source/2`
   > first will result in no environment variables being loaded.
 
   Usage:
 
   ```elixir
   Lightning.Config.Bootstrap.source_envs()
-  Lightning.Config.Bootstrap.setup()
+  Lightning.Config.Bootstrap.configure()
   ```
   """
 
@@ -42,7 +42,14 @@ defmodule Lightning.Config.Bootstrap do
   end
 
   # credo:disable-for-this-file Credo.Check.Refactor.CyclomaticComplexity
-  def setup do
+  def configure do
+    unless Process.get(:dotenvy_vars) do
+      raise """
+      Environment variables haven't been sourced first.
+      Please call `source_envs/0` before calling `configure/0`.
+      """
+    end
+
     # Start the phoenix server if environment is set and running in a release
     if env!("PHX_SERVER", :boolean, false) &&
          env!("RELEASE_NAME", :boolean, false) do

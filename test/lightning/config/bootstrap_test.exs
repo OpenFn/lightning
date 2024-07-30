@@ -17,14 +17,27 @@ defmodule Lightning.Config.BootstrapTest do
     :ok
   end
 
-  test "test" do
+  test "without sourcing envs first" do
+    assert_raise RuntimeError,
+                 """
+                 Environment variables haven't been sourced first.
+                 Please call `source_envs/0` before calling `configure/0`.
+                 """,
+                 fn ->
+                   Bootstrap.configure()
+                 end
+  end
+
+  test "prod" do
+    Dotenvy.source([])
+
     assert_raise RuntimeError,
                  """
                  environment variable DATABASE_URL is missing.
                  For example: ecto://USER:PASS@HOST/DATABASE
                  """,
                  fn ->
-                   Bootstrap.setup()
+                   Bootstrap.configure()
                  end
 
     Dotenvy.source([%{"DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE"}])
@@ -35,7 +48,7 @@ defmodule Lightning.Config.BootstrapTest do
                  You can generate one by calling: mix phx.gen.secret
                  """,
                  fn ->
-                   Bootstrap.setup()
+                   Bootstrap.configure()
                  end
 
     Dotenvy.source([
@@ -43,7 +56,7 @@ defmodule Lightning.Config.BootstrapTest do
       %{"DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE"}
     ])
 
-    Bootstrap.setup()
+    Bootstrap.configure()
 
     assert {:url, "ecto://USER:PASS@HOST/DATABASE"} in get_env(
              :lightning,
