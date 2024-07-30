@@ -32,6 +32,7 @@ Lightning.BuildMacros.html
 Lightning.CLI.Result.html
 Lightning.CLI.html
 Lightning.ChangesetUtils.html
+Lightning.Config.Bootstrap.html
 Lightning.Config.Utils.html
 Lightning.Config.html
 Lightning.Credentials.Audit.html
@@ -324,8 +325,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-A57BCEB4.js
-dist/sidebar_items-A59C1262.js
+dist/search_data-0F50B222.js
+dist/sidebar_items-EB75C0EB.js
 index.html
 provisioning.html
 readme.html

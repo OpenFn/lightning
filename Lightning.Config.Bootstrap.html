@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v2.7.11">
 
-    <title>Lightning.CLI — Lightning v2.7.11</title>
+    <title>Lightning.Config.Bootstrap — Lightning v2.7.11</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
@@ -125,19 +125,26 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/cli.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config/bootstrap.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.CLI</span> 
+  <span translate="no">Lightning.Config.Bootstrap</span> 
   <small class="app-vsn" translate="no">(Lightning v2.7.11)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Module providing facilities to make calls to the OpenFn CLI.</p><p>See <a href="https://github.com/OpenFn/kit/tree/main/packages/cli#openfncli">@openfn/cli</a></p>
+<p>Bootstrap the application environment.</p><p>This module is responsible for setting up the application environment based on
+the configuration provided by the user.</p><p>Usually, config calls are made in the <code class="inline">config/runtime.exs</code> file. This module
+abstracts the runtime configuration into a module that can be tested and
+called from other places (aside from <code class="inline">config/runtime.exs</code>) file.</p><blockquote><h4 class="info">Sourcing envs</h4><p>Internally this module uses <a href="https://hexdocs.pm/dotenvy/0.8.0/Dotenvy.html#source/1"><code class="inline">Dotenvy.source/1</code></a> to source environment variables
+from the <code class="inline">.env</code>, <code class="inline">.env.&lt;config_env&gt;</code>, and <code class="inline">.env.&lt;config_env&gt;.override</code> files.
+It also sources the system environment variables.</p><p>Calling <a href="#configure/0"><code class="inline">configure/0</code></a> without calling <a href="#source_envs/0"><code class="inline">source_envs/0</code></a> or <a href="https://hexdocs.pm/dotenvy/0.8.0/Dotenvy.html#source/2"><code class="inline">Dotenvy.source/2</code></a>
+first will result in no environment variables being loaded.</p></blockquote><p>Usage:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Config.Bootstrap</span><span class="o">.</span><span class="n">source_envs</span><span class="p" data-group-id="0693494772-1">(</span><span class="p" data-group-id="0693494772-1">)</span><span class="w">
+</span><span class="nc">Lightning.Config.Bootstrap</span><span class="o">.</span><span class="n">configure</span><span class="p" data-group-id="0693494772-2">(</span><span class="p" data-group-id="0693494772-2">)</span></code></pre>
   </section>
 
 
@@ -155,21 +162,17 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#execute/1" translate="no">execute(command)</a>
+        <a href="#configure/0" translate="no">configure()</a>
 
       </div>
-
-        <div class="summary-synopsis"><p>Execute a command in a child process and parse the results.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#metadata/2" translate="no">metadata(state, adaptor_path)</a>
+        <a href="#source_envs/0" translate="no">source_envs()</a>
 
       </div>
-
-        <div class="summary-synopsis"><p>Retrieve metadata for a given adaptor and configuration.</p></div>
 
     </div>
 
@@ -186,16 +189,16 @@ Pages
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="execute/1">
+<section class="detail" id="configure/0">
 
   <div class="detail-header">
-    <a href="#execute/1" class="detail-link" title="Link to this function">
+    <a href="#configure/0" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">execute(command)</h1>
+    <h1 class="signature" translate="no">configure()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/cli.ex#L94" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config/bootstrap.ex#L45" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -205,25 +208,19 @@ Pages
 
   <section class="docstring">
 
-      <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> execute(command :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) :: <a href="Lightning.CLI.Result.html#t:t/0">Lightning.CLI.Result.t</a>()</pre>
-
-      </div>
-
-<p>Execute a command in a child process and parse the results.</p>
   </section>
 </section>
-<section class="detail" id="metadata/2">
+<section class="detail" id="source_envs/0">
 
   <div class="detail-header">
-    <a href="#metadata/2" class="detail-link" title="Link to this function">
+    <a href="#source_envs/0" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">metadata(state, adaptor_path)</h1>
+    <h1 class="signature" translate="no">source_envs()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/cli.ex#L113" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config/bootstrap.ex#L34" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -233,13 +230,7 @@ Pages
 
   <section class="docstring">
 
-      <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> metadata(state :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), adaptor_path :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) :: <a href="Lightning.CLI.Result.html#t:t/0">Lightning.CLI.Result.t</a>()</pre>
-
-      </div>
-
-<p>Retrieve metadata for a given adaptor and configuration.</p>
   </section>
 </section>
 
