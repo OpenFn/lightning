@@ -224,16 +224,6 @@ defmodule Lightning.Config do
   @callback get_extension_mod(key :: atom()) :: any()
   @callback grace_period() :: integer()
   @callback instance_admin_email() :: String.t()
-  @callback oauth_provider(key :: atom()) :: keyword() | nil
-  @callback purge_deleted_after_days() :: integer()
-  @callback repo_connection_token_signer() :: Joken.Signer.t()
-  @callback run_token_signer() :: Joken.Signer.t()
-  @callback usage_tracking() :: Keyword.t()
-  @callback reset_password_token_validity_in_days() :: integer()
-  @callback usage_tracking_cron_opts() :: [Oban.Plugins.Cron.cron_input()]
-  @callback worker_secret() :: binary() | nil
-  @callback worker_token_signer() :: Joken.Signer.t()
-  @callback kafka_triggers_enabled?() :: boolean()
   @callback kafka_duplicate_tracking_retention_seconds() :: integer()
   @callback kafka_next_message_candidate_set_delay_milliseconds() :: integer()
   @callback kafka_no_message_candidate_set_delay_milliseconds() :: integer()
@@ -241,6 +231,16 @@ defmodule Lightning.Config do
   @callback kafka_number_of_message_candidate_set_workers() :: integer()
   @callback kafka_number_of_messages_per_second() :: float()
   @callback kafka_number_of_processors() :: integer()
+  @callback kafka_triggers_enabled?() :: boolean()
+  @callback oauth_provider(key :: atom()) :: keyword() | nil
+  @callback purge_deleted_after_days() :: integer()
+  @callback repo_connection_token_signer() :: Joken.Signer.t()
+  @callback reset_password_token_validity_in_days() :: integer()
+  @callback run_token_signer() :: Joken.Signer.t()
+  @callback usage_tracking() :: Keyword.t()
+  @callback usage_tracking_cron_opts() :: [Oban.Plugins.Cron.cron_input()]
+  @callback worker_secret() :: binary() | nil
+  @callback worker_token_signer() :: Joken.Signer.t()
 
   @doc """
   Returns the Apollo server configuration.

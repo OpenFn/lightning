@@ -1,6 +1,6 @@
 defmodule Lightning.KafkaTriggers.DuplicateTrackingCleanupWorker do
   @moduledoc """
-  Repsonsible for cleaing up stale TriggerKafkaMessageRecords entries.
+  Responsible for cleaning up stale TriggerKafkaMessageRecords entries.
   TriggerKafkaMessageRecords are used to deduplicate incoming messages from
   a Kafka cluster.
   """

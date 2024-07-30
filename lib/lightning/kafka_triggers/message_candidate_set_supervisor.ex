@@ -19,17 +19,36 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetSupervisor do
   @impl true
   def init(opts) do
     number_of_workers = Keyword.get(opts, :number_of_workers, 1)
+    # TODO: move the config upwards (to the supervisor), and pass in the exact
+    # config values needed by the children
+    config = Keyword.get(opts, :config, Lightning.Config)
+
+    child_opts = [
+      number_of_workers: number_of_workers,
+      no_message_candidate_set_delay_milliseconds:
+        config.kafka_no_message_candidate_set_delay_milliseconds(),
+      next_message_candidate_set_delay_milliseconds:
+        config.kafka_next_message_candidate_set_delay_milliseconds()
+    ]
 
     mcs_children =
-      generate_child_specs(MessageCandidateSetServer, number_of_workers)
+      generate_child_specs(MessageCandidateSetServer, child_opts)
 
     message_children =
-      generate_child_specs(MessageServer, number_of_workers)
+      generate_child_specs(MessageServer, child_opts)
 
     Supervisor.init(mcs_children ++ message_children, strategy: :one_for_one)
   end
 
-  def generate_child_specs(server, number_of_workers) do
+  def generate_child_specs(server, opts) do
+    no_set_delay =
+      opts |> Keyword.fetch!(:no_message_candidate_set_delay_milliseconds)
+
+    next_set_delay =
+      opts |> Keyword.fetch!(:next_message_candidate_set_delay_milliseconds)
+
+    number_of_workers = opts |> Keyword.fetch!(:number_of_workers)
+
     {worker, id_prefix} =
       case server do
         MessageCandidateSetServer ->
@@ -38,12 +57,6 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetSupervisor do
         MessageServer ->
           {MessageWorker, "message_worker"}
       end
-
-    no_set_delay =
-      Lightning.Config.kafka_no_message_candidate_set_delay_milliseconds()
-
-    next_set_delay =
-      Lightning.Config.kafka_next_message_candidate_set_delay_milliseconds()
 
     workers =
       0..(number_of_workers - 1)

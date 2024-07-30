@@ -16,15 +16,12 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetSupervisorTest do
     :ok
   end
 
-  describe ".start_link/1" do
-    test "successfully starts the supervisor" do
-      assert _pid = start_supervised!(MessageCandidateSetSupervisor)
-    end
-  end
-
   describe ".init/1 without worker count" do
     setup do
-      pid = start_supervised!(MessageCandidateSetSupervisor)
+      pid =
+        start_supervised!(
+          {MessageCandidateSetSupervisor, config: Lightning.MockConfig}
+        )
 
       %{pid: pid}
     end
@@ -62,7 +59,10 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetSupervisorTest do
   describe ".init/1 with worker count" do
     setup do
       pid =
-        start_supervised!({MessageCandidateSetSupervisor, number_of_workers: 2})
+        start_supervised!(
+          {MessageCandidateSetSupervisor,
+           number_of_workers: 2, config: Lightning.MockConfig}
+        )
 
       %{pid: pid}
     end
@@ -111,28 +111,19 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetSupervisorTest do
 
   describe "generate_child_specs/2 - MessageCandidateSetServer" do
     test "generates server spec and requested number of worker specs" do
-      no_set_delay =
-        Lightning.Config.kafka_no_message_candidate_set_delay_milliseconds()
-
-      next_set_delay =
-        Lightning.Config.kafka_next_message_candidate_set_delay_milliseconds()
-
-      assert no_set_delay != nil
-      assert next_set_delay != nil
-
       expected = [
         MessageCandidateSetServer,
         Supervisor.child_spec(
           {
             MessageCandidateSetWorker,
-            [no_set_delay: no_set_delay, next_set_delay: next_set_delay]
+            [no_set_delay: 10, next_set_delay: 20]
           },
           id: "mcs_worker_0"
         ),
         Supervisor.child_spec(
           {
             MessageCandidateSetWorker,
-            [no_set_delay: no_set_delay, next_set_delay: next_set_delay]
+            [no_set_delay: 10, next_set_delay: 20]
           },
           id: "mcs_worker_1"
         )
@@ -140,7 +131,11 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetSupervisorTest do
 
       result =
         MessageCandidateSetServer
-        |> MessageCandidateSetSupervisor.generate_child_specs(2)
+        |> MessageCandidateSetSupervisor.generate_child_specs(
+          number_of_workers: 2,
+          no_message_candidate_set_delay_milliseconds: 10,
+          next_message_candidate_set_delay_milliseconds: 20
+        )
 
       assert result == expected
     end
@@ -148,32 +143,19 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetSupervisorTest do
 
   describe "generate_child_specs/2 - MessageServer" do
     test "generates server spec and requested number of worker specs" do
-      no_set_delay =
-        Application.get_env(:lightning, :kafka_triggers)[
-          :no_message_candidate_set_delay_milliseconds
-        ]
-
-      next_set_delay =
-        Application.get_env(:lightning, :kafka_triggers)[
-          :next_message_candidate_set_delay_milliseconds
-        ]
-
-      assert no_set_delay != nil
-      assert next_set_delay != nil
-
       expected = [
         MessageServer,
         Supervisor.child_spec(
           {
             MessageWorker,
-            [no_set_delay: no_set_delay, next_set_delay: next_set_delay]
+            [no_set_delay: 1, next_set_delay: 2]
           },
           id: "message_worker_0"
         ),
         Supervisor.child_spec(
           {
             MessageWorker,
-            [no_set_delay: no_set_delay, next_set_delay: next_set_delay]
+            [no_set_delay: 1, next_set_delay: 2]
           },
           id: "message_worker_1"
         )
@@ -181,7 +163,11 @@ defmodule Lightning.KafkaTriggers.MessageCandidateSetSupervisorTest do
 
       result =
         MessageServer
-        |> MessageCandidateSetSupervisor.generate_child_specs(2)
+        |> MessageCandidateSetSupervisor.generate_child_specs(
+          number_of_workers: 2,
+          no_message_candidate_set_delay_milliseconds: 1,
+          next_message_candidate_set_delay_milliseconds: 2
+        )
 
       assert result == expected
     end
