@@ -7,6 +7,7 @@ defmodule LightningWeb.API.ProvisioningJSON do
   alias Lightning.Projects.Project
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
 
@@ -21,47 +22,57 @@ defmodule LightningWeb.API.ProvisioningJSON do
   def as_json(%Project{} = project) do
     Ecto.embedded_dump(project, :json)
     |> Map.put(
-      "workflows",
+      :workflows,
       project.workflows
       |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
       |> Enum.map(&as_json/1)
     )
   end
 
-  def as_json(%Workflow{} = workflow) do
-    Ecto.embedded_dump(workflow, :json)
+  def as_json(%module{} = workflow_or_snapshot)
+      when module in [Workflow, Snapshot] do
+    workflow_id =
+      if module == Workflow do
+        workflow_or_snapshot.id
+      else
+        workflow_or_snapshot.workflow_id
+      end
+
+    workflow_or_snapshot
+    |> Ecto.embedded_dump(:json)
+    |> Map.put(:id, workflow_id)
     |> Map.put(
-      "jobs",
-      workflow.jobs
+      :jobs,
+      workflow_or_snapshot.jobs
       |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
       |> Enum.map(&as_json/1)
     )
     |> Map.put(
-      "triggers",
-      workflow.triggers
+      :triggers,
+      workflow_or_snapshot.triggers
       |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
       |> Enum.map(&as_json/1)
     )
     |> Map.put(
-      "edges",
-      workflow.edges
+      :edges,
+      workflow_or_snapshot.edges
       |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
       |> Enum.map(&as_json/1)
     )
   end
 
-  def as_json(%Job{} = job) do
+  def as_json(%module{} = job) when module in [Job, Snapshot.Job] do
     Ecto.embedded_dump(job, :json)
     |> Map.take(~w(id adaptor body name)a)
   end
 
-  def as_json(%Trigger{} = trigger) do
+  def as_json(%module{} = trigger) when module in [Trigger, Snapshot.Trigger] do
     Ecto.embedded_dump(trigger, :json)
     |> Map.take(~w(id type cron_expression enabled)a)
     |> drop_keys_with_nil_value()
   end
 
-  def as_json(%Edge{} = edge) do
+  def as_json(%module{} = edge) when module in [Edge, Snapshot.Edge] do
     Ecto.embedded_dump(edge, :json)
     |> Map.take(~w(
       id enabled source_job_id source_trigger_id

@@ -16,6 +16,9 @@ on:
       commitMessage:
         description: 'Commit message for project state and spec'
         required: true
+      snapshots:
+        description: 'IDs of snapshots separated by spaces'
+        required: false
 
 jobs:
   pull-from-lightning:
@@ -25,10 +28,11 @@ jobs:
     name: A job to pull changes from Lightning
     steps:
       - name: openfn pull and commit
-        uses: openfn/cli-pull-action@v1.0.0
+        uses: openfn/cli-pull-action@v1.1.0
         with:
           secret_input: ${{ secrets[inputs.apiSecretName] }}
           project_id_input: ${{ inputs.projectId }}
           config_path_input: ${{ inputs.pathToConfig }}
           branch_input: ${{ inputs.branch }}
           commit_message_input: ${{ inputs.commitMessage }}
+          snapshots_input: ${{ inputs.snapshots }}

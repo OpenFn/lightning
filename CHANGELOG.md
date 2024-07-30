@@ -21,6 +21,9 @@ and this project adheres to
 - Make root layout configurable
   [#2310](https://github.com/OpenFn/lightning/pull/2310)
 
+- Use snapshots when initiating Github Sync
+  [#1827](https://github.com/OpenFn/lightning/issues/1827)
+
 ### Fixed
 
 ## [v2.7.11] - 2024-07-26

@@ -3,10 +3,12 @@ defmodule Lightning.VersionControlTest do
   alias Lightning.VersionControl
   alias Lightning.VersionControl.ProjectRepoConnection
   alias Lightning.Repo
+  alias Lightning.Workflows.Snapshot
 
   import Lightning.Factories
 
   import Lightning.GithubHelpers
+  import Mox
 
   describe "create_github_connection/2" do
     test "user with valid oauth token creates connection successfully" do
@@ -384,6 +386,39 @@ defmodule Lightning.VersionControlTest do
       assert updated_user.github_oauth_token == %{
                "access_token" => "access-token"
              }
+    end
+  end
+
+  describe "initiate_sync/2" do
+    setup do
+      verify_on_exit!()
+
+      project = insert(:project)
+      workflow = insert(:simple_workflow, project: project)
+      user = user_with_valid_github_oauth()
+      repo_connection = insert(:project_repo_connection, project: project)
+
+      [
+        project: project,
+        user: user,
+        repo_connection: repo_connection,
+        workflow: workflow
+      ]
+    end
+
+    test "creates snapshots for workflows without snapshots", %{
+      user: user,
+      repo_connection: repo_connection,
+      workflow: workflow
+    } do
+      refute Snapshot.get_current_for(workflow)
+
+      expect_create_installation_token(repo_connection.github_installation_id)
+      expect_get_repo(repo_connection.repo)
+      expect_create_workflow_dispatch(repo_connection.repo, "openfn-pull.yml")
+
+      assert :ok = VersionControl.initiate_sync(repo_connection, user.email)
+      assert Snapshot.get_current_for(workflow)
     end
   end
 
