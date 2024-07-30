@@ -8,6 +8,22 @@ defmodule Lightning.Config.Bootstrap do
   Usually, config calls are made in the `config/runtime.exs` file. This module
   abstracts the runtime configuration into a module that can be tested and
   called from other places (aside from `config/runtime.exs`) file.
+
+  > #### Sourcing envs {: .info}
+  >
+  > Internally this module uses `Dotenvy.source/1` to source environment variables
+  > from the `.env`, `.env.<config_env>`, and `.env.<config_env>.override` files.
+  > It also sources the system environment variables.
+  >
+  > Calling `setup/0` without calling `source_envs/0` or `Dotenvy.source/2`
+  > first will result in no environment variables being loaded.
+
+  Usage:
+
+  ```elixir
+  Lightning.Config.Bootstrap.source_envs()
+  Lightning.Config.Bootstrap.setup()
+  ```
   """
 
   import Config
@@ -311,11 +327,11 @@ defmodule Lightning.Config.Bootstrap do
         socket_options: maybe_ipv6
 
       if disable_db_ssl do
-        config :thunderbolt, Thunderbolt.Repo, ssl: false
+        config :lightning, Lightning.Repo, ssl: false
       else
         ssl_opts = [verify: :verify_none]
 
-        config :thunderbolt, Thunderbolt.Repo, ssl_opts: ssl_opts, ssl: true
+        config :lightning, Lightning.Repo, ssl_opts: ssl_opts, ssl: true
       end
 
       # The secret key base is used to sign/encrypt cookies and other secrets.

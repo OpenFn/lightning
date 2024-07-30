@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Move runtime logic into module
+  [#2338](https://github.com/OpenFn/lightning/pull/2338)
+
 ### Fixed
 
 ## [v2.7.11] - 2024-07-26
