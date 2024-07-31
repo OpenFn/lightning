@@ -243,7 +243,7 @@ defmodule LightningWeb.WorkflowLive.Components do
         label="Trigger type"
         class=""
         options={
-          if Application.get_env(:lightning, :kafka_triggers)[:enabled] do
+          if Lightning.Config.kafka_triggers_enabled?() do
             [
               "Cron Schedule (UTC)": "cron",
               "Kafka Consumer": "kafka",
@@ -563,69 +563,6 @@ defmodule LightningWeb.WorkflowLive.Components do
     </div>
     """
   end
-
-  attr :form, :map, required: true
-  attr :disabled, :boolean, default: false
-
-  def workflow_name_field(assigns) do
-    ~H"""
-    <.form
-      :let={f}
-      for={@form}
-      class="grow"
-      phx-submit="save"
-      phx-change="validate"
-      id="workflow_name_form"
-    >
-      <div class="relative grow">
-        <div class="flex items-center">
-          <.text_input form={f} has_errors={f.errors[:name]} disabled={@disabled} />
-          <%= if f.errors[:name] do %>
-            <span class="text-sm text-red-600 font-normal mx-2 px-2 py-2 rounded whitespace-nowrap z-10">
-              <Icon.exclamation_circle class="h-5 w-5 inline-block" />
-              <%= error_to_string(f.errors[:name]) %>
-            </span>
-          <% end %>
-        </div>
-      </div>
-    </.form>
-    """
-  end
-
-  defp text_input(assigns) do
-    base_classes =
-      ~w(block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1
-        ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2
-        focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 peer)
-
-    classes =
-      if assigns.has_errors,
-        do:
-          base_classes ++ ~w(bg-red-100 ring-1 ring-red-600 focus:ring-red-600),
-        else: base_classes ++ ~w(focus:ring-gray-500)
-
-    assigns = Map.put_new(assigns, :classes, classes)
-
-    ~H"""
-    <div class="relative w-full max-w-sm rounded-md shadow-sm">
-      <%= Phoenix.HTML.Form.text_input(
-        @form,
-        :name,
-        class: @classes,
-        required: true,
-        placeholder: "Untitled",
-        disabled: @disabled
-      ) %>
-      <div class="pointer-events-none absolute inset-y-0 right-0 flex
-      items-center pr-3 peer-focus:invisible">
-        <Icon.pencil solid class="h-4 w-4 text-gray-400" />
-      </div>
-    </div>
-    """
-  end
-
-  defp error_to_string({message, _}) when is_binary(message), do: message
-  defp error_to_string(errors) when is_list(errors), do: Enum.join(errors, ", ")
 
   slot :inner_block, required: true
   slot :tabs, required: false

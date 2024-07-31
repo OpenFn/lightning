@@ -386,5 +386,5 @@ defmodule LightningWeb.UserAuth do
     end
   end
 
-  defp signed_in_path(_conn), do: "/"
+  defp signed_in_path(_conn), do: "/projects"
 end

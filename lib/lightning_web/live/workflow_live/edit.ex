@@ -66,16 +66,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
     ~H"""
     <LayoutComponents.page_content>
       <:header>
-        <LayoutComponents.header current_user={@current_user}>
+        <LayoutComponents.header
+          current_user={@current_user}
+          project={@project}
+          breadcrumbs={[{"Workflows", "/projects/#{@project.id}/w"}]}
+        >
           <:title>
-            <.workflow_name_field
-              form={@workflow_form}
-              disabled={
-                !@can_edit_workflow or
-                  @snapshot_version_tag != "latest" or
-                  !@has_presence_edit_priority
-              }
-            />
+            <%= @page_title %>
             <div class="mx-2"></div>
             <LightningWeb.Components.Common.snapshot_version_chip
               id="canvas-workflow-version"
@@ -1022,7 +1019,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         id: Ecto.UUID.generate()
       })
     end
-    |> assign(page_title: "New Workflow")
+    |> assign(page_title: params["name"])
   end
 
   def apply_action(socket, :edit, %{"id" => workflow_id} = params) do
@@ -1363,9 +1360,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
           {:noreply,
            socket
+           |> assign(page_title: workflow.name)
            |> assign_workflow(workflow, snapshot)
            |> put_flash(:info, "Workflow saved")
            |> push_patches_applied(initial_params)
+           |> maybe_push_workflow_created(workflow)
            |> push_patch(
              to: ~p"/projects/#{project.id}/w/#{workflow.id}?#{query_params}",
              replace: true
@@ -2014,6 +2013,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     socket
     |> push_event("patches-applied", %{patches: patches})
+  end
+
+  defp maybe_push_workflow_created(socket, workflow) do
+    if socket.assigns.live_action == :new do
+      push_event(socket, "workflow_created", %{id: workflow.id})
+    else
+      socket
+    end
   end
 
   # In situations where a new job is added, specifically by the WorkflowDiagram

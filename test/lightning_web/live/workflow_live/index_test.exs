@@ -104,8 +104,6 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
 
       {:ok, view, html} = live(conn, ~p"/projects/#{project.id}/w")
 
-      assert Regex.match?(~r{<h1.*Dashboard.*</h1>}s, html)
-
       # Metrics
       # 10 total workorders
       # 10 total runs (4 pending)

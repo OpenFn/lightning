@@ -125,46 +125,53 @@ defmodule Lightning.Config do
         []
       end
     end
-  end
 
-  defmodule Utils do
-    @moduledoc """
-    Utility functions for working with the application environment.
-    """
-
-    @doc """
-    Retrieve a value nested in the application environment.
-    """
-    @spec get_env([atom()], any()) :: any()
-    def get_env(_keys, default \\ nil)
-
-    def get_env([app, key, item], default) do
-      Application.get_env(app, key, []) |> Keyword.get(item, default)
+    @impl true
+    def kafka_triggers_enabled? do
+      kafka_trigger_config() |> Keyword.get(:enabled, false)
     end
 
-    def get_env([app, key], default) do
-      Application.get_env(app, key, default)
+    @impl true
+    def kafka_duplicate_tracking_retention_seconds do
+      kafka_trigger_config()
+      |> Keyword.get(:duplicate_tracking_retention_seconds)
     end
 
-    @spec ensure_boolean(binary()) :: boolean()
-    def ensure_boolean(value) do
-      case value do
-        "true" ->
-          true
+    @impl true
+    def kafka_next_message_candidate_set_delay_milliseconds do
+      kafka_trigger_config()
+      |> Keyword.get(:next_message_candidate_set_delay_milliseconds)
+    end
 
-        "yes" ->
-          true
+    @impl true
+    def kafka_no_message_candidate_set_delay_milliseconds do
+      kafka_trigger_config()
+      |> Keyword.get(:no_message_candidate_set_delay_milliseconds)
+    end
 
-        "false" ->
-          false
+    @impl true
+    def kafka_number_of_consumers do
+      kafka_trigger_config() |> Keyword.get(:number_of_consumers)
+    end
 
-        "no" ->
-          false
+    @impl true
+    def kafka_number_of_message_candidate_set_workers do
+      kafka_trigger_config()
+      |> Keyword.get(:number_of_message_candidate_set_workers)
+    end
 
-        _other ->
-          raise ArgumentError,
-                "expected true, false, yes or no, got: #{inspect(value)}"
-      end
+    @impl true
+    def kafka_number_of_messages_per_second do
+      kafka_trigger_config() |> Keyword.get(:number_of_messages_per_second)
+    end
+
+    @impl true
+    def kafka_number_of_processors do
+      kafka_trigger_config() |> Keyword.get(:number_of_processors)
+    end
+
+    defp kafka_trigger_config do
+      Application.get_env(:lightning, :kafka_triggers, [])
     end
   end
 
@@ -176,12 +183,20 @@ defmodule Lightning.Config do
   @callback get_extension_mod(key :: atom()) :: any()
   @callback grace_period() :: integer()
   @callback instance_admin_email() :: String.t()
+  @callback kafka_duplicate_tracking_retention_seconds() :: integer()
+  @callback kafka_next_message_candidate_set_delay_milliseconds() :: integer()
+  @callback kafka_no_message_candidate_set_delay_milliseconds() :: integer()
+  @callback kafka_number_of_consumers() :: integer()
+  @callback kafka_number_of_message_candidate_set_workers() :: integer()
+  @callback kafka_number_of_messages_per_second() :: float()
+  @callback kafka_number_of_processors() :: integer()
+  @callback kafka_triggers_enabled?() :: boolean()
   @callback oauth_provider(key :: atom()) :: keyword() | nil
   @callback purge_deleted_after_days() :: integer()
   @callback repo_connection_token_signer() :: Joken.Signer.t()
+  @callback reset_password_token_validity_in_days() :: integer()
   @callback run_token_signer() :: Joken.Signer.t()
   @callback usage_tracking() :: Keyword.t()
-  @callback reset_password_token_validity_in_days() :: integer()
   @callback usage_tracking_cron_opts() :: [Oban.Plugins.Cron.cron_input()]
   @callback worker_secret() :: binary() | nil
   @callback worker_token_signer() :: Joken.Signer.t()
@@ -270,6 +285,38 @@ defmodule Lightning.Config do
 
   def usage_tracking_cron_opts do
     impl().usage_tracking_cron_opts()
+  end
+
+  def kafka_triggers_enabled? do
+    impl().kafka_triggers_enabled?()
+  end
+
+  def kafka_duplicate_tracking_retention_seconds do
+    impl().kafka_duplicate_tracking_retention_seconds()
+  end
+
+  def kafka_next_message_candidate_set_delay_milliseconds do
+    impl().kafka_next_message_candidate_set_delay_milliseconds()
+  end
+
+  def kafka_no_message_candidate_set_delay_milliseconds do
+    impl().kafka_no_message_candidate_set_delay_milliseconds()
+  end
+
+  def kafka_number_of_consumers do
+    impl().kafka_number_of_consumers()
+  end
+
+  def kafka_number_of_message_candidate_set_workers do
+    impl().kafka_number_of_message_candidate_set_workers()
+  end
+
+  def kafka_number_of_messages_per_second do
+    impl().kafka_number_of_messages_per_second()
+  end
+
+  def kafka_number_of_processors do
+    impl().kafka_number_of_processors()
   end
 
   defp impl do

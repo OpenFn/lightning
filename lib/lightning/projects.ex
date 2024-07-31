@@ -23,8 +23,10 @@ defmodule Lightning.Projects do
   alias Lightning.Repo
   alias Lightning.Run
   alias Lightning.RunStep
+  alias Lightning.Services.AccountHook
   alias Lightning.Services.ProjectHook
   alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
   alias Lightning.WorkOrder
@@ -459,18 +461,45 @@ defmodule Lightning.Projects do
     |> Repo.all()
   end
 
-  @spec projects_for_user_query(user :: User.t()) :: Ecto.Queryable.t()
-  def projects_for_user_query(%User{id: user_id}) do
+  @doc """
+  Builds a query to retrieve projects associated with a user.
+
+  ## Parameters
+    - user: The user struct for which projects are being queried.
+    - opts: Keyword list of options including :include for associations to preload and :order_by for sorting.
+
+  ## Returns
+    - An Ecto queryable struct to fetch projects.
+  """
+  @spec projects_for_user_query(user :: User.t(), opts :: keyword()) ::
+          Ecto.Queryable.t()
+  def projects_for_user_query(%User{id: user_id}, opts \\ []) do
+    include = Keyword.get(opts, :include, [])
+    order_by = Keyword.get(opts, :order_by, asc: :name)
+
     from(p in Project,
       join: pu in assoc(p, :project_users),
       where: pu.user_id == ^user_id and is_nil(p.scheduled_deletion),
-      order_by: p.name
+      order_by: ^order_by,
+      preload: ^include
     )
   end
 
-  @spec get_projects_for_user(user :: User.t()) :: [Project.t()]
-  def get_projects_for_user(user) do
-    projects_for_user_query(user)
+  @doc """
+  Fetches projects for a given user from the database.
+
+  ## Parameters
+  - user: The user struct for which projects are being queried.
+  - opts: Keyword list of options including :include for associations to preload and :order_by for sorting.
+
+  ## Returns
+  - A list of projects associated with the user.
+  """
+  @spec get_projects_for_user(user :: User.t(), opts :: keyword()) :: [
+          Project.t()
+        ]
+  def get_projects_for_user(%User{} = user, opts \\ []) do
+    projects_for_user_query(user, opts)
     |> Repo.all()
   end
 
@@ -558,11 +587,15 @@ defmodule Lightning.Projects do
       {:ok, string}
 
   """
-  @spec export_project(:yaml, any) :: {:ok, binary}
-  def export_project(:yaml, project_id) do
-    {:ok, yaml} = ExportUtils.generate_new_yaml(project_id)
+  @spec export_project(atom(), Ecto.UUID.t(), [Ecto.UUID.t()] | nil) ::
+          {:ok, binary}
+  def export_project(:yaml, project_id, snapshot_ids \\ nil) do
+    project = get_project!(project_id)
 
-    {:ok, yaml}
+    snapshots =
+      if snapshot_ids, do: Snapshot.get_all_by_ids(snapshot_ids), else: nil
+
+    {:ok, _yaml} = ExportUtils.generate_new_yaml(project, snapshots)
   end
 
   @doc """
@@ -744,22 +777,15 @@ defmodule Lightning.Projects do
         |> Map.take([:first_name, :last_name, :email])
         |> Map.put(:password, generate_random_password())
 
-      case User.user_registration_changeset(user_params)
-           |> Ecto.Changeset.apply_action(:insert) do
-        {:ok, user_data} ->
-          Multi.insert(
-            multi,
-            {:new_user, collaborator.email},
-            struct!(User, user_data)
-          )
-
-        {:error, _changeset} ->
-          Multi.error(
-            multi,
-            {:new_user, collaborator.email},
-            :user_registration_failed
-          )
-      end
+      Multi.run(
+        multi,
+        {:new_user, collaborator.email},
+        fn _repo, _changes ->
+          with {:error, _reason} <- AccountHook.handle_register_user(user_params) do
+            {:error, :user_registration_failed}
+          end
+        end
+      )
     end)
   end
 

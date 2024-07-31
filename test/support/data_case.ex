@@ -46,6 +46,11 @@ defmodule Lightning.DataCase do
       Lightning.Extensions.UsageLimiter
     )
 
+    Mox.stub_with(
+      Lightning.Extensions.MockAccountHook,
+      Lightning.Extensions.AccountHook
+    )
+
     pid =
       Ecto.Adapters.SQL.Sandbox.start_owner!(Lightning.Repo,
         shared: not tags[:async]

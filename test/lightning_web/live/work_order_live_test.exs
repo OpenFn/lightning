@@ -1172,7 +1172,8 @@ defmodule LightningWeb.WorkOrderLiveTest do
         live(conn, ~p"/projects/#{project}/runs/#{run}")
 
       assert error ==
-               {:error, {:redirect, %{flash: %{"nav" => :not_found}, to: "/"}}}
+               {:error,
+                {:redirect, %{flash: %{"nav" => :not_found}, to: "/projects"}}}
     end
 
     test "by default only the latest run is present when there are multiple runs",

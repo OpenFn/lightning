@@ -4,6 +4,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
   import Ecto.Query
   import Lightning.Factories
 
+  alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Workflow
   alias LightningWeb.API.ProvisioningJSON
 
@@ -193,6 +194,66 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       assert workflow_resp["id"] == existing_workflow.id
     end
 
+    test "returns a project only with the specified snapshots", %{
+      conn: conn,
+      user: user
+    } do
+      %{id: project_id, name: project_name} =
+        project =
+        insert(:project,
+          project_users: [%{user_id: user.id}]
+        )
+
+      workflow_1 =
+        insert(:simple_workflow,
+          project: project,
+          name: "workflow 1"
+        )
+
+      {:ok, snapshot_1} = Snapshot.get_or_create_latest_for(workflow_1)
+
+      {:ok, updated_workflow_1} =
+        workflow_1
+        |> Ecto.Changeset.change(%{name: "updated-workflow-name"})
+        |> Lightning.Repo.update()
+
+      workflow_2 =
+        insert(:simple_workflow,
+          project: project,
+          name: "workflow 2"
+        )
+
+      {:ok, snapshot_2} = Snapshot.get_or_create_latest_for(workflow_2)
+
+      conn =
+        get(conn, ~p"/api/provision/#{project_id}", snapshots: [snapshot_1.id])
+
+      response = json_response(conn, 200)
+
+      assert %{
+               "id" => ^project_id,
+               "name" => ^project_name,
+               "workflows" => [workflow_resp]
+             } = response["data"]
+
+      # Only the first workflow is returned because its snapshot was specified
+      assert workflow_resp["id"] == workflow_1.id
+      # The name of the workflow is the original name, not the updated name
+      assert workflow_resp["name"] == workflow_1.name
+      assert updated_workflow_1.name != workflow_1.name
+
+      # Now we specify both snapshots
+      conn =
+        get(conn, ~p"/api/provision/#{project_id}",
+          snapshots: [snapshot_1.id, snapshot_2.id]
+        )
+
+      response = json_response(conn, 200)
+
+      assert %{"workflows" => workflows} = response["data"]
+      assert Enum.count(workflows) == 2
+    end
+
     test "returns a project if user has owner access", %{
       conn: conn,
       user: user
@@ -294,6 +355,61 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
 
       response = get(conn, ~p"/api/provision/yaml?#{%{id: project.id}}")
       assert response.status == 200
+    end
+
+    test "returns valid project yaml for snapshots provided" do
+      project = insert(:project)
+      repo_connection = insert(:project_repo_connection, project: project)
+
+      workflow_1 =
+        insert(:simple_workflow,
+          project: project,
+          name: "workflow 1"
+        )
+
+      {:ok, snapshot_1} = Snapshot.get_or_create_latest_for(workflow_1)
+
+      {:ok, updated_workflow_1} =
+        workflow_1
+        |> Ecto.Changeset.change(%{name: "updated-workflow-name"})
+        |> Lightning.Repo.update()
+
+      workflow_2 =
+        insert(:simple_workflow,
+          project: project,
+          name: "workflow 2"
+        )
+
+      {:ok, snapshot_2} = Snapshot.get_or_create_latest_for(workflow_2)
+
+      conn =
+        Plug.Conn.put_req_header(
+          build_conn(),
+          "authorization",
+          "Bearer #{repo_connection.access_token}"
+        )
+
+      response =
+        get(
+          conn,
+          ~p"/api/provision/yaml?#{%{id: project.id, snapshots: [snapshot_1.id]}}"
+        )
+        |> response(200)
+
+      assert response =~ workflow_1.name
+      refute response =~ updated_workflow_1.name
+      refute response =~ workflow_2.name
+
+      response =
+        get(
+          conn,
+          ~p"/api/provision/yaml?#{%{id: project.id, snapshots: [snapshot_1.id, snapshot_2.id]}}"
+        )
+        |> response(200)
+
+      assert response =~ workflow_1.name
+      refute response =~ updated_workflow_1.name
+      assert response =~ workflow_2.name
     end
 
     test "returns a 403 if an invalid repo conenction token is provided" do

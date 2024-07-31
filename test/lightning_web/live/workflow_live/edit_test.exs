@@ -128,7 +128,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     @tag role: :editor
     test "creating a new workflow", %{conn: conn, project: project} do
       Mox.verify_on_exit!()
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new?m=settings")
 
       assert view |> push_patches_to_view(initial_workflow_patchset(project))
 
@@ -136,7 +138,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert workflow_name == ""
 
-      assert view |> element("#workflow_name_form") |> render() =~ workflow_name
+      assert view |> element("#workflow_name") |> render() =~ workflow_name
 
       assert view |> save_is_disabled?()
 
@@ -361,7 +363,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       version = String.slice(snapshot.id, 0..6)
 
       view
-      |> element("a[href='/projects/#{project.id}/w']", "Workflows")
+      |> element(
+        "a[href='/projects/#{project.id}/w'][data-phx-link='redirect']",
+        "Workflows"
+      )
       |> render_click()
 
       {:ok, view, _html} =
@@ -674,18 +679,18 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, m: "settings"]}"
         )
 
       assert view |> has_element?(~s(input[name="workflow[name]"]))
 
       assert view
-             |> form("#workflow_name_form", %{"workflow" => %{"name" => ""}})
+             |> form("#workflow-form", %{"workflow" => %{"name" => ""}})
              |> render_change() =~ "can&#39;t be blank"
 
       html =
         view
-        |> form("#workflow_name_form", %{
+        |> form("#workflow-form", %{
           "workflow" => %{"name" => another_workflow.name}
         })
         |> render_submit()
@@ -694,7 +699,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert html =~ "Workflow could not be saved"
 
       assert view
-             |> form("#workflow_name_form", %{
+             |> form("#workflow-form", %{
                "workflow" => %{"name" => "some new name"}
              })
              |> render_submit() =~ "Workflow saved"

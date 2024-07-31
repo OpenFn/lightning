@@ -18,6 +18,19 @@ and this project adheres to
 ### Added
 
 ### Changed
+- Make root layout configurable
+  [#2310](https://github.com/OpenFn/lightning/pull/2310)
+
+- Use snapshots when initiating Github Sync
+  [#1827](https://github.com/OpenFn/lightning/issues/1827)
+
+- Move runtime logic into module
+  [#2338](https://github.com/OpenFn/lightning/pull/2338)
+- Use `AccountHook Extension` to register new users invited in a project
+  [#2341](https://github.com/OpenFn/lightning/pull/2341)
+
+- Standardized top bars across the UI with a navigable breadcrumbs interface
+  [#2299](https://github.com/OpenFn/lightning/pull/2299)
 
 ### Fixed
 

@@ -132,8 +132,11 @@ defmodule Lightning.Projects.Provisioner do
 
   Exclude deleted workflows.
   """
-  @spec preload_dependencies(Project.t()) :: Project.t()
-  def preload_dependencies(project) do
+  @spec preload_dependencies(Project.t(), nil | [Ecto.UUID.t(), ...]) ::
+          Project.t()
+  def preload_dependencies(project, snapshots \\ nil)
+
+  def preload_dependencies(project, nil) do
     w = from(w in Workflow, where: is_nil(w.deleted_at))
 
     Repo.preload(
@@ -144,6 +147,10 @@ defmodule Lightning.Projects.Provisioner do
       ],
       force: true
     )
+  end
+
+  def preload_dependencies(project, snapshots) when is_list(snapshots) do
+    %{project | workflows: Snapshot.get_all_by_ids(snapshots)}
   end
 
   defp project_changeset(project, attrs) do

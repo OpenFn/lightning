@@ -71,7 +71,7 @@ defmodule LightningWeb.UserSessionControllerTest do
       conn =
         conn |> log_in_user(user) |> get(Routes.user_session_path(conn, :new))
 
-      assert redirected_to(conn) == "/"
+      assert redirected_to(conn) == "/projects"
     end
 
     test "shows a 'via external provider' button", %{conn: conn} do
@@ -100,7 +100,7 @@ defmodule LightningWeb.UserSessionControllerTest do
           )
         )
 
-      assert "/" = redirected_path = redirected_to(conn)
+      assert "/projects" = redirected_path = redirected_to(conn)
 
       response =
         get(recycle(conn), redirected_path)
@@ -133,7 +133,7 @@ defmodule LightningWeb.UserSessionControllerTest do
         |> log_in_user(user)
         |> get(Routes.user_session_path(conn, :exchange_token, "oops"))
 
-      assert redirected_to(conn) == "/"
+      assert redirected_to(conn) == "/projects"
     end
   end
 
@@ -155,10 +155,10 @@ defmodule LightningWeb.UserSessionControllerTest do
         })
 
       assert get_session(conn, :user_token)
-      assert redirected_to(conn) == "/"
+      assert redirected_to(conn) == "/projects"
 
       # Now do a logged in request and assert on the menu
-      conn = get(conn, "/")
+      conn = get(conn, "/projects")
       response = html_response(conn, 200)
       assert response =~ "User Profile"
     end
@@ -224,7 +224,7 @@ defmodule LightningWeb.UserSessionControllerTest do
         })
 
       assert conn.resp_cookies["_lightning_web_user_remember_me"]
-      assert redirected_to(conn) == "/"
+      assert redirected_to(conn) == "/projects"
     end
 
     test "a user with MFA logging in with remember is redirected to TOTP page with remember_me query param",
