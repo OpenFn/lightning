@@ -16,7 +16,11 @@ defmodule LightningWeb.Endpoint do
     websocket: [connect_info: [session: @session_options]]
 
   socket "/worker", LightningWeb.WorkerSocket,
-    websocket: [error_handler: {LightningWeb.WorkerSocket, :handle_error, []}],
+    websocket: [
+      error_handler: {LightningWeb.WorkerSocket, :handle_error, []},
+      compress: true,
+      max_frame_size: 11_000_000
+    ],
     longpoll: false
 
   # Serve at "/" the static files from "priv/static" directory.

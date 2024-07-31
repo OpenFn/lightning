@@ -32,6 +32,8 @@ and this project adheres to
 
 ### Fixed
 
+- Limit frame size of worker socket connections
+  [#2339](https://github.com/OpenFn/lightning/issues/2339)
 - Limit number of days to 31 in cron trigger dropdown
   [#2331](https://github.com/OpenFn/lightning/issues/2331)
 
