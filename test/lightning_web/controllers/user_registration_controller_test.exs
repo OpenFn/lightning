@@ -30,7 +30,7 @@ defmodule LightningWeb.UserRegistrationControllerTest do
         |> log_in_user(user_fixture())
         |> get(Routes.user_registration_path(conn, :new))
 
-      assert redirected_to(conn) == "/"
+      assert redirected_to(conn) == "/projects"
     end
   end
 
@@ -45,10 +45,10 @@ defmodule LightningWeb.UserRegistrationControllerTest do
         })
 
       assert get_session(conn, :user_token)
-      assert redirected_to(conn) == "/"
+      assert redirected_to(conn) == "/projects"
 
       # Now do a logged in request and assert on the menu
-      conn = get(conn, "/")
+      conn = get(conn, "/projects")
       response = html_response(conn, 200)
       # assert response =~ email
 

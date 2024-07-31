@@ -14,6 +14,7 @@ defmodule Lightning.ProjectsTest do
   import Lightning.CredentialsFixtures
   import Lightning.Factories
   import Swoosh.TestAssertions
+  import Mox
 
   describe "projects" do
     @invalid_attrs %{name: nil}
@@ -1398,6 +1399,42 @@ defmodule Lightning.ProjectsTest do
       assert dataclip.request === %{"star" => "sadio mane"}
       assert dataclip.body === %{"team" => "senegal"}
       assert is_nil(dataclip.wiped_at)
+    end
+  end
+
+  describe "invite_collaborators/3" do
+    setup :verify_on_exit!
+
+    test "calls the AccountHook service for user registration" do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user_id: user.id, role: :owner}])
+
+      collaborators_count = 5
+
+      collaborators =
+        Enum.map(1..collaborators_count, fn n ->
+          %{
+            email: "myemailtest#{n}@test#{n}ing.com",
+            first_name: "Anna",
+            last_name: "Smith",
+            role: "editor"
+          }
+        end)
+
+      # expect the AccountHook service to be called for each collaborator
+      expect(
+        Lightning.Extensions.MockAccountHook,
+        :handle_register_user,
+        collaborators_count,
+        fn attrs ->
+          Lightning.Extensions.AccountHook.handle_register_user(attrs)
+        end
+      )
+
+      assert {:ok, _} =
+               Projects.invite_collaborators(project, collaborators, user)
     end
   end
 

@@ -29,7 +29,7 @@ defmodule LightningWeb.AuthProvidersLiveTest do
     } do
       {:ok, _index_live, html} =
         live(conn, ~p"/settings/authentication")
-        |> follow_redirect(conn, "/")
+        |> follow_redirect(conn, "/projects")
 
       assert html =~ "Sorry, you don&#39;t have access to that."
     end

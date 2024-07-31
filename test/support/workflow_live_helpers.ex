@@ -185,7 +185,7 @@ defmodule Lightning.WorkflowLive.Helpers do
 
   def fill_workflow_name(view, name) do
     view
-    |> element("#workflow_name_form")
+    |> element("#workflow-form")
     |> render_change(%{"workflow" => %{"name" => name}})
   end
 

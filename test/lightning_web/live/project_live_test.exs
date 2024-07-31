@@ -32,7 +32,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
     test "cannot access the index page", %{conn: conn} do
       {:ok, _index_live, html} =
-        live(conn, ~p"/settings/projects") |> follow_redirect(conn, "/")
+        live(conn, ~p"/settings/projects") |> follow_redirect(conn, "/projects")
 
       assert html =~ "Sorry, you don&#39;t have access to that."
     end
@@ -40,7 +40,7 @@ defmodule LightningWeb.ProjectLiveTest do
     test "cannot access the new page", %{conn: conn} do
       {:ok, _index_live, html} =
         live(conn, ~p"/settings/projects/new")
-        |> follow_redirect(conn, "/")
+        |> follow_redirect(conn, "/projects")
 
       assert html =~ "Sorry, you don&#39;t have access to that."
     end
@@ -186,7 +186,7 @@ defmodule LightningWeb.ProjectLiveTest do
           }
         )
         |> render_submit()
-        |> follow_redirect(conn, ~p"/")
+        |> follow_redirect(conn, ~p"/projects")
 
       assert html =~ "Project scheduled for deletion"
     end
@@ -536,7 +536,8 @@ defmodule LightningWeb.ProjectLiveTest do
              |> has_element?()
 
       assert live(conn, ~p"/projects/#{project_3}/w") ==
-               {:error, {:redirect, %{flash: %{"nav" => :not_found}, to: "/"}}}
+               {:error,
+                {:redirect, %{flash: %{"nav" => :not_found}, to: "/projects"}}}
     end
   end
 
