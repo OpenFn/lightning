@@ -19,6 +19,12 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v2.7.12] - 2024-07-31
+
+### Changed
+
 - Make root layout configurable
   [#2310](https://github.com/OpenFn/lightning/pull/2310)
 - Use snapshots when initiating Github Sync
