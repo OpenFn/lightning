@@ -23,6 +23,7 @@ defmodule Lightning.Projects do
   alias Lightning.Repo
   alias Lightning.Run
   alias Lightning.RunStep
+  alias Lightning.Services.AccountHook
   alias Lightning.Services.ProjectHook
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
@@ -776,22 +777,15 @@ defmodule Lightning.Projects do
         |> Map.take([:first_name, :last_name, :email])
         |> Map.put(:password, generate_random_password())
 
-      case User.user_registration_changeset(user_params)
-           |> Ecto.Changeset.apply_action(:insert) do
-        {:ok, user_data} ->
-          Multi.insert(
-            multi,
-            {:new_user, collaborator.email},
-            struct!(User, user_data)
-          )
-
-        {:error, _changeset} ->
-          Multi.error(
-            multi,
-            {:new_user, collaborator.email},
-            :user_registration_failed
-          )
-      end
+      Multi.run(
+        multi,
+        {:new_user, collaborator.email},
+        fn _repo, _changes ->
+          with {:error, _reason} <- AccountHook.handle_register_user(user_params) do
+            {:error, :user_registration_failed}
+          end
+        end
+      )
     end)
   end
 

@@ -26,6 +26,8 @@ and this project adheres to
 
 - Move runtime logic into module
   [#2338](https://github.com/OpenFn/lightning/pull/2338)
+- Use `AccountHook Extension` to register new users invited in a project
+  [#2341](https://github.com/OpenFn/lightning/pull/2341)
 
 - Standardized top bars across the UI with a navigable breadcrumbs interface
   [#2299](https://github.com/OpenFn/lightning/pull/2299)
