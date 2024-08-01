@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Correctly handle floats in LogMessage
+  [#2348](https://github.com/OpenFn/lightning/issues/2348)
+
 ## [v2.7.12] - 2024-07-31
 
 ### Changed

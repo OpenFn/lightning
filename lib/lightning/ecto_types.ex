@@ -85,6 +85,9 @@ defmodule Lightning.LogMessage do
   def cast(d) when is_integer(d),
     do: Ecto.Type.cast(:string, d |> Integer.to_string())
 
+  def cast(d) when is_float(d),
+    do: Ecto.Type.cast(:string, d |> Float.to_string())
+
   def cast(d) when is_list(d) do
     {:ok,
      d

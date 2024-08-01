@@ -21,6 +21,16 @@ defmodule Lightning.EctoTypesTest do
       assert {:ok, ~s<{"baz":null,"foo":"bar"}>} =
                LogMessage.cast(%{"foo" => "bar", "baz" => nil})
     end
+
+    test "can be cast from an integer" do
+      assert {:ok, ~s<12345>} =
+               LogMessage.cast(12345)
+    end
+
+    test "can be cast from a float" do
+      assert {:ok, ~s<5.893>} =
+               LogMessage.cast(5.893)
+    end
   end
 
   describe "UnixDateTime" do
