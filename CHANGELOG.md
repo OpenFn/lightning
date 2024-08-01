@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Don't log 406 Not Acceptable errors to Sentry
+  [#2350](https://github.com/OpenFn/lightning/issues/2350)
+
 ### Fixed
 
 - Correctly handle floats in LogMessage

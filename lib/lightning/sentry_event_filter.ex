@@ -8,7 +8,8 @@ defmodule Lightning.SentryEventFilter do
     Plug.Parsers.RequestTooLargeError,
     Plug.Parsers.BadEncodingError,
     Plug.Parsers.ParseError,
-    Plug.Parsers.UnsupportedMediaTypeError
+    Plug.Parsers.UnsupportedMediaTypeError,
+    Phoenix.NotAcceptableError
   ]
 
   def exclude_exception?(%x{}, :plug) when x in @ignored_exceptions do

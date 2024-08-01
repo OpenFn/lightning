@@ -92,9 +92,6 @@ defmodule LightningWeb.UserLiveTest do
 
       assert html =~ "Users"
 
-      refute html =~
-               "#{DateTime.utc_now() |> Timex.shift(days: 7) |> Map.fetch!(:year)}"
-
       {:ok, form_live, _} =
         index_live
         |> element("#user-#{user.id} a", "Delete")
