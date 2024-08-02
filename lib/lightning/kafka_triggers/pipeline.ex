@@ -5,8 +5,10 @@ defmodule Lightning.KafkaTriggers.Pipeline do
   """
   use Broadway
 
+  alias Ecto.Changeset
   alias Ecto.Multi
   alias Lightning.KafkaTriggers
+  alias Lightning.KafkaTriggers.MessageHandling
   alias Lightning.KafkaTriggers.TriggerKafkaMessage
   alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
   alias Lightning.Repo
@@ -50,18 +52,11 @@ defmodule Lightning.KafkaTriggers.Pipeline do
 
   @impl true
   def handle_message(_processor, message, context) do
-    %{trigger_id: trigger_id} = context
+    %{trigger_id: trigger_id_atom} = context
 
-    %{
-      data: data,
-      metadata: %{
-        key: key,
-        offset: offset,
-        partition: partition,
-        topic: topic,
-        ts: timestamp
-      }
-    } = message
+    trigger_id = trigger_id_atom |> Atom.to_string()
+
+    %{metadata: %{partition: partition, ts: timestamp}} = message
 
     topic_partition_offset =
       KafkaTriggers.build_topic_partition_offset(message)
@@ -71,32 +66,19 @@ defmodule Lightning.KafkaTriggers.Pipeline do
         %TriggerKafkaMessageRecord{},
         %{
           topic_partition_offset: topic_partition_offset,
-          trigger_id: trigger_id |> Atom.to_string()
+          trigger_id: trigger_id
         }
       )
 
-    message_changeset =
-      %TriggerKafkaMessage{}
-      |> TriggerKafkaMessage.changeset(%{
-        data: data,
-        key: key,
-        message_timestamp: timestamp,
-        metadata: message.metadata,
-        offset: offset,
-        topic: topic,
-        trigger_id: trigger_id |> Atom.to_string()
-      })
-
     trigger_changeset =
       Trigger
-      |> Repo.get(trigger_id |> Atom.to_string())
+      |> Repo.get(trigger_id)
       |> Trigger.kafka_partitions_changeset(partition, timestamp)
 
     Multi.new()
     |> Multi.insert(:record, record_changeset)
-    |> Multi.insert(:message, message_changeset)
     |> Multi.update(:trigger, trigger_changeset)
-    |> Repo.transaction()
+    |> persist(trigger_id, message)
     |> case do
       {:ok, _} ->
         message
@@ -109,8 +91,33 @@ defmodule Lightning.KafkaTriggers.Pipeline do
       } ->
         Broadway.Message.failed(message, :duplicate)
 
+      {
+        :error,
+        %{
+          errors: [
+            trigger_id: {
+              "has already been taken",
+              [
+                constraint: :unique,
+                constraint_name: "trigger_kafka_message_records_pkey"
+              ]
+            }
+          ]
+        }
+      } ->
+        Broadway.Message.failed(message, :duplicate)
+
       {:error, _step, _error_changes, _changes_so_far} ->
         Broadway.Message.failed(message, :persistence)
+
+      {:error, %Changeset{}} ->
+        Broadway.Message.failed(message, :persistence)
+
+      {:error, :data_is_not_json_object} ->
+        Broadway.Message.failed(message, :invalid_data)
+
+      {:error, :work_order_creation_blocked, _reason} ->
+        Broadway.Message.failed(message, :work_order_creation_blocked)
     end
   end
 
@@ -123,6 +130,41 @@ defmodule Lightning.KafkaTriggers.Pipeline do
     end)
 
     messages
+  end
+
+  defp persist(multi = %Multi{}, trigger_id, message) do
+    %{
+      data: data,
+      metadata: %{
+        key: key,
+        offset: offset,
+        topic: topic,
+        ts: timestamp
+      }
+    } = message
+
+    case key do
+      "" ->
+        multi
+        |> MessageHandling.persist_message(trigger_id, message)
+
+      _ ->
+        message_changeset =
+          %TriggerKafkaMessage{}
+          |> TriggerKafkaMessage.changeset(%{
+            data: data,
+            key: key,
+            message_timestamp: timestamp,
+            metadata: message.metadata,
+            offset: offset,
+            topic: topic,
+            trigger_id: trigger_id
+          })
+
+        multi
+        |> Multi.insert(:message, message_changeset)
+        |> Repo.transaction()
+    end
   end
 
   defp create_log_entry(%{status: {:failed, :duplicate}} = message, context) do
