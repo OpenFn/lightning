@@ -19,6 +19,8 @@ and this project adheres to
 
 ### Changed
 
+- Use standard styles for link, fix home button in breadcrumbs
+  [#2354](https://github.com/OpenFn/lightning/pull/2354)
 - Don't log 406 Not Acceptable errors to Sentry
   [#2350](https://github.com/OpenFn/lightning/issues/2350)
 
