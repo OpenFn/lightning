@@ -105,12 +105,10 @@ defmodule LightningWeb.DashboardLive.Components do
             </.link>
           </.td>
           <.td>
-            <.link>
-              <%= Lightning.Helpers.format_date(
-                project.updated_at,
-                "%d/%b/%Y %H:%M:%S"
-              ) %>
-            </.link>
+            <%= Lightning.Helpers.format_date(
+              project.updated_at,
+              "%d/%b/%Y %H:%M:%S"
+            ) %>
           </.td>
           <.td class="text-right">
             <.link
