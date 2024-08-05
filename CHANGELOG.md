@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Use standard styles for link, fix home button in breadcrumbs
+  [#2354](https://github.com/OpenFn/lightning/pull/2354)
+
 ### Fixed
 
 ## [v2.7.13] - 2024-08-05

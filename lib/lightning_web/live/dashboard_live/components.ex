@@ -68,12 +68,13 @@ defmodule LightningWeb.DashboardLive.Components do
               Last Activity
               <span
                 phx-click="sort_by_activity"
-                class="cursor-pointer align-middle ml-2 flex-none rounded text-gray-400 group-hover:visible group-focus:visible"
+                class="align-middle ml-2 flex-none rounded text-gray-400 group-hover:visible group-focus:visible"
               >
                 <.icon name={@activity_sort_icon} />
               </span>
             </div>
           </.th>
+          <.th></.th>
         </.tr>
 
         <.tr
@@ -81,7 +82,7 @@ defmodule LightningWeb.DashboardLive.Components do
           id={"projects-table-row-#{project.id}"}
           class="hover:bg-gray-100 transition-colors duration-200"
         >
-          <.td class="flex items-center">
+          <.td>
             <.link
               class="break-words max-w-[15rem] text-gray-800"
               href={~p"/projects/#{project.id}/w"}
@@ -97,21 +98,26 @@ defmodule LightningWeb.DashboardLive.Components do
           </.td>
           <.td class="break-words max-w-[5rem]">
             <.link
-              class="text-primary-700"
+              class="link"
               href={~p"/projects/#{project.id}/settings#collaboration"}
             >
               <%= length(project.project_users) %>
             </.link>
           </.td>
           <.td>
-            <.link
-              class="text-primary-700"
-              href={~p"/projects/#{project.id}/history"}
-            >
+            <.link>
               <%= Lightning.Helpers.format_date(
                 project.updated_at,
                 "%d/%b/%Y %H:%M:%S"
               ) %>
+            </.link>
+          </.td>
+          <.td class="text-right">
+            <.link
+              class="table-action"
+              navigate={~p"/projects/#{project.id}/history"}
+            >
+              History
             </.link>
           </.td>
         </.tr>
