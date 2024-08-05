@@ -81,6 +81,17 @@ defmodule LightningWeb.LayoutComponents do
 
     ~H"""
     <div class="flex-none bg-white shadow-sm">
+      <LightningWeb.Components.Common.alert
+        :if={@current_user && !@current_user.confirmed_at}
+        link_right={%{text: "Resend confirmation email", target: "/"}}
+        type="danger"
+      >
+        <:message>
+          <p>
+            Your account has not been confirmed yet. User's are expected to verify their account within 48 hours of account creation.
+          </p>
+        </:message>
+      </LightningWeb.Components.Common.alert>
       <div class={[@title_class, @title_height]}>
         <%= if @current_user do %>
           <nav class="flex" aria-label="Breadcrumb">
