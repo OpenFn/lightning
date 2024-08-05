@@ -74,7 +74,7 @@ defmodule LightningWeb.Components.Common do
                 <%= @link_right.text %>
                 <span aria-hidden="true"> &rarr;</span>
               </a>
-              <%= render_slot(@link_right) %>
+              <%!-- <%= render_slot(@link_right) %> --%>
             </p>
           <% else %>
             <div :if={@actions} class={["mt-4"]}>
