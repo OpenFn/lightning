@@ -2,6 +2,7 @@
 import { DEFAULT_TEXT } from '../editor/Editor';
 import { PhoenixHook } from '../hooks/PhoenixHook';
 import { Lightning } from '../workflow-diagram/types';
+import { randomUUID } from '../common';
 import type { mount } from './component';
 import {
   Patch,
@@ -41,13 +42,13 @@ export type WorkflowEditorEntrypoint = PhoenixHook<
 const createNewWorkflow = () => {
   const triggers = [
     {
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       type: 'webhook',
     },
   ];
   const jobs = [
     {
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       name: 'New job',
       adaptor: '@openfn/language-common@latest',
       body: DEFAULT_TEXT,
@@ -56,7 +57,7 @@ const createNewWorkflow = () => {
 
   const edges = [
     {
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       source_trigger_id: triggers[0].id,
       target_job_id: jobs[0].id,
       condition_type: 'always',

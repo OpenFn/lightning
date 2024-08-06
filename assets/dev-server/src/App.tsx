@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import WorkflowDiagram from '../../js/workflow-diagram/WorkflowDiagram'
 // import useStore from './store'
 import { createWorkflowStore } from '../../js/workflow-editor/store'
+import { randomUUID } from '../../js/common'
 import workflows from './workflows';
 import './main.css'
 import 'reactflow/dist/style.css';
@@ -95,7 +96,7 @@ export default () => {
   const addJob = useCallback(() => {
     const { add } = store.getState();
 
-    const newNodeId = crypto.randomUUID();
+    const newNodeId = randomUUID();
     add({
       jobs: [{
         id: newNodeId,

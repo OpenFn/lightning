@@ -8,6 +8,7 @@ import { styleEdge } from './styles';
 import { Flow } from './types';
 import toWorkflow from './util/to-workflow';
 import type { WorkflowState } from '../workflow-editor/store';
+import { randomUUID } from '../common';
 import { DEFAULT_TEXT } from '../editor/Editor';
 
 // generates a placeholder node and edge as child of the parent
@@ -17,7 +18,7 @@ export const create = (parentNode: Flow.Node) => {
     edges: [],
   };
 
-  const targetId = crypto.randomUUID();
+  const targetId = randomUUID();
   newModel.nodes.push({
     id: targetId,
     type: 'placeholder',
@@ -37,7 +38,7 @@ export const create = (parentNode: Flow.Node) => {
 
   newModel.edges.push(
     styleEdge({
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       type: 'step',
       source: parentNode.id,
       target: targetId,
