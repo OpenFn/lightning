@@ -186,7 +186,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
     Logger.warning(log_entry)
   end
 
-  defp create_log_entry(message, context) do
+  defp create_log_entry(%{status: {:failed, type}} = message, context) do
     %{
       metadata: %{
         key: key,
@@ -198,6 +198,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
 
     log_message =
       "Kafka Pipeline Error:" <>
+        " Type `#{type}`" <>
         " Trigger_id `#{context.trigger_id}`" <>
         " Topic `#{topic}`" <>
         " Partition `#{partition}`" <>
@@ -209,7 +210,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
 
   defp notify_sentry(%{status: {:failed, :duplicate}}, _context), do: nil
 
-  defp notify_sentry(message, context) do
+  defp notify_sentry(%{status: {:failed, type}} = message, context) do
     %{
       metadata: %{
         key: key,
@@ -226,7 +227,8 @@ defmodule Lightning.KafkaTriggers.Pipeline do
         offset: offset,
         partition: partition,
         topic: topic,
-        trigger_id: context.trigger_id
+        trigger_id: context.trigger_id,
+        type: type
       }
     )
   end

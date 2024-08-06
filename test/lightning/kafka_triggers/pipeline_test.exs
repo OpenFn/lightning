@@ -590,7 +590,10 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
     end
 
     defp expected_general_error_message(message, context) do
+      %{status: {:failed, type}} = message
+
       "Kafka Pipeline Error:" <>
+        " Type `#{type}`" <>
         " Trigger_id `#{context.trigger_id}`" <>
         " Topic `#{message.metadata.topic}`" <>
         " Partition `#{message.metadata.partition}`" <>
@@ -599,12 +602,15 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
     end
 
     defp expected_extra_sentry_data(message, context) do
+      %{status: {:failed, type}} = message
+
       %{
         key: message.metadata.key,
         offset: message.metadata.offset,
         partition: message.metadata.partition,
         topic: message.metadata.topic,
-        trigger_id: context.trigger_id
+        trigger_id: context.trigger_id,
+        type: type
       }
     end
   end
