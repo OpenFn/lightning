@@ -18,13 +18,17 @@ and this project adheres to
 ### Added
 
 ### Changed
-- Kafka messages without keys are synchronously converted into a
-  Workorder, Dataclip and Run. Messages with keys are stored as
-  TriggerKafkaMessage records, however the code needed to process them has been
-  disabled, pending removal.
-  [#2351] (https://github.com/OpenFn/lightning/issues/2351)
 
 ### Fixed
+
+## [v2.7.15] - 2024-08-07
+
+### Changed
+
+- Kafka messages without keys are synchronously converted into a Workorder,
+  Dataclip and Run. Messages with keys are stored as TriggerKafkaMessage
+  records, however the code needed to process them has been disabled, pending
+  removal. [#2351] (https://github.com/OpenFn/lightning/issues/2351)
 
 ## [v2.7.14] - 2024-08-05
 
