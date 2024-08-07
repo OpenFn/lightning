@@ -21,6 +21,14 @@ and this project adheres to
 
 ### Fixed
 
+## [v2.7.16] - 2024-08-07
+
+### Fixed
+
+- @ibrahimwickama fixed issue that prevented users from creating new workflows
+  if they are running in an `http` environment (rather than `localhost` or
+  `https`). [#2365](https://github.com/OpenFn/lightning/pull/2356)
+
 ## [v2.7.15] - 2024-08-07
 
 ### Changed
