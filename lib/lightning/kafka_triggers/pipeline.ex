@@ -51,32 +51,11 @@ defmodule Lightning.KafkaTriggers.Pipeline do
 
   @impl true
   def handle_message(_processor, message, context) do
-    %{trigger_id: trigger_id_atom} = context
-
-    trigger_id = trigger_id_atom |> Atom.to_string()
-
-    %{metadata: %{partition: partition, ts: timestamp}} = message
-
-    topic_partition_offset =
-      KafkaTriggers.build_topic_partition_offset(message)
-
-    record_changeset =
-      TriggerKafkaMessageRecord.changeset(
-        %TriggerKafkaMessageRecord{},
-        %{
-          topic_partition_offset: topic_partition_offset,
-          trigger_id: trigger_id
-        }
-      )
-
-    trigger_changeset =
-      Trigger
-      |> Repo.get(trigger_id)
-      |> Trigger.kafka_partitions_changeset(partition, timestamp)
+    trigger_id = context.trigger_id |> Atom.to_string()
 
     Multi.new()
-    |> Multi.insert(:record, record_changeset)
-    |> Multi.update(:trigger, trigger_changeset)
+    |> track_message(trigger_id, message)
+    |> update_partition_timestamps(trigger_id, message)
     |> MessageHandling.persist_message(trigger_id, message)
     |> case do
       {:ok, _} ->
@@ -107,6 +86,33 @@ defmodule Lightning.KafkaTriggers.Pipeline do
       {:error, :work_order_creation_blocked, _reason} ->
         Broadway.Message.failed(message, :work_order_creation_blocked)
     end
+  end
+
+  defp track_message(multi, trigger_id, message) do
+    topic_partition_offset =
+      KafkaTriggers.build_topic_partition_offset(message)
+
+    record_changeset =
+      TriggerKafkaMessageRecord.changeset(
+        %TriggerKafkaMessageRecord{},
+        %{
+          topic_partition_offset: topic_partition_offset,
+          trigger_id: trigger_id
+        }
+      )
+
+    multi |> Multi.insert(:record, record_changeset)
+  end
+
+  defp update_partition_timestamps(multi, trigger_id, message) do
+    %{metadata: %{partition: partition, ts: timestamp}} = message
+
+    trigger_changeset =
+      Trigger
+      |> Repo.get(trigger_id)
+      |> Trigger.kafka_partitions_changeset(partition, timestamp)
+
+    multi |> Multi.update(:trigger, trigger_changeset)
   end
 
   @impl true
