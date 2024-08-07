@@ -9,7 +9,6 @@ defmodule Lightning.KafkaTriggers.Pipeline do
   alias Ecto.Multi
   alias Lightning.KafkaTriggers
   alias Lightning.KafkaTriggers.MessageHandling
-  alias Lightning.KafkaTriggers.TriggerKafkaMessage
   alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
   alias Lightning.Repo
   alias Lightning.Workflows.Trigger
@@ -78,18 +77,10 @@ defmodule Lightning.KafkaTriggers.Pipeline do
     Multi.new()
     |> Multi.insert(:record, record_changeset)
     |> Multi.update(:trigger, trigger_changeset)
-    |> persist(trigger_id, message)
+    |> MessageHandling.persist_message(trigger_id, message)
     |> case do
       {:ok, _} ->
         message
-
-      {
-        :error,
-        :record,
-        %{errors: [trigger_id: {"has already been taken", _constraints}]},
-        _changes_so_far
-      } ->
-        Broadway.Message.failed(message, :duplicate)
 
       {
         :error,
@@ -106,9 +97,6 @@ defmodule Lightning.KafkaTriggers.Pipeline do
         }
       } ->
         Broadway.Message.failed(message, :duplicate)
-
-      {:error, _step, _error_changes, _changes_so_far} ->
-        Broadway.Message.failed(message, :persistence)
 
       {:error, %Changeset{}} ->
         Broadway.Message.failed(message, :persistence)
@@ -130,41 +118,6 @@ defmodule Lightning.KafkaTriggers.Pipeline do
     end)
 
     messages
-  end
-
-  defp persist(%Multi{} = multi, trigger_id, message) do
-    %{
-      data: data,
-      metadata: %{
-        key: key,
-        offset: offset,
-        topic: topic,
-        ts: timestamp
-      }
-    } = message
-
-    case key do
-      "" ->
-        multi
-        |> MessageHandling.persist_message(trigger_id, message)
-
-      _key ->
-        message_changeset =
-          %TriggerKafkaMessage{}
-          |> TriggerKafkaMessage.changeset(%{
-            data: data,
-            key: key,
-            message_timestamp: timestamp,
-            metadata: message.metadata,
-            offset: offset,
-            topic: topic,
-            trigger_id: trigger_id
-          })
-
-        multi
-        |> Multi.insert(:message, message_changeset)
-        |> Repo.transaction()
-    end
   end
 
   defp create_log_entry(%{status: {:failed, :duplicate}} = message, context) do
