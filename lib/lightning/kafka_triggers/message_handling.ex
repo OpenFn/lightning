@@ -102,7 +102,7 @@ defmodule Lightning.KafkaTriggers.MessageHandling do
     create_work_order(message, trigger, multi)
   end
 
-  defp create_work_order(candidate = %TriggerKafkaMessage{}) do
+  defp create_work_order(%TriggerKafkaMessage{} = candidate) do
     %{
       data: data,
       metadata: metadata,
@@ -144,7 +144,7 @@ defmodule Lightning.KafkaTriggers.MessageHandling do
     end
   end
 
-  defp create_work_order(message = %Broadway.Message{}, trigger, multi) do
+  defp create_work_order(%Broadway.Message{} = message, trigger, multi) do
     %{data: data, metadata: request} = message
     %{workflow: workflow} = trigger
 

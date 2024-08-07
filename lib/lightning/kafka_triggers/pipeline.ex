@@ -132,7 +132,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
     messages
   end
 
-  defp persist(multi = %Multi{}, trigger_id, message) do
+  defp persist(%Multi{} = multi, trigger_id, message) do
     %{
       data: data,
       metadata: %{
@@ -148,7 +148,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
         multi
         |> MessageHandling.persist_message(trigger_id, message)
 
-      _ ->
+      _key ->
         message_changeset =
           %TriggerKafkaMessage{}
           |> TriggerKafkaMessage.changeset(%{
