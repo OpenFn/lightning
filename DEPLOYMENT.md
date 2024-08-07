@@ -118,30 +118,6 @@ be able to edit any triggers created before the feature was disabled.
 
 #### Performance Tuning
 
-Kafka triggers currently rely on the existence of Message Candidate Sets. These
-are a temporary measure to ensure that message sequence for messages with
-identical keys are preserved. As part of this mechanism, Lightning uses
-a MessageCandidateSetWorker to convert messages into WorkOrders.
-
-By default, there is only one worker process, but the number of workers can be
-increased by setting the `KAFKA_NUMBER_OF_MESSAGE_CANDIDATE_SET_WORKERS`
-environment variable. Increasing this may increase the rate at which messages
-received by Kafka are converted to WorkOrders. If you find that you have a
-large number of records in the `trigger_kafka_messages` table, then increasing
-the number of workers may help to reduce this backlog.
-
-The MessageCandidateSetWorker has two configurable processing delays:
-
-- The delay before the worker requests the next Message Candidate Set for
-  consideration after it has finished processing the current Message Candidate
-  Set. This can be set by configuring the
-  `KAFKA_NEXT_MESSAGE_CANDIDATE_SET_DELAY_MILLISECONDS` environment variable. The
-  default value is currently 250ms.
-- The delay before the worker requests the next Message Candidate Set for
-  consideration when there are no Message Candidate Sets available. This can be
-  set by configuring the `KAFKA_NO_MESSAGE_CANDIDATE_SET_DELAY_MILLISECONDS`
-  environment variable. The default value is currently 10000ms.
-
 The number of Kafka consumers in the consumer group can be modified by setting
 the `KAFKA_NUMBER_OF_CONSUMERS` environment variable. The default value is
 currently 1. The optimal setting is one consumer per topic partition. NOTE:
@@ -156,8 +132,16 @@ message every 10 seconds). The default value is 1.
 Processing concurrency within the Kafka Broadway pipeline is controlled by the
 `KAFKA_NUMBER_OF_PROCESSORS` environment variable. Modifying this, modifies the
 number of processors that are downstream of the Kafka consumer, so an increase
-in this value should inrcease throughput (when factoring in the rate limit set
+in this value should increase throughput (when factoring in the rate limit set
 by `KAFKA_NUMBER_OF_MESSAGES_PER_SECOND`). The default value is 1.
+
+#### Deduplication
+
+Each Kafka trigger maintains record of the topic, parition and offset for each
+message received. This to protect against the ingestion of duplicate messages
+from the cluster. These records are periodically cleaned out. The duration for
+which they are retained is controlled by
+`KAFKA_DUPLICATE_TRACKING_RETENTION_SECONDS`. The default value is 3600.
 
 ### Other config
 
