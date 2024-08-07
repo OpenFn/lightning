@@ -4,11 +4,12 @@ import Connection from './edges/Connection';
 import { styleEdge } from './styles';
 import { Flow } from './types';
 import { WorkflowState } from '../workflow-editor/store';
+import { randomUUID } from '../common'
 import toWorkflow from './util/to-workflow';
 
 const generateEdgeDiff = (source: string, target: string) => {
   const newEdge = styleEdge({
-    id: crypto.randomUUID(),
+    id: randomUUID(),
     type: 'step',
     source,
     target,

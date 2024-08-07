@@ -3,6 +3,7 @@ import type { Patch as ImmerPatch } from 'immer';
 import { applyPatches, enablePatches, produce } from 'immer';
 import { createStore } from 'zustand';
 import type { Lightning } from '../workflow-diagram/types';
+import { randomUUID } from '../common';
 
 enablePatches();
 
@@ -99,7 +100,7 @@ export const createWorkflowStore = (
 
     console.debug('Proposing changes', patches);
 
-    if (onChange) onChange({ id: crypto.randomUUID(), fn, patches });
+    if (onChange) onChange({ id: randomUUID(), fn, patches });
 
     return nextState;
   }
@@ -117,7 +118,7 @@ export const createWorkflowStore = (
             if (data[key]) {
               data[key]!.forEach(item => {
                 if (!item.id) {
-                  item.id = crypto.randomUUID();
+                  item.id = randomUUID();
                 }
                 draft[key].push(item as any);
               });
