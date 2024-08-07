@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-2BA673E2.js"></script>
+    <script src="dist/sidebar_items-0743FE56.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -206,22 +206,7 @@ option to create a Kafka trigger in the UI, nor will the Kafka consumer groups
 be running. </p><p>To enable this feature set the <code class="inline">KAFKA_TRIGGERS_ENABLED</code> environment variable 
 to <code class="inline">yes</code> and restart Lightning. Please note that, if you enable this feature
 and then create some Kafka triggers and then disable the feature, you will not
-be able to edit any triggers created before the feature was disabled.</p><h4>Performance Tuning</h4><p>Kafka triggers currently rely on the existence of Message Candidate Sets. These
-are a temporary measure to ensure that message sequence for messages with
-identical keys are preserved. As part of this mechanism, Lightning uses
-a MessageCandidateSetWorker to convert messages into WorkOrders.</p><p>By default, there is only one worker process, but the number of workers can be
-increased by setting the <code class="inline">KAFKA_NUMBER_OF_MESSAGE_CANDIDATE_SET_WORKERS</code>
-environment variable. Increasing this may increase the rate at which messages
-received by Kafka are converted to WorkOrders. If you find that you have a
-large number of records in the <code class="inline">trigger_kafka_messages</code> table, then increasing
-the number of workers may help to reduce this backlog.</p><p>The MessageCandidateSetWorker has two configurable processing delays:</p><ul><li>The delay before the worker requests the next Message Candidate Set for
-consideration after it has finished processing the current Message Candidate
-Set. This can be set by configuring the
-<code class="inline">KAFKA_NEXT_MESSAGE_CANDIDATE_SET_DELAY_MILLISECONDS</code> environment variable. The
-default value is currently 250ms.</li><li>The delay before the worker requests the next Message Candidate Set for
-consideration when there are no Message Candidate Sets available. This can be
-set by configuring the <code class="inline">KAFKA_NO_MESSAGE_CANDIDATE_SET_DELAY_MILLISECONDS</code>
-environment variable. The default value is currently 10000ms.</li></ul><p>The number of Kafka consumers in the consumer group can be modified by setting
+be able to edit any triggers created before the feature was disabled.</p><h4>Performance Tuning</h4><p>The number of Kafka consumers in the consumer group can be modified by setting
 the <code class="inline">KAFKA_NUMBER_OF_CONSUMERS</code> environment variable. The default value is
 currently 1. The optimal setting is one consumer per topic partition. NOTE:
 This setting will move to KafkaConfiguration as it will be trigger-specific.</p><p>The number of messages that the Kafka consumer will forward is rate-limited by
@@ -231,8 +216,12 @@ an integer value of messages over a 10-second interval (e.g. 0.15 becomes 1
 message every 10 seconds). The default value is 1.</p><p>Processing concurrency within the Kafka Broadway pipeline is controlled by the
 <code class="inline">KAFKA_NUMBER_OF_PROCESSORS</code> environment variable. Modifying this, modifies the
 number of processors that are downstream of the Kafka consumer, so an increase
-in this value should inrcease throughput (when factoring in the rate limit set
-by <code class="inline">KAFKA_NUMBER_OF_MESSAGES_PER_SECOND</code>). The default value is 1.</p><h3 id="other-config" class="section-heading">
+in this value should increase throughput (when factoring in the rate limit set
+by <code class="inline">KAFKA_NUMBER_OF_MESSAGES_PER_SECOND</code>). The default value is 1.</p><h4>Deduplication</h4><p>Each Kafka trigger maintains record of the topic, parition and offset for each
+message received. This to protect against the ingestion of duplicate messages
+from the cluster. These records are periodically cleaned out. The duration for
+which they are retained is controlled by
+<code class="inline">KAFKA_DUPLICATE_TRACKING_RETENTION_SECONDS</code>. The default value is 3600.</p><h3 id="other-config" class="section-heading">
   <a href="#other-config" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
