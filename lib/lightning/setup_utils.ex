@@ -868,4 +868,18 @@ defmodule Lightning.SetupUtils do
     |> limit(1)
     |> Repo.one!()
   end
+
+  @doc """
+  In some (mostly remote-controlled) deployments, it's necessary to create a
+  user, empty projects that they can access, and credentials (shared with those
+  projects) that they own so that later `openfn deploy` calls can make use of
+  these artifacts.
+
+  When run _before_ `openfn deploy`, this function makes it possible to set up
+  an entire lightning instance with a working project (including secrets)
+  without using the web UI.
+  """
+  def setup_user(user, projects, credentials) do
+    IO.inspect("Doing a lot here!")
+  end
 end
