@@ -879,7 +879,39 @@ defmodule Lightning.SetupUtils do
   an entire lightning instance with a working project (including secrets)
   without using the web UI.
   """
-  def setup_user(user, projects, credentials) do
+  def setup_user(user, token, project_names, credentials) do
     IO.inspect("Doing a lot here!")
+    IO.inpsect(user)
+    IO.inpsect(projects)
+    IO.inpsect(credentials)
+
+    # create user
+    {:ok, user} = Accounts.create_user(user)
+
+    # create token
+    Repo.insert!(%Lightning.Accounts.UserToken{
+      user_id: user.id,
+      context: "api",
+      token: token
+    })
+
+    # create projects
+    projects =
+      Enum.map(project_names, fn name ->
+        {:ok, project} =
+          Projects.create_project(
+            %{
+              name: name,
+              history_retention_period:
+                Application.get_env(:lightning, :default_retention_period),
+              project_users: [%{user_id: user.id, role: :owner}]
+            },
+            false
+          )
+
+        project
+      end)
+
+    # create credentials
   end
 end
