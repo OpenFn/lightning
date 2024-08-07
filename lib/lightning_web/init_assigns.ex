@@ -6,9 +6,16 @@ defmodule LightningWeb.InitAssigns do
   alias Lightning.Accounts
 
   def on_mount(:default, _params, session, socket) do
+    current_user = Accounts.get_user_by_session_token(session["user_token"])
+    confirmation_required? = Accounts.confirmation_required?(current_user)
+
     {:cont,
-    socket |> assign_new(:current_user, fn ->
-       Accounts.get_user_by_session_token(session["user_token"])
-     end) |> assign_new(:require_confirmed_user, fn -> true end)}
+     socket
+     |> assign_new(:current_user, fn ->
+       current_user
+     end)
+     |> assign_new(:account_confirmation_required?, fn ->
+       confirmation_required?
+     end)}
   end
 end

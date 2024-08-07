@@ -121,7 +121,11 @@ defmodule LightningWeb.UserAuth do
   def fetch_current_user(conn, _opts) do
     {user_token, conn} = ensure_user_token(conn)
     user = user_token && Accounts.get_user_by_session_token(user_token)
-    conn |> assign(:current_user, user) |> assign(:require_confirmed_user, true)
+    confirmation_required? = Accounts.confirmation_required?(user)
+
+    conn
+    |> assign(:current_user, user)
+    |> assign(:account_confirmation_required?, confirmation_required?)
   end
 
   defp ensure_user_token(conn) do
