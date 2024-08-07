@@ -9,7 +9,6 @@ defmodule Lightning.KafkaTriggers.Pipeline do
   alias Ecto.Multi
   alias Lightning.KafkaTriggers
   alias Lightning.KafkaTriggers.MessageHandling
-  alias Lightning.KafkaTriggers.TriggerKafkaMessage
   alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
   alias Lightning.Repo
   alias Lightning.Workflows.Trigger
@@ -50,46 +49,21 @@ defmodule Lightning.KafkaTriggers.Pipeline do
     )
   end
 
+  # Dialyzer does not correctly match the types that can be returned by
+  # MessageHandling.persist_message/3. The {:ok, _} match fails.
+  @dialyzer {:no_match, handle_message: 3}
+
   @impl true
   def handle_message(_processor, message, context) do
-    %{trigger_id: trigger_id_atom} = context
-
-    trigger_id = trigger_id_atom |> Atom.to_string()
-
-    %{metadata: %{partition: partition, ts: timestamp}} = message
-
-    topic_partition_offset =
-      KafkaTriggers.build_topic_partition_offset(message)
-
-    record_changeset =
-      TriggerKafkaMessageRecord.changeset(
-        %TriggerKafkaMessageRecord{},
-        %{
-          topic_partition_offset: topic_partition_offset,
-          trigger_id: trigger_id
-        }
-      )
-
-    trigger_changeset =
-      Trigger
-      |> Repo.get(trigger_id)
-      |> Trigger.kafka_partitions_changeset(partition, timestamp)
+    trigger_id = context.trigger_id |> Atom.to_string()
 
     Multi.new()
-    |> Multi.insert(:record, record_changeset)
-    |> Multi.update(:trigger, trigger_changeset)
-    |> persist(trigger_id, message)
+    |> track_message(trigger_id, message)
+    |> update_partition_timestamps(trigger_id, message)
+    |> MessageHandling.persist_message(trigger_id, message)
     |> case do
       {:ok, _} ->
         message
-
-      {
-        :error,
-        :record,
-        %{errors: [trigger_id: {"has already been taken", _constraints}]},
-        _changes_so_far
-      } ->
-        Broadway.Message.failed(message, :duplicate)
 
       {
         :error,
@@ -107,11 +81,11 @@ defmodule Lightning.KafkaTriggers.Pipeline do
       } ->
         Broadway.Message.failed(message, :duplicate)
 
-      {:error, _step, _error_changes, _changes_so_far} ->
-        Broadway.Message.failed(message, :persistence)
-
       {:error, %Changeset{}} ->
         Broadway.Message.failed(message, :persistence)
+
+      {:error, :data_is_not_json} ->
+        Broadway.Message.failed(message, :invalid_data)
 
       {:error, :data_is_not_json_object} ->
         Broadway.Message.failed(message, :invalid_data)
@@ -119,6 +93,33 @@ defmodule Lightning.KafkaTriggers.Pipeline do
       {:error, :work_order_creation_blocked, _reason} ->
         Broadway.Message.failed(message, :work_order_creation_blocked)
     end
+  end
+
+  defp track_message(multi, trigger_id, message) do
+    topic_partition_offset =
+      KafkaTriggers.build_topic_partition_offset(message)
+
+    record_changeset =
+      TriggerKafkaMessageRecord.changeset(
+        %TriggerKafkaMessageRecord{},
+        %{
+          topic_partition_offset: topic_partition_offset,
+          trigger_id: trigger_id
+        }
+      )
+
+    multi |> Multi.insert(:record, record_changeset)
+  end
+
+  defp update_partition_timestamps(multi, trigger_id, message) do
+    %{metadata: %{partition: partition, ts: timestamp}} = message
+
+    trigger_changeset =
+      Trigger
+      |> Repo.get(trigger_id)
+      |> Trigger.kafka_partitions_changeset(partition, timestamp)
+
+    multi |> Multi.update(:trigger, trigger_changeset)
   end
 
   @impl true
@@ -130,41 +131,6 @@ defmodule Lightning.KafkaTriggers.Pipeline do
     end)
 
     messages
-  end
-
-  defp persist(%Multi{} = multi, trigger_id, message) do
-    %{
-      data: data,
-      metadata: %{
-        key: key,
-        offset: offset,
-        topic: topic,
-        ts: timestamp
-      }
-    } = message
-
-    case key do
-      "" ->
-        multi
-        |> MessageHandling.persist_message(trigger_id, message)
-
-      _key ->
-        message_changeset =
-          %TriggerKafkaMessage{}
-          |> TriggerKafkaMessage.changeset(%{
-            data: data,
-            key: key,
-            message_timestamp: timestamp,
-            metadata: message.metadata,
-            offset: offset,
-            topic: topic,
-            trigger_id: trigger_id
-          })
-
-        multi
-        |> Multi.insert(:message, message_changeset)
-        |> Repo.transaction()
-    end
   end
 
   defp create_log_entry(%{status: {:failed, :duplicate}} = message, context) do

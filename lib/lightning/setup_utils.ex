@@ -716,7 +716,6 @@ defmodule Lightning.SetupUtils do
       Lightning.WorkOrder,
       Lightning.Invocation.Step,
       Lightning.Credentials.Credential,
-      Lightning.KafkaTriggers.TriggerKafkaMessage,
       Lightning.KafkaTriggers.TriggerKafkaMessageRecord,
       Lightning.Workflows.Job,
       Lightning.Workflows.Trigger,

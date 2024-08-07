@@ -21,6 +21,16 @@ and this project adheres to
 
 ### Fixed
 
+- Removed all Kafka trigger code that ensured that message sequence is
+  honoured for messages with keys. Functionality to ensure that message sequence
+  is honoured will be added in the future, but in an abstraction that is a better
+  fit for the current Lightning design.
+  [#2362](https://github.com/OpenFn/lightning/issues/2362)
+- Dropped the `trigger_kafka_messages` table that formed part of the Kafka
+  trigger implementation, but which is now obsolete given the removal of the
+  code related to message sequence preservation.
+  [#2362](https://github.com/OpenFn/lightning/issues/2362)
+
 ## [v2.7.17] - 2024-08-14
 
 ### Added

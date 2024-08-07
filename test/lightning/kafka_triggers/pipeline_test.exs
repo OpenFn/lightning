@@ -11,7 +11,6 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
   alias Lightning.Invocation
   alias Lightning.KafkaTriggers
   alias Lightning.KafkaTriggers.MessageHandling
-  alias Lightning.KafkaTriggers.TriggerKafkaMessage
   alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
   alias Lightning.KafkaTriggers.Pipeline
   alias Lightning.Repo
@@ -162,7 +161,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
     end
   end
 
-  describe ".handle_message - message has key" do
+  describe ".handle_message" do
     setup do
       trigger_1 =
         insert(
@@ -182,177 +181,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
 
       context = %{trigger_id: trigger_1.id |> String.to_atom()}
 
-      %{trigger_1: trigger_1, trigger_2: trigger_2, context: context}
-    end
-
-    test "returns the message", %{context: context} do
       message = build_broadway_message()
-
-      assert Pipeline.handle_message(nil, message, context) == message
-    end
-
-    test "updates the partition timestamp for the trigger", %{
-      trigger_1: trigger_1,
-      trigger_2: trigger_2,
-      context: context
-    } do
-      message = build_broadway_message()
-
-      Pipeline.handle_message(nil, message, context)
-
-      %{
-        kafka_configuration: %{
-          partition_timestamps: trigger_1_timestamps
-        }
-      } = Trigger |> Repo.get(trigger_1.id)
-
-      %{
-        kafka_configuration: %{
-          partition_timestamps: trigger_2_timestamps
-        }
-      } = Trigger |> Repo.get(trigger_2.id)
-
-      assert %{"1" => 1_715_164_718_281, "2" => 1_715_164_718_283} =
-               trigger_1_timestamps
-
-      assert trigger_2_timestamps == partition_timestamps()
-    end
-
-    test "persists a TriggerKafkaMessage for further processing", %{
-      context: context
-    } do
-      trigger_id = Atom.to_string(context.trigger_id)
-
-      message = build_broadway_message()
-
-      Pipeline.handle_message(nil, message, context)
-
-      trigger_kafka_message = Repo.one(TriggerKafkaMessage)
-
-      metadata = message.metadata |> stringify_keys()
-      data = message.data
-
-      assert %{
-               data: ^data,
-               key: "abc_123_def",
-               message_timestamp: 1_715_164_718_283,
-               metadata: ^metadata,
-               offset: 11,
-               topic: "bar_topic",
-               trigger_id: ^trigger_id,
-               work_order_id: nil
-             } = trigger_kafka_message
-    end
-
-    test "records the message for the purposes of future deduplication", %{
-      context: context
-    } do
-      trigger_id = context.trigger_id |> Atom.to_string()
-
-      message = build_broadway_message()
-
-      Pipeline.handle_message(nil, message, context)
-
-      message_record = Repo.one(TriggerKafkaMessageRecord)
-
-      assert %TriggerKafkaMessageRecord{
-               trigger_id: ^trigger_id,
-               topic_partition_offset: "bar_topic_2_11"
-             } = message_record
-    end
-
-    test "does not update partition timestamps if message is duplicate", %{
-      trigger_1: trigger_1,
-      trigger_2: trigger_2,
-      context: context
-    } do
-      trigger_id = context.trigger_id |> Atom.to_string()
-
-      message = build_broadway_message()
-
-      insert_message_record(trigger_id)
-
-      Pipeline.handle_message(nil, message, context)
-
-      %{
-        kafka_configuration: %{
-          partition_timestamps: trigger_1_timestamps
-        }
-      } = Trigger |> Repo.get(trigger_1.id)
-
-      %{
-        kafka_configuration: %{
-          partition_timestamps: trigger_2_timestamps
-        }
-      } = Trigger |> Repo.get(trigger_2.id)
-
-      assert trigger_1_timestamps == partition_timestamps()
-      assert trigger_2_timestamps == partition_timestamps()
-    end
-
-    test "does not create TriggerKafkaMessage if message is duplicate", %{
-      context: context
-    } do
-      trigger_id = context.trigger_id |> Atom.to_string()
-
-      message = build_broadway_message()
-
-      insert_message_record(trigger_id)
-
-      Pipeline.handle_message(nil, message, context)
-
-      assert Repo.one(TriggerKafkaMessage) == nil
-    end
-
-    test "marks message as failed when duplicate", %{
-      context: context
-    } do
-      trigger_id = context.trigger_id |> Atom.to_string()
-      message = build_broadway_message()
-
-      insert_message_record(trigger_id)
-
-      %{status: status} = Pipeline.handle_message(nil, message, context)
-
-      assert {:failed, :duplicate} = status
-    end
-
-    test "marks message as failed for non-duplicate error", %{
-      context: context
-    } do
-      with_mock Repo,
-                [:passthrough],
-                transaction: fn _ -> {:error, :message, %Changeset{}, %{}} end do
-        message = build_broadway_message()
-
-        %{status: status} = Pipeline.handle_message(nil, message, context)
-
-        assert {:failed, :persistence} = status
-      end
-    end
-  end
-
-  describe ".handle_message - message does not have a key" do
-    setup do
-      trigger_1 =
-        insert(
-          :trigger,
-          type: :kafka,
-          kafka_configuration: configuration(index: 1),
-          enabled: true
-        )
-
-      trigger_2 =
-        insert(
-          :trigger,
-          type: :kafka,
-          kafka_configuration: configuration(index: 2, ssl: false),
-          enabled: true
-        )
-
-      context = %{trigger_id: trigger_1.id |> String.to_atom()}
-
-      message = build_broadway_message(key: "")
 
       %{
         context: context,
@@ -498,6 +327,20 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
 
     test "marks message as failed for invalid json", %{context: context} do
       message = build_broadway_message(data_as_json: "invalid json", key: "")
+
+      %{status: status} = Pipeline.handle_message(nil, message, context)
+
+      assert {:failed, :invalid_data} = status
+    end
+
+    test "marks message as failed for json that is not an object", %{
+      context: context
+    } do
+      message =
+        build_broadway_message(
+          data_as_json: "\"json but not an object\"",
+          key: ""
+        )
 
       %{status: status} = Pipeline.handle_message(nil, message, context)
 
@@ -684,24 +527,5 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       }
     )
     |> Repo.insert()
-  end
-
-  # Put this in a helper
-  defp stringify_keys(map) do
-    map
-    |> Map.keys()
-    |> Enum.reduce(%{}, fn key, acc ->
-      acc |> stringify_key(key, map[key])
-    end)
-  end
-
-  defp stringify_key(acc, key, val) when is_map(val) and not is_struct(val) do
-    acc
-    |> Map.merge(%{to_string(key) => stringify_keys(val)})
-  end
-
-  defp stringify_key(acc, key, val) do
-    acc
-    |> Map.merge(%{to_string(key) => val})
   end
 end

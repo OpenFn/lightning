@@ -270,17 +270,6 @@ defmodule Lightning.Factories do
     }
   end
 
-  def trigger_kafka_message_factory do
-    %Lightning.KafkaTriggers.TriggerKafkaMessage{
-      trigger: build(:trigger, type: :kafka),
-      topic: "arb_topic",
-      message_timestamp: System.os_time(:millisecond),
-      metadata: %{},
-      offset: 1001,
-      data: %{some: :data} |> Jason.encode!()
-    }
-  end
-
   def triggers_kafka_configuration_factory do
     %Lightning.Workflows.Triggers.KafkaConfiguration{
       group_id: "arb_group_id",
