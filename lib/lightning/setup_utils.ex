@@ -882,7 +882,7 @@ defmodule Lightning.SetupUtils do
   def setup_user(user, token, project_names, credentials) do
     IO.inspect("Doing a lot here!")
     IO.inpsect(user)
-    IO.inpsect(projects)
+    IO.inpsect(project_names)
     IO.inpsect(credentials)
 
     # create user
