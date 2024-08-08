@@ -61,6 +61,32 @@ defmodule Lightning.Accounts.UserNotifierTest do
       )
     end
 
+    test "remind_account_confirmation/2" do
+      token = "sometoken"
+
+      UserNotifier.remind_account_confirmation(
+        %User{
+          email: "real@email.com",
+          first_name: "Real"
+        },
+        token
+      )
+
+      url =
+        LightningWeb.Router.Helpers.user_confirmation_url(
+          LightningWeb.Endpoint,
+          :edit,
+          token
+        )
+
+      assert_email_sent(
+        subject: "Confirm your OpenFn account",
+        to: "real@email.com",
+        text_body:
+          "Hello Real,\n\nPlease confirm your OpenFn account by clicking on the URL below:\n\n#{url}\n\nIf you have not requested an account confirmation email, please ignore this.\n\nOpenFn\n"
+      )
+    end
+
     test "deliver_confirmation_instructions/2" do
       token = "sometoken"
 

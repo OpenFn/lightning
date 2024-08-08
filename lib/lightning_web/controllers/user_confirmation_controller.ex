@@ -42,17 +42,18 @@ defmodule LightningWeb.UserConfirmationController do
     end
   end
 
+  def send_email(
+        %{assigns: %{current_user: %{confirmed_at: nil}}} = conn,
+        _params
+      ) do
+    Lightning.Accounts.remind_account_confirmation(conn.assigns.current_user)
+
+    conn
+    |> put_flash(:info, "Confirmation email sent successfully")
+    |> redirect(to: get_referer(conn))
+  end
+
   def send_email(conn, _params) do
-    %{current_user: user} = conn.assigns
-
-    conn =
-      if !user.confirmed_at do
-        Lightning.Accounts.remind_account_confirmation(user)
-        conn |> put_flash(:info, "Email sent successfully")
-      else
-        conn
-      end
-
     redirect(conn, to: get_referer(conn))
   end
 
