@@ -42,6 +42,27 @@ defmodule LightningWeb.UserConfirmationController do
     end
   end
 
+  def send_email(conn, _params) do
+    Lightning.Accounts.deliver_user_confirmation_instructions(
+      conn.assigns.current_user
+    )
+
+    referer = get_referer(conn)
+
+    conn
+    |> redirect(to: referer)
+  end
+
+  defp get_referer(conn) do
+    conn
+    |> Plug.Conn.get_req_header("referer")
+    |> List.first()
+    |> case do
+      nil -> "/projects"
+      referer -> referer |> URI.parse() |> Map.get(:path)
+    end
+  end
+
   # Do not log in the user after confirmation to avoid a
   # leaked token giving the user access to the account.
   def update(conn, %{"token" => token}) do

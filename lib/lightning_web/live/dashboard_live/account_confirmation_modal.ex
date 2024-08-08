@@ -7,7 +7,17 @@ defmodule LightningWeb.AccountConfirmationModal do
   end
 
   def update(assigns, socket) do
-    {:ok, socket |> assign(assigns) |> assign(:email_sent, false)}
+    show_modal =
+      case socket.view do
+        LightningWeb.ProfileLive.Edit -> false
+        _ -> true
+      end
+
+    {:ok,
+     socket
+     |> assign(assigns)
+     |> assign(:show_modal, show_modal)
+     |> assign(:email_sent, false)}
   end
 
   @impl true
@@ -31,11 +41,11 @@ defmodule LightningWeb.AccountConfirmationModal do
     ~H"""
     <div class="text-xs">
       <.modal
-        show={true}
+        id={@id}
+        show={@show_modal}
         close_on_keydown={false}
         close_on_click_away={false}
-        id={@id}
-        width="xl:min-w-1/3 min-w-1/2 w-1/2"
+        width="xl:min-w-1/3 min-w-1/2 w-1/3"
       >
         <:title>
           <div class="flex justify-between">
@@ -47,7 +57,6 @@ defmodule LightningWeb.AccountConfirmationModal do
         </div>
 
         <.modal_footer class="mt-6 mx-6 flex items-center justify-between">
-          <!-- Confirmation alert or spacer -->
           <div class="flex-grow">
             <div :if={@email_sent} class="flex items-center">
               <div class="flex-shrink-0">
@@ -60,16 +69,13 @@ defmodule LightningWeb.AccountConfirmationModal do
               </div>
             </div>
           </div>
-          <!-- Buttons on the right -->
           <div class="flex-none">
-            <button
-              id="update-email-address-button"
-              type="button"
-              phx-target={@myself}
+            <.link
+              href={~p"/profile"}
               class="inline-flex justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:w-auto"
             >
               Update email address
-            </button>
+            </.link>
             <button
               id="resend-confirmation-email-button"
               type="button"

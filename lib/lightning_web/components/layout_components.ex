@@ -83,7 +83,12 @@ defmodule LightningWeb.LayoutComponents do
     <div class="flex-none bg-white shadow-sm">
       <LightningWeb.Components.Common.alert
         :if={@current_user && !@current_user.confirmed_at}
-        link_right={%{text: "Resend confirmation email", target: "/"}}
+        link_right={
+          %{
+            text: "Resend confirmation email",
+            target: "/users/send-confirmation-email"
+          }
+        }
         type="danger"
       >
         <:message>
