@@ -830,14 +830,10 @@ defmodule Lightning.Accounts do
   end
 
   def remind_account_confirmation(%User{} = user) do
-    if user.confirmed_at do
-      {:error, :already_confirmed}
-    else
-      UserNotifier.remind_account_confirmation(
-        user,
-        build_email_token(user)
-      )
-    end
+    UserNotifier.remind_account_confirmation(
+      user,
+      build_email_token(user)
+    )
   end
 
   @doc """
