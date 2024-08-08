@@ -829,6 +829,17 @@ defmodule Lightning.Accounts do
     end
   end
 
+  def remind_account_confirmation(%User{} = user) do
+    if user.confirmed_at do
+      {:error, :already_confirmed}
+    else
+      UserNotifier.remind_account_confirmation(
+        user,
+        build_email_token(user)
+      )
+    end
+  end
+
   @doc """
   Confirms a user by the given token.
 

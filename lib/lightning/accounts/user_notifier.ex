@@ -87,6 +87,20 @@ defmodule Lightning.Accounts.UserNotifier do
     """)
   end
 
+  def remind_account_confirmation(user, token) do
+    deliver(user.email, "Confirm your OpenFn account", """
+    Hello #{user.first_name},
+
+    Please confirm your OpenFn account by clicking on the URL below:
+
+    #{url(LightningWeb.Endpoint, ~p"/users/confirm/#{token}")}
+
+    If you have not requested an account confirmation email, please ignore this.
+
+    OpenFn
+    """)
+  end
+
   @doc """
   Deliver email to notify user of his addition of a project.
   """

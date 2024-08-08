@@ -43,14 +43,9 @@ defmodule LightningWeb.UserConfirmationController do
   end
 
   def send_email(conn, _params) do
-    Lightning.Accounts.deliver_user_confirmation_instructions(
-      conn.assigns.current_user
-    )
+    Lightning.Accounts.remind_account_confirmation(conn.assigns.current_user)
 
-    referer = get_referer(conn)
-
-    conn
-    |> redirect(to: referer)
+    redirect(conn, to: get_referer(conn))
   end
 
   defp get_referer(conn) do
