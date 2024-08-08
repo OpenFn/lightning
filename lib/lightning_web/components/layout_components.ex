@@ -65,6 +65,7 @@ defmodule LightningWeb.LayoutComponents do
   slot :inner_block
 
   def header(assigns) do
+    # TODO - remove me!!!!
     title_height =
       if Enum.any?(assigns[:description]) do
         "mt-4 h-10"
@@ -72,14 +73,31 @@ defmodule LightningWeb.LayoutComponents do
         "h-20"
       end
 
+    confirm_by_date = assigns.current_user.inserted_at |> Timex.shift(hours: 48)
+
     # description has the same title class except for height and font
     assigns =
       assign(assigns,
         title_class: "max-w-7xl mx-auto sm:px-6 lg:px-8",
-        title_height: "py-6 flex items-center " <> title_height
+        title_height: "py-6 flex items-center " <> title_height,
+        confirm_by_date: confirm_by_date
       )
 
+    # <a href="#" class="whitespace-nowrap font-semibold">
+    #   Resend confirmation email&nbsp;<span aria-hidden="true">&rarr;</span>
+    # </a>
+
     ~H"""
+    <LightningWeb.Components.Common.banner
+      type="danger"
+      message={"Please confirm your account with the link in your email. Your account will be locked on #{@confirm_by_date}"}
+      action={
+        %{
+          text: "Resend confirmation email",
+          target: "/users/send-confirmation-email"
+        }
+      }
+    />
     <div class="flex-none bg-white shadow-sm">
       <LightningWeb.Components.Common.alert
         :if={@current_user && !@current_user.confirmed_at}
@@ -92,9 +110,7 @@ defmodule LightningWeb.LayoutComponents do
         type="danger"
       >
         <:message>
-          <p>
-            Your account has not been confirmed yet. User's are expected to verify their account within 48 hours of account creation.
-          </p>
+          <p></p>
         </:message>
       </LightningWeb.Components.Common.alert>
       <div class={[@title_class, @title_height]}>
