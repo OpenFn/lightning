@@ -65,6 +65,7 @@ defmodule LightningWeb.LayoutComponents do
   slot :inner_block
 
   def header(assigns) do
+    # TODO - remove title_height once we confirm that :description is unused
     title_height =
       if Enum.any?(assigns[:description]) do
         "mt-4 h-10"
@@ -72,31 +73,32 @@ defmodule LightningWeb.LayoutComponents do
         "h-20"
       end
 
+    confirm_by_date =
+      assigns.current_user.inserted_at
+      |> Timex.shift(hours: 48)
+      |> Timex.format!("%A, %d-%b @ %H:%M UTC", :strftime)
+
     # description has the same title class except for height and font
     assigns =
       assign(assigns,
         title_class: "max-w-7xl mx-auto sm:px-6 lg:px-8",
-        title_height: "py-6 flex items-center " <> title_height
+        title_height: "py-6 flex items-center " <> title_height,
+        confirm_by_date: confirm_by_date
       )
 
     ~H"""
-    <div class="flex-none bg-white shadow-sm">
-      <LightningWeb.Components.Common.alert
-        :if={@current_user && !@current_user.confirmed_at}
-        link_right={
-          %{
-            text: "Resend confirmation email",
-            target: "/users/send-confirmation-email"
-          }
+    <LightningWeb.Components.Common.banner
+      :if={@current_user && !@current_user.confirmed_at}
+      type="danger"
+      message={"Please confirm your account before #{@confirm_by_date} to continue using OpenFn."}
+      action={
+        %{
+          text: "Resend confirmation email",
+          target: "/users/send-confirmation-email"
         }
-        type="danger"
-      >
-        <:message>
-          <p>
-            Your account has not been confirmed yet. User's are expected to verify their account within 48 hours of account creation.
-          </p>
-        </:message>
-      </LightningWeb.Components.Common.alert>
+      }
+    />
+    <div class="flex-none bg-white shadow-sm">
       <div class={[@title_class, @title_height]}>
         <%= if @current_user do %>
           <nav class="flex" aria-label="Breadcrumb">

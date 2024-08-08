@@ -34,7 +34,7 @@ defmodule LightningWeb.Components.Common do
       case assigns.type do
         "success" -> "hero-check-circle-solid"
         "warning" -> "hero-exclamation-triangle-solid"
-        "error" -> "hero-x-circle-solid"
+        "danger" -> "hero-x-circle-solid"
         _info -> "hero-information-circle-solid"
       end
 
@@ -49,7 +49,7 @@ defmodule LightningWeb.Components.Common do
     <div id={@id} class={"rounded-md bg-#{@color}-50 p-4 #{@class}"}>
       <div class="flex">
         <div class="flex-shrink-0">
-          <.icon name={@icon} class={"mb-1 h-5 w-5 text-#{@color}-400"} />
+          <.icon name={@icon} class={"h-5 w-5 text-#{@color}-400"} />
         </div>
         <div class={[
           "ml-3",
@@ -57,13 +57,13 @@ defmodule LightningWeb.Components.Common do
         ]}>
           <%= if @header do %>
             <h3 class={"text-sm font-medium text-#{@color}-800"}><%= @header %></h3>
-            <div class={"mt-2 text-sm text-#{@color}-700"}>
+            <p class={"mt-2 text-sm text-#{@color}-700"}>
               <%= render_slot(@message) %>
-            </div>
+            </p>
           <% else %>
-            <div class={"text-sm text-#{@color}-700"}>
+            <p class={"text-sm text-#{@color}-700"}>
               <%= render_slot(@message) %>
-            </div>
+            </p>
           <% end %>
           <%= if assigns[:link_right] do %>
             <p class="mt-3 text-sm md:ml-6 md:mt-0">
@@ -74,9 +74,9 @@ defmodule LightningWeb.Components.Common do
                 <%= @link_right.text %>
                 <span aria-hidden="true"> &rarr;</span>
               </a>
-              <%!-- <%= render_slot(@link_right) %> --%>
             </p>
-          <% else %>
+          <% end %>
+          <%= if Enum.count(@actions) > 0 do %>
             <div :if={@actions} class={["mt-4"]}>
               <div class="-mx-2 -my-1.5 flex">
                 <%= for item <- @actions do %>
@@ -99,6 +99,49 @@ defmodule LightningWeb.Components.Common do
             </div>
           <% end %>
         </div>
+      </div>
+    </div>
+    """
+  end
+
+  attr :id, :string, default: "banner"
+  attr :type, :string, required: true
+  attr :class, :string, default: ""
+  attr :message, :string, required: true
+  attr :action, :map, required: false, default: nil
+  attr :dismissable, :boolean, default: false
+
+  @doc """
+  Banners can sometimes be dismissed, take the full width, and can optionally
+  provide a link or button to perform a single action.
+  """
+  def banner(assigns) do
+    classes =
+      case assigns.type do
+        "success" -> "alert-success"
+        "warning" -> "alert-warning"
+        "danger" -> "alert-danger"
+        _info -> "alert-info"
+      end
+
+    assigns = assign(assigns, class: [classes] ++ List.wrap(assigns.class))
+
+    ~H"""
+    <div class={[
+      "flex items-center gap-x-6 px-6 py-2.5 sm:px-3.5 sm:before:flex-1",
+      @class
+    ]}>
+      <p class="text-sm leading-6">
+        <%= @message %>
+        <%= if assigns[:action] do %>
+          <a href={@action.target} class="whitespace-nowrap font-semibold">
+            <%= @action.text %>
+            <span aria-hidden="true"> &rarr;</span>
+          </a>
+        <% end %>
+      </p>
+      <div class="flex flex-1 justify-end">
+        <%!-- todo - add if/when we have a dismissable banner --%>
       </div>
     </div>
     """

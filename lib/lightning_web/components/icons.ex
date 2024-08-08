@@ -29,7 +29,12 @@ defmodule LightningWeb.Components.Icons do
   def icon(%{name: "hero-" <> _} = assigns) do
     ~H"""
     <span
-      class={[@naked && "text-gray-500 hover:text-primary-400", @name, @class]}
+      class={[
+        @naked && "text-gray-500 hover:text-primary-400",
+        "align-top",
+        @name,
+        @class
+      ]}
       {@rest}
     />
     """
