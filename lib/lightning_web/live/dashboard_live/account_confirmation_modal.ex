@@ -36,10 +36,6 @@ defmodule LightningWeb.AccountConfirmationModal do
   use LightningWeb, :live_component
 
   @impl true
-  def update(%{email_sent: email_sent}, socket) do
-    {:ok, assign(socket, :email_sent, email_sent)}
-  end
-
   def update(assigns, socket) do
     show_modal =
       case socket.view do
@@ -58,13 +54,6 @@ defmodule LightningWeb.AccountConfirmationModal do
   def handle_event("resend-confirmation-email", _, socket) do
     Lightning.Accounts.deliver_user_confirmation_instructions(
       socket.assigns.current_user
-    )
-
-    send_update_after(
-      self(),
-      __MODULE__,
-      [id: socket.assigns.id, email_sent: false],
-      5000
     )
 
     {:noreply, assign(socket, :email_sent, true)}
@@ -87,29 +76,16 @@ defmodule LightningWeb.AccountConfirmationModal do
           </div>
         </:title>
         <div class="container mx-auto px-6 space-y-6 bg-white text-base text-gray-600">
-          For security purposes, we have blocked access to your accounts, projects and workflows until you confirm your account. Please click resend confirmation email to receive instructions on how to confirm your OpenFn account or update your email address if you have not received a confirmation email.
+          <div :if={@email_sent}>
+            Confirmation email sent successfully
+          </div>
+          <div :if={not @email_sent}>
+            For security purposes, we have blocked access to your accounts, projects and workflows until you confirm your account. Please click resend confirmation email to receive instructions on how to confirm your OpenFn account or update your email address if you have not received a confirmation email.
+          </div>
         </div>
 
-        <.modal_footer class="mt-6 mx-6 flex items-center justify-between">
-          <div class="flex-grow">
-            <div :if={@email_sent} class="flex items-center">
-              <div class="flex-shrink-0">
-                <.icon name="hero-check-circle-solid" class="h-5 w-5 text-green-400" />
-              </div>
-              <div class="ml-2">
-                <p class="text-sm font-medium text-green-800">
-                  Confirmation email sent successfully
-                </p>
-              </div>
-            </div>
-          </div>
-          <div class="flex-none">
-            <.link
-              href={~p"/profile"}
-              class="inline-flex justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:w-auto"
-            >
-              Update email address
-            </.link>
+        <.modal_footer class="mt-6 mx-6">
+          <div class="sm:flex sm:flex-row-reverse">
             <button
               id="resend-confirmation-email-button"
               type="button"
@@ -119,6 +95,12 @@ defmodule LightningWeb.AccountConfirmationModal do
             >
               Resend confirmation email
             </button>
+            <.link
+              href={~p"/profile"}
+              class="inline-flex justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:w-auto"
+            >
+              Update email address
+            </.link>
           </div>
         </.modal_footer>
       </.modal>
