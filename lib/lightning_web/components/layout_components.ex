@@ -74,9 +74,12 @@ defmodule LightningWeb.LayoutComponents do
       end
 
     confirm_by_date =
-      assigns.current_user.inserted_at
-      |> Timex.shift(hours: 48)
-      |> Timex.format!("%A, %d-%b @ %H:%M UTC", :strftime)
+      if assigns.current_user,
+        do:
+          assigns.current_user.inserted_at
+          |> Timex.shift(hours: 48)
+          |> Timex.format!("%A, %d-%b @ %H:%M UTC", :strftime),
+        else: ""
 
     # description has the same title class except for height and font
     assigns =
@@ -90,6 +93,7 @@ defmodule LightningWeb.LayoutComponents do
     <LightningWeb.Components.Common.banner
       :if={@current_user && !@current_user.confirmed_at}
       type="danger"
+      id="account-confirmation-alert"
       message={"Please confirm your account before #{@confirm_by_date} to continue using OpenFn."}
       action={
         %{
