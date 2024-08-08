@@ -256,7 +256,7 @@ defmodule Lightning.Accounts.UserNotifier do
   """
   def deliver_update_email_warning(user, new_email) do
     deliver(user.email, "Your OpenFn email was changed", """
-    Hi #{user.email},
+    Hi #{user.first_name},
 
     We have received a request to change the email address associated with your OpenFn account from #{user.email} to #{new_email}.
 

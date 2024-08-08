@@ -34,7 +34,7 @@ defmodule LightningWeb.Components.Common do
       case assigns.type do
         "success" -> "hero-check-circle-solid"
         "warning" -> "hero-exclamation-triangle-solid"
-        "error" -> "hero-x-circle-solid"
+        "danger" -> "hero-x-circle-solid"
         _info -> "hero-information-circle-solid"
       end
 
@@ -49,7 +49,7 @@ defmodule LightningWeb.Components.Common do
     <div id={@id} class={"rounded-md bg-#{@color}-50 p-4 #{@class}"}>
       <div class="flex">
         <div class="flex-shrink-0">
-          <.icon name={@icon} class={"mb-1 h-5 w-5 text-#{@color}-400"} />
+          <.icon name={@icon} class={"h-5 w-5 text-#{@color}-400"} />
         </div>
         <div class={[
           "ml-3",
@@ -57,13 +57,13 @@ defmodule LightningWeb.Components.Common do
         ]}>
           <%= if @header do %>
             <h3 class={"text-sm font-medium text-#{@color}-800"}><%= @header %></h3>
-            <div class={"mt-2 text-sm text-#{@color}-700"}>
+            <p class={"mt-2 text-sm text-#{@color}-700"}>
               <%= render_slot(@message) %>
-            </div>
+            </p>
           <% else %>
-            <div class={"text-sm text-#{@color}-700"}>
+            <p class={"text-sm text-#{@color}-700"}>
               <%= render_slot(@message) %>
-            </div>
+            </p>
           <% end %>
           <%= if assigns[:link_right] do %>
             <p class="mt-3 text-sm md:ml-6 md:mt-0">
@@ -75,7 +75,8 @@ defmodule LightningWeb.Components.Common do
                 <span aria-hidden="true"> &rarr;</span>
               </a>
             </p>
-          <% else %>
+          <% end %>
+          <%= if Enum.count(@actions) > 0 do %>
             <div :if={@actions} class={["mt-4"]}>
               <div class="-mx-2 -my-1.5 flex">
                 <%= for item <- @actions do %>
@@ -103,10 +104,7 @@ defmodule LightningWeb.Components.Common do
     """
   end
 
-  # background: FDEBEB
-  # text: EF4444
-
-  attr :id, :string, default: "alert"
+  attr :id, :string, default: "banner"
   attr :type, :string, required: true
   attr :class, :string, default: ""
   attr :message, :string, required: true
@@ -118,52 +116,22 @@ defmodule LightningWeb.Components.Common do
   provide a link or button to perform a single action.
   """
   def banner(assigns) do
-    background_color =
+    classes =
       case assigns.type do
-        "success" -> "green"
-        "warning" -> "yellow"
-        "danger" -> "red"
-        _info -> "blue"
+        "success" -> "alert-success"
+        "warning" -> "alert-warning"
+        "danger" -> "alert-danger"
+        _info -> "alert-info"
       end
 
-    font_color =
-      case assigns.type do
-        "success" -> "green"
-        "warning" -> "yellow"
-        "danger" -> "red"
-        _info -> "blue"
-      end
-
-    assigns =
-      assign(assigns,
-        background_color: background_color,
-        font_color: font_color,
-        class: assigns.class
-      )
+    assigns = assign(assigns, class: [classes] ++ List.wrap(assigns.class))
 
     ~H"""
-    <div class="relative isolate flex items-center gap-x-6 overflow-hidden bg-gray-50 px-6 py-2.5 sm:px-3.5 sm:before:flex-1">
-      <div
-        class="absolute left-[max(-7rem,calc(50%-52rem))] top-1/2 -z-10 -translate-y-1/2 transform-gpu blur-2xl"
-        aria-hidden="true"
-      >
-        <div
-          class="aspect-[577/310] w-[36.0625rem] bg-gradient-to-r from-[#ff80b5] to-[#9089fc] opacity-30"
-          style="clip-path: polygon(74.8% 41.9%, 97.2% 73.2%, 100% 34.9%, 92.5% 0.4%, 87.5% 0%, 75% 28.6%, 58.5% 54.6%, 50.1% 56.8%, 46.9% 44%, 48.3% 17.4%, 24.7% 53.9%, 0% 27.9%, 11.9% 74.2%, 24.9% 54.1%, 68.6% 100%, 74.8% 41.9%)"
-        >
-        </div>
-      </div>
-      <div
-        class="absolute left-[max(45rem,calc(50%+8rem))] top-1/2 -z-10 -translate-y-1/2 transform-gpu blur-2xl"
-        aria-hidden="true"
-      >
-        <div
-          class="aspect-[577/310] w-[36.0625rem] bg-gradient-to-r from-[#ff80b5] to-[#9089fc] opacity-30"
-          style="clip-path: polygon(74.8% 41.9%, 97.2% 73.2%, 100% 34.9%, 92.5% 0.4%, 87.5% 0%, 75% 28.6%, 58.5% 54.6%, 50.1% 56.8%, 46.9% 44%, 48.3% 17.4%, 24.7% 53.9%, 0% 27.9%, 11.9% 74.2%, 24.9% 54.1%, 68.6% 100%, 74.8% 41.9%)"
-        >
-        </div>
-      </div>
-      <p class="text-sm leading-6 text-gray-900">
+    <div class={[
+      "flex items-center gap-x-6 px-6 py-2.5 sm:px-3.5 sm:before:flex-1",
+      @class
+    ]}>
+      <p class="text-sm leading-6">
         <%= @message %>
         <%= if assigns[:action] do %>
           <a href={@action.target} class="whitespace-nowrap font-semibold">
@@ -173,7 +141,7 @@ defmodule LightningWeb.Components.Common do
         <% end %>
       </p>
       <div class="flex flex-1 justify-end">
-        <%!-- todo - if dismissable --%>
+        <%!-- todo - add if/when we have a dismissable banner --%>
       </div>
     </div>
     """

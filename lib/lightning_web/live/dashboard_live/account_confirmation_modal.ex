@@ -73,15 +73,18 @@ defmodule LightningWeb.AccountConfirmationModal do
             <span class="font-bold">Confirm your account</span>
           </div>
         </:title>
-        <div class="container mx-auto px-6 space-y-6 bg-white text-base text-gray-600">
-          <div :if={@email_sent}>
-            Confirmation email sent successfully
+        <div class="container mx-auto px-6 space-y-6 text-base text-gray-600">
+          <div>
+            This account has been blocked pending email confirmation. Please
+            check your email for a confirmation link, request that a new link be
+            sent, or update your email address to keep using OpenFn.
           </div>
-          <div :if={not @email_sent}>
-            For security purposes, we have blocked access to your projects and workflows until you confirm your account. Please click resend confirmation email to receive instructions on how to confirm your OpenFn account or update your email address if you have not received a confirmation email.
-          </div>
+          <Common.alert :if={@email_sent} type="info">
+            <:message>
+              A new link has been sent. Please check your email.
+            </:message>
+          </Common.alert>
         </div>
-
         <.modal_footer class="mt-6 mx-6">
           <div class="sm:flex sm:flex-row-reverse">
             <button
