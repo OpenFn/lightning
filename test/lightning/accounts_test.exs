@@ -17,6 +17,26 @@ defmodule Lightning.AccountsTest do
   import Lightning.AccountsFixtures
   import Lightning.Factories
 
+  test "confirmation_required?/1 returns false for users who are already confirmed" do
+    user = insert(:user, confirmed_at: DateTime.utc_now())
+    refute Accounts.confirmation_required?(user)
+  end
+
+  test "confirmation_required?/1 returns false for users who just created their accounts before 48 hours" do
+    user = insert(:user, confirmed_at: nil, inserted_at: DateTime.utc_now())
+    refute Accounts.confirmation_required?(user)
+  end
+
+  test "confirmation_required?/1 returns false for users who created their accounts more than 48 hours ago and haven't confirmed them" do
+    user =
+      insert(:user,
+        confirmed_at: nil,
+        inserted_at: DateTime.utc_now() |> Timex.shift(hours: -50)
+      )
+
+    assert Accounts.confirmation_required?(user)
+  end
+
   test "has_activity_in_projects?/1 returns true if user has activity in a project (is associated with a run) and false otherwise." do
     user = insert(:user)
     another_user = insert(:user)
