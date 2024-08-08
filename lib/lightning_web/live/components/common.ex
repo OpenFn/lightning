@@ -105,7 +105,11 @@ defmodule LightningWeb.Components.Common do
   end
 
   attr :id, :string, default: "banner"
-  attr :type, :string, required: true
+
+  attr :type, :string,
+    default: "info",
+    values: ["info", "success", "warning", "danger"]
+
   attr :class, :string, default: ""
   attr :message, :string, required: true
   attr :action, :map, required: false, default: nil
@@ -116,15 +120,10 @@ defmodule LightningWeb.Components.Common do
   provide a link or button to perform a single action.
   """
   def banner(assigns) do
-    classes =
-      case assigns.type do
-        "success" -> "alert-success"
-        "warning" -> "alert-warning"
-        "danger" -> "alert-danger"
-        _info -> "alert-info"
-      end
-
-    assigns = assign(assigns, class: [classes] ++ List.wrap(assigns.class))
+    assigns =
+      assign(assigns,
+        class: ["alert-#{assigns.type}" | List.wrap(assigns.class)]
+      )
 
     ~H"""
     <div class={[
