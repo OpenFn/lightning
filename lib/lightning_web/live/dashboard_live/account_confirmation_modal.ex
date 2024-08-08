@@ -1,4 +1,38 @@
 defmodule LightningWeb.AccountConfirmationModal do
+  @moduledoc """
+  A LiveView component for displaying an account confirmation modal.
+
+  This component is responsible for informing users that access to their
+  accounts, projects, and workflows is restricted until they confirm
+  their account. It provides functionality to resend the confirmation
+  email and allows users to update their email address if needed.
+
+  ## Features
+
+  - Displays a modal with instructions for account confirmation.
+  - Allows users to resend the confirmation email.
+  - Provides feedback when the confirmation email is successfully sent.
+  - Allows users to navigate to the profile page to update their email address.
+
+  ## Usage
+
+  Include this component in your LiveView template where you need to prompt
+  users to confirm their account. The component determines whether the modal
+  should be shown based on the current view context.
+
+  ## Examples
+
+      <.live_component
+        module={LightningWeb.AccountConfirmationModal}
+        id="account-confirmation-modal"
+        current_user={@current_user}
+      />
+
+  The component uses assigns to manage its state, including:
+
+  - `:show_modal` - Determines if the modal should be visible.
+  - `:email_sent` - Indicates if the confirmation email was successfully sent.
+  """
   use LightningWeb, :live_component
 
   @impl true
