@@ -43,7 +43,15 @@ defmodule LightningWeb.UserConfirmationController do
   end
 
   def send_email(conn, _params) do
-    Lightning.Accounts.remind_account_confirmation(conn.assigns.current_user)
+    %{current_user: user} = conn.assigns
+
+    conn =
+      if !user.confirmed_at do
+        Lightning.Accounts.remind_account_confirmation(user)
+        conn |> put_flash(:info, "Email sent successfully")
+      else
+        conn
+      end
 
     redirect(conn, to: get_referer(conn))
   end
@@ -54,7 +62,7 @@ defmodule LightningWeb.UserConfirmationController do
     |> List.first()
     |> case do
       nil -> "/projects"
-      referer -> referer |> URI.parse() |> Map.get(:path)
+      referer -> URI.parse(referer) |> Map.get(:path)
     end
   end
 
