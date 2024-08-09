@@ -880,11 +880,6 @@ defmodule Lightning.SetupUtils do
   without using the web UI.
   """
   def setup_user(user, token, project_names, credentials) do
-    IO.inspect("Doing a lot here!")
-    IO.inpsect(user)
-    IO.inpsect(project_names)
-    IO.inpsect(credentials)
-
     # create user
     {:ok, user} = Accounts.create_user(user)
 
@@ -897,7 +892,8 @@ defmodule Lightning.SetupUtils do
 
     # create projects
     projects =
-      Enum.map(project_names, fn name ->
+      project_names
+      |> Enum.map(fn name ->
         {:ok, project} =
           Projects.create_project(
             %{
@@ -913,5 +909,20 @@ defmodule Lightning.SetupUtils do
       end)
 
     # create credentials
+    Enum.each(credentials, fn credential ->
+      {:ok, _credential} =
+        Credentials.create_credential(
+          credential
+          |> Map.put(:user_id, user.id)
+          |> Map.put(
+            :project_credentials,
+            Enum.map(projects, fn project ->
+              %{project_id: project.id}
+            end)
+          )
+        )
+    end)
+
+    :ok
   end
 end
