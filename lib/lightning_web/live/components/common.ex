@@ -57,13 +57,13 @@ defmodule LightningWeb.Components.Common do
         ]}>
           <%= if @header do %>
             <h3 class={"text-sm font-medium text-#{@color}-800"}><%= @header %></h3>
-            <p class={"mt-2 text-sm text-#{@color}-700"}>
+            <div class={"mt-2 text-sm text-#{@color}-700"}>
               <%= render_slot(@message) %>
-            </p>
+            </div>
           <% else %>
-            <p class={"text-sm text-#{@color}-700"}>
+            <div class={"text-sm text-#{@color}-700"}>
               <%= render_slot(@message) %>
-            </p>
+            </div>
           <% end %>
           <%= if assigns[:link_right] do %>
             <p class="mt-3 text-sm md:ml-6 md:mt-0">
@@ -127,10 +127,13 @@ defmodule LightningWeb.Components.Common do
     assigns = assign(assigns, class: [classes] ++ List.wrap(assigns.class))
 
     ~H"""
-    <div class={[
-      "flex items-center gap-x-6 px-6 py-2.5 sm:px-3.5 sm:before:flex-1",
-      @class
-    ]}>
+    <div
+      id={@id}
+      class={[
+        "flex items-center gap-x-6 px-6 py-2.5 sm:px-3.5 sm:before:flex-1",
+        @class
+      ]}
+    >
       <p class="text-sm leading-6">
         <%= @message %>
         <%= if assigns[:action] do %>
