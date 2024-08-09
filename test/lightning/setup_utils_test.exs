@@ -4,7 +4,9 @@ defmodule Lightning.SetupUtilsTest do
   import Swoosh.TestAssertions
 
   alias Lightning.{Accounts, Projects, Workflows, Jobs, SetupUtils}
-  alias Lightning.Accounts.User
+  alias Lightning.Projects.{Project, ProjectUser, ProjectCredential}
+  alias Lightning.Accounts.{User, UserToken}
+  alias Lightning.Credentials.{Credential}
 
   describe "Setup demo site seed data" do
     setup do
@@ -34,7 +36,7 @@ defmodule Lightning.SetupUtilsTest do
       User.valid_password?(super_user, "welcome123")
 
       user_token =
-        Lightning.Repo.all(Lightning.Accounts.UserToken)
+        Lightning.Repo.all(UserToken)
         |> List.first()
 
       assert user_token.user_id == super_user.id
@@ -645,6 +647,68 @@ defmodule Lightning.SetupUtilsTest do
 
       assert Repo.all(Lightning.Invocation.LogLine)
              |> Enum.count() == 0
+    end
+  end
+
+  describe "setup_user/4" do
+    test "creates a user, an api token, projects, and credentials" do
+      assert :ok ==
+               Lightning.SetupUtils.setup_user(
+                 %{
+                   first_name: "Taylor",
+                   last_name: "Downs",
+                   email: "contact@openfn.org",
+                   password: "shh12345678!"
+                 },
+                 "abc123",
+                 ["project-a", "project-b"],
+                 [
+                   %{
+                     name: "openmrs",
+                     schema: "raw",
+                     body: %{"a" => "secret"}
+                   },
+                   %{
+                     name: "dhis2",
+                     schema: "raw",
+                     body: %{"b" => "safe"}
+                   }
+                 ]
+               )
+
+      # check that the user and the API token has been created
+      assert %User{id: user_id} = Repo.get_by(User, email: "contact@openfn.org")
+      assert %UserToken{} = Repo.get_by(UserToken, token: "abc123")
+
+      # check that both projects are there
+      assert [%Project{id: p1_id}, %Project{id: p2_id}] = Repo.all(Project)
+
+      # check that the user has owner access to both
+      assert [
+               %ProjectUser{project_id: ^p1_id, user_id: ^user_id, role: :owner},
+               %ProjectUser{project_id: ^p2_id, user_id: ^user_id, role: :owner}
+             ] =
+               Repo.all(ProjectUser)
+
+      credentials =
+        Repo.all(Credential) |> Repo.preload(:project_credentials)
+
+      assert [
+               %Credential{
+                 name: "openmrs",
+                 project_credentials: [
+                   %ProjectCredential{project_id: ^p1_id},
+                   %ProjectCredential{project_id: ^p2_id}
+                 ]
+               },
+               %Credential{
+                 name: "dhis2",
+                 project_credentials: [
+                   %ProjectCredential{project_id: ^p1_id},
+                   %ProjectCredential{project_id: ^p2_id}
+                 ]
+               }
+             ] = credentials
     end
   end
 
