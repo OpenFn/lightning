@@ -54,8 +54,8 @@
       <Common.flash flash={@flash} kind={:error} />
       <.live_nav_block
         :if={
-          not assigns[:account_confirmation_required?] or
-            @socket.view == LightningWeb.ProfileLive.Edit
+          @socket.view == LightningWeb.ProfileLive.Edit or
+            not Map.has_key?(assigns, :account_confirmation_required?)
         }
         flash={@flash}
       >
