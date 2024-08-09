@@ -829,6 +829,13 @@ defmodule Lightning.Accounts do
     end
   end
 
+  def remind_account_confirmation(%User{} = user) do
+    UserNotifier.remind_account_confirmation(
+      user,
+      build_email_token(user)
+    )
+  end
+
   @doc """
   Confirms a user by the given token.
 
@@ -952,4 +959,10 @@ defmodule Lightning.Accounts do
     )
     |> Repo.all()
   end
+
+  def confirmation_required?(%User{confirmed_at: nil, inserted_at: inserted_at}) do
+    DateTime.diff(DateTime.utc_now(), inserted_at, :hour) >= 48
+  end
+
+  def confirmation_required?(_user), do: false
 end

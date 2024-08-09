@@ -5,8 +5,7 @@ defmodule LightningWeb.Plugs.Redirect do
   This plug takes an option `:to` which specifies the target URL for the redirection.
   """
 
-  use Phoenix.Controller
-  import Plug.Conn
+  use LightningWeb, :controller
 
   @doc """
   Initializes the plug options.

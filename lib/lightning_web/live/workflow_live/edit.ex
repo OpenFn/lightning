@@ -442,11 +442,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
             ~p"/projects/#{@project.id}/w/#{@workflow.id}?s=#{@selected_job.id}"
           }
         />
-        <.workflow_info_banner
+        <Common.banner
           :if={@display_banner}
+          type="warning"
           id={"canvas-banner-#{@current_user.id}"}
-          position="absolute"
           message={@banner_message}
+          class="absolute"
+          icon
+          centered
         />
         <.form
           id="workflow-form"

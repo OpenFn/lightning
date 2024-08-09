@@ -2675,10 +2675,10 @@ defmodule LightningWeb.ProjectLiveTest do
       # form does not exist
       refute has_element?(view, "form#failure-alert-#{project_user.id}")
 
-      # status is displayed as disabled even though it is enabled on the project user
+      # status is displayed as Unavailable even though it is enabled on the project user
       assert view
              |> element("#failure-alert-status-#{project_user.id}")
-             |> render() =~ "Disabled"
+             |> render() =~ "Unavailable"
     end
   end
 

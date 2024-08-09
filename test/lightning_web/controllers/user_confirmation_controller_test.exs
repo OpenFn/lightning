@@ -4,6 +4,8 @@ defmodule LightningWeb.UserConfirmationControllerTest do
   alias Lightning.Accounts
   alias Lightning.Repo
   import Lightning.AccountsFixtures
+  import Lightning.Factories
+  import Swoosh.TestAssertions
 
   setup do
     %{user: user_fixture()}
@@ -14,6 +16,44 @@ defmodule LightningWeb.UserConfirmationControllerTest do
       conn = get(conn, Routes.user_confirmation_path(conn, :new))
       response = html_response(conn, 200)
       assert response =~ "Resend confirmation instructions"
+    end
+  end
+
+  describe "GET /users/send-confirmation-email" do
+    test "sends confirmation email to the logged in user when that user has not confirmed their accounts",
+         %{conn: conn} do
+      user = insert(:user, confirmed_at: nil)
+
+      conn =
+        conn
+        |> log_in_user(user)
+        |> get("/users/send-confirmation-email")
+
+      assert redirected_to(conn) == "/projects"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
+               "Confirmation email sent successfully"
+
+      assert_email_sent(
+        subject: "Confirm your OpenFn account",
+        to: user.email
+      )
+    end
+
+    test "doesn't sends confirmation email to the logged in user when that user has confirmed their accounts",
+         %{conn: conn} do
+      user = insert(:user, confirmed_at: DateTime.utc_now())
+
+      conn =
+        conn
+        |> log_in_user(user)
+        |> get("/users/send-confirmation-email")
+
+      assert redirected_to(conn) == "/projects"
+
+      refute Phoenix.Flash.get(conn.assigns.flash, :info)
+
+      refute_email_sent(subject: "Confirm your OpenFn account")
     end
   end
 
