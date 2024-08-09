@@ -52,7 +52,13 @@
     <div class="flex-auto">
       <Common.flash flash={@flash} kind={:info} />
       <Common.flash flash={@flash} kind={:error} />
-      <.live_nav_block flash={@flash}>
+      <.live_nav_block
+        :if={
+          not assigns[:account_confirmation_required?] or
+            @socket.view == LightningWeb.ProfileLive.Edit
+        }
+        flash={@flash}
+      >
         <%= @inner_content %>
       </.live_nav_block>
       <.live_component module={LightningWeb.ModalPortal} id="modal-portal" />
