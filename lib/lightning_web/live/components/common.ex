@@ -6,6 +6,15 @@ defmodule LightningWeb.Components.Common do
 
   alias Phoenix.LiveView.JS
 
+  defp select_icon(type) do
+    case type do
+      "success" -> "hero-check-circle-solid"
+      "warning" -> "hero-exclamation-triangle-solid"
+      "danger" -> "hero-x-circle-solid"
+      _info -> "hero-information-circle-solid"
+    end
+  end
+
   attr :id, :string, default: "alert"
   attr :type, :string, required: true
   attr :class, :string, default: ""
@@ -30,13 +39,7 @@ defmodule LightningWeb.Components.Common do
         _info -> "blue"
       end
 
-    icon =
-      case assigns.type do
-        "success" -> "hero-check-circle-solid"
-        "warning" -> "hero-exclamation-triangle-solid"
-        "danger" -> "hero-x-circle-solid"
-        _info -> "hero-information-circle-solid"
-      end
+    icon = select_icon(assigns.type)
 
     assigns =
       assign(assigns,
@@ -108,6 +111,8 @@ defmodule LightningWeb.Components.Common do
   attr :type, :string, required: true
   attr :class, :string, default: ""
   attr :message, :string, required: true
+  attr :centered, :boolean, default: false
+  attr :icon, :boolean, default: false
   attr :action, :map, required: false, default: nil
   attr :dismissable, :boolean, default: false
 
@@ -124,17 +129,27 @@ defmodule LightningWeb.Components.Common do
         _info -> "alert-info"
       end
 
-    assigns = assign(assigns, class: [classes] ++ List.wrap(assigns.class))
+    icon_name = select_icon(assigns.type)
+
+    assigns =
+      assign(assigns,
+        class: [classes] ++ List.wrap(assigns.class),
+        icon_name: icon_name
+      )
 
     ~H"""
     <div
       id={@id}
       class={[
-        "flex items-center gap-x-6 px-6 py-2.5 sm:px-3.5 sm:before:flex-1",
+        "w-full flex items-center gap-x-6 px-6 py-2.5 sm:px-3.5",
+        @centered && "sm:before:flex-1",
         @class
       ]}
     >
       <p class="text-sm leading-6">
+        <%= if @icon == true do %>
+          <.icon name={@icon_name} class="h-5 w-5 align-middle mr-1" />
+        <% end %>
         <%= @message %>
         <%= if assigns[:action] do %>
           <a href={@action.target} class="whitespace-nowrap font-semibold">

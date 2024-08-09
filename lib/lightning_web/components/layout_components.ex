@@ -92,8 +92,9 @@ defmodule LightningWeb.LayoutComponents do
     ~H"""
     <LightningWeb.Components.Common.banner
       :if={@current_user && !@current_user.confirmed_at}
-      type="danger"
       id="account-confirmation-alert"
+      type="danger"
+      centered
       message={"Please confirm your account before #{@confirm_by_date} to continue using OpenFn."}
       action={
         %{
