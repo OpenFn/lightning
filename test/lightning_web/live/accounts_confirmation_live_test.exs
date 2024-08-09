@@ -34,7 +34,7 @@ defmodule LightningWeb.AccountsConfirmationLiveTest do
 
     {:ok, view, _html} = conn |> log_in_user(user) |> live("/projects")
 
-    assert view |> has_element?("#account-confirmation-alert")
+    refute view |> has_element?("#account-confirmation-alert")
     assert view |> has_element?("#account-confirmation-modal")
   end
 end

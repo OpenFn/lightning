@@ -6,6 +6,15 @@ defmodule LightningWeb.Components.Common do
 
   alias Phoenix.LiveView.JS
 
+  defp select_icon(type) do
+    case type do
+      "success" -> "hero-check-circle-solid"
+      "warning" -> "hero-exclamation-triangle-solid"
+      "danger" -> "hero-x-circle-solid"
+      _info -> "hero-information-circle-solid"
+    end
+  end
+
   attr :id, :string, default: "alert"
   attr :type, :string, required: true
   attr :class, :string, default: ""
@@ -30,13 +39,7 @@ defmodule LightningWeb.Components.Common do
         _info -> "blue"
       end
 
-    icon =
-      case assigns.type do
-        "success" -> "hero-check-circle-solid"
-        "warning" -> "hero-exclamation-triangle-solid"
-        "danger" -> "hero-x-circle-solid"
-        _info -> "hero-information-circle-solid"
-      end
+    icon = select_icon(assigns.type)
 
     assigns =
       assign(assigns,
@@ -57,13 +60,13 @@ defmodule LightningWeb.Components.Common do
         ]}>
           <%= if @header do %>
             <h3 class={"text-sm font-medium text-#{@color}-800"}><%= @header %></h3>
-            <p class={"mt-2 text-sm text-#{@color}-700"}>
+            <div class={"mt-2 text-sm text-#{@color}-700"}>
               <%= render_slot(@message) %>
-            </p>
+            </div>
           <% else %>
-            <p class={"text-sm text-#{@color}-700"}>
+            <div class={"text-sm text-#{@color}-700"}>
               <%= render_slot(@message) %>
-            </p>
+            </div>
           <% end %>
           <%= if assigns[:link_right] do %>
             <p class="mt-3 text-sm md:ml-6 md:mt-0">
@@ -112,6 +115,8 @@ defmodule LightningWeb.Components.Common do
 
   attr :class, :string, default: ""
   attr :message, :string, required: true
+  attr :centered, :boolean, default: false
+  attr :icon, :boolean, default: false
   attr :action, :map, required: false, default: nil
   attr :dismissable, :boolean, default: false
 
@@ -122,15 +127,23 @@ defmodule LightningWeb.Components.Common do
   def banner(assigns) do
     assigns =
       assign(assigns,
-        class: ["alert-#{assigns.type}" | List.wrap(assigns.class)]
+        class: ["alert-#{assigns.type}" | List.wrap(assigns.class)],
+        icon_name: select_icon(assigns.type)
       )
 
     ~H"""
-    <div class={[
-      "flex items-center gap-x-6 px-6 py-2.5 sm:px-3.5 sm:before:flex-1",
-      @class
-    ]}>
+    <div
+      id={@id}
+      class={[
+        "w-full flex items-center gap-x-6 px-6 py-2.5 sm:px-3.5",
+        @centered && "sm:before:flex-1",
+        @class
+      ]}
+    >
       <p class="text-sm leading-6">
+        <%= if @icon == true do %>
+          <.icon name={@icon_name} class="h-5 w-5 align-middle mr-1" />
+        <% end %>
         <%= @message %>
         <%= if assigns[:action] do %>
           <a href={@action.target} class="whitespace-nowrap font-semibold">
