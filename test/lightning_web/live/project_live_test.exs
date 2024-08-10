@@ -648,7 +648,7 @@ defmodule LightningWeb.ProjectLiveTest do
               "#credentials"
           )
 
-        credential_name = "My Credential"
+        credential_name = Lightning.Name.generate()
 
         refute html =~ credential_name
 
