@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-58D63ECA.js"></script>
+    <script src="dist/sidebar_items-EBDEF082.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -197,6 +197,19 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#setup_user/4" translate="no">setup_user(user, token, project_names, credentials)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>In some (mostly remote-controlled) deployments, it's necessary to create a
+user, empty projects that they can access, and credentials (shared with those
+projects) that they own so that later <code class="inline">openfn deploy</code> calls can make use of
+these artifacts.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#tear_down/1" translate="no">tear_down(opts \\ [destroy_super: false])</a>
 
       </div>
@@ -338,6 +351,33 @@ Pages
       </div>
 
 <p>Creates initial data and returns the created records.</p>
+  </section>
+</section>
+<section class="detail" id="setup_user/4">
+
+  <div class="detail-header">
+    <a href="#setup_user/4" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">setup_user(user, token, project_names, credentials)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L882" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>In some (mostly remote-controlled) deployments, it's necessary to create a
+user, empty projects that they can access, and credentials (shared with those
+projects) that they own so that later <code class="inline">openfn deploy</code> calls can make use of
+these artifacts.</p><p>When run <em>before</em> <code class="inline">openfn deploy</code>, this function makes it possible to set up
+an entire lightning instance with a working project (including secrets)
+without using the web UI.</p>
   </section>
 </section>
 <section class="detail" id="tear_down/1">
