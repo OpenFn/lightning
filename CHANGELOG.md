@@ -24,6 +24,9 @@ and this project adheres to
 
 ### Changed
 
+- Enforced uniqueness on credential names _by user_.
+  [#2371](https://github.com/OpenFn/lightning/pull/2371)
+
 ### Fixed
 
 ## [v2.7.16] - 2024-08-07
