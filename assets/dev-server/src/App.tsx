@@ -48,11 +48,13 @@ export default () => {
     setHistory(h => [evt, ...h]);
   };
 
-  // TODO how do I update the store when a pickl is changed?
+  const [store, setStore] = useState(() => createWorkflowStore({}, () => {}));
+
+  // TODO how do I update the store when a picklist is changed?
   // Maybe just force a remount?
-  const [store, setStore] = useState(() =>
-    createWorkflowStore(workflows[workflowId], onChange)
-  );
+  // const [store, setStore] = useState(() =>
+  //   createWorkflowStore(workflows[workflowId], onChange)
+  // );
   const [selectedId, setSelectedId] = useState<string>();
   const ref = useRef(null);
 
@@ -65,28 +67,27 @@ export default () => {
   // on startup (or on workflow id change) create a store
   // on change, set the state back into the app.
   // Now if the store changes, we can deal with it
-  // useEffect(() => {
+  useEffect(() => {
+    const s = createWorkflowStore(workflows[workflowId], onChange);
 
-  //   const s = createWorkflowStore(workflows[workflowId], onChange);
+    const unsubscribe = s.subscribe(({ jobs, edges, triggers }) => {
+      // console.log('store change: ', { jobs, edges, triggers });
+      // setWorkflow({ jobs, edges, triggers });
+      // setStore()
+    });
 
-  //   const unsubscribe = s.subscribe(({ jobs, edges, triggers }) => {
-  //     console.log('store change: ', { jobs, edges, triggers });
-  //     setWorkflow({ jobs, edges, triggers });
-  //   });
+    setStore(s);
+    // const { jobs, edges, triggers } = s.getState();
 
-  //   const { jobs, edges, triggers } = s.getState();
-  //   // Set the chart to null to reset its positions
-  //   setWorkflow({ jobs: [], edges: [], triggers: [] });
+    // // now set the chart properly
+    // // use a timeout to make sure its applied
+    // setTimeout(() => {
+    //   setWorkflow({ jobs, edges, triggers });
+    //   setStore(s);
+    // }, 1);
 
-  //   // now set the chart properly
-  //   // use a timeout to make sure its applied
-  //   setTimeout(() => {
-  //     setWorkflow({ jobs, edges, triggers });
-  //     setStore(s);
-  //   }, 1);
-
-  //   return () => unsubscribe();
-  // }, [workflowId]);
+    return () => unsubscribe();
+  }, [workflowId]);
 
   const handleSelectionChange = useCallback((id: string) => {
     setSelectedId(id);
@@ -152,6 +153,8 @@ export default () => {
           store={store}
           requestChange={handleRequestChange}
           onSelectionChange={handleSelectionChange}
+          layoutDuration={0}
+          forceFit
         />
       </div>
       <div className="flex-1 flex flex-col h-full w-1/3">
