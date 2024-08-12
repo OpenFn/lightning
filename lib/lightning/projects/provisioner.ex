@@ -13,6 +13,7 @@ defmodule Lightning.Projects.Provisioner do
 
   alias Ecto.Multi
   alias Lightning.Accounts.User
+  alias Lightning.Projects
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectUser
   alias Lightning.Repo
@@ -87,9 +88,15 @@ defmodule Lightning.Projects.Provisioner do
 
   @spec parse_document(Project.t(), map()) :: Ecto.Changeset.t(Project.t())
   def parse_document(%Project{} = project, data) when is_map(data) do
+    project_credentials = Projects.list_project_credentials(project)
+
     project
     |> project_changeset(data)
-    |> cast_assoc(:workflows, with: &workflow_changeset/2)
+    |> cast_assoc(:workflows,
+      with: fn workflow, attrs ->
+        workflow_changeset(workflow, attrs, project_credentials)
+      end
+    )
     |> then(fn changeset ->
       case WorkflowUsageLimiter.limit_workflows_activation(
              project,
@@ -161,26 +168,29 @@ defmodule Lightning.Projects.Provisioner do
     |> Project.validate()
   end
 
-  defp workflow_changeset(workflow, attrs) do
+  defp workflow_changeset(workflow, attrs, project_credentials) do
     workflow
     |> cast(attrs, [:id, :name, :delete])
     |> optimistic_lock(:lock_version)
     |> validate_required([:id])
     |> maybe_mark_for_deletion()
     |> validate_extraneous_params()
-    |> cast_assoc(:jobs, with: &job_changeset/2)
+    |> cast_assoc(:jobs,
+      with: fn job, params -> job_changeset(job, params, project_credentials) end
+    )
     |> cast_assoc(:triggers, with: &trigger_changeset/2)
     |> cast_assoc(:edges, with: &edge_changeset/2)
     |> Workflow.validate()
   end
 
-  defp job_changeset(job, attrs) do
+  defp job_changeset(job, attrs, project_credentials) do
     job
     |> cast(attrs, [:id, :name, :body, :adaptor, :delete])
     |> validate_required([:id])
     |> unique_constraint(:id, name: :jobs_pkey)
     |> Job.validate()
     |> validate_extraneous_params()
+    |> maybe_add_project_credential(project_credentials)
     |> maybe_mark_for_deletion()
     |> maybe_ignore()
   end
@@ -247,6 +257,32 @@ defmodule Lightning.Projects.Provisioner do
         |> add_error(:delete, "cannot change or add a record while deleting")
 
       _ ->
+        changeset
+    end
+  end
+
+  defp maybe_add_project_credential(changeset, project_credentials) do
+    credential_name = changeset.params["credential"] |> dbg()
+
+    project_credential =
+      credential_name &&
+        Enum.find(project_credentials, fn project_credential ->
+          project_credential.credential.name == credential_name
+        end)
+        |> dbg()
+
+    cond do
+      credential_name && project_credential ->
+        put_change(changeset, :project_credential_id, project_credential.id)
+
+      credential_name && is_nil(project_credential) ->
+        add_error(
+          changeset,
+          :credential,
+          "a credential with the given name does not exist in the project"
+        )
+
+      true ->
         changeset
     end
   end
