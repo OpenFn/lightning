@@ -17,10 +17,11 @@ and this project adheres to
 
 ### Added
 
-- Added an `iex` command to setup a user, apiToken, project, and credential so
-  that it's possible to get a fully running lightning instance via external
-  shell script. (This is a tricky requirement for a distributed set of local
-  deployments) [#2369](https://github.com/OpenFn/lightning/issues/2369)
+- Added an `iex` command to setup a user, an apiToken, and credentials so that
+  it's possible to get a fully running lightning instance via external shell
+  script. (This is a tricky requirement for a distributed set of local
+  deployments) [#2369](https://github.com/OpenFn/lightning/issues/2369) and
+  [#2373](https://github.com/OpenFn/lightning/pull/2373)
 
 ### Changed
 
