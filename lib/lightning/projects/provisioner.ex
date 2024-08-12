@@ -255,7 +255,7 @@ defmodule Lightning.Projects.Provisioner do
   end
 
   defp maybe_add_project_credentials(changeset, user_or_repo_connection) do
-    credentials_params = changeset.params["credentials"]
+    credentials_params = changeset.params["project_credentials"]
 
     if is_struct(user_or_repo_connection, User) and is_list(credentials_params) do
       user_credentials =
@@ -316,6 +316,7 @@ defmodule Lightning.Projects.Provisioner do
   """
   def validate_extraneous_params(changeset) do
     param_keys = changeset.params |> Map.keys() |> MapSet.new(&to_string/1)
+
     field_keys = changeset.types |> Map.keys() |> MapSet.new(&to_string/1)
 
     extraneous_params = MapSet.difference(param_keys, field_keys)

@@ -18,7 +18,7 @@ defmodule Lightning.Projects.ProvisionerTest do
                name: ["This field can't be blank."]
              }
 
-      %{body: body} = valid_document(%{email: "email@email.com"})
+      %{body: body} = valid_document()
 
       body =
         body
@@ -77,14 +77,40 @@ defmodule Lightning.Projects.ProvisionerTest do
       Mox.verify_on_exit!()
       user = insert(:user)
 
+      credential = insert(:credential, name: "Test Credential", user: user)
+
       %{
-        body: body,
+        body: %{"workflows" => [workflow]} = body,
         project_id: project_id,
         workflow_id: workflow_id,
         first_job_id: first_job_id,
-        second_job_id: second_job_id,
-        credential_id: _credential_id
-      } = valid_document(user)
+        second_job_id: second_job_id
+      } = valid_document()
+
+      project_credential_id = Ecto.UUID.generate()
+
+      credentials_payload = [
+        %{
+          "id" => project_credential_id,
+          "name" => credential.name,
+          "owner" => user.email
+        }
+      ]
+
+      updated_workflow_jobs =
+        Enum.map(workflow["jobs"], fn job ->
+          if job["id"] == first_job_id do
+            job
+            |> Map.put("project_credential_id", project_credential_id)
+          else
+            job
+          end
+        end)
+
+      body_with_credentials =
+        body
+        |> Map.put("project_credentials", credentials_payload)
+        |> Map.put("workflows", [%{workflow | "jobs" => updated_workflow_jobs}])
 
       Mox.stub(
         Lightning.Extensions.MockUsageLimiter,
@@ -93,7 +119,11 @@ defmodule Lightning.Projects.ProvisionerTest do
       )
 
       {:ok, project} =
-        Provisioner.import_document(%Lightning.Projects.Project{}, user, body)
+        Provisioner.import_document(
+          %Lightning.Projects.Project{},
+          user,
+          body_with_credentials
+        )
 
       assert %{id: ^project_id, workflows: [workflow]} = project
 
@@ -134,7 +164,7 @@ defmodule Lightning.Projects.ProvisionerTest do
         end
       )
 
-      %{body: body} = valid_document(user, project.id)
+      %{body: body} = valid_document(project.id)
 
       {:ok, project} = Provisioner.import_document(project, user, body)
 
@@ -168,7 +198,7 @@ defmodule Lightning.Projects.ProvisionerTest do
         end
       )
 
-      %{body: body} = valid_document(user, project.id)
+      %{body: body} = valid_document(project.id)
 
       {:ok, project} = Provisioner.import_document(project, user, body)
 
@@ -233,7 +263,7 @@ defmodule Lightning.Projects.ProvisionerTest do
         end
       )
 
-      %{body: body, workflow_id: workflow_id} = valid_document(user, project.id)
+      %{body: body, workflow_id: workflow_id} = valid_document(project.id)
 
       {:ok, project} = Provisioner.import_document(project, user, body)
 
@@ -311,7 +341,7 @@ defmodule Lightning.Projects.ProvisionerTest do
         end
       )
 
-      %{body: body, workflow_id: workflow_id} = valid_document(user, project.id)
+      %{body: body, workflow_id: workflow_id} = valid_document(project.id)
 
       %{id: other_edge_id} = Lightning.Factories.insert(:edge)
 
@@ -355,7 +385,7 @@ defmodule Lightning.Projects.ProvisionerTest do
       %{
         body: body,
         second_job_id: second_job_id
-      } = valid_document(user, project.id)
+      } = valid_document(project.id)
 
       {:ok, project} = Provisioner.import_document(project, user, body)
 
@@ -412,7 +442,7 @@ defmodule Lightning.Projects.ProvisionerTest do
       %{
         body: body,
         workflow_id: workflow_id
-      } = valid_document(user, project.id)
+      } = valid_document(project.id)
 
       {:ok, project} = Provisioner.import_document(project, user, body)
       body = body |> remove_workflow_from_document(workflow_id)
@@ -469,7 +499,7 @@ defmodule Lightning.Projects.ProvisionerTest do
       project: %{id: project_id} = project,
       user: user
     } do
-      %{body: body} = valid_document(user, project_id)
+      %{body: body} = valid_document(project_id)
       error_msg = "Oopsie Doopsie"
 
       Lightning.Extensions.MockUsageLimiter
@@ -494,7 +524,7 @@ defmodule Lightning.Projects.ProvisionerTest do
       project: %{id: project_id} = project,
       user: user
     } do
-      %{body: body, workflow_id: workflow_id} = valid_document(user, project.id)
+      %{body: body, workflow_id: workflow_id} = valid_document(project.id)
 
       Mox.stub(
         Lightning.Extensions.MockUsageLimiter,
@@ -515,7 +545,7 @@ defmodule Lightning.Projects.ProvisionerTest do
     end
   end
 
-  defp valid_document(user, project_id \\ nil) do
+  defp valid_document(project_id \\ nil) do
     project_id = project_id || Ecto.UUID.generate()
     first_job_id = Ecto.UUID.generate()
     second_job_id = Ecto.UUID.generate()
@@ -523,18 +553,10 @@ defmodule Lightning.Projects.ProvisionerTest do
     workflow_id = Ecto.UUID.generate()
     trigger_edge_id = Ecto.UUID.generate()
     job_edge_id = Ecto.UUID.generate()
-    credential_id = Ecto.UUID.generate()
 
     body = %{
       "id" => project_id,
       "name" => "test-project",
-      "credentials" => [
-        %{
-          "id" => credential_id,
-          "name" => "Test Credential",
-          "owner" => user.email
-        }
-      ],
       "workflows" => [
         %{
           "id" => workflow_id,
@@ -584,8 +606,7 @@ defmodule Lightning.Projects.ProvisionerTest do
       first_job_id: first_job_id,
       second_job_id: second_job_id,
       trigger_id: trigger_id,
-      job_edge_id: job_edge_id,
-      credential_id: credential_id
+      job_edge_id: job_edge_id
     }
   end
 
