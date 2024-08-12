@@ -34,35 +34,44 @@ async function server() {
   });
 }
 
-const wait = async () =>
+const wait = async (delay = 500) =>
   new Promise(resolve => {
-    setTimeout(resolve, 500);
+    setTimeout(resolve, delay);
   });
 
 async function test() {
-  console.log(' >> test');
   // Launch the browser and open a new blank page
   const browser = await puppeteer.launch({
     executablePath: '/snap/bin/chromium', // needed for some reason on my local machine??
   });
-  console.log(' >> browser ready', browser.isConnected());
-  console.log(await browser.userAgent());
-  console.log(await browser.version());
-  // console.log(await browser.pages());
+
   const page = await browser.newPage();
-  console.log(' >>page ready');
 
   // Navigate the page to a URL
   await page.goto(`http://localhost:${PORT}`);
-  console.log(' >> navigated');
 
-  await page.setViewport({ width: 3000, height: 3000 });
+  await page.setViewport({ width: 2000, height: 1600 });
 
-  await wait();
+  await wait(200);
 
-  await page.screenshot({
-    path: 'page.png',
-  });
+  const chart = await page.$('.react-flow__pane');
+  while (true) {
+    const sel = await page.$('#select-workflow');
+    const id = await page.evaluate(el => el.value, sel);
+    console.log(id);
+    await chart.screenshot({
+      path: `tmp/${id}.png`,
+    });
+
+    const nextButton = await page.$('#next-workflow');
+
+    const disabled = await page.evaluate(el => el.disabled, nextButton);
+    if (disabled) {
+      break;
+    }
+    await nextButton.click();
+    await wait(50);
+  }
 
   // await browser.close();
 
