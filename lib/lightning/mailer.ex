@@ -4,7 +4,8 @@ defmodule Lightning.Mailer do
 
   defimpl Swoosh.Email.Recipient, for: Lightning.Accounts.User do
     def format(%Lightning.Accounts.User{} = user) do
-      {user.email, "#{user.first_name} #{user.last_name}"}
+      {[user.first_name, user.last_name] |> Enum.join(" ") |> String.trim(),
+       user.email}
     end
   end
 end

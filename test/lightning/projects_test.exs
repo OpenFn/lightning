@@ -231,11 +231,13 @@ defmodule Lightning.ProjectsTest do
 
       %{subject: subject, body: body} = data_retention_email(updated_project)
 
-      for %{user: %{email: email}} <- admins do
+      for %{user: user} <- admins do
+        email = Swoosh.Email.Recipient.format(user)
+
         assert_receive {:email,
                         %Swoosh.Email{
                           subject: ^subject,
-                          to: [{"", ^email}],
+                          to: [^email],
                           text_body: ^body
                         }}
       end
@@ -601,7 +603,7 @@ defmodule Lightning.ProjectsTest do
       for user <- [user_1, user_2] do
         email = %Email{
           subject: "Project scheduled for deletion",
-          to: [{"", user.email}],
+          to: [Swoosh.Email.Recipient.format(user)],
           from:
             {Lightning.Config.email_sender_name(),
              Lightning.Config.instance_admin_email()},
