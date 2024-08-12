@@ -11,8 +11,23 @@
   <:header>
     <LayoutComponents.header current_user={@current_user} project={@project}>
       <:title><%= @page_title %></:title>
+      <.button
+        id="export-history-button"
+        type="button"
+        phx-click="show-export-modal"
+        class="gap-x-2 text-sm"
+        tooltip="Export all 480 results matching your query"
+      >
+        <.icon name="hero-cloud-arrow-down" class="w-5 h-5" /> Export
+      </.button>
     </LayoutComponents.header>
   </:header>
+  <.live_component
+    :if={@show_export_modal}
+    module={LightningWeb.RunLive.ExportConfirmationModal}
+    id="export-confirmation-modal"
+    count_work_orders={@page.total_entries}
+  />
   <LayoutComponents.centered>
     <div>
       <%!-- Search Bar --%>
@@ -303,16 +318,6 @@
                   </div>
                 </div>
               </div>
-              <.button
-                id="export-history-button"
-                type="button"
-                phx-click={show_modal("confirm-history-export-modal")}
-                color_class="bg-white text-gray-900 hover:bg-gray-50 disabled:bg-gray-100"
-                class="gap-x-2 rounded-md px-3.5 py-2.5 text-sm shadow-sm ring-1 ring-inset ring-gray-300 disabled:cursor-not-allowed"
-                tooltip="Export all 480 results matching your query"
-              >
-                <.icon name="hero-cloud-arrow-down" class="w-5 h-5" /> Export
-              </.button>
             </div>
           </.form>
         </div>

@@ -32,7 +32,7 @@ defmodule LightningWeb.Components.NewInputs do
 
   def button(assigns) do
     ~H"""
-    <.tooltip_when_disabled id={@id} tooltip={@tooltip} disabled={@rest[:disabled]}>
+    <.tooltip id={@id} tooltip={@tooltip}>
       <button
         id={@id}
         type={@type}
@@ -48,17 +48,16 @@ defmodule LightningWeb.Components.NewInputs do
       >
         <%= render_slot(@inner_block) %>
       </button>
-    </.tooltip_when_disabled>
+    </.tooltip>
     """
   end
 
   attr :id, :string, required: true
-  attr :disabled, :boolean, default: false
   attr :tooltip, :string, default: nil
 
   slot :inner_block, required: true
 
-  defp tooltip_when_disabled(%{disabled: true, tooltip: tooltip} = assigns)
+  defp tooltip(%{tooltip: tooltip} = assigns)
        when not is_nil(tooltip) do
     ~H"""
     <span
@@ -72,7 +71,7 @@ defmodule LightningWeb.Components.NewInputs do
     """
   end
 
-  defp tooltip_when_disabled(assigns) do
+  defp tooltip(assigns) do
     ~H"""
     <%= render_slot(@inner_block) %>
     """

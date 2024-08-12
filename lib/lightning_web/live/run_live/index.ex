@@ -121,6 +121,7 @@ defmodule LightningWeb.RunLive.Index do
        active_menu_item: :runs,
        work_orders: [],
        selected_work_orders: [],
+       show_export_modal: false,
        can_edit_data_retention: can_edit_data_retention,
        can_run_workflow: can_run_workflow,
        pagination_path: &pagination_path(socket, project, &1),
@@ -458,6 +459,26 @@ defmodule LightningWeb.RunLive.Index do
     {:noreply,
      socket
      |> put_flash(:error, error_message)}
+  end
+
+  def handle_event("show-export-modal", _params, socket) do
+    {:noreply, socket |> assign(:show_export_modal, true)}
+  end
+
+  def handle_event("close-export-modal", _params, socket) do
+    {:noreply, socket |> assign(:show_export_modal, false)}
+  end
+
+  def handle_event("confirm-export", _params, socket) do
+    # HistoryExportWorker.enqueue()
+
+    {:noreply,
+     socket
+     |> assign(:show_export_modal, false)
+     |> put_flash(
+       :info,
+       "History export started successfuly. You will be notified by email after completion."
+     )}
   end
 
   defp find_workflow_name(workflows, workflow_id) do
