@@ -39,7 +39,7 @@ const Form = ({ nodeId, store, onChange }) => {
 };
 
 export default () => {
-  const [workflowId, setWorkflowId] = useState('chart1');
+  const [workflowId, setWorkflowId] = useState(Object.keys(workflows)[0]);
   const [history, setHistory] = useState([]);
 
   const onChange = evt => {
@@ -146,6 +146,7 @@ export default () => {
     <div className="flex flex-row h-full w-full">
       <div
         className="flex-1 border-2 border-slate-200 m-2 bg-secondary-100"
+        style={{ flexBasis: '66%' }}
         ref={ref}
       >
         <WorkflowDiagram
@@ -157,24 +158,16 @@ export default () => {
           forceFit
         />
       </div>
-      <div className="flex-1 flex flex-col h-full w-1/3">
+      <div className="flex flex-1 flex-col h-full" style={{ flexBasis: '33%' }}>
         <div className="border-2 border-slate-200 m-2 p-2">
-          {/*
-          Options to control data flow from outside the chart
-          These must write to the store and push to the component
-        */}
-          <button
-            className="bg-primary-500 mx-2 py-2 px-4 border border-transparent shadow-sm rounded-md text-white"
-            onClick={() => setWorkflowId('chart1')}
+          <select
+            id="select-workflow"
+            onChange={e => setWorkflowId(e.target.value)}
           >
-            Workflow 1
-          </button>
-          <button
-            className="bg-primary-500 mx-2 py-2 px-4 border border-transparent shadow-sm rounded-md text-white"
-            onClick={() => setWorkflowId('chart2')}
-          >
-            Workflow 2
-          </button>
+            {Object.keys(workflows).map(wf_id => (
+              <option>{wf_id}</option>
+            ))}
+          </select>
           <button
             className="bg-primary-500 mx-2 py-2 px-4 border border-transparent shadow-sm rounded-md text-white"
             onClick={() => addJob()}
