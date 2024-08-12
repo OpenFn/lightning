@@ -90,7 +90,6 @@ const Node = ({
   );
 
   const nodeOpacity = data.dropTargetError ? 0.4 : 1;
-
   return (
     <div className="group">
       <div className="flex flex-row cursor-pointer">

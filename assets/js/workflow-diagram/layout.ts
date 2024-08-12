@@ -1,5 +1,5 @@
 import Dagre from '../../vendor/dagre.js';
-import { timer } from 'd3-timer';
+// import { timer } from 'd3-timer';
 import { getRectOfNodes, ReactFlowInstance } from 'reactflow';
 
 import { FIT_PADDING } from './constants';
