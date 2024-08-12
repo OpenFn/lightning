@@ -34,14 +34,14 @@ defmodule Lightning.Projects.Project do
 
     has_many :project_users, ProjectUser
     has_many :users, through: [:project_users, :user]
-    has_many :project_credentials, ProjectCredential
-    has_many :credentials, through: [:project_credentials, :credential]
     has_many :project_oauth_clients, ProjectOauthClient
     has_many :oauth_clients, through: [:project_oauth_clients, :oauth_client]
 
     has_many :workflows, Workflow
     has_many :jobs, through: [:workflows, :jobs]
 
+    has_many :project_credentials, ProjectCredential
+    has_many :credentials, through: [:project_credentials, :credential]
     timestamps()
   end
 

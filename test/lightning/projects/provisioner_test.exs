@@ -89,13 +89,14 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       project_credential_id = Ecto.UUID.generate()
 
-      credentials_payload = [
-        %{
-          "id" => project_credential_id,
-          "name" => credential.name,
-          "owner" => user.email
-        }
-      ]
+      credentials_payload =
+        [
+          %{
+            "id" => project_credential_id,
+            "name" => credential.name,
+            "owner" => user.email
+          }
+        ]
 
       updated_workflow_jobs =
         Enum.map(workflow["jobs"], fn job ->
@@ -125,7 +126,13 @@ defmodule Lightning.Projects.ProvisionerTest do
           body_with_credentials
         )
 
-      assert %{id: ^project_id, workflows: [workflow]} = project
+      assert %{
+               id: ^project_id,
+               workflows: [workflow],
+               project_credentials: [project_credential]
+             } = project
+
+      assert %{id: ^project_credential_id} = project_credential
 
       assert %{id: ^workflow_id, jobs: jobs} = workflow
 
