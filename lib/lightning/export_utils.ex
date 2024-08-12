@@ -14,7 +14,12 @@ defmodule Lightning.ExportUtils do
 
   defp hyphenate(other), do: other
 
-  defp job_to_treenode(job) do
+  defp job_to_treenode(job, project_credentials) do
+    project_credential =
+      Enum.find(project_credentials, fn pc ->
+        pc.id == job.project_credential_id
+      end)
+
     %{
       # The identifier here for our YAML reducer will be the hyphenated name
       id: hyphenate(job.name),
@@ -22,7 +27,8 @@ defmodule Lightning.ExportUtils do
       node_type: :job,
       adaptor: job.adaptor,
       body: job.body,
-      credential: nil,
+      credential:
+        project_credential && project_credential_key(project_credential),
       globals: []
     }
   end
@@ -107,6 +113,7 @@ defmodule Lightning.ExportUtils do
     }
 
     map
+    |> dbg()
     |> Enum.filter(fn {key, _value} ->
       if Map.has_key?(map, :node_type) do
         ordering_map[map.node_type]
@@ -197,8 +204,21 @@ defmodule Lightning.ExportUtils do
       workflows
       |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
       |> Enum.reduce(%{}, fn workflow, acc ->
-        ytree = build_workflow_yaml_tree(workflow)
+        ytree = build_workflow_yaml_tree(workflow, project.project_credentials)
         Map.put(acc, hyphenate(workflow.name), ytree)
+      end)
+
+    credentials_map =
+      project.project_credentials
+      |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
+      |> Enum.reduce(%{}, fn project_credential, acc ->
+        ytree = build_project_credential_yaml_tree(project_credential)
+
+        Map.put(
+          acc,
+          project_credential_key(project_credential),
+          ytree
+        )
       end)
 
     %{
@@ -207,15 +227,29 @@ defmodule Lightning.ExportUtils do
       node_type: :project,
       globals: [],
       workflows: workflows_map,
-      credentials: []
+      credentials: credentials_map
     }
   end
 
-  defp build_workflow_yaml_tree(workflow) do
+  defp project_credential_key(project_credential) do
+    hyphenate(
+      "#{project_credential.credential.user.email} #{project_credential.credential.name}"
+    )
+  end
+
+  defp build_project_credential_yaml_tree(project_credential) do
+    %{
+      name: project_credential.credential.name,
+      node_type: :credential,
+      owner: project_credential.credential.user.email
+    }
+  end
+
+  defp build_workflow_yaml_tree(workflow, project_credentials) do
     jobs =
       workflow.jobs
       |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
-      |> Enum.map(fn j -> job_to_treenode(j) end)
+      |> Enum.map(fn j -> job_to_treenode(j, project_credentials) end)
 
     triggers =
       workflow.triggers
@@ -240,6 +274,9 @@ defmodule Lightning.ExportUtils do
   def generate_new_yaml(project, snapshots \\ nil)
 
   def generate_new_yaml(project, nil) do
+    project =
+      Lightning.Repo.preload(project, project_credentials: [credential: :user])
+
     yaml =
       project
       |> Workflows.get_workflows_for()
@@ -250,6 +287,9 @@ defmodule Lightning.ExportUtils do
   end
 
   def generate_new_yaml(project, snapshots) when is_list(snapshots) do
+    project =
+      Lightning.Repo.preload(project, project_credentials: [credential: :user])
+
     yaml =
       snapshots
       |> Enum.sort_by(& &1.name)
