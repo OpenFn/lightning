@@ -1,6 +1,9 @@
 name: a-test-project
 description: This is only a test
-# credentials:
+credentials:
+  email-0@example.com-new-credential:
+    name: new credential
+    owner: email-0@example.com
 # globals:
 workflows:
   workflow-1:
@@ -9,7 +12,7 @@ workflows:
       webhook-job:
         name: webhook job
         adaptor: '@openfn/language-common@latest'
-        # credential:
+        credential: email-0@example.com-new-credential
         # globals:
         body: |
           console.log('webhook job')

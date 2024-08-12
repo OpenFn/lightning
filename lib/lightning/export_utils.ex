@@ -98,6 +98,7 @@ defmodule Lightning.ExportUtils do
   defp pick_and_sort(map) do
     ordering_map = %{
       project: [:name, :description, :credentials, :globals, :workflows],
+      credential: [:name, :owner],
       workflow: [:name, :jobs, :triggers, :edges],
       job: [:name, :adaptor, :credential, :globals, :body],
       trigger: [:type, :cron_expression, :enabled],
@@ -113,7 +114,6 @@ defmodule Lightning.ExportUtils do
     }
 
     map
-    |> dbg()
     |> Enum.filter(fn {key, _value} ->
       if Map.has_key?(map, :node_type) do
         ordering_map[map.node_type]

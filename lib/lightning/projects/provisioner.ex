@@ -153,6 +153,8 @@ defmodule Lightning.Projects.Provisioner do
   end
 
   def preload_dependencies(project, snapshots) when is_list(snapshots) do
+    project = preload_dependencies(project)
+
     %{project | workflows: Snapshot.get_all_by_ids(snapshots)}
   end
 
