@@ -24,6 +24,9 @@ and this project adheres to
 
 ### Changed
 
+- Use Swoosh to format User models into recipients
+  [#2374](https://github.com/OpenFn/lightning/pull/2374)
+
 ### Fixed
 
 ## [v2.7.16] - 2024-08-07
