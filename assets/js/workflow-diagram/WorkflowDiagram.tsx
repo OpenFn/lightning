@@ -229,7 +229,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
     }, [flow, ref, model]);
 
     const connectHandlers = useConnect(model, setModel, store);
-
+    console.log(' >> render', model.nodes);
     return (
       <ReactFlowProvider>
         <ReactFlow

@@ -5,7 +5,8 @@
   "scripts": {
     "start": "node dev-server.mjs",
     "test": "npx ava ./test/index.test.ts",
-    "test-report": "npx ava --tap ./test/index.test.ts | tap-xunit > ../test/reports/ava.xml"
+    "test-report": "npx ava --tap ./test/index.test.ts | tap-xunit > ../test/reports/ava.xml",
+    "test:canvas": "TS_NODE_TRANSPILE_ONLY=1 ts-node --project tsconfig.json test/snapshots.tsx"
   },
   "license": "LGPLv3",
   "dependencies": {
@@ -20,6 +21,7 @@
     "esbuild-plugin-copy": "^2.1.1",
     "esbuild-postcss": "^0.0.4",
     "immer": "^10.0.1",
+    "jsdom": "^24.1.1",
     "jsonpath": "^1.1.1",
     "marked": "^4.2.4",
     "monaco-editor": "^0.34.0",
@@ -36,11 +38,15 @@
   },
   "devDependencies": {
     "@openfn/ws-worker": "^1.5",
+    "@types/jsdom": "^21.1.7",
     "@types/marked": "^4.0.8",
     "@types/react": "^18.0.15",
     "@types/react-dom": "^18.0.6",
     "ava": "^5.1.0",
+    "canvas": "^2.11.2",
     "esbuild": "^0.17.18",
+    "html-to-image": "^1.11.11",
+    "jsdom-screenshot": "^4.0.0",
     "tap-xunit": "^2.4.1",
     "ts-node": "^10.9.1"
   },
