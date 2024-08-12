@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from 'react';
 
 import WorkflowDiagram from '../../js/workflow-diagram/WorkflowDiagram';
 // import useStore from './store'
@@ -38,8 +44,10 @@ const Form = ({ nodeId, store, onChange }) => {
   );
 };
 
+const allWorkflows = Object.keys(workflows);
+
 export default () => {
-  const [workflowId, setWorkflowId] = useState(Object.keys(workflows)[0]);
+  const [workflowId, setWorkflowId] = useState(allWorkflows[0]);
   const [history, setHistory] = useState([]);
 
   const onChange = evt => {
@@ -50,19 +58,18 @@ export default () => {
 
   const [store, setStore] = useState(() => createWorkflowStore({}, () => {}));
 
-  // TODO how do I update the store when a picklist is changed?
-  // Maybe just force a remount?
-  // const [store, setStore] = useState(() =>
-  //   createWorkflowStore(workflows[workflowId], onChange)
-  // );
   const [selectedId, setSelectedId] = useState<string>();
   const ref = useRef(null);
 
-  // const [workflow, setWorkflow] = useState({
-  //   jobs: [],
-  //   triggers: [],
-  //   edges: [],
-  // });
+  const hasMoreWorkflows = useMemo(() => {
+    const idx = allWorkflows.indexOf(workflowId);
+    return idx < allWorkflows.length - 1;
+  }, [workflowId]);
+
+  const next = useCallback(() => {
+    const idx = allWorkflows.indexOf(workflowId);
+    setWorkflowId(allWorkflows[idx + 1]);
+  }, [workflowId]);
 
   // on startup (or on workflow id change) create a store
   // on change, set the state back into the app.
@@ -70,23 +77,7 @@ export default () => {
   useEffect(() => {
     const s = createWorkflowStore(workflows[workflowId], onChange);
 
-    const unsubscribe = s.subscribe(({ jobs, edges, triggers }) => {
-      // console.log('store change: ', { jobs, edges, triggers });
-      // setWorkflow({ jobs, edges, triggers });
-      // setStore()
-    });
-
     setStore(s);
-    // const { jobs, edges, triggers } = s.getState();
-
-    // // now set the chart properly
-    // // use a timeout to make sure its applied
-    // setTimeout(() => {
-    //   setWorkflow({ jobs, edges, triggers });
-    //   setStore(s);
-    // }, 1);
-
-    return () => unsubscribe();
   }, [workflowId]);
 
   const handleSelectionChange = useCallback((id: string) => {
@@ -143,7 +134,7 @@ export default () => {
   );
 
   return (
-    <div className="flex flex-row h-full w-full">
+    <div className="flex flex-row h-full w-full overflow-hidden">
       <div
         className="flex-1 border-2 border-slate-200 m-2 bg-secondary-100"
         style={{ flexBasis: '66%' }}
@@ -158,16 +149,28 @@ export default () => {
           forceFit
         />
       </div>
-      <div className="flex flex-1 flex-col h-full" style={{ flexBasis: '33%' }}>
+      <div
+        className={'flex flex-1 flex-col h-full'}
+        style={{ flexBasis: '33%' }}
+      >
         <div className="border-2 border-slate-200 m-2 p-2">
           <select
             id="select-workflow"
             onChange={e => setWorkflowId(e.target.value)}
+            value={workflowId}
           >
             {Object.keys(workflows).map(wf_id => (
               <option>{wf_id}</option>
             ))}
           </select>
+          <button
+            id="next-workflow"
+            className="bg-primary-500 mx-2 py-2 px-4 border border-transparent shadow-sm rounded-md text-white"
+            onClick={() => next()}
+            disabled={!hasMoreWorkflows}
+          >
+            Next
+          </button>
           <button
             className="bg-primary-500 mx-2 py-2 px-4 border border-transparent shadow-sm rounded-md text-white"
             onClick={() => addJob()}
