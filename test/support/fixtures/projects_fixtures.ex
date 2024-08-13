@@ -21,11 +21,11 @@ defmodule Lightning.ProjectsFixtures do
   end
 
   def canonical_project_fixture(attrs \\ %{}) do
-    user = Factories.insert(:user)
+    user = Factories.insert(:user, email: "cannonical-user@lightning.com")
 
     credential =
       Factories.insert(:credential,
-        user_id: user.id,
+        user: user,
         name: "new credential",
         body: %{"foo" => "super-secret"}
       )
@@ -44,7 +44,8 @@ defmodule Lightning.ProjectsFixtures do
         name: "webhook job",
         # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
         inserted_at: DateTime.utc_now() |> Timex.shift(seconds: 0),
-        body: "console.log('webhook job')\nfn(state => state)"
+        body: "console.log('webhook job')\nfn(state => state)",
+        project_credential_id: project_credential.id
       )
 
     workflow_1_job_2 =

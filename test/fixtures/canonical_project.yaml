@@ -1,9 +1,9 @@
 name: a-test-project
 description: This is only a test
 credentials:
-  email-0@example.com-new-credential:
+  cannonical-user@lightning.com-new-credential:
     name: new credential
-    owner: email-0@example.com
+    owner: cannonical-user@lightning.com
 # globals:
 workflows:
   workflow-1:
@@ -84,4 +84,4 @@ workflows:
         source_job: some-cronjob
         target_job: on-cron-failure
         condition_type: on_job_success
-        enabled: true 
+        enabled: true

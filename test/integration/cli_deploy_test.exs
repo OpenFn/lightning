@@ -275,7 +275,21 @@ defmodule Lightning.CliDeployTest do
         {hyphenize(workflow.name), expected_workflow_state(workflow)}
       end)
 
-    Map.merge(state, %{workflows: workflows})
+    credentials =
+      Map.new(project.project_credentials, fn pc ->
+        {hyphenize("#{pc.credential.user.email} #{pc.credential.name}"),
+         expected_project_credential_state(pc)}
+      end)
+
+    Map.merge(state, %{workflows: workflows, project_credentials: credentials})
+  end
+
+  defp expected_project_credential_state(project_credential) do
+    %{
+      id: project_credential.id,
+      name: project_credential.credential.name,
+      owner: project_credential.credential.user.email
+    }
   end
 
   defp expected_workflow_state(workflow) do
@@ -321,7 +335,7 @@ defmodule Lightning.CliDeployTest do
   end
 
   defp expected_job_state(job) do
-    Map.take(job, [:id, :name, :body, :adaptor])
+    Map.take(job, [:id, :name, :body, :adaptor, :project_credential_id])
   end
 
   defp expected_edge_state(edge) do
