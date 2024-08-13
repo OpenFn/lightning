@@ -25,6 +25,8 @@ and this project adheres to
 
 ### Changed
 
+- Enforced uniqueness on credential names _by user_.
+  [#2371](https://github.com/OpenFn/lightning/pull/2371)
 - Use Swoosh to format User models into recipients
   [#2374](https://github.com/OpenFn/lightning/pull/2374)
 

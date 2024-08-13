@@ -578,6 +578,7 @@ defmodule Lightning.AccountsTest do
 
       CredentialsFixtures.project_credential_fixture(user_id: user.id, name: "a")
       CredentialsFixtures.project_credential_fixture(user_id: user.id, name: "b")
+
       CredentialsFixtures.project_credential_fixture()
 
       assert count_project_credentials_for_user(user) == 2
