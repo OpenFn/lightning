@@ -576,8 +576,9 @@ defmodule Lightning.AccountsTest do
     test "purging user deletes all project credentials that involve this user's credentials" do
       user = insert(:user)
 
-      CredentialsFixtures.project_credential_fixture(user_id: user.id, name: "1")
-      CredentialsFixtures.project_credential_fixture(user_id: user.id, name: "2")
+      CredentialsFixtures.project_credential_fixture(user_id: user.id, name: "a")
+      CredentialsFixtures.project_credential_fixture(user_id: user.id, name: "b")
+
       CredentialsFixtures.project_credential_fixture()
 
       assert count_project_credentials_for_user(user) == 2
@@ -591,9 +592,9 @@ defmodule Lightning.AccountsTest do
       user_1 = insert(:user)
       user_2 = insert(:user)
 
-      CredentialsFixtures.credential_fixture(user_id: user_1.id, name: "1")
-      CredentialsFixtures.credential_fixture(user_id: user_1.id, name: "2")
-      CredentialsFixtures.credential_fixture(user_id: user_2.id, name: "3")
+      CredentialsFixtures.credential_fixture(user_id: user_1.id, name: "a")
+      CredentialsFixtures.credential_fixture(user_id: user_1.id, name: "b")
+      CredentialsFixtures.credential_fixture(user_id: user_2.id, name: "a")
 
       assert count_for(Credentials.Credential) == 3
 
