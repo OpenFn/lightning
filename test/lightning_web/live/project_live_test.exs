@@ -152,12 +152,12 @@ defmodule LightningWeb.ProjectLiveTest do
       project_name = String.replace(@create_attrs.raw_name, " ", "-")
 
       assert_email_sent(
-        to: [{"", user_1.email}],
+        to: [Swoosh.Email.Recipient.format(user_1)],
         subject: "You now have access to \"#{project_name}\""
       )
 
       assert_email_sent(
-        to: [{"", user_2.email}],
+        to: [Swoosh.Email.Recipient.format(user_2)],
         subject: "You now have access to \"#{project_name}\""
       )
     end
@@ -2101,12 +2101,12 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "Invite sent successfully"
 
       refute_email_sent(
-        to: [{"", "nonexists@localtests.com"}],
+        to: [{"Non Exists", "nonexists@localtests.com"}],
         subject: "You now have access to \"my-project\""
       )
 
       assert_email_sent(
-        to: [{"", "nonexists@localtests.com"}],
+        to: [{"Non Exists", "nonexists@localtests.com"}],
         subject: "Join my-project on OpenFn as a collaborator"
       )
     end

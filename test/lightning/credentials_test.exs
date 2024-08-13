@@ -192,7 +192,7 @@ defmodule Lightning.CredentialsTest do
 
       assert_email_sent(
         subject: "Your \"#{credential.name}\" credential will be deleted",
-        to: user.email
+        to: Swoosh.Email.Recipient.format(user)
       )
     end
 
