@@ -13,7 +13,7 @@ defmodule Lightning.KafkaTriggers do
       find_enabled_triggers()
       |> Enum.each(fn trigger ->
         child_spec = generate_pipeline_child_spec(trigger)
-        Supervisor.start_child(supervisor, child_spec)
+        Supervisor.start_child(supervisor, child_spec) |> IO.inspect(label: "STAAAAAAAAAAAAAARRRRRRRRRRRRRRRRTTTTTTTTTTTTTTTT")
       end)
     end
 

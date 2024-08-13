@@ -9,6 +9,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
   alias Ecto.Multi
   alias Lightning.KafkaTriggers
   alias Lightning.KafkaTriggers.MessageHandling
+  # alias Lightning.KafakTriggers.PipelineRegistry
   alias Lightning.KafkaTriggers.TriggerKafkaMessage
   alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
   alias Lightning.Repo
@@ -25,8 +26,11 @@ defmodule Lightning.KafkaTriggers.Pipeline do
       opts
       |> Keyword.get(:rate_limit)
 
+    IO.puts "WTAF"
+
     Broadway.start_link(__MODULE__,
-      name: trigger_id,
+      name: {:via, Registry, {Registry.Pipeline, "wtf"}},
+      # name: "fuzzy-wuzzy",
       context: %{
         trigger_id: trigger_id
       },

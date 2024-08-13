@@ -5,6 +5,8 @@ defmodule Lightning.KafkaTriggers.Supervisor do
   """
   use Supervisor
 
+  # alias Lightning.KafkaTriggers.PipelineRegistry
+
   def start_link(init_arg) do
     Supervisor.start_link(__MODULE__, init_arg, name: __MODULE__)
   end
@@ -16,14 +18,15 @@ defmodule Lightning.KafkaTriggers.Supervisor do
     children =
       if enabled do
         [
-          {
-            id: :kafka_pipelines_registry,
-            start: {
-              Registry,
-              :start_link,
-              [[{:keys, :unique}, {:name, Lightning.KafkaTriggers.PipelineRegistry}]]
-            }
-          },
+          {Registry, keys: :unique, name: Registry.Pipeline},
+          # %{
+          #   id: :kafka_pipelines_registry,
+          #   start: {
+          #     Registry,
+          #     :start_link,
+          #     [[keys: :unique, name: PipelineRegistry]]
+          #   }
+          # },
           {
             Lightning.KafkaTriggers.PipelineSupervisor,
             type: :supervisor
