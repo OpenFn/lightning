@@ -17,6 +17,14 @@ defmodule Lightning.KafkaTriggers.Supervisor do
       if enabled do
         [
           {
+            id: :kafka_pipelines_registry,
+            start: {
+              Registry,
+              :start_link,
+              [[{:keys, :unique}, {:name, Lightning.KafkaTriggers.PipelineRegistry}]]
+            }
+          },
+          {
             Lightning.KafkaTriggers.PipelineSupervisor,
             type: :supervisor
           },
