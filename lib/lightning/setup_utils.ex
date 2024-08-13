@@ -871,15 +871,21 @@ defmodule Lightning.SetupUtils do
 
   @doc """
   In some (mostly remote-controlled) deployments, it's necessary to create a
-  user, empty projects that they can access, and credentials (shared with those
-  projects) that they own so that later `openfn deploy` calls can make use of
-  these artifacts.
+  user, and apiToken, and multiple credentials (owned by the user) so that later
+  `openfn deploy` calls can make use of these artifacts.
 
   When run _before_ `openfn deploy`, this function makes it possible to set up
   an entire lightning instance with a working project (including secrets)
   without using the web UI.
+
+  ## Examples
+
+    iex> setup_user(%{email: "td@openfn.org", first_name: "taylor", last_name: "downs", password: "shh12345!"}, "secretToken", [%{name: "openmrs", schema: "raw", body: %{"a" => "secret"}}, %{ name: "dhis2", schema: "raw", body: %{"b" => "safe"}}])
+    :ok
+
   """
-  def setup_user(user, token, project_names, credentials) do
+  @spec setup_user(map(), String.t(), list(map())) :: :ok | {:error, any()}
+  def setup_user(user, token, credentials) do
     # create user
     {:ok, user} = Accounts.create_user(user)
 
@@ -890,36 +896,12 @@ defmodule Lightning.SetupUtils do
       token: token
     })
 
-    # create projects
-    projects =
-      project_names
-      |> Enum.map(fn name ->
-        {:ok, project} =
-          Projects.create_project(
-            %{
-              name: name,
-              history_retention_period:
-                Application.get_env(:lightning, :default_retention_period),
-              project_users: [%{user_id: user.id, role: :owner}]
-            },
-            false
-          )
-
-        project
-      end)
-
     # create credentials
     Enum.each(credentials, fn credential ->
       {:ok, _credential} =
         Credentials.create_credential(
           credential
           |> Map.put(:user_id, user.id)
-          |> Map.put(
-            :project_credentials,
-            Enum.map(projects, fn project ->
-              %{project_id: project.id}
-            end)
-          )
         )
     end)
 
