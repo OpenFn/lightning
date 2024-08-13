@@ -12,7 +12,7 @@ workflows:
       webhook-job:
         name: webhook job
         adaptor: '@openfn/language-common@latest'
-        credential: email-0@example.com-new-credential
+        credential: cannonical-user@lightning.com-new-credential
         # globals:
         body: |
           console.log('webhook job')
