@@ -2,6 +2,7 @@ defmodule LightningWeb.RunLive.Index do
   @moduledoc """
   Index Liveview for Runs
   """
+  alias Lightning.WorkOrders.ExportWorker
   use LightningWeb, :live_view
 
   import Ecto.Changeset, only: [get_change: 2]
@@ -470,7 +471,8 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   def handle_event("confirm-export", _params, socket) do
-    # HistoryExportWorker.enqueue()
+    search_params = SearchParams.new(socket.assigns.filters)
+    :ok = ExportWorker.start_export(socket.assigns.project, search_params)
 
     {:noreply,
      socket

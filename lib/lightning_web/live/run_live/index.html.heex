@@ -15,8 +15,9 @@
         id="export-history-button"
         type="button"
         phx-click="show-export-modal"
+        disabled={@page.total_entries <= 0}
         class="gap-x-2 text-sm"
-        tooltip="Export all 480 results matching your query"
+        {if @page.total_entries > 0, do: [tooltip: "Export all #{@page.total_entries} results matching your query"], else: []}
       >
         <.icon name="hero-cloud-arrow-down" class="w-5 h-5" /> Export
       </.button>
