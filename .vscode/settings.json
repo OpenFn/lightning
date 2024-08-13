@@ -12,5 +12,6 @@
   },
   "emmet.includeLanguages": {
     "phoenix-heex": "html"
-  }
+  },
+  "svg.preview.background": "transparent"
 }

@@ -39,7 +39,7 @@ const calculateLayout = async (
     g.setNode(node.id, { ...node, width: 350, height: 200 })
   );
 
-  Dagre.layout(g, { disableOptimalOrderHeuristic: true });
+  Dagre.layout(g);
 
   const newModel = {
     nodes: nodes.map(node => {

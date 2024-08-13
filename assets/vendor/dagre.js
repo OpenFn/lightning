@@ -1330,7 +1330,10 @@ function order(g, opts) {
     return;
   }
 
-  let bestCC = Number.POSITIVE_INFINITY,
+
+  // openfn: set bestCC to zero so that this only kicks in
+  // if there's at least one edge crossing
+  let bestCC = 0, /*Number.POSITIVE_INFINITY,*/
     best;
 
   for (let i = 0, lastBest = 0; lastBest < 4; ++i, ++lastBest) {
@@ -1345,7 +1348,10 @@ function order(g, opts) {
     }
   }
 
-  assignOrder(g, best);
+  // openfn: only change order if there's a reason to
+  if (best) {
+    assignOrder(g, best);
+  }
 }
 
 function buildLayerGraphs(g, ranks, relationship) {
