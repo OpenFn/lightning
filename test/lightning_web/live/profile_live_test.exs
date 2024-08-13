@@ -171,7 +171,7 @@ defmodule LightningWeb.ProfileLiveTest do
 
       assert_email_sent(
         subject: "Your account has been scheduled for deletion",
-        to: user.email
+        to: Swoosh.Email.Recipient.format(user)
       )
     end
 
