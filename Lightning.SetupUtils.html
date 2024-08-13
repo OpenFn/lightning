@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-EBDEF082.js"></script>
+    <script src="dist/sidebar_items-7149EFD3.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -197,14 +197,13 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#setup_user/4" translate="no">setup_user(user, token, project_names, credentials)</a>
+        <a href="#setup_user/3" translate="no">setup_user(user, token, credentials)</a>
 
       </div>
 
         <div class="summary-synopsis"><p>In some (mostly remote-controlled) deployments, it's necessary to create a
-user, empty projects that they can access, and credentials (shared with those
-projects) that they own so that later <code class="inline">openfn deploy</code> calls can make use of
-these artifacts.</p></div>
+user, and apiToken, and multiple credentials (owned by the user) so that later
+<code class="inline">openfn deploy</code> calls can make use of these artifacts.</p></div>
 
     </div>
 
@@ -353,16 +352,16 @@ these artifacts.</p></div>
 <p>Creates initial data and returns the created records.</p>
   </section>
 </section>
-<section class="detail" id="setup_user/4">
+<section class="detail" id="setup_user/3">
 
   <div class="detail-header">
-    <a href="#setup_user/4" class="detail-link" title="Link to this function">
+    <a href="#setup_user/3" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">setup_user(user, token, project_names, credentials)</h1>
+    <h1 class="signature" translate="no">setup_user(user, token, credentials)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L882" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L888" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -372,12 +371,24 @@ these artifacts.</p></div>
 
   <section class="docstring">
 
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> setup_user(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()]) :: :ok | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}</pre>
+
+      </div>
+
 <p>In some (mostly remote-controlled) deployments, it's necessary to create a
-user, empty projects that they can access, and credentials (shared with those
-projects) that they own so that later <code class="inline">openfn deploy</code> calls can make use of
-these artifacts.</p><p>When run <em>before</em> <code class="inline">openfn deploy</code>, this function makes it possible to set up
+user, and apiToken, and multiple credentials (owned by the user) so that later
+<code class="inline">openfn deploy</code> calls can make use of these artifacts.</p><p>When run <em>before</em> <code class="inline">openfn deploy</code>, this function makes it possible to set up
 an entire lightning instance with a working project (including secrets)
-without using the web UI.</p>
+without using the web UI.</p><h2 id="setup_user/3-examples" class="section-heading">
+  <a href="#setup_user/3-examples" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Examples</span>
+</h2>
+<p>  iex&gt; setup_user(%{email: &quot;td@openfn.org&quot;, first_name: &quot;taylor&quot;, last_name: &quot;downs&quot;, password: &quot;shh12345!&quot;}, &quot;secretToken&quot;, [%{name: &quot;openmrs&quot;, schema: &quot;raw&quot;, body: %{&quot;a&quot; =&gt; &quot;secret&quot;}}, %{ name: &quot;dhis2&quot;, schema: &quot;raw&quot;, body: %{&quot;b&quot; =&gt; &quot;safe&quot;}}])
+  :ok</p>
   </section>
 </section>
 <section class="detail" id="tear_down/1">
