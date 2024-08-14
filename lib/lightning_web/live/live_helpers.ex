@@ -172,9 +172,10 @@ defmodule LightningWeb.LiveHelpers do
     %{socket | assigns: check_limits(assigns, project_id)}
   end
 
-  def check_limits(assigns, project_id) do
+  def check_limits(%{current_user: user} = assigns, project_id) do
     case UsageLimiter.check_limits(%Context{
-           project_id: project_id
+           project_id: project_id,
+           user_id: user.id
          }) do
       :ok ->
         assigns
