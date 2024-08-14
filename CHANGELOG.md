@@ -18,7 +18,7 @@ and this project adheres to
 ### Added
 
 - Ensure that all users in an instance have a confirmed email address within 48
-  hours [#160](https://github.com/OpenFn/thunderbolt/issues/160)
+  hours [#2389](https://github.com/OpenFn/lightning/issues/2389)
 
 ### Changed
 
