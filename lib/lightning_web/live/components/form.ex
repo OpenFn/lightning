@@ -435,8 +435,6 @@ defmodule LightningWeb.Components.Form do
     """
   end
 
-  attr :class, :any, default: ""
-
   def select(assigns) do
     select_classes = ~w[
       block
@@ -450,7 +448,7 @@ defmodule LightningWeb.Components.Form do
       focus:ring-primary-200
       focus:ring-opacity-50
       disabled:cursor-not-allowed
-    ] ++ List.wrap(assigns.class)
+    ]
 
     opts = assigns_to_attributes(assigns) ++ [class: select_classes]
 
