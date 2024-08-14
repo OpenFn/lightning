@@ -161,7 +161,7 @@ defmodule Lightning.ProjectsFixtures do
   "cannonical-user@lightning.com" and there can only be one in the DB at any
   given time.
   """
-  def canonical_project_fixture(attrs \\ %{}) do
+  def canonical_project_fixture(attrs \\ []) do
     attrs =
       attrs
       |> Keyword.put_new_lazy(:owner, fn ->
