@@ -32,6 +32,9 @@ and this project adheres to
 
 ### Fixed
 
+- When a Workflow is deleted, any associated Kafka trigger pipelines will be
+  stopped and deleted. [#2379](https://github.com/OpenFn/lightning/issues/2379)
+
 ## [v2.7.16] - 2024-08-07
 
 ### Fixed
