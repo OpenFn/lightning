@@ -472,7 +472,7 @@ defmodule LightningWeb.RunLive.Index do
 
   def handle_event("confirm-export", _params, socket) do
     search_params = SearchParams.new(socket.assigns.filters)
-    :ok = ExportWorker.start_export(socket.assigns.project, search_params)
+    ExportWorker.export(socket.assigns.project, search_params)
 
     {:noreply,
      socket
