@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.7.17] - 2024-08-14
+
+### Added
+
 - Added an `iex` command to setup a user, an apiToken, and credentials so that
   it's possible to get a fully running lightning instance via external shell
   script. (This is a tricky requirement for a distributed set of local
