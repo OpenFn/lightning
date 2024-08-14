@@ -7,6 +7,21 @@ defmodule Lightning.Workflows.Triggers.Events do
     defstruct trigger_id: nil
   end
 
+  defmodule KafkaTriggerPersistenceFailure do
+    @moduledoc false
+    defstruct trigger_id: nil, timestamp: nil
+  end
+
+  def kafka_trigger_persistence_failure(trigger_id, timestamp) do
+    Lightning.broadcast(
+      kafka_trigger_persistence_failure_topic(),
+      %KafkaTriggerPersistenceFailure{
+        trigger_id: trigger_id,
+        timestamp: timestamp
+      }
+    )
+  end
+
   def kafka_trigger_updated(trigger_id) do
     Lightning.broadcast(
       kafka_trigger_updated_topic(),
@@ -14,8 +29,16 @@ defmodule Lightning.Workflows.Triggers.Events do
     )
   end
 
+  def subscribe_to_kafka_trigger_persistence_failure do
+    Lightning.subscribe(kafka_trigger_persistence_failure_topic())
+  end
+
   def subscribe_to_kafka_trigger_updated do
     Lightning.subscribe(kafka_trigger_updated_topic())
+  end
+
+  def kafka_trigger_persistence_failure_topic do
+    "kafka_trigger_persistence_failure"
   end
 
   def kafka_trigger_updated_topic, do: "kafka_trigger_updated"

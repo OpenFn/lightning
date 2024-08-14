@@ -15,6 +15,8 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
   alias Lightning.KafkaTriggers.Pipeline
   alias Lightning.Repo
   alias Lightning.Workflows.Trigger
+  alias Lightning.Workflows.Triggers.Events
+  alias Lightning.Workflows.Triggers.Events.KafkaTriggerPersistenceFailure
   alias Lightning.WorkOrder
 
   describe ".start_link/1" do
@@ -371,14 +373,23 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
 
   describe ".handle_failed/2" do
     setup do
-      messages = [
-        build_broadway_message(offset: 1) |> Broadway.Message.failed(:duplicate),
-        build_broadway_message(offset: 2) |> Broadway.Message.failed(:who_knows)
-      ]
+      timestamp_1 = 1_715_164_718_281
+      timestamp_2 = 1_715_164_718_282
+
+      message_1 =
+        [offset: 1, timestamp: timestamp_1]
+        |> build_broadway_message()
+        |> Broadway.Message.failed(:duplicate)
+
+      message_2 =
+        [offset: 2, timestamp: timestamp_2]
+        |> build_broadway_message()
+        |> Broadway.Message.failed(:who_knows)
 
       %{
         context: %{trigger_id: "my_trigger_id"},
-        messages: messages
+        messages: [message_1, message_2],
+        timestamps: [timestamp_1, timestamp_2]
       }
     end
 
@@ -422,6 +433,42 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
         assert_not_called(Sentry.capture_message(notification, extra: extra_1))
         assert_called(Sentry.capture_message(notification, extra: extra_2))
       end
+    end
+
+    test "publishes a rollback event for a persistence failure", %{
+      context: context,
+      messages: [message_1, message_2],
+      timestamps: [timestamp_1, timestamp_2]
+    } do
+      %{trigger_id: trigger_id} = context
+
+      timestamp = 1_723_633_665_366
+
+      persistence_failed_message =
+        [offset: 3, timestamp: timestamp]
+        |> build_broadway_message()
+        |> Broadway.Message.failed(:persistence)
+
+      messages = [message_1, persistence_failed_message, message_2]
+
+      Events.subscribe_to_kafka_trigger_persistence_failure()
+
+      Pipeline.handle_failed(messages, context)
+
+      assert_received %KafkaTriggerPersistenceFailure{
+        trigger_id: ^trigger_id,
+        timestamp: ^timestamp
+      }
+
+      refute_received %KafkaTriggerPersistenceFailure{
+        trigger_id: ^trigger_id,
+        timestamp: ^timestamp_2
+      }
+
+      refute_received %KafkaTriggerPersistenceFailure{
+        trigger_id: ^trigger_id,
+        timestamp: ^timestamp_1
+      }
     end
 
     defp expected_duplicate_log_message(message, context) do
@@ -468,6 +515,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
 
     key = Keyword.get(opts, :key, "abc_123_def")
     offset = Keyword.get(opts, :offset, 11)
+    ts = Keyword.get(opts, :timestamp, 1_715_164_718_283)
 
     %Broadway.Message{
       data: data,
@@ -476,7 +524,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
         partition: 2,
         key: key,
         headers: [],
-        ts: 1_715_164_718_283,
+        ts: ts,
         topic: "bar_topic"
       },
       acknowledger: nil,

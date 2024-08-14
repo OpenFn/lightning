@@ -13,6 +13,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
   alias Lightning.KafkaTriggers.MessageHandling
   alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
   alias Lightning.Workflows.Trigger
+  alias Lightning.Workflows.Triggers.Events
 
   require Logger
 
@@ -129,12 +130,24 @@ defmodule Lightning.KafkaTriggers.Pipeline do
   def handle_failed(messages, context) do
     messages
     |> Enum.each(fn message ->
+      publish_failure_event(message, context)
       notify_sentry(message, context)
       create_log_entry(message, context)
     end)
 
     messages
   end
+
+  defp publish_failure_event(
+         %{status: {:failed, :persistence}} = message,
+         %{trigger_id: trigger_id}
+       ) do
+    %{metadata: %{ts: timestamp}} = message
+
+    Events.kafka_trigger_persistence_failure(trigger_id, timestamp)
+  end
+
+  defp publish_failure_event(_message, _context), do: nil
 
   defp create_log_entry(%{status: {:failed, :duplicate}} = message, context) do
     %{
