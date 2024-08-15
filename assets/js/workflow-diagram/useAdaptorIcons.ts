@@ -21,7 +21,6 @@ const useAdaptorIcons = (): AdaptorIconData => {
         .then(response => response.json())
         .catch(err => {
           console.error('Error fetching Adaptor Icons manifest:', err);
-          setData({});
         });
     }
 

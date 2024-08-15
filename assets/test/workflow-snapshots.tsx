@@ -41,7 +41,8 @@ const wait = async (delay = 500) =>
 async function test() {
   // Launch the browser and open a new blank page
   const browser = await puppeteer.launch({
-    executablePath: '/snap/bin/chromium', // needed for some reason on my local machine??
+    // If chromium fails to launch, you may need to set this (and maybe update the path)
+    // executablePath: '/snap/bin/chromium',
   });
 
   const page = await browser.newPage();
