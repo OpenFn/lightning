@@ -139,6 +139,8 @@ defmodule Lightning.MixProject do
       {:hammer_backend_mnesia, "~> 0.6"},
       {:hammer, "~> 6.0"},
       {:dotenvy, "~> 0.8.0"},
+      {:waffle_ecto, "~> 0.0"},
+      {:waffle, "~> 1.1"},
       # MFA
       {:nimble_totp, "~> 1.0"},
       {:eqrcode, "~> 0.1"},
