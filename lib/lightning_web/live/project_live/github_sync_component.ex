@@ -206,6 +206,9 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
       %{"message" => message} ->
         "Github Error: #{message}"
 
+      %{"error_description" => message} ->
+        "Github Error: #{message}"
+
       _ ->
         "Oops! An error occured while connecting to Github. Please try again later"
     end
