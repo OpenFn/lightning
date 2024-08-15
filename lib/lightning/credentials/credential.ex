@@ -44,6 +44,9 @@ defmodule Lightning.Credentials.Credential do
     ])
     |> cast_assoc(:project_credentials)
     |> validate_required([:name, :body, :user_id])
+    |> unique_constraint([:name, :user_id],
+      message: "you have another credential with the same name"
+    )
     |> assoc_constraint(:user)
     |> assoc_constraint(:oauth_client)
     |> validate_oauth()

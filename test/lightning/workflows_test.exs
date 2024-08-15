@@ -574,5 +574,24 @@ defmodule Lightning.WorkflowsTest do
       assert Repo.get(Trigger, trigger_1_id) |> Map.get(:enabled) == false
       assert Repo.get(Trigger, trigger_2_id) |> Map.get(:enabled) == false
     end
+
+    test "mark_for_deletion/2 publishes events for Kafka triggers", %{w1: w1} do
+      %{id: kafka_trigger_1_id} =
+        insert(:trigger, workflow: w1, enabled: true, type: :kafka)
+
+      %{id: webhook_trigger_id} =
+        insert(:trigger, workflow: w1, enabled: true, type: :webhook)
+
+      %{id: kafka_trigger_2_id} =
+        insert(:trigger, workflow: w1, enabled: true, type: :kafka)
+
+      Events.subscribe_to_kafka_trigger_updated()
+
+      assert {:ok, _workflow} = Workflows.mark_for_deletion(w1)
+
+      refute_received %KafkaTriggerUpdated{trigger_id: ^webhook_trigger_id}
+      assert_received %KafkaTriggerUpdated{trigger_id: ^kafka_trigger_2_id}
+      assert_received %KafkaTriggerUpdated{trigger_id: ^kafka_trigger_1_id}
+    end
   end
 end

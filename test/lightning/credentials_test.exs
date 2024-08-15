@@ -192,7 +192,7 @@ defmodule Lightning.CredentialsTest do
 
       assert_email_sent(
         subject: "Your \"#{credential.name}\" credential will be deleted",
-        to: user.email
+        to: Swoosh.Email.Recipient.format(user)
       )
     end
 
@@ -303,6 +303,31 @@ defmodule Lightning.CredentialsTest do
   end
 
   describe "create_credential/1" do
+    test "fails if another cred exists with the same name for the same user" do
+      valid_attrs = %{
+        body: %{"a" => "test"},
+        name: "simple name",
+        user_id: insert(:user).id,
+        schema: "raw"
+      }
+
+      assert {:ok, %Credential{}} = Credentials.create_credential(valid_attrs)
+
+      assert {
+               :error,
+               %Ecto.Changeset{
+                 errors: [
+                   name:
+                     {"you have another credential with the same name",
+                      [
+                        constraint: :unique,
+                        constraint_name: "credentials_name_user_id_index"
+                      ]}
+                 ]
+               }
+             } = Credentials.create_credential(valid_attrs)
+    end
+
     test "suceeds with raw schema" do
       valid_attrs = %{
         body: %{"username" => "user", "password" => "pass", "port" => 5000},

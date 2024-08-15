@@ -13,6 +13,7 @@ defmodule Lightning.KafkaTriggers.MessageHandling do
   alias Lightning.KafkaTriggers.TriggerKafkaMessage
   alias Lightning.Repo
   alias Lightning.Services.UsageLimiter
+  alias Lightning.Workflows.Trigger
   alias Lightning.WorkOrder
   alias Lightning.WorkOrders
 
@@ -92,7 +93,16 @@ defmodule Lightning.KafkaTriggers.MessageHandling do
     :ok
   end
 
-  defp create_work_order(candidate) do
+  def persist_message(multi, trigger_id, message) do
+    trigger =
+      Trigger
+      |> Repo.get(trigger_id)
+      |> Repo.preload(:workflow)
+
+    create_work_order(message, trigger, multi)
+  end
+
+  defp create_work_order(%TriggerKafkaMessage{} = candidate) do
     %{
       data: data,
       metadata: metadata,
@@ -131,6 +141,42 @@ defmodule Lightning.KafkaTriggers.MessageHandling do
 
       {:error, _decode_error} ->
         candidate |> update_with_error("Data is not a JSON object")
+    end
+  end
+
+  defp create_work_order(%Broadway.Message{} = message, trigger, multi) do
+    %{data: data, metadata: request} = message
+    %{workflow: workflow} = trigger
+
+    data
+    |> Jason.decode()
+    |> case do
+      {:ok, body} when is_map(body) ->
+        assess_workorder_creation(workflow.project_id)
+        |> case do
+          {:ok, without_run?} ->
+            WorkOrders.create_for(
+              trigger,
+              multi,
+              workflow: workflow,
+              dataclip: %{
+                body: body,
+                request: request,
+                type: :kafka,
+                project_id: workflow.project_id
+              },
+              without_run: without_run?
+            )
+
+          {:error, message} ->
+            {:error, :work_order_creation_blocked, message}
+        end
+
+      {:ok, _something_other_than_map} ->
+        {:error, :data_is_not_json_object}
+
+      {:error, _decode_error} ->
+        {:error, :data_is_not_json_object}
     end
   end
 

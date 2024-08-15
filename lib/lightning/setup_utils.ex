@@ -868,4 +868,43 @@ defmodule Lightning.SetupUtils do
     |> limit(1)
     |> Repo.one!()
   end
+
+  @doc """
+  In some (mostly remote-controlled) deployments, it's necessary to create a
+  user, and apiToken, and multiple credentials (owned by the user) so that later
+  `openfn deploy` calls can make use of these artifacts.
+
+  When run _before_ `openfn deploy`, this function makes it possible to set up
+  an entire lightning instance with a working project (including secrets)
+  without using the web UI.
+
+  ## Examples
+
+    iex> setup_user(%{email: "td@openfn.org", first_name: "taylor", last_name: "downs", password: "shh12345!"}, "secretToken", [%{name: "openmrs", schema: "raw", body: %{"a" => "secret"}}, %{ name: "dhis2", schema: "raw", body: %{"b" => "safe"}}])
+    :ok
+
+  """
+  @spec setup_user(map(), String.t(), list(map())) :: :ok | {:error, any()}
+  def setup_user(user, token, credentials) do
+    # create user
+    {:ok, user} = Accounts.create_user(user)
+
+    # create token
+    Repo.insert!(%Lightning.Accounts.UserToken{
+      user_id: user.id,
+      context: "api",
+      token: token
+    })
+
+    # create credentials
+    Enum.each(credentials, fn credential ->
+      {:ok, _credential} =
+        Credentials.create_credential(
+          credential
+          |> Map.put(:user_id, user.id)
+        )
+    end)
+
+    :ok
+  end
 end

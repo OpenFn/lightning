@@ -24,6 +24,45 @@ and this project adheres to
 
 ### Fixed
 
+## [v2.7.17] - 2024-08-14
+
+### Added
+
+- Added an `iex` command to setup a user, an apiToken, and credentials so that
+  it's possible to get a fully running lightning instance via external shell
+  script. (This is a tricky requirement for a distributed set of local
+  deployments) [#2369](https://github.com/OpenFn/lightning/issues/2369) and
+  [#2373](https://github.com/OpenFn/lightning/pull/2373)
+
+### Changed
+
+- Enforced uniqueness on credential names _by user_.
+  [#2371](https://github.com/OpenFn/lightning/pull/2371)
+- Use Swoosh to format User models into recipients
+  [#2374](https://github.com/OpenFn/lightning/pull/2374)
+
+### Fixed
+
+- When a Workflow is deleted, any associated Kafka trigger pipelines will be
+  stopped and deleted. [#2379](https://github.com/OpenFn/lightning/issues/2379)
+
+## [v2.7.16] - 2024-08-07
+
+### Fixed
+
+- @ibrahimwickama fixed issue that prevented users from creating new workflows
+  if they are running in an `http` environment (rather than `localhost` or
+  `https`). [#2365](https://github.com/OpenFn/lightning/pull/2356)
+
+## [v2.7.15] - 2024-08-07
+
+### Changed
+
+- Kafka messages without keys are synchronously converted into a Workorder,
+  Dataclip and Run. Messages with keys are stored as TriggerKafkaMessage
+  records, however the code needed to process them has been disabled, pending
+  removal. [#2351] (https://github.com/OpenFn/lightning/issues/2351)
+
 ## [v2.7.14] - 2024-08-05
 
 ### Changed

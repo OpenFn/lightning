@@ -107,7 +107,7 @@ defmodule LightningWeb.DashboardLive.Index do
                 phx-click={show_modal("create-project-modal")}
                 class="col-span-1 w-full rounded-md"
               >
-                Create new project
+                Create project
               </.button>
             </:create_project_button>
           </.user_projects_table>

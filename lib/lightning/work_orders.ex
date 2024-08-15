@@ -71,10 +71,12 @@ defmodule Lightning.WorkOrders do
   **For a user**
       create_for(job, workflow: workflow, dataclip: dataclip, user: user)
   """
-  @spec create_for(Trigger.t() | Job.t(), [work_order_option()]) ::
+  @spec create_for(Trigger.t() | Job.t(), Multi.t(), [work_order_option()]) ::
           {:ok, WorkOrder.t()} | {:error, Ecto.Changeset.t(WorkOrder.t())}
-  def create_for(%Trigger{} = trigger, opts) do
-    Multi.new()
+  def create_for(target, multi \\ Multi.new(), opts)
+
+  def create_for(%Trigger{} = trigger, multi, opts) do
+    multi
     |> Multi.put(:workflow, opts[:workflow])
     |> get_or_insert_dataclip(opts[:dataclip])
     |> get_or_create_snapshot(opts[:workflow])
@@ -99,8 +101,8 @@ defmodule Lightning.WorkOrders do
     |> emit_and_return_work_order()
   end
 
-  def create_for(%Job{} = job, opts) do
-    Multi.new()
+  def create_for(%Job{} = job, multi, opts) do
+    multi
     |> Multi.put(:workflow, opts[:workflow])
     |> get_or_create_snapshot()
     |> Multi.insert(:workorder, build_for(job, opts |> Map.new()))

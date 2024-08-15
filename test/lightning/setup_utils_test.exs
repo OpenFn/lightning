@@ -4,7 +4,9 @@ defmodule Lightning.SetupUtilsTest do
   import Swoosh.TestAssertions
 
   alias Lightning.{Accounts, Projects, Workflows, Jobs, SetupUtils}
-  alias Lightning.Accounts.User
+  alias Lightning.Projects
+  alias Lightning.Accounts.{User, UserToken}
+  alias Lightning.Credentials.{Credential}
 
   describe "Setup demo site seed data" do
     setup do
@@ -34,7 +36,7 @@ defmodule Lightning.SetupUtilsTest do
       User.valid_password?(super_user, "welcome123")
 
       user_token =
-        Lightning.Repo.all(Lightning.Accounts.UserToken)
+        Lightning.Repo.all(UserToken)
         |> List.first()
 
       assert user_token.user_id == super_user.id
@@ -645,6 +647,45 @@ defmodule Lightning.SetupUtilsTest do
 
       assert Repo.all(Lightning.Invocation.LogLine)
              |> Enum.count() == 0
+    end
+  end
+
+  describe "setup_user/3" do
+    test "creates a user, an api token, and credentials" do
+      assert :ok ==
+               Lightning.SetupUtils.setup_user(
+                 %{
+                   first_name: "Taylor",
+                   last_name: "Downs",
+                   email: "contact@openfn.org",
+                   password: "shh12345678!"
+                 },
+                 "abc123supersecret",
+                 [
+                   %{
+                     name: "openmrs",
+                     schema: "raw",
+                     body: %{"a" => "secret"}
+                   },
+                   %{
+                     name: "dhis2",
+                     schema: "raw",
+                     body: %{"b" => "safe"}
+                   }
+                 ]
+               )
+
+      # check that the user has been created
+      assert %User{id: user_id} = Repo.get_by(User, email: "contact@openfn.org")
+
+      # check that the apiToken has been created
+      assert %UserToken{} = Repo.get_by(UserToken, token: "abc123supersecret")
+
+      # check that the credentials have been created
+      assert [
+               %Credential{name: "openmrs", user_id: ^user_id},
+               %Credential{name: "dhis2", user_id: ^user_id}
+             ] = Repo.all(Credential)
     end
   end
 
