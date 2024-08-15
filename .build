@@ -192,6 +192,7 @@ LightningWeb.API.JobController.html
 LightningWeb.API.ProjectController.html
 LightningWeb.API.ProvisioningController.html
 LightningWeb.API.RegistrationController.html
+LightningWeb.AccountConfirmationModal.html
 LightningWeb.AuditLive.Index.html
 LightningWeb.AuthProvidersLive.FormComponent.html
 LightningWeb.AuthProvidersLive.Index.html
@@ -329,8 +330,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-6D02F624.js
-dist/sidebar_items-49EFC45C.js
+dist/search_data-3E717B06.js
+dist/sidebar_items-A24E4596.js
 index.html
 provisioning.html
 readme.html

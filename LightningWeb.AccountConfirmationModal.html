@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v2.7.17">
 
-    <title>Lightning.Demo — Lightning v2.7.17</title>
+    <title>LightningWeb.AccountConfirmationModal — Lightning v2.7.17</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
@@ -125,86 +125,49 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/demo.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/account_confirmation_modal.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.Demo</span> 
+  <span translate="no">LightningWeb.AccountConfirmationModal</span> 
   <small class="app-vsn" translate="no">(Lightning v2.7.17)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Demo encapsulates logic for setting up a demonstration site.</p>
+<p>A LiveView component for displaying an account confirmation modal.</p><p>This component is responsible for informing users that access to their
+accounts, projects, and workflows is restricted until they confirm
+their account. It provides functionality to resend the confirmation
+email and allows users to update their email address if needed.</p><h2 id="module-features" class="section-heading">
+  <a href="#module-features" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Features</span>
+</h2>
+<ul><li>Displays a modal with instructions for account confirmation.</li><li>Allows users to resend the confirmation email.</li><li>Provides feedback when the confirmation email is successfully sent.</li><li>Allows users to navigate to the profile page to update their email address.</li></ul><h2 id="module-usage" class="section-heading">
+  <a href="#module-usage" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Usage</span>
+</h2>
+<p>Include this component in your LiveView template where you need to prompt
+users to confirm their account. The component determines whether the modal
+should be shown based on the current view context.</p><h2 id="module-examples" class="section-heading">
+  <a href="#module-examples" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Examples</span>
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="o">.</span><span class="n">live_component</span><span class="w">
+  </span><span class="n">module</span><span class="o">=</span><span class="p" data-group-id="4557937886-1">{</span><span class="nc">LightningWeb.AccountConfirmationModal</span><span class="p" data-group-id="4557937886-1">}</span><span class="w">
+  </span><span class="n">id</span><span class="o">=</span><span class="s">&quot;account-confirmation-modal&quot;</span><span class="w">
+  </span><span class="n">current_user</span><span class="o">=</span><span class="p" data-group-id="4557937886-2">{</span><span class="na">@current_user</span><span class="p" data-group-id="4557937886-2">}</span><span class="w">
+</span><span class="o">/</span><span class="o">&gt;</span></code></pre><p>The component uses assigns to manage its state, including:</p><ul><li><code class="inline">:show_modal</code> - Determines if the modal should be visible.</li><li><code class="inline">:email_sent</code> - Indicates if the confirmation email was successfully sent.</li></ul>
   </section>
 
 
-  <section id="summary" class="details-list">
-    <h1 class="section-heading">
-      <a class="hover-link" href="#summary">
-        <i class="ri-link-m" aria-hidden="true"></i>
-      </a>
-      <span class="text">Summary</span>
-    </h1>
-<div class="summary-functions summary">
-  <h2>
-    <a href="#functions">Functions</a>
-  </h2>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#reset_demo/0" translate="no">reset_demo()</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Deletes everything in the database including the superuser and creates a set
-of publicly available users for a demo site via a command that can be run on
-Kubernetes-deployed systems.</p></div>
-
-    </div>
-
-</div>
-
-  </section>
-
-
-  <section id="functions" class="details-list">
-    <h1 class="section-heading">
-      <a class="hover-link" href="#functions">
-        <i class="ri-link-m" aria-hidden="true"></i>
-      </a>
-      <span class="text">Functions</span>
-    </h1>
-    <div class="functions-list">
-<section class="detail" id="reset_demo/0">
-
-  <div class="detail-header">
-    <a href="#reset_demo/0" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">reset_demo()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/demo.ex#L13" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-<p>Deletes everything in the database including the superuser and creates a set
-of publicly available users for a demo site via a command that can be run on
-Kubernetes-deployed systems.</p>
-  </section>
-</section>
-
-    </div>
-  </section>
 
       <footer class="footer">
         <p>
