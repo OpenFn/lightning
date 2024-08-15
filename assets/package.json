@@ -6,7 +6,7 @@
     "start": "node dev-server.mjs",
     "test": "npx ava ./test/index.test.ts",
     "test-report": "npx ava --tap ./test/index.test.ts | tap-xunit > ../test/reports/ava.xml",
-    "test:canvas": "TS_NODE_TRANSPILE_ONLY=1 ts-node --project tsconfig.json test/snapshots.tsx"
+    "test:snapshots": "TS_NODE_TRANSPILE_ONLY=1 ts-node --project tsconfig.json test/workflow-snapshots.tsx"
   },
   "license": "LGPLv3",
   "dependencies": {
