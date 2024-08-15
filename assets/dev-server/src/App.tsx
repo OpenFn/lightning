@@ -125,6 +125,14 @@ export default () => {
     });
   }, [store, selectedId]);
 
+  const rerunLayout = useCallback(() => {
+    const id = workflowId;
+    setWorkflowId('empty');
+    setTimeout(() => {
+      setWorkflowId(id);
+    }, 100);
+  }, [workflowId]);
+
   const handleRequestChange = useCallback(
     diff => {
       const { add } = store.getState();
@@ -170,6 +178,14 @@ export default () => {
             disabled={!hasMoreWorkflows}
           >
             Next
+          </button>
+          <button
+            id="reload-workflow"
+            className="bg-primary-500 mx-2 py-2 px-4 border border-transparent shadow-sm rounded-md text-white"
+            onClick={() => rerunLayout()}
+            disabled={!hasMoreWorkflows}
+          >
+            Re-run
           </button>
           <button
             className="bg-primary-500 mx-2 py-2 px-4 border border-transparent shadow-sm rounded-md text-white"

@@ -40,11 +40,13 @@ const add = (id, items) => {
   });
 
   // add an edge to the trigger
-  edges.push({
-    id: 'trigger-first',
-    source_trigger_id: triggers[0].id,
-    target_job_id: firstJob.id,
-  });
+  if (firstJob) {
+    edges.push({
+      id: 'trigger-first',
+      source_trigger_id: triggers[0].id,
+      target_job_id: firstJob.id,
+    });
+  }
 
   workflows[id] = {
     id,
@@ -54,17 +56,20 @@ const add = (id, items) => {
   };
 };
 
-add('aisha-2', [
-  j('create a medication'),
-  j('send medication id'),
-  j('create a MedicationRequest'),
-  e('create a medication', 'send medication id'),
-  e('create a medication', 'create a MedicationRequest'),
-  e('send medication id', 'create a MedicationRequest'),
-]);
+// random fisher yates pulled offline
+const shuffle = array => {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const temp = array[i];
+    array[i] = array[j];
+    array[j] = temp;
+  }
+  return array;
+};
 
 add('aisha', [
   j('root'),
+  j('orphan'),
   j('create encounter'),
   j('trigger a thing'),
   j('create an observation'),
@@ -80,6 +85,43 @@ add('aisha', [
   e('create encounter', 'create a condition'),
   e('create an observation', 'update encounter'),
   e('create a condition', 'update encounter'),
+  e('create a medication', 'send medication id'),
+  e('create a medication', 'create a MedicationRequest'),
+  e('send medication id', 'create a MedicationRequest'),
+]);
+
+// add(
+//   'aisha-shuffled',
+//   // TODO this doesn't acutally work without a refresh. We don't have a means to re-shuffle
+//   // And anyway shuffling kind of breaks the model, because we create bad edges.
+//   shuffle([
+//     j('root'),
+//     j('orphan'),
+//     j('create encounter'),
+//     j('trigger a thing'),
+//     j('create an observation'),
+//     j('create a medication'),
+//     j('create a condition'),
+//     j('update encounter'),
+//     e('root', 'create encounter'),
+//     j('send medication id'),
+//     j('create a MedicationRequest'),
+//     e('create encounter', 'trigger a thing'),
+//     e('create encounter', 'create a medication'),
+//     e('create encounter', 'create an observation'),
+//     e('create encounter', 'create a condition'),
+//     e('create an observation', 'update encounter'),
+//     e('create a condition', 'update encounter'),
+//     e('create a medication', 'send medication id'),
+//     e('create a medication', 'create a MedicationRequest'),
+//     e('send medication id', 'create a MedicationRequest'),
+//   ])
+// );
+
+add('aisha-simplified?', [
+  j('create a medication'),
+  j('send medication id'),
+  j('create a MedicationRequest'),
   e('create a medication', 'send medication id'),
   e('create a medication', 'create a MedicationRequest'),
   e('send medication id', 'create a MedicationRequest'),
@@ -218,6 +260,9 @@ add('simple-1', [j('a'), j('b'), j('c'), e('a', 'b'), e('a', 'c')]);
 add('simple-2', [j('a')]);
 
 add('orphans', [j('a'), j('x'), j('y'), e('x', 'y')]);
+
+// hack for re-run
+add('empty', []);
 
 console.log(workflows);
 
