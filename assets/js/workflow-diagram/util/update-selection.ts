@@ -26,7 +26,7 @@ export default (model: Flow.Model, newSelection: string | null) => {
           obj[next.id] = true;
           return obj;
         },
-        {}
+        {} as Record<string, true>
       );
     }
   }
@@ -43,10 +43,7 @@ export default (model: Flow.Model, newSelection: string | null) => {
     return styleItem({
       ...item,
 
-      // using the selection flag for neighbouring edges is SO much easier (and clearer)
       selected: item.id === newSelection || item.id in neighbours,
-      // // @ts-ignore
-      // neighbour: item.id in neighbours,
     });
   }
 
