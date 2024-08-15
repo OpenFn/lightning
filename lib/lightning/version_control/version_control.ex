@@ -8,6 +8,7 @@ defmodule Lightning.VersionControl do
 
   import Ecto.Query, warn: false
 
+  require Logger
   alias Lightning.Accounts.User
   alias Lightning.Extensions.UsageLimiting
   alias Lightning.Repo
@@ -364,7 +365,7 @@ defmodule Lightning.VersionControl do
   @doc """
   Deletes the authorization for the github app and updates the user details accordingly
   """
-  @spec delete_github_ouath_grant(User.t()) :: {:ok, User.t()} | {:error, any()}
+  @spec delete_github_ouath_grant(User.t()) :: {:ok, User.t()} | {:error, map()}
   def delete_github_ouath_grant(%User{} = user) do
     app_config = Application.fetch_env!(:lightning, :github_app)
     client_id = Keyword.fetch!(app_config, :client_id)
@@ -382,8 +383,16 @@ defmodule Lightning.VersionControl do
              client_id,
              access_token
            ) do
-      user |> Ecto.Changeset.change(%{github_oauth_token: nil}) |> Repo.update()
+      remove_oauth_token(user)
+    else
+      {:error, error} ->
+        Logger.error("Error deleting github app grant: #{inspect(error)}")
+        remove_oauth_token(%User{} = user)
     end
+  end
+
+  defp remove_oauth_token(%User{} = user) do
+    user |> Ecto.Changeset.change(%{github_oauth_token: nil}) |> Repo.update()
   end
 
   @spec save_oauth_token(User.t(), map(), notify: boolean()) ::

@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Show Github Error messages as they are to help troubleshooting
+  [#2156](https://github.com/OpenFn/lightning/issues/2156)
+
 ### Fixed
 
 ## [v2.7.19] - 2024-08-19
