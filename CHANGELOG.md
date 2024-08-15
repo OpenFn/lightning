@@ -23,6 +23,8 @@ and this project adheres to
   [#2478](https://github.com/OpenFn/lightning/pull/2478)
 - Improve history export page UI
   [#2442](https://github.com/OpenFn/lightning/issues/2442)
+- When selecting a node in the workflow diagram, connected edges will also be
+  highlighted [2396](https://github.com/OpenFn/lightning/pull/2396)
 
 ### Fixed
 
