@@ -37,7 +37,6 @@
   },
   "devDependencies": {
     "@openfn/ws-worker": "^1.5",
-    "@types/jsdom": "^21.1.7",
     "@types/marked": "^4.0.8",
     "@types/react": "^18.0.15",
     "@types/react-dom": "^18.0.6",
