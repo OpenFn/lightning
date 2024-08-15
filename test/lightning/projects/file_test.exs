@@ -1,16 +1,17 @@
-defmodule Lightning.Projects.FileTest do
+defmodule Lightning.Projects.ProjectFileTest do
   use Lightning.DataCase, async: true
 
-  alias Lightning.Projects.File
+  alias Lightning.Projects.ProjectFile
 
   test "new with valid data" do
     user = insert(:user)
     project = insert(:project)
 
     changeset =
-      File.new(%{
+      ProjectFile.new(%{
         path: "path/to/file",
         size: 123,
+        type: :archive,
         created_by: user,
         project: project
       })
@@ -20,10 +21,12 @@ defmodule Lightning.Projects.FileTest do
 
   test "new with invalid data" do
     changeset =
-      File.new(%{
+      ProjectFile.new(%{
         path: "path/to/file",
         size: 123
       })
+
+    assert {:type, {"can't be blank", [validation: :required]}} in changeset.errors
 
     assert {:created_by, {"can't be blank", [validation: :required]}} in changeset.errors
 
