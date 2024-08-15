@@ -86,7 +86,7 @@ defmodule LightningWeb.LayoutComponents do
       id="account-confirmation-alert"
       type="danger"
       centered
-      message={"Please confirm your account before #{@current_user.inserted_at |> DateTime.add(48, :hour) |> Timex.format!("%A, %d-%b @ %H:%M UTC", :strftime)} to continue using OpenFn."}
+      message={"Please confirm your account before #{@current_user.inserted_at |> DateTime.add(48, :hour) |> Timex.format!("%A, %d %B @ %H:%M UTC", :strftime)} to continue using OpenFn."}
       action={
         %{
           text: "Resend confirmation email",
