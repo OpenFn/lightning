@@ -186,19 +186,28 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
       {:error, %Ecto.Changeset{} = changeset} ->
         assign(socket, changeset: changeset)
 
-      {:error, %{text: error_msg}} ->
+      {:error, error} ->
         socket
-        |> put_flash(:error, error_msg)
+        |> put_flash(:error, error_message(error))
         |> push_navigate(
           to: ~p"/projects/#{socket.assigns.project}/settings#vcs"
         )
+    end
+  end
 
-      {:error, _other} ->
-        socket
-        |> put_flash(:error, "Oops! Could not connect to Github")
-        |> push_navigate(
-          to: ~p"/projects/#{socket.assigns.project}/settings#vcs"
-        )
+  defp error_message(error) do
+    case error do
+      %{text: error_msg} ->
+        error_msg
+
+      %Lightning.VersionControl.GithubError{message: message} ->
+        "Github Error: #{message}"
+
+      %{"message" => message} ->
+        "Github Error: #{message}"
+
+      _ ->
+        "Oops! An error occured while connecting to Github. Please try again later"
     end
   end
 
@@ -250,19 +259,9 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
           to: ~p"/projects/#{socket.assigns.project}/settings#vcs"
         )
 
-      {:error, %{text: error_msg}} ->
+      {:error, error} ->
         socket
-        |> put_flash(:error, error_msg)
-        |> push_navigate(
-          to: ~p"/projects/#{socket.assigns.project}/settings#vcs"
-        )
-
-      {:error, _} ->
-        socket
-        |> put_flash(
-          :error,
-          "Oops! An error occured while connecting to Github. Please try again later"
-        )
+        |> put_flash(:error, error_message(error))
         |> push_navigate(
           to: ~p"/projects/#{socket.assigns.project}/settings#vcs"
         )
@@ -460,7 +459,9 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
                 <div class="mt-2 text-sm text-yellow-700">
                   <%= case failure do %>
                     <% {:error, %Lightning.VersionControl.GithubError{message: message}} -> %>
-                      <p><code><%= message %></code></p>
+                      <p><code>Github Error: <%= message %></code></p>
+                    <% {:error, %{"message" => message}} -> %>
+                      <p><code>Github Error: <%= message %></code></p>
                     <% _other -> %>
                       <p>There was a problem connecting to github</p>
                   <% end %>
