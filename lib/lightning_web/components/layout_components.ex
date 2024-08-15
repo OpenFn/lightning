@@ -73,17 +73,11 @@ defmodule LightningWeb.LayoutComponents do
         "h-20"
       end
 
-    confirm_by_date =
-      assigns.current_user.inserted_at
-      |> Timex.shift(hours: 48)
-      |> Timex.format!("%A, %d-%b @ %H:%M UTC", :strftime)
-
     # description has the same title class except for height and font
     assigns =
       assign(assigns,
         title_class: "max-w-7xl mx-auto sm:px-6 lg:px-8",
-        title_height: "py-6 flex items-center " <> title_height,
-        confirm_by_date: confirm_by_date
+        title_height: "py-6 flex items-center " <> title_height
       )
 
     ~H"""
@@ -92,7 +86,7 @@ defmodule LightningWeb.LayoutComponents do
       id="account-confirmation-alert"
       type="danger"
       centered
-      message={"Please confirm your account before #{@confirm_by_date} to continue using OpenFn."}
+      message={"Please confirm your account before #{@current_user.inserted_at |> DateTime.add(48, :hour) |> Timex.format!("%A, %d-%b @ %H:%M UTC", :strftime)} to continue using OpenFn."}
       action={
         %{
           text: "Resend confirmation email",
