@@ -3,7 +3,7 @@ import { check } from 'k6';
 
 const webhookURL =
   __ENV.WEBHOOK_URL ||
-  'https://demo.openfn.org/i/cae544ab-03dc-4ccc-a09c-fb4edb255d7a';
+  'http://localhost:4000/i/cae544ab-03dc-4ccc-a09c-fb4edb255d7a';
 
 export const options = {
   discardResponseBodies: true,
