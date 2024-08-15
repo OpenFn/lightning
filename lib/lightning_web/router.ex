@@ -113,6 +113,8 @@ defmodule LightningWeb.Router do
         UserConfirmationController,
         :confirm_email
 
+    get "/users/send-confirmation-email", UserConfirmationController, :send_email
+
     live_session :auth, on_mount: LightningWeb.InitAssigns do
       live "/auth/confirm_access", ReAuthenticateLive.New, :new
     end
