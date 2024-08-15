@@ -804,11 +804,71 @@ defmodule Lightning.KafkaTriggersTest do
     end
   end
 
+  describe "rollback_pipeline/2" do
+    setup do
+      kafka_configuration = build(:triggers_kafka_configuration)
+
+      enabled_trigger = 
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: kafka_configuration,
+          enabled: true
+        )
+
+      disabled_trigger =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: kafka_configuration,
+          enabled: false
+        )
+
+      timestamp = 1_723_633_665_366
+      rollback_timestamp = timestamp - 1
+
+      # child_spec =
+      #   KafkaTriggers.generate_pipeline_child_spec(
+      #     enabled_trigger,
+      #     rollback: [timestamp: rollback_timestamp]
+      #   )
+
+      %{
+        # child_spec: child_spec,
+        disabled_trigger: disabled_trigger,
+        enabled_trigger: enabled_trigger,
+        rollback_timestamp: rollback_timestamp,
+        supervisor: 100_000_001,
+        timestamp: timestamp,
+      }
+    end
+
+    # test "restarts trigger with rollback timestamp", %{
+    #   # child_spec: child_spec,
+    #   enabled_trigger: trigger,
+    #   # rollback_timestamp: rollback_timestamp,
+    #   supervisor: supervisor,
+    #   timestamp: timestamp,
+    # } do
+    #   with_mock Supervisor,
+    #     delete_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
+    #     terminate_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
+    #     start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end do
+    #     KafkaTriggers.rollback_pipeline(supervisor, trigger.id, timestamp)
+    #
+    #     assert_called(Supervisor.terminate_child(supervisor, trigger.id))
+    #
+    #     assert call_sequence() == [:terminate_child]
+    #   end
+    # end
+  end
+
   defp child_spec(opts) do
     trigger = opts |> Keyword.get(:trigger)
     index = opts |> Keyword.get(:index)
     sasl = opts |> Keyword.get(:sasl, true)
     ssl = opts |> Keyword.get(:ssl, true)
+    begin_offset = opts |> Keyword.get(:begin_offset, :assigned)
 
     number_of_consumers =
       opts
@@ -833,6 +893,7 @@ defmodule Lightning.KafkaTriggersTest do
         :start_link,
         [
           [
+            begin_offset: begin_offset,
             connect_timeout: (30 + index) * 1000,
             group_id: "lightning-#{index}",
             hosts: [{"host-#{index}", 9092}, {"other-host-#{index}", 9093}],

@@ -133,6 +133,7 @@ defmodule Lightning.KafkaTriggers do
         :start_link,
         [
           [
+            begin_offset: :assigned,
             connect_timeout: connect_timeout * 1000,
             group_id: group_id,
             hosts: hosts,
@@ -215,6 +216,11 @@ defmodule Lightning.KafkaTriggers do
   end
 
   def rollback_pipeline(_supervisor, _trigger_id, _timestamp) do
+    # If no trigger, do nothing
+    # If trigger is disabled, do nothing (this will be different for when we do not want to restart)
+    # Stop the pipeline and delete it
+    # Generate new child spec
+    # Start the pipeline
 
   end
 end
