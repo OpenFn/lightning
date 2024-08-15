@@ -213,4 +213,8 @@ defmodule Lightning.KafkaTriggers do
 
     %{interval: 10_000, messages_per_interval: messages_per_interval}
   end
+
+  def rollback_pipeline(_supervisor, _trigger_id, _timestamp) do
+
+  end
 end

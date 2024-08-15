@@ -15,6 +15,7 @@ defmodule Lightning.KafkaTriggers.EventListener do
   @impl true
   def init(_opts) do
     Events.subscribe_to_kafka_trigger_updated()
+    Events.subscribe_to_kafka_trigger_persistence_failure()
 
     {:ok, %{}}
   end
@@ -29,7 +30,18 @@ defmodule Lightning.KafkaTriggers.EventListener do
   end
 
   @impl true
-  def handle_info(_msg, state) do
+  def handle_info(%Events.KafkaTriggerPersistenceFailure{} = event, state) do
+    %{trigger_id: trigger_id, timestamp: timestamp} = event
+
+    if supervisor = GenServer.whereis(:kafka_pipeline_supervisor) do
+      supervisor |> KafkaTriggers.rollback_pipeline(trigger_id, timestamp)
+    end
+
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_info(_event, state) do
     {:noreply, state}
   end
 end

@@ -6,6 +6,7 @@ defmodule Lightning.KafkaTriggers.EventListenerTest do
   alias Lightning.KafkaTriggers.PipelineSupervisor
   alias Lightning.Workflows.Triggers.Events
   alias Lightning.Workflows.Triggers.Events.KafkaTriggerUpdated
+  alias Lightning.Workflows.Triggers.Events.KafkaTriggerPersistenceFailure
 
   import Mox
 
@@ -18,10 +19,12 @@ defmodule Lightning.KafkaTriggers.EventListenerTest do
   setup do
     pid = start_supervised!(PipelineSupervisor, [])
     trigger = build(:trigger)
+    timestamp = 1_723_633_665_366
 
     %{
       state: %{},
       supervisor_pid: pid,
+      timestamp: timestamp,
       trigger: trigger
     }
   end
@@ -30,7 +33,7 @@ defmodule Lightning.KafkaTriggers.EventListenerTest do
     assert {:ok, _pid} = EventListener.start_link([])
   end
 
-  test "init/1 subscribes to the Kafka triggers topic", %{
+  test "init/1 subscribes to the Kafka trigger updated topic", %{
     trigger: trigger
   } do
     trigger_id = trigger.id
@@ -40,6 +43,22 @@ defmodule Lightning.KafkaTriggers.EventListenerTest do
     Events.kafka_trigger_updated(trigger_id)
 
     assert_receive %KafkaTriggerUpdated{trigger_id: ^trigger_id}
+  end
+
+  test "init/1 subscribes to the Kafka trigger persistence failure topic", %{
+    timestamp: timestamp,
+    trigger: trigger
+  } do
+    trigger_id = trigger.id
+
+    assert EventListener.init([]) == {:ok, %{}}
+
+    Events.kafka_trigger_persistence_failure(trigger_id, timestamp)
+
+    assert_receive %KafkaTriggerPersistenceFailure{
+      trigger_id: ^trigger_id,
+      timestamp: ^timestamp
+    }
   end
 
   describe "handle_info/1 - KafkaTriggerUpdated" do
@@ -99,6 +118,90 @@ defmodule Lightning.KafkaTriggers.EventListenerTest do
                  )
 
         assert_not_called(KafkaTriggers.update_pipeline(:_, :_))
+      end
+    end
+  end
+
+  describe "handle_info/1 - KafkaTriggerPersistenceFailure" do
+    test "rolls the trigger's pipeline back to timestamp", %{
+      supervisor_pid: pid,
+      state: state,
+      timestamp: timestamp,
+      trigger: trigger
+    } do
+      with_mock KafkaTriggers,
+        rollback_pipeline: fn _supervisor, _trigger, _timestamp ->
+          {:ok, "fake-pid"}
+        end do
+        EventListener.handle_info(
+          %KafkaTriggerPersistenceFailure{
+            trigger_id: trigger.id,
+            timestamp: timestamp
+          },
+          state
+        )
+
+        assert_called(
+          KafkaTriggers.rollback_pipeline(pid, trigger.id, timestamp)
+        )
+      end
+    end
+
+    test "returns the appropriate_response", %{
+      state: state,
+      timestamp: timestamp,
+      trigger: trigger
+    } do
+      with_mock KafkaTriggers,
+        rollback_pipeline: fn _supervisor, _trigger, _timestamp ->
+          {:ok, "fake-pid"}
+        end do
+        response =
+          EventListener.handle_info(
+            %KafkaTriggerPersistenceFailure{
+              trigger_id: trigger.id,
+              timestamp: timestamp
+            },
+            state
+          )
+
+        assert response == {:noreply, state}
+      end
+    end
+
+    test "ignores non-KafkaTriggerPersistenceFailure events", %{
+      state: state
+    } do
+      with_mock KafkaTriggers,
+        rollback_pipeline: fn _supervisor, _trigger, _timestamp ->
+          {:ok, "fake-pid"}
+        end do
+        assert {:noreply, ^state} = EventListener.handle_info("huh?", state)
+
+        assert_not_called(KafkaTriggers.rollback_pipeline(:_, :_, :_))
+      end
+    end
+
+    test "does nothing if the supervisor is not running", %{
+      state: state,
+      timestamp: timestamp,
+      trigger: trigger
+    } do
+      stop_supervised!(PipelineSupervisor)
+
+      with_mock KafkaTriggers,
+        rollback_pipeline: fn _supervisor, _trigger, _timestamp ->
+          {:ok, "fake-pid"}
+        end do
+        EventListener.handle_info(
+          %KafkaTriggerPersistenceFailure{
+            trigger_id: trigger.id,
+            timestamp: timestamp
+          },
+          state
+        )
+
+        assert_not_called(KafkaTriggers.rollback_pipeline(:_, :_, :_))
       end
     end
   end
