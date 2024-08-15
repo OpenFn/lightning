@@ -472,15 +472,22 @@ defmodule LightningWeb.RunLive.Index do
 
   def handle_event("confirm-export", _params, socket) do
     search_params = SearchParams.new(socket.assigns.filters)
-    ExportWorker.export(socket.assigns.project, search_params)
 
-    {:noreply,
-     socket
-     |> assign(:show_export_modal, false)
-     |> put_flash(
-       :info,
-       "History export started successfuly. You will be notified by email after completion."
-     )}
+    case ExportWorker.enqueue_export(socket.assigns.project, search_params) do
+      :ok ->
+        {:noreply,
+         socket
+         |> assign(:show_export_modal, false)
+         |> put_flash(
+           :info,
+           "History export started successfully. You will be notified by email after completion."
+         )}
+
+      {:error, _reason} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Failed to start export. Please try again.")}
+    end
   end
 
   defp find_workflow_name(workflows, workflow_id) do

@@ -1,12 +1,46 @@
 defmodule Lightning.WorkOrders.ExportWorker do
+  use Oban.Worker, queue: :history_exports, max_attempts: 3
+
   require Logger
+
   alias Lightning.Invocation.Dataclip
   alias Lightning.Repo
   alias Lightning.Invocation
   alias Lightning.Projects.Project
   alias Lightning.WorkOrders.SearchParams
 
-  def export(%Project{} = project, %SearchParams{} = params) do
+  @impl Oban.Worker
+  def perform(%Oban.Job{
+        args: %{"project_id" => project_id, "search_params" => params}
+      }) do
+    case Project |> Repo.get!(project_id) |> export(params) do
+      :ok ->
+        Logger.info("Export completed successfully.")
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Export failed with reason: #{inspect(reason)}")
+        {:error, reason}
+    end
+  end
+
+  def enqueue_export(project, search_params) do
+    job = %{
+      "project_id" => project.id,
+      "params" => search_params
+    }
+
+    case Oban.insert(Lightning.Oban, new(job)) do
+      {:ok, _job} ->
+        :ok
+
+      {:error, changeset} ->
+        Logger.error("Failed to enqueue export job: #{inspect(changeset)}")
+        {:error, changeset}
+    end
+  end
+
+  defp export(%Project{} = project, %SearchParams{} = params) do
     workorders_query =
       Invocation.search_workorders_for_export_query(project, params)
 
