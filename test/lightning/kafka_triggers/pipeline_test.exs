@@ -21,6 +21,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
 
   describe ".start_link/1" do
     test "starts a Broadway GenServer process with SASL credentials" do
+      begin_offset = :assigned
       connect_timeout = 15_000
       group_id = "my_group"
       hosts = [{"localhost", 9092}]
@@ -40,6 +41,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       with_mock Broadway,
         start_link: fn _module, _opts -> {:ok, "fake-pid"} end do
         Pipeline.start_link(
+          begin_offset: begin_offset,
           connect_timeout: connect_timeout,
           group_id: group_id,
           hosts: hosts,
@@ -64,6 +66,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
                      module: {
                        BroadwayKafka.Producer,
                        [
+                         begin_offset: begin_offset,
                          client_config: [
                            sasl: sasl_expected,
                            ssl: ssl,
@@ -93,6 +96,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
     end
 
     test "starts a Broadway GenServer process without SASL credentials" do
+      begin_offset = :reset
       connect_timeout = 15_000
       group_id = "my_group"
       hosts = [{"localhost", 9092}]
@@ -111,6 +115,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       with_mock Broadway,
         start_link: fn _module, _opts -> {:ok, "fake-pid"} end do
         Pipeline.start_link(
+          begin_offset: begin_offset,
           connect_timeout: connect_timeout,
           group_id: group_id,
           hosts: hosts,
@@ -135,6 +140,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
                      module: {
                        BroadwayKafka.Producer,
                        [
+                         begin_offset: begin_offset,
                          client_config: [
                            ssl: ssl,
                            connect_timeout: connect_timeout

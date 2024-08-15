@@ -33,7 +33,15 @@ defmodule Lightning.KafkaTriggers do
   Selects the appropriate offset reset policy for a given trigger based on the
   presence of partition-specific timestamps.
   """
-  def determine_offset_reset_policy(trigger) do
+  def determine_offset_reset_policy(trigger, opts \\ []) do
+    if rollback_timestamp = opts |> Keyword.get(:rollback_timestamp) do
+      {:timestamp, rollback_timestamp}
+    else
+      determine_offset_from_configuration(trigger)
+    end
+  end
+
+  defp determine_offset_from_configuration(trigger) do
     %Trigger{kafka_configuration: kafka_configuration} = trigger
 
     case kafka_configuration do
@@ -96,7 +104,7 @@ defmodule Lightning.KafkaTriggers do
   @doc """
   Generate the child spec needed to start a `Pipeline` child process.
   """
-  def generate_pipeline_child_spec(trigger) do
+  def generate_pipeline_child_spec(trigger, opts \\ []) do
     %{
       connect_timeout: connect_timeout,
       group_id: group_id,
@@ -121,7 +129,8 @@ defmodule Lightning.KafkaTriggers do
         nil
       end
 
-    offset_reset_policy = determine_offset_reset_policy(trigger)
+    begin_offset = determine_begin_offset(opts)
+    offset_reset_policy = determine_offset_reset_policy(trigger, opts)
 
     number_of_consumers = Lightning.Config.kafka_number_of_consumers()
     number_of_processors = Lightning.Config.kafka_number_of_processors()
@@ -133,7 +142,7 @@ defmodule Lightning.KafkaTriggers do
         :start_link,
         [
           [
-            begin_offset: :assigned,
+            begin_offset: begin_offset,
             connect_timeout: connect_timeout * 1000,
             group_id: group_id,
             hosts: hosts,
@@ -150,6 +159,10 @@ defmodule Lightning.KafkaTriggers do
         ]
       }
     }
+  end
+
+  defp determine_begin_offset(opts) do
+    if opts |> Keyword.get(:rollback_timestamp, nil), do: :reset, else: :assigned
   end
 
   def get_kafka_triggers_being_updated(changeset) do
@@ -215,12 +228,29 @@ defmodule Lightning.KafkaTriggers do
     %{interval: 10_000, messages_per_interval: messages_per_interval}
   end
 
-  def rollback_pipeline(_supervisor, _trigger_id, _timestamp) do
-    # If no trigger, do nothing
-    # If trigger is disabled, do nothing (this will be different for when we do not want to restart)
-    # Stop the pipeline and delete it
-    # Generate new child spec
-    # Start the pipeline
+  def rollback_pipeline(supervisor, trigger_id, timestamp) when timestamp > 1 do
+    Trigger
+    |> Repo.get_by(id: trigger_id, type: :kafka, enabled: true)
+    |> case do
+      nil ->
+        {:error, :enabled_kafka_trigger_not_found}
 
+      trigger ->
+        rollback_timestamp = timestamp - 1
+
+        spec =
+          generate_pipeline_child_spec(
+            trigger,
+            rollback_timestamp: rollback_timestamp
+          )
+
+        Supervisor.terminate_child(supervisor, trigger_id)
+        Supervisor.delete_child(supervisor, trigger_id)
+        Supervisor.start_child(supervisor, spec)
+    end
+  end
+
+  def rollback_pipeline(_supervisor, _trigger_id, _timestamp) do
+    {:error, :invalid_timestamp}
   end
 end

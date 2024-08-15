@@ -216,12 +216,14 @@ defmodule Lightning.KafkaTriggers.Pipeline do
   end
 
   defp build_producer_opts(opts) do
+    begin_offset = opts |> Keyword.get(:begin_offset)
     hosts = opts |> Keyword.get(:hosts)
     group_id = opts |> Keyword.get(:group_id)
     offset_reset_policy = opts |> Keyword.get(:offset_reset_policy)
     topics = opts |> Keyword.get(:topics)
 
     [
+      begin_offset: begin_offset,
       client_config: client_config(opts),
       hosts: hosts,
       group_id: group_id,

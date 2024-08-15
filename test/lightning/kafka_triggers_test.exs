@@ -204,6 +204,25 @@ defmodule Lightning.KafkaTriggersTest do
       assert policy == {:timestamp, 1_715_312_900_120}
     end
 
+    test "returns rollback timestamp if provided" do
+      partition_timestamps = %{
+        "1" => 1_715_312_900_121,
+        "2" => 1_715_312_900_120,
+        "3" => 1_715_312_900_123
+      }
+
+      rollback_timestamp = 1_715_164_718_281
+
+      policy =
+        "earliest"
+        |> build_trigger(partition_timestamps)
+        |> KafkaTriggers.determine_offset_reset_policy(
+          rollback_timestamp: rollback_timestamp
+        )
+
+      assert policy == {:timestamp, rollback_timestamp}
+    end
+
     defp build_trigger(initial_offset_reset, partition_timestamps \\ %{}) do
       kafka_configuration =
         configuration(
@@ -490,6 +509,44 @@ defmodule Lightning.KafkaTriggersTest do
         )
 
       actual_child_spec = KafkaTriggers.generate_pipeline_child_spec(trigger)
+
+      assert actual_child_spec == expected_child_spec
+    end
+
+    test "generates a child spec with rollback settings" do
+      timestamp = 1_715_164_718_281
+
+      number_of_consumers = Lightning.Config.kafka_number_of_consumers()
+
+      assert number_of_consumers != nil
+
+      number_of_processors = Lightning.Config.kafka_number_of_processors()
+
+      assert number_of_processors != nil
+
+      trigger =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: configuration(index: 1),
+          enabled: true
+        )
+
+      expected_child_spec =
+        child_spec(
+          trigger: trigger,
+          index: 1,
+          number_of_consumers: number_of_consumers,
+          number_of_processors: number_of_processors,
+          begin_offset: :reset,
+          offset_timestamp: timestamp
+        )
+
+      actual_child_spec =
+        KafkaTriggers.generate_pipeline_child_spec(
+          trigger,
+          rollback_timestamp: timestamp
+        )
 
       assert actual_child_spec == expected_child_spec
     end
@@ -808,7 +865,7 @@ defmodule Lightning.KafkaTriggersTest do
     setup do
       kafka_configuration = build(:triggers_kafka_configuration)
 
-      enabled_trigger = 
+      enabled_trigger =
         insert(
           :trigger,
           type: :kafka,
@@ -827,40 +884,195 @@ defmodule Lightning.KafkaTriggersTest do
       timestamp = 1_723_633_665_366
       rollback_timestamp = timestamp - 1
 
-      # child_spec =
-      #   KafkaTriggers.generate_pipeline_child_spec(
-      #     enabled_trigger,
-      #     rollback: [timestamp: rollback_timestamp]
-      #   )
+      child_spec =
+        KafkaTriggers.generate_pipeline_child_spec(
+          enabled_trigger,
+          rollback_timestamp: rollback_timestamp
+        )
 
       %{
-        # child_spec: child_spec,
+        child_spec: child_spec,
         disabled_trigger: disabled_trigger,
         enabled_trigger: enabled_trigger,
         rollback_timestamp: rollback_timestamp,
         supervisor: 100_000_001,
-        timestamp: timestamp,
+        timestamp: timestamp
       }
     end
 
-    # test "restarts trigger with rollback timestamp", %{
-    #   # child_spec: child_spec,
-    #   enabled_trigger: trigger,
-    #   # rollback_timestamp: rollback_timestamp,
-    #   supervisor: supervisor,
-    #   timestamp: timestamp,
-    # } do
-    #   with_mock Supervisor,
-    #     delete_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
-    #     terminate_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
-    #     start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end do
-    #     KafkaTriggers.rollback_pipeline(supervisor, trigger.id, timestamp)
-    #
-    #     assert_called(Supervisor.terminate_child(supervisor, trigger.id))
-    #
-    #     assert call_sequence() == [:terminate_child]
-    #   end
-    # end
+    test "restarts trigger with rollback timestamp", %{
+      child_spec: child_spec,
+      enabled_trigger: trigger,
+      supervisor: supervisor,
+      timestamp: timestamp
+    } do
+      with_mock Supervisor,
+        delete_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
+        terminate_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end do
+        KafkaTriggers.rollback_pipeline(supervisor, trigger.id, timestamp)
+
+        assert_called(Supervisor.terminate_child(supervisor, trigger.id))
+        assert_called(Supervisor.delete_child(supervisor, trigger.id))
+        assert_called(Supervisor.start_child(supervisor, child_spec))
+
+        assert call_sequence() == [:terminate_child, :delete_child, :start_child]
+      end
+    end
+
+    test "returns the child PID", %{
+      enabled_trigger: trigger,
+      supervisor: supervisor,
+      timestamp: timestamp
+    } do
+      with_mock Supervisor,
+        delete_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
+        terminate_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end do
+        response =
+          KafkaTriggers.rollback_pipeline(supervisor, trigger.id, timestamp)
+
+        assert response == {:ok, "fake-pid"}
+      end
+    end
+
+    test "does nothing if the trigger is not a kafka trigger", %{
+      supervisor: supervisor,
+      timestamp: timestamp
+    } do
+      trigger = insert(:trigger, type: :webhook)
+
+      with_mock Supervisor,
+        delete_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
+        terminate_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end do
+        KafkaTriggers.rollback_pipeline(supervisor, trigger.id, timestamp)
+
+        assert_not_called(Supervisor.terminate_child(:_, :_))
+        assert_not_called(Supervisor.delete_child(:_, :_))
+        assert_not_called(Supervisor.start_child(:_, :_))
+      end
+    end
+
+    test "returns an error if the trigger is not a kafka trigger", %{
+      supervisor: supervisor,
+      timestamp: timestamp
+    } do
+      trigger = insert(:trigger, type: :webhook)
+
+      with_mock Supervisor,
+        delete_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
+        terminate_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end do
+        response =
+          KafkaTriggers.rollback_pipeline(supervisor, trigger.id, timestamp)
+
+        assert response == {:error, :enabled_kafka_trigger_not_found}
+      end
+    end
+
+    test "does nothing if the trigger does not exist", %{
+      supervisor: supervisor,
+      timestamp: timestamp
+    } do
+      trigger_id = Ecto.UUID.generate()
+
+      with_mock Supervisor,
+        delete_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
+        terminate_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end do
+        KafkaTriggers.rollback_pipeline(supervisor, trigger_id, timestamp)
+
+        assert_not_called(Supervisor.terminate_child(:_, :_))
+        assert_not_called(Supervisor.delete_child(:_, :_))
+        assert_not_called(Supervisor.start_child(:_, :_))
+      end
+    end
+
+    test "returns an error if the trigger does not exist", %{
+      supervisor: supervisor,
+      timestamp: timestamp
+    } do
+      trigger_id = Ecto.UUID.generate()
+
+      with_mock Supervisor,
+        delete_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
+        terminate_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end do
+        response =
+          KafkaTriggers.rollback_pipeline(supervisor, trigger_id, timestamp)
+
+        assert response == {:error, :enabled_kafka_trigger_not_found}
+      end
+    end
+
+    test "does nothing if the trigger is disabled", %{
+      disabled_trigger: trigger,
+      supervisor: supervisor,
+      timestamp: timestamp
+    } do
+      with_mock Supervisor,
+        delete_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
+        terminate_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end do
+        KafkaTriggers.rollback_pipeline(supervisor, trigger.id, timestamp)
+
+        assert_not_called(Supervisor.terminate_child(:_, :_))
+        assert_not_called(Supervisor.delete_child(:_, :_))
+        assert_not_called(Supervisor.start_child(:_, :_))
+      end
+    end
+
+    test "returns an error if the trigger is disabled", %{
+      disabled_trigger: trigger,
+      supervisor: supervisor,
+      timestamp: timestamp
+    } do
+      with_mock Supervisor,
+        delete_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
+        terminate_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end do
+        response =
+          KafkaTriggers.rollback_pipeline(supervisor, trigger.id, timestamp)
+
+        assert response == {:error, :enabled_kafka_trigger_not_found}
+      end
+    end
+
+    test "does nothing if the timestamp is not greater than 1", %{
+      enabled_trigger: trigger,
+      supervisor: supervisor
+    } do
+      timestamp = 1
+
+      with_mock Supervisor,
+        delete_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
+        terminate_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end do
+        KafkaTriggers.rollback_pipeline(supervisor, trigger.id, timestamp)
+
+        assert_not_called(Supervisor.terminate_child(:_, :_))
+        assert_not_called(Supervisor.delete_child(:_, :_))
+        assert_not_called(Supervisor.start_child(:_, :_))
+      end
+    end
+
+    test "returns an error if the timestamp is not greater than 1", %{
+      enabled_trigger: trigger,
+      supervisor: supervisor
+    } do
+      timestamp = 1
+
+      with_mock Supervisor,
+        delete_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
+        terminate_child: fn _sup_pid, _child_id -> {:ok, "anything"} end,
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end do
+        response =
+          KafkaTriggers.rollback_pipeline(supervisor, trigger.id, timestamp)
+
+        assert response == {:error, :invalid_timestamp}
+      end
+    end
   end
 
   defp child_spec(opts) do
@@ -869,6 +1081,14 @@ defmodule Lightning.KafkaTriggersTest do
     sasl = opts |> Keyword.get(:sasl, true)
     ssl = opts |> Keyword.get(:ssl, true)
     begin_offset = opts |> Keyword.get(:begin_offset, :assigned)
+
+    offset_timestamp =
+      opts
+      |> Keyword.get(
+        :offset_timestamp,
+        "171524976732#{index}"
+        |> String.to_integer()
+      )
 
     number_of_consumers =
       opts
@@ -883,8 +1103,6 @@ defmodule Lightning.KafkaTriggersTest do
         :number_of_processors,
         Lightning.Config.kafka_number_of_processors()
       )
-
-    offset_timestamp = "171524976732#{index}" |> String.to_integer()
 
     %{
       id: trigger.id,
