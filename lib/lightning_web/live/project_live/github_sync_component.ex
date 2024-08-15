@@ -209,7 +209,10 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
       %{"error_description" => message} ->
         "Github Error: #{message}"
 
-      _ ->
+      %Tesla.Env{body: body} ->
+        error_message(body)
+
+      _error ->
         "Oops! An error occured while connecting to Github. Please try again later"
     end
   end
@@ -462,8 +465,10 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
                 <div class="mt-2 text-sm text-yellow-700">
                   <%= case failure do %>
                     <% {:error, %Lightning.VersionControl.GithubError{message: message}} -> %>
+                      <p>There was a problem connecting to github</p>
                       <p><code>Github Error: <%= message %></code></p>
                     <% {:error, %{"message" => message}} -> %>
+                      <p>There was a problem connecting to github</p>
                       <p><code>Github Error: <%= message %></code></p>
                     <% _other -> %>
                       <p>There was a problem connecting to github</p>

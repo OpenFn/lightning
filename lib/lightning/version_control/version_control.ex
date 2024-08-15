@@ -8,7 +8,6 @@ defmodule Lightning.VersionControl do
 
   import Ecto.Query, warn: false
 
-  require Logger
   alias Lightning.Accounts.User
   alias Lightning.Extensions.UsageLimiting
   alias Lightning.Repo
@@ -19,6 +18,8 @@ defmodule Lightning.VersionControl do
   alias Lightning.VersionControl.VersionControlUsageLimiter
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Workflow
+
+  require Logger
 
   defdelegate subscribe(user), to: Events
 
