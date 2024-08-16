@@ -39,6 +39,7 @@ defmodule Lightning.Workflows.Job do
 
     belongs_to :project_credential, ProjectCredential
     has_one :credential, through: [:project_credential, :credential]
+
     belongs_to :workflow, Workflow
     has_one :project, through: [:workflow, :project]
 
@@ -79,6 +80,9 @@ defmodule Lightning.Workflows.Job do
     |> validate_required(:name, message: "job name can't be blank")
     |> validate_required(:body, message: "job body can't be blank")
     |> validate_required(:adaptor, message: "job adaptor can't be blank")
+    |> foreign_key_constraint(:project_credential_id,
+      message: "credential doesn't exist or isn't available in this project"
+    )
     |> assoc_constraint(:workflow)
     |> validate_length(:name,
       max: 100,

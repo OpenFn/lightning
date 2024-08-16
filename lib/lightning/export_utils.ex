@@ -28,8 +28,7 @@ defmodule Lightning.ExportUtils do
       adaptor: job.adaptor,
       body: job.body,
       credential:
-        project_credential && project_credential_key(project_credential),
-      globals: []
+        project_credential && project_credential_key(project_credential)
     }
   end
 
@@ -168,7 +167,7 @@ defmodule Lightning.ExportUtils do
   end
 
   defp handle_input(key, value, indentation) when value in [%{}, [], nil] do
-    "#{indentation}# #{key}:"
+    "#{indentation}#{key}: null"
   end
 
   defp handle_input(key, value, indentation) when is_map(value) do
@@ -225,7 +224,6 @@ defmodule Lightning.ExportUtils do
       name: project.name,
       description: project.description,
       node_type: :project,
-      globals: [],
       workflows: workflows_map,
       credentials: credentials_map
     }

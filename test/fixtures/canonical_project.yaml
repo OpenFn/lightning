@@ -4,7 +4,6 @@ credentials:
   cannonical-user@lightning.com-new-credential:
     name: new credential
     owner: cannonical-user@lightning.com
-# globals:
 workflows:
   workflow-1:
     name: workflow 1
@@ -13,23 +12,20 @@ workflows:
         name: webhook job
         adaptor: '@openfn/language-common@latest'
         credential: cannonical-user@lightning.com-new-credential
-        # globals:
         body: |
           console.log('webhook job')
           fn(state => state)
       on-fail:
         name: on fail
         adaptor: '@openfn/language-common@latest'
-        # credential:
-        # globals:
+        credential: null
         body: |
           console.log('on fail')
           fn(state => state)
       on-success:
         name: on success
         adaptor: '@openfn/language-common@latest'
-        # credential:
-        # globals:
+        credential: null
         body: |
           console.log('hello!');
     triggers:
@@ -58,15 +54,13 @@ workflows:
       some-cronjob:
         name: some cronjob
         adaptor: '@openfn/language-common@latest'
-        # credential:
-        # globals:
+        credential: null
         body: |
           console.log('hello!');
       on-cron-failure:
         name: on cron failure
         adaptor: '@openfn/language-common@latest'
-        # credential:
-        # globals:
+        credential: null
         body: |
           console.log('hello!');
     triggers:
