@@ -39,7 +39,6 @@ defmodule Lightning.WorkOrders.ExportWorker do
   require Logger
 
   @batch_size 50
-  @root_dir "openfn-history-export"
 
   @impl Oban.Worker
   def perform(%Oban.Job{
@@ -72,7 +71,10 @@ defmodule Lightning.WorkOrders.ExportWorker do
         :ok
 
       {:error, changeset} ->
-        Logger.error("Failed to enqueue export job: #{inspect(changeset)}")
+        Logger.error(
+          "Failed to enqueue export job. Changeset errors: #{inspect(changeset.errors)}"
+        )
+
         {:error, changeset}
     end
   end
@@ -83,18 +85,32 @@ defmodule Lightning.WorkOrders.ExportWorker do
 
     case create_export_directories() do
       {:ok, export_dir} ->
-        Repo.transaction(fn ->
-          workorders_query
-          |> Repo.stream(max_rows: 100)
-          |> Stream.chunk_every(@batch_size)
-          |> Stream.each(&process_and_write_batch(&1, export_dir))
-          |> Stream.run()
-        end)
+        transaction_result =
+          Repo.transaction(fn ->
+            workorders_query
+            |> Repo.stream(max_rows: 100)
+            |> Stream.chunk_every(@batch_size)
+            |> Stream.each(&process_and_write_batch(&1, export_dir))
+            |> Stream.run()
+          end)
 
-        finalize_export(export_dir)
+        case transaction_result do
+          {:ok, _result} ->
+            finalize_export(export_dir)
+
+          {:error, reason} ->
+            Logger.error(
+              "Export transaction failed. Reason: #{inspect(reason)}. Rolling back any changes."
+            )
+
+            {:error, reason}
+        end
 
       {:error, reason} ->
-        Logger.error("Failed to create export directories: #{inspect(reason)}")
+        Logger.error(
+          "Failed to create export directories. Reason: #{inspect(reason)}"
+        )
+
         {:error, reason}
     end
   end
@@ -139,13 +155,16 @@ defmodule Lightning.WorkOrders.ExportWorker do
     case zip_folder(export_dir.root_dir, "#{export_dir.root_dir}.zip") do
       {:ok, zip_file} ->
         Logger.info(
-          "Export content written and zipped successfully at #{zip_file}"
+          "Export content written and zipped successfully. Zip file location: #{zip_file}"
         )
 
         {:ok, zip_file}
 
       {:error, reason} ->
-        Logger.error("Failed to finalize export: #{inspect(reason)}")
+        Logger.error(
+          "Failed to finalize export. Could not create zip file. Reason: #{inspect(reason)}"
+        )
+
         {:error, reason}
     end
   end
@@ -225,19 +244,15 @@ defmodule Lightning.WorkOrders.ExportWorker do
   end
 
   defp create_export_directories do
-    with {:ok, root_dir} <- Temp.mkdir(@root_dir),
-         logs_dir = Path.join([root_dir, "logs"]),
-         dataclips_dir = Path.join([root_dir, "dataclips"]),
-         :ok <- File.mkdir_p(logs_dir),
-         :ok <- File.mkdir_p(dataclips_dir) do
+    with {:ok, root_dir} <- Briefly.create(type: :directory),
+         :ok <- File.mkdir_p(Path.join(root_dir, "logs")),
+         :ok <- File.mkdir_p(Path.join(root_dir, "dataclips")) do
       {:ok,
        %{
          root_dir: root_dir,
-         logs_dir: logs_dir,
-         dataclips_dir: dataclips_dir
+         logs_dir: Path.join(root_dir, "logs"),
+         dataclips_dir: Path.join(root_dir, "dataclips")
        }}
-    else
-      {:error, reason} -> {:error, reason}
     end
   end
 
@@ -270,7 +285,9 @@ defmodule Lightning.WorkOrders.ExportWorker do
         :ok
 
       error ->
-        Logger.error("Failed to write logs for run #{run_id}: #{inspect(error)}")
+        Logger.error(
+          "Failed to write logs for run #{run_id}. Error details: #{inspect(error)}"
+        )
     end
   end
 
@@ -289,10 +306,14 @@ defmodule Lightning.WorkOrders.ExportWorker do
         :ok
 
       {:ok, error} ->
-        Logger.error("Error in dataclip processing: #{inspect(error)}")
+        Logger.error(
+          "Error in dataclip processing. Error details: #{inspect(error)}"
+        )
 
       {:exit, reason} ->
-        Logger.error("Task exited with reason: #{inspect(reason)}")
+        Logger.error(
+          "Dataclip processing task exited prematurely. Exit reason: #{inspect(reason)}"
+        )
     end)
 
     :ok
