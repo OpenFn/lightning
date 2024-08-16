@@ -220,6 +220,7 @@ defmodule Lightning.WorkOrders.ExportWorker do
   end
 
   defp combine_entities(entity1, entity2) do
+    # TODO: lets chat about this, i'm curious.. :)
     Map.merge(entity1, entity2, fn _key, val1, val2 -> val1 ++ val2 end)
   end
 
@@ -252,6 +253,7 @@ defmodule Lightning.WorkOrders.ExportWorker do
       {:ok, error} ->
         Logger.error("Error in log processing: #{inspect(error)}")
 
+      # TODO: does this imply we are skipping a log in the batch?
       {:exit, reason} ->
         Logger.error("Task exited with reason: #{inspect(reason)}")
     end)
@@ -312,6 +314,7 @@ defmodule Lightning.WorkOrders.ExportWorker do
     end)
   end
 
+  # TODO: there are now 3 functions that are almost identical, need to refactor
   def fetch_dataclips(dataclip_ids) do
     from(d in Dataclip,
       where: d.id in ^dataclip_ids,
@@ -342,6 +345,7 @@ defmodule Lightning.WorkOrders.ExportWorker do
         id: wo.id,
         workflow_id: wo.workflow_id,
         workflow_name: wo.workflow.name,
+        # TODO: should probably not rename the keys for now.
         received_at: wo.inserted_at,
         last_activity: wo.updated_at,
         status: wo.state
@@ -354,6 +358,8 @@ defmodule Lightning.WorkOrders.ExportWorker do
       %{
         id: r.id,
         work_order_id: r.work_order_id,
+        # TODO: need to add `claimed_at`, `started_at`, `finished_at`
+        # TODO: should be add `options`?
         finished_at: r.finished_at,
         status: r.state
       }
@@ -364,8 +370,11 @@ defmodule Lightning.WorkOrders.ExportWorker do
     Enum.map(steps, fn s ->
       %{
         id: s.id,
+        # TODO: need to verify we want to rename this to `status`
+        # TODO: add `error_type`, `started_at`, `finished_at`, `job_id`, `credential_id`, `snapshot_id`
         status: s.exit_reason,
         inserted_at: s.inserted_at,
+        # TODO: perhaps we just keep the keys the same, (i.e. `input_dataclip_id`, `output_dataclip_id`)
         input_dataclip: s.input_dataclip_id,
         output_dataclip: s.output_dataclip_id
       }
