@@ -5,6 +5,7 @@ defmodule Lightning.CliDeployTest do
   require Logger
 
   import Lightning.Factories
+  import Lightning.CredentialsFixtures
   import Mox
 
   alias Lightning.Accounts
@@ -133,11 +134,16 @@ defmodule Lightning.CliDeployTest do
       # no project has been created
       assert [] == Lightning.Repo.all(Lightning.Projects.Project)
 
-      # lets update the user's role to a superuser
+      # lets update the user's role to a superuser and use the canonical email
       user
       |> Lightning.Repo.reload()
-      |> Ecto.Changeset.change(%{role: :superuser})
+      |> Ecto.Changeset.change(%{
+        role: :superuser,
+        email: "cannonical-user@lightning.com"
+      })
       |> Lightning.Repo.update!()
+
+      credential_fixture(user_id: user.id, name: "new credential")
 
       System.cmd(
         @cli_path,
