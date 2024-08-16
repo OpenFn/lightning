@@ -5,8 +5,8 @@ defmodule Lightning.SetupUtils do
   import Ecto.Query
   import Ecto.Changeset
 
-  alias Lightning.Accounts.User
   alias Lightning.Accounts
+  alias Lightning.Accounts.User
   alias Lightning.Credentials
   alias Lightning.Jobs
   alias Lightning.Projects
