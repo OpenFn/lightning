@@ -1,4 +1,7 @@
-defmodule Lightning.Projects.ProjectFile do
+defmodule Lightning.Projects.File do
+  @moduledoc """
+  The project files module
+  """
   use Lightning.Schema
   use Waffle.Ecto.Schema
 

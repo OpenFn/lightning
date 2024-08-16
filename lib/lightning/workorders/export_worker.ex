@@ -1,13 +1,45 @@
 defmodule Lightning.WorkOrders.ExportWorker do
+  @moduledoc """
+    This module handles the export of work orders for a given project. The export process is performed asynchronously using the Oban background job system.
+
+    ## Responsibilities
+
+    - **Enqueueing Export Jobs**: The `enqueue_export/2` function creates and enqueues an Oban job for exporting work orders based on the given project and search parameters.
+    - **Processing Exports**: The `perform/1` function is the main entry point for executing the export job. It retrieves the project, processes work orders, and handles the export process.
+    - **Export Logic**: The export logic involves querying work orders, extracting relevant entities, processing logs and dataclips asynchronously, and writing the final export data to files.
+    - **Error Handling**: The module includes comprehensive error handling and logging to ensure that issues during the export process are recorded and can be diagnosed.
+    - **Zip File Creation**: After processing, the exported files are compressed into a zip file for easy download or further use.
+
+    ## Usage
+
+    - To enqueue an export job, call `enqueue_export/2` with the project and search parameters.
+    - The export process is triggered by Oban and runs in the `history_exports` queue, limited to a single attempt per job.
+
+    ## Example
+
+    ```elixir
+    # Enqueue an export job
+    Lightning.WorkOrders.ExportWorker.enqueue_export(project, search_params)
+
+    # The job will run in the background and log the status of the export process.
+    ```
+
+    This module is designed to handle potentially large datasets efficiently by using streaming, async processing, and error recovery mechanisms.
+  """
   use Oban.Worker, queue: :history_exports, max_attempts: 1
+
+  import Ecto.Query
+
+  alias Lightning.Invocation
+  alias Lightning.Invocation.Dataclip
+  alias Lightning.Projects.Project
+  alias Lightning.Repo
+  alias Lightning.WorkOrders.SearchParams
 
   require Logger
 
-  alias Lightning.Invocation.Dataclip
-  alias Lightning.Repo
-  alias Lightning.Invocation
-  alias Lightning.Projects.Project
-  alias Lightning.WorkOrders.SearchParams
+  @batch_size 50
+  @root_dir "openfn-history-export"
 
   @impl Oban.Worker
   def perform(%Oban.Job{
@@ -16,7 +48,7 @@ defmodule Lightning.WorkOrders.ExportWorker do
     search_params = SearchParams.from_map(params)
 
     with {:ok, project} <- get_project(project_id),
-         :ok <- process_export(project, search_params) do
+         {:ok, _zip_file} <- process_export(project, search_params) do
       Logger.info("Export completed successfully.")
       :ok
     else
@@ -49,34 +81,106 @@ defmodule Lightning.WorkOrders.ExportWorker do
     workorders_query =
       Invocation.search_workorders_for_export_query(project, params)
 
-    workorders_stream = Repo.stream(workorders_query, max_rows: 100)
+    case create_export_directories() do
+      {:ok, export_dir} ->
+        Repo.transaction(fn ->
+          workorders_query
+          |> Repo.stream(max_rows: 100)
+          |> Stream.chunk_every(@batch_size)
+          |> Stream.each(&process_and_write_batch(&1, export_dir))
+          |> Stream.run()
+        end)
 
-    result =
-      Repo.transaction(fn ->
-        export_result =
-          workorders_stream
-          |> Stream.map(&preload_and_extract_entities/1)
-          |> Enum.reduce(%{}, &combine_entities/2)
+        finalize_export(export_dir)
 
-        with {:ok, export_dir} <- create_export_directories(),
-             :ok <- process_logs_async(export_result.log_lines, export_dir),
-             :ok <-
-               process_dataclips_async(
-                 export_result.input_dataclips ++ export_result.output_dataclips,
-                 export_dir
-               ),
-             {:ok, json_data} <- format_and_encode_export(export_result),
-             :ok <- write_export_file(json_data, export_dir) do
-          Logger.info("Export content written to #{export_dir.root_dir}")
-        else
-          {:error, reason} -> Repo.rollback(reason)
-        end
-      end)
-
-    case result do
-      {:ok, _} -> :ok
-      {:error, reason} -> {:error, reason}
+      {:error, reason} ->
+        Logger.error("Failed to create export directories: #{inspect(reason)}")
+        {:error, reason}
     end
+  end
+
+  defp process_and_write_batch(work_orders, export_dir) do
+    export_result =
+      work_orders
+      |> Enum.map(&preload_and_extract_entities/1)
+      |> Enum.reduce(%{}, &combine_entities/2)
+
+    process_logs_and_dataclips_chunk(export_result, export_dir)
+  end
+
+  defp process_logs_and_dataclips_chunk(export_result, export_dir) do
+    process_logs_async(export_result.log_lines, export_dir)
+
+    export_result.dataclips
+    |> fetch_dataclips()
+    |> process_dataclips_async(export_dir)
+
+    encode_and_write_export_chunk(export_result, export_dir)
+  end
+
+  defp encode_and_write_export_chunk(export_result, export_dir) do
+    file_path = Path.join(export_dir.root_dir, "export.json")
+
+    json_chunk =
+      Jason.encode!(
+        %{
+          work_orders: export_result.work_orders,
+          runs: export_result.runs,
+          steps: export_result.steps,
+          run_steps: export_result.run_steps
+        },
+        pretty: true
+      )
+
+    File.write!(file_path, json_chunk, [:append])
+  end
+
+  defp finalize_export(export_dir) do
+    case zip_folder(export_dir.root_dir, "#{export_dir.root_dir}.zip") do
+      {:ok, zip_file} ->
+        Logger.info(
+          "Export content written and zipped successfully at #{zip_file}"
+        )
+
+        {:ok, zip_file}
+
+      {:error, reason} ->
+        Logger.error("Failed to finalize export: #{inspect(reason)}")
+        {:error, reason}
+    end
+  end
+
+  defp zip_folder(folder_path, output_file) do
+    case File.open(output_file, [:write, :binary], fn output ->
+           entries = generate_entries(folder_path, "")
+
+           entries
+           |> Packmatic.build_stream()
+           |> Enum.each(&IO.binwrite(output, &1))
+         end) do
+      {:ok, _} ->
+        {:ok, output_file}
+
+      {:error, error} ->
+        {:error, error}
+    end
+  end
+
+  defp generate_entries(directory_path, parent_path) do
+    directory_path
+    |> File.ls!()
+    |> Enum.flat_map(fn entry ->
+      full_path = Path.join([directory_path, entry])
+      zip_entry_name = Path.join([parent_path, entry])
+
+      if File.dir?(full_path) do
+        generate_entries(full_path, zip_entry_name)
+      else
+        [
+          [source: {:file, full_path}, path: zip_entry_name]
+        ]
+      end
+    end)
   end
 
   defp get_project(project_id) do
@@ -93,10 +197,7 @@ defmodule Lightning.WorkOrders.ExportWorker do
       runs: [
         :run_steps,
         :log_lines,
-        steps: [
-          input_dataclip: [:project, :source_step],
-          output_dataclip: [:project, :source_step]
-        ]
+        :steps
       ]
     ])
     |> extract_entities()
@@ -107,18 +208,14 @@ defmodule Lightning.WorkOrders.ExportWorker do
 
     steps = Enum.flat_map(runs, & &1.steps)
     run_steps = Enum.flat_map(runs, & &1.run_steps)
-    log_lines = Enum.flat_map(runs, & &1.log_lines)
-    input_dataclips = Enum.map(steps, & &1.input_dataclip)
-    output_dataclips = Enum.map(steps, & &1.output_dataclip)
 
     %{
-      runs: runs,
-      steps: steps,
-      run_steps: run_steps,
-      log_lines: log_lines,
-      work_orders: [work_order],
-      input_dataclips: input_dataclips,
-      output_dataclips: output_dataclips
+      runs: format_runs(runs),
+      steps: format_steps(steps),
+      run_steps: format_run_steps(run_steps),
+      work_orders: format_work_orders([work_order]),
+      log_lines: extract_log_lines(runs),
+      dataclips: extract_dataclips(steps)
     }
   end
 
@@ -126,8 +223,8 @@ defmodule Lightning.WorkOrders.ExportWorker do
     Map.merge(entity1, entity2, fn _key, val1, val2 -> val1 ++ val2 end)
   end
 
-  defp create_export_directories() do
-    with {:ok, root_dir} <- Temp.mkdir("openfn"),
+  defp create_export_directories do
+    with {:ok, root_dir} <- Temp.mkdir(@root_dir),
          logs_dir = Path.join([root_dir, "logs"]),
          dataclips_dir = Path.join([root_dir, "dataclips"]),
          :ok <- File.mkdir_p(logs_dir),
@@ -146,20 +243,8 @@ defmodule Lightning.WorkOrders.ExportWorker do
   defp process_logs_async(log_lines, %{logs_dir: logs_dir}) do
     log_lines
     |> Enum.group_by(& &1.run_id)
-    |> Task.async_stream(fn {run_id, logs} ->
-      combined_logs = Enum.map_join(logs, "\n", & &1.message)
-      file_path = Path.join([logs_dir, "#{run_id}.txt"])
-
-      case File.write(file_path, combined_logs) do
-        :ok ->
-          :ok
-
-        error ->
-          Logger.error(
-            "Failed to write logs for run #{run_id}: #{inspect(error)}"
-          )
-      end
-    end)
+    |> Enum.chunk_every(@batch_size)
+    |> Task.async_stream(&process_log_batch(&1, logs_dir))
     |> Enum.each(fn
       {:ok, :ok} ->
         :ok
@@ -174,35 +259,35 @@ defmodule Lightning.WorkOrders.ExportWorker do
     :ok
   end
 
+  defp process_log_batch([{run_id, logs}], logs_dir) do
+    combined_logs = Enum.map_join(logs, "\n", & &1.message)
+    file_path = Path.join([logs_dir, "#{run_id}.txt"])
+
+    case File.write(file_path, combined_logs) do
+      :ok ->
+        :ok
+
+      error ->
+        Logger.error("Failed to write logs for run #{run_id}: #{inspect(error)}")
+    end
+  end
+
+  defp process_log_batch(log_batches, logs_dir) do
+    Enum.each(log_batches, fn {run_id, logs} ->
+      process_log_batch([{run_id, logs}], logs_dir)
+    end)
+  end
+
   defp process_dataclips_async(dataclips, %{dataclips_dir: dataclips_dir}) do
     dataclips
-    |> Task.async_stream(fn dataclip ->
-      case format_dataclip(dataclip) do
-        {:ok, data} ->
-          file_path = Path.join([dataclips_dir, "#{dataclip.id}.json"])
-
-          case File.write(file_path, data) do
-            :ok ->
-              :ok
-
-            error ->
-              Logger.error(
-                "Failed to write data clip #{dataclip.id}: #{inspect(error)}"
-              )
-          end
-
-        {:error, error} ->
-          Logger.error(
-            "Error serializing data clip #{dataclip.id}: #{inspect(error)}"
-          )
-      end
-    end)
+    |> Enum.chunk_every(@batch_size)
+    |> Task.async_stream(&process_dataclip_batch(&1, dataclips_dir))
     |> Enum.each(fn
       {:ok, :ok} ->
         :ok
 
       {:ok, error} ->
-        Logger.error("Error in data clip processing: #{inspect(error)}")
+        Logger.error("Error in dataclip processing: #{inspect(error)}")
 
       {:exit, reason} ->
         Logger.error("Task exited with reason: #{inspect(reason)}")
@@ -211,37 +296,44 @@ defmodule Lightning.WorkOrders.ExportWorker do
     :ok
   end
 
-  defp format_dataclip(%Dataclip{
-         body: body,
-         type: type,
-         wiped_at: wiped_at,
-         project: project,
-         source_step: source_step
-       }) do
-    %{
-      body: body,
-      type: type,
-      wiped_at: wiped_at,
-      project: project.id,
-      source_step: source_step && source_step.id
-    }
-    |> Jason.encode(pretty: true)
+  defp process_dataclip_batch(dataclips, dataclips_dir) do
+    Enum.each(dataclips, fn %{id: dataclip_id, body: dataclip_body} ->
+      file_path = Path.join([dataclips_dir, "#{dataclip_id}.json"])
+
+      case File.write(file_path, dataclip_body) do
+        :ok ->
+          :ok
+
+        error ->
+          Logger.error(
+            "Failed to write dataclip #{dataclip_id}: #{inspect(error)}"
+          )
+      end
+    end)
   end
 
-  defp format_and_encode_export(%{
-         work_orders: work_orders,
-         runs: runs,
-         steps: steps,
-         run_steps: run_steps
-       }) do
-    export_data = %{
-      work_orders: format_work_orders(work_orders),
-      runs: format_runs(runs),
-      steps: format_steps(steps),
-      run_steps: format_run_steps(run_steps)
-    }
-
-    Jason.encode(export_data, pretty: true)
+  def fetch_dataclips(dataclip_ids) do
+    from(d in Dataclip,
+      where: d.id in ^dataclip_ids,
+      select: %{
+        id: d.id,
+        body:
+          type(
+            fragment(
+              """
+              CASE WHEN type IN ('http_request', 'kafka')
+              THEN jsonb_build_object('data', ?, 'request', ?)
+              ELSE ? END
+              """,
+              d.body,
+              d.request,
+              d.body
+            ),
+            :string
+          )
+      }
+    )
+    |> Repo.all()
   end
 
   defp format_work_orders(work_orders) do
@@ -291,12 +383,20 @@ defmodule Lightning.WorkOrders.ExportWorker do
     end)
   end
 
-  defp write_export_file(json_data, %{root_dir: root_dir}) do
-    file_path = Path.join(root_dir, "export.json")
+  defp extract_dataclips(steps) do
+    Enum.reduce(steps, MapSet.new(), fn step, acc ->
+      acc
+      |> MapSet.put(step.input_dataclip_id)
+      |> MapSet.put(step.output_dataclip_id)
+    end)
+    |> MapSet.to_list()
+  end
 
-    case File.write(file_path, json_data) do
-      :ok -> :ok
-      {:error, reason} -> {:error, reason}
-    end
+  defp extract_log_lines(runs) do
+    runs
+    |> Enum.flat_map(& &1.log_lines)
+    |> Enum.map(fn log_line ->
+      %{id: log_line.id, message: log_line.message, run_id: log_line.run_id}
+    end)
   end
 end

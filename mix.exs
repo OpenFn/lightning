@@ -142,6 +142,7 @@ defmodule Lightning.MixProject do
       {:dotenvy, "~> 0.8.0"},
       {:waffle_ecto, "~> 0.0"},
       {:waffle, "~> 1.1"},
+      {:packmatic, "~> 1.0"},
       # MFA
       {:nimble_totp, "~> 1.0"},
       {:eqrcode, "~> 0.1"},
