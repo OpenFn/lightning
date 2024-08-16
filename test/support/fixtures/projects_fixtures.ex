@@ -20,7 +20,9 @@ defmodule Lightning.ProjectsFixtures do
     Factories.insert(:project, attrs)
   end
 
-  def build_full_project(attrs \\ %{}) do
+  @spec build_full_project(attrs :: Keyword.t()) ::
+          Lightning.Projects.Project.t()
+  def build_full_project(attrs \\ []) when is_list(attrs) do
     user =
       if attrs[:owner] do
         attrs[:owner]
@@ -129,7 +131,7 @@ defmodule Lightning.ProjectsFixtures do
       workflows: [workflow_1, workflow_2],
       project_users: [%{user: user}]
     )
-    |> ExMachina.merge_attributes(attrs)
+    |> ExMachina.merge_attributes(Enum.into(attrs, %{}))
     |> Factories.insert()
     |> then(fn %{workflows: [workflow_1, workflow_2]} = project ->
       project_credential = Lightning.Repo.reload(project_credential)
@@ -161,7 +163,9 @@ defmodule Lightning.ProjectsFixtures do
   "cannonical-user@lightning.com" and there can only be one in the DB at any
   given time.
   """
-  def canonical_project_fixture(attrs \\ []) do
+  @spec canonical_project_fixture(attrs :: Keyword.t()) ::
+          Lightning.Projects.Project.t()
+  def canonical_project_fixture(attrs \\ []) when is_list(attrs) do
     attrs =
       attrs
       |> Keyword.put_new_lazy(:owner, fn ->
