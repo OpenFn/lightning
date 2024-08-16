@@ -29,6 +29,7 @@ and this project adheres to
   [#2371](https://github.com/OpenFn/lightning/pull/2371)
 - Use Swoosh to format User models into recipients
   [#2374](https://github.com/OpenFn/lightning/pull/2374)
+- Bump default CLI to `@openfn/cli@1.8.1`
 
 ### Fixed
 

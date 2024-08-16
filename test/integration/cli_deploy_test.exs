@@ -96,8 +96,7 @@ defmodule Lightning.CliDeployTest do
       # encoding and decoding in order to transform values like dates into string
       assert actual_state == expected_state |> Jason.encode!() |> Jason.decode!()
 
-      expected_yaml =
-        File.read!("test/fixtures/canonical_project.yaml") |> String.trim()
+      expected_yaml = File.read!("test/fixtures/canonical_project.yaml")
 
       actual_yaml = File.read!(config.specPath)
 
