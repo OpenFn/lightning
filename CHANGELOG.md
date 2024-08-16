@@ -33,6 +33,9 @@ and this project adheres to
   script. (This is a tricky requirement for a distributed set of local
   deployments) [#2369](https://github.com/OpenFn/lightning/issues/2369) and
   [#2373](https://github.com/OpenFn/lightning/pull/2373)
+- Added support for _very basic_ project-credential management (add, associate
+  with job) via provisioning API.
+  [#2367](https://github.com/OpenFn/lightning/issues/2367)
 
 ### Changed
 
@@ -40,6 +43,7 @@ and this project adheres to
   [#2371](https://github.com/OpenFn/lightning/pull/2371)
 - Use Swoosh to format User models into recipients
   [#2374](https://github.com/OpenFn/lightning/pull/2374)
+- Bump default CLI to `@openfn/cli@1.8.1`
 
 ### Fixed
 

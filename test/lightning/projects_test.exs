@@ -557,7 +557,7 @@ defmodule Lightning.ProjectsTest do
       project = project_fixture(name: "newly-created-project")
 
       expected_yaml =
-        "name: newly-created-project\n# description:\n# credentials:\n# globals:\n# workflows:"
+        "name: newly-created-project\ndescription: null\ncredentials: null\nworkflows: null"
 
       {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
 
@@ -565,8 +565,8 @@ defmodule Lightning.ProjectsTest do
     end
 
     test "export_project/2 as yaml" do
-      %{project: project} =
-        full_project_fixture(
+      project =
+        canonical_project_fixture(
           name: "a-test-project",
           description: "This is only a test"
         )
@@ -1443,7 +1443,7 @@ defmodule Lightning.ProjectsTest do
   @spec full_project_fixture(attrs :: Keyword.t()) :: %{optional(any) => any}
   def full_project_fixture(attrs \\ []) when is_list(attrs) do
     %{workflows: [workflow_1, workflow_2]} =
-      project = canonical_project_fixture(attrs)
+      project = build_full_project(attrs)
 
     insert(:job,
       name: "unrelated job"

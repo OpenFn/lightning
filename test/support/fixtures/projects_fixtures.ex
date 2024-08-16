@@ -20,12 +20,25 @@ defmodule Lightning.ProjectsFixtures do
     Factories.insert(:project, attrs)
   end
 
-  def canonical_project_fixture(attrs \\ %{}) do
-    user = Factories.insert(:user)
+  @spec build_full_project(attrs :: Keyword.t()) ::
+          Lightning.Projects.Project.t()
+  def build_full_project(attrs \\ []) when is_list(attrs) do
+    user =
+      if attrs[:owner] do
+        attrs[:owner]
+      else
+        Factories.insert(:user,
+          email: ExMachina.sequence(:email, &"email-#{&1}@example.com")
+        )
+      end
+
+    # There's no :owner key in a project, but this shortcut is useful for
+    # building the canonical project for testing the provisioning API.
+    attrs = Keyword.delete(attrs, :owner)
 
     credential =
       Factories.insert(:credential,
-        user_id: user.id,
+        user: user,
         name: "new credential",
         body: %{"foo" => "super-secret"}
       )
@@ -44,7 +57,8 @@ defmodule Lightning.ProjectsFixtures do
         name: "webhook job",
         # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
         inserted_at: DateTime.utc_now() |> Timex.shift(seconds: 0),
-        body: "console.log('webhook job')\nfn(state => state)"
+        body: "console.log('webhook job')\nfn(state => state)",
+        project_credential_id: project_credential.id
       )
 
     workflow_1_job_2 =
@@ -117,7 +131,7 @@ defmodule Lightning.ProjectsFixtures do
       workflows: [workflow_1, workflow_2],
       project_users: [%{user: user}]
     )
-    |> ExMachina.merge_attributes(attrs)
+    |> ExMachina.merge_attributes(Enum.into(attrs, %{}))
     |> Factories.insert()
     |> then(fn %{workflows: [workflow_1, workflow_2]} = project ->
       project_credential = Lightning.Repo.reload(project_credential)
@@ -141,5 +155,23 @@ defmodule Lightning.ProjectsFixtures do
 
       %{project | workflows: [%{workflow_1 | jobs: workflow_1_jobs}, workflow_2]}
     end)
+  end
+
+  @doc """
+  This is a variant of a "full project" that's used specifically to test the
+  provisioning API. It's owned by and created by the
+  "cannonical-user@lightning.com" and there can only be one in the DB at any
+  given time.
+  """
+  @spec canonical_project_fixture(attrs :: Keyword.t()) ::
+          Lightning.Projects.Project.t()
+  def canonical_project_fixture(attrs \\ []) when is_list(attrs) do
+    attrs =
+      attrs
+      |> Keyword.put_new_lazy(:owner, fn ->
+        Factories.insert(:user, email: "cannonical-user@lightning.com")
+      end)
+
+    build_full_project(attrs)
   end
 end

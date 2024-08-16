@@ -1,7 +1,9 @@
 name: a-test-project
 description: This is only a test
-# credentials:
-# globals:
+credentials:
+  cannonical-user@lightning.com-new-credential:
+    name: new credential
+    owner: cannonical-user@lightning.com
 workflows:
   workflow-1:
     name: workflow 1
@@ -9,24 +11,21 @@ workflows:
       webhook-job:
         name: webhook job
         adaptor: '@openfn/language-common@latest'
-        # credential:
-        # globals:
+        credential: cannonical-user@lightning.com-new-credential
         body: |
           console.log('webhook job')
           fn(state => state)
       on-fail:
         name: on fail
         adaptor: '@openfn/language-common@latest'
-        # credential:
-        # globals:
+        credential: null
         body: |
           console.log('on fail')
           fn(state => state)
       on-success:
         name: on success
         adaptor: '@openfn/language-common@latest'
-        # credential:
-        # globals:
+        credential: null
         body: |
           console.log('hello!');
     triggers:
@@ -55,15 +54,13 @@ workflows:
       some-cronjob:
         name: some cronjob
         adaptor: '@openfn/language-common@latest'
-        # credential:
-        # globals:
+        credential: null
         body: |
           console.log('hello!');
       on-cron-failure:
         name: on cron failure
         adaptor: '@openfn/language-common@latest'
-        # credential:
-        # globals:
+        credential: null
         body: |
           console.log('hello!');
     triggers:
@@ -81,4 +78,4 @@ workflows:
         source_job: some-cronjob
         target_job: on-cron-failure
         condition_type: on_job_success
-        enabled: true 
+        enabled: true
