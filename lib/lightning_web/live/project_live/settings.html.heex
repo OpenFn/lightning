@@ -48,6 +48,10 @@
         <.icon name="hero-square-3-stack-3d" class="h-5 w-5 inline-block mr-2" />
         <span class="inline-block align-middle">Data Storage</span>
       </:tab>
+      <:tab hash="history-exports">
+        <.icon name="hero-folder-arrow-down" class="h-5 w-5 inline-block mr-2" />
+        <span class="inline-block align-middle">History Exports</span>
+      </:tab>
       <:panel hash="project" class="">
         <div>
           <h6 class="font-medium text-black">Project setup</h6>
@@ -1018,6 +1022,77 @@
               </div>
             </div>
           </.form>
+        </div>
+      </:panel>
+      <:panel hash="history-exports">
+        <div class="flex justify-between content-center pb-2">
+          <div class="leading-loose">
+            <h6 class="font-medium text-black">
+              View and download work order history for this project
+            </h6>
+            <small class="block text-xs text-gray-600">
+              All requested work order history exports for this project are listed in this table.
+            </small>
+            <.permissions_message
+              :if={!@can_create_project_credential}
+              section="available credentials."
+            />
+          </div>
+        </div>
+        <div class="my-6">
+          <.new_table
+            id="project_users_table"
+            rows={@project_files}
+            row_class="group hover:bg-indigo-50 hover:border-l-indigo-500"
+          >
+            <:col
+              :let={file}
+              label_class="text-gray-700 uppercase"
+              label="Export Date"
+            >
+              <%= file.inserted_at
+              |> Lightning.Helpers.format_date("%d/%m/%Y %H:%M:%S") %>
+            </:col>
+            <:col
+              :let={file}
+              label_class="text-gray-700 uppercase"
+              label="Filename"
+            >
+              <%= if file.file do %>
+                <%= file.file.file_name %>
+              <% else %>
+                <em>Pending</em>
+              <% end %>
+            </:col>
+            <:col
+              :let={file}
+              label_class="text-gray-700 uppercase"
+              label="Export Requested By"
+            >
+              <%= file.created_by.first_name <> " " <> file.created_by.last_name %>
+            </:col>
+            <:col
+              :let={file}
+              label_class="text-gray-700 uppercase"
+              label="Status"
+            >
+              <%= file.status |> Atom.to_string() |> String.capitalize() %>
+            </:col>
+            <:col :let={file}>
+              <.link
+                id={"download-export-file-#{file.id}-button"}
+                navigate={
+                  Lightning.Storage.ProjectFileDefinition.url(
+                    {file.file, file},
+                    :original
+                  )
+                }
+                class="table-action"
+              >
+                Download
+              </.link>
+            </:col>
+          </.new_table>
         </div>
       </:panel>
     </LightningWeb.Components.Tabbed.container>

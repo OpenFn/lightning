@@ -11,16 +11,21 @@ defmodule Lightning.Projects.File do
           file: Lightning.Storage.ProjectFileDefinition.Type.t(),
           created_by: Lightning.Accounts.User.t(),
           project: Lightning.Projects.Project.t(),
-          type: atom()
+          type: atom(),
+          status: atom()
         }
 
   schema "project_files" do
     field :file, Lightning.Storage.ProjectFileDefinition.Type
     field :size, :integer
+
+    field :status, Ecto.Enum,
+      values: [:enqueued, :in_progress, :completed, :failed]
+
     belongs_to :created_by, Lightning.Accounts.User
     belongs_to :project, Lightning.Projects.Project
 
-    field :type, Ecto.Enum, values: [:archive]
+    field :type, Ecto.Enum, values: [:export]
 
     timestamps()
   end
@@ -34,7 +39,7 @@ defmodule Lightning.Projects.File do
   @spec new(%{atom => any}) :: Ecto.Changeset.t()
   def new(attrs) do
     %__MODULE__{}
-    |> cast(attrs, [:size, :type])
+    |> cast(attrs, [:size, :type, :status])
     |> put_assoc(:created_by, attrs[:created_by])
     |> put_assoc(:project, attrs[:project])
     |> validate_required([:type, :created_by, :project])
@@ -46,6 +51,6 @@ defmodule Lightning.Projects.File do
 
     project_file
     |> cast_attachments(params, [:file], allow_paths: true)
-    |> validate_required([:id, :type, :created_by, :project, :file])
+    |> validate_required([:id, :type, :status, :created_by, :project, :file])
   end
 end

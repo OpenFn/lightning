@@ -3,6 +3,7 @@ defmodule Lightning.Accounts.UserNotifier do
   The UserNotifier module.
   """
 
+  alias Lightning.Helpers
   use LightningWeb, :html
 
   use Oban.Worker,
@@ -249,6 +250,19 @@ defmodule Lightning.Accounts.UserNotifier do
     An email has been sent to your new email address with a confirmation link.
 
     If you didn't request this change, please contact #{admin()} immediately to regain control of your account. When your account has been secured, we'd also recommend that you turn on multi-factor authentication to prevent further unauthorized access.
+
+    OpenFn
+    """)
+  end
+
+  def notify_history_export_completion(user, project_file) do
+    deliver(user.email, "Your OpenFn History Export Is Complete", """
+    Hello #{user.first_name},
+
+    You history export started requested on #{Helpers.format_date(project_file.inserted_at)} is completed. Please visit this URL to download the file:acceptor
+
+    #{Lightning.Storage.ProjectFileDefinition.url({project_file.file, project_file},
+    :original)}
 
     OpenFn
     """)

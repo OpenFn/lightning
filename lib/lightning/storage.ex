@@ -46,7 +46,7 @@ defmodule Lightning.Storage do
     end
 
     def storage_dir(_, {_file, project_file}) do
-      "archives/#{project_file.project_id}"
+      "exports/#{project_file.project_id}"
     end
   end
 end

@@ -7,6 +7,7 @@ defmodule Lightning.Repo.Migrations.AddProjectFiles do
       add :file, :string
       add :size, :integer
       add :type, :string, null: false
+      add :status, :string, null: false
       add :created_by_id, references(:users, type: :binary_id), null: false
       add :project_id, references(:projects, type: :binary_id), null: false
 

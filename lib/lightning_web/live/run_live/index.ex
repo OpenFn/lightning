@@ -2,6 +2,7 @@ defmodule LightningWeb.RunLive.Index do
   @moduledoc """
   Index Liveview for Runs
   """
+  alias Lightning.Repo
   use LightningWeb, :live_view
 
   import Ecto.Changeset, only: [get_change: 2]
@@ -13,6 +14,7 @@ defmodule LightningWeb.RunLive.Index do
   alias Lightning.Invocation.Step
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
+  alias Lightning.Projects
   alias Lightning.Services.UsageLimiter
   alias Lightning.WorkOrders
   alias Lightning.WorkOrders.Events
@@ -473,17 +475,37 @@ defmodule LightningWeb.RunLive.Index do
   def handle_event("confirm-export", _params, socket) do
     search_params = SearchParams.new(socket.assigns.filters)
 
-    case ExportWorker.enqueue_export(socket.assigns.project, search_params) do
-      :ok ->
-        {:noreply,
-         socket
-         |> assign(:show_export_modal, false)
-         |> put_flash(
-           :info,
-           "History export started successfully. You will be notified by email after completion."
-         )}
+    case Projects.File.new(%{
+           type: :export,
+           status: :enqueued,
+           created_by: socket.assigns.current_user,
+           project: socket.assigns.project
+         })
+         |> Repo.insert() do
+      {:ok, project_file} ->
+        case ExportWorker.enqueue_export(
+               socket.assigns.project,
+               project_file,
+               search_params
+             ) do
+          :ok ->
+            {:noreply,
+             socket
+             |> assign(:show_export_modal, false)
+             |> put_flash(
+               :info,
+               "History export started successfully. You will be notified by email after completion."
+             )}
 
-      {:error, _reason} ->
+          {:error, _reason} ->
+            Repo.update!(project_file, %{status: :failed})
+
+            {:noreply,
+             socket
+             |> put_flash(:error, "Failed to start export. Please try again.")}
+        end
+
+      {:error, _changeset} ->
         {:noreply,
          socket
          |> put_flash(:error, "Failed to start export. Please try again.")}

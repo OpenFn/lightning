@@ -26,6 +26,8 @@ defmodule Lightning.WorkOrders.ExportWorker do
 
     This module is designed to handle potentially large datasets efficiently by using streaming, async processing, and error recovery mechanisms.
   """
+  alias Lightning.Accounts.UserNotifier
+  alias Lightning.Projects
   use Oban.Worker, queue: :history_exports, max_attempts: 1
 
   import Ecto.Query
@@ -42,14 +44,37 @@ defmodule Lightning.WorkOrders.ExportWorker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{
-        args: %{"project_id" => project_id, "search_params" => params}
+        args: %{
+          "project_id" => project_id,
+          "project_file" => project_file_id,
+          "search_params" => params
+        }
       }) do
     search_params = SearchParams.from_map(params)
 
-    with {:ok, project} <- get_project(project_id),
-         {:ok, _zip_file} <- process_export(project, search_params) do
-      Logger.info("Export completed successfully.")
-      :ok
+    with {:ok, project_file} <-
+           get_project_file(project_file_id),
+         {:ok, project_file} <-
+           update_status(project_file, status: :in_progress),
+         {:ok, project} <- get_project(project_id),
+         {:ok, zip_file} <- process_export(project, search_params) do
+      case update_status(project_file,
+             status: :completed,
+             zip_file_path: zip_file
+           ) do
+        {:ok, project_file} ->
+          UserNotifier.notify_history_export_completion(
+            project_file.created_by,
+            project_file
+          )
+
+          Logger.info("Export completed successfully.")
+          :ok
+
+        {:error, reason} ->
+          Logger.error("Export failed with reason: #{inspect(reason)}")
+          {:error, reason}
+      end
     else
       {:error, reason} ->
         Logger.error("Export failed with reason: #{inspect(reason)}")
@@ -57,9 +82,10 @@ defmodule Lightning.WorkOrders.ExportWorker do
     end
   end
 
-  def enqueue_export(project, search_params) do
+  def enqueue_export(project, project_file, search_params) do
     job = %{
       "project_id" => project.id,
+      "project_file" => project_file.id,
       "search_params" => search_params
     }
 
@@ -206,6 +232,34 @@ defmodule Lightning.WorkOrders.ExportWorker do
     case Repo.get(Project, project_id) do
       nil -> {:error, :project_not_found}
       project -> {:ok, project}
+    end
+  end
+
+  defp get_project_file(project_file_id) do
+    case Repo.get(Projects.File, project_file_id)
+         |> Repo.preload([:created_by, :project]) do
+      nil -> {:error, :project_file_not_found}
+      project_file -> {:ok, project_file}
+    end
+  end
+
+  defp update_status(project_file, opts) do
+    zip_file_path = Keyword.get(opts, :zip_file_path, nil)
+
+    changeset_opts = Keyword.drop(opts, [:zip_file_path])
+
+    changeset = Ecto.Changeset.change(project_file, changeset_opts)
+
+    changeset =
+      if zip_file_path do
+        Lightning.Projects.File.attach_file(changeset, zip_file_path)
+      else
+        changeset
+      end
+
+    case Repo.update(changeset) do
+      {:ok, updated_project_file} -> {:ok, updated_project_file}
+      {:error, _changeset} -> {:error, :status_not_updated}
     end
   end
 

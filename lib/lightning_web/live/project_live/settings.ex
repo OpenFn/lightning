@@ -40,6 +40,7 @@ defmodule LightningWeb.ProjectLive.Settings do
     credentials = list_credentials(project)
     oauth_clients = list_clients(project)
     auth_methods = WebhookAuthMethods.list_for_project(project)
+    project_files = Projects.list_project_files(project)
 
     projects = Projects.get_projects_for_user(current_user)
 
@@ -127,6 +128,7 @@ defmodule LightningWeb.ProjectLive.Settings do
        webhook_auth_methods: auth_methods,
        credentials: credentials,
        oauth_clients: oauth_clients,
+       project_files: project_files,
        project_users: [],
        current_user: socket.assigns.current_user,
        project_changeset: Projects.change_project(socket.assigns.project),

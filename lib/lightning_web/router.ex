@@ -171,6 +171,8 @@ defmodule LightningWeb.Router do
         live "/w/:id", WorkflowLive.Edit, :edit
       end
 
+      get "/project_files/:id/download", ProjectFileController, :download
+
       live "/credentials", CredentialLive.Index, :index
       live "/credentials/:id/delete", CredentialLive.Index, :delete
       live "/credentials/new", CredentialLive.Edit, :new
