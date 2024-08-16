@@ -295,15 +295,15 @@ Pages
 
       </div>
 
-<p>Creates a new session with the given job.</p><p><strong>Example</strong></p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">AiAssistant</span><span class="o">.</span><span class="n">new_session</span><span class="p" data-group-id="3641769262-1">(</span><span class="p" data-group-id="3641769262-2">%</span><span class="nc" data-group-id="3641769262-2">Lightning.Workflows.Job</span><span class="p" data-group-id="3641769262-2">{</span><span class="w">
+<p>Creates a new session with the given job.</p><p><strong>Example</strong></p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">AiAssistant</span><span class="o">.</span><span class="n">new_session</span><span class="p" data-group-id="3466932948-1">(</span><span class="p" data-group-id="3466932948-2">%</span><span class="nc" data-group-id="3466932948-2">Lightning.Workflows.Job</span><span class="p" data-group-id="3466932948-2">{</span><span class="w">
 </span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;fn()&quot;</span><span class="p">,</span><span class="w">
 </span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="ss">adaptor</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@openfn/language-common@latest&quot;</span><span class="w">
-</span><span class="gp unselectable">...&gt; </span><span class="p" data-group-id="3641769262-2">}</span><span class="p" data-group-id="3641769262-1">)</span><span class="w">
-</span><span class="p" data-group-id="3641769262-3">%</span><span class="nc" data-group-id="3641769262-3">Lightning.AiAssistant.Session</span><span class="p" data-group-id="3641769262-3">{</span><span class="w">
+</span><span class="gp unselectable">...&gt; </span><span class="p" data-group-id="3466932948-2">}</span><span class="p" data-group-id="3466932948-1">)</span><span class="w">
+</span><span class="p" data-group-id="3466932948-3">%</span><span class="nc" data-group-id="3466932948-3">Lightning.AiAssistant.Session</span><span class="p" data-group-id="3466932948-3">{</span><span class="w">
   </span><span class="ss">expression</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;fn()&quot;</span><span class="p">,</span><span class="w">
   </span><span class="ss">adaptor</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@openfn/language-common@1.6.2&quot;</span><span class="p">,</span><span class="w">
-  </span><span class="ss">history</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3641769262-4">[</span><span class="p" data-group-id="3641769262-4">]</span><span class="w">
-</span><span class="p" data-group-id="3641769262-3">}</span></code></pre><blockquote><p>ℹ️ The <code class="inline">adaptor</code> field is resolved to the latest version when <code class="inline">@latest</code>
+  </span><span class="ss">history</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3466932948-4">[</span><span class="p" data-group-id="3466932948-4">]</span><span class="w">
+</span><span class="p" data-group-id="3466932948-3">}</span></code></pre><blockquote><p>ℹ️ The <code class="inline">adaptor</code> field is resolved to the latest version when <code class="inline">@latest</code>
 is provided as Apollo expects a specific version.</p></blockquote>
   </section>
 </section>
@@ -362,8 +362,8 @@ is provided as Apollo expects a specific version.</p></blockquote>
 
       </div>
 
-<p>Queries the AI assistant with the given content.</p><p>Returns <code class="inline">{:ok, session}</code> if the query was successful, otherwise <code class="inline">:error</code>.</p><p><strong>Example</strong></p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">AiAssistant</span><span class="o">.</span><span class="n">query</span><span class="p" data-group-id="7411967463-1">(</span><span class="n">session</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;fn()&quot;</span><span class="p" data-group-id="7411967463-1">)</span><span class="w">
-</span><span class="p" data-group-id="7411967463-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">session</span><span class="p" data-group-id="7411967463-2">}</span></code></pre>
+<p>Queries the AI assistant with the given content.</p><p>Returns <code class="inline">{:ok, session}</code> if the query was successful, otherwise <code class="inline">:error</code>.</p><p><strong>Example</strong></p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">AiAssistant</span><span class="o">.</span><span class="n">query</span><span class="p" data-group-id="2539634459-1">(</span><span class="n">session</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;fn()&quot;</span><span class="p" data-group-id="2539634459-1">)</span><span class="w">
+</span><span class="p" data-group-id="2539634459-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">session</span><span class="p" data-group-id="2539634459-2">}</span></code></pre>
   </section>
 </section>
 

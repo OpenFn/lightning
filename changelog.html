@@ -177,7 +177,9 @@ hours <a href="https://github.com/OpenFn/lightning/issues/2389">#2389</a></li></
 it's possible to get a fully running lightning instance via external shell
 script. (This is a tricky requirement for a distributed set of local
 deployments) <a href="https://github.com/OpenFn/lightning/issues/2369">#2369</a> and
-<a href="https://github.com/OpenFn/lightning/pull/2373">#2373</a></li></ul><h3 id="changed-1" class="section-heading">
+<a href="https://github.com/OpenFn/lightning/pull/2373">#2373</a></li><li>Added support for <em>very basic</em> project-credential management (add, associate
+with job) via provisioning API.
+<a href="https://github.com/OpenFn/lightning/issues/2367">#2367</a></li></ul><h3 id="changed-1" class="section-heading">
   <a href="#changed-1" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -185,7 +187,7 @@ deployments) <a href="https://github.com/OpenFn/lightning/issues/2369">#2369</a>
 </h3>
 <ul><li>Enforced uniqueness on credential names <em>by user</em>.
 <a href="https://github.com/OpenFn/lightning/pull/2371">#2371</a></li><li>Use Swoosh to format User models into recipients
-<a href="https://github.com/OpenFn/lightning/pull/2374">#2374</a></li></ul><h3 id="fixed-1" class="section-heading">
+<a href="https://github.com/OpenFn/lightning/pull/2374">#2374</a></li><li>Bump default CLI to <code class="inline">@openfn/cli@1.8.1</code></li></ul><h3 id="fixed-1" class="section-heading">
   <a href="#fixed-1" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -2049,7 +2051,7 @@ work orders up to <code class="inline">v0.10.0</code>, though the granularity of
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="2818196403-1">(</span><span class="p" data-group-id="2818196403-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="8003658818-1">(</span><span class="p" data-group-id="8003658818-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added-34" class="section-heading">
