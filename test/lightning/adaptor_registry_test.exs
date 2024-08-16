@@ -16,18 +16,18 @@ defmodule Lightning.AdaptorRegistryTest do
     end
 
     test "uses cache from a specific location" do
-      {:ok, fd, file_path} = Temp.open("cache.json")
-
-      IO.write(fd, ~S"""
-        [{
-          "latest": "3.0.5",
-          "name": "@openfn/language-dhis2",
-          "repo": "git+https://github.com/openfn/language-dhis2.git",
-          "versions": []
-        }]
-      """)
-
-      File.close(fd)
+      file_path =
+        Briefly.create!(extname: ".json")
+        |> tap(fn path ->
+          File.write!(path, ~S"""
+          [{
+            "latest": "3.0.5",
+            "name": "@openfn/language-dhis2",
+            "repo": "git+https://github.com/openfn/language-dhis2.git",
+            "versions": []
+          }]
+          """)
+        end)
 
       start_supervised!(
         {AdaptorRegistry, [name: :test_adaptor_registry, use_cache: file_path]}
@@ -35,8 +35,6 @@ defmodule Lightning.AdaptorRegistryTest do
 
       results = AdaptorRegistry.all(:test_adaptor_registry)
       assert length(results) == 1
-
-      File.rm(file_path)
     end
 
     test "retrieves a list of adaptors when caching is disabled" do
