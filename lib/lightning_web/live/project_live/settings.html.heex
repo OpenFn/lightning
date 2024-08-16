@@ -784,6 +784,11 @@
               action={:show}
               can_install_github={@can_install_github}
               can_initiate_github_sync={@can_initiate_github_sync}
+              actions_disabled={is_map(assigns[:github_banner])}
+              actions_disabled_tooltip={
+                is_map(assigns[:github_banner]) &&
+                  assigns[:github_banner][:text]
+              }
             />
           <% else %>
             <div :if={@can_install_github}>
@@ -801,6 +806,11 @@
                 action={:new}
                 can_install_github={@can_install_github}
                 can_initiate_github_sync={@can_initiate_github_sync}
+                actions_disabled={is_map(assigns[:github_banner])}
+                actions_disabled_tooltip={
+                  is_map(assigns[:github_banner]) &&
+                    assigns[:github_banner][:text]
+                }
               />
               <div
                 :if={!user_has_valid_oauth_token(@current_user)}

@@ -24,6 +24,11 @@ and this project adheres to
 
 ### Fixed
 
+- Unable to remove/reconnect github app in lightning after uninstalling directly from Github
+  [#2168](https://github.com/OpenFn/lightning/issues/2168)
+- Github sync buttons available even when usage limiter returns error
+  [PR#2390](https://github.com/OpenFn/lightning/pull/2390)
+
 ## [v2.7.19] - 2024-08-19
 
 ### Added
