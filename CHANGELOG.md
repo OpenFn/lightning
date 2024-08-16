@@ -22,6 +22,9 @@ and this project adheres to
   script. (This is a tricky requirement for a distributed set of local
   deployments) [#2369](https://github.com/OpenFn/lightning/issues/2369) and
   [#2373](https://github.com/OpenFn/lightning/pull/2373)
+- Added support for _very basic_ project-credential management (add, associate
+  with job) via provisioning API.
+  [#2367](https://github.com/OpenFn/lightning/issues/2367)
 
 ### Changed
 
