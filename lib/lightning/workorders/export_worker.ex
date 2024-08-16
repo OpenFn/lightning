@@ -52,30 +52,28 @@ defmodule Lightning.WorkOrders.ExportWorker do
       }) do
     search_params = SearchParams.from_map(params)
 
-    with {:ok, project_file} <-
-           get_project_file(project_file_id),
-         {:ok, project_file} <-
-           update_status(project_file, status: :in_progress),
-         {:ok, project} <- get_project(project_id),
-         {:ok, zip_file} <- process_export(project, search_params) do
-      case update_status(project_file,
-             status: :completed,
-             zip_file_path: zip_file
-           ) do
-        {:ok, project_file} ->
-          UserNotifier.notify_history_export_completion(
-            project_file.created_by,
-            project_file
-          )
-
-          Logger.info("Export completed successfully.")
-          :ok
-
-        {:error, reason} ->
-          Logger.error("Export failed with reason: #{inspect(reason)}")
-          {:error, reason}
+    result =
+      with {:ok, project_file} <- get_project_file(project_file_id),
+           {:ok, project_file} <-
+             update_project_file(project_file, %{status: :in_progress}),
+           {:ok, project} <- get_project(project_id),
+           {:ok, zip_file} <- process_export(project, search_params) do
+        update_project_file(
+          project_file,
+          %{status: :completed, file: zip_file}
+        )
       end
-    else
+
+    case result do
+      {:ok, project_file} ->
+        UserNotifier.notify_history_export_completion(
+          project_file.created_by,
+          project_file
+        )
+
+        Logger.info("Export completed successfully.")
+        :ok
+
       {:error, reason} ->
         Logger.error("Export failed with reason: #{inspect(reason)}")
         {:error, reason}
@@ -243,24 +241,21 @@ defmodule Lightning.WorkOrders.ExportWorker do
     end
   end
 
-  defp update_status(project_file, opts) do
-    zip_file_path = Keyword.get(opts, :zip_file_path, nil)
+  defp update_project_file(project_file, attrs) do
+    file_path = Map.get(attrs, :file)
 
-    changeset_opts = Keyword.drop(opts, [:zip_file_path])
+    changeset_attrs = Map.drop(attrs, [:file])
 
-    changeset = Ecto.Changeset.change(project_file, changeset_opts)
+    changeset = Ecto.Changeset.change(project_file, changeset_attrs)
 
     changeset =
-      if zip_file_path do
-        Lightning.Projects.File.attach_file(changeset, zip_file_path)
+      if file_path do
+        Lightning.Projects.File.attach_file(changeset, file_path)
       else
         changeset
       end
 
-    case Repo.update(changeset) do
-      {:ok, updated_project_file} -> {:ok, updated_project_file}
-      {:error, _changeset} -> {:error, :status_not_updated}
-    end
+    Repo.update(changeset)
   end
 
   defp preload_and_extract_entities(work_order) do
