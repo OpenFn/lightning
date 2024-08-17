@@ -22,6 +22,9 @@ and this project adheres to
 
 ### Changed
 
+- Ensure that all the demo accounts are confirmed by default
+  [#2395](https://github.com/OpenFn/lightning/issues/2395)
+
 ### Fixed
 
 ## [v2.7.17] - 2024-08-14

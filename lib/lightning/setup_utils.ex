@@ -6,6 +6,7 @@ defmodule Lightning.SetupUtils do
   import Ecto.Changeset
 
   alias Lightning.Accounts
+  alias Lightning.Accounts.User
   alias Lightning.Credentials
   alias Lightning.Jobs
   alias Lightning.Projects
@@ -49,7 +50,7 @@ defmodule Lightning.SetupUtils do
   """
   def setup_demo(opts \\ [create_super: false]) do
     %{super_user: super_user, admin: admin, editor: editor, viewer: viewer} =
-      create_users(opts)
+      create_users(opts) |> confirm_users()
 
     %{
       project: openhie_project,
@@ -162,6 +163,25 @@ defmodule Lightning.SetupUtils do
       })
 
     %{super_user: super_user, admin: admin, editor: editor, viewer: viewer}
+  end
+
+  def confirm_users(users) do
+    confirm_user = fn user ->
+      case user do
+        nil ->
+          :ok
+
+        _ ->
+          User.confirm_changeset(user)
+          |> Repo.update!()
+      end
+    end
+
+    users
+    |> Map.values()
+    |> Enum.each(confirm_user)
+
+    users
   end
 
   def create_starter_project(name, project_users) do
