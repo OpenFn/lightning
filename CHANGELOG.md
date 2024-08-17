@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.7.18] - 2024-08-17
+
+### Added
+
 - Ensure that all users in an instance have a confirmed email address within 48
   hours [#2389](https://github.com/OpenFn/lightning/issues/2389)
 
@@ -27,9 +35,9 @@ and this project adheres to
 
 ### Fixed
 
-- Removed all Kafka trigger code that ensured that message sequence is
-  honoured for messages with keys. Functionality to ensure that message sequence
-  is honoured will be added in the future, but in an abstraction that is a better
+- Removed all Kafka trigger code that ensured that message sequence is honoured
+  for messages with keys. Functionality to ensure that message sequence is
+  honoured will be added in the future, but in an abstraction that is a better
   fit for the current Lightning design.
   [#2362](https://github.com/OpenFn/lightning/issues/2362)
 - Dropped the `trigger_kafka_messages` table that formed part of the Kafka
