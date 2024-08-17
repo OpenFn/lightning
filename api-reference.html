@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-DEE7D4F7.js"></script>
+    <script src="dist/sidebar_items-6911A206.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -837,75 +837,12 @@ process by enabling, reloading or disabling it.</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
-    <a href="Lightning.KafkaTriggers.MessageCandidateSet.html" translate="no">Lightning.KafkaTriggers.MessageCandidateSet</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>A message candidate set is a representative of a group of TriggerKafkaMessages
-that belog to the same trigger and have an identical ttopic and key.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Lightning.KafkaTriggers.MessageCandidateSetServer.html" translate="no">Lightning.KafkaTriggers.MessageCandidateSetServer</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Server responsible for maintaining a list of message candidate sets that
-are provided to the worker processes.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Lightning.KafkaTriggers.MessageCandidateSetSupervisor.html" translate="no">Lightning.KafkaTriggers.MessageCandidateSetSupervisor</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Starts the server and worker processes responsible for converting messages
-received from Kafka clusters. There are two sets of workers and servers. This
-is to accommodate messages that have keys (grouped into MessageCandidateSets)
-and those that do not, which are processed individually.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Lightning.KafkaTriggers.MessageCandidateSetWorker.html" translate="no">Lightning.KafkaTriggers.MessageCandidateSetWorker</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Requests a message candidate set from the MessageCandidateSetServer and
-manages the state of the returned candidate set.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
     <a href="Lightning.KafkaTriggers.MessageHandling.html" translate="no">Lightning.KafkaTriggers.MessageHandling</a>
 
   </div>
 
-    <div class="summary-synopsis"><p>Contains the logic for ensuring that messages are processed in the order
-they are received (within the guarantees provided by Kafka for messages with
-the same key and topic).</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Lightning.KafkaTriggers.MessageServer.html" translate="no">Lightning.KafkaTriggers.MessageServer</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Server responsible for maintaining a list of messages with nil keys that
-are provided to the worker processes.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Lightning.KafkaTriggers.MessageWorker.html" translate="no">Lightning.KafkaTriggers.MessageWorker</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Requests a message from the MessageServer and manages the state of the
-returned message.</p></div>
+    <div class="summary-synopsis"><p>Contains the logic to persist a Kafka messages as a WorkOrder, Run and
+Dataclip.</p></div>
 
 </div>
 <div class="summary-row">
@@ -936,15 +873,6 @@ Kafka trigger.</p></div>
 
     <div class="summary-synopsis"><p>Starts all the processes needed to pull data from Kafka clusters and then
 generate work orders based on the messages received.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Lightning.KafkaTriggers.TriggerKafkaMessage.html" translate="no">Lightning.KafkaTriggers.TriggerKafkaMessage</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>This persists a message received from a Kafka cluster.</p></div>
 
 </div>
 <div class="summary-row">

@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-DEE7D4F7.js"></script>
+    <script src="dist/sidebar_items-6911A206.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -137,9 +137,8 @@ Pages
 
 
   <section id="moduledoc">
-<p>Contains the logic for ensuring that messages are processed in the order
-they are received (within the guarantees provided by Kafka for messages with
-the same key and topic).</p>
+<p>Contains the logic to persist a Kafka messages as a WorkOrder, Run and
+Dataclip.</p>
   </section>
 
 
@@ -157,61 +156,7 @@ the same key and topic).</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#find_candidate_for/1" translate="no">find_candidate_for(message_candidate_set)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Find the MessageCandidateSetCandidate for the MessageCandidateSet identified
-by the MessageCanididateSetID (i.e. trigger_id, topic, key).</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#find_message_candidate_sets/0" translate="no">find_message_candidate_sets()</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>This method finds all unique MessageCandidateSets present in the
-<code class="inline">TriggerKafkaMessage</code> table.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#find_nil_key_message_ids/0" translate="no">find_nil_key_message_ids()</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
         <a href="#persist_message/3" translate="no">persist_message(multi, trigger_id, message)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#process_candidate_for/1" translate="no">process_candidate_for(candidate_set)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#process_message_for/1" translate="no">process_message_for(message_id)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#successful?/1" translate="no">successful?(map)</a>
 
       </div>
 
@@ -230,75 +175,6 @@ by the MessageCanididateSetID (i.e. trigger_id, topic, key).</p></div>
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="find_candidate_for/1">
-
-  <div class="detail-header">
-    <a href="#find_candidate_for/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">find_candidate_for(message_candidate_set)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers/message_handling.ex#L208" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-<p>Find the MessageCandidateSetCandidate for the MessageCandidateSet identified
-by the MessageCanididateSetID (i.e. trigger_id, topic, key).</p><p>Within the current implementation, this no longer needs to be a public method,
-but having it as a public method allows for easier testing.</p>
-  </section>
-</section>
-<section class="detail" id="find_message_candidate_sets/0">
-
-  <div class="detail-header">
-    <a href="#find_message_candidate_sets/0" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">find_message_candidate_sets()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers/message_handling.ex#L24" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-<p>This method finds all unique MessageCandidateSets present in the
-<code class="inline">TriggerKafkaMessage</code> table.</p>
-  </section>
-</section>
-<section class="detail" id="find_nil_key_message_ids/0">
-
-  <div class="detail-header">
-    <a href="#find_nil_key_message_ids/0" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">find_nil_key_message_ids()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers/message_handling.ex#L38" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
 <section class="detail" id="persist_message/3">
 
   <div class="detail-header">
@@ -308,73 +184,7 @@ but having it as a public method allows for easier testing.</p>
     </a>
     <h1 class="signature" translate="no">persist_message(multi, trigger_id, message)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers/message_handling.ex#L96" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="process_candidate_for/1">
-
-  <div class="detail-header">
-    <a href="#process_candidate_for/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">process_candidate_for(candidate_set)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers/message_handling.ex#L44" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="process_message_for/1">
-
-  <div class="detail-header">
-    <a href="#process_message_for/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">process_message_for(message_id)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers/message_handling.ex#L68" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="successful?/1">
-
-  <div class="detail-header">
-    <a href="#successful?/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">successful?(map)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers/message_handling.ex#L197" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers/message_handling.ex#L15" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>

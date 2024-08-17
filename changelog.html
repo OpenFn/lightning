@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-DEE7D4F7.js"></script>
+    <script src="dist/sidebar_items-6911A206.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -162,7 +162,14 @@ hours <a href="https://github.com/OpenFn/lightning/issues/2389">#2389</a></li></
   </a>
   <span class="text">Fixed</span>
 </h3>
-<h2 id="v2-7-17-2024-08-14" class="section-heading">
+<ul><li>Removed all Kafka trigger code that ensured that message sequence is
+honoured for messages with keys. Functionality to ensure that message sequence
+is honoured will be added in the future, but in an abstraction that is a better
+fit for the current Lightning design.
+<a href="https://github.com/OpenFn/lightning/issues/2362">#2362</a></li><li>Dropped the <code class="inline">trigger_kafka_messages</code> table that formed part of the Kafka
+trigger implementation, but which is now obsolete given the removal of the
+code related to message sequence preservation.
+<a href="https://github.com/OpenFn/lightning/issues/2362">#2362</a></li></ul><h2 id="v2-7-17-2024-08-14" class="section-heading">
   <a href="#v2-7-17-2024-08-14" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -2052,7 +2059,7 @@ work orders up to <code class="inline">v0.10.0</code>, though the granularity of
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="7740158795-1">(</span><span class="p" data-group-id="7740158795-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="6766116932-1">(</span><span class="p" data-group-id="6766116932-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added-34" class="section-heading">
