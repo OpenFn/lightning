@@ -142,7 +142,7 @@ defmodule Lightning.MixProject do
       {:goth, "~> 1.3"},
       {:waffle, "~> 1.1"},
       {:waffle_ecto, "~> 0.0"},
-      {:waffle_gcs, github: "elixir-waffle/waffle_gcs", branch: "main"},
+      {:waffle_gcs, "~> 0.2"},
       {:packmatic, "~> 1.0"},
       # MFA
       {:nimble_totp, "~> 1.0"},
