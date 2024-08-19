@@ -507,18 +507,18 @@ defmodule Lightning.Config.Bootstrap do
     env!("STORAGE_BACKEND", :string, nil)
     |> case do
       "gcs" ->
-        config :waffle,
-          storage: Waffle.Storage.Google.CloudStorage,
+        config :lightning, Lightning.Storage,
+          adapter: Lightning.Storage.GCS,
           bucket:
             env!("GCS_BUCKET", :string, nil) ||
-              raise("GCS_BUCKET is not set, but STORAGE_BACKEND is set to gcs"),
-          token_fetcher: Lightning.Storage.GCSTokenFetcher,
-          signed: true
+              raise("GCS_BUCKET is not set, but STORAGE_BACKEND is set to gcs")
 
         goth_required()
 
       v when v in ["local", nil] ->
-        config :waffle, Application.get_all_env(:waffle)
+        config :lightning,
+               Lightning.Storage,
+               Application.get_env(:lightning, Lightning.Storage)
 
       unknown ->
         raise """

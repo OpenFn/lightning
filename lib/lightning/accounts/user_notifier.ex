@@ -261,8 +261,7 @@ defmodule Lightning.Accounts.UserNotifier do
 
     You history export started requested on #{Helpers.format_date(project_file.inserted_at)} is completed. Please visit this URL to download the file:acceptor
 
-    #{Lightning.Storage.ProjectFileDefinition.url({project_file.file, project_file},
-    :original)}
+    #{url(LightningWeb.Endpoint, ~p"/project_files/#{project_file.id}/download")}
 
     OpenFn
     """)
