@@ -22,6 +22,14 @@ defmodule Lightning.Storage do
     def storage_dir(_, {_file, project_file}) do
       "exports/#{project_file.project_id}"
     end
+
+    def file_path({file, scope}, version) do
+      Path.join([
+        storage_dir_prefix(),
+        storage_dir(version, {file, scope}),
+        file.file_name
+      ])
+    end
   end
 
   defmodule GCSTokenFetcher do

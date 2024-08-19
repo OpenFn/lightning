@@ -109,6 +109,8 @@ defmodule LightningWeb.Router do
     get "/download/yaml", DownloadsController, :download_project_yaml
     get "/dataclip/body/:id", DataclipController, :show
 
+    get "/project_files/:id/download", ProjectFileController, :download
+
     get "/profile/confirm_email/:token",
         UserConfirmationController,
         :confirm_email
@@ -170,8 +172,6 @@ defmodule LightningWeb.Router do
         live "/w/new", WorkflowLive.Edit, :new
         live "/w/:id", WorkflowLive.Edit, :edit
       end
-
-      get "/project_files/:id/download", ProjectFileController, :download
 
       live "/credentials", CredentialLive.Index, :index
       live "/credentials/:id/delete", CredentialLive.Index, :delete

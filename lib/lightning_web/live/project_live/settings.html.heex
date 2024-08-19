@@ -1081,12 +1081,8 @@
             <:col :let={file}>
               <.link
                 id={"download-export-file-#{file.id}-button"}
-                navigate={
-                  Lightning.Storage.ProjectFileDefinition.url(
-                    {file.file, file},
-                    :original
-                  )
-                }
+                href={~p"/project_files/#{file.id}/download"}
+                target="_blank"
                 class="table-action"
               >
                 Download

@@ -33,11 +33,6 @@ defmodule LightningWeb.Endpoint do
     gzip: true,
     only: LightningWeb.static_paths()
 
-  plug Plug.Static,
-    at: "/exports",
-    from: Path.expand("./exports") |> IO.inspect(),
-    gzip: true
-
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
   if code_reloading? do
