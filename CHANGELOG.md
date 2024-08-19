@@ -19,6 +19,8 @@ and this project adheres to
 
 ### Changed
 
+- Claude integration in job chat (OPENAI_API_KEY renamed to ANTHROPIC_API_KEY)
+
 ### Fixed
 
 ## [v2.9.0] - 2024-09-06
