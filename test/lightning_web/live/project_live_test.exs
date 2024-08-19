@@ -3471,6 +3471,190 @@ defmodule LightningWeb.ProjectLiveTest do
       assert flash["error"] == error_msg
     end
 
+    test "users get a flash containing the github error in case the api returns an error with error_description key",
+         %{
+           conn: conn
+         } do
+      expected_installation = %{
+        "id" => 1234,
+        "account" => %{
+          "type" => "User",
+          "login" => "username"
+        }
+      }
+
+      expected_repo = %{
+        "full_name" => "someaccount/somerepo",
+        "default_branch" => "main"
+      }
+
+      expected_branch = %{"name" => "somebranch"}
+
+      project = insert(:project)
+
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_valid_github_oauth_token!(user)
+
+      expect_get_user_installations(200, %{
+        "installations" => [expected_installation]
+      })
+
+      expect_create_installation_token(expected_installation["id"])
+      expect_get_installation_repos(200, %{"repositories" => [expected_repo]})
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      render_async(view)
+
+      # lets select the installation
+      view
+      |> form("#project-repo-connection-form",
+        connection: %{github_installation_id: expected_installation["id"]}
+      )
+      |> render_change()
+
+      # we should now have the repos listed
+      render_async(view)
+
+      # lets select the repo
+      expect_create_installation_token(expected_installation["id"])
+
+      expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
+
+      view
+      |> form("#project-repo-connection-form",
+        connection: %{
+          github_installation_id: expected_installation["id"],
+          repo: expected_repo["full_name"]
+        }
+      )
+      |> render_change()
+
+      # we should now have the branches listed
+      render_async(view)
+
+      # let us submit
+
+      # push pull.yml
+      expected_error_msg = "Some error message"
+
+      expect_get_repo(expected_repo["full_name"], 200, expected_repo)
+
+      expect_create_blob(expected_repo["full_name"], 403, %{
+        "error_description" => expected_error_msg
+      })
+
+      view
+      |> form("#project-repo-connection-form")
+      |> render_submit(
+        connection: %{
+          branch: expected_branch["name"],
+          sync_direction: "deploy",
+          config_path: "./config.json",
+          accept: true
+        }
+      )
+
+      flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+      assert flash["error"] == "Github Error: #{expected_error_msg}"
+    end
+
+    test "users get a flash containing the github error in case the api returns an error with message key",
+         %{
+           conn: conn
+         } do
+      expected_installation = %{
+        "id" => 1234,
+        "account" => %{
+          "type" => "User",
+          "login" => "username"
+        }
+      }
+
+      expected_repo = %{
+        "full_name" => "someaccount/somerepo",
+        "default_branch" => "main"
+      }
+
+      expected_branch = %{"name" => "somebranch"}
+
+      project = insert(:project)
+
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_valid_github_oauth_token!(user)
+
+      expect_get_user_installations(200, %{
+        "installations" => [expected_installation]
+      })
+
+      expect_create_installation_token(expected_installation["id"])
+      expect_get_installation_repos(200, %{"repositories" => [expected_repo]})
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      render_async(view)
+
+      # lets select the installation
+      view
+      |> form("#project-repo-connection-form",
+        connection: %{github_installation_id: expected_installation["id"]}
+      )
+      |> render_change()
+
+      # we should now have the repos listed
+      render_async(view)
+
+      # lets select the repo
+      expect_create_installation_token(expected_installation["id"])
+
+      expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
+
+      view
+      |> form("#project-repo-connection-form",
+        connection: %{
+          github_installation_id: expected_installation["id"],
+          repo: expected_repo["full_name"]
+        }
+      )
+      |> render_change()
+
+      # we should now have the branches listed
+      render_async(view)
+
+      # let us submit
+
+      # push pull.yml
+      expected_error_msg = "Some error message"
+
+      expect_get_repo(expected_repo["full_name"], 200, expected_repo)
+
+      expect_create_blob(expected_repo["full_name"], 403, %{
+        "message" => expected_error_msg
+      })
+
+      view
+      |> form("#project-repo-connection-form")
+      |> render_submit(
+        connection: %{
+          branch: expected_branch["name"],
+          sync_direction: "deploy",
+          config_path: "./config.json",
+          accept: true
+        }
+      )
+
+      flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+      assert flash["error"] == "Github Error: #{expected_error_msg}"
+    end
+
     test "connect button is disabled if the usage limiter returns an error",
          %{
            conn: conn
