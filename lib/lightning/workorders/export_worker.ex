@@ -109,22 +109,20 @@ defmodule Lightning.WorkOrders.ExportWorker do
 
     case create_export_directories() do
       {:ok, export_dir} ->
-        transaction_result =
-          Repo.transaction(fn ->
-            workorders_query
-            |> Repo.stream(max_rows: 100)
-            |> Stream.chunk_every(@batch_size)
-            |> Stream.each(&process_and_write_batch(&1, export_dir))
-            |> Stream.run()
-          end)
-
-        case transaction_result do
+        Repo.transaction(fn ->
+          workorders_query
+          |> Repo.stream(max_rows: 100)
+          |> Stream.chunk_every(@batch_size)
+          |> Stream.each(&process_and_write_batch(&1, export_dir))
+          |> Stream.run()
+        end)
+        |> case do
           {:ok, _result} ->
             finalize_export(export_dir)
 
           {:error, reason} ->
             Logger.error(
-              "Export transaction failed. Reason: #{inspect(reason)}. Rolling back any changes."
+              "Export transaction failed. Reason: #{inspect(reason)}. Rolled back transaction."
             )
 
             {:error, reason}
@@ -293,7 +291,8 @@ defmodule Lightning.WorkOrders.ExportWorker do
   end
 
   defp create_export_directories do
-    with {:ok, root_dir} <- Briefly.create(type: :directory),
+    with {:ok, root_dir} <-
+           Briefly.create(type: :directory),
          :ok <- File.mkdir_p(Path.join(root_dir, "logs")),
          :ok <- File.mkdir_p(Path.join(root_dir, "dataclips")) do
       {:ok,

@@ -139,8 +139,10 @@ defmodule Lightning.MixProject do
       {:hammer_backend_mnesia, "~> 0.6"},
       {:hammer, "~> 6.0"},
       {:dotenvy, "~> 0.8.0"},
-      {:waffle_ecto, "~> 0.0"},
+      {:goth, "~> 1.3"},
       {:waffle, "~> 1.1"},
+      {:waffle_ecto, "~> 0.0"},
+      {:waffle_gcs, github: "elixir-waffle/waffle_gcs", branch: "main"},
       {:packmatic, "~> 1.0"},
       # MFA
       {:nimble_totp, "~> 1.0"},

@@ -46,10 +46,10 @@ defmodule Lightning.Projects.File do
   end
 
   @spec attach_file(Ecto.Changeset.t(t()), term()) :: Ecto.Changeset.t(t())
-  def attach_file(project_file, uploadable \\ :invalid) do
+  def attach_file(changeset, uploadable) do
     params = %{"file" => uploadable}
 
-    project_file
+    changeset
     |> cast_attachments(params, [:file], allow_paths: true)
     |> validate_required([:id, :type, :status, :created_by, :project, :file])
   end

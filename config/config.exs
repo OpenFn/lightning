@@ -144,10 +144,10 @@ config :lightning, :default_retention_period, nil
 
 config :lightning, Lightning.Runtime.RuntimeManager, start: false
 
+config :lightning, :goth_required, false
+
 config :waffle,
-  storage: Waffle.Storage.Local,
-  # or {:system, "ASSET_HOST"}
-  asset_host: "http://localhost:4000"
+  storage: Waffle.Storage.Local
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

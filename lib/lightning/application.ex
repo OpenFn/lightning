@@ -85,32 +85,39 @@ defmodule Lightning.Application do
         Application.get_env(:libcluster, :topologies)
       end
 
-    children = [
-      Lightning.PromEx,
-      {Cluster.Supervisor, [topologies, [name: Lightning.ClusterSupervisor]]},
-      {Lightning.Vault, Application.get_env(:lightning, Lightning.Vault, [])},
-      # Start the Ecto repository
-      Lightning.Repo,
-      # Start Oban,
-      {Oban, oban_opts()},
-      # Start the Telemetry supervisor
-      LightningWeb.Telemetry,
-      # Start the PubSub system
-      {Phoenix.PubSub, name: Lightning.PubSub},
-      {Finch, name: Lightning.Finch},
-      auth_providers_cache_childspec,
-      # Start the Endpoint (http/https)
-      LightningWeb.Endpoint,
-      Lightning.Workflows.Presence,
-      adaptor_registry_childspec,
-      adaptor_service_childspec,
-      {Lightning.TaskWorker, name: :cli_task_worker},
-      {Lightning.Runtime.RuntimeManager,
-       worker_secret: Lightning.Config.worker_secret()},
-      {Lightning.KafkaTriggers.Supervisor, type: :supervisor}
-      # Start a worker by calling: Lightning.Worker.start_link(arg)
-      # {Lightning.Worker, arg}
-    ]
+    goth =
+      (Application.get_env(:lightning, :goth_required, false) &&
+         {Goth, name: Lightning.Goth}) || nil
+
+    children =
+      [
+        Lightning.PromEx,
+        {Cluster.Supervisor, [topologies, [name: Lightning.ClusterSupervisor]]},
+        {Lightning.Vault, Application.get_env(:lightning, Lightning.Vault, [])},
+        # Start the Ecto repository
+        Lightning.Repo,
+        # Start Oban,
+        {Oban, oban_opts()},
+        goth,
+        # Start the Telemetry supervisor
+        LightningWeb.Telemetry,
+        # Start the PubSub system
+        {Phoenix.PubSub, name: Lightning.PubSub},
+        {Finch, name: Lightning.Finch},
+        auth_providers_cache_childspec,
+        # Start the Endpoint (http/https)
+        LightningWeb.Endpoint,
+        Lightning.Workflows.Presence,
+        adaptor_registry_childspec,
+        adaptor_service_childspec,
+        {Lightning.TaskWorker, name: :cli_task_worker},
+        {Lightning.Runtime.RuntimeManager,
+         worker_secret: Lightning.Config.worker_secret()},
+        {Lightning.KafkaTriggers.Supervisor, type: :supervisor}
+        # Start a worker by calling: Lightning.Worker.start_link(arg)
+        # {Lightning.Worker, arg}
+      ]
+      |> Enum.reject(&is_nil/1)
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options

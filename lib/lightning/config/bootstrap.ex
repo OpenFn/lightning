@@ -497,7 +497,43 @@ defmodule Lightning.Config.Bootstrap do
       number_of_processors: env!("KAFKA_NUMBER_OF_PROCESSORS", :integer, 1)
 
     # # ==============================================================================
+
+    setup_storage()
+
     :ok
+  end
+
+  defp setup_storage do
+    env!("STORAGE_BACKEND", :string, nil)
+    |> case do
+      "gcs" ->
+        config :waffle,
+          storage: Waffle.Storage.Google.CloudStorage,
+          bucket:
+            env!("GCS_BUCKET", :string, nil) ||
+              raise("GCS_BUCKET is not set, but STORAGE_BACKEND is set to gcs"),
+          token_fetcher: Lightning.Storage.GCSTokenFetcher,
+          signed: true
+
+        goth_required()
+
+      v when v in ["local", nil] ->
+        config :waffle, Application.get_all_env(:waffle)
+
+      unknown ->
+        raise """
+        Unknown storage backend: #{unknown}
+
+        Currently supported backends are:
+
+        - gcs
+        - local (default)
+        """
+    end
+  end
+
+  defp goth_required do
+    config :lightning, :goth_required, true
   end
 
   defp github_config do
