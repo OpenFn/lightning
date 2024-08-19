@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Allow the Kafka trigger to reset the offset and try again when a message can
+  not be persisted.[#2386](https://github.com/OpenFn/lightning/issues/2386)
+
 ### Changed
 
 ### Fixed
