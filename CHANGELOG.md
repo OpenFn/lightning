@@ -17,12 +17,16 @@ and this project adheres to
 
 ### Added
 
-- Pass the user_id param on check usage limits.
-  [#2387](https://github.com/OpenFn/lightning/issues/2387)
-
 ### Changed
 
 ### Fixed
+
+## [v2.7.19] - 2024-08-19
+
+### Added
+
+- Pass the user_id param on check usage limits.
+  [#2387](https://github.com/OpenFn/lightning/issues/2387)
 
 ## [v2.7.18] - 2024-08-17
 
