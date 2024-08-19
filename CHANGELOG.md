@@ -24,7 +24,7 @@ and this project adheres to
 - Improve history export page UI
   [#2442](https://github.com/OpenFn/lightning/issues/2442)
 - When selecting a node in the workflow diagram, connected edges will also be
-  highlighted [2396](https://github.com/OpenFn/lightning/pull/2396)
+  highlighted [2396](https://github.com/OpenFn/lightning/issues/2358)
 
 ### Fixed
 
@@ -32,6 +32,7 @@ and this project adheres to
   [#2479](https://github.com/OpenFn/lightning/issues/2479)
 - Fix jumpy combobox for scope switcher
   [#2469](https://github.com/OpenFn/lightning/issues/2469)
+- Fix console errors when rending edge labels in the workflow diagram
 
 ## [v2.9.3] - 2024-09-11
 
