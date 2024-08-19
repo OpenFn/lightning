@@ -192,10 +192,16 @@ defmodule Lightning.WorkOrders.ExportWorker do
   end
 
   defp zip_folder(folder_path, output_file) do
+    IO.inspect(folder_path, label: "FOLDER_PATH")
+    IO.inspect(output_file, label: "FOLDER_PATH")
+
     case File.open(output_file, [:write, :binary], fn output ->
            entries = generate_entries(folder_path, "")
 
+           IO.inspect(output, label: "OUTPUT")
+
            entries
+           |> IO.inspect(label: "ENTRIES")
            |> Packmatic.build_stream()
            |> Enum.each(&IO.binwrite(output, &1))
          end) do
@@ -213,6 +219,9 @@ defmodule Lightning.WorkOrders.ExportWorker do
     |> Enum.flat_map(fn entry ->
       full_path = Path.join([directory_path, entry])
       zip_entry_name = Path.join([parent_path, entry])
+
+      IO.inspect(full_path, label: "FULL_PATH")
+      IO.inspect(zip_entry_name, label: "ZIP_ENTRY_NAME")
 
       if File.dir?(full_path) do
         generate_entries(full_path, zip_entry_name)
@@ -240,19 +249,7 @@ defmodule Lightning.WorkOrders.ExportWorker do
   end
 
   defp update_project_file(project_file, attrs) do
-    file_path = Map.get(attrs, :file)
-
-    changeset_attrs = Map.drop(attrs, [:file])
-
-    changeset = Ecto.Changeset.change(project_file, changeset_attrs)
-
-    changeset =
-      if file_path do
-        Lightning.Projects.File.attach_file(changeset, file_path)
-      else
-        changeset
-      end
-
+    changeset = Ecto.Changeset.change(project_file, attrs)
     Repo.update(changeset)
   end
 
