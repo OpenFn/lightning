@@ -160,7 +160,7 @@ the Apollo AI service.
 
 The following environment variables are required:
 
-- `OPENAI_API_KEY` - your OpenAI API key.
+- `ANTHROPIC_API_KEY` - your Anthropic API key.
 - `APOLLO_ENDPOINT` - the endpoint for the OpenFn Apollo AI service.
 
 ### Kafka Triggers
