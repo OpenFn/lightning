@@ -1,47 +1,33 @@
 defmodule Lightning.StorageTest do
-  use Lightning.DataCase, async: true
+  use ExUnit.Case, async: true
 
-  # alias Lightning.Storage
-  alias Lightning.Storage.ProjectFileDefinition
-  alias Lightning.Projects.ProjectFile
+  alias Lightning.Storage
 
-  setup do
-    %{project: insert(:project)}
+  import Mox
+
+  setup_all do
+    Mox.defmock(MockStorageBackend, for: Lightning.Storage.Adapter)
+
+    :ok
   end
 
-  test "store and url", %{project: project} do
-    {:ok, path} = touch_temp_zip()
+  setup :verify_on_exit!
 
-    project_file = %ProjectFile{id: Ecto.UUID.generate(), project_id: project.id}
+  test "should call store on the current backend" do
+    Lightning.MockConfig
+    |> expect(:storage_backend, fn -> MockStorageBackend end)
 
-    {:ok, file} =
-      ProjectFileDefinition.store({path, project_file})
+    MockStorageBackend |> expect(:store, fn _, _ -> {:ok, "path"} end)
 
-    assert ProjectFileDefinition.url({file, project_file}) ==
-             "//archives/#{project_file.project_id}/#{project_file.id}.zip"
+    assert Storage.store("source", "destination") == {:ok, "path"}
   end
 
-  test "using ecto", %{project: project} do
-    {:ok, path} = touch_temp_zip()
+  test "should call get on the current backend" do
+    Lightning.MockConfig
+    |> expect(:storage_backend, fn -> MockStorageBackend end)
 
-    {:ok, project_file} =
-      ProjectFile.new(%{
-        project: project,
-        created_by: insert(:user),
-        type: :archive
-      })
-      |> Repo.insert!()
-      |> ProjectFile.attach_file(path)
-      |> Repo.update()
+    MockStorageBackend |> expect(:get, fn _ -> {:ok, "path"} end)
 
-    assert ProjectFileDefinition.url({project_file.file, project_file}) =~
-             "//archives/#{project_file.project_id}/#{project_file.id}.zip?"
-  end
-
-  defp touch_temp_zip() do
-    Briefly.create(extname: ".zip")
-    |> tap(fn {:ok, path} ->
-      File.write!(path, "Hello, I'm not really a zip")
-    end)
+    assert Storage.get("some_path") == {:ok, "path"}
   end
 end

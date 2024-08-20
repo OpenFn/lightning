@@ -508,7 +508,7 @@ defmodule Lightning.Config.Bootstrap do
     |> case do
       "gcs" ->
         config :lightning, Lightning.Storage,
-          adapter: Lightning.Storage.GCS,
+          backend: Lightning.Storage.GCS,
           bucket:
             env!("GCS_BUCKET", :string, nil) ||
               raise("GCS_BUCKET is not set, but STORAGE_BACKEND is set to gcs")

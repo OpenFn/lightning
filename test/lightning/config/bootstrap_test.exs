@@ -85,7 +85,7 @@ defmodule Lightning.Config.BootstrapTest do
 
       storage = get_env(:lightning, Lightning.Storage)
 
-      assert {:adapter, Lightning.Storage.Local} in storage
+      assert {:backend, Lightning.Storage.Local} in storage
       assert {:storage_dir, "."} in storage
 
       refute get_env(:lightning, :goth_required)
@@ -105,7 +105,7 @@ defmodule Lightning.Config.BootstrapTest do
 
       storage = get_env(:lightning, Lightning.Storage)
 
-      assert {:adapter, Lightning.Storage.GCS} in storage
+      assert {:backend, Lightning.Storage.GCS} in storage
       assert {:bucket, "foo"} in storage
 
       assert {:goth_required, true} in get_env(:lightning)
