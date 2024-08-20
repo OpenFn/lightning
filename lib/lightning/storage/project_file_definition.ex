@@ -3,14 +3,14 @@ defmodule Lightning.Storage.ProjectFileDefinition do
   alias Lightning.Storage
 
   def store(source_path, %ProjectFile{} = file) do
-    Storage.store(source_path, storage_path(file))
+    Storage.store(source_path, file.path)
   end
 
   def get(%ProjectFile{} = file) do
-    file |> storage_path() |> Storage.get()
+    Storage.get(file.path)
   end
 
-  defp storage_path(%ProjectFile{id: id, file: filename, project_id: project_id}) do
-    Path.join(["exports", project_id, "#{id}#{Path.extname(filename)}"])
+  def storage_path_for_exports(%ProjectFile{} = file, ext \\ ".zip") do
+    Path.join(["exports", file.project_id, "#{file.id}#{ext}"])
   end
 end

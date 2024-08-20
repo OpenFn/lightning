@@ -4,7 +4,7 @@ defmodule Lightning.Repo.Migrations.AddProjectFiles do
   def change do
     create table(:project_files, primary_key: false) do
       add :id, :binary_id, primary_key: true
-      add :file, :string
+      add :path, :string
       add :size, :integer
       add :type, :string, null: false
       add :status, :string, null: false

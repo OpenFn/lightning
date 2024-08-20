@@ -60,15 +60,11 @@ defmodule Lightning.WorkOrders.ExportWorker do
            {:ok, project} <- get_project(project_id),
            {:ok, zip_file} <-
              process_export(project, search_params, project_file),
-           {:ok, _} <-
-             ProjectFileDefinition.store(zip_file, %{
-               project_file
-               | file: Path.basename(zip_file)
-             }) do
-        update_project_file(
-          project_file,
-          %{status: :completed, file: Path.basename(zip_file)}
-        )
+           {:ok, storage_path} <- store_project_file(zip_file, project_file) do
+        update_project_file(project_file, %{
+          status: :completed,
+          path: storage_path
+        })
       end
 
     case result do
@@ -107,6 +103,19 @@ defmodule Lightning.WorkOrders.ExportWorker do
         )
 
         {:error, changeset}
+    end
+  end
+
+  defp store_project_file(source_path, project_file) do
+    storage_path =
+      ProjectFileDefinition.storage_path_for_exports(project_file, ".zip")
+
+    with {:ok, _} <-
+           ProjectFileDefinition.store(source_path, %{
+             project_file
+             | path: storage_path
+           }) do
+      {:ok, storage_path}
     end
   end
 

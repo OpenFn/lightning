@@ -1058,8 +1058,8 @@
               label_class="text-gray-700 uppercase"
               label="Filename"
             >
-              <%= if file.file do %>
-                <%= file.file %>
+              <%= if file.path do %>
+                <%= Path.basename(file.path) %>
               <% else %>
                 <em>Pending</em>
               <% end %>

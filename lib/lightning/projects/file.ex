@@ -7,7 +7,7 @@ defmodule Lightning.Projects.File do
   @type t() :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,
-          file: String.t(),
+          path: String.t(),
           created_by: Lightning.Accounts.User.t(),
           project: Lightning.Projects.Project.t(),
           type: atom(),
@@ -15,7 +15,7 @@ defmodule Lightning.Projects.File do
         }
 
   schema "project_files" do
-    field :file, :string
+    field :path, :string
     field :size, :integer
 
     field :status, Ecto.Enum,
@@ -38,7 +38,7 @@ defmodule Lightning.Projects.File do
   @spec new(%{atom => any}) :: Ecto.Changeset.t()
   def new(attrs) do
     %__MODULE__{}
-    |> cast(attrs, [:size, :type, :status, :file])
+    |> cast(attrs, [:size, :type, :status, :path])
     |> put_assoc(:created_by, attrs[:created_by])
     |> put_assoc(:project, attrs[:project])
     |> validate_required([:type, :created_by, :project])

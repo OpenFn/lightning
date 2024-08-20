@@ -12,7 +12,7 @@ defmodule LightningWeb.ProjectFileController do
       |> put_resp_content_type("application/zip")
       |> put_resp_header(
         "Content-Disposition",
-        "attachment; filename=\"#{project_file.file}\""
+        "attachment; filename=\"#{Path.basename(project_file.path)}\""
       )
       |> send_resp(200, file_content)
     end
