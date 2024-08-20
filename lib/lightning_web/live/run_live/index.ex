@@ -2,7 +2,6 @@ defmodule LightningWeb.RunLive.Index do
   @moduledoc """
   Index Liveview for Runs
   """
-  alias Lightning.Repo
   use LightningWeb, :live_view
 
   import Ecto.Changeset, only: [get_change: 2]
@@ -15,6 +14,7 @@ defmodule LightningWeb.RunLive.Index do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
+  alias Lightning.Repo
   alias Lightning.Services.UsageLimiter
   alias Lightning.WorkOrders
   alias Lightning.WorkOrders.Events

@@ -17,7 +17,7 @@ defmodule Lightning.Storage do
     adapter().get_url(path)
   end
 
-  defp adapter() do
+  defp adapter do
     Lightning.Config.storage_backend()
   end
 end

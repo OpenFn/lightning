@@ -3,7 +3,6 @@ defmodule Lightning.Accounts.UserNotifier do
   The UserNotifier module.
   """
 
-  alias Lightning.Helpers
   use LightningWeb, :html
 
   use Oban.Worker,
@@ -13,6 +12,7 @@ defmodule Lightning.Accounts.UserNotifier do
   import Swoosh.Email
 
   alias Lightning.Accounts.User
+  alias Lightning.Helpers
   alias Lightning.Mailer
   alias Lightning.Projects
   alias Lightning.Projects.Project

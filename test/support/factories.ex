@@ -27,6 +27,17 @@ defmodule Lightning.Factories do
     }
   end
 
+  def project_file_factory do
+    %Lightning.Projects.File{
+      path: "path/to/file",
+      size: 123,
+      status: :enqueued,
+      type: :export,
+      created_by: build(:user),
+      project: build(:project)
+    }
+  end
+
   def project_user_factory do
     %Lightning.Projects.ProjectUser{}
   end

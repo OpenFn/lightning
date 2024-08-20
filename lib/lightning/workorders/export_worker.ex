@@ -26,14 +26,14 @@ defmodule Lightning.WorkOrders.ExportWorker do
 
     This module is designed to handle potentially large datasets efficiently by using streaming, async processing, and error recovery mechanisms.
   """
-  alias Lightning.Accounts.UserNotifier
-  alias Lightning.Projects
   use Oban.Worker, queue: :history_exports, max_attempts: 1
 
   import Ecto.Query
 
+  alias Lightning.Accounts.UserNotifier
   alias Lightning.Invocation
   alias Lightning.Invocation.Dataclip
+  alias Lightning.Projects
   alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Storage.ProjectFileDefinition

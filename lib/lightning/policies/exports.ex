@@ -6,8 +6,8 @@ defmodule Lightning.Policies.Exports do
 
   alias Lightning.Accounts.User
   alias Lightning.Projects
-  alias Lightning.Projects.Project
   alias Lightning.Projects.File, as: ProjectFile
+  alias Lightning.Projects.Project
 
   @type actions :: :download
 
