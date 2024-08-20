@@ -16,14 +16,14 @@ defmodule LightningWeb.ProjectFileController do
              conn.assigns.current_user,
              project_file
            ),
-         {:ok, file_content} <- ProjectFileDefinition.get(project_file) do
-      conn
-      |> put_resp_content_type("application/zip")
-      |> put_resp_header(
-        "Content-Disposition",
-        "attachment; filename=\"#{Path.basename(project_file.path)}\""
-      )
-      |> send_resp(200, file_content)
+         {:ok, file_url} <- ProjectFileDefinition.get_url(project_file) do
+      case URI.parse(file_url) do
+        %{scheme: "file", path: path} ->
+          send_download(conn, {:file, path})
+
+        _http_url ->
+          redirect(conn, external: file_url)
+      end
     end
   end
 end

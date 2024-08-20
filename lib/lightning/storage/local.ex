@@ -13,8 +13,10 @@ defmodule Lightning.Storage.Local do
   end
 
   @impl true
-  def get(path) do
-    File.read(path)
+  def get_url(path) do
+    uri = storage_dir!() |> Path.join(path) |> URI.encode()
+
+    {:ok, "file://" <> uri}
   end
 
   defp storage_dir!() do

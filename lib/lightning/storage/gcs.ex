@@ -18,13 +18,23 @@ defmodule Lightning.Storage.GCS do
   end
 
   @impl true
-  def get(path) do
-    conn = conn()
+  def get_url(path) do
+    {:ok, client_email} = Goth.Config.get("client_email")
+    {:ok, private_key} = Goth.Config.get("private_key")
 
-    with {:ok, object} <- Objects.storage_objects_get(conn, bucket!(), path),
-         {:ok, %Tesla.Env{body: body}} <- Tesla.get(conn, object.mediaLink) do
-      {:ok, body}
-    end
+    client =
+      GcsSignedUrl.Client.load(%{
+        "client_email" => client_email,
+        "private_key" => private_key
+      })
+
+    {:ok,
+     GcsSignedUrl.generate_v4(
+       client,
+       bucket!(),
+       path,
+       expires: 3600
+     )}
   end
 
   defp bucket!() do

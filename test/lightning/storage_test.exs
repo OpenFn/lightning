@@ -22,12 +22,12 @@ defmodule Lightning.StorageTest do
     assert Storage.store("source", "destination") == {:ok, "path"}
   end
 
-  test "should call get on the current backend" do
+  test "should call get_url on the current backend" do
     Lightning.MockConfig
     |> expect(:storage_backend, fn -> MockStorageBackend end)
 
-    MockStorageBackend |> expect(:get, fn _ -> {:ok, "path"} end)
+    MockStorageBackend |> expect(:get_url, fn _ -> {:ok, "path"} end)
 
-    assert Storage.get("some_path") == {:ok, "path"}
+    assert Storage.get_url("some_path") == {:ok, "path"}
   end
 end

@@ -7,8 +7,8 @@ defmodule Lightning.Storage do
   end
 
   @impl true
-  def get(path) do
-    adapter().get(path)
+  def get_url(path) do
+    adapter().get_url(path)
   end
 
   defp adapter() do

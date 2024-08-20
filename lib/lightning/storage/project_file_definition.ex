@@ -6,8 +6,8 @@ defmodule Lightning.Storage.ProjectFileDefinition do
     Storage.store(source_path, file.path)
   end
 
-  def get(%ProjectFile{} = file) do
-    Storage.get(file.path)
+  def get_url(%ProjectFile{} = file) do
+    Storage.get_url(file.path)
   end
 
   def storage_path_for_exports(%ProjectFile{} = file, ext \\ ".zip") do
