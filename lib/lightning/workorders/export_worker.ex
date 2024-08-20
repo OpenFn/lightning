@@ -58,7 +58,8 @@ defmodule Lightning.WorkOrders.ExportWorker do
            {:ok, project_file} <-
              update_project_file(project_file, %{status: :in_progress}),
            {:ok, project} <- get_project(project_id),
-           {:ok, zip_file} <- process_export(project, search_params),
+           {:ok, zip_file} <-
+             process_export(project, search_params, project_file),
            {:ok, _} <-
              ProjectFileDefinition.store(zip_file, %{
                project_file
