@@ -84,16 +84,15 @@ defmodule Lightning.WorkOrders.ExportWorker do
   end
 
   def enqueue_export(project, project_file, search_params) do
-    job = %{
-      "project_id" => project.id,
-      "project_file" => project_file.id,
-      "search_params" => search_params
-    }
+    job =
+      new(%{
+        "project_id" => project.id,
+        "project_file" => project_file.id,
+        "search_params" => search_params
+      })
 
-    case Oban.insert(
-           Lightning.Oban,
-           Oban.Job.new(job, worker: __MODULE__, queue: :history_exports)
-         ) do
+    Oban.insert(Lightning.Oban, job)
+    |> case do
       {:ok, _job} ->
         :ok
 
@@ -421,54 +420,67 @@ defmodule Lightning.WorkOrders.ExportWorker do
 
   defp format_work_orders(work_orders) do
     Enum.map(work_orders, fn wo ->
-      %{
-        id: wo.id,
-        workflow_id: wo.workflow_id,
-        workflow_name: wo.workflow.name,
-        # TODO: should probably not rename the keys for now.
-        received_at: wo.inserted_at,
-        last_activity: wo.updated_at,
-        status: wo.state
-      }
+      Map.take(wo, [
+        :id,
+        :dataclip_id,
+        :inserted_at,
+        :last_activity,
+        :snapshot_id,
+        :state,
+        :trigger_id,
+        :updated_at,
+        :workflow_id
+      ])
+      |> Map.merge(%{
+        workflow_name: wo.workflow.name
+      })
     end)
   end
 
   defp format_runs(runs) do
     Enum.map(runs, fn r ->
-      %{
-        id: r.id,
-        work_order_id: r.work_order_id,
-        # TODO: need to add `claimed_at`, `started_at`, `finished_at`
-        # TODO: should be add `options`?
-        finished_at: r.finished_at,
-        status: r.state
-      }
+      Map.take(r, [
+        :claimed_at,
+        :created_by_id,
+        :dataclip_id,
+        :error_type,
+        :finished_at,
+        :id,
+        :inserted_at,
+        :options,
+        :snapshot_id,
+        :started_at,
+        :starting_job_id,
+        :starting_trigger_id,
+        :state,
+        :work_order_id
+      ])
     end)
   end
 
   defp format_steps(steps) do
     Enum.map(steps, fn s ->
-      %{
-        id: s.id,
-        # TODO: need to verify we want to rename this to `status`
-        # TODO: add `error_type`, `started_at`, `finished_at`, `job_id`, `credential_id`, `snapshot_id`
-        status: s.exit_reason,
-        inserted_at: s.inserted_at,
-        # TODO: perhaps we just keep the keys the same, (i.e. `input_dataclip_id`, `output_dataclip_id`)
+      Map.take(s, [
+        :id,
+        :credential_id,
+        :error_type,
+        :exit_reason,
+        :finished_at,
+        :inserted_at,
+        :job_id,
+        :snapshot_it,
+        :started_at
+      ])
+      |> Map.merge(%{
         input_dataclip: s.input_dataclip_id,
         output_dataclip: s.output_dataclip_id
-      }
+      })
     end)
   end
 
   defp format_run_steps(run_steps) do
     Enum.map(run_steps, fn rs ->
-      %{
-        id: rs.id,
-        run_id: rs.run_id,
-        step_id: rs.step_id,
-        inserted_at: rs.inserted_at
-      }
+      Map.take(rs, [:id, :run_id, :step_id, :inserted_at])
     end)
   end
 
