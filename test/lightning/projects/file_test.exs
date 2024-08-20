@@ -11,7 +11,7 @@ defmodule Lightning.Projects.ProjectFileTest do
       File.new(%{
         path: "path/to/file",
         size: 123,
-        type: :archive,
+        type: :export,
         created_by: user,
         project: project
       })

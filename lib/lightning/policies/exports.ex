@@ -11,7 +11,7 @@ defmodule Lightning.Policies.Exports do
 
   @type actions :: :download
 
-  @spec authorize(actions(), User.t(), Project.t()) ::
+  @spec authorize(actions(), User.t(), ProjectFile.t()) ::
           boolean() | {:error, :forbidden}
   def authorize(:download, %User{} = user, %ProjectFile{project_id: project_id}) do
     Projects.member_of?(%Project{id: project_id}, user) or {:error, :forbidden}

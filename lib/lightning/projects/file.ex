@@ -43,4 +43,9 @@ defmodule Lightning.Projects.File do
     |> put_assoc(:project, attrs[:project])
     |> validate_required([:type, :created_by, :project])
   end
+
+  @spec mark_failed(t()) :: Ecto.Changeset.t()
+  def mark_failed(file) do
+    file |> change(%{status: :failed})
+  end
 end

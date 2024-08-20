@@ -498,7 +498,8 @@ defmodule LightningWeb.RunLive.Index do
              )}
 
           {:error, _reason} ->
-            Repo.update!(project_file, %{status: :failed})
+            Projects.File.mark_failed(project_file)
+            |> Repo.update!()
 
             {:noreply,
              socket
