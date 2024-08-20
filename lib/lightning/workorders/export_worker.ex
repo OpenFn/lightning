@@ -109,7 +109,11 @@ defmodule Lightning.WorkOrders.ExportWorker do
     end
   end
 
-  defp process_export(%Project{} = project, %SearchParams{} = params) do
+  defp process_export(
+         %Project{} = project,
+         %SearchParams{} = params,
+         %Projects.File{} = project_file
+       ) do
     workorders_query =
       Invocation.search_workorders_for_export_query(project, params)
 
@@ -124,7 +128,7 @@ defmodule Lightning.WorkOrders.ExportWorker do
         end)
         |> case do
           {:ok, _result} ->
-            finalize_export(export_dir)
+            finalize_export(export_dir, project_file)
 
           {:error, reason} ->
             Logger.error(
@@ -179,8 +183,10 @@ defmodule Lightning.WorkOrders.ExportWorker do
     File.write!(file_path, json_chunk, [:append])
   end
 
-  defp finalize_export(export_dir) do
-    case zip_folder(export_dir.root_dir, "#{export_dir.root_dir}.zip") do
+  defp finalize_export(export_dir, project_file) do
+    zip_file_name = Path.join(export_dir.root_dir, "#{project_file.id}.zip")
+
+    case zip_folder(export_dir.root_dir, zip_file_name) do
       {:ok, zip_file} ->
         Logger.info(
           "Export content written and zipped successfully. Zip file location: #{zip_file}"
@@ -198,16 +204,11 @@ defmodule Lightning.WorkOrders.ExportWorker do
   end
 
   defp zip_folder(folder_path, output_file) do
-    IO.inspect(folder_path, label: "FOLDER_PATH")
-    IO.inspect(output_file, label: "FOLDER_PATH")
-
     case File.open(output_file, [:write, :binary], fn output ->
            entries = generate_entries(folder_path, "")
 
-           IO.inspect(output, label: "OUTPUT")
-
            entries
-           |> IO.inspect(label: "ENTRIES")
+           |> Enum.reject(fn entry -> entry[:source] == {:file, output_file} end)
            |> Packmatic.build_stream()
            |> Enum.each(&IO.binwrite(output, &1))
          end) do
@@ -225,9 +226,6 @@ defmodule Lightning.WorkOrders.ExportWorker do
     |> Enum.flat_map(fn entry ->
       full_path = Path.join([directory_path, entry])
       zip_entry_name = Path.join([parent_path, entry])
-
-      IO.inspect(full_path, label: "FULL_PATH")
-      IO.inspect(zip_entry_name, label: "ZIP_ENTRY_NAME")
 
       if File.dir?(full_path) do
         generate_entries(full_path, zip_entry_name)
