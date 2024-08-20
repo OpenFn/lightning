@@ -6,7 +6,7 @@ defmodule Lightning.StorageTest do
   import Mox
 
   setup_all do
-    Mox.defmock(MockStorageBackend, for: Lightning.Storage.Adapter)
+    Mox.defmock(MockStorageBackend, for: Lightning.Storage.Backend)
 
     :ok
   end

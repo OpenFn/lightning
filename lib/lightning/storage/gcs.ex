@@ -1,5 +1,5 @@
 defmodule Lightning.Storage.GCS do
-  @behaviour Lightning.Storage.Adapter
+  @behaviour Lightning.Storage.Backend
 
   alias GoogleApi.Storage.V1.Model.Object
   alias GoogleApi.Storage.V1.Api.Objects

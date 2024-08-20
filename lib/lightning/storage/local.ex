@@ -1,5 +1,5 @@
 defmodule Lightning.Storage.Local do
-  @behaviour Lightning.Storage.Adapter
+  @behaviour Lightning.Storage.Backend
 
   @impl true
   def store(source_path, destination_path) do

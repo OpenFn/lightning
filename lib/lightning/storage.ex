@@ -1,5 +1,11 @@
 defmodule Lightning.Storage do
-  @behaviour Lightning.Storage.Adapter
+  @moduledoc """
+  The external storage module.
+
+  This module is responsible for storing and retrieving files from the
+  configured storage backend.
+  """
+  @behaviour Lightning.Storage.Backend
 
   @impl true
   def store(source_path, destination_path) do
