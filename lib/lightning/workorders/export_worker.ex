@@ -36,6 +36,7 @@ defmodule Lightning.WorkOrders.ExportWorker do
   alias Lightning.Invocation.Dataclip
   alias Lightning.Projects.Project
   alias Lightning.Repo
+  alias Lightning.Storage.ProjectFileDefinition
   alias Lightning.WorkOrders.SearchParams
 
   require Logger
@@ -57,10 +58,15 @@ defmodule Lightning.WorkOrders.ExportWorker do
            {:ok, project_file} <-
              update_project_file(project_file, %{status: :in_progress}),
            {:ok, project} <- get_project(project_id),
-           {:ok, zip_file} <- process_export(project, search_params) do
+           {:ok, zip_file} <- process_export(project, search_params),
+           {:ok, _} <-
+             ProjectFileDefinition.store(zip_file, %{
+               project_file
+               | file: Path.basename(zip_file)
+             }) do
         update_project_file(
           project_file,
-          %{status: :completed, file: zip_file}
+          %{status: :completed, file: Path.basename(zip_file)}
         )
       end
 

@@ -10,7 +10,7 @@ defmodule Lightning.Storage.ProjectFileDefinition do
     file |> storage_path() |> Storage.get()
   end
 
-  defp storage_path(%ProjectFile{file: filename, project_id: project_id}) do
-    Path.join(["exports", project_id, filename])
+  defp storage_path(%ProjectFile{id: id, file: filename, project_id: project_id}) do
+    Path.join(["exports", project_id, "#{id}#{Path.extname(filename)}"])
   end
 end
