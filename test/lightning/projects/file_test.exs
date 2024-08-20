@@ -1,14 +1,14 @@
 defmodule Lightning.Projects.ProjectFileTest do
   use Lightning.DataCase, async: true
 
-  alias Lightning.Projects.ProjectFile
+  alias Lightning.Projects.File
 
   test "new with valid data" do
     user = insert(:user)
     project = insert(:project)
 
     changeset =
-      ProjectFile.new(%{
+      File.new(%{
         path: "path/to/file",
         size: 123,
         type: :archive,
@@ -21,7 +21,7 @@ defmodule Lightning.Projects.ProjectFileTest do
 
   test "new with invalid data" do
     changeset =
-      ProjectFile.new(%{
+      File.new(%{
         path: "path/to/file",
         size: 123
       })

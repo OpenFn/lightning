@@ -30,7 +30,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
       assert_email_sent(
         subject: "Project scheduled for deletion",
-        to: "user@openfn.org",
+        to: Swoosh.Email.Recipient.format(user),
         text_body: """
         Hi User,\n\nYour OpenFn project "project-a" has been scheduled for deletion.\n\nAll of the workflows in this project have been disabled, and it's associated resources will be deleted on #{actual_deletion_date}.\n\nIf you don't want this project deleted, please email #{admin_email} as soon as possible.\n\nOpenFn
         """
@@ -54,7 +54,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
       assert_email_sent(
         subject: "You now have access to \"#{project.name}\"",
-        to: "user@openfn.org",
+        to: Swoosh.Email.Recipient.format(user),
         text_body: """
         Hi Anna,\n\nYou've been granted "editor" access to the "a-test-project" project on OpenFn.\n\nVisit the URL below to check it out:\n\n#{url}\n\nOpenFn
         """
@@ -80,7 +80,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
       assert_email_sent(
         subject: "Confirm your OpenFn account",
-        to: "real@email.com",
+        to: Swoosh.Email.Recipient.format(%User{email: "real@email.com"}),
         text_body:
           "Hi ,\n\nWelcome to OpenFn. Please confirm your account by visiting the URL below:\n\n#{url}\n\nIf you didn't create an account with us, please ignore this.\n\nOpenFn\n"
       )
@@ -89,12 +89,16 @@ defmodule Lightning.Accounts.UserNotifierTest do
     test "deliver_confirmation_instructions/3" do
       token = "sometoken"
 
+      sender = %User{first_name: "Sizwe", email: "super@email.com"}
+
+      receiver = %User{
+        first_name: "Joe",
+        email: "real@email.com"
+      }
+
       UserNotifier.deliver_confirmation_instructions(
-        %User{first_name: "Sizwe", email: "super@email.com"},
-        %User{
-          first_name: "Joe",
-          email: "real@email.com"
-        },
+        sender,
+        receiver,
         token
       )
 
@@ -107,7 +111,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
       assert_email_sent(
         subject: "Confirm your OpenFn account",
-        to: "real@email.com",
+        to: Swoosh.Email.Recipient.format(receiver),
         text_body: """
         Hi Joe,
 
@@ -129,7 +133,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
       assert_email_sent(
         subject: "Your account has been scheduled for deletion",
-        to: "real@email.com"
+        to: Swoosh.Email.Recipient.format(%User{email: "real@email.com"})
       )
     end
 
@@ -143,7 +147,10 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
       assert_email_sent(
         subject: "Your \"Test\" credential will be deleted",
-        to: "real@email.com"
+        to:
+          Swoosh.Email.Recipient.format(%User{
+            email: "real@email.com"
+          })
       )
     end
 
@@ -219,7 +226,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
       assert_email_sent(
         subject: "Daily digest for project Real Project",
-        to: "real@email.com",
+        to: Swoosh.Email.Recipient.format(user),
         text_body: """
         Hi Elias,
 
@@ -297,7 +304,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
       assert_email_sent(
         subject: "Weekly digest for project Real Project",
-        to: "real@email.com",
+        to: Swoosh.Email.Recipient.format(user),
         text_body: """
         Hi Elias,
 
@@ -377,7 +384,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
       assert_email_sent(
         subject: "Monthly digest for project Real Project",
-        to: "real@email.com",
+        to: Swoosh.Email.Recipient.format(user),
         text_body: """
         Hi Elias,
 
