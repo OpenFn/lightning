@@ -58,7 +58,7 @@ defmodule Lightning.Accounts.UserNotifier do
   Deliver instructions to confirm account.
   """
   def deliver_confirmation_instructions(user, token) do
-    deliver(user.email, "Confirm your OpenFn account", """
+    deliver(user, "Confirm your OpenFn account", """
     Hi #{user.first_name},
 
     Welcome to OpenFn. Please confirm your account by visiting the URL below:
@@ -75,7 +75,7 @@ defmodule Lightning.Accounts.UserNotifier do
   Deliver instructions to confirm account.
   """
   def deliver_confirmation_instructions(enroller, user, token) do
-    deliver(user.email, "Confirm your OpenFn account", """
+    deliver(user, "Confirm your OpenFn account", """
     Hi #{user.first_name},
 
     #{enroller.first_name} has just created an OpenFn account for you. You can complete your registration by visiting the URL below:
@@ -95,7 +95,7 @@ defmodule Lightning.Accounts.UserNotifier do
     role = Projects.get_project_user_role(user, project) |> Atom.to_string()
     url = LightningWeb.RouteHelpers.project_dashboard_url(project.id)
 
-    deliver(user.email, "You now have access to \"#{project.name}\"", """
+    deliver(user, "You now have access to \"#{project.name}\"", """
     Hi #{user.first_name},
 
     You've been granted "#{role}" access to the "#{project.name}" project on OpenFn.
@@ -138,7 +138,7 @@ defmodule Lightning.Accounts.UserNotifier do
       )
 
     deliver(
-      user.email,
+      user,
       "The data retention policy for #{updated_project.name} has been modified",
       """
       Hi #{user.first_name},
@@ -167,7 +167,7 @@ defmodule Lightning.Accounts.UserNotifier do
       |> Lightning.Helpers.actual_deletion_date()
       |> Lightning.Helpers.format_date()
 
-    deliver(user.email, "Your account has been scheduled for deletion", """
+    deliver(user, "Your account has been scheduled for deletion", """
      Hi #{user.first_name},
 
     Your OpenFn account has been scheduled for deletion. It has been disabled and you'll no longer be able to log in.
@@ -184,7 +184,7 @@ defmodule Lightning.Accounts.UserNotifier do
 
   def send_credential_deletion_notification_email(user, credential) do
     deliver(
-      user.email,
+      user,
       "Your \"#{credential.name}\" credential will be deleted",
       """
       Hi #{user.first_name},
@@ -208,7 +208,7 @@ defmodule Lightning.Accounts.UserNotifier do
   Deliver instructions to reset a user password.
   """
   def deliver_reset_password_instructions(user, url) do
-    deliver(user.email, "Finish resetting your password", """
+    deliver(user, "Finish resetting your password", """
     Hi #{user.first_name},
 
     We have received a request to reset your OpenFn password. To proceed, please visit the URL below:
@@ -225,7 +225,7 @@ defmodule Lightning.Accounts.UserNotifier do
   Deliver instructions to update a user email.
   """
   def deliver_update_email_instructions(user, url) do
-    deliver(user.email, "Please confirm your new email", """
+    deliver(user, "Please confirm your new email", """
     Hi #{user.first_name},
 
     We have received a request to change the email associated with your OpenFn account. To proceed, please visit the URL below:
@@ -242,7 +242,7 @@ defmodule Lightning.Accounts.UserNotifier do
   Deliver warning to update a user email.
   """
   def deliver_update_email_warning(user, new_email) do
-    deliver(user.email, "Your OpenFn email was changed", """
+    deliver(user, "Your OpenFn email was changed", """
     Hi #{user.email},
 
     We have received a request to change the email address associated with your OpenFn account from #{user.email} to #{new_email}.
@@ -256,7 +256,7 @@ defmodule Lightning.Accounts.UserNotifier do
   end
 
   def notify_history_export_completion(user, project_file) do
-    deliver(user.email, "Your OpenFn History Export Is Complete", """
+    deliver(user, "Your OpenFn History Export Is Complete", """
     Hello #{user.first_name},
 
     You history export started requested on #{Helpers.format_date(project_file.inserted_at)} is completed. Please visit this URL to download the file:acceptor
@@ -338,7 +338,7 @@ defmodule Lightning.Accounts.UserNotifier do
     OpenFn
     """
 
-    deliver(user.email, title, body)
+    deliver(user, title, body)
   end
 
   def notify_project_deletion(
@@ -350,7 +350,7 @@ defmodule Lightning.Accounts.UserNotifier do
       |> Lightning.Helpers.actual_deletion_date()
       |> Lightning.Helpers.format_date()
 
-    deliver(user.email, "Project scheduled for deletion", """
+    deliver(user, "Project scheduled for deletion", """
     Hi #{user.first_name},
 
     Your OpenFn project "#{project.name}" has been scheduled for deletion.
@@ -364,7 +364,7 @@ defmodule Lightning.Accounts.UserNotifier do
   end
 
   def deliver_project_invitation_email(user, inviter, project, role, token) do
-    deliver(user.email, "Join #{project.name} on OpenFn as a collaborator", """
+    deliver(user, "Join #{project.name} on OpenFn as a collaborator", """
     Hi #{user.first_name},
 
     #{inviter.first_name} has invited you to join project "#{project.name}" and granted you "#{role}" access. Since you don't have an OpenFn account yet, we've set one up for you.

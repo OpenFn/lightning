@@ -83,7 +83,11 @@ defmodule Lightning.Config.BootstrapTest do
     test "should default to using the local storage adapter" do
       Bootstrap.configure()
 
-      assert {:storage, Waffle.Storage.Local} in get_env(:waffle)
+      storage = get_env(:lightning, Lightning.Storage)
+
+      assert {:adapter, Lightning.Storage.Local} in storage
+      assert {:storage_dir, "."} in storage
+
       refute get_env(:lightning, :goth_required)
     end
 
@@ -99,9 +103,10 @@ defmodule Lightning.Config.BootstrapTest do
 
       Bootstrap.configure()
 
-      waffle = get_env(:waffle)
-      assert {:storage, Waffle.Storage.Google.CloudStorage} in waffle
-      assert {:bucket, "foo"} in waffle
+      storage = get_env(:lightning, Lightning.Storage)
+
+      assert {:adapter, Lightning.Storage.GCS} in storage
+      assert {:bucket, "foo"} in storage
 
       assert {:goth_required, true} in get_env(:lightning)
     end
