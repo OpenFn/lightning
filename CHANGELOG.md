@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix issue with the persisting of a Kafka message with headers.
+  [#2402](https://github.com/OpenFn/lightning/issues/2402)
+
 ## [v2.7.19] - 2024-08-19
 
 ### Added

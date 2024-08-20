@@ -22,8 +22,10 @@ defmodule Lightning.KafkaTriggers.MessageHandling do
   end
 
   defp create_work_order(%Broadway.Message{} = message, trigger, multi) do
-    %{data: data, metadata: request} = message
+    %{data: data, metadata: metadata} = message
     %{workflow: workflow} = trigger
+
+    request = metadata |> convert_for_serialisation()
 
     with {:ok, body} <- Jason.decode(data),
          true <- is_map(body),
@@ -71,5 +73,13 @@ defmodule Lightning.KafkaTriggers.MessageHandling do
       {:error, :runs_hard_limit, %Message{text: message}} ->
         {:error, message}
     end
+  end
+
+  defp convert_for_serialisation(%{headers: headers} = metadata) do
+    metadata |> Map.merge(%{headers: list_of_lists(headers)})
+  end
+
+  defp list_of_lists(list) do
+    list |> Enum.map(&Tuple.to_list/1)
   end
 end
