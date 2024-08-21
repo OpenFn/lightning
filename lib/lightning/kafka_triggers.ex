@@ -162,7 +162,7 @@ defmodule Lightning.KafkaTriggers do
   end
 
   defp determine_begin_offset(opts) do
-    if opts |> Keyword.get(:rollback_timestamp, nil), do: :reset, else: :assigned
+    if Keyword.get(opts, :rollback_timestamp, nil), do: :reset, else: :assigned
   end
 
   def get_kafka_triggers_being_updated(changeset) do
