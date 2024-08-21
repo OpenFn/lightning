@@ -1,12 +1,11 @@
 defmodule Lightning.ExportWorkerTest do
   use Lightning.DataCase, async: true
 
+  alias Lightning.Storage.ProjectFileDefinition
+  alias Lightning.WorkOrders.ExportWorker
   alias Lightning.WorkOrders.SearchParams
 
   import Lightning.Factories
-  import Mox
-
-  setup :verify_on_exit!
 
   defp to_string_key_map(struct) do
     struct
@@ -16,39 +15,60 @@ defmodule Lightning.ExportWorkerTest do
     end)
   end
 
-  describe "enqueue_export/2" do
-    setup do
-      project = insert(:project)
-      project_file = insert(:project_file)
-      search_params = SearchParams.new(%{})
+  setup do
+    project = insert(:project)
+    project_file = insert(:project_file)
+    search_params = SearchParams.new(%{})
+    workflow = insert(:simple_workflow, project: project)
 
-      {:ok,
-       project: project, project_file: project_file, search_params: search_params}
-    end
+    workorder =
+      insert(:workorder,
+        workflow: workflow,
+        trigger: build(:trigger),
+        dataclip: build(:dataclip),
+        last_activity: DateTime.utc_now()
+      )
 
-    test "enqueue_export/3 enqueues an Oban job successfully", %{
-      project: project,
-      project_file: project_file,
-      search_params: search_params
-    } do
+    run =
+      insert(:run,
+        work_order: workorder,
+        starting_trigger: build(:trigger),
+        dataclip: build(:dataclip),
+        finished_at: build(:timestamp),
+        state: :started
+      )
+      |> Repo.preload(:log_lines)
+
+    {:ok,
+     project: project,
+     project_file: project_file,
+     search_params: search_params,
+     workorder: workorder,
+     run: run}
+  end
+
+  describe "perform/1" do
+    test "exporting with default search params would create a zip folder containing all the export files",
+         %{
+           project: project,
+           project_file: project_file,
+           search_params: search_params
+         } do
       assert :ok ==
-               Lightning.WorkOrders.ExportWorker.enqueue_export(
-                 project,
-                 project_file,
-                 search_params
-               )
+               ExportWorker.perform(%Oban.Job{
+                 args: %{
+                   "project_id" => project.id,
+                   "project_file" => project_file.id,
+                   "search_params" => to_string_key_map(search_params)
+                 }
+               })
 
-      job =
-        Repo.one(
-          from j in Oban.Job,
-            where:
-              j.queue == "history_exports" and
-                j.args["project_id"] == ^project.id
-        )
+      project_file = Repo.reload(project_file)
 
-      assert job.args["project_id"] == project.id
-      assert job.args["project_file"] == project_file.id
-      assert job.args["search_params"] == to_string_key_map(search_params)
+      storage_path =
+        ProjectFileDefinition.storage_path_for_exports(project_file, ".zip")
+
+      assert project_file.path == storage_path
     end
   end
 end
