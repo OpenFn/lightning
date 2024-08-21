@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Kafka documentation housekeeping.
+  [#2414](https://github.com/OpenFn/lightning/issues/2414)
+
 ### Fixed
 
 ## [v2.7.19] - 2024-08-19
