@@ -285,7 +285,7 @@ variable.
 be persisted will not be retained by Lightning ans this can result in data loss,
 if the Kafka cluster can not make these messages available again.**
 
-If a Kafka message files to be persisted as a WorkOrder, Run and Dataclip, the
+If a Kafka message fails to be persisted as a WorkOrder, Run and Dataclip, the
 option exists to write the failed message to a location on the local file
 system. If this option is enabled by setting `KAFKA_ALTERNATE_STORAGE_ENABLED`,
 then the `KAFKA_ALTERNATE_STORAGE_PATH` ENV variable must be set to the path
