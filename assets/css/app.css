@@ -115,6 +115,15 @@ div[id^='tippy-'] {
          bg-primary-950;
 }
 
+.icon-button {
+  @apply cursor-pointer
+  hover:text-indigo-500
+  font-bold
+  text-secondary-600
+  transition
+  hover:rotate-[-6deg];
+}
+
 @keyframes fade-in-scale-keys {
   0% {
     scale: 0.95;

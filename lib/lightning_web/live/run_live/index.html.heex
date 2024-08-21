@@ -11,16 +11,6 @@
   <:header>
     <LayoutComponents.header current_user={@current_user} project={@project}>
       <:title><%= @page_title %></:title>
-      <.button
-        id="export-history-button"
-        type="button"
-        phx-click="show-export-modal"
-        disabled={@page.total_entries <= 0}
-        class="gap-x-2 text-sm"
-        {if @page.total_entries > 0, do: [tooltip: "Export all #{@page.total_entries} results matching your query"], else: []}
-      >
-        <.icon name="hero-cloud-arrow-down" class="w-5 h-5" /> Export
-      </.button>
     </LayoutComponents.header>
   </:header>
   <.live_component
@@ -737,7 +727,26 @@
                 async_page={@async_page}
                 url={@pagination_path}
                 help_text="Use whole words or the start of words for better results; partial string matching often won't find substrings in the middle or at the end of a word."
-              />
+              >
+                <:action>
+                  <button
+                    id="export-history-button"
+                    type="button"
+                    phx-click="show-export-modal"
+                    class="icon-button"
+                    phx-hook="Tooltip"
+                    aria-label={
+                      if @page.total_entries > 0,
+                        do:
+                          "Export all #{@page.total_entries} results matching your query",
+                        else: ""
+                    }
+                    disabled={@page.total_entries <= 0}
+                  >
+                    <.icon name="hero-cloud-arrow-down" class="w-5 h-5" />
+                  </button>
+                </:action>
+              </LightningWeb.Pagination.pagination_bar>
             </div>
           </div>
         </div>

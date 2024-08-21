@@ -152,12 +152,12 @@ defmodule LightningWeb.ProjectLiveTest do
       project_name = String.replace(@create_attrs.raw_name, " ", "-")
 
       assert_email_sent(
-        to: [Swoosh.Email.Recipient.format(user_1)],
+        to: Swoosh.Email.Recipient.format(user_1),
         subject: "You now have access to \"#{project_name}\""
       )
 
       assert_email_sent(
-        to: [Swoosh.Email.Recipient.format(user_2)],
+        to: Swoosh.Email.Recipient.format(user_2),
         subject: "You now have access to \"#{project_name}\""
       )
     end
