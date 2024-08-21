@@ -457,7 +457,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
 
       messages = [message_1, persistence_failed_message, message_2]
 
-      Events.subscribe_to_kafka_trigger_persistence_failure()
+      Events.subscribe_to_kafka_trigger_events()
 
       Pipeline.handle_failed(messages, context)
 

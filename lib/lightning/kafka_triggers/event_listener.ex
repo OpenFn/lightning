@@ -14,8 +14,7 @@ defmodule Lightning.KafkaTriggers.EventListener do
 
   @impl true
   def init(_opts) do
-    Events.subscribe_to_kafka_trigger_updated()
-    Events.subscribe_to_kafka_trigger_persistence_failure()
+    Events.subscribe_to_kafka_trigger_events()
 
     {:ok, %{}}
   end

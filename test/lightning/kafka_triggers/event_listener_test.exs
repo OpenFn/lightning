@@ -33,7 +33,7 @@ defmodule Lightning.KafkaTriggers.EventListenerTest do
     assert {:ok, _pid} = EventListener.start_link([])
   end
 
-  test "init/1 subscribes to the Kafka trigger updated topic", %{
+  test "init/1 subscribes to kafka trigger updated events", %{
     trigger: trigger
   } do
     trigger_id = trigger.id
@@ -45,7 +45,7 @@ defmodule Lightning.KafkaTriggers.EventListenerTest do
     assert_receive %KafkaTriggerUpdated{trigger_id: ^trigger_id}
   end
 
-  test "init/1 subscribes to the Kafka trigger persistence failure topic", %{
+  test "init/1 subscribes to the Kafka trigger persistence failure events", %{
     timestamp: timestamp,
     trigger: trigger
   } do

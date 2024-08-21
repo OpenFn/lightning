@@ -8,10 +8,10 @@ defmodule Lightning.Workflows.Triggers.EventsTest do
   test "can subscribe to events relating to a Kafka trigger being updated" do
     trigger_id = "a-b-c-1-2-3"
 
-    Events.subscribe_to_kafka_trigger_updated()
+    Events.subscribe_to_kafka_trigger_events()
 
     Lightning.broadcast(
-      "kafka_trigger_updated",
+      "kafka_trigger_events",
       %KafkaTriggerUpdated{trigger_id: trigger_id}
     )
 
@@ -21,7 +21,7 @@ defmodule Lightning.Workflows.Triggers.EventsTest do
   test "can broadcast a kafka trigger updated event" do
     trigger_id = Ecto.UUID.generate()
 
-    Events.subscribe_to_kafka_trigger_updated()
+    Events.subscribe_to_kafka_trigger_events()
 
     Events.kafka_trigger_updated(trigger_id)
 
@@ -32,10 +32,10 @@ defmodule Lightning.Workflows.Triggers.EventsTest do
     trigger_id = "a-b-c-1-2-3"
     timestamp = 1_723_633_665_366
 
-    Events.subscribe_to_kafka_trigger_persistence_failure()
+    Events.subscribe_to_kafka_trigger_events()
 
     Lightning.broadcast(
-      "kafka_trigger_persistence_failure",
+      "kafka_trigger_events",
       %KafkaTriggerPersistenceFailure{
         trigger_id: trigger_id,
         timestamp: timestamp
@@ -52,7 +52,7 @@ defmodule Lightning.Workflows.Triggers.EventsTest do
     trigger_id = "a-b-c-1-2-3"
     timestamp = 1_723_633_665_366
 
-    Events.subscribe_to_kafka_trigger_persistence_failure()
+    Events.subscribe_to_kafka_trigger_events()
 
     Events.kafka_trigger_persistence_failure(trigger_id, timestamp)
 
