@@ -42,8 +42,8 @@ defmodule Lightning.ExportWorkerTest do
             dataclip: input_dataclip,
             steps: [step_1, step_2],
             log_lines: [
-              build(:log_line, step: step_1),
-              build(:log_line, step: step_2)
+              build(:log_line, step: step_1, message: "This is a log line"),
+              build(:log_line, step: step_2, message: "This is another log line")
             ]
           ),
           build(:run,
@@ -51,8 +51,8 @@ defmodule Lightning.ExportWorkerTest do
             dataclip: input_dataclip,
             steps: [step_1, step_2],
             log_lines: [
-              build(:log_line, step: step_1),
-              build(:log_line, step: step_2)
+              build(:log_line, step: step_1, message: "Here is another log line"),
+              build(:log_line, step: step_2, message: "Want more log lines ? :)")
             ]
           )
         ]
@@ -171,8 +171,9 @@ defmodule Lightning.ExportWorkerTest do
       end
 
       expected_log_files = %{
-        "logs/#{run_1.id}.txt" => "somelog0\nsomelog1",
-        "logs/#{run_2.id}.txt" => "somelog2\nsomelog3"
+        "logs/#{run_1.id}.txt" => "This is a log line\nThis is another log line",
+        "logs/#{run_2.id}.txt" =>
+          "Here is another log line\nWant more log lines ? :)"
       }
 
       for {file_path, expected_content} <- expected_log_files do
