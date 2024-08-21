@@ -5,6 +5,7 @@ defmodule LightningWeb.API.ProvisioningJSON do
   import Ecto.Changeset
 
   alias Lightning.Projects.Project
+  alias Lightning.Projects.ProjectCredential
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
@@ -24,6 +25,12 @@ defmodule LightningWeb.API.ProvisioningJSON do
     |> Map.put(
       :workflows,
       project.workflows
+      |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
+      |> Enum.map(&as_json/1)
+    )
+    |> Map.put(
+      :project_credentials,
+      project.project_credentials
       |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
       |> Enum.map(&as_json/1)
     )
@@ -63,7 +70,7 @@ defmodule LightningWeb.API.ProvisioningJSON do
 
   def as_json(%module{} = job) when module in [Job, Snapshot.Job] do
     Ecto.embedded_dump(job, :json)
-    |> Map.take(~w(id adaptor body name)a)
+    |> Map.take(~w(id adaptor body name project_credential_id)a)
   end
 
   def as_json(%module{} = trigger) when module in [Trigger, Snapshot.Trigger] do
@@ -79,6 +86,14 @@ defmodule LightningWeb.API.ProvisioningJSON do
       condition_type condition_label condition_expression target_job_id
     )a)
     |> drop_keys_with_nil_value()
+  end
+
+  def as_json(%ProjectCredential{} = project_credential) do
+    %{
+      id: project_credential.id,
+      name: project_credential.credential.name,
+      owner: project_credential.credential.user.email
+    }
   end
 
   defp drop_keys_with_nil_value(map) do

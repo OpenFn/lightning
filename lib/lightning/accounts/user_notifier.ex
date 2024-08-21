@@ -88,6 +88,20 @@ defmodule Lightning.Accounts.UserNotifier do
     """)
   end
 
+  def remind_account_confirmation(user, token) do
+    deliver(user.email, "Confirm your OpenFn account", """
+    Hello #{user.first_name},
+
+    Please confirm your OpenFn account by clicking on the URL below:
+
+    #{url(LightningWeb.Endpoint, ~p"/users/confirm/#{token}")}
+
+    If you have not requested an account confirmation email, please ignore this.
+
+    OpenFn
+    """)
+  end
+
   @doc """
   Deliver email to notify user of his addition of a project.
   """
@@ -211,7 +225,9 @@ defmodule Lightning.Accounts.UserNotifier do
     deliver(user, "Finish resetting your password", """
     Hi #{user.first_name},
 
-    We have received a request to reset your OpenFn password. To proceed, please visit the URL below:
+    We have received a request to reset your OpenFn password.
+
+    To proceed, please visit the URL below:
 
     #{url}
 
@@ -222,13 +238,15 @@ defmodule Lightning.Accounts.UserNotifier do
   end
 
   @doc """
-  Deliver instructions to update a user email.
+  Deliver instructions to update a user.
   """
   def deliver_update_email_instructions(user, url) do
     deliver(user, "Please confirm your new email", """
     Hi #{user.first_name},
 
-    We have received a request to change the email associated with your OpenFn account. To proceed, please visit the URL below:
+    We have received a request to change the email associated with your OpenFn account.
+
+    To proceed, please visit the URL below:
 
     #{url}
 
@@ -239,11 +257,11 @@ defmodule Lightning.Accounts.UserNotifier do
   end
 
   @doc """
-  Deliver warning to update a user email.
+  Deliver warning to update a user.
   """
   def deliver_update_email_warning(user, new_email) do
     deliver(user, "Your OpenFn email was changed", """
-    Hi #{user.email},
+    Hi #{user.first_name},
 
     We have received a request to change the email address associated with your OpenFn account from #{user.email} to #{new_email}.
 

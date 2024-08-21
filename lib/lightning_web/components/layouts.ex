@@ -6,5 +6,6 @@ defmodule LightningWeb.Layouts do
   embed_templates "layouts/*"
 
   slot :header_tags
+  slot :body_tags
   def root(assigns)
 end

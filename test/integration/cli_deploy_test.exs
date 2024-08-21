@@ -5,6 +5,7 @@ defmodule Lightning.CliDeployTest do
   require Logger
 
   import Lightning.Factories
+  import Lightning.CredentialsFixtures
   import Mox
 
   alias Lightning.Accounts
@@ -35,6 +36,7 @@ defmodule Lightning.CliDeployTest do
     :ok
   end
 
+  @tag :integration
   describe "The openfn CLI can be used to" do
     setup %{tmp_dir: tmp_dir} do
       url = LightningWeb.Endpoint.url()
@@ -95,8 +97,7 @@ defmodule Lightning.CliDeployTest do
       # encoding and decoding in order to transform values like dates into string
       assert actual_state == expected_state |> Jason.encode!() |> Jason.decode!()
 
-      expected_yaml =
-        File.read!("test/fixtures/canonical_project.yaml") |> String.trim()
+      expected_yaml = File.read!("test/fixtures/canonical_project.yaml")
 
       actual_yaml = File.read!(config.specPath)
 
@@ -133,11 +134,16 @@ defmodule Lightning.CliDeployTest do
       # no project has been created
       assert [] == Lightning.Repo.all(Lightning.Projects.Project)
 
-      # lets update the user's role to a superuser
+      # lets update the user's role to a superuser and use the canonical email
       user
       |> Lightning.Repo.reload()
-      |> Ecto.Changeset.change(%{role: :superuser})
+      |> Ecto.Changeset.change(%{
+        role: :superuser,
+        email: "cannonical-user@lightning.com"
+      })
       |> Lightning.Repo.update!()
+
+      credential_fixture(user_id: user.id, name: "new credential")
 
       System.cmd(
         @cli_path,
@@ -274,7 +280,21 @@ defmodule Lightning.CliDeployTest do
         {hyphenize(workflow.name), expected_workflow_state(workflow)}
       end)
 
-    Map.merge(state, %{workflows: workflows})
+    credentials =
+      Map.new(project.project_credentials, fn pc ->
+        {hyphenize("#{pc.credential.user.email} #{pc.credential.name}"),
+         expected_project_credential_state(pc)}
+      end)
+
+    Map.merge(state, %{workflows: workflows, project_credentials: credentials})
+  end
+
+  defp expected_project_credential_state(project_credential) do
+    %{
+      id: project_credential.id,
+      name: project_credential.credential.name,
+      owner: project_credential.credential.user.email
+    }
   end
 
   defp expected_workflow_state(workflow) do
@@ -320,7 +340,7 @@ defmodule Lightning.CliDeployTest do
   end
 
   defp expected_job_state(job) do
-    Map.take(job, [:id, :name, :body, :adaptor])
+    Map.take(job, [:id, :name, :body, :adaptor, :project_credential_id])
   end
 
   defp expected_edge_state(edge) do

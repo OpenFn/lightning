@@ -28,7 +28,8 @@ defmodule Lightning.Extensions.UsageLimiting do
     @moduledoc false
 
     @type t :: %Context{
-            project_id: Ecto.UUID.t()
+            project_id: Ecto.UUID.t(),
+            user_id: Ecto.UUID.t()
           }
 
     defstruct [:project_id, :user_id]

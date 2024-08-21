@@ -65,6 +65,7 @@ defmodule LightningWeb.LayoutComponents do
   slot :inner_block
 
   def header(assigns) do
+    # TODO - remove title_height once we confirm that :description is unused
     title_height =
       if Enum.any?(assigns[:description]) do
         "mt-4 h-10"
@@ -80,6 +81,19 @@ defmodule LightningWeb.LayoutComponents do
       )
 
     ~H"""
+    <LightningWeb.Components.Common.banner
+      :if={@current_user && !@current_user.confirmed_at}
+      id="account-confirmation-alert"
+      type="danger"
+      centered
+      message={"Please confirm your account before #{@current_user.inserted_at |> DateTime.add(48, :hour) |> Timex.format!("%A, %d %B @ %H:%M UTC", :strftime)} to continue using OpenFn."}
+      action={
+        %{
+          text: "Resend confirmation email",
+          target: "/users/send-confirmation-email"
+        }
+      }
+    />
     <div class="flex-none bg-white shadow-sm">
       <div class={[@title_class, @title_height]}>
         <%= if @current_user do %>

@@ -152,12 +152,12 @@ defmodule LightningWeb.ProjectLiveTest do
       project_name = String.replace(@create_attrs.raw_name, " ", "-")
 
       assert_email_sent(
-        to: Swoosh.Email.Recipient.format(user_1),
+        to: [Swoosh.Email.Recipient.format(user_1)],
         subject: "You now have access to \"#{project_name}\""
       )
 
       assert_email_sent(
-        to: Swoosh.Email.Recipient.format(user_2),
+        to: [Swoosh.Email.Recipient.format(user_2)],
         subject: "You now have access to \"#{project_name}\""
       )
     end
@@ -648,7 +648,7 @@ defmodule LightningWeb.ProjectLiveTest do
               "#credentials"
           )
 
-        credential_name = "My Credential"
+        credential_name = Lightning.Name.generate()
 
         refute html =~ credential_name
 
@@ -2101,12 +2101,12 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "Invite sent successfully"
 
       refute_email_sent(
-        to: [{"", "nonexists@localtests.com"}],
+        to: [{"Non Exists", "nonexists@localtests.com"}],
         subject: "You now have access to \"my-project\""
       )
 
       assert_email_sent(
-        to: [{"nonexists@localtests.com", "Non Exists"}],
+        to: [{"Non Exists", "nonexists@localtests.com"}],
         subject: "Join my-project on OpenFn as a collaborator"
       )
     end
@@ -2675,10 +2675,10 @@ defmodule LightningWeb.ProjectLiveTest do
       # form does not exist
       refute has_element?(view, "form#failure-alert-#{project_user.id}")
 
-      # status is displayed as disabled even though it is enabled on the project user
+      # status is displayed as Unavailable even though it is enabled on the project user
       assert view
              |> element("#failure-alert-status-#{project_user.id}")
-             |> render() =~ "Disabled"
+             |> render() =~ "Unavailable"
     end
   end
 

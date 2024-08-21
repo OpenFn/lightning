@@ -526,7 +526,7 @@ defmodule LightningWeb.ProjectLive.Settings do
             else: "Disabled" %>
         </span>
       <% true -> %>
-        <span id={"failure-alert-status-#{@project_user.id}"}>Disabled</span>
+        <span id={"failure-alert-status-#{@project_user.id}"}>Unavailable</span>
     <% end %>
     """
   end

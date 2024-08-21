@@ -19,14 +19,14 @@
   border-color: #bce8f1;
 }
 .alert-warning {
-  color: #8a6d3b;
+  color: #8B5F0D;
   background-color: #fcf8e3;
   border-color: #faebcc;
 }
 .alert-danger {
-  color: #a94442;
-  background-color: #f2dede;
-  border-color: #ebccd1;
+  color: #DC2626;
+  background-color: #FDEBEB;
+  border-color: #FDEBEB;
 }
 .alert p {
   margin-bottom: 0;

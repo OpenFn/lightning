@@ -62,7 +62,8 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
         insert(:project_credential,
           credential: %{
             name: "test credential",
-            body: %{"username" => "quux", "password" => "immasecret"}
+            body: %{"username" => "quux", "password" => "immasecret"},
+            user_id: user.id
           },
           project: project
         )
@@ -133,7 +134,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
              } =
                edge_2_json
 
-      refute Map.has_key?(job_2_json, "project_credential_id")
+      assert Map.has_key?(job_2_json, "project_credential_id")
 
       assert %{
                "id" => ^job_2_id,

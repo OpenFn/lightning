@@ -253,9 +253,16 @@ defmodule Lightning.Workflows do
       with {:ok, _} <- result do
         workflow
         |> Repo.preload([:triggers], force: true)
+        |> tap(&notify_of_affected_kafka_triggers/1)
         |> Events.workflow_updated()
       end
     end)
+  end
+
+  defp notify_of_affected_kafka_triggers(%{triggers: triggers}) do
+    triggers
+    |> Enum.filter(&(&1.type == :kafka))
+    |> Enum.each(&Triggers.Events.kafka_trigger_updated(&1.id))
   end
 
   @doc """

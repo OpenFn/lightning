@@ -144,26 +144,8 @@ defmodule Lightning.Config do
     end
 
     @impl true
-    def kafka_next_message_candidate_set_delay_milliseconds do
-      kafka_trigger_config()
-      |> Keyword.get(:next_message_candidate_set_delay_milliseconds)
-    end
-
-    @impl true
-    def kafka_no_message_candidate_set_delay_milliseconds do
-      kafka_trigger_config()
-      |> Keyword.get(:no_message_candidate_set_delay_milliseconds)
-    end
-
-    @impl true
     def kafka_number_of_consumers do
       kafka_trigger_config() |> Keyword.get(:number_of_consumers)
-    end
-
-    @impl true
-    def kafka_number_of_message_candidate_set_workers do
-      kafka_trigger_config()
-      |> Keyword.get(:number_of_message_candidate_set_workers)
     end
 
     @impl true
@@ -190,10 +172,7 @@ defmodule Lightning.Config do
   @callback grace_period() :: integer()
   @callback instance_admin_email() :: String.t()
   @callback kafka_duplicate_tracking_retention_seconds() :: integer()
-  @callback kafka_next_message_candidate_set_delay_milliseconds() :: integer()
-  @callback kafka_no_message_candidate_set_delay_milliseconds() :: integer()
   @callback kafka_number_of_consumers() :: integer()
-  @callback kafka_number_of_message_candidate_set_workers() :: integer()
   @callback kafka_number_of_messages_per_second() :: float()
   @callback kafka_number_of_processors() :: integer()
   @callback kafka_triggers_enabled?() :: boolean()
@@ -306,20 +285,8 @@ defmodule Lightning.Config do
     impl().kafka_duplicate_tracking_retention_seconds()
   end
 
-  def kafka_next_message_candidate_set_delay_milliseconds do
-    impl().kafka_next_message_candidate_set_delay_milliseconds()
-  end
-
-  def kafka_no_message_candidate_set_delay_milliseconds do
-    impl().kafka_no_message_candidate_set_delay_milliseconds()
-  end
-
   def kafka_number_of_consumers do
     impl().kafka_number_of_consumers()
-  end
-
-  def kafka_number_of_message_candidate_set_workers do
-    impl().kafka_number_of_message_candidate_set_workers()
   end
 
   def kafka_number_of_messages_per_second do

@@ -21,6 +21,63 @@ and this project adheres to
 
 ### Fixed
 
+## [v2.7.19] - 2024-08-19
+
+### Added
+
+- Pass the user_id param on check usage limits.
+  [#2387](https://github.com/OpenFn/lightning/issues/2387)
+
+## [v2.7.18] - 2024-08-17
+
+### Added
+
+- Ensure that all users in an instance have a confirmed email address within 48
+  hours [#2389](https://github.com/OpenFn/lightning/issues/2389)
+
+### Changed
+
+- Ensure that all the demo accounts are confirmed by default
+  [#2395](https://github.com/OpenFn/lightning/issues/2395)
+
+### Fixed
+
+- Removed all Kafka trigger code that ensured that message sequence is honoured
+  for messages with keys. Functionality to ensure that message sequence is
+  honoured will be added in the future, but in an abstraction that is a better
+  fit for the current Lightning design.
+  [#2362](https://github.com/OpenFn/lightning/issues/2362)
+- Dropped the `trigger_kafka_messages` table that formed part of the Kafka
+  trigger implementation, but which is now obsolete given the removal of the
+  code related to message sequence preservation.
+  [#2362](https://github.com/OpenFn/lightning/issues/2362)
+
+## [v2.7.17] - 2024-08-14
+
+### Added
+
+- Added an `iex` command to setup a user, an apiToken, and credentials so that
+  it's possible to get a fully running lightning instance via external shell
+  script. (This is a tricky requirement for a distributed set of local
+  deployments) [#2369](https://github.com/OpenFn/lightning/issues/2369) and
+  [#2373](https://github.com/OpenFn/lightning/pull/2373)
+- Added support for _very basic_ project-credential management (add, associate
+  with job) via provisioning API.
+  [#2367](https://github.com/OpenFn/lightning/issues/2367)
+
+### Changed
+
+- Enforced uniqueness on credential names _by user_.
+  [#2371](https://github.com/OpenFn/lightning/pull/2371)
+- Use Swoosh to format User models into recipients
+  [#2374](https://github.com/OpenFn/lightning/pull/2374)
+- Bump default CLI to `@openfn/cli@1.8.1`
+
+### Fixed
+
+- When a Workflow is deleted, any associated Kafka trigger pipelines will be
+  stopped and deleted. [#2379](https://github.com/OpenFn/lightning/issues/2379)
+
 ## [v2.7.16] - 2024-08-07
 
 ### Fixed

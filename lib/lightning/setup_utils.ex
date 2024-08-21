@@ -6,6 +6,7 @@ defmodule Lightning.SetupUtils do
   import Ecto.Changeset
 
   alias Lightning.Accounts
+  alias Lightning.Accounts.User
   alias Lightning.Credentials
   alias Lightning.Jobs
   alias Lightning.Projects
@@ -49,7 +50,7 @@ defmodule Lightning.SetupUtils do
   """
   def setup_demo(opts \\ [create_super: false]) do
     %{super_user: super_user, admin: admin, editor: editor, viewer: viewer} =
-      create_users(opts)
+      create_users(opts) |> confirm_users()
 
     %{
       project: openhie_project,
@@ -162,6 +163,25 @@ defmodule Lightning.SetupUtils do
       })
 
     %{super_user: super_user, admin: admin, editor: editor, viewer: viewer}
+  end
+
+  def confirm_users(users) do
+    confirm_user = fn user ->
+      case user do
+        nil ->
+          :ok
+
+        _ ->
+          User.confirm_changeset(user)
+          |> Repo.update!()
+      end
+    end
+
+    users
+    |> Map.values()
+    |> Enum.each(confirm_user)
+
+    users
   end
 
   def create_starter_project(name, project_users) do
@@ -716,7 +736,6 @@ defmodule Lightning.SetupUtils do
       Lightning.WorkOrder,
       Lightning.Invocation.Step,
       Lightning.Credentials.Credential,
-      Lightning.KafkaTriggers.TriggerKafkaMessage,
       Lightning.KafkaTriggers.TriggerKafkaMessageRecord,
       Lightning.Workflows.Job,
       Lightning.Workflows.Trigger,
@@ -867,5 +886,44 @@ defmodule Lightning.SetupUtils do
     |> select([pu, _o, u], u)
     |> limit(1)
     |> Repo.one!()
+  end
+
+  @doc """
+  In some (mostly remote-controlled) deployments, it's necessary to create a
+  user, and apiToken, and multiple credentials (owned by the user) so that later
+  `openfn deploy` calls can make use of these artifacts.
+
+  When run _before_ `openfn deploy`, this function makes it possible to set up
+  an entire lightning instance with a working project (including secrets)
+  without using the web UI.
+
+  ## Examples
+
+    iex> setup_user(%{email: "td@openfn.org", first_name: "taylor", last_name: "downs", password: "shh12345!"}, "secretToken", [%{name: "openmrs", schema: "raw", body: %{"a" => "secret"}}, %{ name: "dhis2", schema: "raw", body: %{"b" => "safe"}}])
+    :ok
+
+  """
+  @spec setup_user(map(), String.t(), list(map())) :: :ok | {:error, any()}
+  def setup_user(user, token, credentials) do
+    # create user
+    {:ok, user} = Accounts.create_user(user)
+
+    # create token
+    Repo.insert!(%Lightning.Accounts.UserToken{
+      user_id: user.id,
+      context: "api",
+      token: token
+    })
+
+    # create credentials
+    Enum.each(credentials, fn credential ->
+      {:ok, _credential} =
+        Credentials.create_credential(
+          credential
+          |> Map.put(:user_id, user.id)
+        )
+    end)
+
+    :ok
   end
 end

@@ -77,13 +77,41 @@ defmodule Lightning.Projects.ProvisionerTest do
       Mox.verify_on_exit!()
       user = insert(:user)
 
+      credential = insert(:credential, name: "Test Credential", user: user)
+
       %{
-        body: body,
+        body: %{"workflows" => [workflow]} = body,
         project_id: project_id,
         workflow_id: workflow_id,
         first_job_id: first_job_id,
         second_job_id: second_job_id
       } = valid_document()
+
+      project_credential_id = Ecto.UUID.generate()
+
+      credentials_payload =
+        [
+          %{
+            "id" => project_credential_id,
+            "name" => credential.name,
+            "owner" => user.email
+          }
+        ]
+
+      updated_workflow_jobs =
+        Enum.map(workflow["jobs"], fn job ->
+          if job["id"] == first_job_id do
+            job
+            |> Map.put("project_credential_id", project_credential_id)
+          else
+            job
+          end
+        end)
+
+      body_with_credentials =
+        body
+        |> Map.put("project_credentials", credentials_payload)
+        |> Map.put("workflows", [%{workflow | "jobs" => updated_workflow_jobs}])
 
       Mox.stub(
         Lightning.Extensions.MockUsageLimiter,
@@ -92,9 +120,19 @@ defmodule Lightning.Projects.ProvisionerTest do
       )
 
       {:ok, project} =
-        Provisioner.import_document(%Lightning.Projects.Project{}, user, body)
+        Provisioner.import_document(
+          %Lightning.Projects.Project{},
+          user,
+          body_with_credentials
+        )
 
-      assert %{id: ^project_id, workflows: [workflow]} = project
+      assert %{
+               id: ^project_id,
+               workflows: [workflow],
+               project_credentials: [project_credential]
+             } = project
+
+      assert %{id: ^project_credential_id} = project_credential
 
       assert %{id: ^workflow_id, jobs: jobs} = workflow
 
