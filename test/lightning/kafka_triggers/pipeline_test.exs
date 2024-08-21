@@ -66,16 +66,16 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
                      module: {
                        BroadwayKafka.Producer,
                        [
-                         begin_offset: begin_offset,
                          client_config: [
                            sasl: sasl_expected,
                            ssl: ssl,
                            connect_timeout: connect_timeout
                          ],
-                         hosts: hosts,
+                         begin_offset: begin_offset,
                          group_id: group_id,
-                         topics: topics,
-                         offset_reset_policy: offset_reset_policy
+                         hosts: hosts,
+                         offset_reset_policy: offset_reset_policy,
+                         topics: topics
                        ]
                      },
                      concurrency: number_of_consumers,
@@ -140,15 +140,15 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
                      module: {
                        BroadwayKafka.Producer,
                        [
-                         begin_offset: begin_offset,
                          client_config: [
                            ssl: ssl,
                            connect_timeout: connect_timeout
                          ],
-                         hosts: hosts,
+                         begin_offset: begin_offset,
                          group_id: group_id,
-                         topics: topics,
-                         offset_reset_policy: offset_reset_policy
+                         hosts: hosts,
+                         offset_reset_policy: offset_reset_policy,
+                         topics: topics
                        ]
                      },
                      concurrency: number_of_consumers,
