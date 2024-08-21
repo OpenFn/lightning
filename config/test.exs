@@ -111,11 +111,7 @@ config :junit_formatter,
   print_report_file: true,
   prepend_project_name?: true
 
-config :lightning, Oban,
-  repo: Lightning.Repo,
-  testing: :manual,
-  queues: false,
-  plugins: [Oban.Plugins.Pruner]
+config :lightning, Oban, testing: :inline
 
 config :lightning, LightningWeb, allow_credential_transfer: true
 
