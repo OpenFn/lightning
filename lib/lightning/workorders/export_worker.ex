@@ -279,7 +279,7 @@ defmodule Lightning.WorkOrders.ExportWorker do
     |> extract_entities()
   end
 
-  defp extract_entities(work_order) do
+  def extract_entities(work_order) do
     runs = work_order.runs
 
     steps = Enum.flat_map(runs, & &1.steps)

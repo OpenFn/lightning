@@ -29,7 +29,7 @@ defmodule Lightning.Factories do
 
   def project_file_factory do
     %Lightning.Projects.File{
-      path: "path/to/file",
+      path: nil,
       size: 123,
       status: :enqueued,
       type: :export,
