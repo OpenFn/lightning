@@ -34,8 +34,8 @@ defmodule Lightning.KafkaTriggers do
   presence of partition-specific timestamps.
   """
   def determine_offset_reset_policy(trigger, opts \\ []) do
-    if rollback_timestamp = opts |> Keyword.get(:rollback_timestamp) do
-      {:timestamp, rollback_timestamp}
+    if reset_timestamp = opts |> Keyword.get(:reset_timestamp) do
+      {:timestamp, reset_timestamp}
     else
       determine_offset_from_configuration(trigger)
     end
@@ -162,7 +162,7 @@ defmodule Lightning.KafkaTriggers do
   end
 
   defp determine_begin_offset(opts) do
-    if Keyword.get(opts, :rollback_timestamp, nil), do: :reset, else: :assigned
+    if Keyword.get(opts, :reset_timestamp, nil), do: :reset, else: :assigned
   end
 
   def get_kafka_triggers_being_updated(changeset) do
@@ -228,7 +228,7 @@ defmodule Lightning.KafkaTriggers do
     %{interval: 10_000, messages_per_interval: messages_per_interval}
   end
 
-  def rollback_pipeline(supervisor, trigger_id, timestamp) when timestamp > 1 do
+  def reset_pipeline(supervisor, trigger_id, timestamp) when timestamp > 1 do
     Trigger
     |> Repo.get_by(id: trigger_id, type: :kafka, enabled: true)
     |> case do
@@ -236,12 +236,12 @@ defmodule Lightning.KafkaTriggers do
         {:error, :enabled_kafka_trigger_not_found}
 
       trigger ->
-        rollback_timestamp = timestamp - 1
+        reset_timestamp = timestamp - 1
 
         spec =
           generate_pipeline_child_spec(
             trigger,
-            rollback_timestamp: rollback_timestamp
+            reset_timestamp: reset_timestamp
           )
 
         Supervisor.terminate_child(supervisor, trigger_id)
@@ -250,7 +250,7 @@ defmodule Lightning.KafkaTriggers do
     end
   end
 
-  def rollback_pipeline(_supervisor, _trigger_id, _timestamp) do
+  def reset_pipeline(_supervisor, _trigger_id, _timestamp) do
     {:error, :invalid_timestamp}
   end
 end

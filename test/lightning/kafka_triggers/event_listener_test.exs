@@ -130,7 +130,7 @@ defmodule Lightning.KafkaTriggers.EventListenerTest do
       trigger: trigger
     } do
       with_mock KafkaTriggers,
-        rollback_pipeline: fn _supervisor, _trigger, _timestamp ->
+        reset_pipeline: fn _supervisor, _trigger, _timestamp ->
           {:ok, "fake-pid"}
         end do
         EventListener.handle_info(
@@ -141,9 +141,7 @@ defmodule Lightning.KafkaTriggers.EventListenerTest do
           state
         )
 
-        assert_called(
-          KafkaTriggers.rollback_pipeline(pid, trigger.id, timestamp)
-        )
+        assert_called(KafkaTriggers.reset_pipeline(pid, trigger.id, timestamp))
       end
     end
 
@@ -153,7 +151,7 @@ defmodule Lightning.KafkaTriggers.EventListenerTest do
       trigger: trigger
     } do
       with_mock KafkaTriggers,
-        rollback_pipeline: fn _supervisor, _trigger, _timestamp ->
+        reset_pipeline: fn _supervisor, _trigger, _timestamp ->
           {:ok, "fake-pid"}
         end do
         response =
@@ -173,12 +171,12 @@ defmodule Lightning.KafkaTriggers.EventListenerTest do
       state: state
     } do
       with_mock KafkaTriggers,
-        rollback_pipeline: fn _supervisor, _trigger, _timestamp ->
+        reset_pipeline: fn _supervisor, _trigger, _timestamp ->
           {:ok, "fake-pid"}
         end do
         assert {:noreply, ^state} = EventListener.handle_info("huh?", state)
 
-        assert_not_called(KafkaTriggers.rollback_pipeline(:_, :_, :_))
+        assert_not_called(KafkaTriggers.reset_pipeline(:_, :_, :_))
       end
     end
 
@@ -190,7 +188,7 @@ defmodule Lightning.KafkaTriggers.EventListenerTest do
       stop_supervised!(PipelineSupervisor)
 
       with_mock KafkaTriggers,
-        rollback_pipeline: fn _supervisor, _trigger, _timestamp ->
+        reset_pipeline: fn _supervisor, _trigger, _timestamp ->
           {:ok, "fake-pid"}
         end do
         EventListener.handle_info(
@@ -201,7 +199,7 @@ defmodule Lightning.KafkaTriggers.EventListenerTest do
           state
         )
 
-        assert_not_called(KafkaTriggers.rollback_pipeline(:_, :_, :_))
+        assert_not_called(KafkaTriggers.reset_pipeline(:_, :_, :_))
       end
     end
   end

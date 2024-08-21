@@ -33,7 +33,7 @@ defmodule Lightning.KafkaTriggers.EventListener do
     %{trigger_id: trigger_id, timestamp: timestamp} = event
 
     if supervisor = GenServer.whereis(:kafka_pipeline_supervisor) do
-      supervisor |> KafkaTriggers.rollback_pipeline(trigger_id, timestamp)
+      supervisor |> KafkaTriggers.reset_pipeline(trigger_id, timestamp)
     end
 
     {:noreply, state}
