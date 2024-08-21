@@ -1079,14 +1079,27 @@
               <%= file.status |> Atom.to_string() |> String.capitalize() %>
             </:col>
             <:col :let={file}>
-              <.link
-                id={"download-export-file-#{file.id}-button"}
-                href={~p"/project_files/#{file.id}/download"}
-                target="_blank"
-                class="table-action"
-              >
-                Download
-              </.link>
+              <%= if file.status == :completed do %>
+                <.link
+                  id={"download-export-file-#{file.id}-button"}
+                  href={~p"/project_files/#{file.id}/download"}
+                  target="_blank"
+                  class="table-action py-2 px-4"
+                >
+                  Download
+                </.link>
+              <% else %>
+                <.button
+                  id={"download-export-file-#{file.id}-button"}
+                  disabled={true}
+                  class="table-action"
+                  tooltip="Export is not yet ready for download"
+                  color_class="disabled:bg-gray-50"
+                >
+                  Download
+                </.button>
+
+              <% end %>
             </:col>
           </.new_table>
         </div>
