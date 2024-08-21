@@ -234,7 +234,7 @@ defmodule Lightning.ProjectsTest do
       for admin <- admins do
         assert_email_sent(
           subject: subject,
-          to: Swoosh.Email.Recipient.format(admin.user),
+          to: [Swoosh.Email.Recipient.format(admin.user)],
           text_body: body
         )
       end
