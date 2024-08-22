@@ -319,6 +319,18 @@ defmodule Lightning.Runs do
     end)
   end
 
+  @spec forfeit_claim(Lightning.Run.t()) ::
+          {:ok, any()} | {:error, any()}
+  def forfeit_claim(%Run{} = run) do
+    Logger.warning(fn ->
+      "Detected forfeit run: #{inspect(run)}"
+    end)
+
+    run
+    |> Ecto.Changeset.change(state: "available")
+    |> Repo.update()
+  end
+
   defdelegate subscribe(run), to: Events
 
   def get_project_id_for_run(run) do

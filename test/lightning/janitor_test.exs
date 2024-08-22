@@ -6,6 +6,9 @@ defmodule Lightning.JanitorTest do
   alias Lightning.Repo
   alias Lightning.Run
 
+  describe "release_claimed_but_not_started/0" do
+  end
+
   describe "find_and_update_lost/0" do
     @tag :capture_log
     test "updates lost runs and their steps" do

@@ -41,6 +41,11 @@ defmodule Lightning.Config do
     end
 
     @impl true
+    def max_pull_timeout_seconds do
+      Application.get_env(:lightning, :max_pull_timeout_seconds)
+    end
+
+    @impl true
     def default_max_run_duration do
       Application.get_env(:lightning, :max_run_duration_seconds)
     end
@@ -164,6 +169,7 @@ defmodule Lightning.Config do
   @callback email_sender_name() :: String.t()
   @callback get_extension_mod(key :: atom()) :: any()
   @callback grace_period() :: integer()
+  @callback max_pull_timeout_seconds() :: integer()
   @callback instance_admin_email() :: String.t()
   @callback kafka_duplicate_tracking_retention_seconds() :: integer()
   @callback kafka_number_of_consumers() :: integer()

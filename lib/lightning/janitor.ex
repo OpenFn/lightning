@@ -24,7 +24,12 @@ defmodule Lightning.Janitor do
   by the Oban cron plugin.
   """
   @impl Oban.Worker
-  def perform(%Oban.Job{}), do: find_and_update_lost()
+  def perform(%Oban.Job{}), do: chores()
+
+  defp chores do
+    forfeit_expired_claims()
+    find_and_update_lost()
+  end
 
   @doc """
   The find_and_update_lost function determines the current time, finds all
@@ -40,6 +45,25 @@ defmodule Lightning.Janitor do
       stream
       |> Stream.each(fn run ->
         Runs.mark_run_lost(run)
+      end)
+      |> Stream.run()
+    end)
+  end
+
+  @doc """
+  The find_and_update_lost function determines the current time, finds all
+  runs that were claimed before the earliest allowable claim time for
+  unfinished runs, and marks them as lost.
+  """
+  def forfeit_expired_claims do
+    stream =
+      Runs.Query.forfeited()
+      |> Repo.stream()
+
+    Repo.transaction(fn ->
+      stream
+      |> Stream.each(fn run ->
+        Runs.forfeit_claim(run)
       end)
       |> Stream.run()
     end)
