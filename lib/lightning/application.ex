@@ -86,8 +86,22 @@ defmodule Lightning.Application do
       end
 
     goth =
-      (Application.get_env(:lightning, :goth_required, false) &&
-         {Goth, name: Lightning.Goth}) || nil
+      Application.get_env(:lightning, Lightning.Google, [])
+      |> then(fn config ->
+        if config[:required] do
+          {Goth,
+           name: Lightning.Google,
+           source:
+             {:service_account, config[:credentials],
+              [
+                scopes: [
+                  "openid",
+                  "https://www.googleapis.com/auth/userinfo.email",
+                  "https://www.googleapis.com/auth/cloud-platform"
+                ]
+              ]}}
+        end
+      end)
 
     children =
       [

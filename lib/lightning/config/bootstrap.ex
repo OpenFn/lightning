@@ -499,7 +499,7 @@ defmodule Lightning.Config.Bootstrap do
             env!("GCS_BUCKET", :string, nil) ||
               raise("GCS_BUCKET is not set, but STORAGE_BACKEND is set to gcs")
 
-        goth_required()
+        google_required()
 
       v when v in ["local", nil] ->
         config :lightning,
@@ -518,8 +518,29 @@ defmodule Lightning.Config.Bootstrap do
     end
   end
 
-  defp goth_required do
-    config :lightning, :goth_required, true
+  # Not really happy about having to put this here, but for some reason
+  # dialyzer thinks that when :error can be matched then {:error, _} can't be.
+  @dialyzer {:no_match, google_required: 0}
+  defp google_required do
+    with value when is_binary(value) <-
+           env!(
+             "GOOGLE_APPLICATION_CREDENTIALS_JSON",
+             :string,
+             {:error,
+              "GOOGLE_APPLICATION_CREDENTIALS_JSON is not set, this is required when using Google Cloud services."}
+           ),
+         {:ok, decoded} <- Base.decode64(value),
+         {:ok, credentials} <- Jason.decode(decoded) do
+      config :lightning, Lightning.Google,
+        credentials: credentials,
+        required: true
+    else
+      {:error, %Jason.DecodeError{} = error} -> raise """
+      Could not decode GOOGLE_APPLICATION_CREDENTIALS_JSON: #{Jason.DecodeError.message(error)}
+      """
+      {:error, message} -> raise message
+      :error -> raise "Could not decode GOOGLE_APPLICATION_CREDENTIALS_JSON"
+    end
   end
 
   defp github_config do

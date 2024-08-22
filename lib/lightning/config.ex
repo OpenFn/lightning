@@ -73,6 +73,12 @@ defmodule Lightning.Config do
     end
 
     @impl true
+    def google(key) do
+      Application.get_env(:lightning, Lightning.Google, [])
+      |> Keyword.get(key)
+    end
+
+    @impl true
     def check_flag?(flag) do
       Application.get_env(:lightning, flag)
     end
@@ -169,6 +175,7 @@ defmodule Lightning.Config do
   @callback default_max_run_duration() :: integer()
   @callback email_sender_name() :: String.t()
   @callback get_extension_mod(key :: atom()) :: any()
+  @callback google(key :: atom()) :: any()
   @callback grace_period() :: integer()
   @callback instance_admin_email() :: String.t()
   @callback kafka_duplicate_tracking_retention_seconds() :: integer()
@@ -247,6 +254,10 @@ defmodule Lightning.Config do
 
   def get_extension_mod(key) do
     impl().get_extension_mod(key)
+  end
+
+  def google(key) do
+    impl().google(key)
   end
 
   def cors_origin do

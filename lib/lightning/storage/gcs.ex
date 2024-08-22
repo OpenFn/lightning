@@ -40,14 +40,10 @@ defmodule Lightning.Storage.GCS do
 
   @impl true
   def get_url(path) do
-    {:ok, client_email} = Goth.Config.get("client_email")
-    {:ok, private_key} = Goth.Config.get("private_key")
-
     client =
-      GcsSignedUrl.Client.load(%{
-        "client_email" => client_email,
-        "private_key" => private_key
-      })
+      Lightning.Config.google(:credentials)
+      |> Map.take(["client_email", "private_key"])
+      |> GcsSignedUrl.Client.load()
 
     {:ok,
      GcsSignedUrl.generate_v4(

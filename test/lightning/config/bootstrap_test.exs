@@ -101,6 +101,32 @@ defmodule Lightning.Config.BootstrapTest do
 
       Dotenvy.source([env, %{"GCS_BUCKET" => "foo"}])
 
+      assert_raise RuntimeError,
+                   "GOOGLE_APPLICATION_CREDENTIALS_JSON is not set, this is required when using Google Cloud services.",
+                   fn ->
+                     Bootstrap.configure()
+                   end
+
+      Dotenvy.source([
+        env,
+        %{"GCS_BUCKET" => "foo", "GOOGLE_APPLICATION_CREDENTIALS_JSON" => "bar"}
+      ])
+
+      assert_raise RuntimeError,
+                   "Could not decode GOOGLE_APPLICATION_CREDENTIALS_JSON",
+                   fn ->
+                     Bootstrap.configure()
+                   end
+
+      Dotenvy.source([
+        env,
+        %{
+          "GCS_BUCKET" => "foo",
+          "GOOGLE_APPLICATION_CREDENTIALS_JSON" =>
+            %{"I'm some" => "JSON"} |> Jason.encode!() |> Base.encode64()
+        }
+      ])
+
       Bootstrap.configure()
 
       storage = get_env(:lightning, Lightning.Storage)
@@ -108,7 +134,12 @@ defmodule Lightning.Config.BootstrapTest do
       assert {:backend, Lightning.Storage.GCS} in storage
       assert {:bucket, "foo"} in storage
 
-      assert {:goth_required, true} in get_env(:lightning)
+      assert {:credentials, %{"I'm some" => "JSON"}} in get_env(
+               :lightning,
+               Lightning.Google
+             )
+
+      assert {:required, true} in get_env(:lightning, Lightning.Google)
     end
 
     @tag env: %{"STORAGE_BACKEND" => "foo"}
