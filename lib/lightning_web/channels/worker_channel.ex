@@ -31,6 +31,11 @@ defmodule LightningWeb.WorkerChannel do
         runs =
           runs
           |> Enum.map(fn run ->
+            # in heavy load this averages over 10 seconds and causes all runs to
+            # be marked as lost
+            # dbg("there was a run and we set it to started")
+            # :timer.sleep(11_000)
+
             opts = run_options(run)
 
             token =
