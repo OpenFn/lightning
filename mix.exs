@@ -141,10 +141,7 @@ defmodule Lightning.MixProject do
       {:hammer, "~> 6.0"},
       {:dotenvy, "~> 0.8.0"},
       {:goth, "~> 1.3"},
-      {:waffle, "~> 1.1"},
       {:gcs_signed_url, "~> 0.4.6"},
-      {:waffle_ecto, "~> 0.0"},
-      {:waffle_gcs, "~> 0.2"},
       {:packmatic, "~> 1.0"},
       # MFA
       {:nimble_totp, "~> 1.0"},
