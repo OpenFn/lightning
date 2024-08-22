@@ -226,6 +226,10 @@ defmodule Lightning.Config.Bootstrap do
       data_domain: env!("PLAUSIBLE_DATA_DOMAIN", :string, nil)
 
     config :lightning,
+           :max_pull_timeout_seconds,
+           env!("WORKER_MAX_PULL_TIMEOUT_SECONDS", :integer, 30)
+
+    config :lightning,
            :run_grace_period_seconds,
            env!("RUN_GRACE_PERIOD_SECONDS", :integer, 10)
 
