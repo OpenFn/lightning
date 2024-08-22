@@ -213,20 +213,16 @@ defmodule Lightning.WorkOrders.ExportWorker do
   end
 
   defp zip_folder(folder_path, output_file) do
-    case File.open(output_file, [:write, :binary], fn output ->
-           entries = generate_entries(folder_path, "")
+    generate_entries(folder_path, "")
+    |> Enum.reject(fn entry -> entry[:source] == {:file, output_file} end)
+    |> Packmatic.build_stream()
+    |> Stream.into(File.stream!(output_file, []))
+    |> Stream.run()
 
-           entries
-           |> Enum.reject(fn entry -> entry[:source] == {:file, output_file} end)
-           |> Packmatic.build_stream()
-           |> Enum.each(&IO.binwrite(output, &1))
-         end) do
-      {:ok, _} ->
-        {:ok, output_file}
-
-      {:error, error} ->
-        {:error, error}
-    end
+    {:ok, output_file}
+  catch
+    error ->
+      {:error, error}
   end
 
   defp generate_entries(directory_path, parent_path) do

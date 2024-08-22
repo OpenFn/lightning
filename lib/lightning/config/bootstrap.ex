@@ -535,11 +535,16 @@ defmodule Lightning.Config.Bootstrap do
         credentials: credentials,
         required: true
     else
-      {:error, %Jason.DecodeError{} = error} -> raise """
-      Could not decode GOOGLE_APPLICATION_CREDENTIALS_JSON: #{Jason.DecodeError.message(error)}
-      """
-      {:error, message} -> raise message
-      :error -> raise "Could not decode GOOGLE_APPLICATION_CREDENTIALS_JSON"
+      {:error, %Jason.DecodeError{} = error} ->
+        raise """
+        Could not decode GOOGLE_APPLICATION_CREDENTIALS_JSON: #{Jason.DecodeError.message(error)}
+        """
+
+      {:error, message} ->
+        raise message
+
+      :error ->
+        raise "Could not decode GOOGLE_APPLICATION_CREDENTIALS_JSON"
     end
   end
 

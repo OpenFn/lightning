@@ -127,7 +127,7 @@ defmodule Lightning.ExportWorkerTest do
         "export.json" | expected_log_files ++ expected_dataclip_files
       ]
 
-      assert Enum.sort(expected_files) == Enum.sort(file_list)
+      assert MapSet.new(expected_files) == MapSet.new(file_list)
 
       actual_content = extract_and_read(zip_file_path, "export.json")
 
@@ -188,7 +188,10 @@ defmodule Lightning.ExportWorkerTest do
   def extract_and_read(zip_file_path, target_file_name) do
     {:ok, output_dir} = Briefly.create(directory: true)
     {_, 0} = System.cmd("unzip", [zip_file_path, "-d", output_dir])
-    {_, 0} = System.cmd("chmod", ["777", "-R", output_dir])
+    # For some reason, when Packmatic creates the zip file, there are
+    # no permissions set on the files. 🤷
+    {_, 0} = System.cmd("find", [output_dir | ~w"-type f -exec chmod 644 {} +"])
+    {_, 0} = System.cmd("find", [output_dir | ~w"-type d -exec chmod 755 {} +"])
     file_path = Path.join([output_dir, target_file_name])
     File.read!(file_path)
   end
