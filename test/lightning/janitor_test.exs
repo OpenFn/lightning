@@ -6,7 +6,14 @@ defmodule Lightning.JanitorTest do
   alias Lightning.Repo
   alias Lightning.Run
 
-  describe "release_claimed_but_not_started/0" do
+  describe "forfeit_expired_claims/0" do
+    test "releases runs for reclaim if they have not been started after the pull timeout plus grace" do
+      dbg("eish, i don't love this. what if there was some other reason for them getting lost?")
+      dbg("like, what if they did start, and did the work, and all that, but we never heard back from them because of network issues?")
+      dbg("i wouldn't want to re-do the work.")
+      dbg("i wish there was some way to only mark them as claimed once we know that the worker actually got the run.")
+      dbg("can we check that our reply in the websocket channel was actually received by the ws-worker?")
+    end
   end
 
   describe "find_and_update_lost/0" do
