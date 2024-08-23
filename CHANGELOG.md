@@ -24,6 +24,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix issue with the persisting of a Kafka message with headers.
+  [#2402](https://github.com/OpenFn/lightning/issues/2402)
 - Protect against race conditions when updating partition timestamps for a
   Kafka trigger. [#2378](https://github.com/OpenFn/lightning/issues/2378)
 
