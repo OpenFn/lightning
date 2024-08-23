@@ -76,10 +76,6 @@ defmodule Lightning.KafkaTriggers.MessageHandling do
   end
 
   defp convert_for_serialisation(%{headers: headers} = metadata) do
-    metadata |> Map.merge(%{headers: list_of_lists(headers)})
-  end
-
-  defp list_of_lists(list) do
-    list |> Enum.map(&Tuple.to_list/1)
+    Map.put(metadata, :headers, Enum.map(headers, &Tuple.to_list/1))
   end
 end

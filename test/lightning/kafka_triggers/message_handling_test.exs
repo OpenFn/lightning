@@ -1,5 +1,5 @@
 defmodule Lightning.KafkaTriggers.MessageHandlingTest do
-  use LightningWeb.ConnCase, async: false
+  use LightningWeb.ConnCase, async: true
 
   import Lightning.Factories
 
