@@ -687,6 +687,24 @@ defmodule Lightning.SetupUtilsTest do
                %Credential{name: "dhis2", user_id: ^user_id}
              ] = Repo.all(Credential)
     end
+
+    test "can be used to set up a superuser" do
+      assert :ok ==
+               Lightning.SetupUtils.setup_user(
+                 %{
+                   role: :superuser,
+                   first_name: "Super",
+                   last_name: "Hero",
+                   email: "super@openfn.org",
+                   password: "easyAsCake123!"
+                 },
+                 "abc"
+               )
+
+      # check that the user has been created
+      assert %User{id: _user_id, role: :superuser} =
+               Repo.get_by(User, email: "super@openfn.org")
+    end
   end
 
   defp get_dataclip_body(dataclip_id) do
