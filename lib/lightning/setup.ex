@@ -21,7 +21,7 @@ defmodule Lightning.Setup do
   def setup_user(user, token \\ nil, credentials \\ nil) do
     {:ok, _pid} = Lightning.Setup.ensure_minimum_setup()
 
-    :ok = Lightning.Setup.setup_user(user, token, credentials)
+    :ok = SetupUtils.setup_user(user, token, credentials)
   end
 
   @doc """
