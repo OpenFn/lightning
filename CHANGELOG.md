@@ -19,6 +19,7 @@ and this project adheres to
 
 ### Changed
 
+- Allow execution of a setup_user command from outside the container.
 - Implement a combo-box to make navigating between projects easier
   [#241](https://github.com/OpenFn/lightning/pull/2424)
 
