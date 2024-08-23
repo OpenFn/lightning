@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-2E3AA6A1.js"></script>
+    <script src="dist/sidebar_items-60404972.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -339,6 +339,14 @@ Possible roles are :admin, :viewer, :editor, and :owner</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#list_project_files/1" translate="no">list_project_files(project)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#list_projects/0" translate="no">list_projects()</a>
 
       </div>
@@ -576,7 +584,7 @@ deletion.)</p></div>
     </a>
     <h1 class="signature" translate="no">add_project_users(project, project_users, notify_users \\ true)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L311" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L312" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -606,7 +614,7 @@ deletion.)</p></div>
     </a>
     <h1 class="signature" translate="no">cancel_scheduled_deletion(project_id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L657" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L658" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -630,7 +638,7 @@ deletion.)</p></div>
     </a>
     <h1 class="signature" translate="no">change_project(project, attrs \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L451" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L452" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -646,8 +654,8 @@ deletion.)</p></div>
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_project</span><span class="p" data-group-id="2864983062-1">(</span><span class="n">project</span><span class="p" data-group-id="2864983062-1">)</span><span class="w">
-</span><span class="p" data-group-id="2864983062-2">%</span><span class="nc" data-group-id="2864983062-2">Ecto.Changeset</span><span class="p" data-group-id="2864983062-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2864983062-3">%</span><span class="nc" data-group-id="2864983062-3">Project</span><span class="p" data-group-id="2864983062-3">{</span><span class="p" data-group-id="2864983062-3">}</span><span class="p" data-group-id="2864983062-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_project</span><span class="p" data-group-id="1195129266-1">(</span><span class="n">project</span><span class="p" data-group-id="1195129266-1">)</span><span class="w">
+</span><span class="p" data-group-id="1195129266-2">%</span><span class="nc" data-group-id="1195129266-2">Ecto.Changeset</span><span class="p" data-group-id="1195129266-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1195129266-3">%</span><span class="nc" data-group-id="1195129266-3">Project</span><span class="p" data-group-id="1195129266-3">{</span><span class="p" data-group-id="1195129266-3">}</span><span class="p" data-group-id="1195129266-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="create_project/2">
@@ -663,7 +671,7 @@ deletion.)</p></div>
     </a>
     <h1 class="signature" translate="no">create_project(attrs \\ %{}, schedule_email? \\ true)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L203" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L204" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -679,11 +687,11 @@ deletion.)</p></div>
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_project</span><span class="p" data-group-id="5734870948-1">(</span><span class="p" data-group-id="5734870948-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="5734870948-2">}</span><span class="p" data-group-id="5734870948-1">)</span><span class="w">
-</span><span class="p" data-group-id="5734870948-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5734870948-4">%</span><span class="nc" data-group-id="5734870948-4">Project</span><span class="p" data-group-id="5734870948-4">{</span><span class="p" data-group-id="5734870948-4">}</span><span class="p" data-group-id="5734870948-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_project</span><span class="p" data-group-id="5612293567-1">(</span><span class="p" data-group-id="5612293567-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="5612293567-2">}</span><span class="p" data-group-id="5612293567-1">)</span><span class="w">
+</span><span class="p" data-group-id="5612293567-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5612293567-4">%</span><span class="nc" data-group-id="5612293567-4">Project</span><span class="p" data-group-id="5612293567-4">{</span><span class="p" data-group-id="5612293567-4">}</span><span class="p" data-group-id="5612293567-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_project</span><span class="p" data-group-id="5734870948-5">(</span><span class="p" data-group-id="5734870948-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="5734870948-6">}</span><span class="p" data-group-id="5734870948-5">)</span><span class="w">
-</span><span class="p" data-group-id="5734870948-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5734870948-8">%</span><span class="nc" data-group-id="5734870948-8">Ecto.Changeset</span><span class="p" data-group-id="5734870948-8">{</span><span class="p" data-group-id="5734870948-8">}</span><span class="p" data-group-id="5734870948-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_project</span><span class="p" data-group-id="5612293567-5">(</span><span class="p" data-group-id="5612293567-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="5612293567-6">}</span><span class="p" data-group-id="5612293567-5">)</span><span class="w">
+</span><span class="p" data-group-id="5612293567-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5612293567-8">%</span><span class="nc" data-group-id="5612293567-8">Ecto.Changeset</span><span class="p" data-group-id="5612293567-8">{</span><span class="p" data-group-id="5612293567-8">}</span><span class="p" data-group-id="5612293567-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="delete_project/1">
@@ -695,7 +703,7 @@ deletion.)</p></div>
     </a>
     <h1 class="signature" translate="no">delete_project(project)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L355" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L356" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -712,11 +720,11 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_project</span><span class="p" data-group-id="4079892531-1">(</span><span class="n">project</span><span class="p" data-group-id="4079892531-1">)</span><span class="w">
-</span><span class="p" data-group-id="4079892531-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4079892531-3">%</span><span class="nc" data-group-id="4079892531-3">Project</span><span class="p" data-group-id="4079892531-3">{</span><span class="p" data-group-id="4079892531-3">}</span><span class="p" data-group-id="4079892531-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_project</span><span class="p" data-group-id="1814160270-1">(</span><span class="n">project</span><span class="p" data-group-id="1814160270-1">)</span><span class="w">
+</span><span class="p" data-group-id="1814160270-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1814160270-3">%</span><span class="nc" data-group-id="1814160270-3">Project</span><span class="p" data-group-id="1814160270-3">{</span><span class="p" data-group-id="1814160270-3">}</span><span class="p" data-group-id="1814160270-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_project</span><span class="p" data-group-id="4079892531-4">(</span><span class="n">project</span><span class="p" data-group-id="4079892531-4">)</span><span class="w">
-</span><span class="p" data-group-id="4079892531-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4079892531-6">%</span><span class="nc" data-group-id="4079892531-6">Ecto.Changeset</span><span class="p" data-group-id="4079892531-6">{</span><span class="p" data-group-id="4079892531-6">}</span><span class="p" data-group-id="4079892531-5">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_project</span><span class="p" data-group-id="1814160270-4">(</span><span class="n">project</span><span class="p" data-group-id="1814160270-4">)</span><span class="w">
+</span><span class="p" data-group-id="1814160270-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1814160270-6">%</span><span class="nc" data-group-id="1814160270-6">Ecto.Changeset</span><span class="p" data-group-id="1814160270-6">{</span><span class="p" data-group-id="1814160270-6">}</span><span class="p" data-group-id="1814160270-5">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="delete_project_user!/1">
@@ -728,7 +736,7 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
     </a>
     <h1 class="signature" translate="no">delete_project_user!(project_user)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L337" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L338" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -759,7 +767,7 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
     </a>
     <h1 class="signature" translate="no">export_project(atom, project_id, snapshot_ids \\ nil)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L592" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L593" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -781,8 +789,8 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">export_project</span><span class="p" data-group-id="7715274444-1">(</span><span class="ss">:yaml</span><span class="p">,</span><span class="w"> </span><span class="n">project_id</span><span class="p" data-group-id="7715274444-1">)</span><span class="w">
-</span><span class="p" data-group-id="7715274444-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">string</span><span class="p" data-group-id="7715274444-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">export_project</span><span class="p" data-group-id="8156319550-1">(</span><span class="ss">:yaml</span><span class="p">,</span><span class="w"> </span><span class="n">project_id</span><span class="p" data-group-id="8156319550-1">)</span><span class="w">
+</span><span class="p" data-group-id="8156319550-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">string</span><span class="p" data-group-id="8156319550-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_project/1">
@@ -794,7 +802,7 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
     </a>
     <h1 class="signature" translate="no">get_project(id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L99" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L100" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -816,7 +824,7 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
     </a>
     <h1 class="signature" translate="no">get_project!(id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L97" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L98" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -832,10 +840,10 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_project!</span><span class="p" data-group-id="1222163479-1">(</span><span class="mi">123</span><span class="p" data-group-id="1222163479-1">)</span><span class="w">
-</span><span class="p" data-group-id="1222163479-2">%</span><span class="nc" data-group-id="1222163479-2">Project</span><span class="p" data-group-id="1222163479-2">{</span><span class="p" data-group-id="1222163479-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_project!</span><span class="p" data-group-id="4888581585-1">(</span><span class="mi">123</span><span class="p" data-group-id="4888581585-1">)</span><span class="w">
+</span><span class="p" data-group-id="4888581585-2">%</span><span class="nc" data-group-id="4888581585-2">Project</span><span class="p" data-group-id="4888581585-2">{</span><span class="p" data-group-id="4888581585-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project!</span><span class="p" data-group-id="1222163479-3">(</span><span class="mi">456</span><span class="p" data-group-id="1222163479-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project!</span><span class="p" data-group-id="4888581585-3">(</span><span class="mi">456</span><span class="p" data-group-id="4888581585-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
@@ -848,7 +856,7 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
     </a>
     <h1 class="signature" translate="no">get_project_credential(project_id, credential_id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L572" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L573" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -870,7 +878,7 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
     </a>
     <h1 class="signature" translate="no">get_project_user(id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L133" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L134" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -892,7 +900,7 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
     </a>
     <h1 class="signature" translate="no">get_project_user(project, user)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L135" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L136" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -914,7 +922,7 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
     </a>
     <h1 class="signature" translate="no">get_project_user!(id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L131" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L132" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -930,10 +938,10 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user!</span><span class="p" data-group-id="0665021286-1">(</span><span class="mi">123</span><span class="p" data-group-id="0665021286-1">)</span><span class="w">
-</span><span class="p" data-group-id="0665021286-2">%</span><span class="nc" data-group-id="0665021286-2">ProjectUser</span><span class="p" data-group-id="0665021286-2">{</span><span class="p" data-group-id="0665021286-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user!</span><span class="p" data-group-id="4221982849-1">(</span><span class="mi">123</span><span class="p" data-group-id="4221982849-1">)</span><span class="w">
+</span><span class="p" data-group-id="4221982849-2">%</span><span class="nc" data-group-id="4221982849-2">ProjectUser</span><span class="p" data-group-id="4221982849-2">{</span><span class="p" data-group-id="4221982849-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user!</span><span class="p" data-group-id="0665021286-3">(</span><span class="mi">456</span><span class="p" data-group-id="0665021286-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user!</span><span class="p" data-group-id="4221982849-3">(</span><span class="mi">456</span><span class="p" data-group-id="4221982849-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
@@ -946,7 +954,7 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
     </a>
     <h1 class="signature" translate="no">get_project_user_role(user, project)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L535" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L536" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -963,16 +971,16 @@ Possible roles are :admin, :viewer, :editor, and :owner</p><h2 id="get_project_u
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user_role</span><span class="p" data-group-id="3212194107-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="3212194107-1">)</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user_role</span><span class="p" data-group-id="2536833597-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="2536833597-1">)</span><span class="w">
 </span><span class="ss">:admin</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user_role</span><span class="p" data-group-id="3212194107-2">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="3212194107-2">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user_role</span><span class="p" data-group-id="2536833597-2">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="2536833597-2">)</span><span class="w">
 </span><span class="ss">:viewer</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user_role</span><span class="p" data-group-id="3212194107-3">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="3212194107-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user_role</span><span class="p" data-group-id="2536833597-3">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="2536833597-3">)</span><span class="w">
 </span><span class="ss">:editor</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user_role</span><span class="p" data-group-id="3212194107-4">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="3212194107-4">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user_role</span><span class="p" data-group-id="2536833597-4">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="2536833597-4">)</span><span class="w">
 </span><span class="ss">:owner</span></code></pre>
   </section>
 </section>
@@ -985,7 +993,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p><h2 id="get_project_u
     </a>
     <h1 class="signature" translate="no">get_project_users!(id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L168" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L169" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1007,7 +1015,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p><h2 id="get_project_u
     </a>
     <h1 class="signature" translate="no">get_project_with_users!(id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L160" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L161" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1023,10 +1031,10 @@ Possible roles are :admin, :viewer, :editor, and :owner</p><h2 id="get_project_u
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_project!</span><span class="p" data-group-id="0892068626-1">(</span><span class="mi">123</span><span class="p" data-group-id="0892068626-1">)</span><span class="w">
-</span><span class="p" data-group-id="0892068626-2">%</span><span class="nc" data-group-id="0892068626-2">Project</span><span class="p" data-group-id="0892068626-2">{</span><span class="p" data-group-id="0892068626-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_project!</span><span class="p" data-group-id="2345731646-1">(</span><span class="mi">123</span><span class="p" data-group-id="2345731646-1">)</span><span class="w">
+</span><span class="p" data-group-id="2345731646-2">%</span><span class="nc" data-group-id="2345731646-2">Project</span><span class="p" data-group-id="2345731646-2">{</span><span class="p" data-group-id="2345731646-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project!</span><span class="p" data-group-id="0892068626-3">(</span><span class="mi">456</span><span class="p" data-group-id="0892068626-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project!</span><span class="p" data-group-id="2345731646-3">(</span><span class="mi">456</span><span class="p" data-group-id="2345731646-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
@@ -1041,7 +1049,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p><h2 id="get_project_u
     </a>
     <h1 class="signature" translate="no">get_projects_for_user(user, opts \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L501" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L502" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1084,7 +1092,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p><h2 id="get_project_u
     </a>
     <h1 class="signature" translate="no">invite_collaborators(project, collaborators, inviter)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L744" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L745" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1106,7 +1114,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p><h2 id="get_project_u
     </a>
     <h1 class="signature" translate="no">list_project_admin_emails(id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L182" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L183" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1134,7 +1142,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p><h2 id="get_project_u
     </a>
     <h1 class="signature" translate="no">list_project_credentials(project)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L458" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L459" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1155,6 +1163,28 @@ Possible roles are :admin, :viewer, :editor, and :owner</p><h2 id="get_project_u
 
   </section>
 </section>
+<section class="detail" id="list_project_files/1">
+
+  <div class="detail-header">
+    <a href="#list_project_files/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">list_project_files(project)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L859" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
 <section class="detail" id="list_projects/0">
 
   <div class="detail-header">
@@ -1164,7 +1194,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p><h2 id="get_project_u
     </a>
     <h1 class="signature" translate="no">list_projects()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L71" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L72" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1180,8 +1210,8 @@ Possible roles are :admin, :viewer, :editor, and :owner</p><h2 id="get_project_u
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_projects</span><span class="p" data-group-id="8811037898-1">(</span><span class="p" data-group-id="8811037898-1">)</span><span class="w">
-</span><span class="p" data-group-id="8811037898-2">[</span><span class="p" data-group-id="8811037898-3">%</span><span class="nc" data-group-id="8811037898-3">Project</span><span class="p" data-group-id="8811037898-3">{</span><span class="p" data-group-id="8811037898-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="8811037898-2">]</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_projects</span><span class="p" data-group-id="7572380684-1">(</span><span class="p" data-group-id="7572380684-1">)</span><span class="w">
+</span><span class="p" data-group-id="7572380684-2">[</span><span class="p" data-group-id="7572380684-3">%</span><span class="nc" data-group-id="7572380684-3">Project</span><span class="p" data-group-id="7572380684-3">{</span><span class="p" data-group-id="7572380684-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="7572380684-2">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="list_projects_having_history_retention/0">
@@ -1193,7 +1223,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p><h2 id="get_project_u
     </a>
     <h1 class="signature" translate="no">list_projects_having_history_retention()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L79" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L80" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1222,7 +1252,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p><h2 id="get_project_u
     </a>
     <h1 class="signature" translate="no">member_of?(project, user)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L559" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L560" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1244,7 +1274,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p><h2 id="get_project_u
     </a>
     <h1 class="signature" translate="no">perform(job)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L41" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L42" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1267,7 +1297,7 @@ will find projects that are ready for permanent deletion and purge them.</p>
     </a>
     <h1 class="signature" translate="no">project_credentials_query(project)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L427" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L428" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1289,7 +1319,7 @@ will find projects that are ready for permanent deletion and purge them.</p>
     </a>
     <h1 class="signature" translate="no">project_dataclips_query(project)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L431" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L432" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1311,7 +1341,7 @@ will find projects that are ready for permanent deletion and purge them.</p>
     </a>
     <h1 class="signature" translate="no">project_jobs_query(project)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L402" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L403" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1333,7 +1363,7 @@ will find projects that are ready for permanent deletion and purge them.</p>
     </a>
     <h1 class="signature" translate="no">project_run_step_query(project)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L386" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L387" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1355,7 +1385,7 @@ will find projects that are ready for permanent deletion and purge them.</p>
     </a>
     <h1 class="signature" translate="no">project_runs_query(project)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L378" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L379" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1377,7 +1407,7 @@ will find projects that are ready for permanent deletion and purge them.</p>
     </a>
     <h1 class="signature" translate="no">project_steps_query(project)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L409" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L410" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1399,7 +1429,7 @@ will find projects that are ready for permanent deletion and purge them.</p>
     </a>
     <h1 class="signature" translate="no">project_triggers_query(project)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L435" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L436" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1421,7 +1451,7 @@ will find projects that are ready for permanent deletion and purge them.</p>
     </a>
     <h1 class="signature" translate="no">project_user_role_query(user, project)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L508" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L509" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1452,7 +1482,7 @@ will find projects that are ready for permanent deletion and purge them.</p>
     </a>
     <h1 class="signature" translate="no">project_users_query(project)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L423" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L424" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1481,7 +1511,7 @@ will find projects that are ready for permanent deletion and purge them.</p>
     </a>
     <h1 class="signature" translate="no">project_workflows_query(project)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L417" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L418" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1503,7 +1533,7 @@ will find projects that are ready for permanent deletion and purge them.</p>
     </a>
     <h1 class="signature" translate="no">project_workorders_query(project)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L395" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L396" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1527,7 +1557,7 @@ will find projects that are ready for permanent deletion and purge them.</p>
     </a>
     <h1 class="signature" translate="no">projects_for_user_query(user, opts \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L476" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L477" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1568,7 +1598,7 @@ will find projects that are ready for permanent deletion and purge them.</p>
     </a>
     <h1 class="signature" translate="no">save_dataclips?(id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L104" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L105" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1590,7 +1620,7 @@ will find projects that are ready for permanent deletion and purge them.</p>
     </a>
     <h1 class="signature" translate="no">schedule_project_deletion(project)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L608" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L609" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1616,7 +1646,7 @@ deletion.)</p>
     </a>
     <h1 class="signature" translate="no">select_first_project_for_user(user)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L541" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L542" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1645,7 +1675,7 @@ deletion.)</p>
     </a>
     <h1 class="signature" translate="no">update_project(project, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L230" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L231" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1661,11 +1691,11 @@ deletion.)</p>
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_project</span><span class="p" data-group-id="6710166692-1">(</span><span class="n">project</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6710166692-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="6710166692-2">}</span><span class="p" data-group-id="6710166692-1">)</span><span class="w">
-</span><span class="p" data-group-id="6710166692-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6710166692-4">%</span><span class="nc" data-group-id="6710166692-4">Project</span><span class="p" data-group-id="6710166692-4">{</span><span class="p" data-group-id="6710166692-4">}</span><span class="p" data-group-id="6710166692-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_project</span><span class="p" data-group-id="5653045358-1">(</span><span class="n">project</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5653045358-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="5653045358-2">}</span><span class="p" data-group-id="5653045358-1">)</span><span class="w">
+</span><span class="p" data-group-id="5653045358-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5653045358-4">%</span><span class="nc" data-group-id="5653045358-4">Project</span><span class="p" data-group-id="5653045358-4">{</span><span class="p" data-group-id="5653045358-4">}</span><span class="p" data-group-id="5653045358-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_project</span><span class="p" data-group-id="6710166692-5">(</span><span class="n">project</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6710166692-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="6710166692-6">}</span><span class="p" data-group-id="6710166692-5">)</span><span class="w">
-</span><span class="p" data-group-id="6710166692-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6710166692-8">%</span><span class="nc" data-group-id="6710166692-8">Ecto.Changeset</span><span class="p" data-group-id="6710166692-8">{</span><span class="p" data-group-id="6710166692-8">}</span><span class="p" data-group-id="6710166692-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_project</span><span class="p" data-group-id="5653045358-5">(</span><span class="n">project</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5653045358-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="5653045358-6">}</span><span class="p" data-group-id="5653045358-5">)</span><span class="w">
+</span><span class="p" data-group-id="5653045358-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5653045358-8">%</span><span class="nc" data-group-id="5653045358-8">Ecto.Changeset</span><span class="p" data-group-id="5653045358-8">{</span><span class="p" data-group-id="5653045358-8">}</span><span class="p" data-group-id="5653045358-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="update_project_user/2">
@@ -1677,7 +1707,7 @@ deletion.)</p>
     </a>
     <h1 class="signature" translate="no">update_project_user(project_user, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L303" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L304" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1693,11 +1723,11 @@ deletion.)</p>
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_project_user</span><span class="p" data-group-id="0959283255-1">(</span><span class="n">project_user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0959283255-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="0959283255-2">}</span><span class="p" data-group-id="0959283255-1">)</span><span class="w">
-</span><span class="p" data-group-id="0959283255-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0959283255-4">%</span><span class="nc" data-group-id="0959283255-4">ProjectUser</span><span class="p" data-group-id="0959283255-4">{</span><span class="p" data-group-id="0959283255-4">}</span><span class="p" data-group-id="0959283255-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_project_user</span><span class="p" data-group-id="0978754835-1">(</span><span class="n">project_user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0978754835-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="0978754835-2">}</span><span class="p" data-group-id="0978754835-1">)</span><span class="w">
+</span><span class="p" data-group-id="0978754835-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0978754835-4">%</span><span class="nc" data-group-id="0978754835-4">ProjectUser</span><span class="p" data-group-id="0978754835-4">{</span><span class="p" data-group-id="0978754835-4">}</span><span class="p" data-group-id="0978754835-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_project_user</span><span class="p" data-group-id="0959283255-5">(</span><span class="n">projectUser</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0959283255-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="0959283255-6">}</span><span class="p" data-group-id="0959283255-5">)</span><span class="w">
-</span><span class="p" data-group-id="0959283255-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0959283255-8">%</span><span class="nc" data-group-id="0959283255-8">Ecto.Changeset</span><span class="p" data-group-id="0959283255-8">{</span><span class="p" data-group-id="0959283255-8">}</span><span class="p" data-group-id="0959283255-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_project_user</span><span class="p" data-group-id="0978754835-5">(</span><span class="n">projectUser</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0978754835-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="0978754835-6">}</span><span class="p" data-group-id="0978754835-5">)</span><span class="w">
+</span><span class="p" data-group-id="0978754835-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0978754835-8">%</span><span class="nc" data-group-id="0978754835-8">Ecto.Changeset</span><span class="p" data-group-id="0978754835-8">{</span><span class="p" data-group-id="0978754835-8">}</span><span class="p" data-group-id="0978754835-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="update_project_with_users/3">
@@ -1711,7 +1741,7 @@ deletion.)</p>
     </a>
     <h1 class="signature" translate="no">update_project_with_users(project, attrs, notify_users \\ true)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L248" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L249" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1740,7 +1770,7 @@ deletion.)</p>
     </a>
     <h1 class="signature" translate="no">url_safe_project_name(name)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L550" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L551" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1762,7 +1792,7 @@ deletion.)</p>
     </a>
     <h1 class="signature" translate="no">validate_for_deletion(project, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L653" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L654" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1778,8 +1808,8 @@ deletion.)</p>
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">validate_for_deletion</span><span class="p" data-group-id="7290632090-1">(</span><span class="n">project</span><span class="p" data-group-id="7290632090-1">)</span><span class="w">
-</span><span class="p" data-group-id="7290632090-2">%</span><span class="nc" data-group-id="7290632090-2">Ecto.Changeset</span><span class="p" data-group-id="7290632090-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7290632090-3">%</span><span class="nc" data-group-id="7290632090-3">Project</span><span class="p" data-group-id="7290632090-3">{</span><span class="p" data-group-id="7290632090-3">}</span><span class="p" data-group-id="7290632090-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">validate_for_deletion</span><span class="p" data-group-id="3867648675-1">(</span><span class="n">project</span><span class="p" data-group-id="3867648675-1">)</span><span class="w">
+</span><span class="p" data-group-id="3867648675-2">%</span><span class="nc" data-group-id="3867648675-2">Ecto.Changeset</span><span class="p" data-group-id="3867648675-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3867648675-3">%</span><span class="nc" data-group-id="3867648675-3">Project</span><span class="p" data-group-id="3867648675-3">{</span><span class="p" data-group-id="3867648675-3">}</span><span class="p" data-group-id="3867648675-2">}</span></code></pre>
   </section>
 </section>
 

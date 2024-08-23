@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-2E3AA6A1.js"></script>
+    <script src="dist/sidebar_items-60404972.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -184,10 +184,23 @@ as run_results via the websocket connection from a worker.</li></ul><h3 id="gith
 </h3>
 <p>Lightning enables connection to github via Github Apps. The following github
 permissions are needed for the github app:</p><table><thead><tr><th style="text-align: left;"><strong>Resource</strong></th><th style="text-align: left;"><strong>Access</strong></th></tr></thead><tbody><tr><td style="text-align: left;">Actions</td><td style="text-align: left;">Read and Write</td></tr><tr><td style="text-align: left;">Contents</td><td style="text-align: left;">Read and Write</td></tr><tr><td style="text-align: left;">Metadata</td><td style="text-align: left;">Read only</td></tr><tr><td style="text-align: left;">Secrets</td><td style="text-align: left;">Read and Write</td></tr><tr><td style="text-align: left;">Workflows</td><td style="text-align: left;">Read and Write</td></tr></tbody></table><p>These envrionment variables will need to be set in order to configure the github
-app:</p><ul><li><code class="inline">GITHUB_APP_ID</code> - the github app ID.</li><li><code class="inline">GITHUB_APP_NAME</code> - the github app name</li><li><code class="inline">GITHUB_APP_CLIENT_ID</code> - the github app Client ID</li><li><code class="inline">GITHUB_APP_CLIENT_SECRET</code> - the github app Client Secret</li><li><code class="inline">GITHUB_CERT</code> - the github app private key</li></ul><p>You can access these from your github app settings menu. Also needed for the
+app:</p><table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;"><strong>Description</strong></th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">GITHUB_APP_ID</code></td><td style="text-align: left;">the github app ID.</td></tr><tr><td style="text-align: left;"><code class="inline">GITHUB_APP_NAME</code></td><td style="text-align: left;">the github app name</td></tr><tr><td style="text-align: left;"><code class="inline">GITHUB_APP_CLIENT_ID</code></td><td style="text-align: left;">the github app Client ID</td></tr><tr><td style="text-align: left;"><code class="inline">GITHUB_APP_CLIENT_SECRET</code></td><td style="text-align: left;">the github app Client Secret</td></tr><tr><td style="text-align: left;"><code class="inline">GITHUB_CERT</code></td><td style="text-align: left;">the github app private key</td></tr></tbody></table><p>You can access these from your github app settings menu. Also needed for the
 configurtaion is:</p><ul><li><code class="inline">REPO_CONNECTION_SIGNING_SECRET</code> - secret used to sign access tokens. This
 access token is used to authenticate requests made from the github actions.
-You can generate this using <code class="inline">mix lightning.gen_encryption_key</code></li></ul><h3 id="ai-chat" class="section-heading">
+You can generate this using <code class="inline">mix lightning.gen_encryption_key</code></li></ul><h3 id="storage" class="section-heading">
+  <a href="#storage" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Storage</span>
+</h3>
+<p>Lightning can use a storage backend to store exports.</p><table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;">Description</th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">STORAGE_BACKEND</code></td><td style="text-align: left;">the storage backend to use. (default is <code class="inline">local</code>)</td></tr><tr><td style="text-align: left;"><code class="inline">STORAGE_PATH</code></td><td style="text-align: left;">the path to store files in. (default is <code class="inline">.</code>)</td></tr></tbody></table><h4>Supported backends:</h4><ul><li><code class="inline">local</code> - local file storage</li><li><code class="inline">gcs</code> - Google Cloud Storage</li></ul><h4>Google Cloud Storage</h4><p>For Google Cloud Storage, the following environment variables are required:</p><table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;">Description</th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">GCS_BUCKET</code></td><td style="text-align: left;">the name of the bucket to store files in</td></tr><tr><td style="text-align: left;"><code class="inline">GOOGLE_APPLICATION_CREDENTIALS_JSON</code></td><td style="text-align: left;">A base64 encoded JSON keyfile for the service account with access to the bucket.</td></tr></tbody></table><blockquote><p>ℹ️ Note: The <code class="inline">GOOGLE_APPLICATION_CREDENTIALS_JSON</code> should be base64 encoded,
+currently Workload Identity is not supported.</p></blockquote><h3 id="other-config" class="section-heading">
+  <a href="#other-config" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Other config</span>
+</h3>
+<table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;">Description</th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">ADAPTORS_PATH</code></td><td style="text-align: left;">Where you store your locally installed adaptors</td></tr><tr><td style="text-align: left;"><code class="inline">ALLOW_SIGNUP</code></td><td style="text-align: left;">Set to <code class="inline">true</code> to enable user access to the registration page. Set to <code class="inline">false</code> to disable new user registrations and block access to the registration page.&lt;br&gt;Default is <code class="inline">true</code>.</td></tr><tr><td style="text-align: left;"><code class="inline">CORS_ORIGIN</code></td><td style="text-align: left;">A list of acceptable hosts for browser/cors requests (',' separated)</td></tr><tr><td style="text-align: left;"><code class="inline">DISABLE_DB_SSL</code></td><td style="text-align: left;">In production, the use of an SSL connection to Postgres is required by default.&lt;br&gt;Setting this to <code class="inline">&quot;true&quot;</code> allows unencrypted connections to the database. This is strongly discouraged in a real production environment.</td></tr><tr><td style="text-align: left;"><code class="inline">EMAIL_ADMIN</code></td><td style="text-align: left;">This is used as the sender email address for system emails. It is also displayed in the menu as the support email.</td></tr><tr><td style="text-align: left;"><code class="inline">EMAIL_SENDER_NAME</code></td><td style="text-align: left;">This is displayed in the email client as the sender name for emails sent by the application.</td></tr><tr><td style="text-align: left;"><code class="inline">IS_RESETTABLE_DEMO</code></td><td style="text-align: left;">If set to <code class="inline">yes</code>, it allows this instance to be reset to the initial &quot;Lightning Demo&quot; state. Note that this will destroy <em>most</em> of what you have in your database!</td></tr><tr><td style="text-align: left;"><code class="inline">K8S_HEADLESS_SERVICE</code></td><td style="text-align: left;">This environment variable is automatically set if you're running on GKE and it is used to establish an Erlang node cluster. Note that if you're <em>not</em> using Kubernetes, the &quot;gossip&quot; strategy is used to establish clusters.</td></tr><tr><td style="text-align: left;"><code class="inline">LISTEN_ADDRESS</code></td><td style="text-align: left;">The address the web server should bind to. Defaults to <code class="inline">127.0.0.1</code> to block access from other machines.</td></tr><tr><td style="text-align: left;"><code class="inline">LOG_LEVEL</code></td><td style="text-align: left;">How noisy you want the logs to be (e.g., <code class="inline">debug</code>, <code class="inline">info</code>)</td></tr><tr><td style="text-align: left;"><code class="inline">MIX_ENV</code></td><td style="text-align: left;">Your mix env, likely <code class="inline">prod</code> for deployment</td></tr><tr><td style="text-align: left;"><code class="inline">NODE_ENV</code></td><td style="text-align: left;">Node env, likely <code class="inline">production</code> for deployment</td></tr><tr><td style="text-align: left;"><code class="inline">ORIGINS</code></td><td style="text-align: left;">The allowed origins for web traffic to the backend</td></tr><tr><td style="text-align: left;"><code class="inline">PORT</code></td><td style="text-align: left;">The port your Phoenix app runs on</td></tr><tr><td style="text-align: left;"><code class="inline">PRIMARY_ENCRYPTION_KEY</code></td><td style="text-align: left;">A base64 encoded 32 character long string.&lt;br&gt;See <a href="#encryption">Encryption</a>.</td></tr><tr><td style="text-align: left;"><code class="inline">QUEUE_RESULT_RETENTION_PERIOD_SECONDS</code></td><td style="text-align: left;">The number of seconds to keep completed (successful) <code class="inline">ObanJobs</code> in the queue (not to be confused with runs and/or history)</td></tr><tr><td style="text-align: left;"><code class="inline">SCHEMAS_PATH</code></td><td style="text-align: left;">Path to the credential schemas that provide forms for different adaptors</td></tr><tr><td style="text-align: left;"><code class="inline">SECRET_KEY_BASE</code></td><td style="text-align: left;">A secret key used as a base to generate secrets for encrypting and signing data.</td></tr><tr><td style="text-align: left;"><code class="inline">SENTRY_DSN</code></td><td style="text-align: left;">If using Sentry for error monitoring, your DSN</td></tr><tr><td style="text-align: left;"><code class="inline">URL_HOST</code></td><td style="text-align: left;">The host used for writing URLs (e.g., <code class="inline">demo.openfn.org</code>)</td></tr><tr><td style="text-align: left;"><code class="inline">URL_PORT</code></td><td style="text-align: left;">The port, usually <code class="inline">443</code> for production</td></tr><tr><td style="text-align: left;"><code class="inline">URL_SCHEME</code></td><td style="text-align: left;">The scheme for writing URLs (e.g., <code class="inline">https</code>)</td></tr><tr><td style="text-align: left;"><code class="inline">USAGE_TRACKER_HOST</code></td><td style="text-align: left;">The host that receives usage tracking submissions&lt;br&gt;(defaults to <a href="https://impact.openfn.org">https://impact.openfn.org</a>)</td></tr><tr><td style="text-align: left;"><code class="inline">USAGE_TRACKING_DAILY_BATCH_SIZE</code></td><td style="text-align: left;">The number of days that will be reported on with each run of <code class="inline">UsageTracking.DayWorker</code>. This will only have a noticeable effect in cases where there is a backlog or where reports are being generated retroactively (defaults to 10).</td></tr><tr><td style="text-align: left;"><code class="inline">USAGE_TRACKING_ENABLED</code></td><td style="text-align: left;">Enables the submission of anonymized usage data to OpenFn (defaults to <code class="inline">true</code>)</td></tr><tr><td style="text-align: left;"><code class="inline">USAGE_TRACKING_RESUBMISSION_BATCH_SIZE</code></td><td style="text-align: left;">The number of failed reports that will be submitted on each resubmission run (defaults to 10)</td></tr><tr><td style="text-align: left;"><code class="inline">USAGE_TRACKING_UUIDS</code></td><td style="text-align: left;">Indicates whether submissions should include cleartext UUIDs or not. Options are <code class="inline">cleartext</code> or <code class="inline">hashed_only</code>, with the default being <code class="inline">hashed_only</code>.</td></tr></tbody></table><h3 id="ai-chat" class="section-heading">
   <a href="#ai-chat" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -201,18 +214,18 @@ the Apollo AI service.</p><p>The following environment variables are required:</
   <span class="text">Kafka Triggers</span>
 </h3>
 <p>🧪 <strong>Experimental</strong></p><p>Lightning workflows can be configured with a trigger that will consume messages
-from a Kafka Cluster. By default this is disabled and you will not see the 
+from a Kafka Cluster. By default this is disabled and you will not see the
 option to create a Kafka trigger in the UI, nor will the Kafka consumer groups
-be running. </p><p>To enable this feature set the <code class="inline">KAFKA_TRIGGERS_ENABLED</code> environment variable 
-to <code class="inline">yes</code> and restart Lightning. Please note that, if you enable this feature
-and then create some Kafka triggers and then disable the feature, you will not
-be able to edit any triggers created before the feature was disabled.</p><h4>Performance Tuning</h4><p>The number of Kafka consumers in the consumer group can be modified by setting
+be running.</p><p>To enable this feature set the <code class="inline">KAFKA_TRIGGERS_ENABLED</code> environment variable to
+<code class="inline">yes</code> and restart Lightning. Please note that, if you enable this feature and
+then create some Kafka triggers and then disable the feature, you will not be
+able to edit any triggers created before the feature was disabled.</p><h4>Performance Tuning</h4><p>The number of Kafka consumers in the consumer group can be modified by setting
 the <code class="inline">KAFKA_NUMBER_OF_CONSUMERS</code> environment variable. The default value is
-currently 1. The optimal setting is one consumer per topic partition. NOTE:
-This setting will move to KafkaConfiguration as it will be trigger-specific.</p><p>The number of messages that the Kafka consumer will forward is rate-limited by
+currently 1. The optimal setting is one consumer per topic partition. NOTE: This
+setting will move to KafkaConfiguration as it will be trigger-specific.</p><p>The number of messages that the Kafka consumer will forward is rate-limited by
 the <code class="inline">KAFKA_NUMBER_OF_MESSAGES_PER_SECOND</code> environment variable. This can be set
 to a value of less than 1 (minimum 0.1) and will converted (and rounded-down) to
-an integer value of messages over a 10-second interval (e.g. 0.15 becomes 1 
+an integer value of messages over a 10-second interval (e.g. 0.15 becomes 1
 message every 10 seconds). The default value is 1.</p><p>Processing concurrency within the Kafka Broadway pipeline is controlled by the
 <code class="inline">KAFKA_NUMBER_OF_PROCESSORS</code> environment variable. Modifying this, modifies the
 number of processors that are downstream of the Kafka consumer, so an increase
@@ -221,39 +234,7 @@ by <code class="inline">KAFKA_NUMBER_OF_MESSAGES_PER_SECOND</code>). The default
 message received. This to protect against the ingestion of duplicate messages
 from the cluster. These records are periodically cleaned out. The duration for
 which they are retained is controlled by
-<code class="inline">KAFKA_DUPLICATE_TRACKING_RETENTION_SECONDS</code>. The default value is 3600.</p><h3 id="other-config" class="section-heading">
-  <a href="#other-config" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Other config</span>
-</h3>
-<ul><li><code class="inline">ADAPTORS_PATH</code> - where you store your locally installed adaptors</li><li><code class="inline">DISABLE_DB_SSL</code> - in production the use of an SSL conntection to Postgres is
-required by default, setting this to <code class="inline">&quot;true&quot;</code> allows unencrypted connections
-to the database. This is strongly discouraged in real production environment.</li><li><code class="inline">K8S_HEADLESS_SERVICE</code> - this environment variable is automatically set if
-you're running on GKE and it is used to establish an Erlang node cluster. Note
-that if you're <em>not</em> using Kubernetes, the &quot;gossip&quot; strategy is used for
-establish clusters.</li><li><code class="inline">LISTEN_ADDRESS</code>&quot; - the address the web server should bind to, defaults to
-<code class="inline">127.0.0.1</code> to block access from other machines.</li><li><code class="inline">LOG_LEVEL</code> - how noisy you want the logs to be (e.g. <code class="inline">debug</code>, <code class="inline">info</code>)</li><li><code class="inline">MIX_ENV</code> - your mix env, likely <code class="inline">prod</code> for deployment</li><li><code class="inline">NODE_ENV</code> - node env, likely <code class="inline">production</code> for deployment</li><li><code class="inline">ORIGINS</code> - the allowed origins for web traffic to the backend</li><li><code class="inline">PORT</code> - the port your Phoenix app runs on</li><li><code class="inline">PRIMARY_ENCRYPTION_KEY</code> - a base64 encoded 32 character long string. See
-<a href="#encryption">Encryption</a>.</li><li><code class="inline">SCHEMAS_PATH</code> - path to the credential schemas that provide forms for
-different adaptors</li><li><code class="inline">SECRET_KEY_BASE</code> - a secret key used as a base to generate secrets for
-encrypting and signing data.</li><li><code class="inline">SENTRY_DSN</code> - if using Sentry for error monitoring, your DSN</li><li><code class="inline">CORS_ORIGIN</code> - a list of acceptable hosts for browser/cors requests (','
-separated)</li><li><code class="inline">URL_HOST</code> - the host, used for writing urls (e.g., <code class="inline">demo.openfn.org</code>)</li><li><code class="inline">URL_PORT</code> - the port, usually <code class="inline">443</code> for production</li><li><code class="inline">URL_SCHEME</code> - the scheme for writing urls, (e.g., <code class="inline">https</code>)</li><li><code class="inline">USAGE_TRACKER_HOST</code> - the host that receives usage tracking submissions
-(defaults to <a href="https://impact.openfn.org">https://impact.openfn.org</a>).</li><li><code class="inline">USAGE_TRACKING_DAILY_BATCH_SIZE</code> - the number of days that will be reported
-on with each run of <code class="inline">UsageTracking.DayWorker</code>. This will only have a
-noticeable effect in cases where there is a backlog, or where reports are
-being generated retroactively (defaults to 10).</li><li><code class="inline">USAGE_TRACKING_ENABLED</code> - enables the submission of anonymised usage data to
-OpenFn (defaults to <code class="inline">true</code>).</li><li><code class="inline">USAGE_TRACKING_RESUBMISSION_BATCH_SIZE</code> - the number of failed reports that
-will be submitted on each resubmission run (defaults to 10).</li><li><code class="inline">USAGE_TRACKING_UUIDS</code> - indicates whether submissions should include
-cleartext uuids or not. Options are <code class="inline">cleartext</code> or <code class="inline">hashed_only</code>, with the
-default being <code class="inline">hashed_only</code>.</li><li><code class="inline">QUEUE_RESULT_RETENTION_PERIOD_SECONDS</code> - the number of seconds to keep
-completed (successful) <code class="inline">ObanJobs</code> in the queue (not to be confused with runs
-and/or history)</li><li><code class="inline">IS_RESETTABLE_DEMO</code> - If set to <code class="inline">yes</code> it allows this instance to be reset to
-the initial &quot;Lightning Demo&quot; state. Note that this will destroy <em>most</em> of what
-you have in your database!</li><li><code class="inline">ALLOW_SIGNUP</code>: Set to <code class="inline">true</code> to enable user access to the registration page.
-Set to <code class="inline">false</code> to disable new user registrations and block access to the
-registration page. Default is <code class="inline">true</code>.</li><li><code class="inline">EMAIL_ADMIN</code> - This is used as the sender email address for system emails. It
-is also displayed in the menu as the support email.</li><li><code class="inline">EMAIL_SENDER_NAME</code> - This is displayed in the email client as the sender name
-for emails sent by the application.</li></ul><h3 id="google-oauth2" class="section-heading">
+<code class="inline">KAFKA_DUPLICATE_TRACKING_RETENTION_SECONDS</code>. The default value is 3600.</p><h3 id="google-oauth2" class="section-heading">
   <a href="#google-oauth2" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -262,7 +243,7 @@ for emails sent by the application.</li></ul><h3 id="google-oauth2" class="secti
 <p>Using your Google Cloud account, provision a new OAuth 2.0 Client with the 'Web
 application' type.</p><p>Set the callback url to: <code class="inline">https://&lt;ENDPOINT DOMAIN&gt;/authenticate/callback</code>.
 Replacing <code class="inline">ENDPOINT DOMAIN</code> with the host name of your instance.</p><p>Once the client has been created, get/download the OAuth client JSON and set the
-following environment variables:</p><ul><li><code class="inline">GOOGLE_CLIENT_ID</code> - Which is <code class="inline">client_id</code> from the client details.</li><li><code class="inline">GOOGLE_CLIENT_SECRET</code> - <code class="inline">client_secret</code> from the client details.</li></ul><h3 id="salesforce-oauth2" class="section-heading">
+following environment variables:</p><table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;">Description</th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">GOOGLE_CLIENT_ID</code></td><td style="text-align: left;">Which is <code class="inline">client_id</code> from the client details.</td></tr><tr><td style="text-align: left;"><code class="inline">GOOGLE_CLIENT_SECRET</code></td><td style="text-align: left;"><code class="inline">client_secret</code> from the client details.</td></tr></tbody></table><h3 id="salesforce-oauth2" class="section-heading">
   <a href="#salesforce-oauth2" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -270,9 +251,7 @@ following environment variables:</p><ul><li><code class="inline">GOOGLE_CLIENT_I
 </h3>
 <p>Using your Salesforce developer account, create a new Oauth 2.0 connected
 application.</p><p>Set the callback url to: <code class="inline">https://&lt;ENDPOINT DOMAIN&gt;/authenticate/callback</code>.
-Replacing <code class="inline">ENDPOINT DOMAIN</code> with the host name of your instance.</p><p>Grant permissions as desired.</p><p>Once the client has been created set the following environment variables:</p><ul><li><code class="inline">SALESFORCE_CLIENT_ID</code> - Which is <code class="inline">Consumer Key</code> from the &quot;Manage Consumer
-Details&quot; screen.</li><li><code class="inline">SALESFORCE_CLIENT_SECRET</code> - Which is <code class="inline">Consumer Secret</code> from the &quot;Manage
-Consumer Details&quot; screen.</li></ul>
+Replacing <code class="inline">ENDPOINT DOMAIN</code> with the host name of your instance.</p><p>Grant permissions as desired.</p><p>Once the client has been created set the following environment variables:</p><table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;">Description</th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">SALESFORCE_CLIENT_ID</code></td><td style="text-align: left;">Which is <code class="inline">Consumer Key</code> from the &quot;Manage Consumer Details&quot; screen.</td></tr><tr><td style="text-align: left;"><code class="inline">SALESFORCE_CLIENT_SECRET</code></td><td style="text-align: left;">Which is <code class="inline">Consumer Secret</code> from the &quot;Manage Consumer Details&quot; screen.</td></tr></tbody></table>
 <div class="bottom-actions">
   <div class="bottom-actions-item">
 
