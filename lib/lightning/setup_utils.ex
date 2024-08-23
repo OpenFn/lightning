@@ -743,6 +743,7 @@ defmodule Lightning.SetupUtils do
       Lightning.Workflows.Workflow,
       Lightning.Projects.ProjectUser,
       Lightning.Invocation.Dataclip,
+      Lightning.Projects.File,
       Lightning.Projects.Project
     ])
 
