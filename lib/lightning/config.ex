@@ -111,9 +111,14 @@ defmodule Lightning.Config do
     end
 
     @impl true
-    def storage_backend do
+    def storage do
       Application.get_env(:lightning, Lightning.Storage, [])
-      |> Keyword.get(:backend)
+    end
+
+    @impl true
+    def storage(key) do
+      storage()
+      |> Keyword.get(key)
     end
 
     @impl true
@@ -188,7 +193,8 @@ defmodule Lightning.Config do
   @callback repo_connection_token_signer() :: Joken.Signer.t()
   @callback reset_password_token_validity_in_days() :: integer()
   @callback run_token_signer() :: Joken.Signer.t()
-  @callback storage_backend() :: atom()
+  @callback storage() :: term()
+  @callback storage(key :: atom()) :: term()
   @callback usage_tracking() :: Keyword.t()
   @callback usage_tracking_cron_opts() :: [Oban.Plugins.Cron.cron_input()]
   @callback worker_secret() :: binary() | nil
@@ -280,8 +286,12 @@ defmodule Lightning.Config do
     impl().reset_password_token_validity_in_days()
   end
 
-  def storage_backend do
-    impl().storage_backend()
+  def storage do
+    impl().storage()
+  end
+
+  def storage(key) do
+    impl().storage(key)
   end
 
   def usage_tracking_cron_opts do

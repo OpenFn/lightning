@@ -490,7 +490,10 @@ defmodule Lightning.Config.Bootstrap do
   end
 
   defp setup_storage do
-    env!("STORAGE_BACKEND", :string, nil)
+    config :lightning, Lightning.Storage,
+      path: env!("STORAGE_PATH", :string, ".")
+
+    env!("STORAGE_BACKEND", :string, "local")
     |> case do
       "gcs" ->
         config :lightning, Lightning.Storage,
@@ -501,10 +504,8 @@ defmodule Lightning.Config.Bootstrap do
 
         google_required()
 
-      v when v in ["local", nil] ->
-        config :lightning,
-               Lightning.Storage,
-               Application.get_env(:lightning, Lightning.Storage)
+      "local" ->
+        config :lightning, Lightning.Storage, backend: Lightning.Storage.Local
 
       unknown ->
         raise """

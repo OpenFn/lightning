@@ -15,7 +15,7 @@ defmodule Lightning.StorageTest do
 
   test "should call store on the current backend" do
     Lightning.MockConfig
-    |> expect(:storage_backend, fn -> MockStorageBackend end)
+    |> expect(:storage, fn :backend -> MockStorageBackend end)
 
     MockStorageBackend |> expect(:store, fn _, _ -> {:ok, "path"} end)
 
@@ -24,7 +24,7 @@ defmodule Lightning.StorageTest do
 
   test "should call get_url on the current backend" do
     Lightning.MockConfig
-    |> expect(:storage_backend, fn -> MockStorageBackend end)
+    |> expect(:storage, fn :backend -> MockStorageBackend end)
 
     MockStorageBackend |> expect(:get_url, fn _ -> {:ok, "path"} end)
 

@@ -27,6 +27,8 @@ defmodule Lightning.Storage.GCS do
 
   @impl true
   def store(source_path, destination_path) do
+    {:ok, destination_path} = prefix_storage_path(destination_path)
+
     object = %Object{name: destination_path, bucket: bucket!()}
 
     Objects.storage_objects_insert_simple(
@@ -45,6 +47,8 @@ defmodule Lightning.Storage.GCS do
       |> Map.take(["client_email", "private_key"])
       |> GcsSignedUrl.Client.load()
 
+    {:ok, path} = prefix_storage_path(path)
+
     {:ok,
      GcsSignedUrl.generate_v4(
        client,
@@ -60,7 +64,13 @@ defmodule Lightning.Storage.GCS do
   end
 
   defp conn do
-    {:ok, token} = Goth.fetch(Lightning.Goth)
+    {:ok, token} = Goth.fetch(Lightning.Google)
     GoogleApi.Storage.V1.Connection.new(token.token)
+  end
+
+  defp prefix_storage_path(destination_path) do
+    Path.safe_relative(
+      Path.join(Lightning.Config.storage(:path), destination_path)
+    )
   end
 end

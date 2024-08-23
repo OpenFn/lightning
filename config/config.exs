@@ -144,12 +144,6 @@ config :lightning, :default_retention_period, nil
 
 config :lightning, Lightning.Runtime.RuntimeManager, start: false
 
-config :lightning, :goth_required, false
-
-config :lightning, Lightning.Storage,
-  backend: Lightning.Storage.Local,
-  storage_dir: "."
-
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

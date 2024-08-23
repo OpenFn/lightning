@@ -86,9 +86,19 @@ defmodule Lightning.Config.BootstrapTest do
       storage = get_env(:lightning, Lightning.Storage)
 
       assert {:backend, Lightning.Storage.Local} in storage
-      assert {:storage_dir, "."} in storage
+      assert {:path, "."} in storage
 
-      refute get_env(:lightning, :goth_required)
+      refute get_env(:lightning, :google_required)
+    end
+
+    @tag env: %{"STORAGE_PATH" => "/tmp"}
+    test "can set the storage path" do
+      Bootstrap.configure()
+
+      storage = get_env(:lightning, Lightning.Storage)
+
+      assert {:backend, Lightning.Storage.Local} in storage
+      assert {:path, "/tmp"} in storage
     end
 
     @tag env: %{"STORAGE_BACKEND" => "gcs"}

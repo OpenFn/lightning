@@ -18,6 +18,6 @@ defmodule Lightning.Storage do
   end
 
   defp adapter do
-    Lightning.Config.storage_backend()
+    Lightning.Config.storage(:backend)
   end
 end
