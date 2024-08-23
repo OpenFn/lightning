@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Users are now able to export work orders from the History page.
+  [#1698](https://github.com/OpenFn/lightning/issues/1698)
+
 ### Changed
 
 ### Fixed
