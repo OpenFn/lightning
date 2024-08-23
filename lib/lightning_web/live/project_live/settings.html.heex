@@ -787,7 +787,7 @@
               actions_disabled={is_map(assigns[:github_banner])}
               actions_disabled_tooltip={
                 is_map(assigns[:github_banner]) &&
-                  assigns[:github_banner][:text]
+                  Map.get(assigns[:github_banner], :text)
               }
             />
           <% else %>
@@ -809,7 +809,7 @@
                 actions_disabled={is_map(assigns[:github_banner])}
                 actions_disabled_tooltip={
                   is_map(assigns[:github_banner]) &&
-                    assigns[:github_banner][:text]
+                    Map.get(assigns[:github_banner], :text)
                 }
               />
               <div
