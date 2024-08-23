@@ -22,6 +22,8 @@ and this project adheres to
 
 ### Changed
 
+- Allow `Setup_utils.setup_user` to be used for the initial superuser creation.
+
 ### Fixed
 
 - Fix issue with the persisting of a Kafka message with headers.
