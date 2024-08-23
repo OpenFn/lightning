@@ -106,7 +106,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
       assert_email_sent(
         subject: "Confirm your OpenFn account",
-        to: "real@email.com",
+        to: Swoosh.Email.Recipient.format(%User{email: "real@email.com"}),
         text_body:
           "Hi ,\n\nWelcome to OpenFn. Please confirm your account by visiting the URL below:\n\n#{url}\n\nIf you didn't create an account with us, please ignore this.\n\nOpenFn\n"
       )
@@ -115,12 +115,16 @@ defmodule Lightning.Accounts.UserNotifierTest do
     test "deliver_confirmation_instructions/3" do
       token = "sometoken"
 
+      enroller = %User{first_name: "Sizwe", email: "super@email.com"}
+
+      user = %User{
+        first_name: "Joe",
+        email: "real@email.com"
+      }
+
       UserNotifier.deliver_confirmation_instructions(
-        %User{first_name: "Sizwe", email: "super@email.com"},
-        to_user = %User{
-          first_name: "Joe",
-          email: "real@email.com"
-        },
+        enroller,
+        user,
         token
       )
 
@@ -133,7 +137,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
       assert_email_sent(
         subject: "Confirm your OpenFn account",
-        to: Swoosh.Email.Recipient.format(to_user),
+        to: Swoosh.Email.Recipient.format(user),
         text_body: """
         Hi Joe,
 
@@ -149,29 +153,24 @@ defmodule Lightning.Accounts.UserNotifierTest do
     end
 
     test "send_deletion_notification_email/1" do
-      UserNotifier.send_deletion_notification_email(
-        to_user = %User{
-          email: "real@email.com"
-        }
-      )
+      user = build(:user)
+      UserNotifier.send_deletion_notification_email(user)
 
       assert_email_sent(
         subject: "Your account has been scheduled for deletion",
-        to: Swoosh.Email.Recipient.format(to_user)
+        to: Swoosh.Email.Recipient.format(user)
       )
     end
 
     test "send_credential_deletion_notification_email/2" do
       UserNotifier.send_credential_deletion_notification_email(
-        to_user = %User{
-          email: "real@email.com"
-        },
+        user = build(:user),
         %Credential{name: "Test"}
       )
 
       assert_email_sent(
         subject: "Your \"Test\" credential will be deleted",
-        to: Swoosh.Email.Recipient.format(to_user)
+        to: Swoosh.Email.Recipient.format(user)
       )
     end
 

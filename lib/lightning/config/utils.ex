@@ -6,7 +6,7 @@ defmodule Lightning.Config.Utils do
   @doc """
   Retrieve a value nested in the application environment.
   """
-  @spec get_env([atom()], any()) :: any()
+  @spec get_env([atom()] | atom(), any()) :: any()
   def get_env(_keys, default \\ nil)
 
   def get_env([app, key, item], default) do

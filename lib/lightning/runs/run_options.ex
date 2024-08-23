@@ -20,4 +20,10 @@ defmodule Lightning.Runs.RunOptions do
     field :save_dataclips, :boolean, default: true
     field :run_timeout_ms, :integer, default: 60_000
   end
+
+  defimpl Jason.Encoder, for: __MODULE__ do
+    def encode(value, opts) do
+      Jason.Encode.map(Map.take(value, [:save_dataclips, :run_timeout_ms]), opts)
+    end
+  end
 end
