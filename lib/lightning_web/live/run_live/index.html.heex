@@ -13,6 +13,12 @@
       <:title><%= @page_title %></:title>
     </LayoutComponents.header>
   </:header>
+  <.live_component
+    :if={@show_export_modal}
+    module={LightningWeb.RunLive.ExportConfirmationModal}
+    id="export-confirmation-modal"
+    count_work_orders={@page.total_entries}
+  />
   <LayoutComponents.centered>
     <div>
       <%!-- Search Bar --%>
@@ -721,7 +727,26 @@
                 async_page={@async_page}
                 url={@pagination_path}
                 help_text="Use whole words or the start of words for better results; partial string matching often won't find substrings in the middle or at the end of a word."
-              />
+              >
+                <:action>
+                  <button
+                    id="export-history-button"
+                    type="button"
+                    phx-click="show-export-modal"
+                    class="icon-button"
+                    phx-hook="Tooltip"
+                    aria-label={
+                      if @page.total_entries > 0,
+                        do:
+                          "Export all #{@page.total_entries} results matching your query",
+                        else: ""
+                    }
+                    disabled={@page.total_entries <= 0}
+                  >
+                    <.icon name="hero-cloud-arrow-down" class="w-5 h-5" />
+                  </button>
+                </:action>
+              </LightningWeb.Pagination.pagination_bar>
             </div>
           </div>
         </div>

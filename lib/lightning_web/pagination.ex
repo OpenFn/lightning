@@ -94,33 +94,42 @@ defmodule LightningWeb.Pagination do
   attr :url, :any, required: true
   attr :help_text, :string, default: nil
 
+  slot :action, optional: true
+
   def pagination_bar(assigns) do
     ~H"""
     <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-secondary-200 sm:px-6">
-      <div>
-        <%= if @async_page == Phoenix.LiveView.AsyncResult.loading() do %>
-          <p class="text-sm text-secondary-700"></p>
-        <% else %>
-          <%= if @page.total_entries == 0 do %>
-            <p class="text-sm text-secondary-700">
-              No results found
-              <Common.tooltip id="no-results-tooltip" title={@help_text} />
-            </p>
+      <div class="flex items-center space-x-4">
+        <div>
+          <%= if @async_page == Phoenix.LiveView.AsyncResult.loading() do %>
+            <p class="text-sm text-secondary-700"></p>
           <% else %>
-            <p class="text-sm text-secondary-700">
-              Showing
-              <span class="font-medium">
-                <%= @page.page_number * @page.page_size - @page.page_size + 1 %>
-              </span>
-              to
-              <span class="font-medium">
-                <%= min(@page.page_number * @page.page_size, @page.total_entries) %>
-              </span>
-              of <span class="font-medium"><%= @page.total_entries %></span>
-              total results
-            </p>
+            <%= if @page.total_entries == 0 do %>
+              <p class="text-sm text-secondary-700">
+                No results found
+                <Common.tooltip id="no-results-tooltip" title={@help_text} />
+              </p>
+            <% else %>
+              <p class="text-sm text-secondary-700">
+                Showing
+                <span class="font-medium">
+                  <%= @page.page_number * @page.page_size - @page.page_size + 1 %>
+                </span>
+                to
+                <span class="font-medium">
+                  <%= min(@page.page_number * @page.page_size, @page.total_entries) %>
+                </span>
+                of <span class="font-medium"><%= @page.total_entries %></span>
+                total results
+              </p>
+            <% end %>
           <% end %>
-        <% end %>
+        </div>
+        <div class="flex items-center">
+          <%= for action <- @action do %>
+            <%= render_slot(action) %>
+          <% end %>
+        </div>
       </div>
       <nav
         class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"

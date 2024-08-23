@@ -17,12 +17,17 @@ and this project adheres to
 
 ### Added
 
+- Users are now able to export work orders from the History page.
+  [#1698](https://github.com/OpenFn/lightning/issues/1698)
+
 ### Changed
 
 ### Fixed
 
 - Fix issue with the persisting of a Kafka message with headers.
   [#2402](https://github.com/OpenFn/lightning/issues/2402)
+- Protect against race conditions when updating partition timestamps for a
+  Kafka trigger. [#2378](https://github.com/OpenFn/lightning/issues/2378)
 
 ## [v2.7.19] - 2024-08-19
 

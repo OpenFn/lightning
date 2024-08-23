@@ -75,11 +75,13 @@ permissions are needed for the github app:
 These envrionment variables will need to be set in order to configure the github
 app:
 
-- `GITHUB_APP_ID` - the github app ID.
-- `GITHUB_APP_NAME` - the github app name
-- `GITHUB_APP_CLIENT_ID` - the github app Client ID
-- `GITHUB_APP_CLIENT_SECRET` - the github app Client Secret
-- `GITHUB_CERT` - the github app private key
+| **Variable**               | **Description**              |
+| -------------------------- | ---------------------------- |
+| `GITHUB_APP_ID`            | the github app ID.           |
+| `GITHUB_APP_NAME`          | the github app name          |
+| `GITHUB_APP_CLIENT_ID`     | the github app Client ID     |
+| `GITHUB_APP_CLIENT_SECRET` | the github app Client Secret |
+| `GITHUB_CERT`              | the github app private key   |
 
 You can access these from your github app settings menu. Also needed for the
 configurtaion is:
@@ -87,6 +89,64 @@ configurtaion is:
 - `REPO_CONNECTION_SIGNING_SECRET` - secret used to sign access tokens. This
   access token is used to authenticate requests made from the github actions.
   You can generate this using `mix lightning.gen_encryption_key`
+
+### Storage
+
+Lightning can use a storage backend to store exports.
+
+| **Variable**      | Description                                      |
+| ----------------- | ------------------------------------------------ |
+| `STORAGE_BACKEND` | the storage backend to use. (default is `local`) |
+| `STORAGE_PATH`    | the path to store files in. (default is `.`)     |
+
+#### Supported backends:
+
+- `local` - local file storage
+- `gcs` - Google Cloud Storage
+
+#### Google Cloud Storage
+
+For Google Cloud Storage, the following environment variables are required:
+
+| **Variable**                          | Description                                                                      |
+| ------------------------------------- | -------------------------------------------------------------------------------- |
+| `GCS_BUCKET`                          | the name of the bucket to store files in                                         |
+| `GOOGLE_APPLICATION_CREDENTIALS_JSON` | A base64 encoded JSON keyfile for the service account with access to the bucket. |
+
+> ℹ️ Note: The `GOOGLE_APPLICATION_CREDENTIALS_JSON` should be base64 encoded,
+> currently Workload Identity is not supported.
+
+### Other config
+
+| **Variable**                             | Description                                                                                                                                                                                                                            |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ADAPTORS_PATH`                          | Where you store your locally installed adaptors                                                                                                                                                                                        |
+| `ALLOW_SIGNUP`                           | Set to `true` to enable user access to the registration page. Set to `false` to disable new user registrations and block access to the registration page.<br>Default is `true`.                                                        |
+| `CORS_ORIGIN`                            | A list of acceptable hosts for browser/cors requests (',' separated)                                                                                                                                                                   |
+| `DISABLE_DB_SSL`                         | In production, the use of an SSL connection to Postgres is required by default.<br>Setting this to `"true"` allows unencrypted connections to the database. This is strongly discouraged in a real production environment.             |
+| `EMAIL_ADMIN`                            | This is used as the sender email address for system emails. It is also displayed in the menu as the support email.                                                                                                                     |
+| `EMAIL_SENDER_NAME`                      | This is displayed in the email client as the sender name for emails sent by the application.                                                                                                                                           |
+| `IS_RESETTABLE_DEMO`                     | If set to `yes`, it allows this instance to be reset to the initial "Lightning Demo" state. Note that this will destroy _most_ of what you have in your database!                                                                      |
+| `K8S_HEADLESS_SERVICE`                   | This environment variable is automatically set if you're running on GKE and it is used to establish an Erlang node cluster. Note that if you're _not_ using Kubernetes, the "gossip" strategy is used to establish clusters.           |
+| `LISTEN_ADDRESS`                         | The address the web server should bind to. Defaults to `127.0.0.1` to block access from other machines.                                                                                                                                |
+| `LOG_LEVEL`                              | How noisy you want the logs to be (e.g., `debug`, `info`)                                                                                                                                                                              |
+| `MIX_ENV`                                | Your mix env, likely `prod` for deployment                                                                                                                                                                                             |
+| `NODE_ENV`                               | Node env, likely `production` for deployment                                                                                                                                                                                           |
+| `ORIGINS`                                | The allowed origins for web traffic to the backend                                                                                                                                                                                     |
+| `PORT`                                   | The port your Phoenix app runs on                                                                                                                                                                                                      |
+| `PRIMARY_ENCRYPTION_KEY`                 | A base64 encoded 32 character long string.<br>See [Encryption](#encryption).                                                                                                                                                           |
+| `QUEUE_RESULT_RETENTION_PERIOD_SECONDS`  | The number of seconds to keep completed (successful) `ObanJobs` in the queue (not to be confused with runs and/or history)                                                                                                             |
+| `SCHEMAS_PATH`                           | Path to the credential schemas that provide forms for different adaptors                                                                                                                                                               |
+| `SECRET_KEY_BASE`                        | A secret key used as a base to generate secrets for encrypting and signing data.                                                                                                                                                       |
+| `SENTRY_DSN`                             | If using Sentry for error monitoring, your DSN                                                                                                                                                                                         |
+| `URL_HOST`                               | The host used for writing URLs (e.g., `demo.openfn.org`)                                                                                                                                                                               |
+| `URL_PORT`                               | The port, usually `443` for production                                                                                                                                                                                                 |
+| `URL_SCHEME`                             | The scheme for writing URLs (e.g., `https`)                                                                                                                                                                                            |
+| `USAGE_TRACKER_HOST`                     | The host that receives usage tracking submissions<br>(defaults to https://impact.openfn.org)                                                                                                                                           |
+| `USAGE_TRACKING_DAILY_BATCH_SIZE`        | The number of days that will be reported on with each run of `UsageTracking.DayWorker`. This will only have a noticeable effect in cases where there is a backlog or where reports are being generated retroactively (defaults to 10). |
+| `USAGE_TRACKING_ENABLED`                 | Enables the submission of anonymized usage data to OpenFn (defaults to `true`)                                                                                                                                                         |
+| `USAGE_TRACKING_RESUBMISSION_BATCH_SIZE` | The number of failed reports that will be submitted on each resubmission run (defaults to 10)                                                                                                                                          |
+| `USAGE_TRACKING_UUIDS`                   | Indicates whether submissions should include cleartext UUIDs or not. Options are `cleartext` or `hashed_only`, with the default being `hashed_only`.                                                                                   |
 
 ### AI Chat
 
@@ -107,26 +167,26 @@ The following environment variables are required:
 🧪 **Experimental**
 
 Lightning workflows can be configured with a trigger that will consume messages
-from a Kafka Cluster. By default this is disabled and you will not see the 
+from a Kafka Cluster. By default this is disabled and you will not see the
 option to create a Kafka trigger in the UI, nor will the Kafka consumer groups
-be running. 
+be running.
 
-To enable this feature set the `KAFKA_TRIGGERS_ENABLED` environment variable 
-to `yes` and restart Lightning. Please note that, if you enable this feature
-and then create some Kafka triggers and then disable the feature, you will not
-be able to edit any triggers created before the feature was disabled.
+To enable this feature set the `KAFKA_TRIGGERS_ENABLED` environment variable to
+`yes` and restart Lightning. Please note that, if you enable this feature and
+then create some Kafka triggers and then disable the feature, you will not be
+able to edit any triggers created before the feature was disabled.
 
 #### Performance Tuning
 
 The number of Kafka consumers in the consumer group can be modified by setting
 the `KAFKA_NUMBER_OF_CONSUMERS` environment variable. The default value is
-currently 1. The optimal setting is one consumer per topic partition. NOTE:
-This setting will move to KafkaConfiguration as it will be trigger-specific.
+currently 1. The optimal setting is one consumer per topic partition. NOTE: This
+setting will move to KafkaConfiguration as it will be trigger-specific.
 
 The number of messages that the Kafka consumer will forward is rate-limited by
 the `KAFKA_NUMBER_OF_MESSAGES_PER_SECOND` environment variable. This can be set
 to a value of less than 1 (minimum 0.1) and will converted (and rounded-down) to
-an integer value of messages over a 10-second interval (e.g. 0.15 becomes 1 
+an integer value of messages over a 10-second interval (e.g. 0.15 becomes 1
 message every 10 seconds). The default value is 1.
 
 Processing concurrency within the Kafka Broadway pipeline is controlled by the
@@ -143,62 +203,6 @@ from the cluster. These records are periodically cleaned out. The duration for
 which they are retained is controlled by
 `KAFKA_DUPLICATE_TRACKING_RETENTION_SECONDS`. The default value is 3600.
 
-### Other config
-
-- `ADAPTORS_PATH` - where you store your locally installed adaptors
-- `DISABLE_DB_SSL` - in production the use of an SSL conntection to Postgres is
-  required by default, setting this to `"true"` allows unencrypted connections
-  to the database. This is strongly discouraged in real production environment.
-- `K8S_HEADLESS_SERVICE` - this environment variable is automatically set if
-  you're running on GKE and it is used to establish an Erlang node cluster. Note
-  that if you're _not_ using Kubernetes, the "gossip" strategy is used for
-  establish clusters.
-- `LISTEN_ADDRESS`" - the address the web server should bind to, defaults to
-  `127.0.0.1` to block access from other machines.
-- `LOG_LEVEL` - how noisy you want the logs to be (e.g. `debug`, `info`)
-- `MIX_ENV` - your mix env, likely `prod` for deployment
-- `NODE_ENV` - node env, likely `production` for deployment
-- `ORIGINS` - the allowed origins for web traffic to the backend
-- `PORT` - the port your Phoenix app runs on
-- `PRIMARY_ENCRYPTION_KEY` - a base64 encoded 32 character long string. See
-  [Encryption](#encryption).
-- `SCHEMAS_PATH` - path to the credential schemas that provide forms for
-  different adaptors
-- `SECRET_KEY_BASE` - a secret key used as a base to generate secrets for
-  encrypting and signing data.
-- `SENTRY_DSN` - if using Sentry for error monitoring, your DSN
-- `CORS_ORIGIN` - a list of acceptable hosts for browser/cors requests (','
-  separated)
-- `URL_HOST` - the host, used for writing urls (e.g., `demo.openfn.org`)
-- `URL_PORT` - the port, usually `443` for production
-- `URL_SCHEME` - the scheme for writing urls, (e.g., `https`)
-- `USAGE_TRACKER_HOST` - the host that receives usage tracking submissions
-  (defaults to https://impact.openfn.org).
-- `USAGE_TRACKING_DAILY_BATCH_SIZE` - the number of days that will be reported
-  on with each run of `UsageTracking.DayWorker`. This will only have a
-  noticeable effect in cases where there is a backlog, or where reports are
-  being generated retroactively (defaults to 10).
-- `USAGE_TRACKING_ENABLED` - enables the submission of anonymised usage data to
-  OpenFn (defaults to `true`).
-- `USAGE_TRACKING_RESUBMISSION_BATCH_SIZE` - the number of failed reports that
-  will be submitted on each resubmission run (defaults to 10).
-- `USAGE_TRACKING_UUIDS` - indicates whether submissions should include
-  cleartext uuids or not. Options are `cleartext` or `hashed_only`, with the
-  default being `hashed_only`.
-- `QUEUE_RESULT_RETENTION_PERIOD_SECONDS` - the number of seconds to keep
-  completed (successful) `ObanJobs` in the queue (not to be confused with runs
-  and/or history)
-- `IS_RESETTABLE_DEMO` - If set to `yes` it allows this instance to be reset to
-  the initial "Lightning Demo" state. Note that this will destroy _most_ of what
-  you have in your database!
-- `ALLOW_SIGNUP`: Set to `true` to enable user access to the registration page.
-  Set to `false` to disable new user registrations and block access to the
-  registration page. Default is `true`.
-- `EMAIL_ADMIN` - This is used as the sender email address for system emails. It
-  is also displayed in the menu as the support email.
-- `EMAIL_SENDER_NAME` - This is displayed in the email client as the sender name
-  for emails sent by the application.
-
 ### Google Oauth2
 
 Using your Google Cloud account, provision a new OAuth 2.0 Client with the 'Web
@@ -210,8 +214,10 @@ Replacing `ENDPOINT DOMAIN` with the host name of your instance.
 Once the client has been created, get/download the OAuth client JSON and set the
 following environment variables:
 
-- `GOOGLE_CLIENT_ID` - Which is `client_id` from the client details.
-- `GOOGLE_CLIENT_SECRET` - `client_secret` from the client details.
+| **Variable**           | Description                                   |
+| ---------------------- | --------------------------------------------- |
+| `GOOGLE_CLIENT_ID`     | Which is `client_id` from the client details. |
+| `GOOGLE_CLIENT_SECRET` | `client_secret` from the client details.      |
 
 ### Salesforce Oauth2
 
@@ -225,7 +231,7 @@ Grant permissions as desired.
 
 Once the client has been created set the following environment variables:
 
-- `SALESFORCE_CLIENT_ID` - Which is `Consumer Key` from the "Manage Consumer
-  Details" screen.
-- `SALESFORCE_CLIENT_SECRET` - Which is `Consumer Secret` from the "Manage
-  Consumer Details" screen.
+| **Variable**               | Description                                                           |
+| -------------------------- | --------------------------------------------------------------------- |
+| `SALESFORCE_CLIENT_ID`     | Which is `Consumer Key` from the "Manage Consumer Details" screen.    |
+| `SALESFORCE_CLIENT_SECRET` | Which is `Consumer Secret` from the "Manage Consumer Details" screen. |

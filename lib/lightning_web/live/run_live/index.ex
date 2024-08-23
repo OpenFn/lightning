@@ -13,9 +13,12 @@ defmodule LightningWeb.RunLive.Index do
   alias Lightning.Invocation.Step
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
+  alias Lightning.Projects
+  alias Lightning.Repo
   alias Lightning.Services.UsageLimiter
   alias Lightning.WorkOrders
   alias Lightning.WorkOrders.Events
+  alias Lightning.WorkOrders.ExportWorker
   alias Lightning.WorkOrders.SearchParams
   alias LightningWeb.LiveHelpers
   alias LightningWeb.RunLive.Components
@@ -121,6 +124,7 @@ defmodule LightningWeb.RunLive.Index do
        active_menu_item: :runs,
        work_orders: [],
        selected_work_orders: [],
+       show_export_modal: false,
        can_edit_data_retention: can_edit_data_retention,
        can_run_workflow: can_run_workflow,
        pagination_path: &pagination_path(socket, project, &1),
@@ -458,6 +462,55 @@ defmodule LightningWeb.RunLive.Index do
     {:noreply,
      socket
      |> put_flash(:error, error_message)}
+  end
+
+  def handle_event("show-export-modal", _params, socket) do
+    {:noreply, socket |> assign(:show_export_modal, true)}
+  end
+
+  def handle_event("close-export-modal", _params, socket) do
+    {:noreply, socket |> assign(:show_export_modal, false)}
+  end
+
+  def handle_event("confirm-export", _params, socket) do
+    search_params = SearchParams.new(socket.assigns.filters)
+
+    case Projects.File.new(%{
+           type: :export,
+           status: :enqueued,
+           created_by: socket.assigns.current_user,
+           project: socket.assigns.project
+         })
+         |> Repo.insert() do
+      {:ok, project_file} ->
+        case ExportWorker.enqueue_export(
+               socket.assigns.project,
+               project_file,
+               search_params
+             ) do
+          :ok ->
+            {:noreply,
+             socket
+             |> assign(:show_export_modal, false)
+             |> put_flash(
+               :info,
+               "History export started successfully. You will be notified by email after completion."
+             )}
+
+          {:error, _reason} ->
+            Projects.File.mark_failed(project_file)
+            |> Repo.update!()
+
+            {:noreply,
+             socket
+             |> put_flash(:error, "Failed to start export. Please try again.")}
+        end
+
+      {:error, _changeset} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Failed to start export. Please try again.")}
+    end
   end
 
   defp find_workflow_name(workflows, workflow_id) do
