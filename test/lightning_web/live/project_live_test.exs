@@ -497,14 +497,14 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert view
              |> element(
-               ~s{a[href="#{~p"/projects/#{project_2.id}/w"}"]},
+               "#option-#{project_2.id}",
                ~r/project-2/
              )
              |> has_element?()
 
       refute view
              |> element(
-               ~s{a[href="#{~p"/projects/#{project_3.id}/w"}"]},
+               "#option-#{project_3.id}",
                ~r/project-3/
              )
              |> has_element?()
@@ -512,27 +512,33 @@ defmodule LightningWeb.ProjectLiveTest do
       {:ok, view, html} = live(conn, ~p"/projects/#{project_1}/w")
 
       assert html =~ project_1.name
-      assert view |> element("button", "#{project_1.name}") |> has_element?()
 
       assert view
-             |> element("a[href='#{~p"/projects/#{project_2.id}/w"}']")
+             |> element("input[id='combobox'][value='#{project_1.name}']")
+             |> has_element?()
+
+      assert view
+             |> element("#option-#{project_2.id}")
              |> has_element?()
 
       refute view
-             |> element("a[href='#{~p"/projects/#{project_3.id}/w"}']")
+             |> element("#option-#{project_3.id}")
              |> has_element?()
 
       {:ok, view, html} = live(conn, ~p"/projects/#{project_2}/w")
 
       assert html =~ project_2.name
-      assert view |> element("button", "#{project_2.name}") |> has_element?()
 
       assert view
-             |> element("a[href='#{~p"/projects/#{project_1.id}/w"}']")
+             |> element("input[id='combobox'][value='#{project_2.name}']")
+             |> has_element?()
+
+      assert view
+             |> element("#option-#{project_1.id}")
              |> has_element?()
 
       refute view
-             |> element("a[href='#{~p"/projects/#{project_3.id}/w"}']")
+             |> element("#option-#{project_3.id}")
              |> has_element?()
 
       assert live(conn, ~p"/projects/#{project_3}/w") ==
