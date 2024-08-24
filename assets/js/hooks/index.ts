@@ -18,6 +18,92 @@ export {
   TabbedPanels,
 };
 
+export const Combobox = {
+  mounted() {
+    this.input = this.el.querySelector('input');
+    this.dropdown = this.el.querySelector('ul');
+    this.options = this.el.querySelectorAll('li');
+    this.toggleButton = this.el.querySelector('button');
+
+    this.input.addEventListener(
+      'input',
+      this.debounce(event => this.handleInput(event), 300)
+    );
+
+    this.toggleButton.addEventListener('click', () => this.toggleDropdown());
+
+    this.options.forEach(option => {
+      option.addEventListener('click', event => {
+        event.preventDefault();
+        this.selectOption(option);
+      });
+    });
+
+    document.addEventListener('click', event => {
+      if (!this.el.contains(event.target)) {
+        this.hideDropdown();
+      }
+    });
+  },
+
+  handleInput(event) {
+    this.filterOptions(event);
+    if (this.input.value.trim() !== '') {
+      this.showDropdown();
+    } else {
+      this.hideDropdown();
+    }
+  },
+
+  toggleDropdown() {
+    if (this.dropdown.classList.contains('hidden')) {
+      this.showDropdown();
+    } else {
+      this.hideDropdown();
+    }
+  },
+
+  showDropdown() {
+    this.dropdown.classList.remove('hidden');
+    this.input.setAttribute('aria-expanded', 'true');
+  },
+
+  hideDropdown() {
+    this.dropdown.classList.add('hidden');
+    this.input.setAttribute('aria-expanded', 'false');
+  },
+
+  filterOptions(event) {
+    const searchTerm = event.target.value.toLowerCase();
+    this.options.forEach(option => {
+      const text = option.textContent.toLowerCase();
+      option.style.display = text.includes(searchTerm) ? 'block' : 'none';
+    });
+  },
+
+  selectOption(option) {
+    this.input.value = option.querySelector('span').textContent.trim();
+    this.hideDropdown();
+    this.navigateToItem(option.dataset.url);
+  },
+
+  navigateToItem(url) {
+    window.location.href = url;
+  },
+
+  debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  },
+};
+
 export const OpenAuthorizeUrl = {
   mounted() {
     this.handleEvent('open_authorize_url', ({ url }: { url: string }) => {

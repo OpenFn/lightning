@@ -473,4 +473,59 @@ defmodule LightningWeb.Components.Common do
     </div>
     """
   end
+
+  def combobox(assigns) do
+    ~H"""
+    <div id="combobox-wrapper" phx-hook="Combobox" class="relative my-4 mx-2 px-0">
+      <input
+        id="combobox"
+        type="text"
+        placeholder={@placeholder || "Search..."}
+        value={@selected_item && @selected_item.name}
+        class="w-full rounded-md border-0 bg-white py-1.5 pl-3 pr-12 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+        role="combobox"
+        aria-controls="options"
+        aria-expanded="false"
+        autocomplete="off"
+      />
+      <button
+        type="button"
+        class="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2 focus:outline-none"
+        aria-label="Toggle dropdown"
+      >
+        <.icon name="hero-chevron-up-down" class="h-5 w-5 text-gray-400" />
+      </button>
+
+      <ul
+        class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm hidden"
+        id="options"
+        role="listbox"
+        aria-labelledby="combobox"
+      >
+        <li
+          :for={item <- @items}
+          class="text-gray-900 relative cursor-pointer select-none py-2 pl-3 pr-9 text-gray-900 hover:bg-indigo-600 group hover:text-white"
+          id={"option-#{item.id}"}
+          role="option"
+          tabindex="0"
+          data-item-id={item.id}
+          data-url={@url_func.(item)}
+        >
+          <span class={[
+            "font-normal block truncate",
+            @selected_item && @selected_item.id == item.id && "font-semibold"
+          ]}>
+            <%= item.name %>
+          </span>
+          <span class={[
+            "absolute inset-y-0 right-0 flex items-center pr-4",
+            (!@selected_item || @selected_item.id != item.id) && "hidden"
+          ]}>
+            <.icon name="hero-check" class="group-hover:text-white text-indigo-600" />
+          </span>
+        </li>
+      </ul>
+    </div>
+    """
+  end
 end

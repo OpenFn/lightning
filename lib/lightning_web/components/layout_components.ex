@@ -21,9 +21,11 @@ defmodule LightningWeb.LayoutComponents do
         {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
       ) %>
     <% else %>
-      <Menu.projects_dropdown
-        projects={assigns[:projects] || []}
-        selected_project={assigns[:project]}
+      <Common.combobox
+        items={assigns[:projects] || []}
+        selected_item={assigns[:project]}
+        placeholder="Go to project"
+        url_func={fn project -> ~p"/projects/#{project.id}/w" end}
       />
       <%= if assigns[:project] do %>
         <Menu.project_items
