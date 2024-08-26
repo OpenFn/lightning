@@ -128,21 +128,27 @@ async function loadDTS(
     results.push(...common);
   }
 
-  // Load all the DTS files and squash them into a single namespace
-  // We seem to have to do this because Monaco doesn't recognise types declared in different files
-  // across namespaces
-  // This should work well enough on adaptors anyway
-  let bigFile = '';
   for await (const filePath of fetchDTSListing(specifier)) {
     if (!filePath.startsWith('node_modules')) {
       let content = await fetchFile(`${specifier}${filePath}`);
-      bigFile += content;
+
+      // this is a bit cheeky
+      // we'll manually build namespaces from the file structure
+      // I don't understand why index.d.ts doesn't just do this though.
+      const fileName = filePath.split('/').at(-1).replace('.d.ts', '');
+
+      if (fileName === 'index' || fileName === 'Adaptor') {
+        results.push({
+          content: `declare ${type} { ${content} }`,
+        });
+      } else {
+        results.push({
+          content: `declare ${type} ${fileName} { ${content} }`,
+          // Note that file path seems to break everything?
+        });
+      }
     }
   }
-  results.push({
-    content: `declare ${type} { ${bigFile} }`,
-    filePath: `${name}$/types`,
-  });
 
   return results;
 }
