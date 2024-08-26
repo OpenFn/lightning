@@ -19,6 +19,8 @@ and this project adheres to
 
 - Users are now able to export work orders from the History page.
   [#1698](https://github.com/OpenFn/lightning/issues/1698)
+- Add index over `run_id` and `step_id` in run_steps.
+  [#2428](https://github.com/OpenFn/lightning/issues/2428)
 
 ### Changed
 
