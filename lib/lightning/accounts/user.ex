@@ -273,6 +273,11 @@ defmodule Lightning.Accounts.User do
     change(user, confirmed_at: now)
   end
 
+  @spec remove_github_token_changeset(t()) :: Ecto.Changeset.t()
+  def remove_github_token_changeset(user) do
+    change(user, github_oauth_token: nil)
+  end
+
   def github_token_changeset(user, attrs) do
     user
     |> cast(attrs, [:github_oauth_token])
