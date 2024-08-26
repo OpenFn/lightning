@@ -228,11 +228,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       />
                     </div>
                   </:panel>
-                  <:panel
-                    :if={Lightning.AiAssistant.authorized?(@current_user)}
-                    hash="aichat"
-                    class="h-full"
-                  >
+                  <:panel hash="aichat" class="h-full">
                     <div class="grow min-h-0 h-full text-sm">
                       <.live_component
                         module={LightningWeb.WorkflowLive.AiAssistantComponent}

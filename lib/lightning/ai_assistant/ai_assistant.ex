@@ -49,7 +49,7 @@ defmodule Lightning.AiAssistant do
     }
   end
 
-  @spec save_message!(ChatSession.t(), %{String.t() => any()}) :: Session.t()
+  @spec save_message!(ChatSession.t(), %{String.t() => any()}) :: ChatSession.t()
   def save_message!(session, message) do
     messages = Enum.map(session.messages, &Map.take(&1, [:id]))
 
