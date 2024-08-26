@@ -16,14 +16,15 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
      end)}
   end
 
-  def update(%{selected_job: job}, socket) do
+  def update(%{selected_job: job, current_user: user}, socket) do
     {:ok,
      socket
+     |> assign(:current_user, user)
      |> update(:session, fn session ->
-       if session && job.id == session.id do
-         session |> AiAssistant.Session.put_expression(job.body)
+       if session && job.id == session.job_id do
+         AiAssistant.put_expression_and_adaptor(session, job.body, job.adaptor)
        else
-         AiAssistant.new_session(job)
+         AiAssistant.new_session(job, user)
        end
      end)}
   end
@@ -40,15 +41,15 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
           </div>
         </:loading>
         <div class="row-span-full flex flex-col gap-4 p-2 overflow-y-auto">
-          <%= for message <- @session.history do %>
+          <%= for message <- @session.messages do %>
             <div
-              :if={message.role == "user"}
+              :if={message.sender == :user}
               class="ml-auto bg-blue-500 text-white p-2 rounded-lg text-right break-words"
             >
               <%= message.content %>
             </div>
             <div
-              :if={message.role == "assistant"}
+              :if={message.sender == :assistant}
               class="mr-auto p-2 rounded-lg break-words text-wrap flex flex-row gap-x-2 makeup-html"
             >
               <div class="">
@@ -105,20 +106,21 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   end
 
   def handle_event("send_message", %{"content" => content}, socket) do
+    session =
+      AiAssistant.save_message!(socket.assigns.session, %{
+        "sender" => "user",
+        "content" => content,
+        "user_id" => socket.assigns.current_user.id
+      })
+
     {:noreply,
      socket
      |> assign(:pending_message, AsyncResult.loading())
-     |> assign(
-       :session,
-       AiAssistant.push_history(socket.assigns.session, %{
-         "role" => "user",
-         "content" => content
-       })
-     )
+     |> assign(:session, session)
      |> start_async(
        :process_message,
        fn ->
-         AiAssistant.query(socket.assigns.session, content)
+         AiAssistant.query(session, content)
        end
      )}
   end

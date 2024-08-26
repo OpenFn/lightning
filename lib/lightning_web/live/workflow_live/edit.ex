@@ -236,6 +236,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     <div class="grow min-h-0 h-full text-sm">
                       <.live_component
                         module={LightningWeb.WorkflowLive.AiAssistantComponent}
+                        current_user={@current_user}
                         selected_job={@selected_job}
                         id={"aichat-#{@selected_job.id}"}
                       />

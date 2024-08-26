@@ -4,74 +4,10 @@ defmodule Lightning.AiAssistant do
   """
 
   alias Lightning.Accounts.User
+  alias Lightning.AiAssistant.ChatSession
   alias Lightning.ApolloClient
+  alias Lightning.Repo
   alias Lightning.Workflows.Job
-
-  defmodule Session do
-    @moduledoc """
-    Represents a session with the AI assistant.
-    """
-
-    defstruct [
-      :id,
-      :expression,
-      :adaptor,
-      :history
-    ]
-
-    @type t() :: %__MODULE__{
-            id: Ecto.UUID.t(),
-            expression: String.t(),
-            adaptor: String.t(),
-            history: history()
-          }
-
-    @type history() :: [
-            %{role: :user | :assistant, content: String.t()}
-          ]
-
-    @spec new(Job.t()) :: t()
-    def new(job) do
-      %Session{
-        id: job.id,
-        expression: job.body,
-        adaptor: Lightning.AdaptorRegistry.resolve_adaptor(job.adaptor),
-        history: []
-      }
-    end
-
-    @spec put_history(t(), history() | [%{String.t() => any()}]) :: t()
-    def put_history(session, history) do
-      history =
-        Enum.map(history, fn h ->
-          %{role: h["role"] || h[:role], content: h["content"] || h[:content]}
-        end)
-
-      %{session | history: history}
-    end
-
-    @spec push_history(t(), %{String.t() => any()}) :: t()
-    def push_history(session, message) do
-      history =
-        session.history ++
-          [
-            %{
-              role: message["role"] || message[:role],
-              content: message["content"] || message[:content]
-            }
-          ]
-
-      %{session | history: history}
-    end
-
-    @doc """
-    Puts the given expression into the session.
-    """
-    @spec put_expression(t(), String.t()) :: t()
-    def put_expression(session, expression) do
-      %{session | expression: expression}
-    end
-  end
 
   @doc """
   Creates a new session with the given job.
@@ -82,24 +18,44 @@ defmodule Lightning.AiAssistant do
       ...>   body: "fn()",
       ...>   adaptor: "@openfn/language-common@latest"
       ...> })
-      %Lightning.AiAssistant.Session{
+      %Lightning.AiAssistant.ChatSession{
         expression: "fn()",
         adaptor: "@openfn/language-common@1.6.2",
-        history: []
+        messages: []
       }
 
   > ℹ️ The `adaptor` field is resolved to the latest version when `@latest`
   > is provided as Apollo expects a specific version.
   """
 
-  @spec new_session(Job.t()) :: Session.t()
-  def new_session(job) do
-    Session.new(job)
+  @spec new_session(Job.t(), User.t()) :: ChatSession.t()
+  def new_session(job, user) do
+    %ChatSession{
+      id: Ecto.UUID.generate(),
+      job_id: job.id,
+      user_id: user.id,
+      messages: []
+    }
+    |> put_expression_and_adaptor(job.body, job.adaptor)
   end
 
-  @spec push_history(Session.t(), %{String.t() => any()}) :: Session.t()
-  def push_history(session, message) do
-    Session.push_history(session, message)
+  @spec put_expression_and_adaptor(ChatSession.t(), String.t(), String.t()) ::
+          ChatSession.t()
+  def put_expression_and_adaptor(session, expression, adaptor) do
+    %{
+      session
+      | expression: expression,
+        adaptor: Lightning.AdaptorRegistry.resolve_adaptor(adaptor)
+    }
+  end
+
+  @spec save_message!(ChatSession.t(), %{String.t() => any()}) :: Session.t()
+  def save_message!(session, message) do
+    messages = Enum.map(session.messages, &Map.take(&1, [:id]))
+
+    session
+    |> ChatSession.changeset(%{messages: messages ++ [message]})
+    |> Repo.insert_or_update!()
   end
 
   @doc """
@@ -112,19 +68,37 @@ defmodule Lightning.AiAssistant do
       iex> AiAssistant.query(session, "fn()")
       {:ok, session}
   """
-  @spec query(Session.t(), String.t()) :: {:ok, Session.t()} | :error
+  @spec query(ChatSession.t(), String.t()) :: {:ok, ChatSession.t()} | :error
   def query(session, content) do
     ApolloClient.query(
       content,
       %{expression: session.expression, adaptor: session.adaptor},
-      session.history
+      build_history(session)
     )
     |> case do
-      {:ok, %Tesla.Env{status: status} = response} when status in 200..299 ->
-        {:ok, session |> Session.put_history(response.body["history"])}
+      {:ok, %Tesla.Env{status: status, body: body}} when status in 200..299 ->
+        assist_resp = body["history"] |> Enum.reverse() |> hd()
+        message = Map.merge(assist_resp, %{"sender" => "assistant"})
+        {:ok, save_message!(session, message)}
 
       _ ->
         :error
+    end
+  end
+
+  defp build_history(session) do
+    case Enum.reverse(session.messages) do
+      [%{sender: :user} | other] ->
+        other
+        |> Enum.reverse()
+        |> Enum.map(fn message ->
+          %{role: message.sender, content: message.content}
+        end)
+
+      messages ->
+        Enum.map(messages, fn message ->
+          %{role: message.sender, content: message.content}
+        end)
     end
   end
 
