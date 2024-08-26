@@ -27,6 +27,7 @@ and this project adheres to
 - Show Github Error messages as they are to help troubleshooting
   [#2156](https://github.com/OpenFn/lightning/issues/2156)
 - Allow `Setup_utils.setup_user` to be used for the initial superuser creation.
+- Update to code assist in the Job Editor.
 
 ### Fixed
 
