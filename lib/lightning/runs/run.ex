@@ -56,6 +56,7 @@ defmodule Lightning.Run do
     belongs_to :snapshot, Snapshot
 
     has_many :log_lines, LogLine
+    has_many :run_steps, RunStep
 
     many_to_many :steps, Step,
       join_through: RunStep,

@@ -53,9 +53,8 @@ defmodule LightningWeb.Components.NewInputs do
   end
 
   attr :id, :string, required: true
-  attr :disabled, :boolean, default: false
   attr :tooltip, :string, default: nil
-
+  attr :disabled, :boolean, default: false
   slot :inner_block, required: true
 
   defp tooltip_when_disabled(%{disabled: true, tooltip: tooltip} = assigns)

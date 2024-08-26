@@ -743,6 +743,7 @@ defmodule Lightning.SetupUtils do
       Lightning.Workflows.Workflow,
       Lightning.Projects.ProjectUser,
       Lightning.Invocation.Dataclip,
+      Lightning.Projects.File,
       Lightning.Projects.Project
     ])
 
@@ -903,26 +904,36 @@ defmodule Lightning.SetupUtils do
     :ok
 
   """
-  @spec setup_user(map(), String.t(), list(map())) :: :ok | {:error, any()}
-  def setup_user(user, token, credentials) do
+  @spec setup_user(map(), String.t() | nil, list(map()) | nil) ::
+          :ok | {:error, any()}
+  def setup_user(user, token \\ nil, credentials \\ nil) do
+    {role, user} = Map.pop(user, :role)
+
     # create user
-    {:ok, user} = Accounts.create_user(user)
+    {:ok, user} =
+      if role == :superuser,
+        do: Accounts.register_superuser(user),
+        else: Accounts.create_user(user)
 
     # create token
-    Repo.insert!(%Lightning.Accounts.UserToken{
-      user_id: user.id,
-      context: "api",
-      token: token
-    })
+    if token,
+      do:
+        Repo.insert!(%Lightning.Accounts.UserToken{
+          user_id: user.id,
+          context: "api",
+          token: token
+        })
 
     # create credentials
-    Enum.each(credentials, fn credential ->
-      {:ok, _credential} =
-        Credentials.create_credential(
-          credential
-          |> Map.put(:user_id, user.id)
-        )
-    end)
+    if credentials,
+      do:
+        Enum.each(credentials, fn credential ->
+          {:ok, _credential} =
+            Credentials.create_credential(
+              credential
+              |> Map.put(:user_id, user.id)
+            )
+        end)
 
     :ok
   end

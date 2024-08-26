@@ -53,6 +53,7 @@ benchmarking/*.csv
 monitoring
 
 tmp
+exports
 priv/openfn
 
 .elixir_ls

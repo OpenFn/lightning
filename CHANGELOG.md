@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Users are now able to export work orders from the History page.
+  [#1698](https://github.com/OpenFn/lightning/issues/1698)
+
 ### Changed
 
 - Show Github Error messages as they are to help troubleshooting
@@ -24,10 +27,15 @@ and this project adheres to
 
 ### Fixed
 
-- Unable to remove/reconnect github app in lightning after uninstalling directly from Github
-  [#2168](https://github.com/OpenFn/lightning/issues/2168)
+- Unable to remove/reconnect github app in lightning after uninstalling directly
+  from Github [#2168](https://github.com/OpenFn/lightning/issues/2168)
 - Github sync buttons available even when usage limiter returns error
   [PR#2390](https://github.com/OpenFn/lightning/pull/2390)
+- Allow `Setup_utils.setup_user` to be used for the initial superuser creation.
+- Fix issue with the persisting of a Kafka message with headers.
+  [#2402](https://github.com/OpenFn/lightning/issues/2402)
+- Protect against race conditions when updating partition timestamps for a Kafka
+  trigger. [#2378](https://github.com/OpenFn/lightning/issues/2378)
 
 ## [v2.7.19] - 2024-08-19
 

@@ -11,7 +11,11 @@ defmodule Lightning.MetadataServiceTest do
     # TaskWorker and/or CLI module.
     @tag :skip
     test "returns the metadata when it exists" do
-      path = Temp.open!(%{suffix: ".json"}, &IO.write(&1, ~s({"foo": "bar"})))
+      path =
+        Briefly.create!(extname: ".json")
+        |> tap(fn path ->
+          File.write!(path, ~s({"foo": "bar"}))
+        end)
 
       stdout = """
       {"message":["#{path}"]}

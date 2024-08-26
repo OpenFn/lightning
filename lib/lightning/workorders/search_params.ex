@@ -6,6 +6,19 @@ defmodule Lightning.WorkOrders.SearchParams do
 
   use Lightning.Schema
 
+  @derive {Jason.Encoder,
+           only: [
+             :status,
+             :search_fields,
+             :search_term,
+             :workflow_id,
+             :workorder_id,
+             :date_after,
+             :date_before,
+             :wo_date_after,
+             :wo_date_before
+           ]}
+
   @statuses ~w(pending running success failed crashed killed cancelled lost exception)
   @statuses_set MapSet.new(@statuses)
   @search_fields ~w(id body log)
@@ -121,5 +134,29 @@ defmodule Lightning.WorkOrders.SearchParams do
     end)
     |> Enum.into(%{})
     |> Map.merge(search_params, fn _key, v1, _v2 -> v1 end)
+  end
+
+  def from_map(map) do
+    updated_map =
+      map
+      |> Enum.into(%{}, fn {key, value} ->
+        {String.to_existing_atom(key), value}
+      end)
+      |> Map.update!(:date_after, &parse_datetime/1)
+      |> Map.update!(:date_before, &parse_datetime/1)
+      |> Map.update!(:wo_date_after, &parse_datetime/1)
+      |> Map.update!(:wo_date_before, &parse_datetime/1)
+
+    struct(__MODULE__, updated_map)
+  end
+
+  defp parse_datetime(nil), do: nil
+
+  defp parse_datetime(datetime_string) do
+    DateTime.from_iso8601(datetime_string)
+    |> case do
+      {:ok, datetime, _} -> datetime
+      _ -> nil
+    end
   end
 end

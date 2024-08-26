@@ -5,12 +5,13 @@ defmodule Lightning.KafkaTriggers.Pipeline do
   """
   use Broadway
 
+  import Ecto.Query
+
   alias Ecto.Changeset
   alias Ecto.Multi
   alias Lightning.KafkaTriggers
   alias Lightning.KafkaTriggers.MessageHandling
   alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
-  alias Lightning.Repo
   alias Lightning.Workflows.Trigger
 
   require Logger
@@ -114,12 +115,14 @@ defmodule Lightning.KafkaTriggers.Pipeline do
   defp update_partition_timestamps(multi, trigger_id, message) do
     %{metadata: %{partition: partition, ts: timestamp}} = message
 
-    trigger_changeset =
-      Trigger
-      |> Repo.get(trigger_id)
-      |> Trigger.kafka_partitions_changeset(partition, timestamp)
+    trigger_query =
+      from t in Trigger, where: t.id == ^trigger_id, lock: "FOR UPDATE"
 
-    multi |> Multi.update(:trigger, trigger_changeset)
+    multi
+    |> Multi.one(:trigger, trigger_query)
+    |> Multi.update(:update_trigger, fn %{trigger: trigger} ->
+      trigger |> Trigger.kafka_partitions_changeset(partition, timestamp)
+    end)
   end
 
   @impl true

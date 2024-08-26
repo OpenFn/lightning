@@ -73,6 +73,12 @@ defmodule Lightning.Config do
     end
 
     @impl true
+    def google(key) do
+      Application.get_env(:lightning, Lightning.Google, [])
+      |> Keyword.get(key)
+    end
+
+    @impl true
     def check_flag?(flag) do
       Application.get_env(:lightning, flag)
     end
@@ -102,6 +108,17 @@ defmodule Lightning.Config do
     @impl true
     def reset_password_token_validity_in_days do
       1
+    end
+
+    @impl true
+    def storage do
+      Application.get_env(:lightning, Lightning.Storage, [])
+    end
+
+    @impl true
+    def storage(key) do
+      storage()
+      |> Keyword.get(key)
     end
 
     @impl true
@@ -163,6 +180,7 @@ defmodule Lightning.Config do
   @callback default_max_run_duration() :: integer()
   @callback email_sender_name() :: String.t()
   @callback get_extension_mod(key :: atom()) :: any()
+  @callback google(key :: atom()) :: any()
   @callback grace_period() :: integer()
   @callback instance_admin_email() :: String.t()
   @callback kafka_duplicate_tracking_retention_seconds() :: integer()
@@ -175,6 +193,8 @@ defmodule Lightning.Config do
   @callback repo_connection_token_signer() :: Joken.Signer.t()
   @callback reset_password_token_validity_in_days() :: integer()
   @callback run_token_signer() :: Joken.Signer.t()
+  @callback storage() :: term()
+  @callback storage(key :: atom()) :: term()
   @callback usage_tracking() :: Keyword.t()
   @callback usage_tracking_cron_opts() :: [Oban.Plugins.Cron.cron_input()]
   @callback worker_secret() :: binary() | nil
@@ -242,6 +262,10 @@ defmodule Lightning.Config do
     impl().get_extension_mod(key)
   end
 
+  def google(key) do
+    impl().google(key)
+  end
+
   def cors_origin do
     impl().cors_origin()
   end
@@ -260,6 +284,14 @@ defmodule Lightning.Config do
 
   def reset_password_token_validity_in_days do
     impl().reset_password_token_validity_in_days()
+  end
+
+  def storage do
+    impl().storage()
+  end
+
+  def storage(key) do
+    impl().storage(key)
   end
 
   def usage_tracking_cron_opts do

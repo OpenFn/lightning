@@ -374,6 +374,12 @@ defmodule Lightning.Invocation do
     |> Repo.all()
   end
 
+  def search_workorders_for_export_query(%Project{id: project_id}, search_params) do
+    project_id
+    |> base_query_without_preload()
+    |> search_workorders_query(search_params)
+  end
+
   def count_workorders(%Project{id: project_id}, search_params) do
     project_id
     |> base_query_without_preload()
