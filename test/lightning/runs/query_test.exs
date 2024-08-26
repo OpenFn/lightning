@@ -290,11 +290,11 @@ defmodule Lightning.Runs.QueryTest do
             %{project_id: blue.project.id, row_number: 3, concurrency: 3}
           ],
           fn run, extra ->
-            Map.take(run, [:id, :state]) |> Map.merge(extra)
+            Map.take(run, [:id, :state, :inserted_at]) |> Map.merge(extra)
           end
         )
 
-      window = Query.in_progress_window() |> Repo.all()
+      window = Query.in_progress_window() |> Repo.all() |> Enum.sort_by(& &1.inserted_at, DateTime)
 
       assert match?(^runs_in_order, window)
 
@@ -322,7 +322,7 @@ defmodule Lightning.Runs.QueryTest do
         set: [state: :claimed, claimed_at: now]
       )
 
-      window = Query.in_progress_window() |> Repo.all()
+      window = Query.in_progress_window() |> Repo.all() |> Enum.sort_by(& &1.inserted_at, DateTime)
 
       assert Enum.count(
                window,
@@ -391,6 +391,7 @@ defmodule Lightning.Runs.QueryTest do
 
       Query.in_progress_window()
       |> Repo.all()
+      |> Enum.sort_by(& &1.inserted_at, DateTime)
       |> then(fn in_progress ->
         assert match?(
                  [
@@ -428,6 +429,7 @@ defmodule Lightning.Runs.QueryTest do
 
       Query.in_progress_window()
       |> Repo.all()
+      |> Enum.sort_by(& &1.inserted_at, DateTime)
       |> then(fn in_progress ->
         assert match?(
                  [
@@ -471,6 +473,7 @@ defmodule Lightning.Runs.QueryTest do
 
       Query.in_progress_window()
       |> Repo.all()
+      |> Enum.sort_by(& &1.inserted_at, DateTime)
       |> then(fn in_progress ->
         assert match?(
                  [
