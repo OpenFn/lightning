@@ -24,6 +24,7 @@ and this project adheres to
 
 - Show Github Error messages as they are to help troubleshooting
   [#2156](https://github.com/OpenFn/lightning/issues/2156)
+- Allow `Setup_utils.setup_user` to be used for the initial superuser creation.
 
 ### Fixed
 
@@ -31,7 +32,6 @@ and this project adheres to
   from Github [#2168](https://github.com/OpenFn/lightning/issues/2168)
 - Github sync buttons available even when usage limiter returns error
   [PR#2390](https://github.com/OpenFn/lightning/pull/2390)
-- Allow `Setup_utils.setup_user` to be used for the initial superuser creation.
 - Fix issue with the persisting of a Kafka message with headers.
   [#2402](https://github.com/OpenFn/lightning/issues/2402)
 - Protect against race conditions when updating partition timestamps for a Kafka
