@@ -22,14 +22,20 @@ and this project adheres to
 
 ### Changed
 
+- Show Github Error messages as they are to help troubleshooting
+  [#2156](https://github.com/OpenFn/lightning/issues/2156)
 - Allow `Setup_utils.setup_user` to be used for the initial superuser creation.
 
 ### Fixed
 
+- Unable to remove/reconnect github app in lightning after uninstalling directly
+  from Github [#2168](https://github.com/OpenFn/lightning/issues/2168)
+- Github sync buttons available even when usage limiter returns error
+  [PR#2390](https://github.com/OpenFn/lightning/pull/2390)
 - Fix issue with the persisting of a Kafka message with headers.
   [#2402](https://github.com/OpenFn/lightning/issues/2402)
-- Protect against race conditions when updating partition timestamps for a
-  Kafka trigger. [#2378](https://github.com/OpenFn/lightning/issues/2378)
+- Protect against race conditions when updating partition timestamps for a Kafka
+  trigger. [#2378](https://github.com/OpenFn/lightning/issues/2378)
 
 ## [v2.7.19] - 2024-08-19
 

@@ -190,6 +190,9 @@ defmodule Lightning.VersionControl.GithubClient do
           Sentry.capture_exception(error)
 
           {:error, error}
+
+        {:ok, %{status: 403, body: %{"message" => message} = resp}} ->
+          {:error, GithubError.api_error(message, resp)}
       end
     end
   end
