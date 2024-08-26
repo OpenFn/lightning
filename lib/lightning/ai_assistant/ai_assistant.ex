@@ -77,8 +77,7 @@ defmodule Lightning.AiAssistant do
     )
     |> case do
       {:ok, %Tesla.Env{status: status, body: body}} when status in 200..299 ->
-        assist_resp = body["history"] |> Enum.reverse() |> hd()
-        message = Map.merge(assist_resp, %{"sender" => "assistant"})
+        message = body["history"] |> Enum.reverse() |> hd()
         {:ok, save_message!(session, message)}
 
       _ ->
@@ -88,17 +87,13 @@ defmodule Lightning.AiAssistant do
 
   defp build_history(session) do
     case Enum.reverse(session.messages) do
-      [%{sender: :user} | other] ->
+      [%{role: :user} | other] ->
         other
         |> Enum.reverse()
-        |> Enum.map(fn message ->
-          %{role: message.sender, content: message.content}
-        end)
+        |> Enum.map(&Map.take(&1, [:role, :content]))
 
       messages ->
-        Enum.map(messages, fn message ->
-          %{role: message.sender, content: message.content}
-        end)
+        Enum.map(messages, &Map.take(&1, [:role, :content]))
     end
   end
 

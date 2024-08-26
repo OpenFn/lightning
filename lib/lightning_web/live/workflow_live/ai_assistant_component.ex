@@ -43,13 +43,13 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         <div class="row-span-full flex flex-col gap-4 p-2 overflow-y-auto">
           <%= for message <- @session.messages do %>
             <div
-              :if={message.sender == :user}
+              :if={message.role == :user}
               class="ml-auto bg-blue-500 text-white p-2 rounded-lg text-right break-words"
             >
               <%= message.content %>
             </div>
             <div
-              :if={message.sender == :assistant}
+              :if={message.role == :assistant}
               class="mr-auto p-2 rounded-lg break-words text-wrap flex flex-row gap-x-2 makeup-html"
             >
               <div class="">
@@ -108,7 +108,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   def handle_event("send_message", %{"content" => content}, socket) do
     session =
       AiAssistant.save_message!(socket.assigns.session, %{
-        "sender" => "user",
+        "role" => "user",
         "content" => content,
         "user_id" => socket.assigns.current_user.id
       })

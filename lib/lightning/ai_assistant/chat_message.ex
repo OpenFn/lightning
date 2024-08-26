@@ -6,7 +6,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
 
   schema "ai_chat_messages" do
     field :content, :string
-    field :sender, Ecto.Enum, values: [:user, :assistant]
+    field :role, Ecto.Enum, values: [:user, :assistant]
     field :is_deleted, :boolean, default: false
     field :is_public, :boolean, default: true
 
@@ -20,12 +20,12 @@ defmodule Lightning.AiAssistant.ChatMessage do
     chat_message
     |> cast(attrs, [
       :content,
-      :sender,
+      :role,
       :is_deleted,
       :is_public,
       :chat_session_id,
       :user_id
     ])
-    |> validate_required([:content, :sender])
+    |> validate_required([:content, :role])
   end
 end

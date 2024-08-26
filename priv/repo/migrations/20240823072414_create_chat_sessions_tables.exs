@@ -20,7 +20,7 @@ defmodule Lightning.Repo.Migrations.CreateChatSessionsTables do
 
       add :user_id, references(:users, type: :binary_id, on_delete: :nilify_all)
       add :content, :text
-      add :sender, :string
+      add :role, :string
       add :is_deleted, :boolean
       add :is_public, :boolean
 
