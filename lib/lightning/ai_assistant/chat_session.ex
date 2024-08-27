@@ -1,4 +1,6 @@
 defmodule Lightning.AiAssistant.ChatSession do
+  @moduledoc false
+
   use Lightning.Schema
   import Ecto.Changeset
 
