@@ -294,7 +294,10 @@ defmodule Lightning.Runs.QueryTest do
           end
         )
 
-      window = Query.in_progress_window() |> Repo.all() |> Enum.sort_by(& &1.inserted_at, DateTime)
+      window =
+        Query.in_progress_window()
+        |> Repo.all()
+        |> Enum.sort_by(& &1.inserted_at, DateTime)
 
       assert match?(^runs_in_order, window)
 
@@ -322,7 +325,10 @@ defmodule Lightning.Runs.QueryTest do
         set: [state: :claimed, claimed_at: now]
       )
 
-      window = Query.in_progress_window() |> Repo.all() |> Enum.sort_by(& &1.inserted_at, DateTime)
+      window =
+        Query.in_progress_window()
+        |> Repo.all()
+        |> Enum.sort_by(& &1.inserted_at, DateTime)
 
       assert Enum.count(
                window,
@@ -529,26 +535,26 @@ defmodule Lightning.Runs.QueryTest do
           %{project: project, workflow: workflow}
         end)
 
-        [red_run_1_id, red_run_2_id] =
-          1..2
-          |> Enum.map(fn _ ->
-            %{id: run_id} = insert_run(red, :available)
-            run_id
-          end)
+      [red_run_1_id, red_run_2_id] =
+        1..2
+        |> Enum.map(fn _ ->
+          %{id: run_id} = insert_run(red, :available)
+          run_id
+        end)
 
-        [green_run_1_id, green_run_2_id, green_run_3_id] =
-          1..3
-          |> Enum.map(fn _ ->
-            %{id: run_id} = insert_run(green, :available)
-            run_id
-          end)
+      [green_run_1_id, green_run_2_id, green_run_3_id] =
+        1..3
+        |> Enum.map(fn _ ->
+          %{id: run_id} = insert_run(green, :available)
+          run_id
+        end)
 
-        [blue_run_1_id, blue_run_2_id, blue_run_3_id, blue_run_4_id] =
-          1..4
-          |> Enum.map(fn _ ->
-            %{id: run_id} = insert_run(blue, :available)
-            run_id
-          end)
+      [blue_run_1_id, blue_run_2_id, blue_run_3_id, blue_run_4_id] =
+        1..4
+        |> Enum.map(fn _ ->
+          %{id: run_id} = insert_run(blue, :available)
+          run_id
+        end)
 
       assert {:ok, _} = Lightning.Runs.Queue.claim(7, Query.eligible_for_claim())
 
@@ -624,7 +630,7 @@ defmodule Lightning.Runs.QueryTest do
                      state: :available,
                      row_number: 4,
                      concurrency: 3
-                   },
+                   }
                  ],
                  in_progress
                )
