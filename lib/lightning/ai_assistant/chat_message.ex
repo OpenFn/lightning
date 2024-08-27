@@ -3,7 +3,13 @@ defmodule Lightning.AiAssistant.ChatMessage do
   import Ecto.Changeset
 
   @type role() :: :user | :assistant
-  @type t() :: %__MODULE__{id: Ecto.UUID.t(), content: String.t(), role: role()}
+  @type t() :: %__MODULE__{
+          id: Ecto.UUID.t(),
+          content: String.t() | nil,
+          role: role(),
+          is_deleted: boolean(),
+          is_public: boolean()
+        }
 
   schema "ai_chat_messages" do
     field :content, :string

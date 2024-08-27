@@ -9,9 +9,12 @@ defmodule Lightning.AiAssistant.ChatSession do
   @type t() :: %__MODULE__{
           id: Ecto.UUID.t(),
           job_id: Ecto.UUID.t(),
-          expression: String.t(),
-          adaptor: String.t(),
-          messages: [ChatMessage.t()]
+          user_id: Ecto.UUID.t(),
+          expression: String.t() | nil,
+          adaptor: String.t() | nil,
+          is_public: boolean(),
+          is_deleted: boolean(),
+          messages: [ChatMessage.t(), ...] | []
         }
 
   schema "ai_chat_sessions" do
