@@ -32,13 +32,17 @@ export const Combobox = {
     );
     this.input.addEventListener('click', () => this.handleInputClick());
     this.input.addEventListener('keydown', event => this.handleKeydown(event));
-    this.toggleButton.addEventListener('click', () => this.toggleDropdown());
+    this.toggleButton.addEventListener('click', () =>
+      this.handleToggleButtonClick()
+    );
 
     this.options.forEach(option => {
       option.addEventListener('click', event => {
         event.preventDefault();
         this.selectOption(option);
       });
+      option.addEventListener('mouseenter', () => this.highlightOption(option));
+      option.addEventListener('mouseleave', () => this.restoreHighlight());
     });
 
     document.addEventListener('click', event => {
@@ -46,6 +50,9 @@ export const Combobox = {
         this.hideDropdown();
       }
     });
+
+    // Highlight the initially selected option, if any
+    this.highlightSelectedOption();
   },
 
   handleInput(event) {
@@ -58,7 +65,17 @@ export const Combobox = {
     this.input.select();
     this.showAllOptions();
     this.showDropdown();
-    this.highlightFirstOption();
+    this.highlightSelectedOption();
+  },
+
+  handleToggleButtonClick() {
+    this.toggleDropdown();
+    if (!this.dropdown.classList.contains('hidden')) {
+      this.input.focus();
+      this.input.select();
+      this.showAllOptions();
+      this.highlightSelectedOption();
+    }
   },
 
   handleKeydown(event) {
@@ -67,9 +84,11 @@ export const Combobox = {
       this.selectOption(this.highlightedOption);
     } else if (event.key === 'ArrowDown') {
       event.preventDefault();
+      this.showDropdown();
       this.highlightNextOption();
     } else if (event.key === 'ArrowUp') {
       event.preventDefault();
+      this.showDropdown();
       this.highlightPreviousOption();
     }
   },
@@ -138,12 +157,6 @@ export const Combobox = {
     }
   },
 
-  selectOption(option) {
-    this.input.value = option.querySelector('span').textContent.trim();
-    this.hideDropdown();
-    this.navigateToItem(option.dataset.url);
-  },
-
   navigateToItem(url) {
     window.location.href = url;
   },
@@ -154,6 +167,33 @@ export const Combobox = {
     );
     if (firstVisibleOption) {
       this.highlightOption(firstVisibleOption);
+    } else {
+      this.clearHighlight();
+    }
+  },
+
+  restoreHighlight() {
+    if (this.selectedOption) {
+      this.highlightOption(this.selectedOption);
+    } else {
+      this.clearHighlight();
+    }
+  },
+
+  selectOption(option) {
+    this.input.value = option.querySelector('span').textContent.trim();
+    this.hideDropdown();
+    this.selectedOption = option;
+    this.navigateToItem(option.dataset.url);
+  },
+
+  highlightSelectedOption() {
+    this.selectedOption = Array.from(this.options).find(
+      option =>
+        option.querySelector('span').textContent.trim() === this.input.value
+    );
+    if (this.selectedOption) {
+      this.highlightOption(this.selectedOption);
     } else {
       this.clearHighlight();
     }
