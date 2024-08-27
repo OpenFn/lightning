@@ -24,12 +24,14 @@ export const Combobox = {
     this.dropdown = this.el.querySelector('ul');
     this.options = this.el.querySelectorAll('li');
     this.toggleButton = this.el.querySelector('button');
+    this.highlightedOption = null;
 
     this.input.addEventListener(
       'input',
       this.debounce(event => this.handleInput(event), 300)
     );
     this.input.addEventListener('click', () => this.handleInputClick());
+    this.input.addEventListener('keydown', event => this.handleKeydown(event));
     this.toggleButton.addEventListener('click', () => this.toggleDropdown());
 
     this.options.forEach(option => {
@@ -49,12 +51,27 @@ export const Combobox = {
   handleInput(event) {
     this.filterOptions(event);
     this.showDropdown();
+    this.highlightFirstOption();
   },
 
   handleInputClick() {
-    this.input.select(); // Highlight all text
+    this.input.select();
     this.showAllOptions();
     this.showDropdown();
+    this.highlightFirstOption();
+  },
+
+  handleKeydown(event) {
+    if (event.key === 'Enter' && this.highlightedOption) {
+      event.preventDefault();
+      this.selectOption(this.highlightedOption);
+    } else if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.highlightNextOption();
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.highlightPreviousOption();
+    }
   },
 
   toggleDropdown() {
@@ -73,6 +90,7 @@ export const Combobox = {
   hideDropdown() {
     this.dropdown.classList.add('hidden');
     this.input.setAttribute('aria-expanded', 'false');
+    this.clearHighlight();
   },
 
   filterOptions(event) {
@@ -106,7 +124,7 @@ export const Combobox = {
     if (!noResultsEl) {
       noResultsEl = document.createElement('li');
       noResultsEl.className =
-        'no-results text-gray-500 py-2 px-3 text-sm cursor-default';
+        'no-results text-gray-500 py-2 px-3 text-sm cursor-default hover:bg-gray-100';
       noResultsEl.textContent = 'No projects found';
       this.dropdown.appendChild(noResultsEl);
     }
@@ -128,6 +146,54 @@ export const Combobox = {
 
   navigateToItem(url) {
     window.location.href = url;
+  },
+
+  highlightFirstOption() {
+    const firstVisibleOption = Array.from(this.options).find(
+      option => option.style.display !== 'none'
+    );
+    if (firstVisibleOption) {
+      this.highlightOption(firstVisibleOption);
+    } else {
+      this.clearHighlight();
+    }
+  },
+
+  highlightOption(option) {
+    this.clearHighlight();
+    option.classList.add('bg-indigo-600', 'text-white');
+    this.highlightedOption = option;
+  },
+
+  clearHighlight() {
+    if (this.highlightedOption) {
+      this.highlightedOption.classList.remove('bg-indigo-600', 'text-white');
+      this.highlightedOption = null;
+    }
+  },
+
+  highlightNextOption() {
+    const visibleOptions = Array.from(this.options).filter(
+      option => option.style.display !== 'none'
+    );
+    const currentIndex = visibleOptions.indexOf(this.highlightedOption);
+    const nextOption = visibleOptions[currentIndex + 1] || visibleOptions[0];
+    if (nextOption) {
+      this.highlightOption(nextOption);
+    }
+  },
+
+  highlightPreviousOption() {
+    const visibleOptions = Array.from(this.options).filter(
+      option => option.style.display !== 'none'
+    );
+    const currentIndex = visibleOptions.indexOf(this.highlightedOption);
+    const previousOption =
+      visibleOptions[currentIndex - 1] ||
+      visibleOptions[visibleOptions.length - 1];
+    if (previousOption) {
+      this.highlightOption(previousOption);
+    }
   },
 
   debounce(func, wait) {
