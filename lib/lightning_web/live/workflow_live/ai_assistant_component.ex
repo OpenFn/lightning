@@ -94,6 +94,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
           phx-submit="send_message"
           class="row-span-1 p-2 pt-0"
           phx-target={@myself}
+          id="ai-assistant-form"
         >
           <.chat_input
             form={@form}

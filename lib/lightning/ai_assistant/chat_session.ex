@@ -2,11 +2,17 @@ defmodule Lightning.AiAssistant.ChatSession do
   use Lightning.Schema
   import Ecto.Changeset
 
-  alias Lightning.Workflows.Job
   alias Lightning.Accounts.User
   alias Lightning.AiAssistant.ChatMessage
+  alias Lightning.Workflows.Job
 
-  @type t() :: %__MODULE__{}
+  @type t() :: %__MODULE__{
+          id: Ecto.UUID.t(),
+          job_id: Ecto.UUID.t(),
+          expression: String.t(),
+          adaptor: String.t(),
+          messages: [ChatMessage.t()]
+        }
 
   schema "ai_chat_sessions" do
     field :expression, :string, virtual: true

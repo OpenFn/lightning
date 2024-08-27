@@ -2,7 +2,8 @@ defmodule Lightning.AiAssistant.ChatMessage do
   use Lightning.Schema
   import Ecto.Changeset
 
-  @type t() :: %__MODULE__{}
+  @type role() :: :user | :assistant
+  @type t() :: %__MODULE__{id: Ecto.UUID.t(), content: String.t(), role: role()}
 
   schema "ai_chat_messages" do
     field :content, :string

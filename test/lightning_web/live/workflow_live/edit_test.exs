@@ -1371,4 +1371,34 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert html =~ error_msg
     end
   end
+
+  describe "AI Assistant:" do
+    setup :create_workflow
+
+    test "authorized users can send a message", %{
+      conn: conn,
+      project: project,
+      workflow: %{jobs: [job_1 | _]} = workflow
+    } do
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> "http://localhost:4001/health_check"
+        :openai_api_key -> "openai_api_key"
+      end)
+
+      for {conn, _user} <-
+            setup_project_users(conn, project, [:owner, :admin, :editor, :viewer]) do
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+          )
+
+        render_async(view)
+
+        view
+        |> form("#ai-assistant-form")
+        |> has_element?()
+      end
+    end
+  end
 end
