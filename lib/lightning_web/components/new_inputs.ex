@@ -154,6 +154,10 @@ defmodule LightningWeb.Components.NewInputs do
 
   attr :display_errors, :boolean, default: true
 
+  attr :full_width, :boolean,
+    default: false,
+    doc: "allows to have select boxes expanding the full width of the container"
+
   slot :inner_block
 
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
@@ -217,7 +221,7 @@ defmodule LightningWeb.Components.NewInputs do
         > *</span>
       </.label>
       <div class="flex w-full">
-        <div class="relative items-center">
+        <div class={"relative items-center #{if @full_width, do: "flex-grow"}"}>
           <select
             id={@id}
             name={@name}
