@@ -22,6 +22,10 @@ and this project adheres to
 - Implement a combo-box to make navigating between projects easier
   [#241](https://github.com/OpenFn/lightning/pull/2424)
 
+- Fix select inputs not expanding to full width. Added a :full_width option to
+  control whether the input should expand to the full width or not
+  [#2437](https://github.com/OpenFn/lightning/pull/2437)
+
 ### Fixed
 
 ## [v2.8.1] - 2024-08-28
