@@ -29,7 +29,7 @@ export const Combobox = {
       'input',
       this.debounce(event => this.handleInput(event), 300)
     );
-
+    this.input.addEventListener('click', () => this.handleInputClick());
     this.toggleButton.addEventListener('click', () => this.toggleDropdown());
 
     this.options.forEach(option => {
@@ -48,11 +48,13 @@ export const Combobox = {
 
   handleInput(event) {
     this.filterOptions(event);
-    if (this.input.value.trim() !== '') {
-      this.showDropdown();
-    } else {
-      this.hideDropdown();
-    }
+    this.showDropdown();
+  },
+
+  handleInputClick() {
+    this.input.select(); // Highlight all text
+    this.showAllOptions();
+    this.showDropdown();
   },
 
   toggleDropdown() {
@@ -75,10 +77,47 @@ export const Combobox = {
 
   filterOptions(event) {
     const searchTerm = event.target.value.toLowerCase();
+    let visibleCount = 0;
+
     this.options.forEach(option => {
       const text = option.textContent.toLowerCase();
-      option.style.display = text.includes(searchTerm) ? 'block' : 'none';
+      if (text.includes(searchTerm)) {
+        option.style.display = 'block';
+        visibleCount++;
+      } else {
+        option.style.display = 'none';
+      }
     });
+
+    if (visibleCount === 0) {
+      this.showNoResultsMessage();
+    } else {
+      this.hideNoResultsMessage();
+    }
+  },
+
+  showAllOptions() {
+    this.options.forEach(option => (option.style.display = 'block'));
+    this.hideNoResultsMessage();
+  },
+
+  showNoResultsMessage() {
+    let noResultsEl = this.dropdown.querySelector('.no-results');
+    if (!noResultsEl) {
+      noResultsEl = document.createElement('li');
+      noResultsEl.className =
+        'no-results text-gray-500 py-2 px-3 text-sm cursor-default';
+      noResultsEl.textContent = 'No projects found';
+      this.dropdown.appendChild(noResultsEl);
+    }
+    noResultsEl.style.display = 'block';
+  },
+
+  hideNoResultsMessage() {
+    const noResultsEl = this.dropdown.querySelector('.no-results');
+    if (noResultsEl) {
+      noResultsEl.style.display = 'none';
+    }
   },
 
   selectOption(option) {
