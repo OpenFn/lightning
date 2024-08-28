@@ -71,7 +71,6 @@ defmodule Lightning.Runs.Query do
           order_by: [asc: r.inserted_at]
         ]
       ],
-      # order_by: [asc: r.inserted_at],
       select: %{
         id: r.id,
         state: r.state,
