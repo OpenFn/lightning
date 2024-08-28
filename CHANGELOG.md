@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Improve run claim query by removing extraneous sorts
+  [#2431](https://github.com/OpenFn/lightning/issues/2431)
+
 ### Released
 
 ## [v2.8.0] - 2024-08-27
