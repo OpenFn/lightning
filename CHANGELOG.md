@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Implement a combo-box to make navigating between projects easier
+  [#241](https://github.com/OpenFn/lightning/pull/2424)
+
 ### Fixed
 
 ## [v2.8.1] - 2024-08-28
@@ -43,8 +46,6 @@ and this project adheres to
 - Show Github Error messages as they are to help troubleshooting
   [#2156](https://github.com/OpenFn/lightning/issues/2156)
 - Allow `Setup_utils.setup_user` to be used for the initial superuser creation.
-- Replace projects picker by a comboxbox
-  [#241](https://github.com/OpenFn/lightning/pull/2424)
 - Update to code assist in the Job Editor to import namespaces from adaptors.
   [#2432](https://github.com/OpenFn/lightning/issues/2432)
 
