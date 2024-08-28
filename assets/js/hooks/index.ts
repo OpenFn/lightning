@@ -201,13 +201,14 @@ export const Combobox = {
 
   highlightOption(option) {
     this.clearHighlight();
-    option.classList.add('bg-indigo-600', 'text-white');
+    option.setAttribute('data-highlighted', 'true');
     this.highlightedOption = option;
+    option.scrollIntoView({ block: 'nearest' });
   },
 
   clearHighlight() {
     if (this.highlightedOption) {
-      this.highlightedOption.classList.remove('bg-indigo-600', 'text-white');
+      this.highlightedOption.removeAttribute('data-highlighted');
       this.highlightedOption = null;
     }
   },

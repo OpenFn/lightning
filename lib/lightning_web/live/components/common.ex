@@ -509,7 +509,7 @@ defmodule LightningWeb.Components.Common do
       >
         <li
           :for={item <- @items}
-          class="group text-gray-900 relative cursor-pointer select-none py-2 px-3 text-sm"
+          class="group text-gray-900 relative cursor-pointer select-none py-2 px-3 text-sm data-[highlighted=true]:bg-indigo-600 data-[highlighted=true]:text-white"
           id={"option-#{item.id}"}
           role="option"
           tabindex="0"
@@ -529,7 +529,7 @@ defmodule LightningWeb.Components.Common do
           ]}>
             <.icon
               name="hero-check"
-              class="text-indigo-600 group-hover:text-white group-[.bg-indigo-600]:text-white"
+              class="text-indigo-600 group-data-[highlighted=true]:text-white"
             />
           </span>
         </li>
