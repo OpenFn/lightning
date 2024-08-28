@@ -504,7 +504,7 @@ defmodule LightningWeb.Components.Common do
       >
         <li
           :for={item <- @items}
-          class="text-gray-900 relative cursor-pointer select-none py-2 px-3 text-sm hover:bg-indigo-600 hover:text-white transition-colors duration-150"
+          class="text-gray-900 relative cursor-pointer select-none py-2 px-3 text-sm"
           id={"option-#{item.id}"}
           role="option"
           tabindex="0"
