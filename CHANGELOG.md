@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Implement a combo-box to make navigating between projects easier
+  [#241](https://github.com/OpenFn/lightning/pull/2424)
+
 ### Fixed
 
 ## [v2.8.1] - 2024-08-28
