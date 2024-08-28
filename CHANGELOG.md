@@ -17,16 +17,27 @@ and this project adheres to
 
 ### Added
 
-- Users are now able to export work orders from the History page.
+### Changed
+
+### Released
+
+## [v2.8.0] - 2024-08-27
+
+### Added
+
+- Users are now able to export work orders, runs, steps, logs, and dataclips
+  from the History page.
   [#1698](https://github.com/OpenFn/lightning/issues/1698)
-- Add index over `run_id` and `step_id` in run_steps.
-  [#2428](https://github.com/OpenFn/lightning/issues/2428)
 
 ### Changed
 
+- Add index over `run_id` and `step_id` in run_steps to improve worker claim
+  speed. [#2428](https://github.com/OpenFn/lightning/issues/2428)
 - Show Github Error messages as they are to help troubleshooting
   [#2156](https://github.com/OpenFn/lightning/issues/2156)
 - Allow `Setup_utils.setup_user` to be used for the initial superuser creation.
+- Update to code assist in the Job Editor to import namespaces from adaptors.
+  [#2432](https://github.com/OpenFn/lightning/issues/2432)
 
 ### Fixed
 
