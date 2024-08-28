@@ -527,7 +527,10 @@ defmodule LightningWeb.Components.Common do
             "absolute inset-y-0 right-0 items-center pr-4",
             "flex group-[&:not([data-item-selected])]:hidden"
           ]}>
-            <.icon name="hero-check" class="group-hover:text-white text-indigo-600" />
+            <.icon
+              name="hero-check"
+              class="text-indigo-600 group-hover:text-white group-[.bg-indigo-600]:text-white"
+            />
           </span>
         </li>
       </ul>
