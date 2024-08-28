@@ -480,6 +480,7 @@ defmodule LightningWeb.Components.Common do
       <input
         id="combobox"
         type="text"
+        spellcheck="false"
         placeholder={@placeholder || "Search..."}
         value={@selected_item && @selected_item.name}
         class="w-full rounded-md border-0 bg-white py-1.5 pl-3 pr-12 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
@@ -497,29 +498,34 @@ defmodule LightningWeb.Components.Common do
       </button>
 
       <ul
-        class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm hidden"
+        class={[
+          "absolute z-10 mt-1 max-h-60 py-1 w-full overflow-auto rounded-md",
+          "bg-white shadow-lg ring-1 ring-black ring-opacity-5",
+          "text-base sm:text-sm hidden focus:outline-none"
+        ]}
         id="options"
         role="listbox"
         aria-labelledby="combobox"
       >
         <li
           :for={item <- @items}
-          class="text-gray-900 relative cursor-pointer select-none py-2 px-3 text-sm"
+          class="group text-gray-900 relative cursor-pointer select-none py-2 px-3 text-sm"
           id={"option-#{item.id}"}
           role="option"
           tabindex="0"
           data-item-id={item.id}
+          data-item-selected={@selected_item && @selected_item.id == item.id}
           data-url={@url_func.(item)}
         >
           <span class={[
             "font-normal block truncate",
-            @selected_item && @selected_item.id == item.id && "font-semibold"
+            "group-data-[item-selected]:font-semibold"
           ]}>
             <%= item.name %>
           </span>
           <span class={[
-            "absolute inset-y-0 right-0 flex items-center pr-4",
-            (!@selected_item || @selected_item.id != item.id) && "hidden"
+            "absolute inset-y-0 right-0 items-center pr-4",
+            "flex group-[&:not([data-item-selected])]:hidden"
           ]}>
             <.icon name="hero-check" class="group-hover:text-white text-indigo-600" />
           </span>
