@@ -17,7 +17,10 @@
           label="Github Installation"
           prompt="Select an installation"
           options={installations_select_options(@installations)}
-          disabled={if(@installations.loading, do: true, else: false)}
+          disabled={
+            @actions_disabled ||
+              if(@installations.loading, do: true, else: false)
+          }
           required="true"
           button_placement="right"
         >
@@ -26,7 +29,10 @@
             type="button"
             class="rounded-l-none my-px h-9"
             color_class="text-gray-900 ring-1 ring-gray-300 hover:bg-gray-100"
-            disabled={if(@installations.loading, do: true, else: false)}
+            disabled={
+              @actions_disabled ||
+                if(@installations.loading, do: true, else: false)
+            }
             phx-click="refresh-installations"
             phx-target={@myself}
           >
@@ -117,9 +123,11 @@
       <% end %>
       <div class="flex gap-4 mt-2">
         <.button
+          id="connect-and-sync-button"
           type="submit"
           phx-disable-with="Connecting..."
-          disabled={!@changeset.valid?}
+          disabled={@actions_disabled || !@changeset.valid?}
+          tooltip={@actions_disabled && @actions_disabled_tooltip}
         >
           Connect Branch & Initiate First Sync
         </.button>
@@ -179,11 +187,15 @@
         <div class="pt-2">
           <.button
             id="initiate-sync-button"
-            disabled={!@can_initiate_github_sync || !@verify_connection.ok?}
+            disabled={
+              @actions_disabled || !@can_initiate_github_sync ||
+                !@verify_connection.ok?
+            }
             type="button"
             tooltip={
-              !@can_initiate_github_sync &&
-                "Contact an editor or admin to sync."
+              (@actions_disabled && @actions_disabled_tooltip) ||
+                (!@can_initiate_github_sync &&
+                   "Contact an editor or admin to sync.")
             }
             phx-click="initiate-sync"
             phx-disable-with="Syncing.."

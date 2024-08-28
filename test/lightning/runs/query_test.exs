@@ -290,11 +290,14 @@ defmodule Lightning.Runs.QueryTest do
             %{project_id: blue.project.id, row_number: 3, concurrency: 3}
           ],
           fn run, extra ->
-            Map.take(run, [:id, :state]) |> Map.merge(extra)
+            Map.take(run, [:id, :state, :inserted_at]) |> Map.merge(extra)
           end
         )
 
-      window = Query.in_progress_window() |> Repo.all()
+      window =
+        Query.in_progress_window()
+        |> Repo.all()
+        |> Enum.sort_by(& &1.inserted_at, DateTime)
 
       assert match?(^runs_in_order, window)
 
@@ -322,7 +325,10 @@ defmodule Lightning.Runs.QueryTest do
         set: [state: :claimed, claimed_at: now]
       )
 
-      window = Query.in_progress_window() |> Repo.all()
+      window =
+        Query.in_progress_window()
+        |> Repo.all()
+        |> Enum.sort_by(& &1.inserted_at, DateTime)
 
       assert Enum.count(
                window,
@@ -391,6 +397,7 @@ defmodule Lightning.Runs.QueryTest do
 
       Query.in_progress_window()
       |> Repo.all()
+      |> Enum.sort_by(& &1.inserted_at, DateTime)
       |> then(fn in_progress ->
         assert match?(
                  [
@@ -428,6 +435,7 @@ defmodule Lightning.Runs.QueryTest do
 
       Query.in_progress_window()
       |> Repo.all()
+      |> Enum.sort_by(& &1.inserted_at, DateTime)
       |> then(fn in_progress ->
         assert match?(
                  [
@@ -471,6 +479,7 @@ defmodule Lightning.Runs.QueryTest do
 
       Query.in_progress_window()
       |> Repo.all()
+      |> Enum.sort_by(& &1.inserted_at, DateTime)
       |> then(fn in_progress ->
         assert match?(
                  [
@@ -502,6 +511,129 @@ defmodule Lightning.Runs.QueryTest do
                the next red should be claimed because the first one is finished
                #{inspect(in_progress, pretty: true)}
                """
+      end)
+    end
+
+    test "eligible_for_claim/0 with multiple claims" do
+      # we need 3 projects, each with one workflow, called: red, green, blue
+      # red should have a limit of 1
+      # green should have a limit of 2
+      # blue should have a limit of 3
+
+      [red, green, blue] =
+        [
+          {"red", 1},
+          {"green", 2},
+          {"blue", 3}
+        ]
+        |> Enum.map(fn {name, concurrency} ->
+          project = insert(:project, name: name)
+
+          workflow =
+            insert(:simple_workflow, project: project, concurrency: concurrency)
+
+          %{project: project, workflow: workflow}
+        end)
+
+      [red_run_1_id, red_run_2_id] =
+        1..2
+        |> Enum.map(fn _ ->
+          %{id: run_id} = insert_run(red, :available)
+          run_id
+        end)
+
+      [green_run_1_id, green_run_2_id, green_run_3_id] =
+        1..3
+        |> Enum.map(fn _ ->
+          %{id: run_id} = insert_run(green, :available)
+          run_id
+        end)
+
+      [blue_run_1_id, blue_run_2_id, blue_run_3_id, blue_run_4_id] =
+        1..4
+        |> Enum.map(fn _ ->
+          %{id: run_id} = insert_run(blue, :available)
+          run_id
+        end)
+
+      assert {:ok, _} = Lightning.Runs.Queue.claim(7, Query.eligible_for_claim())
+
+      red_project_id = red.project.id
+      green_project_id = green.project.id
+      blue_project_id = blue.project.id
+
+      Query.in_progress_window()
+      |> Repo.all()
+      |> Enum.sort_by(& &1.inserted_at, DateTime)
+      |> then(fn in_progress ->
+        assert match?(
+                 [
+                   %{
+                     id: ^red_run_1_id,
+                     project_id: ^red_project_id,
+                     state: :claimed,
+                     row_number: 1,
+                     concurrency: 1
+                   },
+                   %{
+                     id: ^red_run_2_id,
+                     project_id: ^red_project_id,
+                     state: :available,
+                     row_number: 2,
+                     concurrency: 1
+                   },
+                   %{
+                     id: ^green_run_1_id,
+                     project_id: ^green_project_id,
+                     state: :claimed,
+                     row_number: 1,
+                     concurrency: 2
+                   },
+                   %{
+                     id: ^green_run_2_id,
+                     project_id: ^green_project_id,
+                     state: :claimed,
+                     row_number: 2,
+                     concurrency: 2
+                   },
+                   %{
+                     id: ^green_run_3_id,
+                     project_id: ^green_project_id,
+                     state: :available,
+                     row_number: 3,
+                     concurrency: 2
+                   },
+                   %{
+                     id: ^blue_run_1_id,
+                     project_id: ^blue_project_id,
+                     state: :claimed,
+                     row_number: 1,
+                     concurrency: 3
+                   },
+                   %{
+                     id: ^blue_run_2_id,
+                     project_id: ^blue_project_id,
+                     state: :claimed,
+                     row_number: 2,
+                     concurrency: 3
+                   },
+                   %{
+                     id: ^blue_run_3_id,
+                     project_id: ^blue_project_id,
+                     state: :claimed,
+                     row_number: 3,
+                     concurrency: 3
+                   },
+                   %{
+                     id: ^blue_run_4_id,
+                     project_id: ^blue_project_id,
+                     state: :available,
+                     row_number: 4,
+                     concurrency: 3
+                   }
+                 ],
+                 in_progress
+               )
       end)
     end
   end
