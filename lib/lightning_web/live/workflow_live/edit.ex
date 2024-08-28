@@ -234,6 +234,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         module={LightningWeb.WorkflowLive.AiAssistantComponent}
                         current_user={@current_user}
                         selected_job={@selected_job}
+                        chat_session_id={@chat_session_id}
+                        action={if(@chat_session_id, do: :show, else: :new)}
                         id={"aichat-#{@selected_job.id}"}
                       />
                     </div>
@@ -962,6 +964,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
        view_only_users_ids: view_only_users_ids,
        active_menu_item: :overview,
        expanded_job: nil,
+       chat_session_id: nil,
        follow_run: nil,
        step: nil,
        manual_run_form: nil,
@@ -971,7 +974,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
        selected_run: nil,
        selected_trigger: nil,
        selection_mode: nil,
-       query_params: %{"s" => nil, "m" => nil, "a" => nil},
+       query_params: %{"s" => nil, "m" => nil, "a" => nil, "cs" => nil},
        workflow: nil,
        snapshot: nil,
        changeset: nil,
@@ -1951,8 +1954,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> assign(
       query_params:
         params
-        |> Map.take(["s", "m", "a"])
-        |> Enum.into(%{"s" => nil, "m" => nil, "a" => nil})
+        |> Map.take(["s", "m", "a", "cs"])
+        |> Enum.into(%{"s" => nil, "m" => nil, "a" => nil, "cs" => nil})
     )
     |> apply_query_params()
   end
@@ -1980,6 +1983,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         end
     end
     |> assign_follow_run(socket.assigns.query_params)
+    |> assign(chat_session_id: socket.assigns.query_params["cs"])
   end
 
   defp switch_changeset(socket) do
@@ -2056,7 +2060,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
       selected_edge: nil,
       selected_job: nil,
       selected_trigger: nil,
-      selection_mode: nil
+      selection_mode: nil,
+      chat_session_id: nil
     )
   end
 
@@ -2083,11 +2088,21 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       :triggers ->
         socket
-        |> assign(selected_job: nil, selected_trigger: value, selected_edge: nil)
+        |> assign(
+          selected_job: nil,
+          selected_trigger: value,
+          selected_edge: nil,
+          chat_session_id: nil
+        )
 
       :edges ->
         socket
-        |> assign(selected_job: nil, selected_trigger: nil, selected_edge: value)
+        |> assign(
+          selected_job: nil,
+          selected_trigger: nil,
+          selected_edge: value,
+          chat_session_id: nil
+        )
     end
   end
 

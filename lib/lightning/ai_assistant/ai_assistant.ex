@@ -9,6 +9,8 @@ defmodule Lightning.AiAssistant do
   alias Lightning.Repo
   alias Lightning.Workflows.Job
 
+  import Ecto.Query
+
   @doc """
   Creates a new session with the given job.
 
@@ -47,6 +49,21 @@ defmodule Lightning.AiAssistant do
       | expression: expression,
         adaptor: Lightning.AdaptorRegistry.resolve_adaptor(adaptor)
     }
+  end
+
+  @spec list_sessions_for_job(Job.t()) :: [ChatSession.t(), ...] | []
+  def list_sessions_for_job(job) do
+    Repo.all(
+      from s in ChatSession,
+        where: s.job_id == ^job.id,
+        order_by: [desc: :updated_at],
+        preload: [:user]
+    )
+  end
+
+  @spec get_session!(Ecto.UUID.t()) :: ChatSession.t()
+  def get_session!(id) do
+    ChatSession |> Repo.get!(id) |> Repo.preload(:messages)
   end
 
   @spec save_message!(ChatSession.t(), %{String.t() => any()}) :: ChatSession.t()
