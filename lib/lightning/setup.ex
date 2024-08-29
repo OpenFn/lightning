@@ -21,7 +21,10 @@ defmodule Lightning.Setup do
   def setup_user(user, token \\ nil, credentials \\ nil) do
     {:ok, _pid} = Lightning.Setup.ensure_minimum_setup()
 
-    :ok = SetupUtils.setup_user(user, token, credentials)
+    {:ok, _, _} =
+      Ecto.Migrator.with_repo(Lightning.Repo, fn _repo ->
+        SetupUtils.setup_user(user, token, credentials)
+      end)
   end
 
   @doc """
