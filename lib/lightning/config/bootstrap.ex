@@ -389,6 +389,7 @@ defmodule Lightning.Config.Bootstrap do
           port: port,
           compress: true,
           protocol_options: [
+            idle_timeout: 600_000, # matching GCP load balancer for single test
             # Note that if a request is more than 10x the max dataclip size, we cut
             # the connection immediately to prevent memory issues via the
             # :max_skip_body_length setting.
