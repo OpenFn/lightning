@@ -8,6 +8,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
      socket
      |> assign(%{
        pending_message: AsyncResult.ok(nil),
+       process_message_on_show: false,
        all_sessions: AsyncResult.ok([]),
        session: nil,
        form: to_form(%{"content" => nil})
@@ -36,13 +37,22 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
          selected_job: job,
          chat_session_id: chat_session_id
        }) do
-    session =
-      chat_session_id
-      |> AiAssistant.get_session!()
-      |> AiAssistant.put_expression_and_adaptor(job.body, job.adaptor)
+    if socket.assigns.process_message_on_show do
+      message = hd(socket.assigns.session.messages)
 
-    socket
-    |> assign(:session, session)
+      socket
+      |> assign(:process_message_on_show, false)
+      |> process_message(message.content)
+    else
+      session =
+        chat_session_id
+        |> AiAssistant.get_session!()
+        |> AiAssistant.put_expression_and_adaptor(job.body, job.adaptor)
+
+      socket
+      |> assign(:session, session)
+      |> assign(:process_message_on_show, false)
+    end
   end
 
   def render(assigns) do
@@ -86,6 +96,106 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
           />
         </.form>
       </.async_result>
+    </div>
+    """
+  end
+
+  def handle_event("send_message", %{"content" => content}, socket) do
+    session =
+      AiAssistant.save_message!(socket.assigns.session, %{
+        "role" => "user",
+        "content" => content,
+        "user_id" => socket.assigns.current_user.id
+      })
+
+    {:noreply,
+     socket
+     |> assign(:session, session)
+     |> redirect_or_process_message(content)}
+  end
+
+  defp redirect_or_process_message(%{assigns: assigns} = socket, message) do
+    if socket.assigns.action == :new do
+      query_params = Map.put(assigns.query_params, "chat", assigns.session.id)
+
+      socket
+      |> assign(:process_message_on_show, true)
+      |> push_patch(to: redirect_url(assigns.base_url, query_params))
+    else
+      process_message(socket, message)
+    end
+  end
+
+  defp process_message(socket, message) do
+    socket
+    |> assign(:pending_message, AsyncResult.loading())
+    |> start_async(
+      :process_message,
+      fn ->
+        AiAssistant.query(socket.assigns.session, message)
+      end
+    )
+  end
+
+  defp redirect_url(base_url, query_params) do
+    query_string =
+      query_params
+      |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+      |> URI.encode_query()
+
+    "#{base_url}?#{query_string}"
+  end
+
+  def handle_async(:process_message, {:ok, {:ok, session}}, socket) do
+    {:noreply,
+     socket
+     |> assign(:session, session)
+     |> assign(:pending_message, AsyncResult.ok(nil))}
+  end
+
+  def handle_async(:process_message, {:ok, :error}, socket) do
+    {:noreply,
+     socket
+     |> update(:pending_message, fn async_result ->
+       AsyncResult.failed(async_result, :error)
+     end)}
+  end
+
+  attr :disabled, :boolean
+  attr :form, :map, required: true
+
+  defp chat_input(assigns) do
+    assigns =
+      assigns
+      |> assign(
+        :errors,
+        Enum.map(
+          assigns.form[:content].errors,
+          &LightningWeb.CoreComponents.translate_error(&1)
+        )
+      )
+
+    ~H"""
+    <div class="w-full max-h-72 flex flex-row rounded-lg shadow-sm ring-1 ring-inset ring-gray-300 focus-within:ring-2 focus-within:ring-indigo-600">
+      <label for={@form[:content].name} class="sr-only">
+        Describe your request
+      </label>
+      <textarea
+        id="content"
+        name={@form[:content].name}
+        class="block grow resize-none border-0 bg-transparent py-1.5 text-gray-900 placeholder:text-gray-400 focus:ring-0 text-sm"
+        placeholder="..."
+        disabled={@disabled}
+      ><%= Phoenix.HTML.Form.normalize_value("textarea", @form[:content].value) %></textarea>
+      <.error :for={msg <- @errors}><%= msg %></.error>
+      <div class="py-2 pl-3 pr-2">
+        <div class="flex items-center space-x-5"></div>
+        <div class="flex-shrink-0">
+          <.button type="submit" disabled={@disabled}>
+            Send
+          </.button>
+        </div>
+      </div>
     </div>
     """
   end
@@ -184,89 +294,6 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         </div>
       </:failed>
     </.async_result>
-    """
-  end
-
-  defp redirect_url(base_url, query_params) do
-    query_string =
-      query_params
-      |> Enum.reject(fn {_k, v} -> is_nil(v) end)
-      |> URI.encode_query()
-
-    "#{base_url}?#{query_string}"
-  end
-
-  def handle_event("send_message", %{"content" => content}, socket) do
-    session =
-      AiAssistant.save_message!(socket.assigns.session, %{
-        "role" => "user",
-        "content" => content,
-        "user_id" => socket.assigns.current_user.id
-      })
-
-    {:noreply,
-     socket
-     |> assign(:pending_message, AsyncResult.loading())
-     |> assign(:session, session)
-     |> start_async(
-       :process_message,
-       fn ->
-         AiAssistant.query(session, content)
-       end
-     )}
-  end
-
-  def handle_async(:process_message, {:ok, {:ok, session}}, socket) do
-    {:noreply,
-     socket
-     |> assign(:session, session)
-     |> assign(:pending_message, AsyncResult.ok(nil))}
-  end
-
-  def handle_async(:process_message, {:ok, :error}, socket) do
-    {:noreply,
-     socket
-     |> update(:pending_message, fn async_result ->
-       AsyncResult.failed(async_result, :error)
-     end)}
-  end
-
-  attr :disabled, :boolean
-  attr :form, :map, required: true
-
-  defp chat_input(assigns) do
-    assigns =
-      assigns
-      |> assign(
-        :errors,
-        Enum.map(
-          assigns.form[:content].errors,
-          &LightningWeb.CoreComponents.translate_error(&1)
-        )
-      )
-
-    ~H"""
-    <div class="w-full max-h-72 flex flex-row rounded-lg shadow-sm ring-1 ring-inset ring-gray-300 focus-within:ring-2 focus-within:ring-indigo-600">
-      <label for={@form[:content].name} class="sr-only">
-        Describe your request
-      </label>
-      <textarea
-        id="content"
-        name={@form[:content].name}
-        class="block grow resize-none border-0 bg-transparent py-1.5 text-gray-900 placeholder:text-gray-400 focus:ring-0 text-sm"
-        placeholder="..."
-        disabled={@disabled}
-      ><%= Phoenix.HTML.Form.normalize_value("textarea", @form[:content].value) %></textarea>
-      <.error :for={msg <- @errors}><%= msg %></.error>
-      <div class="py-2 pl-3 pr-2">
-        <div class="flex items-center space-x-5"></div>
-        <div class="flex-shrink-0">
-          <.button type="submit" disabled={@disabled}>
-            Send
-          </.button>
-        </div>
-      </div>
-    </div>
     """
   end
 end
