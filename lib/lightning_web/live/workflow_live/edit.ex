@@ -196,10 +196,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     <:tab hash="manual">
                       <span class="inline-block align-middle">Input</span>
                     </:tab>
-                    <:tab
-                      :if={Lightning.AiAssistant.authorized?(@current_user)}
-                      hash="aichat"
-                    >
+                    <:tab hash="aichat">
                       <span class="inline-block align-middle">AI Assistant</span>
                     </:tab>
                   </LightningWeb.Components.Tabbed.tabs>

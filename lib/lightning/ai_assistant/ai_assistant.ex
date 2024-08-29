@@ -3,13 +3,13 @@ defmodule Lightning.AiAssistant do
   The AI assistant module.
   """
 
+  import Ecto.Query
+
   alias Lightning.Accounts.User
   alias Lightning.AiAssistant.ChatSession
   alias Lightning.ApolloClient
   alias Lightning.Repo
   alias Lightning.Workflows.Job
-
-  import Ecto.Query
 
   @doc """
   Creates a new session with the given job.
