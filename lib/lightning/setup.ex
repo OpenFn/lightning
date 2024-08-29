@@ -17,7 +17,7 @@ defmodule Lightning.Setup do
 
   """
   @spec setup_user(map(), String.t() | nil, list(map()) | nil) ::
-          :ok | {:error, any()}
+          {:ok, any(), any()} | {:error, any()}
   def setup_user(user, token \\ nil, credentials \\ nil) do
     {:ok, _pid} = Lightning.Setup.ensure_minimum_setup()
 
