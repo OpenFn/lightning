@@ -235,6 +235,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         current_user={@current_user}
                         selected_job={@selected_job}
                         chat_session_id={@chat_session_id}
+                        query_params={@query_params}
+                        base_url={@base_url}
                         action={if(@chat_session_id, do: :show, else: :new)}
                         id={"aichat-#{@selected_job.id}"}
                       />
@@ -974,7 +976,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
        selected_run: nil,
        selected_trigger: nil,
        selection_mode: nil,
-       query_params: %{"s" => nil, "m" => nil, "a" => nil, "cs" => nil},
+       query_params: %{
+         "s" => nil,
+         "m" => nil,
+         "a" => nil,
+         "v" => nil,
+         "chat" => nil
+       },
        workflow: nil,
        snapshot: nil,
        changeset: nil,
@@ -1954,8 +1962,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> assign(
       query_params:
         params
-        |> Map.take(["s", "m", "a", "cs"])
-        |> Enum.into(%{"s" => nil, "m" => nil, "a" => nil, "cs" => nil})
+        |> Map.take(["s", "m", "a", "v", "chat"])
+        |> Enum.into(%{
+          "s" => nil,
+          "m" => nil,
+          "a" => nil,
+          "v" => nil,
+          "chat" => nil
+        })
     )
     |> apply_query_params()
   end
@@ -1983,7 +1997,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         end
     end
     |> assign_follow_run(socket.assigns.query_params)
-    |> assign(chat_session_id: socket.assigns.query_params["cs"])
+    |> assign(chat_session_id: socket.assigns.query_params["chat"])
   end
 
   defp switch_changeset(socket) do

@@ -20,7 +20,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   def update(%{action: action} = assigns, socket) do
     {:ok,
      socket
-     |> assign(:action, action)
+     |> assign(assigns)
      |> apply_action(action, assigns)}
   end
 
@@ -57,59 +57,20 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
           </div>
         </:loading>
         <div class="row-span-full flex flex-col gap-4 p-2 overflow-y-auto">
-          <%= for message <- @session.messages do %>
-            <div
-              :if={message.role == :user}
-              class="ml-auto bg-blue-500 text-white p-2 rounded-lg text-right break-words"
-            >
-              <%= message.content %>
-            </div>
-            <div
-              :if={message.role == :assistant}
-              class="mr-auto p-2 rounded-lg break-words text-wrap flex flex-row gap-x-2 makeup-html"
-            >
-              <div class="">
-                <div class="rounded-full p-2 bg-indigo-200 text-indigo-700 ring-4 ring-white">
-                  <.icon name="hero-cpu-chip" class="" />
-                </div>
-              </div>
-
-              <div>
-                <%= message.content |> Earmark.as_html!() |> raw() %>
-              </div>
-            </div>
-          <% end %>
-          <.async_result assign={@pending_message}>
-            <:loading>
-              <div class="mr-auto p-2 rounded-lg break-words text-wrap flex flex-row gap-x-2 animate-pulse">
-                <div class="">
-                  <div class="rounded-full p-2 bg-indigo-200 text-indigo-700 ring-4 ring-white">
-                    <.icon name="hero-sparkles" class="" />
-                  </div>
-                </div>
-                <div class="h-2 bg-slate-700 rounded"></div>
-              </div>
-            </:loading>
-            <:failed>
-              <div class="mr-auto p-2 rounded-lg break-words text-wrap flex flex-row gap-x-2">
-                <div class="">
-                  <div class="rounded-full p-2 bg-indigo-200 text-indigo-700 ring-4 ring-white">
-                    <.icon name="hero-sparkles" class="" />
-                  </div>
-                </div>
-                <div class="flex gap-2">
-                  <.icon name="exclamation-triangle" class="text-red" />
-                  <span>An error occured! Please try again later.</span>
-                </div>
-              </div>
-            </:failed>
-          </.async_result>
-
           <%= case @action do %>
             <% :new -> %>
-              <.render_sessions all_sessions={@all_sessions} />
+              <.render_sessions
+                all_sessions={@all_sessions}
+                query_params={@query_params}
+                base_url={@base_url}
+              />
             <% :show -> %>
-              <.render_session session={@session} pending_message={@pending_message} />
+              <.render_session
+                session={@session}
+                pending_message={@pending_message}
+                query_params={@query_params}
+                base_url={@base_url}
+              />
           <% end %>
         </div>
         <.form
@@ -130,6 +91,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   end
 
   attr :all_sessions, AsyncResult, required: true
+  attr :query_params, :map, required: true
+  attr :base_url, :string, required: true
 
   defp render_sessions(assigns) do
     ~H"""
@@ -142,7 +105,10 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         </div>
       </:loading>
       <%= for session <- all_sessions do %>
-        <div class="p-2 rounded-lg border border-gray-900 hover:bg-gray-100">
+        <.link
+          patch={redirect_url(@base_url, Map.put(@query_params, "chat", session.id))}
+          class="p-2 rounded-lg border border-gray-900 hover:bg-gray-100"
+        >
           <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100">
             <span class="text-sm font-medium leading-none text-black uppercase">
               <%= String.first(session.user.first_name) %><%= String.first(
@@ -152,7 +118,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
           </span>
 
           <%= session.updated_at %>
-        </div>
+        </.link>
       <% end %>
     </.async_result>
     """
@@ -160,10 +126,17 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
   attr :session, AiAssistant.ChatSession, required: true
   attr :pending_message, AsyncResult, required: true
+  attr :query_params, :map, required: true
+  attr :base_url, :string, required: true
 
   defp render_session(assigns) do
     ~H"""
-    <div class="sticky top-0 bg-gray-100">Session Title and Close Icon</div>
+    <div class="sticky top-0 bg-gray-100 p-2 flex justify-between">
+      <span>Session Title</span>
+      <.link patch={redirect_url(@base_url, Map.put(@query_params, "chat", nil))}>
+        <.icon name="hero-x-mark" class="h-5 w-5" />
+      </.link>
+    </div>
     <%= for message <- @session.messages do %>
       <div
         :if={message.role == :user}
@@ -212,6 +185,15 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
       </:failed>
     </.async_result>
     """
+  end
+
+  defp redirect_url(base_url, query_params) do
+    query_string =
+      query_params
+      |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+      |> URI.encode_query()
+
+    "#{base_url}?#{query_string}"
   end
 
   def handle_event("send_message", %{"content" => content}, socket) do
