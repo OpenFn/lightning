@@ -53,7 +53,7 @@
     <div class="mt-2 flow-root">
       <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
         <div class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-          <.new_table
+          <LightningWeb.Components.Table.table
             id="project_users_table"
             rows={
               Phoenix.HTML.FormData.to_form(
@@ -108,7 +108,7 @@
                 />
               </div>
             </:col>
-          </.new_table>
+          </LightningWeb.Components.Table.table>
         </div>
       </div>
     </div>

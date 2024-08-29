@@ -2,6 +2,8 @@ defmodule LightningWeb.WorkflowLive.Components do
   @moduledoc false
   use LightningWeb, :component
 
+  import PetalComponents.Table
+
   alias LightningWeb.Components.Form
   alias Phoenix.LiveView.JS
 

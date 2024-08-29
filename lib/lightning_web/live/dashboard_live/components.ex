@@ -1,6 +1,8 @@
 defmodule LightningWeb.DashboardLive.Components do
   use LightningWeb, :component
 
+  import PetalComponents.Table
+
   alias Lightning.Accounts.User
   alias Lightning.Projects.Project
 
