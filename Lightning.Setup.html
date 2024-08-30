@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v2.8.1">
 
-    <title>LightningWeb.API.JobController — Lightning v2.8.1</title>
+    <title>Lightning.Setup — Lightning v2.8.1</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
@@ -125,16 +125,20 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/api/job_controller.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">LightningWeb.API.JobController</span> 
+  <span translate="no">Lightning.Setup</span> 
   <small class="app-vsn" translate="no">(Lightning v2.8.1)</small>
 
 </h1>
 
+
+  <section id="moduledoc">
+<p>Demo encapsulates logic for setting up a demonstration site.</p>
+  </section>
 
 
   <section id="summary" class="details-list">
@@ -151,17 +155,21 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#index/2" translate="no">index(conn, params)</a>
+        <a href="#ensure_minimum_setup/0" translate="no">ensure_minimum_setup()</a>
 
       </div>
+
+        <div class="summary-synopsis"><p>Set up the bare minimum so that commands can be executed against the repo.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#show/2" translate="no">show(conn, map)</a>
+        <a href="#setup_user/3" translate="no">setup_user(user, token \\ nil, credentials \\ nil)</a>
 
       </div>
+
+        <div class="summary-synopsis"><p>This makes it possible to run setup_user as an external command</p></div>
 
     </div>
 
@@ -178,16 +186,16 @@ Pages
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="index/2">
+<section class="detail" id="ensure_minimum_setup/0">
 
   <div class="detail-header">
-    <a href="#index/2" class="detail-link" title="Link to this function">
+    <a href="#ensure_minimum_setup/0" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">index(conn, params)</h1>
+    <h1 class="signature" translate="no">ensure_minimum_setup()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/api/job_controller.ex#L11" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup.ex#L33" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -197,19 +205,23 @@ Pages
 
   <section class="docstring">
 
-
+<p>Set up the bare minimum so that commands can be executed against the repo.</p>
   </section>
 </section>
-<section class="detail" id="show/2">
+<section class="detail" id="setup_user/3">
+
+    <span id="setup_user/1"></span>
+
+    <span id="setup_user/2"></span>
 
   <div class="detail-header">
-    <a href="#show/2" class="detail-link" title="Link to this function">
+    <a href="#setup_user/3" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">show(conn, map)</h1>
+    <h1 class="signature" translate="no">setup_user(user, token \\ nil, credentials \\ nil)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/api/job_controller.ex#L40" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup.ex#L21" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -219,7 +231,21 @@ Pages
 
   <section class="docstring">
 
+      <div class="specs">
 
+          <pre translate="no"><span class="attribute">@spec</span> setup_user(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil, [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()] | nil) ::
+  {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}</pre>
+
+      </div>
+
+<p>This makes it possible to run setup_user as an external command</p><p>See: Lightning.SetupUtils.setup_user() for more docs.</p><h2 id="setup_user/3-examples" class="section-heading">
+  <a href="#setup_user/3-examples" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Examples</span>
+</h2>
+<p>  iex&gt; kubectl exec -it deploy/demo-web -- /app/bin/lightning eval Lightning.Setup.setup_user(%{email: &quot;td@openfn.org&quot;, first_name: &quot;taylor&quot;, last_name: &quot;downs&quot;, password: &quot;shh12345!&quot;})
+  :ok</p>
   </section>
 </section>
 
