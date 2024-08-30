@@ -12,17 +12,7 @@ defmodule Lightning.Demo do
   """
   def reset_demo do
     if Application.get_env(:lightning, :is_resettable_demo) do
-      Lightning.Release.load_app()
-
-      children =
-        [
-          {Phoenix.PubSub,
-           name: Lightning.PubSub, adapter: Lightning.Demo.FakePubSub},
-          {Lightning.Vault, Application.get_env(:lightning, Lightning.Vault, [])}
-        ]
-        |> Enum.reject(fn {mod, _} -> Process.whereis(mod) end)
-
-      Supervisor.start_link(children, strategy: :one_for_one)
+      {:ok, _pid} = Lightning.Setup.ensure_minimum_setup()
 
       {:ok, _, _} =
         Ecto.Migrator.with_repo(Lightning.Repo, fn _repo ->
@@ -31,38 +21,6 @@ defmodule Lightning.Demo do
         end)
     else
       IO.puts("I'm sorry, Dave. I'm afraid I can't do that.")
-    end
-  end
-
-  defmodule FakePubSub do
-    @moduledoc false
-
-    # FakePubSub is a Phoenix.PubSub adapter that does nothing.
-    # The purpose of this adapter is to allow the demo to run without
-    # the whole application running.
-
-    @behaviour Phoenix.PubSub.Adapter
-
-    @impl true
-    def child_spec(_opts) do
-      %{id: __MODULE__, start: {__MODULE__, :start_link, []}}
-    end
-
-    def start_link do
-      {:ok, self()}
-    end
-
-    @impl true
-    def node_name(_), do: nil
-
-    @impl true
-    def broadcast(_, _, _, _) do
-      :ok
-    end
-
-    @impl true
-    def direct_broadcast(_, _, _, _, _) do
-      :ok
     end
   end
 end

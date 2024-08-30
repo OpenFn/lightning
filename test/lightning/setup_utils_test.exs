@@ -652,7 +652,7 @@ defmodule Lightning.SetupUtilsTest do
 
   describe "setup_user/3" do
     test "creates a user, an api token, and credentials" do
-      assert :ok ==
+      assert {:ok, :ok} ==
                Lightning.SetupUtils.setup_user(
                  %{
                    first_name: "Taylor",
@@ -689,7 +689,7 @@ defmodule Lightning.SetupUtilsTest do
     end
 
     test "can be used to set up a superuser" do
-      assert :ok ==
+      assert {:ok, :ok} ==
                Lightning.SetupUtils.setup_user(
                  %{
                    role: :superuser,

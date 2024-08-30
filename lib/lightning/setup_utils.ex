@@ -909,32 +909,34 @@ defmodule Lightning.SetupUtils do
   def setup_user(user, token \\ nil, credentials \\ nil) do
     {role, user} = Map.pop(user, :role)
 
-    # create user
-    {:ok, user} =
-      if role == :superuser,
-        do: Accounts.register_superuser(user),
-        else: Accounts.create_user(user)
+    Repo.transaction(fn ->
+      # create user
+      {:ok, user} =
+        if role == :superuser,
+          do: Accounts.register_superuser(user),
+          else: Accounts.create_user(user)
 
-    # create token
-    if token,
-      do:
-        Repo.insert!(%Lightning.Accounts.UserToken{
-          user_id: user.id,
-          context: "api",
-          token: token
-        })
+      # create token
+      if token,
+        do:
+          Repo.insert!(%Lightning.Accounts.UserToken{
+            user_id: user.id,
+            context: "api",
+            token: token
+          })
 
-    # create credentials
-    if credentials,
-      do:
-        Enum.each(credentials, fn credential ->
-          {:ok, _credential} =
-            Credentials.create_credential(
-              credential
-              |> Map.put(:user_id, user.id)
-            )
-        end)
+      # create credentials
+      if credentials,
+        do:
+          Enum.each(credentials, fn credential ->
+            {:ok, _credential} =
+              Credentials.create_credential(
+                credential
+                |> Map.put(:user_id, user.id)
+              )
+          end)
 
-    :ok
+      :ok
+    end)
   end
 end

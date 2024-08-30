@@ -19,6 +19,8 @@ and this project adheres to
 
 ### Changed
 
+- Allow setup_user command to be execute from outside the container with
+  `/app/bin/lightning eval Lightning.Setup.setup_user/3`
 - Implement a combo-box to make navigating between projects easier
   [#241](https://github.com/OpenFn/lightning/pull/2424)
 
