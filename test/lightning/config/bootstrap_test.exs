@@ -70,6 +70,55 @@ defmodule Lightning.Config.BootstrapTest do
                Lightning.Repo
              )
     end
+
+    test "LightningWeb.Endpoint idle_timeout" do
+      # Defaults to 60 seconds if idle_timeout is not set
+      Dotenvy.source([
+        %{"SECRET_KEY_BASE" => "Foo"},
+        %{"DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE"}
+      ])
+
+      Bootstrap.configure()
+
+      idle_timeout =
+        :lightning
+        |> get_env(LightningWeb.Endpoint)
+        |> get_in([:http, :protocol_options, :idle_timeout])
+
+      assert idle_timeout == 60_000
+
+      # Default to 60 seconds if idle timeout is not an integer
+      Dotenvy.source([
+        %{"IDLE_TIMEOUT" => ""},
+        %{"SECRET_KEY_BASE" => "Foo"},
+        %{"DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE"}
+      ])
+
+      Bootstrap.configure()
+
+      idle_timeout =
+        :lightning
+        |> get_env(LightningWeb.Endpoint)
+        |> get_in([:http, :protocol_options, :idle_timeout])
+
+      assert idle_timeout == 60_000
+
+      # Converts provided value to milliseconds
+      Dotenvy.source([
+        %{"IDLE_TIMEOUT" => "240"},
+        %{"SECRET_KEY_BASE" => "Foo"},
+        %{"DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE"}
+      ])
+
+      Bootstrap.configure()
+
+      idle_timeout =
+        :lightning
+        |> get_env(LightningWeb.Endpoint)
+        |> get_in([:http, :protocol_options, :idle_timeout])
+
+      assert idle_timeout == 240_000
+    end
   end
 
   describe "storage" do
