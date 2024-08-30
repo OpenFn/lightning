@@ -380,6 +380,18 @@ defmodule Lightning.Config.Bootstrap do
 
       url_scheme = env!("URL_SCHEME", :string, "https")
 
+      idle_timeout =
+        env!(
+          "IDLE_TIMEOUT",
+          fn str ->
+            case Integer.parse(str) do
+              :error -> 60_000
+              {val, _} -> val * 1_000
+            end
+          end,
+          60_000
+        )
+
       config :lightning, LightningWeb.Endpoint,
         url: [host: host, port: url_port, scheme: url_scheme],
         secret_key_base: secret_key_base,
@@ -398,7 +410,8 @@ defmodule Lightning.Config.Bootstrap do
                 :max_dataclip_size_bytes,
                 10_000_000
               ) *
-                10
+                10,
+            idle_timeout: idle_timeout
           ]
         ],
         server: true

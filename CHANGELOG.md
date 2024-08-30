@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Add support for configurable idle connection timeouts via the `IDLE_TIMEOUT`
+  environment variable. [#2443](https://github.com/OpenFn/lightning/issues/2443)
+
 ### Changed
 
 - Allow setup_user command to be execute from outside the container with
