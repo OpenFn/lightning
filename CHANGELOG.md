@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Add utility module to seed a DB to support query performance analysis.
+  [#2441](https://github.com/OpenFn/lightning/issues/2441)
+
 ### Changed
 
 ### Fixed
