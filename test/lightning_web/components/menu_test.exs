@@ -24,7 +24,7 @@ defmodule LightningWeb.Components.MenuTest do
       assert Floki.text(element) == "Workflows"
 
       assert element |> Floki.attribute("class") |> hd =~
-               "text-primary-300 hover:bg-primary-900"
+               "menu-item-inactive"
     end
   end
 
@@ -47,21 +47,21 @@ defmodule LightningWeb.Components.MenuTest do
       assert Floki.text(element) == "Workflows"
 
       assert element |> Floki.attribute("class") |> hd =~
-               "text-primary-300 hover:bg-primary-900"
+               "menu-item-inactive"
 
       element = Floki.find(menu, "a[href='/projects/#{project_id}/history']")
 
       assert Floki.text(element) == "History"
 
       assert element |> Floki.attribute("class") |> hd =~
-               "text-primary-300 hover:bg-primary-900"
+               "menu-item-inactive"
 
       element = Floki.find(menu, "a[href='/projects/#{project_id}/settings']")
 
       assert Floki.text(element) == "Settings"
 
       assert element |> Floki.attribute("class") |> hd =~
-               "text-primary-200 bg-primary-900"
+               "menu-item-active"
     end
   end
 
@@ -80,14 +80,14 @@ defmodule LightningWeb.Components.MenuTest do
       assert Floki.text(element) =~ "User Profile"
 
       assert element |> Floki.attribute("class") |> hd =~
-               "text-primary-300 hover:bg-primary-900"
+               "menu-item-inactive"
 
       element = Floki.find(menu, "a[href='/credentials']")
 
       assert Floki.text(element) =~ "Credentials"
 
       assert element |> Floki.attribute("class") |> hd =~
-               "text-primary-200 bg-primary-900"
+               "menu-item-active"
 
       element =
         Floki.find(menu, "a[href='/profile/tokens']")
@@ -95,7 +95,7 @@ defmodule LightningWeb.Components.MenuTest do
       assert Floki.text(element) =~ "API Tokens"
 
       assert element |> Floki.attribute("class") |> hd =~
-               "text-primary-300 hover:bg-primary-900"
+               "menu-item-inactive"
     end
   end
 end
