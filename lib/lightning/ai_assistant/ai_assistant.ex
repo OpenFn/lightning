@@ -3,6 +3,8 @@ defmodule Lightning.AiAssistant do
   The AI assistant module.
   """
 
+  import Ecto.Query
+
   alias Lightning.Accounts.User
   alias Lightning.AiAssistant.ChatSession
   alias Lightning.ApolloClient
@@ -49,7 +51,30 @@ defmodule Lightning.AiAssistant do
     }
   end
 
-  @spec save_message!(ChatSession.t(), %{String.t() => any()}) :: ChatSession.t()
+  @spec list_sessions_for_job(Job.t()) :: [ChatSession.t(), ...] | []
+  def list_sessions_for_job(job) do
+    Repo.all(
+      from s in ChatSession,
+        where: s.job_id == ^job.id,
+        order_by: [desc: :updated_at],
+        preload: [:user]
+    )
+  end
+
+  @spec get_session!(Ecto.UUID.t()) :: ChatSession.t()
+  def get_session!(id) do
+    ChatSession |> Repo.get!(id) |> Repo.preload(:messages)
+  end
+
+  @spec create_session!(Job.t(), User.t(), String.t()) :: ChatSession.t()
+  def create_session!(job, user, content) do
+    job
+    |> new_session(user)
+    |> struct(title: String.slice(content, 0, 20))
+    |> save_message!(%{role: :user, content: content, user_id: user.id})
+  end
+
+  @spec save_message!(ChatSession.t(), %{any() => any()}) :: ChatSession.t()
   def save_message!(session, message) do
     messages = Enum.map(session.messages, &Map.take(&1, [:id]))
 
