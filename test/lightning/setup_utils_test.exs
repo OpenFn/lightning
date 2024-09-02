@@ -652,7 +652,7 @@ defmodule Lightning.SetupUtilsTest do
 
   describe "setup_user/3" do
     test "creates a user, an api token, and credentials" do
-      assert :ok ==
+      assert {:ok, :ok} ==
                Lightning.SetupUtils.setup_user(
                  %{
                    first_name: "Taylor",
@@ -686,6 +686,24 @@ defmodule Lightning.SetupUtilsTest do
                %Credential{name: "openmrs", user_id: ^user_id},
                %Credential{name: "dhis2", user_id: ^user_id}
              ] = Repo.all(Credential)
+    end
+
+    test "can be used to set up a superuser" do
+      assert {:ok, :ok} ==
+               Lightning.SetupUtils.setup_user(
+                 %{
+                   role: :superuser,
+                   first_name: "Super",
+                   last_name: "Hero",
+                   email: "super@openfn.org",
+                   password: "easyAsCake123!"
+                 },
+                 "abc"
+               )
+
+      # check that the user has been created
+      assert %User{id: _user_id, role: :superuser} =
+               Repo.get_by(User, email: "super@openfn.org")
     end
   end
 

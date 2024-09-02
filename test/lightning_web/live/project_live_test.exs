@@ -2,6 +2,7 @@ defmodule LightningWeb.ProjectLiveTest do
   use LightningWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
+  import Phoenix.Component
   import Lightning.ProjectsFixtures
   import Lightning.AccountsFixtures
   import Lightning.Factories
@@ -497,14 +498,14 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert view
              |> element(
-               ~s{a[href="#{~p"/projects/#{project_2.id}/w"}"]},
+               "#option-#{project_2.id}",
                ~r/project-2/
              )
              |> has_element?()
 
       refute view
              |> element(
-               ~s{a[href="#{~p"/projects/#{project_3.id}/w"}"]},
+               "#option-#{project_3.id}",
                ~r/project-3/
              )
              |> has_element?()
@@ -512,27 +513,33 @@ defmodule LightningWeb.ProjectLiveTest do
       {:ok, view, html} = live(conn, ~p"/projects/#{project_1}/w")
 
       assert html =~ project_1.name
-      assert view |> element("button", "#{project_1.name}") |> has_element?()
 
       assert view
-             |> element("a[href='#{~p"/projects/#{project_2.id}/w"}']")
+             |> element("input[id='combobox'][value='#{project_1.name}']")
+             |> has_element?()
+
+      assert view
+             |> element("#option-#{project_2.id}")
              |> has_element?()
 
       refute view
-             |> element("a[href='#{~p"/projects/#{project_3.id}/w"}']")
+             |> element("#option-#{project_3.id}")
              |> has_element?()
 
       {:ok, view, html} = live(conn, ~p"/projects/#{project_2}/w")
 
       assert html =~ project_2.name
-      assert view |> element("button", "#{project_2.name}") |> has_element?()
 
       assert view
-             |> element("a[href='#{~p"/projects/#{project_1.id}/w"}']")
+             |> element("input[id='combobox'][value='#{project_2.name}']")
+             |> has_element?()
+
+      assert view
+             |> element("#option-#{project_1.id}")
              |> has_element?()
 
       refute view
-             |> element("a[href='#{~p"/projects/#{project_3.id}/w"}']")
+             |> element("#option-#{project_3.id}")
              |> has_element?()
 
       assert live(conn, ~p"/projects/#{project_3}/w") ==
@@ -3470,6 +3477,259 @@ defmodule LightningWeb.ProjectLiveTest do
       assert flash["error"] == error_msg
     end
 
+    test "users get a flash containing the github error in case the api returns an error with error_description key",
+         %{
+           conn: conn
+         } do
+      expected_installation = %{
+        "id" => 1234,
+        "account" => %{
+          "type" => "User",
+          "login" => "username"
+        }
+      }
+
+      expected_repo = %{
+        "full_name" => "someaccount/somerepo",
+        "default_branch" => "main"
+      }
+
+      expected_branch = %{"name" => "somebranch"}
+
+      project = insert(:project)
+
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_valid_github_oauth_token!(user)
+
+      expect_get_user_installations(200, %{
+        "installations" => [expected_installation]
+      })
+
+      expect_create_installation_token(expected_installation["id"])
+      expect_get_installation_repos(200, %{"repositories" => [expected_repo]})
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      render_async(view)
+
+      # lets select the installation
+      view
+      |> form("#project-repo-connection-form",
+        connection: %{github_installation_id: expected_installation["id"]}
+      )
+      |> render_change()
+
+      # we should now have the repos listed
+      render_async(view)
+
+      # lets select the repo
+      expect_create_installation_token(expected_installation["id"])
+
+      expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
+
+      view
+      |> form("#project-repo-connection-form",
+        connection: %{
+          github_installation_id: expected_installation["id"],
+          repo: expected_repo["full_name"]
+        }
+      )
+      |> render_change()
+
+      # we should now have the branches listed
+      render_async(view)
+
+      # let us submit
+
+      # push pull.yml
+      expected_error_msg = "Some error message"
+
+      expect_get_repo(expected_repo["full_name"], 200, expected_repo)
+
+      expect_create_blob(expected_repo["full_name"], 403, %{
+        "error_description" => expected_error_msg
+      })
+
+      view
+      |> form("#project-repo-connection-form")
+      |> render_submit(
+        connection: %{
+          branch: expected_branch["name"],
+          sync_direction: "deploy",
+          config_path: "./config.json",
+          accept: true
+        }
+      )
+
+      flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+      assert flash["error"] == "Github Error: #{expected_error_msg}"
+    end
+
+    test "users get a flash containing the github error in case the api returns an error with message key",
+         %{
+           conn: conn
+         } do
+      expected_installation = %{
+        "id" => 1234,
+        "account" => %{
+          "type" => "User",
+          "login" => "username"
+        }
+      }
+
+      expected_repo = %{
+        "full_name" => "someaccount/somerepo",
+        "default_branch" => "main"
+      }
+
+      expected_branch = %{"name" => "somebranch"}
+
+      project = insert(:project)
+
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_valid_github_oauth_token!(user)
+
+      expect_get_user_installations(200, %{
+        "installations" => [expected_installation]
+      })
+
+      expect_create_installation_token(expected_installation["id"])
+      expect_get_installation_repos(200, %{"repositories" => [expected_repo]})
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      render_async(view)
+
+      # lets select the installation
+      view
+      |> form("#project-repo-connection-form",
+        connection: %{github_installation_id: expected_installation["id"]}
+      )
+      |> render_change()
+
+      # we should now have the repos listed
+      render_async(view)
+
+      # lets select the repo
+      expect_create_installation_token(expected_installation["id"])
+
+      expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
+
+      view
+      |> form("#project-repo-connection-form",
+        connection: %{
+          github_installation_id: expected_installation["id"],
+          repo: expected_repo["full_name"]
+        }
+      )
+      |> render_change()
+
+      # we should now have the branches listed
+      render_async(view)
+
+      # let us submit
+
+      # push pull.yml
+      expected_error_msg = "Some error message"
+
+      expect_get_repo(expected_repo["full_name"], 200, expected_repo)
+
+      expect_create_blob(expected_repo["full_name"], 403, %{
+        "message" => expected_error_msg
+      })
+
+      view
+      |> form("#project-repo-connection-form")
+      |> render_submit(
+        connection: %{
+          branch: expected_branch["name"],
+          sync_direction: "deploy",
+          config_path: "./config.json",
+          accept: true
+        }
+      )
+
+      flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+      assert flash["error"] == "Github Error: #{expected_error_msg}"
+    end
+
+    test "connect button is disabled if the usage limiter returns an error",
+         %{
+           conn: conn
+         } do
+      expected_installation = %{
+        "id" => 1234,
+        "account" => %{
+          "type" => "User",
+          "login" => "username"
+        }
+      }
+
+      expected_repo = %{
+        "full_name" => "someaccount/somerepo",
+        "default_branch" => "main"
+      }
+
+      %{id: project_id} = project = insert(:project)
+
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_valid_github_oauth_token!(user)
+
+      expect_get_user_installations(200, %{
+        "installations" => [expected_installation]
+      })
+
+      expect_create_installation_token(expected_installation["id"])
+      expect_get_installation_repos(200, %{"repositories" => [expected_repo]})
+
+      Mox.stub_with(
+        Lightning.Extensions.MockUsageLimiter,
+        Lightning.Extensions.UsageLimiter
+      )
+
+      error_msg = "Some funny error message"
+
+      Lightning.Extensions.MockUsageLimiter
+      |> Mox.stub(:limit_action, fn
+        %{type: :github_sync}, %{project_id: ^project_id} ->
+          {:error, :disabled,
+           %{
+             function: fn assigns ->
+               ~H"<p>I am an error message that says: <%= @error %></p>"
+             end,
+             attrs: %{error: error_msg}
+           }}
+
+        _other_action, _context ->
+          :ok
+      end)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      render_async(view)
+
+      submit_btn =
+        element(
+          view,
+          "#connect-and-sync-button",
+          "Connect Branch & Initiate First Sync"
+        )
+
+      assert render(submit_btn) =~ "disabled=\"disabled\""
+    end
+
     test "all users can see a saved repo connection", %{conn: conn} do
       project = insert(:project)
 
@@ -4357,6 +4617,28 @@ defmodule LightningWeb.ProjectLiveTest do
           access_token: "someaccesstoken"
         )
 
+      Mox.stub_with(
+        Lightning.Extensions.MockUsageLimiter,
+        Lightning.Extensions.UsageLimiter
+      )
+
+      error_msg = "Some funny error message"
+
+      Lightning.Extensions.MockUsageLimiter
+      |> Mox.stub(:limit_action, fn
+        %{type: :github_sync}, %{project_id: ^project_id} ->
+          {:error, :disabled,
+           %{
+             function: fn assigns ->
+               ~H"<p>I am an error message that says: <%= @error %></p>"
+             end,
+             attrs: %{error: error_msg}
+           }}
+
+        _other_action, _context ->
+          :ok
+      end)
+
       for {conn, _user} <-
             setup_project_users(conn, project, [:editor, :admin, :owner]) do
         # ensure project is all setup
@@ -4374,11 +4656,6 @@ defmodule LightningWeb.ProjectLiveTest do
 
         expected_secret_name =
           "OPENFN_#{String.replace(repo_connection.project_id, "-", "_")}_API_KEY"
-
-        Mox.stub_with(
-          Lightning.Extensions.MockUsageLimiter,
-          Lightning.Extensions.UsageLimiter
-        )
 
         Mox.expect(Lightning.Tesla.Mock, :call, 6, fn
           # get installation access token.
@@ -4456,21 +4733,7 @@ defmodule LightningWeb.ProjectLiveTest do
         button = element(view, "#initiate-sync-button")
         assert has_element?(button)
 
-        # try clicking the button
-
-        error_msg = "Some funny error message"
-
-        Lightning.Extensions.MockUsageLimiter
-        |> Mox.expect(:limit_action, fn %{type: :github_sync},
-                                        %{project_id: ^project_id} ->
-          {:error, :disabled, %{text: error_msg}}
-        end)
-
-        render_click(button)
-
-        flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
-
-        assert flash["error"] == error_msg
+        assert render(button) =~ "disabled=\"disabled\""
       end
     end
 
@@ -4478,7 +4741,6 @@ defmodule LightningWeb.ProjectLiveTest do
          %{
            conn: conn
          } do
-      import Phoenix.Component
       %{id: project_id} = project = insert(:project)
 
       for {conn, _user} <-

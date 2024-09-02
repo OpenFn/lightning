@@ -1,5 +1,5 @@
 defmodule Lightning.KafkaTriggers.MessageHandlingTest do
-  use LightningWeb.ConnCase, async: false
+  use LightningWeb.ConnCase, async: true
 
   import Lightning.Factories
 
@@ -19,6 +19,15 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
     setup do
       message = build_broadway_message()
 
+      message_with_headers =
+        build_broadway_message(
+          headers: [
+            {"foo_header", "foo_value"},
+            {"bar_header", "bar_value"},
+            {"foo_header", "other_foo_value"}
+          ]
+        )
+
       trigger = insert(:trigger, type: :kafka)
 
       record_changeset =
@@ -31,10 +40,15 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
         Multi.new()
         |> Multi.insert(:record, record_changeset)
 
-      %{message: message, multi: multi, trigger: trigger}
+      %{
+        message: message,
+        message_with_headers: message_with_headers,
+        multi: multi,
+        trigger: trigger
+      }
     end
 
-    test "creates the WorkOrder", %{
+    test "creates the WorkOrder for a message without headers", %{
       message: message,
       multi: multi,
       trigger: trigger
@@ -57,7 +71,35 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
 
       %{dataclip: dataclip} = created_workorder
       assert dataclip.body["data"] == %{"interesting" => "stuff"}
-      assert dataclip.body["request"] == message.metadata |> stringify_keys()
+      assert dataclip.body["request"] == message.metadata |> persisted_metadata()
+      assert dataclip.type == :kafka
+      assert dataclip.project_id == workflow.project_id
+    end
+
+    test "creates the WorkOrder for a message with headers", %{
+      message_with_headers: message,
+      multi: multi,
+      trigger: trigger
+    } do
+      %{workflow: workflow} = trigger
+      MessageHandling.persist_message(multi, trigger.id, message)
+
+      created_workorder =
+        WorkOrder
+        |> Repo.one()
+        |> Repo.preload([
+          :trigger,
+          :workflow,
+          dataclip: Invocation.Query.dataclip_with_body()
+        ])
+
+      assert created_workorder.trigger_id == trigger.id
+      assert created_workorder.workflow_id == workflow.id
+      assert created_workorder.state == :pending
+
+      %{dataclip: dataclip} = created_workorder
+      assert dataclip.body["data"] == %{"interesting" => "stuff"}
+      assert dataclip.body["request"] == message.metadata |> persisted_metadata()
       assert dataclip.type == :kafka
       assert dataclip.project_id == workflow.project_id
     end
@@ -235,6 +277,7 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
           %{interesting: "stuff"} |> Jason.encode!()
         )
 
+      headers = Keyword.get(opts, :headers, [])
       key = Keyword.get(opts, :key, "abc_123_def")
       offset = Keyword.get(opts, :offset, 11)
 
@@ -244,7 +287,7 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
           offset: offset,
           partition: 2,
           key: key,
-          headers: [],
+          headers: headers,
           ts: 1_715_164_718_283,
           topic: "bar_topic"
         },
@@ -254,6 +297,27 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
         batch_mode: :bulk,
         status: :ok
       }
+    end
+
+    defp persisted_metadata(metadata) do
+      metadata
+      |> Enum.reduce(%{}, fn {key, val}, acc ->
+        persisted_value =
+          key
+          |> case do
+            :headers ->
+              val |> convert_list_of_tuples_to_list_of_lists()
+
+            _ ->
+              val
+          end
+
+        acc |> Map.put(Atom.to_string(key), persisted_value)
+      end)
+    end
+
+    defp convert_list_of_tuples_to_list_of_lists(list) do
+      list |> Enum.map(fn {key, val} -> [key, val] end)
     end
   end
 

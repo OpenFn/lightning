@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.7.19",
+      version: "2.8.1",
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -71,6 +71,7 @@ defmodule Lightning.MixProject do
       {:bodyguard, "~> 2.2"},
       {:broadway_kafka, "~> 0.4.2"},
       {:bypass, "~> 2.1", only: :test},
+      {:briefly, "~> 0.5.0"},
       {:cachex, "~> 3.4"},
       {:cloak_ecto, "~> 1.3.0"},
       {:credo, "~> 1.7.3", only: [:test, :dev]},
@@ -86,9 +87,10 @@ defmodule Lightning.MixProject do
       {:excoveralls, "~> 0.15.0", only: [:test, :dev]},
       {:floki, ">= 0.30.0", only: :test},
       {:gettext, "~> 0.18"},
+      {:google_api_storage, "~> 0.40.1"},
       {:hackney, "~> 1.18"},
       {:heroicons, "~> 0.5.3"},
-      {:httpoison, "~> 1.8"},
+      {:httpoison, "~> 2.0"},
       {:jason, "~> 1.4"},
       {:joken, "~> 2.6.0"},
       {:jsonpatch, "~> 1.0.2"},
@@ -130,7 +132,6 @@ defmodule Lightning.MixProject do
       {:tailwind, "~> 0.1", runtime: Mix.env() == :dev},
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
-      {:temp, "~> 0.4"},
       {:tesla, "~> 1.4"},
       {:timex, "~> 3.7"},
       {:unplug, "~> 1.0"},
@@ -139,6 +140,9 @@ defmodule Lightning.MixProject do
       {:hammer_backend_mnesia, "~> 0.6"},
       {:hammer, "~> 6.0"},
       {:dotenvy, "~> 0.8.0"},
+      {:goth, "~> 1.3"},
+      {:gcs_signed_url, "~> 0.4.6"},
+      {:packmatic, "~> 1.0"},
       # MFA
       {:nimble_totp, "~> 1.0"},
       {:eqrcode, "~> 0.1"},

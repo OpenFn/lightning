@@ -19,6 +19,8 @@ defmodule Lightning.VersionControl do
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Workflow
 
+  require Logger
+
   defdelegate subscribe(user), to: Events
 
   @doc """
@@ -364,8 +366,8 @@ defmodule Lightning.VersionControl do
   @doc """
   Deletes the authorization for the github app and updates the user details accordingly
   """
-  @spec delete_github_ouath_grant(User.t()) :: {:ok, User.t()} | {:error, any()}
-  def delete_github_ouath_grant(%User{} = user) do
+  @spec delete_github_oauth_grant(User.t()) :: {:ok, User.t()} | {:error, map()}
+  def delete_github_oauth_grant(%User{} = user) do
     app_config = Application.fetch_env!(:lightning, :github_app)
     client_id = Keyword.fetch!(app_config, :client_id)
     client_secret = Keyword.fetch!(app_config, :client_secret)
@@ -382,8 +384,16 @@ defmodule Lightning.VersionControl do
              client_id,
              access_token
            ) do
-      user |> Ecto.Changeset.change(%{github_oauth_token: nil}) |> Repo.update()
+      remove_oauth_token(user)
+    else
+      {:error, error} ->
+        Logger.error("Error deleting github app grant: #{inspect(error)}")
+        remove_oauth_token(user)
     end
+  end
+
+  defp remove_oauth_token(user) do
+    user |> User.remove_github_token_changeset() |> Repo.update()
   end
 
   @spec save_oauth_token(User.t(), map(), notify: boolean()) ::

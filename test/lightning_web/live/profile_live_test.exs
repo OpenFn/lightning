@@ -540,5 +540,47 @@ defmodule LightningWeb.ProfileLiveTest do
       updated_user = Lightning.Repo.reload(user)
       assert is_nil(updated_user.github_oauth_token)
     end
+
+    test "users can disconnect their github accounts successfully even when the api returns error",
+         %{
+           conn: conn,
+           user: user
+         } do
+      expected_token = %{"access_token" => "1234567"}
+
+      user =
+        user
+        |> Ecto.Changeset.change(%{github_oauth_token: expected_token})
+        |> Repo.update!()
+
+      app_config = Application.fetch_env!(:lightning, :github_app)
+
+      url_to_hit =
+        "https://api.github.com/applications/#{app_config[:client_id]}/grant"
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn
+        %{url: ^url_to_hit}, _opts ->
+          {:ok, %Tesla.Env{status: 403}}
+      end)
+
+      {:ok, view, _html} = live(conn, ~p"/profile")
+      refute has_element?(view, "#connect-github-link")
+      assert has_element?(view, "#disconnect-github-button")
+
+      result =
+        view
+        |> element("#disconnect_github_modal_confirm_button")
+        |> render_click()
+
+      {:ok, view, html} = follow_redirect(result, conn, ~p"/profile")
+
+      assert html =~ "Github connection removed successfully"
+
+      assert has_element?(view, "#connect-github-link")
+      refute has_element?(view, "#disconnect-github-button")
+
+      updated_user = Lightning.Repo.reload(user)
+      assert is_nil(updated_user.github_oauth_token)
+    end
   end
 end

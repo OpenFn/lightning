@@ -32,4 +32,8 @@ defmodule Lightning.VersionControl.GithubError do
   def repo_secret_not_found(msg, meta \\ %{}) do
     new(:repo_secret_not_found, msg, meta)
   end
+
+  def api_error(msg, meta \\ %{}) do
+    new(:api_error, msg, meta)
+  end
 end

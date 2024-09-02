@@ -109,6 +109,8 @@ defmodule LightningWeb.Router do
     get "/download/yaml", DownloadsController, :download_project_yaml
     get "/dataclip/body/:id", DataclipController, :show
 
+    get "/project_files/:id/download", ProjectFileController, :download
+
     get "/profile/confirm_email/:token",
         UserConfirmationController,
         :confirm_email

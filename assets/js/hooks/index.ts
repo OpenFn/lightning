@@ -18,6 +18,238 @@ export {
   TabbedPanels,
 };
 
+export const Combobox = {
+  mounted() {
+    this.input = this.el.querySelector('input');
+    this.dropdown = this.el.querySelector('ul');
+    this.options = this.el.querySelectorAll('li');
+    this.toggleButton = this.el.querySelector('button');
+    this.highlightedOption = null;
+
+    this.input.addEventListener(
+      'input',
+      this.debounce(event => this.handleInput(event), 300)
+    );
+    this.input.addEventListener('click', () => this.handleInputClick());
+    this.input.addEventListener('keydown', event => this.handleKeydown(event));
+    this.toggleButton.addEventListener('click', () =>
+      this.handleToggleButtonClick()
+    );
+
+    this.options.forEach(option => {
+      option.addEventListener('click', event => {
+        event.preventDefault();
+        this.selectOption(option);
+      });
+      option.addEventListener('mouseenter', () => this.highlightOption(option));
+      option.addEventListener('mouseleave', () => this.restoreHighlight());
+    });
+
+    document.addEventListener('click', event => {
+      if (!this.el.contains(event.target)) {
+        this.hideDropdown();
+      }
+    });
+
+    // Highlight the initially selected option, if any
+    this.highlightSelectedOption();
+  },
+
+  handleInput(event) {
+    this.filterOptions(event);
+    this.showDropdown();
+    this.highlightFirstOption();
+  },
+
+  handleInputClick() {
+    this.input.select();
+    this.showAllOptions();
+    this.showDropdown();
+    this.highlightSelectedOption();
+  },
+
+  handleToggleButtonClick() {
+    this.toggleDropdown();
+    if (!this.dropdown.classList.contains('hidden')) {
+      this.input.focus();
+      this.input.select();
+      this.showAllOptions();
+      this.highlightSelectedOption();
+    }
+  },
+
+  handleKeydown(event) {
+    if (event.key === 'Enter' && this.highlightedOption) {
+      event.preventDefault();
+      this.selectOption(this.highlightedOption);
+    } else if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.showDropdown();
+      this.highlightNextOption();
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.showDropdown();
+      this.highlightPreviousOption();
+    }
+  },
+
+  toggleDropdown() {
+    if (this.dropdown.classList.contains('hidden')) {
+      this.showDropdown();
+    } else {
+      this.hideDropdown();
+    }
+  },
+
+  showDropdown() {
+    this.dropdown.classList.remove('hidden');
+    this.input.setAttribute('aria-expanded', 'true');
+  },
+
+  hideDropdown() {
+    this.dropdown.classList.add('hidden');
+    this.input.setAttribute('aria-expanded', 'false');
+    this.clearHighlight();
+  },
+
+  filterOptions(event) {
+    const searchTerm = event.target.value.toLowerCase();
+    let visibleCount = 0;
+
+    this.options.forEach(option => {
+      const text = option.textContent.toLowerCase();
+      if (text.includes(searchTerm)) {
+        option.style.display = 'block';
+        visibleCount++;
+      } else {
+        option.style.display = 'none';
+      }
+    });
+
+    if (visibleCount === 0) {
+      this.showNoResultsMessage();
+    } else {
+      this.hideNoResultsMessage();
+    }
+  },
+
+  showAllOptions() {
+    this.options.forEach(option => (option.style.display = 'block'));
+    this.hideNoResultsMessage();
+  },
+
+  showNoResultsMessage() {
+    let noResultsEl = this.dropdown.querySelector('.no-results');
+    if (!noResultsEl) {
+      noResultsEl = document.createElement('li');
+      noResultsEl.className =
+        'no-results text-gray-500 py-2 px-3 text-sm cursor-default hover:bg-gray-100';
+      noResultsEl.textContent = 'No projects found';
+      this.dropdown.appendChild(noResultsEl);
+    }
+    noResultsEl.style.display = 'block';
+  },
+
+  hideNoResultsMessage() {
+    const noResultsEl = this.dropdown.querySelector('.no-results');
+    if (noResultsEl) {
+      noResultsEl.style.display = 'none';
+    }
+  },
+
+  navigateToItem(url) {
+    window.location.href = url;
+  },
+
+  highlightFirstOption() {
+    const firstVisibleOption = Array.from(this.options).find(
+      option => option.style.display !== 'none'
+    );
+    if (firstVisibleOption) {
+      this.highlightOption(firstVisibleOption);
+    } else {
+      this.clearHighlight();
+    }
+  },
+
+  restoreHighlight() {
+    if (this.selectedOption) {
+      this.highlightOption(this.selectedOption);
+    } else {
+      this.clearHighlight();
+    }
+  },
+
+  selectOption(option) {
+    this.input.value = option.querySelector('span').textContent.trim();
+    this.hideDropdown();
+    this.selectedOption = option;
+    this.navigateToItem(option.dataset.url);
+  },
+
+  highlightSelectedOption() {
+    this.selectedOption = Array.from(this.options).find(
+      option =>
+        option.querySelector('span').textContent.trim() === this.input.value
+    );
+    if (this.selectedOption) {
+      this.highlightOption(this.selectedOption);
+    } else {
+      this.clearHighlight();
+    }
+  },
+
+  highlightOption(option) {
+    this.clearHighlight();
+    option.setAttribute('data-highlighted', 'true');
+    this.highlightedOption = option;
+    option.scrollIntoView({ block: 'nearest' });
+  },
+
+  clearHighlight() {
+    if (this.highlightedOption) {
+      this.highlightedOption.removeAttribute('data-highlighted');
+      this.highlightedOption = null;
+    }
+  },
+
+  highlightNextOption() {
+    const visibleOptions = Array.from(this.options).filter(
+      option => option.style.display !== 'none'
+    );
+    const currentIndex = visibleOptions.indexOf(this.highlightedOption);
+    const nextOption = visibleOptions[currentIndex + 1] || visibleOptions[0];
+    if (nextOption) {
+      this.highlightOption(nextOption);
+    }
+  },
+
+  highlightPreviousOption() {
+    const visibleOptions = Array.from(this.options).filter(
+      option => option.style.display !== 'none'
+    );
+    const currentIndex = visibleOptions.indexOf(this.highlightedOption);
+    const previousOption =
+      visibleOptions[currentIndex - 1] ||
+      visibleOptions[visibleOptions.length - 1];
+    if (previousOption) {
+      this.highlightOption(previousOption);
+    }
+  },
+
+  debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  },
+};
+
 export const OpenAuthorizeUrl = {
   mounted() {
     this.handleEvent('open_authorize_url', ({ url }: { url: string }) => {

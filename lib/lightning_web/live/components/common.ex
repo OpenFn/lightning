@@ -473,4 +473,68 @@ defmodule LightningWeb.Components.Common do
     </div>
     """
   end
+
+  def combobox(assigns) do
+    ~H"""
+    <div id="combobox-wrapper" phx-hook="Combobox" class="relative my-4 mx-2 px-0">
+      <input
+        id="combobox"
+        type="text"
+        spellcheck="false"
+        placeholder={@placeholder || "Search..."}
+        value={@selected_item && @selected_item.name}
+        class="w-full rounded-md border-0 bg-white py-1.5 pl-3 pr-12 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+        role="combobox"
+        aria-controls="options"
+        aria-expanded="false"
+        autocomplete="off"
+      />
+      <button
+        type="button"
+        class="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2 focus:outline-none"
+        aria-label="Toggle dropdown"
+      >
+        <.icon name="hero-chevron-up-down" class="h-5 w-5 text-gray-400" />
+      </button>
+
+      <ul
+        class={[
+          "absolute z-10 mt-1 max-h-60 py-1 w-full overflow-auto rounded-md",
+          "bg-white shadow-lg ring-1 ring-black ring-opacity-5",
+          "text-base sm:text-sm hidden focus:outline-none"
+        ]}
+        id="options"
+        role="listbox"
+        aria-labelledby="combobox"
+      >
+        <li
+          :for={item <- @items}
+          class="group text-gray-900 relative cursor-pointer select-none py-2 px-3 text-sm data-[highlighted=true]:bg-indigo-600 data-[highlighted=true]:text-white"
+          id={"option-#{item.id}"}
+          role="option"
+          tabindex="0"
+          data-item-id={item.id}
+          data-item-selected={@selected_item && @selected_item.id == item.id}
+          data-url={@url_func.(item)}
+        >
+          <span class={[
+            "font-normal block truncate",
+            "group-data-[item-selected]:font-semibold"
+          ]}>
+            <%= item.name %>
+          </span>
+          <span class={[
+            "absolute inset-y-0 right-0 items-center pr-4",
+            "flex group-[&:not([data-item-selected])]:hidden"
+          ]}>
+            <.icon
+              name="hero-check"
+              class="text-indigo-600 group-data-[highlighted=true]:text-white"
+            />
+          </span>
+        </li>
+      </ul>
+    </div>
+    """
+  end
 end

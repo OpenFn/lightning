@@ -71,7 +71,6 @@ defmodule Lightning.Runs.Query do
           order_by: [asc: r.inserted_at]
         ]
       ],
-      order_by: [asc: r.inserted_at],
       select: %{
         id: r.id,
         state: r.state,
@@ -80,7 +79,8 @@ defmodule Lightning.Runs.Query do
         # calculated here?
         row_number: row_number() |> over(:row_number),
         project_id: p.id,
-        concurrency: w.concurrency
+        concurrency: w.concurrency,
+        inserted_at: r.inserted_at
       }
     )
   end
@@ -111,8 +111,8 @@ defmodule Lightning.Runs.Query do
     |> where(
       [r, w],
       (is_nil(w.concurrency) or w.row_number <= w.concurrency) and
-        r.state == :available
+        w.state == "available"
     )
-    |> order_by([r, w], asc: r.inserted_at, asc: w.row_number)
+    |> order_by([r], asc: r.inserted_at)
   end
 end

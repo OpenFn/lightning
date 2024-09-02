@@ -12,7 +12,7 @@ defmodule LightningWeb.ProfileLive.GithubComponent do
 
   @impl true
   def handle_event("disconnect-github", _params, socket) do
-    case VersionControl.delete_github_ouath_grant(socket.assigns.user) do
+    case VersionControl.delete_github_oauth_grant(socket.assigns.user) do
       {:ok, _user} ->
         {:noreply,
          socket

@@ -2,6 +2,7 @@ defmodule Lightning.Projects do
   @moduledoc """
   The Projects context.
   """
+
   use Oban.Worker,
     queue: :background,
     max_attempts: 1
@@ -853,5 +854,13 @@ defmodule Lightning.Projects do
     Enum.find_value(changes[:collaborators], fn collaborator ->
       if collaborator.email == email, do: collaborator.role
     end)
+  end
+
+  def list_project_files(%Project{id: project_id}) do
+    from(pf in __MODULE__.File,
+      where: pf.project_id == ^project_id,
+      preload: [:created_by]
+    )
+    |> Repo.all()
   end
 end

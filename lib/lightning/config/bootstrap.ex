@@ -216,7 +216,8 @@ defmodule Lightning.Config.Bootstrap do
       queues: [
         scheduler: 1,
         workflow_failures: 1,
-        background: 1
+        background: 1,
+        history_exports: 1
       ]
 
     # https://plausible.io/ is an open-source, privacy-friendly alternative to
@@ -379,6 +380,18 @@ defmodule Lightning.Config.Bootstrap do
 
       url_scheme = env!("URL_SCHEME", :string, "https")
 
+      idle_timeout =
+        env!(
+          "IDLE_TIMEOUT",
+          fn str ->
+            case Integer.parse(str) do
+              :error -> 60_000
+              {val, _} -> val * 1_000
+            end
+          end,
+          60_000
+        )
+
       config :lightning, LightningWeb.Endpoint,
         url: [host: host, port: url_port, scheme: url_scheme],
         secret_key_base: secret_key_base,
@@ -397,7 +410,8 @@ defmodule Lightning.Config.Bootstrap do
                 :max_dataclip_size_bytes,
                 10_000_000
               ) *
-                10
+                10,
+            idle_timeout: idle_timeout
           ]
         ],
         server: true
@@ -482,7 +496,70 @@ defmodule Lightning.Config.Bootstrap do
       number_of_processors: env!("KAFKA_NUMBER_OF_PROCESSORS", :integer, 1)
 
     # # ==============================================================================
+
+    setup_storage()
+
     :ok
+  end
+
+  defp setup_storage do
+    config :lightning, Lightning.Storage,
+      path: env!("STORAGE_PATH", :string, ".")
+
+    env!("STORAGE_BACKEND", :string, "local")
+    |> case do
+      "gcs" ->
+        config :lightning, Lightning.Storage,
+          backend: Lightning.Storage.GCS,
+          bucket:
+            env!("GCS_BUCKET", :string, nil) ||
+              raise("GCS_BUCKET is not set, but STORAGE_BACKEND is set to gcs")
+
+        google_required()
+
+      "local" ->
+        config :lightning, Lightning.Storage, backend: Lightning.Storage.Local
+
+      unknown ->
+        raise """
+        Unknown storage backend: #{unknown}
+
+        Currently supported backends are:
+
+        - gcs
+        - local (default)
+        """
+    end
+  end
+
+  # Not really happy about having to put this here, but for some reason
+  # dialyzer thinks that when :error can be matched then {:error, _} can't be.
+  @dialyzer {:no_match, google_required: 0}
+  defp google_required do
+    with value when is_binary(value) <-
+           env!(
+             "GOOGLE_APPLICATION_CREDENTIALS_JSON",
+             :string,
+             {:error,
+              "GOOGLE_APPLICATION_CREDENTIALS_JSON is not set, this is required when using Google Cloud services."}
+           ),
+         {:ok, decoded} <- Base.decode64(value),
+         {:ok, credentials} <- Jason.decode(decoded) do
+      config :lightning, Lightning.Google,
+        credentials: credentials,
+        required: true
+    else
+      {:error, %Jason.DecodeError{} = error} ->
+        raise """
+        Could not decode GOOGLE_APPLICATION_CREDENTIALS_JSON: #{Jason.DecodeError.message(error)}
+        """
+
+      {:error, message} ->
+        raise message
+
+      :error ->
+        raise "Could not decode GOOGLE_APPLICATION_CREDENTIALS_JSON"
+    end
   end
 
   defp github_config do
