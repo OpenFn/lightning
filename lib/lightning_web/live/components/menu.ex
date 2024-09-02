@@ -59,11 +59,12 @@ defmodule LightningWeb.Components.Menu do
   end
 
   def menu_item(assigns) do
-    base_classes = ~w[px-3 py-2 rounded-md text-sm font-medium rounded-md block]
+    base_classes =
+      ~w[menu-item px-3 py-2 rounded-md text-sm font-medium rounded-md block]
 
-    active_classes = ~w[text-primary-200 bg-primary-900] ++ base_classes
+    active_classes = ~w[menu-item-active] ++ base_classes
 
-    inactive_classes = ~w[text-primary-300 hover:bg-primary-900] ++ base_classes
+    inactive_classes = ~w[menu-item-inactive] ++ base_classes
 
     assigns =
       assigns

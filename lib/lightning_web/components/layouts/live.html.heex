@@ -1,12 +1,12 @@
 <main class="h-screen">
   <div class="flex flex-row h-full">
     <nav
-      class="basis-48 bg-primary-800 text-white"
+      class={"basis-48 #{@side_menu_theme}"}
       id="side-menu"
       style="width: 192px"
     >
       <div class="flex flex-col h-full">
-        <div class="w-full h-20 bg-primary-900 flex items-center justify-center">
+        <div class="w-full h-20 flex items-center justify-center">
           <.link navigate={Routes.dashboard_index_path(@socket, :index)}>
             <img
               class="h-10 w-10"

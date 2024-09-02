@@ -16,6 +16,7 @@ defmodule LightningWeb.InitAssigns do
      end)
      |> assign_new(:account_confirmation_required?, fn ->
        confirmation_required?
-     end)}
+     end)
+     |> assign(:side_menu_theme, "primary-theme")}
   end
 end
