@@ -1,6 +1,8 @@
 defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   use LightningWeb, :live_component
+
   alias Lightning.AiAssistant
+  alias Lightning.AiAssistant.Limiter
   alias Phoenix.LiveView.AsyncResult
   alias Phoenix.LiveView.JS
 
@@ -8,6 +10,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     {:ok,
      socket
      |> assign(%{
+       notified_ai_limit?: false,
        pending_message: AsyncResult.ok(nil),
        process_message_on_show: false,
        all_sessions: AsyncResult.ok([]),
@@ -24,6 +27,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     {:ok,
      socket
      |> assign(assigns)
+     |> maybe_notify_limit_error()
      |> apply_action(action, assigns)}
   end
 
@@ -71,10 +75,18 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
   def handle_event("send_message", %{"content" => content}, socket) do
     if socket.assigns.can_edit_workflow do
-      {:noreply,
-       socket
-       |> assign(error_message: nil)
-       |> save_message(socket.assigns.action, content)}
+      %{project_id: project_id, action: action} = socket.assigns
+
+      case Limiter.validate_quota(project_id) do
+        :ok ->
+          {:noreply, save_message(socket, action, content)}
+
+        {:error, :too_many_queries, message} ->
+          {:noreply, notify_limit_error(socket, message)}
+      end
+      |> then(fn socket ->
+        {:noreply, assign(socket, error_message: nil)}
+      end)
     else
       {:noreply,
        socket
@@ -519,5 +531,28 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
       true ->
         "#{diff} sec"
     end
+  end
+
+  defp maybe_notify_limit_error(
+         %{assigns: %{notified_ai_limit?: true}} = socket
+       ),
+       do: socket
+
+  defp maybe_notify_limit_error(socket) do
+    %{project_id: project_id} = socket.assigns
+
+    case Limiter.validate_quota(project_id) do
+      :ok ->
+        socket
+
+      {:error, :too_many_queries, message} ->
+        notify_limit_error(socket, message)
+    end
+  end
+
+  defp notify_limit_error(socket, message) do
+    send(self(), {:too_many_queries, message})
+
+    assign(socket, :notified_ai_limit?, true)
   end
 end
