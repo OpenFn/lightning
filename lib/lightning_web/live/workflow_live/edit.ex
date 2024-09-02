@@ -1994,7 +1994,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
         end
     end
     |> assign_follow_run(socket.assigns.query_params)
-    |> assign(chat_session_id: socket.assigns.query_params["chat"])
+    |> assign_chat_session_id(socket.assigns.query_params)
+  end
+
+  defp assign_chat_session_id(socket, %{"chat" => session_id})
+       when is_binary(session_id) do
+    socket
+    |> assign(chat_session_id: session_id)
+  end
+
+  defp assign_chat_session_id(socket, _params) do
+    socket
+    |> assign(chat_session_id: nil)
   end
 
   defp switch_changeset(socket) do
@@ -2128,6 +2139,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       query_params
       |> Map.put("a", run.id)
       |> Map.put("v", version)
+      |> Enum.reject(fn {_k, v} -> is_nil(v) end)
 
     socket
     |> push_patch(to: ~p"/projects/#{project}/w/#{workflow}?#{params}")
