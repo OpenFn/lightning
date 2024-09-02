@@ -66,7 +66,15 @@ defmodule Lightning.AiAssistant do
     ChatSession |> Repo.get!(id) |> Repo.preload(:messages)
   end
 
-  @spec save_message!(ChatSession.t(), %{String.t() => any()}) :: ChatSession.t()
+  @spec create_session!(Job.t(), User.t(), String.t()) :: ChatSession.t()
+  def create_session!(job, user, content) do
+    job
+    |> new_session(user)
+    |> struct(title: String.slice(content, 0, 20))
+    |> save_message!(%{role: :user, content: content, user_id: user.id})
+  end
+
+  @spec save_message!(ChatSession.t(), %{any() => any()}) :: ChatSession.t()
   def save_message!(session, message) do
     messages = Enum.map(session.messages, &Map.take(&1, [:id]))
 

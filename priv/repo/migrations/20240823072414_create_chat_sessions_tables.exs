@@ -4,6 +4,7 @@ defmodule Lightning.Repo.Migrations.CreateChatSessionsTables do
   def change do
     create table(:ai_chat_sessions, primary_key: false) do
       add :id, :uuid, primary_key: true
+      add :title, :string
       add :is_public, :boolean
       add :is_deleted, :boolean
       add :job_id, references(:jobs, type: :binary_id, on_delete: :nilify_all)

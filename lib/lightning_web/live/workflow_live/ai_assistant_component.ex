@@ -25,12 +25,11 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
      |> apply_action(action, assigns)}
   end
 
-  defp apply_action(socket, :new, %{selected_job: job, current_user: user}) do
+  defp apply_action(socket, :new, %{selected_job: job}) do
     socket
     |> assign_async(:all_sessions, fn ->
       {:ok, %{all_sessions: AiAssistant.list_sessions_for_job(job)}}
     end)
-    |> assign(:session, AiAssistant.new_session(job, user))
   end
 
   defp apply_action(socket, :show, %{
@@ -101,29 +100,38 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   end
 
   def handle_event("send_message", %{"content" => content}, socket) do
-    session =
-      AiAssistant.save_message!(socket.assigns.session, %{
-        "role" => "user",
-        "content" => content,
-        "user_id" => socket.assigns.current_user.id
-      })
-
     {:noreply,
      socket
-     |> assign(:session, session)
-     |> redirect_or_process_message(content)}
+     |> save_message(socket.assigns.action, content)}
   end
 
-  defp redirect_or_process_message(%{assigns: assigns} = socket, message) do
-    if socket.assigns.action == :new do
-      query_params = Map.put(assigns.query_params, "chat", assigns.session.id)
+  defp save_message(%{assigns: assigns} = socket, :new, content) do
+    session =
+      AiAssistant.create_session!(
+        assigns.selected_job,
+        assigns.current_user,
+        content
+      )
 
-      socket
-      |> assign(:process_message_on_show, true)
-      |> push_patch(to: redirect_url(assigns.base_url, query_params))
-    else
-      process_message(socket, message)
-    end
+    query_params = Map.put(assigns.query_params, "chat", session.id)
+
+    socket
+    |> assign(:session, session)
+    |> assign(:process_message_on_show, true)
+    |> push_patch(to: redirect_url(assigns.base_url, query_params))
+  end
+
+  defp save_message(%{assigns: assigns} = socket, :show, content) do
+    session =
+      AiAssistant.save_message!(assigns.session, %{
+        "role" => "user",
+        "content" => content,
+        "user_id" => assigns.current_user.id
+      })
+
+    socket
+    |> assign(:session, session)
+    |> process_message(content)
   end
 
   defp process_message(socket, message) do
@@ -217,16 +225,18 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
       <%= for session <- all_sessions do %>
         <.link
           patch={redirect_url(@base_url, Map.put(@query_params, "chat", session.id))}
-          class="p-2 rounded-lg border border-gray-900 hover:bg-gray-100"
+          class="p-2 rounded-lg border border-gray-900 hover:bg-gray-100 flex items-center justify-between"
         >
-          <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100">
-            <span class="text-sm font-medium leading-none text-black uppercase">
-              <%= String.first(session.user.first_name) %><%= String.first(
-                session.user.last_name
-              ) %>
+          <span>
+            <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100">
+              <span class="text-sm font-medium leading-none text-black uppercase">
+                <%= String.first(session.user.first_name) %><%= String.first(
+                  session.user.last_name
+                ) %>
+              </span>
             </span>
+            <%= session.title %>
           </span>
-
           <%= session.updated_at %>
         </.link>
       <% end %>
@@ -242,7 +252,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   defp render_session(assigns) do
     ~H"""
     <div class="sticky top-0 bg-gray-100 p-2 flex justify-between">
-      <span>Session Title</span>
+      <span><%= @session.title %></span>
       <.link patch={redirect_url(@base_url, Map.put(@query_params, "chat", nil))}>
         <.icon name="hero-x-mark" class="h-5 w-5" />
       </.link>
