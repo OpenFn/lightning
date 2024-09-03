@@ -29,6 +29,17 @@
     --primary-ring-focus: theme('colors.blue.600');
   }
 
+  &.sudo-theme {
+    --primary-bg: theme('colors.slate.700');
+    --primary-text: theme('colors.white');
+    --primary-bg-lighter: theme('colors.slate.600');
+    --primary-bg-dark: theme('colors.slate.900');
+    --primary-text-light: theme('colors.slate.300');
+    --primary-text-lighter: theme('colors.slate.200');
+    --primary-ring: theme('colors.gray.300');
+    --primary-ring-focus: theme('colors.slate.600');
+  }
+
   background-color: var(--primary-bg);
   color: var(--primary-text);
 
