@@ -19,7 +19,6 @@ and this project adheres to
 
 - Change navbar colors depending on scope.
   [#2449](https://github.com/OpenFn/lightning/pull/2449)
-
 - Add support for configurable idle connection timeouts via the `IDLE_TIMEOUT`
   environment variable. [#2443](https://github.com/OpenFn/lightning/issues/2443)
 
