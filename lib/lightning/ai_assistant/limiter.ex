@@ -3,9 +3,9 @@ defmodule Lightning.AiAssistant.Limiter do
   The AI assistant limiter to check for AI query quota.
   """
 
+  alias Lightning.Extensions.UsageLimiting
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
-  alias Lightning.Extensions.UsageLimiting
   alias Lightning.Services.UsageLimiter
 
   @doc """

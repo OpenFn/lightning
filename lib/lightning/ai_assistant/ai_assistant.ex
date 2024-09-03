@@ -157,11 +157,17 @@ defmodule Lightning.AiAssistant do
     ApolloClient.test() == :ok
   end
 
-  defp maybe_increment_msgs_counter(%{message: %{"role" => "assistant"}}), do: Multi.new()
+  defp maybe_increment_msgs_counter(%{message: %{"role" => "assistant"}}),
+    do: Multi.new()
 
-  defp maybe_increment_msgs_counter(%{upsert: session, message: %{"role" => "user"}}) do
+  defp maybe_increment_msgs_counter(%{
+         upsert: session,
+         message: %{"role" => "user"}
+       }) do
     Multi.new()
-    |> Multi.update_all(:inc_counter, fn _ ->
+    |> Multi.update_all(
+      :inc_counter,
+      fn _ ->
         from(cs in ChatSession,
           where: cs.id == ^session.id,
           update: [inc: [msgs_counter: 1]]
