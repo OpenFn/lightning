@@ -1815,5 +1815,49 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert view |> element("#assistant-failed-message") |> render() =~
                "Oops! Something went wrong. Please try again."
     end
+
+    test "shows a flash error when limit has reached", %{
+      conn: conn,
+      project: %{id: project_id} = project,
+      workflow: %{jobs: [job_1 | _]} = workflow
+    } do
+      [{conn, _user}] = setup_project_users(conn, project, [:owner])
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> "http://localhost:4001/health_check"
+        :openai_api_key -> "openai_api_key"
+      end)
+
+      error_message = "You've reached your quota of AI queries"
+
+      Mox.stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn %{
+                                                                          type:
+                                                                            :ai_query
+                                                                        },
+                                                                        %{
+                                                                          project_id:
+                                                                            ^project_id
+                                                                        } ->
+        {:error, :too_many_queries,
+         %Lightning.Extensions.Message{text: error_message}}
+      end)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      render_async(view)
+
+      view
+      |> form("#ai-assistant-form")
+      |> has_element?()
+
+      assert render(view)
+             |> Floki.parse_fragment!()
+             |> Floki.find("#flash")
+             |> Floki.text() =~ error_message
+    end
   end
 end

@@ -10,7 +10,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     {:ok,
      socket
      |> assign(%{
-       notified_ai_limit?: false,
+       checked_ai_limit?: false,
+       reached_ai_limit?: false,
        pending_message: AsyncResult.ok(nil),
        process_message_on_show: false,
        all_sessions: AsyncResult.ok([]),
@@ -546,13 +547,17 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         socket
 
       {:error, :too_many_queries, message} ->
-        notify_limit_error(socket, message)
+        socket
+        |> notify_limit_error(message)
     end
+    |> then(fn socket ->
+      assign(socket, :checked_ai_limit?, true)
+    end)
   end
 
   defp notify_limit_error(socket, message) do
     send(self(), {:too_many_queries, message})
 
-    assign(socket, :notified_ai_limit?, true)
+    assign(socket, :reached_ai_limit?, true)
   end
 end

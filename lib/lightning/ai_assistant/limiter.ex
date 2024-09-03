@@ -13,16 +13,9 @@ defmodule Lightning.AiAssistant.Limiter do
   """
   @spec validate_quota(Ecto.UUID.t()) :: :ok | UsageLimiting.error()
   def validate_quota(project_id) do
-    if 2 > 1 do
-      {:error, :too_many_queries,
-       %Lightning.Extensions.Message{text: "Lots of queries"}}
-    else
-      UsageLimiter.limit_action(
-        %Action{type: :ai_query, amount: 1},
-        %Context{
-          project_id: project_id
-        }
-      )
-    end
+    UsageLimiter.limit_action(%Action{type: :ai_query}, %Context{
+        project_id: project_id
+      }
+    )
   end
 end
