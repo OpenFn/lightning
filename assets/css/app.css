@@ -9,6 +9,7 @@
 :root {
   --primary-bg: theme('colors.primary.800');
   --primary-text: theme('colors.white');
+  --primary-bg-lighter: theme('colors.primary.600');
   --primary-bg-dark: theme('colors.primary.900');
   --primary-text-light: theme('colors.primary.300');
   --primary-text-lighter: theme('colors.primary.200');
@@ -20,6 +21,7 @@
   &.secondary-theme {
     --primary-bg: theme('colors.blue.700');
     --primary-text: theme('colors.white');
+    --primary-bg-lighter: theme('colors.blue.600');
     --primary-bg-dark: theme('colors.blue.900');
     --primary-text-light: theme('colors.blue.300');
     --primary-text-lighter: theme('colors.blue.200');
@@ -44,7 +46,7 @@
     color: var(--primary-text-light);
   }
   .menu-item-inactive:hover {
-    background-color: var(--primary-bg-dark);
+    background-color: var(--primary-bg-lighter);
   }
 
   input#combobox {
@@ -63,11 +65,11 @@
       > li {
         color: theme('colors.gray.900');
         .hero-check {
-          color: var(--primary-bg-dark);
+          color: var(--primary-bg-lighter);
         }
 
         &[data-highlighted='true'] {
-          background-color: var(--primary-bg-dark);
+          background-color: var(--primary-bg-lighter);
           color: var(--primary-text);
 
           .hero-check {
