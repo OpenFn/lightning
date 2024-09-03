@@ -7,13 +7,13 @@
 /* This file is for your main application CSS */
 
 :root {
-  --primary-bg: theme('colors.indigo.800');
+  --primary-bg: theme('colors.primary.800');
   --primary-text: theme('colors.white');
-  --primary-bg-dark: theme('colors.indigo.900');
-  --primary-text-light: theme('colors.indigo.300');
-  --primary-text-lighter: theme('colors.indigo.200');
-  --primary-ring: theme('colors.indigo.500');
-  --primary-ring-focus: theme('colors.indigo.800');
+  --primary-bg-dark: theme('colors.primary.900');
+  --primary-text-light: theme('colors.primary.300');
+  --primary-text-lighter: theme('colors.primary.200');
+  --primary-ring: theme('colors.primary.500');
+  --primary-ring-focus: theme('colors.primary.800');
 
   --secondary-bg: #1d4ed8;
   --secondary-text: theme('colors.white');
