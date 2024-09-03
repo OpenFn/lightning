@@ -63,7 +63,7 @@ defmodule Lightning.AiAssistant do
 
   @spec get_session!(Ecto.UUID.t()) :: ChatSession.t()
   def get_session!(id) do
-    ChatSession |> Repo.get!(id) |> Repo.preload(:messages)
+    ChatSession |> Repo.get!(id) |> Repo.preload(messages: :user)
   end
 
   @spec create_session!(Job.t(), User.t(), String.t()) :: ChatSession.t()
@@ -81,6 +81,17 @@ defmodule Lightning.AiAssistant do
     session
     |> ChatSession.changeset(%{messages: messages ++ [message]})
     |> Repo.insert_or_update!()
+  end
+
+  @spec project_has_any_session?(Ecto.UUID.t()) :: boolean()
+  def project_has_any_session?(project_id) do
+    query =
+      from s in ChatSession,
+        join: j in assoc(s, :job),
+        join: w in assoc(j, :workflow),
+        where: w.project_id == ^project_id
+
+    Repo.exists?(query)
   end
 
   @doc """
@@ -123,11 +134,14 @@ defmodule Lightning.AiAssistant do
   end
 
   @doc """
-  Checks if the user is authorized to access the AI assistant.
+  Checks if the AI assistant is enabled.
   """
-  @spec authorized?(User.t()) :: boolean()
-  def authorized?(user) do
-    user.role == :superuser
+  @spec enabled?() :: boolean()
+  def enabled? do
+    endpoint = Lightning.Config.apollo(:endpoint)
+    api_key = Lightning.Config.apollo(:openai_api_key)
+
+    is_binary(endpoint) && is_binary(api_key)
   end
 
   @doc """
