@@ -14,126 +14,64 @@
   --primary-text-lighter: theme('colors.primary.200');
   --primary-ring: theme('colors.primary.500');
   --primary-ring-focus: theme('colors.primary.800');
-
-  --secondary-bg: theme('colors.blue.700');
-  --secondary-text: theme('colors.white');
-  --secondary-bg-dark: theme('colors.blue.900');
-  --secondary-text-light: theme('colors.blue.300');
-  --secondary-text-lighter: theme('colors.blue.200');
-  --secondary-ring: theme('colors.blue.500');
-  --secondary-ring-focus: theme('colors.blue.800');
 }
 
-.primary-theme {
-  #side-menu {
-    background-color: var(--primary-bg);
-    color: var(--primary-text);
+#side-menu {
+  &.secondary-theme {
+    --primary-bg: theme('colors.blue.700');
+    --primary-text: theme('colors.white');
+    --primary-bg-dark: theme('colors.blue.900');
+    --primary-text-light: theme('colors.blue.300');
+    --primary-text-lighter: theme('colors.blue.200');
+    --primary-ring: theme('colors.blue.500');
+    --primary-ring-focus: theme('colors.blue.800');
   }
-}
 
-.primary-theme > div > div:nth-child(1) {
-  background-color: var(--primary-bg-dark);
-}
-
-.primary-theme > div > div > .menu-item-active {
-  color: var(--primary-text-lighter);
-  background-color: var(--primary-bg-dark);
-}
-
-.primary-theme > div > div .menu-item-inactive {
-  color: var(--primary-text-light);
-}
-
-.primary-theme > div > div .menu-item-inactive:hover {
-  background-color: var(--primary-bg-dark);
-}
-
-.primary-theme > div > div > input#combobox {
-  background-color: white;
-  color: theme('colors.gray.900');
-  --tw-ring-color: var(--primary-ring);
-}
-
-.primary-theme > div > div > input#combobox:focus {
-  --tw-ring-color: var(--primary-ring-focus);
-}
-
-.primary-theme > div > div > input#combobox ~ ul {
-  background-color: white;
-  --tw-ring-color: var(--primary-ring-focus);
-}
-
-.primary-theme > div > div > input#combobox ~ ul > li {
-  color: theme('colors.gray.900');
-}
-
-.primary-theme > div > div > input#combobox ~ ul > li > span > .hero-check {
-  color: var(--primary-bg-dark);
-}
-
-.primary-theme > div > div > input#combobox ~ ul > li[data-highlighted='true'] {
-  background-color: var(--primary-bg-dark);
+  background-color: var(--primary-bg);
   color: var(--primary-text);
-}
-
-.primary-theme
-  > div
-  > div
-  > input#combobox
-  ~ ul
-  > li[data-highlighted='true']
-  > span
-  > .hero-check {
-  color: var(--primary-text);
-}
-
-/* Secondary theme */
-.secondary-theme#side-menu {
-  background-color: var(--secondary-bg);
-  color: var(--secondary-text);
 
   div > div {
     &:first-child {
-      background-color: var(--secondary-bg-dark);
+      background-color: var(--primary-bg-dark);
     }
   }
 
   .menu-item-active {
-    color: var(--secondary-text-lighter);
-    background-color: var(--secondary-bg-dark);
+    color: var(--primary-text-lighter);
+    background-color: var(--primary-bg-dark);
   }
   .menu-item-inactive {
-    color: var(--secondary-text-light);
+    color: var(--primary-text-light);
   }
   .menu-item-inactive:hover {
-    background-color: var(--secondary-bg-dark);
+    background-color: var(--primary-bg-dark);
   }
 
   input#combobox {
     background-color: white;
     color: theme('colors.gray.900');
-    --tw-ring-color: var(--secondary-ring);
+    --tw-ring-color: var(--primary-ring);
 
     &:focus {
-      --tw-ring-color: var(--secondary-ring-focus);
+      --tw-ring-color: var(--primary-ring-focus);
     }
 
     ~ ul {
       background-color: white;
-      --tw-ring-color: var(--secondary-ring-focus);
+      --tw-ring-color: var(--primary-ring-focus);
 
       > li {
         color: theme('colors.gray.900');
         .hero-check {
-          color: var(--secondary-bg-dark);
+          color: var(--primary-bg-dark);
         }
 
         &[data-highlighted='true'] {
-          background-color: var(--secondary-bg-dark);
-          color: var(--secondary-text);
+          background-color: var(--primary-bg-dark);
+          color: var(--primary-text);
 
           .hero-check {
-            color: var(--secondary-text);
+            color: var(--primary-text);
           }
         }
       }
