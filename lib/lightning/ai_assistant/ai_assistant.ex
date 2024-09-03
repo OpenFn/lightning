@@ -5,11 +5,13 @@ defmodule Lightning.AiAssistant do
 
   import Ecto.Query
 
+  alias Ecto.Multi
   alias Lightning.Accounts.User
   alias Lightning.AiAssistant.ChatSession
   alias Lightning.ApolloClient
   alias Lightning.Repo
   alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Workflow
 
   @spec put_expression_and_adaptor(ChatSession.t(), String.t(), String.t()) ::
           ChatSession.t()
@@ -39,9 +41,12 @@ defmodule Lightning.AiAssistant do
   @spec create_session(Job.t(), User.t(), String.t()) ::
           {:ok, ChatSession.t()} | {:error, Ecto.Changeset.t()}
   def create_session(job, user, content) do
+    %{project_id: project_id} = Repo.get!(Workflow, job.workflow_id)
+
     %ChatSession{
       id: Ecto.UUID.generate(),
       job_id: job.id,
+      project_id: project_id,
       user_id: user.id,
       title: String.slice(content, 0, 40),
       messages: []
@@ -57,9 +62,26 @@ defmodule Lightning.AiAssistant do
     # note: we should only increment the counter when role is `:assistant`
     messages = Enum.map(session.messages, &Map.take(&1, [:id]))
 
-    session
-    |> ChatSession.changeset(%{messages: messages ++ [message]})
-    |> Repo.insert_or_update()
+    Multi.new()
+    |> Multi.put(:message, message)
+    |> Multi.insert_or_update(
+      :upsert,
+      session
+      |> ChatSession.changeset(%{messages: messages ++ [message]})
+    )
+    |> Multi.merge(&maybe_increment_msgs_counter/1)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{upsert: session} = changes} ->
+        if Map.has_key?(changes, :inc_counter) do
+          {:ok, %{session | msgs_counter: session.msgs_counter + 1}}
+        else
+          {:ok, session}
+        end
+
+      {:error, _operation, changeset, _changes} ->
+        {:error, changeset}
+    end
   end
 
   @spec project_has_any_session?(Ecto.UUID.t()) :: boolean()
@@ -133,5 +155,19 @@ defmodule Lightning.AiAssistant do
   @spec endpoint_available?() :: boolean()
   def endpoint_available? do
     ApolloClient.test() == :ok
+  end
+
+  defp maybe_increment_msgs_counter(%{message: %{"role" => "assistant"}}), do: Multi.new()
+
+  defp maybe_increment_msgs_counter(%{upsert: session, message: %{"role" => "user"}}) do
+    Multi.new()
+    |> Multi.update_all(:inc_counter, fn _ ->
+        from(cs in ChatSession,
+          where: cs.id == ^session.id,
+          update: [inc: [msgs_counter: 1]]
+        )
+      end,
+      []
+    )
   end
 end

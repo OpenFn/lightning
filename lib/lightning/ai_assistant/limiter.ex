@@ -3,8 +3,8 @@ defmodule Lightning.AiAssistant.Limiter do
   The AI assistant limiter to check for AI query quota.
   """
 
-  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Extensions.UsageLimiting.Action
+  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Extensions.UsageLimiting
   alias Lightning.Services.UsageLimiter
 
@@ -14,8 +14,7 @@ defmodule Lightning.AiAssistant.Limiter do
   @spec validate_quota(Ecto.UUID.t()) :: :ok | UsageLimiting.error()
   def validate_quota(project_id) do
     UsageLimiter.limit_action(%Action{type: :ai_query}, %Context{
-        project_id: project_id
-      }
-    )
+      project_id: project_id
+    })
   end
 end

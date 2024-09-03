@@ -534,10 +534,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     end
   end
 
-  defp maybe_notify_limit_error(
-         %{assigns: %{notified_ai_limit?: true}} = socket
-       ),
-       do: socket
+  defp maybe_notify_limit_error(%{assigns: %{checked_ai_limit?: true}} = socket),
+    do: socket
 
   defp maybe_notify_limit_error(socket) do
     %{project_id: project_id} = socket.assigns
