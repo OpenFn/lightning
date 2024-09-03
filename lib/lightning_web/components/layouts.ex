@@ -12,6 +12,6 @@ defmodule LightningWeb.Layouts do
   attr :side_menu_theme, :string, default: "primary-theme"
   def live(assigns)
 
-  attr :side_menu_theme, :string, default: "sudo-theme"
+  attr :side_menu_theme, :string, default: "sudo-variant"
   def settings(assigns)
 end
