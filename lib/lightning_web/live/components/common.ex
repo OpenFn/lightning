@@ -483,7 +483,7 @@ defmodule LightningWeb.Components.Common do
         spellcheck="false"
         placeholder={@placeholder || "Search..."}
         value={@selected_item && @selected_item.name}
-        class="w-full rounded-md border-0 py-1.5 pl-3 pr-12 shadow-sm ring-1 ring-inset focus:ring-2 focus:ring-inset sm:text-sm sm:leading-6"
+        class="w-full rounded-md border-0 py-1.5 pl-3 pr-12 shadow-sm ring-1 ring-inset focus:ring-2 sm:text-sm sm:leading-6"
         role="combobox"
         aria-controls="options"
         aria-expanded="false"

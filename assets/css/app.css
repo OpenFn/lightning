@@ -13,8 +13,8 @@
   --primary-bg-dark: theme('colors.primary.900');
   --primary-text-light: theme('colors.primary.300');
   --primary-text-lighter: theme('colors.primary.200');
-  --primary-ring: theme('colors.primary.500');
-  --primary-ring-focus: theme('colors.primary.800');
+  --primary-ring: theme('colors.gray.300');
+  --primary-ring-focus: theme('colors.primary.600');
 }
 
 #side-menu {
@@ -25,8 +25,8 @@
     --primary-bg-dark: theme('colors.blue.900');
     --primary-text-light: theme('colors.blue.300');
     --primary-text-lighter: theme('colors.blue.200');
-    --primary-ring: theme('colors.blue.500');
-    --primary-ring-focus: theme('colors.blue.800');
+    --primary-ring: theme('colors.gray.300');
+    --primary-ring-focus: theme('colors.blue.600');
   }
 
   background-color: var(--primary-bg);
