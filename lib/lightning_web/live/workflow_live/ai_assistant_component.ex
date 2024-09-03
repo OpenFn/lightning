@@ -60,7 +60,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     ~H"""
     <div class="h-full">
       <%= if @action == :new and !@has_read_disclaimer do %>
-        <.render_onboarding myself={@myself} />
+        <.render_onboarding myself={@myself} can_edit_workflow={@can_edit_workflow} />
       <% else %>
         <.render_session {assigns} />
       <% end %>
@@ -162,6 +162,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
           id="get-started-with-ai-btn"
           phx-click="mark_disclaimer_read"
           phx-target={@myself}
+          disabled={!@can_edit_workflow}
         >
           Get started with the AI Assistant
         </.button>
@@ -263,7 +264,10 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         >
           <.chat_input
             form={@form}
-            disabled={!endpoint_available? or !is_nil(@pending_message.loading)}
+            disabled={
+              !endpoint_available? or !is_nil(@pending_message.loading) or
+                !@can_edit_workflow
+            }
           />
         </.form>
       </.async_result>
