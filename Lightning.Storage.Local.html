@@ -156,11 +156,11 @@ determine the root directory for storage operations.</li></ul><h2 id="module-exa
   <span class="text">Example Usage</span>
 </h2>
 <pre><code class="makeup elixir" translate="no"><span class="c1"># Store a file</span><span class="w">
-</span><span class="p" data-group-id="0839341911-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">filename</span><span class="p" data-group-id="0839341911-1">}</span><span class="w"> </span><span class="o">=</span><span class="w">
-  </span><span class="nc">Lightning.Storage.Local</span><span class="o">.</span><span class="n">store</span><span class="p" data-group-id="0839341911-2">(</span><span class="s">&quot;/path/to/source&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;destination/path&quot;</span><span class="p" data-group-id="0839341911-2">)</span><span class="w">
+</span><span class="p" data-group-id="2790894945-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">filename</span><span class="p" data-group-id="2790894945-1">}</span><span class="w"> </span><span class="o">=</span><span class="w">
+  </span><span class="nc">Lightning.Storage.Local</span><span class="o">.</span><span class="n">store</span><span class="p" data-group-id="2790894945-2">(</span><span class="s">&quot;/path/to/source&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;destination/path&quot;</span><span class="p" data-group-id="2790894945-2">)</span><span class="w">
 
 </span><span class="c1"># Get the URL for the stored file</span><span class="w">
-</span><span class="p" data-group-id="0839341911-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">url</span><span class="p" data-group-id="0839341911-3">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Storage.Local</span><span class="o">.</span><span class="n">get_url</span><span class="p" data-group-id="0839341911-4">(</span><span class="s">&quot;destination/path&quot;</span><span class="p" data-group-id="0839341911-4">)</span></code></pre>
+</span><span class="p" data-group-id="2790894945-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">url</span><span class="p" data-group-id="2790894945-3">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Storage.Local</span><span class="o">.</span><span class="n">get_url</span><span class="p" data-group-id="2790894945-4">(</span><span class="s">&quot;destination/path&quot;</span><span class="p" data-group-id="2790894945-4">)</span></code></pre>
   </section>
 
 
