@@ -51,6 +51,7 @@ defmodule LightningWeb.Hooks do
       can_access_project ->
         {:cont,
          socket
+         |> assign(:side_menu_theme, "primary-theme")
          |> assign_new(:project_user, fn -> project_user end)
          |> assign_new(:project, fn -> project end)
          |> assign_new(:projects, fn -> projects end)}
