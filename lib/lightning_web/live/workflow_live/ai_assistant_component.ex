@@ -12,7 +12,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
        process_message_on_show: false,
        all_sessions: AsyncResult.ok([]),
        session: nil,
-       form: to_form(%{"content" => nil})
+       form: to_form(%{"content" => nil}),
+       error_message: nil
      })
      |> assign_async(:endpoint_available?, fn ->
        {:ok, %{endpoint_available?: AiAssistant.endpoint_available?()}}
@@ -71,6 +72,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   def handle_event("send_message", %{"content" => content}, socket) do
     {:noreply,
      socket
+     |> assign(error_message: nil)
      |> save_message(socket.assigns.action, content)}
   end
 
@@ -79,42 +81,56 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   end
 
   defp save_message(%{assigns: assigns} = socket, :new, content) do
-    session =
-      AiAssistant.create_session!(
-        assigns.selected_job,
-        assigns.current_user,
-        content
-      )
+    case AiAssistant.create_session(
+           assigns.selected_job,
+           assigns.current_user,
+           content
+         ) do
+      {:ok, session} ->
+        query_params = Map.put(assigns.query_params, "chat", session.id)
 
-    query_params = Map.put(assigns.query_params, "chat", session.id)
+        socket
+        |> assign(:session, session)
+        |> assign(:process_message_on_show, true)
+        |> push_patch(to: redirect_url(assigns.base_url, query_params))
 
-    socket
-    |> assign(:session, session)
-    |> assign(:process_message_on_show, true)
-    |> push_patch(to: redirect_url(assigns.base_url, query_params))
+      error ->
+        assign(socket, error_message: error_message(error))
+    end
   end
 
   defp save_message(%{assigns: assigns} = socket, :show, content) do
-    session =
-      AiAssistant.save_message!(assigns.session, %{
-        "role" => "user",
-        "content" => content,
-        "user" => assigns.current_user
-      })
+    case AiAssistant.save_message(assigns.session, %{
+           "role" => "user",
+           "content" => content,
+           "user" => assigns.current_user
+         }) do
+      {:ok, session} ->
+        socket
+        |> assign(:session, session)
+        |> process_message(content)
 
-    socket
-    |> assign(:session, session)
-    |> process_message(content)
+      error ->
+        assign(socket, error_message: error_message(error))
+    end
+  end
+
+  defp error_message({:error, %Ecto.Changeset{}}) do
+    "Oops! Could not save message. Please try again."
+  end
+
+  defp error_message({:error, :apollo_unavailable}) do
+    "Oops! Could not reach the Ai Server. Please try again later."
   end
 
   defp process_message(socket, message) do
+    session = socket.assigns.session
+
     socket
     |> assign(:pending_message, AsyncResult.loading())
     |> start_async(
       :process_message,
-      fn ->
-        AiAssistant.query(socket.assigns.session, message)
-      end
+      fn -> AiAssistant.query(session, message) end
     )
   end
 
@@ -134,11 +150,11 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
      |> assign(:pending_message, AsyncResult.ok(nil))}
   end
 
-  def handle_async(:process_message, {:ok, :error}, socket) do
+  def handle_async(:process_message, {:ok, error}, socket) do
     {:noreply,
      socket
      |> update(:pending_message, fn async_result ->
-       AsyncResult.failed(async_result, :error)
+       AsyncResult.failed(async_result, error)
      end)}
   end
 
@@ -263,6 +279,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
           id="ai-assistant-form"
         >
           <.chat_input
+            error_message={@error_message}
             form={@form}
             disabled={
               !endpoint_available? or !is_nil(@pending_message.loading) or
@@ -277,6 +294,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
   attr :disabled, :boolean
   attr :form, :map, required: true
+  attr :error_message, :string
 
   defp chat_input(assigns) do
     assigns =
@@ -290,6 +308,9 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
       )
 
     ~H"""
+    <div :if={@error_message} class="alert alert-danger">
+      <%= @error_message %>
+    </div>
     <div class="text-xs text-center italic">
       Do not paste PPI or sensitive business data
     </div>
@@ -304,7 +325,6 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         placeholder="Open a previous session or send a message to start a new session"
         disabled={@disabled}
       ><%= Phoenix.HTML.Form.normalize_value("textarea", @form[:content].value) %></textarea>
-      <.error :for={msg <- @errors}><%= msg %></.error>
       <div class="py-2 pl-3 pr-2">
         <div class="flex items-center space-x-5"></div>
         <div class="flex-shrink-0">
@@ -399,7 +419,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
               <div class="h-2 bg-slate-700 rounded"></div>
             </div>
           </:loading>
-          <:failed>
+          <:failed :let={failure}>
             <div class="mr-auto p-2 rounded-lg break-words text-wrap flex flex-row gap-x-2">
               <div class="">
                 <div class="rounded-full p-2 bg-indigo-200 text-indigo-700 ring-4 ring-white">
@@ -407,8 +427,11 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
                 </div>
               </div>
               <div class="flex gap-2">
-                <.icon name="exclamation-triangle" class="text-red" />
-                <span>An error occured! Please try again later.</span>
+                <.icon
+                  name="hero-exclamation-triangle"
+                  class="text-amber-400 h-8 w-8"
+                />
+                <span><%= error_message(failure) %></span>
               </div>
             </div>
           </:failed>
