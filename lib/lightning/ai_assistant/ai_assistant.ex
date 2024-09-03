@@ -71,7 +71,7 @@ defmodule Lightning.AiAssistant do
     job
     |> new_session(user)
     |> struct(title: String.slice(content, 0, 20))
-    |> save_message!(%{role: :user, content: content, user_id: user.id})
+    |> save_message!(%{role: :user, content: content, user: user})
   end
 
   @spec save_message!(ChatSession.t(), %{any() => any()}) :: ChatSession.t()
