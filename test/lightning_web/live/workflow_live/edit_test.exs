@@ -1828,7 +1828,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         :openai_api_key -> "openai_api_key"
       end)
 
-      error_message = "You've reached your quota of AI queries"
+      error_message = "You have reached your quota of AI queries"
 
       Mox.stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn %{
                                                                           type:
@@ -1858,6 +1858,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
              |> Floki.parse_fragment!()
              |> Floki.find("#flash")
              |> Floki.text() =~ error_message
+
+      assert view
+             |> element("#canvas-banner-limit")
+             |> render() =~ error_message
     end
   end
 end
