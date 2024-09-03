@@ -11,36 +11,6 @@ defmodule Lightning.AiAssistant do
   alias Lightning.Repo
   alias Lightning.Workflows.Job
 
-  @doc """
-  Creates a new session with the given job.
-
-  **Example**
-
-      iex> AiAssistant.new_session(%Lightning.Workflows.Job{
-      ...>   body: "fn()",
-      ...>   adaptor: "@openfn/language-common@latest"
-      ...> })
-      %Lightning.AiAssistant.ChatSession{
-        expression: "fn()",
-        adaptor: "@openfn/language-common@1.6.2",
-        messages: []
-      }
-
-  > ℹ️ The `adaptor` field is resolved to the latest version when `@latest`
-  > is provided as Apollo expects a specific version.
-  """
-
-  @spec new_session(Job.t(), User.t()) :: ChatSession.t()
-  def new_session(job, user) do
-    %ChatSession{
-      id: Ecto.UUID.generate(),
-      job_id: job.id,
-      user_id: user.id,
-      messages: []
-    }
-    |> put_expression_and_adaptor(job.body, job.adaptor)
-  end
-
   @spec put_expression_and_adaptor(ChatSession.t(), String.t(), String.t()) ::
           ChatSession.t()
   def put_expression_and_adaptor(session, expression, adaptor) do
@@ -66,21 +36,30 @@ defmodule Lightning.AiAssistant do
     ChatSession |> Repo.get!(id) |> Repo.preload(messages: :user)
   end
 
-  @spec create_session!(Job.t(), User.t(), String.t()) :: ChatSession.t()
-  def create_session!(job, user, content) do
-    job
-    |> new_session(user)
-    |> struct(title: String.slice(content, 0, 20))
-    |> save_message!(%{role: :user, content: content, user: user})
+  @spec create_session(Job.t(), User.t(), String.t()) ::
+          {:ok, ChatSession.t()} | {:error, Ecto.Changeset.t()}
+  def create_session(job, user, content) do
+    %ChatSession{
+      id: Ecto.UUID.generate(),
+      job_id: job.id,
+      user_id: user.id,
+      title: String.slice(content, 0, 20),
+      messages: []
+    }
+    |> put_expression_and_adaptor(job.body, job.adaptor)
+    |> save_message(%{role: :user, content: content, user: user})
   end
 
-  @spec save_message!(ChatSession.t(), %{any() => any()}) :: ChatSession.t()
-  def save_message!(session, message) do
+  @spec save_message(ChatSession.t(), %{any() => any()}) ::
+          {:ok, ChatSession.t()} | {:error, Ecto.Changeset.t()}
+  def save_message(session, message) do
+    # we can call the limiter at this point
+    # note: we should only increment the counter when role is `:assistant`
     messages = Enum.map(session.messages, &Map.take(&1, [:id]))
 
     session
     |> ChatSession.changeset(%{messages: messages ++ [message]})
-    |> Repo.insert_or_update!()
+    |> Repo.insert_or_update()
   end
 
   @spec project_has_any_session?(Ecto.UUID.t()) :: boolean()
@@ -104,20 +83,24 @@ defmodule Lightning.AiAssistant do
       iex> AiAssistant.query(session, "fn()")
       {:ok, session}
   """
-  @spec query(ChatSession.t(), String.t()) :: {:ok, ChatSession.t()} | :error
+  @spec query(ChatSession.t(), String.t()) ::
+          {:ok, ChatSession.t()}
+          | {:error, Ecto.Changeset.t() | :apollo_unavailable}
   def query(session, content) do
-    ApolloClient.query(
-      content,
-      %{expression: session.expression, adaptor: session.adaptor},
-      build_history(session)
-    )
-    |> case do
+    apollo_resp =
+      ApolloClient.query(
+        content,
+        %{expression: session.expression, adaptor: session.adaptor},
+        build_history(session)
+      )
+
+    case apollo_resp do
       {:ok, %Tesla.Env{status: status, body: body}} when status in 200..299 ->
         message = body["history"] |> Enum.reverse() |> hd()
-        {:ok, save_message!(session, message)}
+        save_message(session, message)
 
       _ ->
-        :error
+        {:error, :apollo_unavailable}
     end
   end
 
