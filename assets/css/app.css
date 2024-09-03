@@ -18,7 +18,7 @@
 }
 
 #side-menu {
-  &.secondary-theme {
+  &.secondary-variant {
     --primary-bg: theme('colors.blue.700');
     --primary-text: theme('colors.white');
     --primary-bg-lighter: theme('colors.blue.600');
@@ -29,7 +29,7 @@
     --primary-ring-focus: theme('colors.blue.600');
   }
 
-  &.sudo-theme {
+  &.sudo-variant {
     --primary-bg: theme('colors.slate.700');
     --primary-text: theme('colors.white');
     --primary-bg-lighter: theme('colors.slate.600');
