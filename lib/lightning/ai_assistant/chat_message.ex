@@ -3,6 +3,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
 
   use Lightning.Schema
   import Ecto.Changeset
+  import Lightning.Validators, only: [validate_required_assoc: 2]
 
   @type role() :: :user | :assistant
   @type t() :: %__MODULE__{
@@ -32,9 +33,26 @@ defmodule Lightning.AiAssistant.ChatMessage do
       :role,
       :is_deleted,
       :is_public,
-      :chat_session_id,
-      :user_id
+      :chat_session_id
     ])
     |> validate_required([:content, :role])
+    |> maybe_put_user_assoc(attrs[:user] || attrs["user"])
+    |> maybe_require_user()
+  end
+
+  defp maybe_put_user_assoc(changeset, user) do
+    if user do
+      put_assoc(changeset, :user, user)
+    else
+      changeset
+    end
+  end
+
+  defp maybe_require_user(changeset) do
+    if get_field(changeset, :role) == :user do
+      validate_required_assoc(changeset, :user)
+    else
+      changeset
+    end
   end
 end

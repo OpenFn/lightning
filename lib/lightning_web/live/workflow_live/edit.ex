@@ -6,6 +6,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   import LightningWeb.Components.Icons
   import LightningWeb.WorkflowLive.Components
 
+  alias Lightning.AiAssistant
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Invocation
@@ -226,18 +227,40 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     </div>
                   </:panel>
                   <:panel hash="aichat" class="h-full">
-                    <div class="grow min-h-0 h-full text-sm">
-                      <.live_component
-                        module={LightningWeb.WorkflowLive.AiAssistantComponent}
-                        current_user={@current_user}
-                        selected_job={@selected_job}
-                        chat_session_id={@chat_session_id}
-                        query_params={@query_params}
-                        base_url={@base_url}
-                        action={if(@chat_session_id, do: :show, else: :new)}
-                        id={"aichat-#{@selected_job.id}"}
-                      />
-                    </div>
+                    <%= if @ai_assistant_enabled do %>
+                      <div class="grow min-h-0 h-full text-sm">
+                        <.live_component
+                          module={LightningWeb.WorkflowLive.AiAssistantComponent}
+                          can_edit_workflow={@can_edit_workflow}
+                          project_has_chat_sessions={@project_has_chat_sessions}
+                          current_user={@current_user}
+                          selected_job={@selected_job}
+                          chat_session_id={@chat_session_id}
+                          query_params={@query_params}
+                          base_url={@base_url}
+                          action={if(@chat_session_id, do: :show, else: :new)}
+                          id={"aichat-#{@selected_job.id}"}
+                        />
+                      </div>
+                    <% else %>
+                      <div class="flex flex-col items-center justify-center h-full">
+                        <div class="text-center">
+                          <p class="text-gray-500 text-sm">
+                            AI Assistant has not been configured for your instance.
+                            <br />Contact your admin to configure AI Assistant or try it on
+                            <br />OpenFn cloud for free.
+                            <br />Try the AI Assistant on
+                            <a
+                              href="https://app.openfn.org"
+                              target="_blank"
+                              class="text-primary-600"
+                            >
+                              https://app.openfn.org
+                            </a>
+                          </p>
+                        </div>
+                      </div>
+                    <% end %>
                   </:panel>
                 </LightningWeb.Components.Tabbed.panels>
               </.collapsible_panel>
@@ -963,6 +986,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
        view_only_users_ids: view_only_users_ids,
        active_menu_item: :overview,
        expanded_job: nil,
+       ai_assistant_enabled: AiAssistant.enabled?(),
+       project_has_chat_sessions: nil,
        chat_session_id: nil,
        follow_run: nil,
        step: nil,
@@ -1049,6 +1074,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
           |> assign(selected_run: run_id)
           |> assign_workflow(workflow, snapshot)
           |> assign(page_title: workflow.name)
+          |> assign(
+            project_has_chat_sessions:
+              AiAssistant.project_has_any_session?(workflow.project_id)
+          )
         else
           socket
           |> put_flash(:error, "Workflow not found")
