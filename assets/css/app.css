@@ -6,6 +6,92 @@
 @import '../../deps/petal_components/assets/default.css';
 /* This file is for your main application CSS */
 
+:root {
+  --primary-bg: theme('colors.primary.800');
+  --primary-text: theme('colors.white');
+  --primary-bg-lighter: theme('colors.primary.600');
+  --primary-bg-dark: theme('colors.primary.900');
+  --primary-text-light: theme('colors.primary.300');
+  --primary-text-lighter: theme('colors.primary.200');
+  --primary-ring: theme('colors.gray.300');
+  --primary-ring-focus: theme('colors.primary.600');
+}
+
+#side-menu {
+  &.secondary-variant {
+    --primary-bg: theme('colors.blue.700');
+    --primary-text: theme('colors.white');
+    --primary-bg-lighter: theme('colors.blue.600');
+    --primary-bg-dark: theme('colors.blue.900');
+    --primary-text-light: theme('colors.blue.300');
+    --primary-text-lighter: theme('colors.blue.200');
+    --primary-ring: theme('colors.gray.300');
+    --primary-ring-focus: theme('colors.blue.600');
+  }
+
+  &.sudo-variant {
+    --primary-bg: theme('colors.slate.700');
+    --primary-text: theme('colors.white');
+    --primary-bg-lighter: theme('colors.slate.600');
+    --primary-bg-dark: theme('colors.slate.900');
+    --primary-text-light: theme('colors.slate.300');
+    --primary-text-lighter: theme('colors.slate.200');
+    --primary-ring: theme('colors.gray.300');
+    --primary-ring-focus: theme('colors.slate.600');
+  }
+
+  background-color: var(--primary-bg);
+  color: var(--primary-text);
+
+  div > div {
+    &:first-child {
+      background-color: var(--primary-bg-dark);
+    }
+  }
+
+  .menu-item-active {
+    color: var(--primary-text-lighter);
+    background-color: var(--primary-bg-dark);
+  }
+  .menu-item-inactive {
+    color: var(--primary-text-light);
+  }
+  .menu-item-inactive:hover {
+    background-color: var(--primary-bg-dark);
+  }
+
+  input#combobox {
+    background-color: white;
+    color: theme('colors.gray.900');
+    --tw-ring-color: var(--primary-ring);
+
+    &:focus {
+      --tw-ring-color: var(--primary-ring-focus);
+    }
+
+    ~ ul {
+      background-color: white;
+      --tw-ring-color: var(--primary-ring-focus);
+
+      > li {
+        color: theme('colors.gray.900');
+        .hero-check {
+          color: var(--primary-bg-lighter);
+        }
+
+        &[data-highlighted='true'] {
+          background-color: var(--primary-bg-lighter);
+          color: var(--primary-text);
+
+          .hero-check {
+            color: var(--primary-text);
+          }
+        }
+      }
+    }
+  }
+}
+
 /* Alerts and form errors used by phx.new */
 .alert {
   padding: 15px;
@@ -19,14 +105,14 @@
   border-color: #bce8f1;
 }
 .alert-warning {
-  color: #8B5F0D;
+  color: #8b5f0d;
   background-color: #fcf8e3;
   border-color: #faebcc;
 }
 .alert-danger {
-  color: #DC2626;
-  background-color: #FDEBEB;
-  border-color: #FDEBEB;
+  color: #dc2626;
+  background-color: #fdebeb;
+  border-color: #fdebeb;
 }
 .alert p {
   margin-bottom: 0;

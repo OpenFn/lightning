@@ -30,6 +30,6 @@ defmodule LightningWeb.LayoutComponentsTest do
     assert Floki.text(element) == "Settings"
 
     assert element |> Floki.attribute("class") |> hd =~
-             "text-primary-200 bg-primary-900"
+             "menu-item-active"
   end
 end
