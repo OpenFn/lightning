@@ -10,8 +10,8 @@ defmodule Lightning.AiAssistant do
   alias Lightning.AiAssistant.ChatSession
   alias Lightning.ApolloClient
   alias Lightning.Repo
+  alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows.Job
-  alias Lightning.Workflows.Workflow
 
   @spec put_expression_and_adaptor(ChatSession.t(), String.t(), String.t()) ::
           ChatSession.t()
@@ -41,12 +41,9 @@ defmodule Lightning.AiAssistant do
   @spec create_session(Job.t(), User.t(), String.t()) ::
           {:ok, ChatSession.t()} | {:error, Ecto.Changeset.t()}
   def create_session(job, user, content) do
-    %{project_id: project_id} = Repo.get!(Workflow, job.workflow_id)
-
     %ChatSession{
       id: Ecto.UUID.generate(),
       job_id: job.id,
-      project_id: project_id,
       user_id: user.id,
       title: String.slice(content, 0, 40),
       messages: []
@@ -72,12 +69,8 @@ defmodule Lightning.AiAssistant do
     |> Multi.merge(&maybe_increment_msgs_counter/1)
     |> Repo.transaction()
     |> case do
-      {:ok, %{upsert: session} = changes} ->
-        if Map.has_key?(changes, :inc_counter) do
-          {:ok, %{session | msgs_counter: session.msgs_counter + 1}}
-        else
-          {:ok, session}
-        end
+      {:ok, %{upsert: session}} ->
+        {:ok, session}
 
       {:error, _operation, changeset, _changes} ->
         {:error, changeset}
@@ -171,20 +164,7 @@ defmodule Lightning.AiAssistant do
     maybe_increment_msgs_counter(%{upsert: session, message: %{role: :user}})
   end
 
-  defp maybe_increment_msgs_counter(%{
-         upsert: session,
-         message: %{role: :user}
-       }) do
-    Multi.new()
-    |> Multi.update_all(
-      :inc_counter,
-      fn _ ->
-        from(cs in ChatSession,
-          where: cs.id == ^session.id,
-          update: [inc: [msgs_counter: 1]]
-        )
-      end,
-      []
-    )
+  defp maybe_increment_msgs_counter(%{upsert: session, message: %{role: :user}}) do
+    UsageLimiter.increment_ai_queries(session)
   end
 end

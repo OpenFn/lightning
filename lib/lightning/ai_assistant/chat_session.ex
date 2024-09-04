@@ -6,15 +6,12 @@ defmodule Lightning.AiAssistant.ChatSession do
 
   alias Lightning.Accounts.User
   alias Lightning.AiAssistant.ChatMessage
-  alias Lightning.Projects.Project
   alias Lightning.Workflows.Job
 
   @type t() :: %__MODULE__{
           id: Ecto.UUID.t(),
           job_id: Ecto.UUID.t(),
           user_id: Ecto.UUID.t(),
-          project_id: Ecto.UUID.t(),
-          msgs_counter: integer(),
           title: String.t(),
           expression: String.t() | nil,
           adaptor: String.t() | nil,
@@ -26,12 +23,10 @@ defmodule Lightning.AiAssistant.ChatSession do
   schema "ai_chat_sessions" do
     field :expression, :string, virtual: true
     field :adaptor, :string, virtual: true
-    field :msgs_counter, :integer
     field :title, :string
     field :is_public, :boolean, default: false
     field :is_deleted, :boolean, default: false
     belongs_to :job, Job
-    belongs_to :project, Project
     belongs_to :user, User
 
     has_many :messages, ChatMessage, preload_order: [asc: :inserted_at]
@@ -41,15 +36,8 @@ defmodule Lightning.AiAssistant.ChatSession do
 
   def changeset(chat_session, attrs) do
     chat_session
-    |> cast(attrs, [
-      :title,
-      :is_public,
-      :is_deleted,
-      :job_id,
-      :project_id,
-      :user_id
-    ])
-    |> validate_required([:title, :job_id, :project_id, :user_id])
+    |> cast(attrs, [:title, :is_public, :is_deleted, :job_id, :user_id])
+    |> validate_required([:title, :job_id, :user_id])
     |> cast_assoc(:messages)
   end
 end

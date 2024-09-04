@@ -43,6 +43,9 @@ defmodule Lightning.Extensions.UsageLimiting do
   @callback limit_action(action :: Action.t(), context :: Context.t()) ::
               :ok | error()
 
+  @callback increment_ai_queries(Lightning.AiAssistant.ChatSession.t()) ::
+              Ecto.Multi.t()
+
   @callback get_run_options(context :: Context.t()) ::
               Lightning.Runs.RunOptions.keyword_list()
 end

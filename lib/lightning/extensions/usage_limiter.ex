@@ -11,6 +11,9 @@ defmodule Lightning.Extensions.UsageLimiter do
   def limit_action(_action, _context), do: :ok
 
   @impl true
+  def increment_ai_queries(_session), do: Ecto.Multi.new()
+
+  @impl true
   def get_run_options(context) do
     [
       save_dataclips: Lightning.Projects.save_dataclips?(context.project_id),
