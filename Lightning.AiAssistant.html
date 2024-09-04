@@ -5,15 +5,15 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.30.9">
-    <meta name="project" content="Lightning v2.8.1">
+    <meta name="project" content="Lightning v2.8.2">
 
-    <title>Lightning.AiAssistant — Lightning v2.8.1</title>
+    <title>Lightning.AiAssistant — Lightning v2.8.2</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-A26FC54E.js"></script>
+    <script src="dist/sidebar_items-1A848FC1.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -72,7 +72,7 @@
 Lightning
       </a>
       <div class="sidebar-projectVersion" translate="no">
-        v2.8.1
+        v2.8.2
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -131,7 +131,7 @@ Pages
     </a>
 
   <span translate="no">Lightning.AiAssistant</span> 
-  <small class="app-vsn" translate="no">(Lightning v2.8.1)</small>
+  <small class="app-vsn" translate="no">(Lightning v2.8.2)</small>
 
 </h1>
 
@@ -295,15 +295,15 @@ Pages
 
       </div>
 
-<p>Creates a new session with the given job.</p><p><strong>Example</strong></p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">AiAssistant</span><span class="o">.</span><span class="n">new_session</span><span class="p" data-group-id="6544544840-1">(</span><span class="p" data-group-id="6544544840-2">%</span><span class="nc" data-group-id="6544544840-2">Lightning.Workflows.Job</span><span class="p" data-group-id="6544544840-2">{</span><span class="w">
+<p>Creates a new session with the given job.</p><p><strong>Example</strong></p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">AiAssistant</span><span class="o">.</span><span class="n">new_session</span><span class="p" data-group-id="9223453960-1">(</span><span class="p" data-group-id="9223453960-2">%</span><span class="nc" data-group-id="9223453960-2">Lightning.Workflows.Job</span><span class="p" data-group-id="9223453960-2">{</span><span class="w">
 </span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;fn()&quot;</span><span class="p">,</span><span class="w">
 </span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="ss">adaptor</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@openfn/language-common@latest&quot;</span><span class="w">
-</span><span class="gp unselectable">...&gt; </span><span class="p" data-group-id="6544544840-2">}</span><span class="p" data-group-id="6544544840-1">)</span><span class="w">
-</span><span class="p" data-group-id="6544544840-3">%</span><span class="nc" data-group-id="6544544840-3">Lightning.AiAssistant.Session</span><span class="p" data-group-id="6544544840-3">{</span><span class="w">
+</span><span class="gp unselectable">...&gt; </span><span class="p" data-group-id="9223453960-2">}</span><span class="p" data-group-id="9223453960-1">)</span><span class="w">
+</span><span class="p" data-group-id="9223453960-3">%</span><span class="nc" data-group-id="9223453960-3">Lightning.AiAssistant.Session</span><span class="p" data-group-id="9223453960-3">{</span><span class="w">
   </span><span class="ss">expression</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;fn()&quot;</span><span class="p">,</span><span class="w">
   </span><span class="ss">adaptor</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@openfn/language-common@1.6.2&quot;</span><span class="p">,</span><span class="w">
-  </span><span class="ss">history</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6544544840-4">[</span><span class="p" data-group-id="6544544840-4">]</span><span class="w">
-</span><span class="p" data-group-id="6544544840-3">}</span></code></pre><blockquote><p>ℹ️ The <code class="inline">adaptor</code> field is resolved to the latest version when <code class="inline">@latest</code>
+  </span><span class="ss">history</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9223453960-4">[</span><span class="p" data-group-id="9223453960-4">]</span><span class="w">
+</span><span class="p" data-group-id="9223453960-3">}</span></code></pre><blockquote><p>ℹ️ The <code class="inline">adaptor</code> field is resolved to the latest version when <code class="inline">@latest</code>
 is provided as Apollo expects a specific version.</p></blockquote>
   </section>
 </section>
@@ -362,8 +362,8 @@ is provided as Apollo expects a specific version.</p></blockquote>
 
       </div>
 
-<p>Queries the AI assistant with the given content.</p><p>Returns <code class="inline">{:ok, session}</code> if the query was successful, otherwise <code class="inline">:error</code>.</p><p><strong>Example</strong></p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">AiAssistant</span><span class="o">.</span><span class="n">query</span><span class="p" data-group-id="4394673695-1">(</span><span class="n">session</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;fn()&quot;</span><span class="p" data-group-id="4394673695-1">)</span><span class="w">
-</span><span class="p" data-group-id="4394673695-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">session</span><span class="p" data-group-id="4394673695-2">}</span></code></pre>
+<p>Queries the AI assistant with the given content.</p><p>Returns <code class="inline">{:ok, session}</code> if the query was successful, otherwise <code class="inline">:error</code>.</p><p><strong>Example</strong></p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">AiAssistant</span><span class="o">.</span><span class="n">query</span><span class="p" data-group-id="4665700256-1">(</span><span class="n">session</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;fn()&quot;</span><span class="p" data-group-id="4665700256-1">)</span><span class="w">
+</span><span class="p" data-group-id="4665700256-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">session</span><span class="p" data-group-id="4665700256-2">}</span></code></pre>
   </section>
 </section>
 
