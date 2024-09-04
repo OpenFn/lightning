@@ -318,18 +318,13 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   attr :error_message, :string
 
   defp chat_input(assigns) do
-    assigns =
-      assigns
-      |> assign(
-        :errors,
-        Enum.map(
-          assigns.form[:content].errors,
-          &LightningWeb.CoreComponents.translate_error(&1)
-        )
-      )
-
     ~H"""
-    <div :if={@error_message} class="alert alert-danger">
+    <div
+      :if={@error_message}
+      class="alert alert-danger hover:cursor-pointer"
+      role="alert"
+      phx-click={JS.hide()}
+    >
       <%= @error_message %>
     </div>
     <div class="text-xs text-center italic">
