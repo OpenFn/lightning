@@ -1,7 +1,7 @@
 defmodule Lightning.Extensions.UsageLimiterTest do
   use ExUnit.Case, async: true
 
-  alias Ecto.Multi
+  import Lightning.Factories
 
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
@@ -34,12 +34,8 @@ defmodule Lightning.Extensions.UsageLimiterTest do
   end
 
   describe "increment_ai_queries/2" do
-    test "returns the same multi" do
-      session = %Lightning.AiAssistant.ChatSession{job_id: Lightning.Factories.build(:job)}
-
-      multi = Multi.new() |> Multi.put(:session, session)
-
-      assert Multi.merge(fn %{session: session} -> UsageLimiter.increment_ai_queries(session) == multi
+    test "returns no change" do
+      assert Ecto.Multi.new() == UsageLimiter.increment_ai_queries(build(:chat_session))
     end
   end
 end

@@ -130,8 +130,14 @@ defmodule Lightning.AiAssistantTest do
   describe "create_session/3" do
     test "creates a new session", %{
       user: user,
-      workflow: %{jobs: [job_1 | _]} = _workflow
+      workflow: %{jobs: [%{id: job_id} = job_1 | _]} = _workflow
     } do
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :increment_ai_queries,
+        fn %{job_id: ^job_id} -> Ecto.Multi.new() end
+      )
+
       assert {:ok, session} = AiAssistant.create_session(job_1, user, "foo")
 
       assert session.job_id == job_1.id
@@ -145,6 +151,34 @@ defmodule Lightning.AiAssistantTest do
                [%{role: :user, content: "foo", user: ^user}],
                session.messages
              )
+    end
+  end
+
+  describe "save_message/2" do
+    test "calls limiter to increment ai queries" do
+      user = insert(:user)
+
+      content1 = """
+      How could I merge the headers and data on a single http request body
+      using OpenFn http adaptor?
+      """
+
+      %{id: job_id} = job = insert(:job, workflow: build(:workflow))
+
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :increment_ai_queries,
+        2,
+        fn %{job_id: ^job_id} -> Ecto.Multi.new() end
+      )
+
+      {:ok, session} = AiAssistant.create_session(job, user, content1)
+
+      AiAssistant.save_message(session, %{
+        role: :user,
+        content: "What if I want to deduplicate the headers?",
+        user: user
+      })
     end
   end
 end
