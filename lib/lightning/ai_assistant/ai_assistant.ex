@@ -43,7 +43,7 @@ defmodule Lightning.AiAssistant do
       id: Ecto.UUID.generate(),
       job_id: job.id,
       user_id: user.id,
-      title: String.slice(content, 0, 20),
+      title: String.slice(content, 0, 40),
       messages: []
     }
     |> put_expression_and_adaptor(job.body, job.adaptor)

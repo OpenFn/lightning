@@ -1074,16 +1074,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
           |> assign(selected_run: run_id)
           |> assign_workflow(workflow, snapshot)
           |> assign(page_title: workflow.name)
-          |> assign(
-            project_has_chat_sessions:
-              AiAssistant.project_has_any_session?(workflow.project_id)
-          )
         else
           socket
           |> put_flash(:error, "Workflow not found")
           |> push_redirect(to: ~p"/projects/#{socket.assigns.project}/w")
         end
     end
+    |> assign(
+      project_has_chat_sessions:
+        AiAssistant.project_has_any_session?(socket.assigns.project.id)
+    )
   end
 
   defp track_user_presence(socket) do
