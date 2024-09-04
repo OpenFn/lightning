@@ -16,12 +16,12 @@ and this project adheres to
 ## [Unreleased]
 
 ### Added
-- Placeholder
-
 - Change navbar colors depending on scope.
   [#2449](https://github.com/OpenFn/lightning/pull/2449)
 - Add support for configurable idle connection timeouts via the `IDLE_TIMEOUT`
   environment variable. [#2443](https://github.com/OpenFn/lightning/issues/2443)
+- Persist AI Assistant conversations and enable it for all users
+  [#2296](https://github.com/OpenFn/lightning/issues/2296)
 
 ### Changed
 
