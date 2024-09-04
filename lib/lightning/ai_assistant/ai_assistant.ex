@@ -150,21 +150,22 @@ defmodule Lightning.AiAssistant do
     ApolloClient.test() == :ok
   end
 
-  # role sent via async as string
-  defp maybe_increment_msgs_counter(%{message: %{"role" => "assistant"}}),
-    do: Multi.new()
-
-  defp maybe_increment_msgs_counter(%{message: %{role: :assistant}}),
-    do: Multi.new()
+  # assistant role sent via async as string
+  defp maybe_increment_msgs_counter(%{
+         upsert: session,
+         message: %{"role" => "assistant"}
+       }),
+       do:
+         maybe_increment_msgs_counter(%{
+           upsert: session,
+           message: %{role: :assistant}
+         })
 
   defp maybe_increment_msgs_counter(%{
          upsert: session,
-         message: %{"role" => "user"}
-       }) do
-    maybe_increment_msgs_counter(%{upsert: session, message: %{role: :user}})
-  end
+         message: %{role: :assistant}
+       }),
+       do: UsageLimiter.increment_ai_queries(session)
 
-  defp maybe_increment_msgs_counter(%{upsert: session, message: %{role: :user}}) do
-    UsageLimiter.increment_ai_queries(session)
-  end
+  defp maybe_increment_msgs_counter(_user_role), do: Multi.new()
 end
