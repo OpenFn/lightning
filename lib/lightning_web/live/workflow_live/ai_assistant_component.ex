@@ -59,7 +59,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
   def render(assigns) do
     ~H"""
-    <div class="h-full">
+    <div id={@id} class="h-full">
       <%= if @action == :new and !@has_read_disclaimer do %>
         <.render_onboarding myself={@myself} can_edit_workflow={@can_edit_workflow} />
       <% else %>
@@ -70,10 +70,19 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   end
 
   def handle_event("send_message", %{"content" => content}, socket) do
-    {:noreply,
-     socket
-     |> assign(error_message: nil)
-     |> save_message(socket.assigns.action, content)}
+    if socket.assigns.can_edit_workflow do
+      {:noreply,
+       socket
+       |> assign(error_message: nil)
+       |> save_message(socket.assigns.action, content)}
+    else
+      {:noreply,
+       socket
+       |> assign(
+         form: to_form(%{"content" => nil}),
+         error_message: "You are not authorized to use the Ai Assistant"
+       )}
+    end
   end
 
   def handle_event("mark_disclaimer_read", _params, socket) do
@@ -123,6 +132,10 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     "Oops! Could not reach the Ai Server. Please try again later."
   end
 
+  defp error_message(_error) do
+    "Oops! Something went wrong. Please try again."
+  end
+
   defp process_message(socket, message) do
     session = socket.assigns.session
 
@@ -155,6 +168,14 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
      socket
      |> update(:pending_message, fn async_result ->
        AsyncResult.failed(async_result, error)
+     end)}
+  end
+
+  def handle_async(:process_message, {:exit, error}, socket) do
+    {:noreply,
+     socket
+     |> update(:pending_message, fn async_result ->
+       AsyncResult.failed(async_result, {:exit, error})
      end)}
   end
 
@@ -328,7 +349,11 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
       <div class="py-2 pl-3 pr-2">
         <div class="flex items-center space-x-5"></div>
         <div class="flex-shrink-0">
-          <.button type="submit" disabled={@disabled}>
+          <.button
+            id="ai-assistant-form-submit-btn"
+            type="submit"
+            disabled={@disabled}
+          >
             Send
           </.button>
         </div>

@@ -1375,18 +1375,137 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   describe "AI Assistant:" do
     setup :create_workflow
 
-    test "authorized users can send a message", %{
-      conn: conn,
-      project: project,
-      workflow: %{jobs: [job_1 | _]} = workflow
-    } do
+    test "correct information is displayed when the assistant is not configured",
+         %{
+           conn: conn,
+           project: project,
+           workflow: %{jobs: [job_1 | _]} = workflow
+         } do
+      # when not configured properly
       Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> "http://localhost:4001/health_check"
+        :endpoint -> nil
         :openai_api_key -> "openai_api_key"
       end)
 
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      render_async(view)
+      refute has_element?(view, "#aichat-#{job_1.id}")
+
+      assert render(view) =~
+               "AI Assistant has not been configured for your instance"
+
+      # when configured properly
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> "http://localhost:4001"
+        :openai_api_key -> "openai_api_key"
+      end)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      render_async(view)
+      assert has_element?(view, "#aichat-#{job_1.id}")
+
+      refute render(view) =~
+               "AI Assistant has not been configured for your instance"
+    end
+
+    test "onboarding ui is displayed when no session exists for the project", %{
+      conn: conn,
+      project: project,
+      user: user,
+      workflow: %{jobs: [job_1, job_2 | _]} = workflow
+    } do
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> "http://localhost:4001"
+        :openai_api_key -> "openai_api_key"
+      end)
+
+      # when no session exists
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      render_async(view)
+
+      html = view |> element("#aichat-#{job_1.id}") |> render()
+      assert html =~ "Get started with the AI Assistant"
+      assert html =~ "Learn more about AI Assistant"
+      refute has_element?(view, "#ai-assistant-form")
+
+      # let's try clicking the get started button
+      view |> element("#get-started-with-ai-btn") |> render_click()
+      html = view |> element("#aichat-#{job_1.id}") |> render()
+      refute html =~ "Get started with the AI Assistant"
+      refute html =~ "Learn more about AI Assistant"
+      assert has_element?(view, "#ai-assistant-form")
+
+      # when a session exists
+      # notice I'm using another job for the session.
+      # This is because the onboarding is shown once per project and not per job
+      insert(:chat_session, user: user, job: job_2)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      render_async(view)
+
+      html = view |> element("#aichat-#{job_1.id}") |> render()
+      refute html =~ "Get started with the AI Assistant"
+      refute html =~ "Learn more about AI Assistant"
+
+      assert has_element?(view, "#ai-assistant-form")
+    end
+
+    test "authorized users can send a message", %{
+      conn: conn,
+      project: project,
+      user: user,
+      workflow: %{jobs: [job_1 | _]} = workflow
+    } do
+      apollo_endpoint = "http://localhost:4001"
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> apollo_endpoint
+        :openai_api_key -> "openai_api_key"
+      end)
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        fn
+          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
+            {:ok, %Tesla.Env{status: 200}}
+
+          %{method: :post}, _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{
+                 "history" => [%{"role" => "assistant", "content" => "Hello!"}]
+               }
+             }}
+        end
+      )
+
+      # insert session so that the onboarding flow is not displayed
+      insert(:chat_session, user: user, job: job_1)
+
       for {conn, _user} <-
-            setup_project_users(conn, project, [:owner, :admin, :editor, :viewer]) do
+            setup_project_users(conn, project, [:owner, :admin, :editor]) do
         {:ok, view, _html} =
           live(
             conn,
@@ -1395,9 +1514,55 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
         render_async(view)
 
-        view
-        |> form("#ai-assistant-form")
-        |> has_element?()
+        assert view
+               |> form("#ai-assistant-form")
+               |> has_element?()
+
+        input_element = element(view, "#ai-assistant-form textarea")
+        submit_btn = element(view, "#ai-assistant-form-submit-btn")
+
+        assert has_element?(input_element)
+        refute render(input_element) =~ "disabled=\"disabled\""
+        assert has_element?(submit_btn)
+        refute render(submit_btn) =~ "disabled=\"disabled\""
+
+        # try submitting a message
+        html =
+          view
+          |> form("#ai-assistant-form")
+          |> render_submit(%{content: "Hello"})
+
+        refute html =~ "You are not authorized to use the Ai Assistant"
+      end
+
+      for {conn, _user} <- setup_project_users(conn, project, [:viewer]) do
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+          )
+
+        render_async(view)
+
+        assert view
+               |> form("#ai-assistant-form")
+               |> has_element?()
+
+        input_element = element(view, "#ai-assistant-form textarea")
+        submit_btn = element(view, "#ai-assistant-form-submit-btn")
+
+        assert has_element?(input_element)
+        assert render(input_element) =~ "disabled=\"disabled\""
+        assert has_element?(submit_btn)
+        assert render(submit_btn) =~ "disabled=\"disabled\""
+
+        # try submitting a message
+        html =
+          view
+          |> form("#ai-assistant-form")
+          |> render_submit(%{content: "Hello"})
+
+        assert html =~ "You are not authorized to use the Ai Assistant"
       end
     end
   end
