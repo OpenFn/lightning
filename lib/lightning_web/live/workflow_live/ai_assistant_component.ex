@@ -379,6 +379,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         </:loading>
         <%= for session <- all_sessions do %>
           <.link
+            id={"session-#{session.id}"}
             patch={
               redirect_url(@base_url, Map.put(@query_params, "chat", session.id))
             }
@@ -412,7 +413,11 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
       </div>
       <div class="flex flex-col gap-4 p-2 overflow-y-auto">
         <%= for message <- @session.messages do %>
-          <div :if={message.role == :user} class="ml-auto flex items-end gap-x-2">
+          <div
+            :if={message.role == :user}
+            id={"message-#{message.id}"}
+            class="ml-auto flex items-end gap-x-2"
+          >
             <div class="bg-blue-300 bg-opacity-50 p-2 rounded-lg text-right break-words text-gray">
               <%= message.content %>
             </div>
@@ -420,6 +425,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
           </div>
           <div
             :if={message.role == :assistant}
+            id={"message-#{message.id}"}
             class="mr-auto p-2 rounded-lg break-words text-wrap flex flex-row gap-x-2 makeup-html"
           >
             <div class="">
@@ -435,7 +441,10 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         <% end %>
         <.async_result assign={@pending_message}>
           <:loading>
-            <div class="mr-auto p-2 rounded-lg break-words text-wrap flex flex-row gap-x-2 animate-pulse">
+            <div
+              id="assistant-pending-message"
+              class="mr-auto p-2 rounded-lg break-words text-wrap flex flex-row gap-x-2 animate-pulse"
+            >
               <div class="">
                 <div class="rounded-full p-2 bg-indigo-200 text-indigo-700 ring-4 ring-white">
                   <.icon name="hero-sparkles" class="" />
@@ -445,7 +454,10 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             </div>
           </:loading>
           <:failed :let={failure}>
-            <div class="mr-auto p-2 rounded-lg break-words text-wrap flex flex-row gap-x-2">
+            <div
+              id="assistant-failed-message"
+              class="mr-auto p-2 rounded-lg break-words text-wrap flex flex-row gap-x-2"
+            >
               <div class="">
                 <div class="rounded-full p-2 bg-indigo-200 text-indigo-700 ring-4 ring-white">
                   <.icon name="hero-sparkles" class="" />

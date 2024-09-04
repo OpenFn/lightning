@@ -1533,6 +1533,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           |> render_submit(%{content: "Hello"})
 
         refute html =~ "You are not authorized to use the Ai Assistant"
+
+        assert_patch(view)
       end
 
       for {conn, _user} <- setup_project_users(conn, project, [:viewer]) do
@@ -1564,6 +1566,257 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
         assert html =~ "You are not authorized to use the Ai Assistant"
       end
+    end
+
+    test "users can start a new session", %{
+      conn: conn,
+      project: project,
+      workflow: %{jobs: [job_1 | _]} = workflow
+    } do
+      apollo_endpoint = "http://localhost:4001"
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> apollo_endpoint
+        :openai_api_key -> "openai_api_key"
+      end)
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        fn
+          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
+            {:ok, %Tesla.Env{status: 200}}
+
+          %{method: :post}, _opts ->
+            # delay the response to simulate a long running request
+            # I'm doing this to test the pending assistant resp message
+            Process.sleep(3)
+
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{
+                 "history" => [
+                   %{"role" => "user", "content" => "Ping"},
+                   %{"role" => "assistant", "content" => "Pong"}
+                 ]
+               }
+             }}
+        end
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      render_async(view)
+
+      # click the get started button
+      view |> element("#get-started-with-ai-btn") |> render_click()
+
+      # submit a message
+      view
+      |> form("#ai-assistant-form")
+      |> render_submit(%{content: "Ping"})
+
+      assert_patch(view)
+
+      # pending message is shown
+      assert has_element?(view, "#assistant-pending-message")
+      refute render(view) =~ "Pong"
+
+      html = render_async(view)
+
+      # pending message is not shown
+      refute has_element?(view, "#assistant-pending-message")
+      assert html =~ "Pong"
+    end
+
+    test "users can resume a session", %{
+      conn: conn,
+      project: project,
+      user: user,
+      workflow: %{jobs: [job_1 | _]} = workflow
+    } do
+      apollo_endpoint = "http://localhost:4001"
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> apollo_endpoint
+        :openai_api_key -> "openai_api_key"
+      end)
+
+      expected_question = "Can you help me with this?"
+      expected_answer = "No, I am a robot"
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        fn
+          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
+            {:ok, %Tesla.Env{status: 200}}
+
+          %{method: :post}, _opts ->
+            # delay the response to simulate a long running request
+            Process.sleep(3)
+
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{
+                 "history" => [
+                   %{"role" => "user", "content" => "Ping"},
+                   %{"role" => "assistant", "content" => "Pong"},
+                   %{"role" => "user", "content" => expected_question},
+                   %{"role" => "assistant", "content" => expected_answer}
+                 ]
+               }
+             }}
+        end
+      )
+
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          messages: [
+            %{role: :user, content: "Ping", user: user},
+            %{role: :assistant, content: "Pong"}
+          ]
+        )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      html = render_async(view)
+
+      assert html =~ session.title
+
+      # click the link to open the session
+      view |> element("#session-#{session.id}") |> render_click()
+
+      assert_patch(view)
+
+      # submit a message
+      view
+      |> form("#ai-assistant-form")
+      |> render_submit(%{content: expected_question})
+
+      # pending message is shown
+      assert has_element?(view, "#assistant-pending-message")
+      refute render(view) =~ expected_answer
+
+      html = render_async(view)
+
+      # pending message is not shown
+      refute has_element?(view, "#assistant-pending-message")
+      assert html =~ expected_answer
+    end
+
+    test "an error is displayed incase the assistant does not return 200", %{
+      conn: conn,
+      project: project,
+      workflow: %{jobs: [job_1 | _]} = workflow
+    } do
+      apollo_endpoint = "http://localhost:4001"
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> apollo_endpoint
+        :openai_api_key -> "openai_api_key"
+      end)
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        fn
+          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
+            {:ok, %Tesla.Env{status: 200}}
+
+          %{method: :post}, _opts ->
+            {:ok, %Tesla.Env{status: 400}}
+        end
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      render_async(view)
+
+      # click the get started button
+      view |> element("#get-started-with-ai-btn") |> render_click()
+
+      # submit a message
+      view
+      |> form("#ai-assistant-form")
+      |> render_submit(%{content: "Ping"})
+
+      assert_patch(view)
+
+      render_async(view)
+
+      # pending message is not shown
+      assert has_element?(view, "#assistant-failed-message")
+
+      assert view |> element("#assistant-failed-message") |> render() =~
+               "Oops! Could not reach the Ai Server. Please try again later."
+    end
+
+    test "an error is displayed incase the assistant query process crashes", %{
+      conn: conn,
+      project: project,
+      workflow: %{jobs: [job_1 | _]} = workflow
+    } do
+      apollo_endpoint = "http://localhost:4001"
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> apollo_endpoint
+        :openai_api_key -> "openai_api_key"
+      end)
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        fn
+          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
+            {:ok, %Tesla.Env{status: 200}}
+
+          %{method: :post}, _opts ->
+            raise "oops"
+        end
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      render_async(view)
+
+      # click the get started button
+      view |> element("#get-started-with-ai-btn") |> render_click()
+
+      # submit a message
+      view
+      |> form("#ai-assistant-form")
+      |> render_submit(%{content: "Ping"})
+
+      assert_patch(view)
+
+      render_async(view)
+
+      # pending message is not shown
+      assert has_element?(view, "#assistant-failed-message")
+
+      assert view |> element("#assistant-failed-message") |> render() =~
+               "Oops! Something went wrong. Please try again."
     end
   end
 end
