@@ -6,5 +6,7 @@ defmodule Lightning.Repo.Migrations.AddAiChatCounter do
       add :project_id, references(:projects, type: :binary_id, on_delete: :nilify_all)
       add :msgs_counter, :integer, default: 0
     end
+
+    create index(:ai_chat_sessions, [:project_id])
   end
 end
