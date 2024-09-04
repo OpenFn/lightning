@@ -16,6 +16,7 @@ and this project adheres to
 ## [Unreleased]
 
 ### Added
+
 - Limit AI queries and hook the increment of AI queries to allow usage limiting.
   [#2438](https://github.com/OpenFn/lightning/pull/2438)
 - Persist AI Assistant conversations and enable it for all users
