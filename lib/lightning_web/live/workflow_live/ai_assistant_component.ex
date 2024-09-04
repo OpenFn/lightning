@@ -80,10 +80,10 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
       case Limiter.validate_quota(project_id) do
         :ok ->
-          {:noreply, save_message(socket, action, content)}
+          save_message(socket, action, content)
 
         {:error, :too_many_queries, message} ->
-          {:noreply, notify_limit_error(socket, message)}
+          notify_limit_error(socket, message)
       end
       |> then(fn socket ->
         {:noreply, assign(socket, error_message: nil)}
