@@ -28,6 +28,8 @@ and this project adheres to
   `/app/bin/lightning eval Lightning.Setup.setup_user/3`
 - Implement a combo-box to make navigating between projects easier
   [#241](https://github.com/OpenFn/lightning/pull/2424)
+- Updated vulnerable version of micromatch.
+  [#2454](https://github.com/OpenFn/lightning/issues/2454)
 
 ### Fixed
 
