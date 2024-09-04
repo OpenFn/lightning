@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.8.2] - 2024-09-04
+
+### Added
+
 - Change navbar colors depending on scope.
   [#2449](https://github.com/OpenFn/lightning/pull/2449)
 - Add support for configurable idle connection timeouts via the `IDLE_TIMEOUT`
@@ -30,8 +38,6 @@ and this project adheres to
   [#241](https://github.com/OpenFn/lightning/pull/2424)
 - Updated vulnerable version of micromatch.
   [#2454](https://github.com/OpenFn/lightning/issues/2454)
-
-### Fixed
 
 ## [v2.8.1] - 2024-08-28
 
