@@ -1590,7 +1590,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           %{method: :post}, _opts ->
             # delay the response to simulate a long running request
             # I'm doing this to test the pending assistant resp message
-            Process.sleep(3)
+            # It is an anti-pattern but I can't think of clean way to tell liveview to delay the task execution
+            Process.sleep(5)
 
             {:ok,
              %Tesla.Env{
@@ -1658,9 +1659,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
             {:ok, %Tesla.Env{status: 200}}
 
           %{method: :post}, _opts ->
-            # delay the response to simulate a long running request
-            Process.sleep(3)
-
             {:ok,
              %Tesla.Env{
                status: 200,
@@ -1702,18 +1700,17 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert_patch(view)
 
       # submit a message
-      view
-      |> form("#ai-assistant-form")
-      |> render_submit(%{content: expected_question})
+      html =
+        view
+        |> form("#ai-assistant-form")
+        |> render_submit(%{content: expected_question})
 
-      # pending message is shown
-      assert has_element?(view, "#assistant-pending-message")
-      refute render(view) =~ expected_answer
+      # answer is not yet shown
+      refute html =~ expected_answer
 
       html = render_async(view)
 
-      # pending message is not shown
-      refute has_element?(view, "#assistant-pending-message")
+      # answer is now displayed
       assert html =~ expected_answer
     end
 
