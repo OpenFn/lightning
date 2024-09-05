@@ -1,6 +1,8 @@
 defmodule Lightning.Extensions.UsageLimiterTest do
   use ExUnit.Case, async: true
 
+  import Lightning.Factories
+
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Extensions.UsageLimiter
@@ -28,6 +30,13 @@ defmodule Lightning.Extensions.UsageLimiterTest do
                  %Context{project_id: Ecto.UUID.generate()}
                ) == :ok
       end)
+    end
+  end
+
+  describe "increment_ai_queries/2" do
+    test "returns no change" do
+      assert Ecto.Multi.new() ==
+               UsageLimiter.increment_ai_queries(build(:chat_session))
     end
   end
 end

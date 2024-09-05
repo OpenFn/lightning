@@ -5,10 +5,12 @@ defmodule Lightning.AiAssistant do
 
   import Ecto.Query
 
+  alias Ecto.Multi
   alias Lightning.Accounts.User
   alias Lightning.AiAssistant.ChatSession
   alias Lightning.ApolloClient
   alias Lightning.Repo
+  alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows.Job
 
   @spec put_expression_and_adaptor(ChatSession.t(), String.t(), String.t()) ::
@@ -57,9 +59,22 @@ defmodule Lightning.AiAssistant do
     # note: we should only increment the counter when role is `:assistant`
     messages = Enum.map(session.messages, &Map.take(&1, [:id]))
 
-    session
-    |> ChatSession.changeset(%{messages: messages ++ [message]})
-    |> Repo.insert_or_update()
+    Multi.new()
+    |> Multi.put(:message, message)
+    |> Multi.insert_or_update(
+      :upsert,
+      session
+      |> ChatSession.changeset(%{messages: messages ++ [message]})
+    )
+    |> Multi.merge(&maybe_increment_msgs_counter/1)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{upsert: session}} ->
+        {:ok, session}
+
+      {:error, _operation, changeset, _changes} ->
+        {:error, changeset}
+    end
   end
 
   @spec project_has_any_session?(Ecto.UUID.t()) :: boolean()
@@ -134,4 +149,23 @@ defmodule Lightning.AiAssistant do
   def endpoint_available? do
     ApolloClient.test() == :ok
   end
+
+  # assistant role sent via async as string
+  defp maybe_increment_msgs_counter(%{
+         upsert: session,
+         message: %{"role" => "assistant"}
+       }),
+       do:
+         maybe_increment_msgs_counter(%{
+           upsert: session,
+           message: %{role: :assistant}
+         })
+
+  defp maybe_increment_msgs_counter(%{
+         upsert: session,
+         message: %{role: :assistant}
+       }),
+       do: UsageLimiter.increment_ai_queries(session)
+
+  defp maybe_increment_msgs_counter(_user_role), do: Multi.new()
 end

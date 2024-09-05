@@ -232,6 +232,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         <.live_component
                           module={LightningWeb.WorkflowLive.AiAssistantComponent}
                           can_edit_workflow={@can_edit_workflow}
+                          project_id={@project.id}
                           project_has_chat_sessions={@project_has_chat_sessions}
                           current_user={@current_user}
                           selected_job={@selected_job}
@@ -1696,7 +1697,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> maybe_disable_canvas()}
   end
 
-  def handle_info(%{}, socket), do: {:noreply, socket}
+  def handle_info(%{}, socket) do
+    {:noreply, socket}
+  end
 
   defp maybe_disable_canvas(socket) do
     %{

@@ -147,4 +147,51 @@ defmodule Lightning.AiAssistantTest do
              )
     end
   end
+
+  describe "save_message/2" do
+    test "calls limiter to increment ai queries when role is assistant" do
+      user = insert(:user)
+
+      %{id: job_id} = job = insert(:job, workflow: build(:workflow))
+
+      session = insert(:chat_session, job: job, user: user)
+
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :increment_ai_queries,
+        1,
+        fn %{job_id: ^job_id} -> Ecto.Multi.new() end
+      )
+
+      content1 = """
+      I am an assistant and I am here to help you with your questions.
+      """
+
+      AiAssistant.save_message(session, %{
+        role: :assistant,
+        content: content1,
+        user: user
+      })
+    end
+
+    test "does not call limiter to increment ai queries when role is user" do
+      user = insert(:user)
+
+      %{id: job_id} = job = insert(:job, workflow: build(:workflow))
+      session = insert(:chat_session, job: job, user: user)
+
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :increment_ai_queries,
+        0,
+        fn %{job_id: ^job_id} -> Ecto.Multi.new() end
+      )
+
+      AiAssistant.save_message(session, %{
+        role: :user,
+        content: "What if I want to deduplicate the headers?",
+        user: user
+      })
+    end
+  end
 end
