@@ -75,24 +75,17 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
   def handle_event("send_message", %{"content" => content}, socket) do
     if socket.assigns.can_edit_workflow do
-      %{project_id: project_id, action: action} = socket.assigns
+      %{action: action} = socket.assigns
       # clear error
-      socket = assign(socket, error_message: nil)
-
-      case Limiter.validate_quota(project_id) do
-        :ok ->
-          socket
-          |> assign(ai_limit_result: :ok)
-          |> save_message(action, content)
-
-        error ->
-          assign(socket,
-            ai_limit_result: error,
-            error_message: error_message(error)
-          )
-      end
+      socket
+      |> assign(error_message: nil)
+      |> check_limit()
       |> then(fn socket ->
-        {:noreply, socket}
+        if socket.assigns.ai_limit_result == :ok do
+          {:noreply, save_message(socket, action, content)}
+        else
+          {:noreply, socket}
+        end
       end)
     else
       {:noreply,
@@ -325,11 +318,12 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
           <div
             :if={@error_message}
             id="ai-assistant-error"
-            class="alert alert-danger hover:cursor-pointer"
+            class="alert alert-danger hover:cursor-pointer flex justify-between"
             role="alert"
             phx-click={JS.hide()}
           >
-            <%= @error_message %>
+            <div><%= @error_message %></div>
+            <.icon name="hero-x-mark" class="h-5 w-5" />
           </div>
           <.chat_input
             form={@form}
@@ -560,10 +554,15 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   end
 
   defp maybe_check_limit(%{assigns: %{ai_limit_result: nil}} = socket) do
-    %{project_id: project_id} = socket.assigns
-
-    assign(socket, :ai_limit_result, Limiter.validate_quota(project_id))
+    check_limit(socket)
   end
 
   defp maybe_check_limit(socket), do: socket
+
+  defp check_limit(socket) do
+    %{project_id: project_id} = socket.assigns
+    limit = Limiter.validate_quota(project_id)
+    error_message = if limit != :ok, do: error_message(limit)
+    assign(socket, ai_limit_result: limit, error_message: error_message)
+  end
 end

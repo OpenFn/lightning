@@ -1858,9 +1858,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # click the get started button
       view |> element("#get-started-with-ai-btn") |> render_click()
 
-      # error flash is not shown immediately
-      refute has_element?(view, "#ai-assistant-error")
-      # it is however available is a tooltip
+      assert has_element?(view, "#ai-assistant-error", error_message)
       assert render(view) =~ "aria-label=\"#{error_message}\""
 
       # submiting a message shows the flash
