@@ -130,14 +130,8 @@ defmodule Lightning.AiAssistantTest do
   describe "create_session/3" do
     test "creates a new session", %{
       user: user,
-      workflow: %{jobs: [%{id: job_id} = job_1 | _]} = _workflow
+      workflow: %{jobs: [job_1 | _]} = _workflow
     } do
-      Mox.expect(
-        Lightning.Extensions.MockUsageLimiter,
-        :increment_ai_queries,
-        fn %{job_id: ^job_id} -> Ecto.Multi.new() end
-      )
-
       assert {:ok, session} = AiAssistant.create_session(job_1, user, "foo")
 
       assert session.job_id == job_1.id
@@ -155,24 +149,43 @@ defmodule Lightning.AiAssistantTest do
   end
 
   describe "save_message/2" do
-    test "calls limiter to increment ai queries" do
+    test "calls limiter to increment ai queries when role is assistant" do
       user = insert(:user)
 
-      content1 = """
-      How could I merge the headers and data on a single http request body
-      using OpenFn http adaptor?
-      """
-
       %{id: job_id} = job = insert(:job, workflow: build(:workflow))
+
+      session = insert(:chat_session, job: job, user: user)
 
       Mox.expect(
         Lightning.Extensions.MockUsageLimiter,
         :increment_ai_queries,
-        2,
+        1,
         fn %{job_id: ^job_id} -> Ecto.Multi.new() end
       )
 
-      {:ok, session} = AiAssistant.create_session(job, user, content1)
+      content1 = """
+      I am an assistant and I am here to help you with your questions.
+      """
+
+      AiAssistant.save_message(session, %{
+        role: :assistant,
+        content: content1,
+        user: user
+      })
+    end
+
+    test "does not call limiter to increment ai queries when role is user" do
+      user = insert(:user)
+
+      %{id: job_id} = job = insert(:job, workflow: build(:workflow))
+      session = insert(:chat_session, job: job, user: user)
+
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :increment_ai_queries,
+        0,
+        fn %{job_id: ^job_id} -> Ecto.Multi.new() end
+      )
 
       AiAssistant.save_message(session, %{
         role: :user,
