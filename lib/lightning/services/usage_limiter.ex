@@ -17,6 +17,11 @@ defmodule Lightning.Services.UsageLimiter do
   end
 
   @impl true
+  def increment_ai_queries(session) do
+    adapter().increment_ai_queries(session)
+  end
+
+  @impl true
   def get_run_options(context) do
     adapter().get_run_options(context)
   end

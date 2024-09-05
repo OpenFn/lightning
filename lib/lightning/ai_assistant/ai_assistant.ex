@@ -3,103 +3,89 @@ defmodule Lightning.AiAssistant do
   The AI assistant module.
   """
 
+  import Ecto.Query
+
+  alias Ecto.Multi
   alias Lightning.Accounts.User
+  alias Lightning.AiAssistant.ChatSession
   alias Lightning.ApolloClient
+  alias Lightning.Repo
+  alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows.Job
 
-  defmodule Session do
-    @moduledoc """
-    Represents a session with the AI assistant.
-    """
+  @spec put_expression_and_adaptor(ChatSession.t(), String.t(), String.t()) ::
+          ChatSession.t()
+  def put_expression_and_adaptor(session, expression, adaptor) do
+    %{
+      session
+      | expression: expression,
+        adaptor: Lightning.AdaptorRegistry.resolve_adaptor(adaptor)
+    }
+  end
 
-    defstruct [
-      :id,
-      :expression,
-      :adaptor,
-      :history
-    ]
+  @spec list_sessions_for_job(Job.t()) :: [ChatSession.t(), ...] | []
+  def list_sessions_for_job(job) do
+    Repo.all(
+      from s in ChatSession,
+        where: s.job_id == ^job.id,
+        order_by: [desc: :updated_at],
+        preload: [:user]
+    )
+  end
 
-    @type t() :: %__MODULE__{
-            id: Ecto.UUID.t(),
-            expression: String.t(),
-            adaptor: String.t(),
-            history: history()
-          }
+  @spec get_session!(Ecto.UUID.t()) :: ChatSession.t()
+  def get_session!(id) do
+    ChatSession |> Repo.get!(id) |> Repo.preload(messages: :user)
+  end
 
-    @type history() :: [
-            %{role: :user | :assistant, content: String.t()}
-          ]
+  @spec create_session(Job.t(), User.t(), String.t()) ::
+          {:ok, ChatSession.t()} | {:error, Ecto.Changeset.t()}
+  def create_session(job, user, content) do
+    %ChatSession{
+      id: Ecto.UUID.generate(),
+      job_id: job.id,
+      user_id: user.id,
+      title: String.slice(content, 0, 40),
+      messages: []
+    }
+    |> put_expression_and_adaptor(job.body, job.adaptor)
+    |> save_message(%{role: :user, content: content, user: user})
+  end
 
-    @spec new(Job.t()) :: t()
-    def new(job) do
-      %Session{
-        id: job.id,
-        expression: job.body,
-        adaptor: Lightning.AdaptorRegistry.resolve_adaptor(job.adaptor),
-        history: []
-      }
-    end
+  @spec save_message(ChatSession.t(), %{any() => any()}) ::
+          {:ok, ChatSession.t()} | {:error, Ecto.Changeset.t()}
+  def save_message(session, message) do
+    # we can call the limiter at this point
+    # note: we should only increment the counter when role is `:assistant`
+    messages = Enum.map(session.messages, &Map.take(&1, [:id]))
 
-    @spec put_history(t(), history() | [%{String.t() => any()}]) :: t()
-    def put_history(session, history) do
-      history =
-        Enum.map(history, fn h ->
-          %{role: h["role"] || h[:role], content: h["content"] || h[:content]}
-        end)
+    Multi.new()
+    |> Multi.put(:message, message)
+    |> Multi.insert_or_update(
+      :upsert,
+      session
+      |> ChatSession.changeset(%{messages: messages ++ [message]})
+    )
+    |> Multi.merge(&maybe_increment_msgs_counter/1)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{upsert: session}} ->
+        {:ok, session}
 
-      %{session | history: history}
-    end
-
-    @spec push_history(t(), %{String.t() => any()}) :: t()
-    def push_history(session, message) do
-      history =
-        session.history ++
-          [
-            %{
-              role: message["role"] || message[:role],
-              content: message["content"] || message[:content]
-            }
-          ]
-
-      %{session | history: history}
-    end
-
-    @doc """
-    Puts the given expression into the session.
-    """
-    @spec put_expression(t(), String.t()) :: t()
-    def put_expression(session, expression) do
-      %{session | expression: expression}
+      {:error, _operation, changeset, _changes} ->
+        {:error, changeset}
     end
   end
 
-  @doc """
-  Creates a new session with the given job.
+  @spec project_has_any_session?(Ecto.UUID.t()) :: boolean()
+  def project_has_any_session?(project_id) do
+    query =
+      from s in ChatSession,
+        join: j in assoc(s, :job),
+        join: w in assoc(j, :workflow),
+        where: w.project_id == ^project_id
 
-  **Example**
-
-      iex> AiAssistant.new_session(%Lightning.Workflows.Job{
-      ...>   body: "fn()",
-      ...>   adaptor: "@openfn/language-common@latest"
-      ...> })
-      %Lightning.AiAssistant.Session{
-        expression: "fn()",
-        adaptor: "@openfn/language-common@1.6.2",
-        history: []
-      }
-
-  > ℹ️ The `adaptor` field is resolved to the latest version when `@latest`
-  > is provided as Apollo expects a specific version.
-  """
-
-  @spec new_session(Job.t()) :: Session.t()
-  def new_session(job) do
-    Session.new(job)
-  end
-
-  @spec push_history(Session.t(), %{String.t() => any()}) :: Session.t()
-  def push_history(session, message) do
-    Session.push_history(session, message)
+    Repo.exists?(query)
   end
 
   @doc """
@@ -112,28 +98,48 @@ defmodule Lightning.AiAssistant do
       iex> AiAssistant.query(session, "fn()")
       {:ok, session}
   """
-  @spec query(Session.t(), String.t()) :: {:ok, Session.t()} | :error
+  @spec query(ChatSession.t(), String.t()) ::
+          {:ok, ChatSession.t()}
+          | {:error, Ecto.Changeset.t() | :apollo_unavailable}
   def query(session, content) do
-    ApolloClient.query(
-      content,
-      %{expression: session.expression, adaptor: session.adaptor},
-      session.history
-    )
-    |> case do
-      {:ok, %Tesla.Env{status: status} = response} when status in 200..299 ->
-        {:ok, session |> Session.put_history(response.body["history"])}
+    apollo_resp =
+      ApolloClient.query(
+        content,
+        %{expression: session.expression, adaptor: session.adaptor},
+        build_history(session)
+      )
+
+    case apollo_resp do
+      {:ok, %Tesla.Env{status: status, body: body}} when status in 200..299 ->
+        message = body["history"] |> Enum.reverse() |> hd()
+        save_message(session, message)
 
       _ ->
-        :error
+        {:error, :apollo_unavailable}
+    end
+  end
+
+  defp build_history(session) do
+    case Enum.reverse(session.messages) do
+      [%{role: :user} | other] ->
+        other
+        |> Enum.reverse()
+        |> Enum.map(&Map.take(&1, [:role, :content]))
+
+      messages ->
+        Enum.map(messages, &Map.take(&1, [:role, :content]))
     end
   end
 
   @doc """
-  Checks if the user is authorized to access the AI assistant.
+  Checks if the AI assistant is enabled.
   """
-  @spec authorized?(User.t()) :: boolean()
-  def authorized?(user) do
-    user.role == :superuser
+  @spec enabled?() :: boolean()
+  def enabled? do
+    endpoint = Lightning.Config.apollo(:endpoint)
+    api_key = Lightning.Config.apollo(:openai_api_key)
+
+    is_binary(endpoint) && is_binary(api_key)
   end
 
   @doc """
@@ -143,4 +149,23 @@ defmodule Lightning.AiAssistant do
   def endpoint_available? do
     ApolloClient.test() == :ok
   end
+
+  # assistant role sent via async as string
+  defp maybe_increment_msgs_counter(%{
+         upsert: session,
+         message: %{"role" => "assistant"}
+       }),
+       do:
+         maybe_increment_msgs_counter(%{
+           upsert: session,
+           message: %{role: :assistant}
+         })
+
+  defp maybe_increment_msgs_counter(%{
+         upsert: session,
+         message: %{role: :assistant}
+       }),
+       do: UsageLimiter.increment_ai_queries(session)
+
+  defp maybe_increment_msgs_counter(_user_role), do: Multi.new()
 end

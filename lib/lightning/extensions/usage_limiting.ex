@@ -4,6 +4,7 @@ defmodule Lightning.Extensions.UsageLimiting do
   """
   @type error_reason ::
           :too_many_runs
+          | :too_many_queries
           | :runs_hard_limit
           | :unknown_project
   @type message :: Lightning.Extensions.Message.t()
@@ -15,9 +16,10 @@ defmodule Lightning.Extensions.UsageLimiting do
             type:
               :new_run
               | :activate_workflow
-              | :new_user
+              | :ai_query
               | :alert_failure
-              | :github_sync,
+              | :github_sync
+              | :new_user,
             amount: pos_integer()
           }
 
@@ -40,6 +42,9 @@ defmodule Lightning.Extensions.UsageLimiting do
 
   @callback limit_action(action :: Action.t(), context :: Context.t()) ::
               :ok | error()
+
+  @callback increment_ai_queries(Lightning.AiAssistant.ChatSession.t()) ::
+              Ecto.Multi.t()
 
   @callback get_run_options(context :: Context.t()) ::
               Lightning.Runs.RunOptions.keyword_list()
