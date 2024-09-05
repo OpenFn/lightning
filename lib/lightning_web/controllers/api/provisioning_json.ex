@@ -47,8 +47,8 @@ defmodule LightningWeb.API.ProvisioningJSON do
 
     workflow_or_snapshot
     |> Ecto.embedded_dump(:json)
+    |> Map.take(~w(id name inserted_at lock_version concurrency)a)
     |> Map.put(:id, workflow_id)
-    |> Map.delete(:workflow_id)
     |> Map.put(
       :jobs,
       workflow_or_snapshot.jobs

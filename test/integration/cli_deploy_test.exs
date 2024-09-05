@@ -298,7 +298,9 @@ defmodule Lightning.CliDeployTest do
   end
 
   defp expected_workflow_state(workflow) do
-    state = Map.take(workflow, Lightning.Workflows.Workflow.__schema__(:fields))
+    state =
+      workflow
+      |> Map.take([:id, :name, :inserted_at, :lock_version, :concurrency])
 
     jobs =
       Map.new(workflow.jobs, fn job ->
