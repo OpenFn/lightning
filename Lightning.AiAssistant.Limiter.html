@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v2.8.2">
 
-    <title>LightningWeb.CredentialLive.JsonSchemaBodyComponent — Lightning v2.8.2</title>
+    <title>Lightning.AiAssistant.Limiter — Lightning v2.8.2</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
@@ -125,16 +125,20 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/credential_live/json_schema_body_component.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/limiter.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">LightningWeb.CredentialLive.JsonSchemaBodyComponent</span> 
+  <span translate="no">Lightning.AiAssistant.Limiter</span> 
   <small class="app-vsn" translate="no">(Lightning v2.8.2)</small>
 
 </h1>
 
+
+  <section id="moduledoc">
+<p>The AI assistant limiter to check for AI query quota.</p>
+  </section>
 
 
   <section id="summary" class="details-list">
@@ -151,21 +155,11 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#fieldset/1" translate="no">fieldset(assigns)</a>
+        <a href="#validate_quota/1" translate="no">validate_quota(project_id)</a>
 
       </div>
 
-        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">form</code> (<code class="inline">:map</code>) (required)</li></ul><h2>Slots</h2><ul><li><code class="inline">inner_block</code></li></ul></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#schema_input/1" translate="no">schema_input(assigns)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">form</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">schema</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">field</code> (<code class="inline">:any</code>) (required)</li></ul></div>
+        <div class="summary-synopsis"><p>Checks if has not reached the limit of the project ai queries quota.</p></div>
 
     </div>
 
@@ -182,16 +176,16 @@ Pages
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="fieldset/1">
+<section class="detail" id="validate_quota/1">
 
   <div class="detail-header">
-    <a href="#fieldset/1" class="detail-link" title="Link to this function">
+    <a href="#validate_quota/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">fieldset(assigns)</h1>
+    <h1 class="signature" translate="no">validate_quota(project_id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/credential_live/json_schema_body_component.ex#L9" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/limiter.ex#L15" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -201,47 +195,14 @@ Pages
 
   <section class="docstring">
 
-<h2 id="fieldset/1-attributes" class="section-heading">
-  <a href="#fieldset/1-attributes" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Attributes</span>
-</h2>
-<ul><li><code class="inline">form</code> (<code class="inline">:map</code>) (required)</li></ul><h2 id="fieldset/1-slots" class="section-heading">
-  <a href="#fieldset/1-slots" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Slots</span>
-</h2>
-<ul><li><code class="inline">inner_block</code></li></ul>
-  </section>
-</section>
-<section class="detail" id="schema_input/1">
+      <div class="specs">
 
-  <div class="detail-header">
-    <a href="#schema_input/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">schema_input(assigns)</h1>
+          <pre translate="no"><span class="attribute">@spec</span> validate_quota(<a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) ::
+  :ok | <a href="Lightning.Extensions.UsageLimiting.html#t:error/0">Lightning.Extensions.UsageLimiting.error</a>()</pre>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/credential_live/json_schema_body_component.ex#L78" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+      </div>
 
-
-  </div>
-
-  <section class="docstring">
-
-<h2 id="schema_input/1-attributes" class="section-heading">
-  <a href="#schema_input/1-attributes" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Attributes</span>
-</h2>
-<ul><li><code class="inline">form</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">schema</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">field</code> (<code class="inline">:any</code>) (required)</li></ul>
+<p>Checks if has not reached the limit of the project ai queries quota.</p>
   </section>
 </section>
 

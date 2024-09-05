@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-1A848FC1.js"></script>
+    <script src="dist/sidebar_items-7C51316C.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -155,11 +155,19 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#authorized?/1" translate="no">authorized?(user)</a>
+        <a href="#create_session/3" translate="no">create_session(job, user, content)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Checks if the user is authorized to access the AI assistant.</p></div>
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#enabled?/0" translate="no">enabled?()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Checks if the AI assistant is enabled.</p></div>
 
     </div>
 
@@ -175,17 +183,31 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#new_session/1" translate="no">new_session(job)</a>
+        <a href="#get_session!/1" translate="no">get_session!(id)</a>
 
       </div>
-
-        <div class="summary-synopsis"><p>Creates a new session with the given job.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#push_history/2" translate="no">push_history(session, message)</a>
+        <a href="#list_sessions_for_job/1" translate="no">list_sessions_for_job(job)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#project_has_any_session?/1" translate="no">project_has_any_session?(project_id)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#put_expression_and_adaptor/3" translate="no">put_expression_and_adaptor(session, expression, adaptor)</a>
 
       </div>
 
@@ -198,6 +220,14 @@ Pages
       </div>
 
         <div class="summary-synopsis"><p>Queries the AI assistant with the given content.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#save_message/2" translate="no">save_message(session, message)</a>
+
+      </div>
 
     </div>
 
@@ -214,16 +244,16 @@ Pages
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="authorized?/1">
+<section class="detail" id="create_session/3">
 
   <div class="detail-header">
-    <a href="#authorized?/1" class="detail-link" title="Link to this function">
+    <a href="#create_session/3" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">authorized?(user)</h1>
+    <h1 class="signature" translate="no">create_session(job, user, content)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L135" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L43" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -235,11 +265,44 @@ Pages
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> authorized?(<a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> create_session(
+  <a href="Lightning.Workflows.Job.html#t:t/0">Lightning.Workflows.Job.t</a>(),
+  <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>(),
+  <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()
+) ::
+  {:ok, Lightning.AiAssistant.ChatSession.t()} | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
 
       </div>
 
-<p>Checks if the user is authorized to access the AI assistant.</p>
+
+  </section>
+</section>
+<section class="detail" id="enabled?/0">
+
+  <div class="detail-header">
+    <a href="#enabled?/0" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">enabled?()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L138" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> enabled?() :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+
+      </div>
+
+<p>Checks if the AI assistant is enabled.</p>
   </section>
 </section>
 <section class="detail" id="endpoint_available?/0">
@@ -251,7 +314,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">endpoint_available?()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L143" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L149" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -270,16 +333,16 @@ Pages
 <p>Checks if the Apollo endpoint is available.</p>
   </section>
 </section>
-<section class="detail" id="new_session/1">
+<section class="detail" id="get_session!/1">
 
   <div class="detail-header">
-    <a href="#new_session/1" class="detail-link" title="Link to this function">
+    <a href="#get_session!/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">new_session(job)</h1>
+    <h1 class="signature" translate="no">get_session!(id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L96" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L37" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -291,32 +354,23 @@ Pages
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> new_session(<a href="Lightning.Workflows.Job.html#t:t/0">Lightning.Workflows.Job.t</a>()) :: <a href="Lightning.AiAssistant.Session.html#t:t/0">Lightning.AiAssistant.Session.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> get_session!(<a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) :: Lightning.AiAssistant.ChatSession.t()</pre>
 
       </div>
 
-<p>Creates a new session with the given job.</p><p><strong>Example</strong></p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">AiAssistant</span><span class="o">.</span><span class="n">new_session</span><span class="p" data-group-id="9223453960-1">(</span><span class="p" data-group-id="9223453960-2">%</span><span class="nc" data-group-id="9223453960-2">Lightning.Workflows.Job</span><span class="p" data-group-id="9223453960-2">{</span><span class="w">
-</span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;fn()&quot;</span><span class="p">,</span><span class="w">
-</span><span class="gp unselectable">...&gt; </span><span class="w">  </span><span class="ss">adaptor</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@openfn/language-common@latest&quot;</span><span class="w">
-</span><span class="gp unselectable">...&gt; </span><span class="p" data-group-id="9223453960-2">}</span><span class="p" data-group-id="9223453960-1">)</span><span class="w">
-</span><span class="p" data-group-id="9223453960-3">%</span><span class="nc" data-group-id="9223453960-3">Lightning.AiAssistant.Session</span><span class="p" data-group-id="9223453960-3">{</span><span class="w">
-  </span><span class="ss">expression</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;fn()&quot;</span><span class="p">,</span><span class="w">
-  </span><span class="ss">adaptor</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@openfn/language-common@1.6.2&quot;</span><span class="p">,</span><span class="w">
-  </span><span class="ss">history</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9223453960-4">[</span><span class="p" data-group-id="9223453960-4">]</span><span class="w">
-</span><span class="p" data-group-id="9223453960-3">}</span></code></pre><blockquote><p>ℹ️ The <code class="inline">adaptor</code> field is resolved to the latest version when <code class="inline">@latest</code>
-is provided as Apollo expects a specific version.</p></blockquote>
+
   </section>
 </section>
-<section class="detail" id="push_history/2">
+<section class="detail" id="list_sessions_for_job/1">
 
   <div class="detail-header">
-    <a href="#push_history/2" class="detail-link" title="Link to this function">
+    <a href="#list_sessions_for_job/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">push_history(session, message)</h1>
+    <h1 class="signature" translate="no">list_sessions_for_job(job)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L101" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L27" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -328,8 +382,69 @@ is provided as Apollo expects a specific version.</p></blockquote>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> push_history(<a href="Lightning.AiAssistant.Session.html#t:t/0">Lightning.AiAssistant.Session.t</a>(), %{required(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}) ::
-  <a href="Lightning.AiAssistant.Session.html#t:t/0">Lightning.AiAssistant.Session.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> list_sessions_for_job(<a href="Lightning.Workflows.Job.html#t:t/0">Lightning.Workflows.Job.t</a>()) ::
+  [Lightning.AiAssistant.ChatSession.t(), ...] | []</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="project_has_any_session?/1">
+
+  <div class="detail-header">
+    <a href="#project_has_any_session?/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">project_has_any_session?(project_id)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L81" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> project_has_any_session?(<a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="put_expression_and_adaptor/3">
+
+  <div class="detail-header">
+    <a href="#put_expression_and_adaptor/3" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">put_expression_and_adaptor(session, expression, adaptor)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L18" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> put_expression_and_adaptor(
+  Lightning.AiAssistant.ChatSession.t(),
+  <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
+  <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()
+) ::
+  Lightning.AiAssistant.ChatSession.t()</pre>
 
       </div>
 
@@ -345,7 +460,7 @@ is provided as Apollo expects a specific version.</p></blockquote>
     </a>
     <h1 class="signature" translate="no">query(session, content)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L116" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L104" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -357,13 +472,43 @@ is provided as Apollo expects a specific version.</p></blockquote>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> query(<a href="Lightning.AiAssistant.Session.html#t:t/0">Lightning.AiAssistant.Session.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) ::
-  {:ok, <a href="Lightning.AiAssistant.Session.html#t:t/0">Lightning.AiAssistant.Session.t</a>()} | :error</pre>
+          <pre translate="no"><span class="attribute">@spec</span> query(Lightning.AiAssistant.ChatSession.t(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) ::
+  {:ok, Lightning.AiAssistant.ChatSession.t()}
+  | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>() | :apollo_unavailable}</pre>
 
       </div>
 
-<p>Queries the AI assistant with the given content.</p><p>Returns <code class="inline">{:ok, session}</code> if the query was successful, otherwise <code class="inline">:error</code>.</p><p><strong>Example</strong></p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">AiAssistant</span><span class="o">.</span><span class="n">query</span><span class="p" data-group-id="4665700256-1">(</span><span class="n">session</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;fn()&quot;</span><span class="p" data-group-id="4665700256-1">)</span><span class="w">
-</span><span class="p" data-group-id="4665700256-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">session</span><span class="p" data-group-id="4665700256-2">}</span></code></pre>
+<p>Queries the AI assistant with the given content.</p><p>Returns <code class="inline">{:ok, session}</code> if the query was successful, otherwise <code class="inline">:error</code>.</p><p><strong>Example</strong></p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">AiAssistant</span><span class="o">.</span><span class="n">query</span><span class="p" data-group-id="1722633094-1">(</span><span class="n">session</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;fn()&quot;</span><span class="p" data-group-id="1722633094-1">)</span><span class="w">
+</span><span class="p" data-group-id="1722633094-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">session</span><span class="p" data-group-id="1722633094-2">}</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="save_message/2">
+
+  <div class="detail-header">
+    <a href="#save_message/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">save_message(session, message)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L57" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> save_message(Lightning.AiAssistant.ChatSession.t(), %{required(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}) ::
+  {:ok, Lightning.AiAssistant.ChatSession.t()} | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
+
+      </div>
+
+
   </section>
 </section>
 

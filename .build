@@ -11,7 +11,7 @@ Lightning.Accounts.html
 Lightning.AdaptorRegistry.Npm.html
 Lightning.AdaptorRegistry.html
 Lightning.AdaptorService.html
-Lightning.AiAssistant.Session.html
+Lightning.AiAssistant.Limiter.html
 Lightning.AiAssistant.html
 Lightning.ApolloClient.html
 Lightning.Auditing.Audit.html
@@ -334,8 +334,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-3B222175.js
-dist/sidebar_items-1A848FC1.js
+dist/search_data-E5B77A3D.js
+dist/sidebar_items-7C51316C.js
 index.html
 provisioning.html
 readme.html
