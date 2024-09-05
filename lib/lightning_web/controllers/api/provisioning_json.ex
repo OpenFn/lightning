@@ -38,19 +38,17 @@ defmodule LightningWeb.API.ProvisioningJSON do
 
   def as_json(%module{} = workflow_or_snapshot)
       when module in [Workflow, Snapshot] do
-    workflow_id =
-      if module == Workflow do
-        workflow_or_snapshot.id
-      else
-        workflow_or_snapshot.workflow_id
-      end
-
     workflow_or_snapshot
-    |> Ecto.embedded_dump(:json)
+    |> case do
+      %Workflow{} = workflow ->
+        workflow |> Ecto.embedded_dump(:json)
+
+      %Snapshot{workflow_id: workflow_id} = snapshot ->
+        snapshot |> Ecto.embedded_dump(:json) |> Map.put(:id, workflow_id)
+    end
     |> Map.take(
       ~w(id name inserted_at updated_at deleted_at lock_version concurrency)a
     )
-    |> Map.put(:id, workflow_id)
     |> Map.put(
       :jobs,
       workflow_or_snapshot.jobs
