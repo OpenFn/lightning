@@ -10,8 +10,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     {:ok,
      socket
      |> assign(%{
-       checked_ai_limit?: false,
-       reached_ai_limit?: false,
+       ai_limit_result: nil,
        pending_message: AsyncResult.ok(nil),
        process_message_on_show: false,
        all_sessions: AsyncResult.ok([]),
@@ -28,7 +27,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     {:ok,
      socket
      |> assign(assigns)
-     |> maybe_notify_limit_error()
+     |> maybe_check_limit()
      |> apply_action(action, assigns)}
   end
 
@@ -77,16 +76,23 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   def handle_event("send_message", %{"content" => content}, socket) do
     if socket.assigns.can_edit_workflow do
       %{project_id: project_id, action: action} = socket.assigns
+      # clear error
+      socket = assign(socket, error_message: nil)
 
       case Limiter.validate_quota(project_id) do
         :ok ->
-          save_message(socket, action, content)
+          socket
+          |> assign(ai_limit_result: :ok)
+          |> save_message(action, content)
 
-        {:error, :too_many_queries, message} ->
-          notify_limit_error(socket, message)
+        error ->
+          assign(socket,
+            ai_limit_result: error,
+            error_message: error_message(error)
+          )
       end
       |> then(fn socket ->
-        {:noreply, assign(socket, error_message: nil)}
+        {:noreply, socket}
       end)
     else
       {:noreply,
@@ -143,6 +149,10 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
   defp error_message({:error, :apollo_unavailable}) do
     "Oops! Could not reach the Ai Server. Please try again later."
+  end
+
+  defp error_message({:error, _reason, %{text: text_message}}) do
+    text_message
   end
 
   defp error_message(_error) do
@@ -312,13 +322,22 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
           phx-target={@myself}
           id="ai-assistant-form"
         >
+          <div
+            :if={@error_message}
+            id="ai-assistant-error"
+            class="alert alert-danger hover:cursor-pointer"
+            role="alert"
+            phx-click={JS.hide()}
+          >
+            <%= @error_message %>
+          </div>
           <.chat_input
-            error_message={@error_message}
             form={@form}
             disabled={
-              !endpoint_available? or !is_nil(@pending_message.loading) or
-                !@can_edit_workflow
+              !@can_edit_workflow or @ai_limit_result != :ok or !endpoint_available? or
+                !is_nil(@pending_message.loading)
             }
+            tooltip={disabled_tooltip_message(@can_edit_workflow, @ai_limit_result)}
           />
         </.form>
       </.async_result>
@@ -326,20 +345,25 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     """
   end
 
+  defp disabled_tooltip_message(can_edit_workflow, ai_limit_result) do
+    case {can_edit_workflow, ai_limit_result} do
+      {false, _} ->
+        "You are not authorized to use the Ai Assistant"
+
+      {_, {:error, _reason, _msg} = error} ->
+        error_message(error)
+
+      _ ->
+        nil
+    end
+  end
+
   attr :disabled, :boolean
+  attr :tooltip, :string
   attr :form, :map, required: true
-  attr :error_message, :string
 
   defp chat_input(assigns) do
     ~H"""
-    <div
-      :if={@error_message}
-      class="alert alert-danger hover:cursor-pointer"
-      role="alert"
-      phx-click={JS.hide()}
-    >
-      <%= @error_message %>
-    </div>
     <div class="text-xs text-center italic">
       Do not paste PPI or sensitive business data
     </div>
@@ -361,6 +385,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             id="ai-assistant-form-submit-btn"
             type="submit"
             disabled={@disabled}
+            tooltip={@tooltip}
           >
             Send
           </.button>
@@ -534,28 +559,11 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     end
   end
 
-  defp maybe_notify_limit_error(%{assigns: %{checked_ai_limit?: true}} = socket),
-    do: socket
-
-  defp maybe_notify_limit_error(socket) do
+  defp maybe_check_limit(%{assigns: %{ai_limit_result: nil}} = socket) do
     %{project_id: project_id} = socket.assigns
 
-    case Limiter.validate_quota(project_id) do
-      :ok ->
-        socket
-
-      {:error, :too_many_queries, message} ->
-        socket
-        |> notify_limit_error(message)
-    end
-    |> then(fn socket ->
-      assign(socket, :checked_ai_limit?, true)
-    end)
+    assign(socket, :ai_limit_result, Limiter.validate_quota(project_id))
   end
 
-  defp notify_limit_error(socket, message) do
-    send(self(), {:too_many_queries, message})
-
-    assign(socket, :reached_ai_limit?, true)
-  end
+  defp maybe_check_limit(socket), do: socket
 end

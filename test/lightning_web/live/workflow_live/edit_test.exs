@@ -1850,18 +1850,20 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       render_async(view)
 
+      # click the get started button
+      view |> element("#get-started-with-ai-btn") |> render_click()
+
+      # error flash is not shown immediately
+      refute has_element?(view, "#ai-assistant-error")
+      # it is however available is a tooltip
+      assert render(view) =~ "aria-label=\"#{error_message}\""
+
+      # submiting a message shows the flash
       view
       |> form("#ai-assistant-form")
-      |> has_element?()
+      |> render_submit(%{content: "Ping"})
 
-      assert render(view)
-             |> Floki.parse_fragment!()
-             |> Floki.find("#flash")
-             |> Floki.text() =~ error_message
-
-      assert view
-             |> element("#canvas-banner-limit")
-             |> render() =~ error_message
+      assert has_element?(view, "#ai-assistant-error", error_message)
     end
   end
 end

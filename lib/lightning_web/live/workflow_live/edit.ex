@@ -473,21 +473,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
           icon
           centered
         />
-        <%!-- <Common.banner
-          type="danger"
-          id="canvas-banner-limit"
-          message={@limit_banner_message}
-          class="absolute"
-          icon={true}
-          centered={true}
-        /> --%>
-        <div
-          :if={assigns[:limit_banner_message]}
-          class="alert-danger w-full h-12 text-red-900 text-sm font-semibold text-center p-3"
-        >
-          <Heroicons.exclamation_triangle class="h-5 w-5 inline-block mr-2" />
-          <%= @limit_banner_message %>
-        </div>
         <.form
           id="workflow-form"
           for={@workflow_form}
@@ -1710,13 +1695,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> assign(summary)
      |> maybe_switch_workflow_version()
      |> maybe_disable_canvas()}
-  end
-
-  def handle_info({:too_many_queries, %{text: text_message}}, socket) do
-    {:noreply,
-     socket
-     |> assign(limit_banner_message: text_message)
-     |> put_flash(:error, text_message)}
   end
 
   def handle_info(%{}, socket) do
