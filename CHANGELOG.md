@@ -39,6 +39,9 @@ and this project adheres to
 - Updated vulnerable version of micromatch.
   [#2454](https://github.com/OpenFn/lightning/issues/2454)
 
+- Fix `workflow_id` presence in state.json during Github sync
+  [#2445](https://github.com/OpenFn/lightning/issues/2445)
+
 ## [v2.8.1] - 2024-08-28
 
 ### Changed
