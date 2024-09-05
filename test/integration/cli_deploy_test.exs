@@ -300,7 +300,15 @@ defmodule Lightning.CliDeployTest do
   defp expected_workflow_state(workflow) do
     state =
       workflow
-      |> Map.take([:id, :name, :inserted_at, :lock_version, :concurrency])
+      |> Map.take([
+        :id,
+        :name,
+        :inserted_at,
+        :updated_at,
+        :deleted_at,
+        :lock_version,
+        :concurrency
+      ])
 
     jobs =
       Map.new(workflow.jobs, fn job ->
