@@ -2,6 +2,8 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   @moduledoc false
   use LightningWeb, :component
 
+  import LightningWeb.Components.Table
+
   alias Lightning.DashboardStats.ProjectMetrics
   alias Lightning.Projects.Project
   alias Lightning.Workflows.WorkflowUsageLimiter
@@ -56,7 +58,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       )
 
     ~H"""
-    <.new_table
+    <.table
       id="workflows"
       rows={@workflows}
       row_class="group hover:bg-indigo-50 hover:border-l-indigo-500"
@@ -159,7 +161,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
           </div>
         </div>
       </:col>
-    </.new_table>
+    </.table>
     """
   end
 

@@ -121,7 +121,6 @@ defmodule LightningWeb do
       import PetalComponents.Badge
       import PetalComponents.Card
       import PetalComponents.Dropdown
-      import PetalComponents.Table
       import PetalComponents.Typography
 
       alias LightningWeb.Components

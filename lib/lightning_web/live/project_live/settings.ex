@@ -2,8 +2,9 @@ defmodule LightningWeb.ProjectLive.Settings do
   @moduledoc """
   Index Liveview for project settings
   """
-
   use LightningWeb, :live_view
+
+  import PetalComponents.Table
 
   alias Lightning.Accounts.User
   alias Lightning.Credentials

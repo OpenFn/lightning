@@ -2,6 +2,8 @@ defmodule LightningWeb.Components.Credentials do
   @moduledoc false
   use LightningWeb, :component
 
+  import PetalComponents.Table
+
   alias LightningWeb.CredentialLive.JsonSchemaBodyComponent
   alias LightningWeb.CredentialLive.OauthComponent
   alias LightningWeb.CredentialLive.RawBodyComponent
