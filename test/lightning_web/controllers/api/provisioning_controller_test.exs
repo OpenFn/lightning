@@ -795,7 +795,16 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
 
       assert project.name == "test-project"
 
-      assert workflows |> Enum.all?(&match?(%{"project_id" => ^project_id}, &1)),
+      workflow_ids = Enum.map(workflows, fn w -> w["id"] end)
+
+      parent_project_ids =
+        from(w in Workflow,
+          where: w.id in ^workflow_ids
+        )
+        |> Repo.all()
+        |> Enum.map(fn w -> w.project_id end)
+
+      assert parent_project_ids |> Enum.all?(&match?(^project_id, &1)),
              "All workflows should belong to the same project"
 
       workflow =

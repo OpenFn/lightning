@@ -17,6 +17,24 @@ and this project adheres to
 
 ### Added
 
+- Limit AI queries and hook the increment of AI queries to allow usage limiting.
+  [#2438](https://github.com/OpenFn/lightning/pull/2438)
+- Persist AI Assistant conversations and enable it for all users
+  [#2296](https://github.com/OpenFn/lightning/issues/2296)
+
+### Changed
+
+### Fixed
+
+- Fix `workflow_id` presence in state.json during Github sync
+  [#2445](https://github.com/OpenFn/lightning/issues/2445)
+
+## [v2.8.2] - 2024-09-04
+
+### Added
+
+- Change navbar colors depending on scope.
+  [#2449](https://github.com/OpenFn/lightning/pull/2449)
 - Add support for configurable idle connection timeouts via the `IDLE_TIMEOUT`
   environment variable. [#2443](https://github.com/OpenFn/lightning/issues/2443)
 
@@ -26,8 +44,8 @@ and this project adheres to
   `/app/bin/lightning eval Lightning.Setup.setup_user/3`
 - Implement a combo-box to make navigating between projects easier
   [#241](https://github.com/OpenFn/lightning/pull/2424)
-
-### Fixed
+- Updated vulnerable version of micromatch.
+  [#2454](https://github.com/OpenFn/lightning/issues/2454)
 
 ## [v2.8.1] - 2024-08-28
 

@@ -1,14 +1,23 @@
-<main class="h-screen w-screen">
+<main class="h-screen">
   <div class="flex flex-row h-full">
-    <div class="flex-none w-48 bg-primary-800 text-white h-full">
+    <nav
+      class={"basis-48 #{@side_menu_theme}"}
+      id="side-menu"
+      style="width: 192px"
+    >
       <div class="flex flex-col h-full">
-        <div class="w-full h-20 bg-primary-900 flex items-center justify-center mb-4">
-          <img
-            class="h-10 w-10"
-            src={Routes.static_path(@socket || @conn, "/images/logo-white.svg")}
-            alt="OpenFn"
-          />
+        <div class="w-full h-20 flex items-center justify-center">
+          <.link navigate={Routes.dashboard_index_path(@socket, :index)}>
+            <img
+              class="h-10 w-10"
+              src={
+                Routes.static_path(@socket || @conn, "/images/logo-white.svg")
+              }
+              alt="OpenFn"
+            />
+          </.link>
         </div>
+        <div class="mt-4"></div>
         <Menu.menu_item
           to={Routes.project_index_path(@socket, :index)}
           active={@active_menu_item == :projects}
@@ -44,7 +53,7 @@
         </Menu.menu_item>
         <LightningWeb.Components.Common.version_chip />
       </div>
-    </div>
+    </nav>
     <div class="flex-auto">
       <.live_info_block flash={@flash} />
       <.live_error_block flash={@flash} />

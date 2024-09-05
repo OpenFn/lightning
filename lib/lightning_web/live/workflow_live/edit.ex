@@ -6,6 +6,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   import LightningWeb.Components.Icons
   import LightningWeb.WorkflowLive.Components
 
+  alias Lightning.AiAssistant
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Invocation
@@ -196,10 +197,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     <:tab hash="manual">
                       <span class="inline-block align-middle">Input</span>
                     </:tab>
-                    <:tab
-                      :if={Lightning.AiAssistant.authorized?(@current_user)}
-                      hash="aichat"
-                    >
+                    <:tab hash="aichat">
                       <span class="inline-block align-middle">AI Assistant</span>
                     </:tab>
                   </LightningWeb.Components.Tabbed.tabs>
@@ -228,18 +226,42 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       />
                     </div>
                   </:panel>
-                  <:panel
-                    :if={Lightning.AiAssistant.authorized?(@current_user)}
-                    hash="aichat"
-                    class="h-full"
-                  >
-                    <div class="grow min-h-0 h-full text-sm">
-                      <.live_component
-                        module={LightningWeb.WorkflowLive.AiAssistantComponent}
-                        selected_job={@selected_job}
-                        id={"aichat-#{@selected_job.id}"}
-                      />
-                    </div>
+                  <:panel hash="aichat" class="h-full">
+                    <%= if @ai_assistant_enabled do %>
+                      <div class="grow min-h-0 h-full text-sm">
+                        <.live_component
+                          module={LightningWeb.WorkflowLive.AiAssistantComponent}
+                          can_edit_workflow={@can_edit_workflow}
+                          project_id={@project.id}
+                          project_has_chat_sessions={@project_has_chat_sessions}
+                          current_user={@current_user}
+                          selected_job={@selected_job}
+                          chat_session_id={@chat_session_id}
+                          query_params={@query_params}
+                          base_url={@base_url}
+                          action={if(@chat_session_id, do: :show, else: :new)}
+                          id={"aichat-#{@selected_job.id}"}
+                        />
+                      </div>
+                    <% else %>
+                      <div class="flex flex-col items-center justify-center h-full">
+                        <div class="text-center">
+                          <p class="text-gray-500 text-sm">
+                            AI Assistant has not been configured for your instance.
+                            <br />Contact your admin to configure AI Assistant or try it on
+                            <br />OpenFn cloud for free.
+                            <br />Try the AI Assistant on
+                            <a
+                              href="https://app.openfn.org"
+                              target="_blank"
+                              class="text-primary-600"
+                            >
+                              https://app.openfn.org
+                            </a>
+                          </p>
+                        </div>
+                      </div>
+                    <% end %>
                   </:panel>
                 </LightningWeb.Components.Tabbed.panels>
               </.collapsible_panel>
@@ -965,6 +987,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
        view_only_users_ids: view_only_users_ids,
        active_menu_item: :overview,
        expanded_job: nil,
+       ai_assistant_enabled: AiAssistant.enabled?(),
+       project_has_chat_sessions: nil,
+       chat_session_id: nil,
        follow_run: nil,
        step: nil,
        manual_run_form: nil,
@@ -974,7 +999,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
        selected_run: nil,
        selected_trigger: nil,
        selection_mode: nil,
-       query_params: %{"s" => nil, "m" => nil, "a" => nil},
+       query_params: %{
+         "s" => nil,
+         "m" => nil,
+         "a" => nil,
+         "v" => nil,
+         "chat" => nil
+       },
        workflow: nil,
        snapshot: nil,
        changeset: nil,
@@ -1050,6 +1081,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
           |> push_redirect(to: ~p"/projects/#{socket.assigns.project}/w")
         end
     end
+    |> assign(
+      project_has_chat_sessions:
+        AiAssistant.project_has_any_session?(socket.assigns.project.id)
+    )
   end
 
   defp track_user_presence(socket) do
@@ -1662,7 +1697,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> maybe_disable_canvas()}
   end
 
-  def handle_info(%{}, socket), do: {:noreply, socket}
+  def handle_info(%{}, socket) do
+    {:noreply, socket}
+  end
 
   defp maybe_disable_canvas(socket) do
     %{
@@ -1954,8 +1991,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> assign(
       query_params:
         params
-        |> Map.take(["s", "m", "a"])
-        |> Enum.into(%{"s" => nil, "m" => nil, "a" => nil})
+        |> Map.take(["s", "m", "a", "v", "chat"])
+        |> Enum.into(%{
+          "s" => nil,
+          "m" => nil,
+          "a" => nil,
+          "v" => nil,
+          "chat" => nil
+        })
     )
     |> apply_query_params()
   end
@@ -1983,6 +2026,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
         end
     end
     |> assign_follow_run(socket.assigns.query_params)
+    |> assign_chat_session_id(socket.assigns.query_params)
+  end
+
+  defp assign_chat_session_id(socket, %{"chat" => session_id})
+       when is_binary(session_id) do
+    socket
+    |> assign(chat_session_id: session_id)
+  end
+
+  defp assign_chat_session_id(socket, _params) do
+    socket
+    |> assign(chat_session_id: nil)
   end
 
   defp switch_changeset(socket) do
@@ -2059,7 +2114,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
       selected_edge: nil,
       selected_job: nil,
       selected_trigger: nil,
-      selection_mode: nil
+      selection_mode: nil,
+      chat_session_id: nil
     )
   end
 
@@ -2086,11 +2142,21 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       :triggers ->
         socket
-        |> assign(selected_job: nil, selected_trigger: value, selected_edge: nil)
+        |> assign(
+          selected_job: nil,
+          selected_trigger: value,
+          selected_edge: nil,
+          chat_session_id: nil
+        )
 
       :edges ->
         socket
-        |> assign(selected_job: nil, selected_trigger: nil, selected_edge: value)
+        |> assign(
+          selected_job: nil,
+          selected_trigger: nil,
+          selected_edge: value,
+          chat_session_id: nil
+        )
     end
   end
 
@@ -2105,6 +2171,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       query_params
       |> Map.put("a", run.id)
       |> Map.put("v", version)
+      |> Enum.reject(fn {_k, v} -> is_nil(v) end)
 
     socket
     |> push_patch(to: ~p"/projects/#{project}/w/#{workflow}?#{params}")

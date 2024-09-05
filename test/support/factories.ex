@@ -301,6 +301,23 @@ defmodule Lightning.Factories do
     }
   end
 
+  def chat_session_factory do
+    %Lightning.AiAssistant.ChatSession{
+      id: fn -> Ecto.UUID.generate() end,
+      expression: "fn()",
+      adaptor: "@openfn/language-common@latest",
+      title: "Some session title",
+      messages: []
+    }
+  end
+
+  def chat_message_factory do
+    %Lightning.AiAssistant.ChatMessage{
+      content: "Hello, world!",
+      role: :user
+    }
+  end
+
   # ----------------------------------------------------------------------------
   # Helpers
   # ----------------------------------------------------------------------------

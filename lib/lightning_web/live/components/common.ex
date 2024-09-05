@@ -483,7 +483,7 @@ defmodule LightningWeb.Components.Common do
         spellcheck="false"
         placeholder={@placeholder || "Search..."}
         value={@selected_item && @selected_item.name}
-        class="w-full rounded-md border-0 bg-white py-1.5 pl-3 pr-12 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+        class="w-full rounded-md border-0 py-1.5 pl-3 pr-12 shadow-sm ring-1 ring-inset focus:ring-2 sm:text-sm sm:leading-6"
         role="combobox"
         aria-controls="options"
         aria-expanded="false"
@@ -500,7 +500,7 @@ defmodule LightningWeb.Components.Common do
       <ul
         class={[
           "absolute z-10 mt-1 max-h-60 py-1 w-full overflow-auto rounded-md",
-          "bg-white shadow-lg ring-1 ring-black ring-opacity-5",
+          "shadow-lg ring-1 ring-opacity-5",
           "text-base sm:text-sm hidden focus:outline-none"
         ]}
         id="options"
@@ -509,7 +509,7 @@ defmodule LightningWeb.Components.Common do
       >
         <li
           :for={item <- @items}
-          class="group text-gray-900 relative cursor-pointer select-none py-2 px-3 text-sm data-[highlighted=true]:bg-indigo-600 data-[highlighted=true]:text-white"
+          class="group relative cursor-pointer select-none py-2 px-3 text-sm"
           id={"option-#{item.id}"}
           role="option"
           tabindex="0"
@@ -527,10 +527,7 @@ defmodule LightningWeb.Components.Common do
             "absolute inset-y-0 right-0 items-center pr-4",
             "flex group-[&:not([data-item-selected])]:hidden"
           ]}>
-            <.icon
-              name="hero-check"
-              class="text-indigo-600 group-data-[highlighted=true]:text-white"
-            />
+            <.icon name="hero-check" />
           </span>
         </li>
       </ul>
