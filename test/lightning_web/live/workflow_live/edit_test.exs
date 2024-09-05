@@ -1571,7 +1571,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     test "users can start a new session", %{
       conn: conn,
       project: project,
-      workflow: %{jobs: [job_1 | _]} = workflow
+      workflow: %{jobs: [job_1 | _]} = workflow,
+      test: test
     } do
       apollo_endpoint = "http://localhost:4001"
 
@@ -1590,19 +1591,21 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           %{method: :post}, _opts ->
             # delay the response to simulate a long running request
             # I'm doing this to test the pending assistant resp message
-            # It is an anti-pattern but I can't think of clean way to tell liveview to delay the task execution
-            Process.sleep(5)
+            test |> to_string() |> Lightning.subscribe()
 
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{
-                 "history" => [
-                   %{"role" => "user", "content" => "Ping"},
-                   %{"role" => "assistant", "content" => "Pong"}
-                 ]
-               }
-             }}
+            receive do
+              :return_resp ->
+                {:ok,
+                 %Tesla.Env{
+                   status: 200,
+                   body: %{
+                     "history" => [
+                       %{"role" => "user", "content" => "Ping"},
+                       %{"role" => "assistant", "content" => "Pong"}
+                     ]
+                   }
+                 }}
+            end
         end
       )
 
@@ -1628,6 +1631,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert has_element?(view, "#assistant-pending-message")
       refute render(view) =~ "Pong"
 
+      # return the response
+      test |> to_string() |> Lightning.broadcast(:return_resp)
       html = render_async(view)
 
       # pending message is not shown
