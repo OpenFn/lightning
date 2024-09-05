@@ -24,6 +24,9 @@ and this project adheres to
 
 ### Changed
 
+- Rename `new_table` component to `table`.
+  [#2448](https://github.com/OpenFn/lightning/pull/2448)
+
 ### Fixed
 
 - Fix `workflow_id` presence in state.json during Github sync
