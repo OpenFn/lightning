@@ -49,10 +49,12 @@ defmodule Lightning.Projects.Provisioner do
              build_import_changeset(project, user_or_repo_connection, data),
            {:ok, %{workflows: workflows} = project} <-
              Repo.insert_or_update(project_changeset),
-           {:ok, _changes} <- create_snapshots(project_changeset, workflows) do
+           updated_project <- preload_dependencies(project),
+           {:ok, _changes} <-
+             create_snapshots(project_changeset, updated_project.workflows) do
         Enum.each(workflows, &Lightning.Workflows.Events.workflow_updated/1)
 
-        {:ok, preload_dependencies(project)}
+        {:ok, updated_project}
       end
     end)
   end

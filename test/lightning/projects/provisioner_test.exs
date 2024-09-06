@@ -216,7 +216,18 @@ defmodule Lightning.Projects.ProvisionerTest do
           Snapshot.get_current_for(workflow)
         end)
 
-      assert [%Snapshot{lock_version: 1}] = snapshots_before
+      assert [
+               %Snapshot{
+                 lock_version: 1,
+                 jobs: jobs,
+                 triggers: triggers,
+                 edges: edges
+               }
+             ] = snapshots_before
+
+      assert Enum.count(jobs) == 2
+      assert Enum.count(triggers) == 1
+      assert Enum.count(edges) == 2
 
       third_job_id = Ecto.UUID.generate()
 
@@ -255,7 +266,18 @@ defmodule Lightning.Projects.ProvisionerTest do
           Snapshot.get_current_for(workflow)
         end)
 
-      assert [%Snapshot{lock_version: 2}] = snapshots_after
+      assert [
+               %Snapshot{
+                 lock_version: 2,
+                 jobs: jobs,
+                 triggers: triggers,
+                 edges: edges
+               }
+             ] = snapshots_after
+
+      assert Enum.count(jobs) == 3
+      assert Enum.count(triggers) == 1
+      assert Enum.count(edges) == 2
     end
 
     test "adding a record from another project or workflow", %{
