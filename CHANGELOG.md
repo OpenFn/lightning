@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Enhance user profile page to add a section for updating basic information
+  [#2470](https://github.com/OpenFn/lightning/pull/2470)
+
 ### Fixed
 
 ## [v2.9.0] - 2024-09-06
