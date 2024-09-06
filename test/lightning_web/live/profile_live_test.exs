@@ -53,6 +53,52 @@ defmodule LightningWeb.ProfileLiveTest do
       assert html =~ "Change password"
     end
 
+    test "update basic information", %{conn: conn, user: user} do
+      {:ok, profile_live, _html} =
+        live(conn, ~p"/profile")
+
+      assert profile_live
+             |> has_element?("h2", "#{user.first_name} #{user.last_name}")
+
+      assert profile_live
+             |> form("#basic-info-form", user: %{first_name: ""})
+             |> render_change() =~ "This field can&#39;t be blank"
+
+      assert profile_live
+             |> form("#basic-info-form", user: %{last_name: ""})
+             |> render_change() =~ "This field can&#39;t be blank"
+
+      assert profile_live
+             |> form("#basic-info-form",
+               user: %{
+                 first_name: "Kylian",
+                 last_name: "",
+                 contact_preference: "critical"
+               }
+             )
+             |> render_submit() =~ "This field can&#39;t be blank"
+
+      {:ok, profile_live, html} =
+        profile_live
+        |> form("#basic-info-form",
+          user: %{
+            first_name: "Kylian",
+            last_name: "Mbappe",
+            contact_preference: "critical"
+          }
+        )
+        |> render_submit()
+        |> follow_redirect(conn, ~p"/profile")
+
+      assert html =~ "User information updated successfully"
+
+      refute profile_live
+             |> has_element?("h2", "#{user.first_name} #{user.last_name}")
+
+      assert profile_live
+             |> has_element?("h2", "Kylian Mbappe")
+    end
+
     test "save password", %{conn: conn} do
       {:ok, profile_live, _html} =
         live(conn, Routes.profile_edit_path(conn, :edit))
