@@ -31,6 +31,9 @@ and this project adheres to
 
 - Fix `workflow_id` presence in state.json during Github sync
   [#2445](https://github.com/OpenFn/lightning/issues/2445)
+- Provioner creates invalid snapshots when doing CLI deploy
+  [#2461](https://github.com/OpenFn/lightning/issues/2461)
+  [#2460](https://github.com/OpenFn/lightning/issues/2460)
 
 ## [v2.8.2] - 2024-09-04
 
