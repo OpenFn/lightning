@@ -81,7 +81,7 @@ defmodule LightningWeb.Components.NewInputs do
   attr :tooltip, :string, required: true
   attr :class, :string, default: ""
   attr :icon, :string, default: "hero-information-circle-solid"
-  attr :icon_class, :string, default: "w-4 h-4 text-primary-600"
+  attr :icon_class, :string, default: "w-4 h-4 text-primary-600 opacity-50"
 
   defp tooltip_for_label(assigns) do
     classes = ~w"relative cursor-pointer"
