@@ -11,10 +11,11 @@ defmodule LightningWeb.ProfileLive.FormComponent do
     {:ok,
      socket
      |> assign(
-       password_changeset: Accounts.change_user_password(user),
-       email_changeset: user |> Accounts.validate_change_user_email(%{}),
        user: user,
-       action: action
+       action: action,
+       email_changeset: Accounts.validate_change_user_email(user),
+       password_changeset: Accounts.change_user_password(user),
+       basic_info_changeset: Accounts.change_basic_info(user)
      )}
   end
 
@@ -89,5 +90,16 @@ defmodule LightningWeb.ProfileLive.FormComponent do
       |> Map.put(:action, :validate_email)
 
     {:noreply, assign(socket, :email_changeset, changeset)}
+  end
+
+  def enum_options(module, field) do
+    value_label_map = %{
+      critical: "Critical",
+      any: "Anytime"
+    }
+
+    module
+    |> Ecto.Enum.values(field)
+    |> Enum.map(&{Map.get(value_label_map, &1, to_string(&1)), &1})
   end
 end
