@@ -58,32 +58,32 @@ defmodule LightningWeb.ProfileLiveTest do
         live(conn, Routes.profile_edit_path(conn, :edit))
 
       assert profile_live
-             |> form("#password_form", user: @invalid_empty_password_attrs)
+             |> form("#password-form", user: @invalid_empty_password_attrs)
              |> render_change() =~ "can&#39;t be blank"
 
       assert profile_live
-             |> form("#password_form", user: @invalid_dont_match_password_attrs)
+             |> form("#password-form", user: @invalid_dont_match_password_attrs)
              |> render_change() =~ "Your passwords do not match"
 
       assert profile_live
-             |> form("#password_form", user: @invalid_too_short_password_attrs)
+             |> form("#password-form", user: @invalid_too_short_password_attrs)
              |> render_change() =~ "Password minimum length is 8 characters"
 
       assert profile_live
-             |> form("#password_form", user: @invalid_empty_password_attrs)
+             |> form("#password-form", user: @invalid_empty_password_attrs)
              |> render_submit() =~ "can&#39;t be blank"
 
       assert profile_live
-             |> form("#password_form", user: @invalid_dont_match_password_attrs)
+             |> form("#password-form", user: @invalid_dont_match_password_attrs)
              |> render_submit() =~ "Your passwords do not match"
 
       assert profile_live
-             |> form("#password_form", user: @invalid_too_short_password_attrs)
+             |> form("#password-form", user: @invalid_too_short_password_attrs)
              |> render_submit() =~ "Password minimum length is 8 characters"
 
       {:ok, conn} =
         profile_live
-        |> form("#password_form", user: @update_password_attrs)
+        |> form("#password-form", user: @update_password_attrs)
         |> render_submit()
         |> follow_redirect(conn)
 
@@ -102,7 +102,7 @@ defmodule LightningWeb.ProfileLiveTest do
         live(conn, Routes.profile_edit_path(conn, :edit))
 
       assert profile_live
-             |> form("#email_form", user: %{current_password: "invalid"})
+             |> form("#email-form", user: %{current_password: "invalid"})
              |> render_change() =~ "Your passwords do not match."
     end
 
@@ -111,7 +111,7 @@ defmodule LightningWeb.ProfileLiveTest do
         live(conn, Routes.profile_edit_path(conn, :edit))
 
       assert profile_live
-             |> form("#email_form", user: %{email: user.email})
+             |> form("#email-form", user: %{email: user.email})
              |> render_change() =~ "Please change your email"
     end
 
@@ -120,15 +120,15 @@ defmodule LightningWeb.ProfileLiveTest do
         live(conn, Routes.profile_edit_path(conn, :edit))
 
       assert profile_live
-             |> form("#email_form", user: @invalid_email_update_attrs)
+             |> form("#email-form", user: @invalid_email_update_attrs)
              |> render_change() =~ "can&#39;t be blank"
 
       assert profile_live
-             |> form("#email_form", user: %{email: "oops email"})
+             |> form("#email-form", user: %{email: "oops email"})
              |> render_change() =~ "Email address not valid."
 
       assert profile_live
-             |> form("#email_form", user: @update_email_attrs)
+             |> form("#email-form", user: @update_email_attrs)
              |> render_submit() =~ "Sending confirmation email..."
     end
 
