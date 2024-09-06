@@ -77,6 +77,24 @@ defmodule LightningWeb.Components.NewInputs do
     """
   end
 
+  attr :id, :string, required: true
+  attr :tooltip, :string, required: true
+  attr :class, :string, default: ""
+  attr :icon, :string, default: "hero-information-circle-solid"
+  attr :icon_class, :string, default: "w-4 h-4 text-primary-600"
+
+  defp tooltip_for_label(assigns) do
+    classes = ~w"relative cursor-pointer"
+
+    assigns = assign(assigns, class: classes ++ List.wrap(assigns.class))
+
+    ~H"""
+    <span class={@class} id={@id} aria-label={@tooltip} phx-hook="Tooltip">
+      <.icon name={@icon} class={@icon_class} />
+    </span>
+    """
+  end
+
   @doc """
   Renders an input with label and error messages.
 
@@ -154,6 +172,8 @@ defmodule LightningWeb.Components.NewInputs do
 
   attr :display_errors, :boolean, default: true
 
+  attr :tooltip, :any, default: nil
+
   slot :inner_block
 
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
@@ -215,6 +235,7 @@ defmodule LightningWeb.Components.NewInputs do
           :if={Map.get(@rest, :required, false)}
           class="text-red-500"
         > *</span>
+        <.tooltip_for_label :if={@tooltip} id={@id} tooltip={@tooltip} />
       </.label>
       <div class="flex w-full">
         <div class="relative items-center">

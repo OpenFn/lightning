@@ -43,9 +43,8 @@
           field={f[:contact_preference]}
           label="Contact preference"
           required="true"
-          prompt="Select a contact preference"
+          tooltip="How often would you like to hear from us about your OpenFn account ? Choose 'Anytime' to stay in up to date with all information, or 'Critical' if you prefer to be notified only about issues affecting your projects and account status."
           options={enum_options(Lightning.Accounts.User, :contact_preference)}
-          value={Phoenix.HTML.Form.input_value(f, :contact_preference)}
         />
       </div>
     </div>
