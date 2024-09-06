@@ -54,7 +54,10 @@
     </div>
     <button
       type="submit"
-      disabled={!@basic_info_changeset.valid?}
+      disabled={
+        !@basic_info_changeset.valid? ||
+          Enum.empty?(@basic_info_changeset.changes)
+      }
       class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:w-auto"
     >
       Save

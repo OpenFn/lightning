@@ -77,7 +77,9 @@ defmodule LightningWeb.ProfileLive.FormComponent do
     case Accounts.update_basic_info(socket.assigns.user, user_params) do
       {:ok, _} ->
         {:noreply,
-         socket |> put_flash(:info, "User information updated successfully")}
+         socket
+         |> put_flash(:info, "User information updated successfully")
+         |> push_navigate(to: ~p"/profile")}
 
       {:error, changeset} ->
         {:noreply, assign(socket, :basic_info_changeset, changeset)}
