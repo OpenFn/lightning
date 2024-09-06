@@ -15,7 +15,7 @@ defmodule LightningWeb.ProfileLive.FormComponent do
        action: action,
        email_changeset: Accounts.validate_change_user_email(user),
        password_changeset: Accounts.change_user_password(user),
-       basic_info_changeset: Accounts.change_basic_info(user)
+       basic_info_changeset: Accounts.basic_info_changeset(user)
      )}
   end
 
@@ -73,6 +73,18 @@ defmodule LightningWeb.ProfileLive.FormComponent do
   end
 
   @impl true
+  def handle_event("update_basic_info", %{"user" => user_params}, socket) do
+    case Accounts.update_basic_info(socket.assigns.user, user_params) do
+      {:ok, _} ->
+        {:noreply,
+         socket |> put_flash(:info, "User information updated successfully")}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, :basic_info_changeset, changeset)}
+    end
+  end
+
+  @impl true
   def handle_event("validate_password", %{"user" => user_params}, socket) do
     changeset =
       socket.assigns.user
@@ -90,6 +102,16 @@ defmodule LightningWeb.ProfileLive.FormComponent do
       |> Map.put(:action, :validate_email)
 
     {:noreply, assign(socket, :email_changeset, changeset)}
+  end
+
+  @impl true
+  def handle_event("validate_basic_info", %{"user" => user_params}, socket) do
+    changeset =
+      socket.assigns.user
+      |> Accounts.basic_info_changeset(user_params)
+      |> Map.put(:action, :validate)
+
+    {:noreply, assign(socket, :basic_info_changeset, changeset)}
   end
 
   def enum_options(module, field) do
