@@ -296,7 +296,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             The AI assistant uses a third-party model to process chat messages. Messages may be saved on OpenFn and Anthropic servers.
           </p>
           <p>
-            Although we are constantly monitoring and improving the performance of the model,  the Assistant can
+            Although we are constantly monitoring and improving the performance of the model, the Assistant can
             sometimes provide incorrect or misleading responses. You should consider the responses critically and verify
             the output where possible.
           </p>
