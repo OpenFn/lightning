@@ -197,25 +197,70 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
   defp render_onboarding(assigns) do
     ~H"""
-    <div class="flex flex-col items-center justify-center h-full relative">
-      <p class="text-gray-700 font-medium mb-4 w-1/2 text-center">
-        The AI Assistant is an experimental new feature to help you write job code.
-        <br />
-        <br />
-        Remember that you, the human in control, are responsible for how its output is used.
-        <br />
-      </p>
+    <div class="h-full flex flex-col">
+      <div class="flex-1 flex flex-col items-center justify-center relative">
+        <p class="text-gray-700 font-medium mb-4 w-1/2 text-center">
+          The AI Assistant is an experimental new feature to help you write job code.
+          <br />
+          <br />
+          Remember that you, the human in control, are responsible for how its output is used.
+          <br />
+        </p>
 
-      <.button
-        id="get-started-with-ai-btn"
-        phx-click="mark_disclaimer_read"
-        phx-target={@myself}
-        disabled={!@can_edit_workflow}
-      >
-        Get started with the AI Assistant
-      </.button>
-      <.render_disclaimer />
+        <.button
+          id="get-started-with-ai-btn"
+          phx-click="mark_disclaimer_read"
+          phx-target={@myself}
+          disabled={!@can_edit_workflow}
+        >
+          Get started with the AI Assistant
+        </.button>
+        <.render_disclaimer />
+      </div>
+      <.render_ai_footer />
     </div>
+    """
+  end
+
+  defp render_ai_footer(assigns) do
+    ~H"""
+    <div class="flex w-100">
+      <p class="flex-1 text-xs mt-1 text-left ml-1">
+        <a
+          href="#"
+          phx-click={JS.show(to: "#ai-assistant-disclaimer")}
+          class="text-primary-400 hover:text-primary-600"
+        >
+          About the AI Assistant
+        </a>
+      </p>
+      <p class="flex-1 text-xs mt-1 text-right mr-1">
+        <a
+          href="#"
+          phx-click={JS.show(to: "#ai-assistant-disclaimer")}
+          class="text-primary-400 hover:text-primary-600"
+        >
+          Responsible AI Policy
+        </a>
+      </p>
+    </div>
+    <%!-- <div class="w-100 text-xs text-right mt-1">
+      <a
+        href="#"
+        phx-click={JS.show(to: "#ai-assistant-disclaimer")}
+        class="text-primary-400 hover:text-primary-600"
+      >
+        About the AI Assistant
+      </a>
+      <a class="text-xs text-primary-400 ml-1 mr-1">|</a>
+      <a
+        href="#"
+        phx-click={JS.show(to: "#ai-assistant-disclaimer")}
+        class="text-primary-400 hover:text-primary-600"
+      >
+        Responsible AI Policy
+      </a>
+    </div> --%>
     """
   end
 
@@ -401,43 +446,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         </div>
       </div>
     </div>
-    <div class="flex w-100">
-      <p class="flex-1 text-xs mt-1 text-left ml-1">
-        <a
-          href="#"
-          phx-click={JS.show(to: "#ai-assistant-disclaimer")}
-          class="text-primary-400 hover:text-primary-600"
-        >
-          About the AI Assistant
-        </a>
-      </p>
-      <p class="flex-1 text-xs mt-1 text-right mr-1">
-        <a
-          href="#"
-          phx-click={JS.show(to: "#ai-assistant-disclaimer")}
-          class="text-primary-400 hover:text-primary-600"
-        >
-          Responsible AI Policy
-        </a>
-      </p>
-    </div>
-    <%!-- <div class="w-100 text-xs text-right mt-1">
-      <a
-        href="#"
-        phx-click={JS.show(to: "#ai-assistant-disclaimer")}
-        class="text-primary-400 hover:text-primary-600"
-      >
-        About the AI Assistant
-      </a>
-      <a class="text-xs text-primary-400 ml-1 mr-1">|</a>
-      <a
-        href="#"
-        phx-click={JS.show(to: "#ai-assistant-disclaimer")}
-        class="text-primary-400 hover:text-primary-600"
-      >
-        Responsible AI Policy
-      </a>
-    </div> --%>
+    <.render_ai_footer />
     """
   end
 
