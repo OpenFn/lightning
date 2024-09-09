@@ -198,28 +198,30 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   defp render_onboarding(assigns) do
     ~H"""
     <div class="flex flex-col items-center justify-center h-full relative">
-      <div class="text-center">
-        <p class="text-gray-700 font-medium mb-4">
-          All models are wrong. <br />- Joe Clark!
-        </p>
-        <p class="text-xs mb-2">
-          <a
-            href="#"
-            phx-click={JS.show(to: "#ai-assistant-disclaimer")}
-            class="text-primary-600"
-          >
-            Learn more about AI Assistant
-          </a>
-        </p>
-        <.button
-          id="get-started-with-ai-btn"
-          phx-click="mark_disclaimer_read"
-          phx-target={@myself}
-          disabled={!@can_edit_workflow}
+      <p class="text-gray-700 font-medium mb-4 w-1/2 text-center">
+        The AI Assistant is an experimental new feature to help you write job code.
+        <br />
+        <br />
+        Remember that you, the human in control, are responsible for how its output is used.
+        <br />
+      </p>
+      <p class="text-xs mb-2">
+        <a
+          href="#"
+          phx-click={JS.show(to: "#ai-assistant-disclaimer")}
+          class="text-primary-600"
         >
-          Get started with the AI Assistant
-        </.button>
-      </div>
+          Learn more about the AI Assistant
+        </a>
+      </p>
+      <.button
+        id="get-started-with-ai-btn"
+        phx-click="mark_disclaimer_read"
+        phx-target={@myself}
+        disabled={!@can_edit_workflow}
+      >
+        Get started with the AI Assistant
+      </.button>
       <.render_disclaimer />
     </div>
     """
