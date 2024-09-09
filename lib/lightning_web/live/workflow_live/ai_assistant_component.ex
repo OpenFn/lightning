@@ -205,15 +205,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         Remember that you, the human in control, are responsible for how its output is used.
         <br />
       </p>
-      <p class="text-xs mb-2">
-        <a
-          href="#"
-          phx-click={JS.show(to: "#ai-assistant-disclaimer")}
-          class="text-primary-600"
-        >
-          Learn more about the AI Assistant
-        </a>
-      </p>
+
       <.button
         id="get-started-with-ai-btn"
         phx-click="mark_disclaimer_read"
@@ -334,7 +326,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         <.form
           for={@form}
           phx-submit="send_message"
-          class="row-span-1 p-2 pt-0"
+          class="row-span-1 pl-2 pr-2 pb-1"
           phx-target={@myself}
           id="ai-assistant-form"
         >
@@ -409,6 +401,43 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         </div>
       </div>
     </div>
+    <div class="flex w-100">
+      <p class="flex-1 text-xs mt-1 text-left ml-1">
+        <a
+          href="#"
+          phx-click={JS.show(to: "#ai-assistant-disclaimer")}
+          class="text-primary-400 hover:text-primary-600"
+        >
+          About the AI Assistant
+        </a>
+      </p>
+      <p class="flex-1 text-xs mt-1 text-right mr-1">
+        <a
+          href="#"
+          phx-click={JS.show(to: "#ai-assistant-disclaimer")}
+          class="text-primary-400 hover:text-primary-600"
+        >
+          Responsible AI Policy
+        </a>
+      </p>
+    </div>
+    <%!-- <div class="w-100 text-xs text-right mt-1">
+      <a
+        href="#"
+        phx-click={JS.show(to: "#ai-assistant-disclaimer")}
+        class="text-primary-400 hover:text-primary-600"
+      >
+        About the AI Assistant
+      </a>
+      <a class="text-xs text-primary-400 ml-1 mr-1">|</a>
+      <a
+        href="#"
+        phx-click={JS.show(to: "#ai-assistant-disclaimer")}
+        class="text-primary-400 hover:text-primary-600"
+      >
+        Responsible AI Policy
+      </a>
+    </div> --%>
     """
   end
 
