@@ -5,15 +5,15 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.30.9">
-    <meta name="project" content="Lightning v2.9.0">
+    <meta name="project" content="Lightning v2.9.1">
 
-    <title>LightningWeb.Plugs.Redirect — Lightning v2.9.0</title>
+    <title>LightningWeb.Plugs.Redirect — Lightning v2.9.1</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-4CF536D6.js"></script>
+    <script src="dist/sidebar_items-BF9AA7F2.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -72,7 +72,7 @@
 Lightning
       </a>
       <div class="sidebar-projectVersion" translate="no">
-        v2.9.0
+        v2.9.1
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -131,7 +131,7 @@ Pages
     </a>
 
   <span translate="no">LightningWeb.Plugs.Redirect</span> 
-  <small class="app-vsn" translate="no">(Lightning v2.9.0)</small>
+  <small class="app-vsn" translate="no">(Lightning v2.9.1)</small>
 
 </h1>
 
@@ -217,10 +217,10 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">conn</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="7975837014-1">%</span><span class="nc" data-group-id="7975837014-1">Plug.Conn</span><span class="p" data-group-id="7975837014-1">{</span><span class="p" data-group-id="7975837014-1">}</span><span class="w">
-</span><span class="gp unselectable">iex&gt; </span><span class="n">opts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="7975837014-2">[</span><span class="ss">to</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/new_path&quot;</span><span class="p" data-group-id="7975837014-2">]</span><span class="w">
-</span><span class="gp unselectable">iex&gt; </span><span class="nc">LightningWeb.Plugs.Redirect</span><span class="o">.</span><span class="n">call</span><span class="p" data-group-id="7975837014-3">(</span><span class="n">conn</span><span class="p">,</span><span class="w"> </span><span class="n">opts</span><span class="p" data-group-id="7975837014-3">)</span><span class="w">
-</span><span class="p" data-group-id="7975837014-4">%</span><span class="nc" data-group-id="7975837014-4">Plug.Conn</span><span class="p" data-group-id="7975837014-4">{</span><span class="n">...</span><span class="p" data-group-id="7975837014-4">}</span></code></pre><h2 id="call/2-raises" class="section-heading">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">conn</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="3373144391-1">%</span><span class="nc" data-group-id="3373144391-1">Plug.Conn</span><span class="p" data-group-id="3373144391-1">{</span><span class="p" data-group-id="3373144391-1">}</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">opts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="3373144391-2">[</span><span class="ss">to</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/new_path&quot;</span><span class="p" data-group-id="3373144391-2">]</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">LightningWeb.Plugs.Redirect</span><span class="o">.</span><span class="n">call</span><span class="p" data-group-id="3373144391-3">(</span><span class="n">conn</span><span class="p">,</span><span class="w"> </span><span class="n">opts</span><span class="p" data-group-id="3373144391-3">)</span><span class="w">
+</span><span class="p" data-group-id="3373144391-4">%</span><span class="nc" data-group-id="3373144391-4">Plug.Conn</span><span class="p" data-group-id="3373144391-4">{</span><span class="n">...</span><span class="p" data-group-id="3373144391-4">}</span></code></pre><h2 id="call/2-raises" class="section-heading">
   <a href="#call/2-raises" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -266,8 +266,8 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">LightningWeb.Plugs.Redirect</span><span class="o">.</span><span class="n">init</span><span class="p" data-group-id="4572232913-1">(</span><span class="ss">to</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/new_path&quot;</span><span class="p" data-group-id="4572232913-1">)</span><span class="w">
-</span><span class="p" data-group-id="4572232913-2">[</span><span class="ss">to</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/new_path&quot;</span><span class="p" data-group-id="4572232913-2">]</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">LightningWeb.Plugs.Redirect</span><span class="o">.</span><span class="n">init</span><span class="p" data-group-id="8525168323-1">(</span><span class="ss">to</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/new_path&quot;</span><span class="p" data-group-id="8525168323-1">)</span><span class="w">
+</span><span class="p" data-group-id="8525168323-2">[</span><span class="ss">to</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/new_path&quot;</span><span class="p" data-group-id="8525168323-2">]</span></code></pre>
   </section>
 </section>
 
