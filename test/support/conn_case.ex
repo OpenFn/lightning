@@ -79,9 +79,15 @@ defmodule LightningWeb.ConnCase do
 
   It stores an updated connection and a registered user in the
   test context.
+
+  Optionally you may provide the current user's email address by providing
+  an `email` tag in the context.
+
+      @tag email: "my@user.com"
   """
-  def register_and_log_in_user(%{conn: conn}) do
-    user = Lightning.AccountsFixtures.user_fixture()
+  def register_and_log_in_user(%{conn: conn} = tags) do
+    attrs = Map.take(tags, [:email])
+    user = Lightning.Factories.insert(:user, attrs)
     %{conn: log_in_user(conn, user), user: user}
   end
 

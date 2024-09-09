@@ -13,6 +13,16 @@ defmodule Lightning.AiAssistantTest do
     [user: user, project: project, workflow: workflow]
   end
 
+  describe "available?/1" do
+    test "is not available for users without openfn.org email" do
+      user = build(:user, email: "test@openFn.org")
+      assert AiAssistant.available?(user)
+
+      user = build(:user, email: "test@example.net")
+      refute AiAssistant.available?(user)
+    end
+  end
+
   describe "endpoint_available?" do
     test "availability" do
       Mox.stub(Lightning.MockConfig, :apollo, fn key ->
