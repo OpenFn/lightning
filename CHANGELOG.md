@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Responsible AI review of AI Assistant
+  [#2478](https://github.com/OpenFn/lightning/pull/2478)
+
 ### Fixed
 
 ## [v2.9.0] - 2024-09-06
