@@ -240,7 +240,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
           phx-click={JS.show(to: "#ai-assistant-disclaimer")}
           class="text-primary-400 hover:text-primary-600"
         >
-          Responsible AI Policy
+          OpenFn Responsible AI Policy
         </a>
       </p>
     </div>
