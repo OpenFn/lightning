@@ -21,6 +21,13 @@ and this project adheres to
 
 ### Fixed
 
+## [v2.9.2] - 2024-09-09
+
+### Changed
+
+- Temporarily limit AI to @openfn emails while testing
+  [#2482](https://github.com/OpenFn/lightning/pull/2482)
+
 ## [v2.9.1] - 2024-09-09
 
 ### Fixed
