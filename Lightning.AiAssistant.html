@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-BF9AA7F2.js"></script>
+    <script src="dist/sidebar_items-9F9BE0BA.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -155,6 +155,14 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#available?/1" translate="no">available?(user)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#create_session/3" translate="no">create_session(job, user, content)</a>
 
       </div>
@@ -244,6 +252,28 @@ Pages
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
+<section class="detail" id="available?/1">
+
+  <div class="detail-header">
+    <a href="#available?/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">available?(user)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L145" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
 <section class="detail" id="create_session/3">
 
   <div class="detail-header">
@@ -314,7 +344,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">endpoint_available?()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L149" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L153" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -478,8 +508,8 @@ Pages
 
       </div>
 
-<p>Queries the AI assistant with the given content.</p><p>Returns <code class="inline">{:ok, session}</code> if the query was successful, otherwise <code class="inline">:error</code>.</p><p><strong>Example</strong></p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">AiAssistant</span><span class="o">.</span><span class="n">query</span><span class="p" data-group-id="9860025548-1">(</span><span class="n">session</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;fn()&quot;</span><span class="p" data-group-id="9860025548-1">)</span><span class="w">
-</span><span class="p" data-group-id="9860025548-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">session</span><span class="p" data-group-id="9860025548-2">}</span></code></pre>
+<p>Queries the AI assistant with the given content.</p><p>Returns <code class="inline">{:ok, session}</code> if the query was successful, otherwise <code class="inline">:error</code>.</p><p><strong>Example</strong></p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">AiAssistant</span><span class="o">.</span><span class="n">query</span><span class="p" data-group-id="2043629878-1">(</span><span class="n">session</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;fn()&quot;</span><span class="p" data-group-id="2043629878-1">)</span><span class="w">
+</span><span class="p" data-group-id="2043629878-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">session</span><span class="p" data-group-id="2043629878-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="save_message/2">
