@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+- Provisioner creates invalid snapshots when doing CLI deploy
+  [#2461](https://github.com/OpenFn/lightning/issues/2461)
+  [#2460](https://github.com/OpenFn/lightning/issues/2460)
+
 ## [v2.9.0] - 2024-09-06
 
 ### Added
