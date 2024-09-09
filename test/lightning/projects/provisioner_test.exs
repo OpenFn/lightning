@@ -315,7 +315,13 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       assert flatten_errors(changeset) == %{
                workflows: [
-                 %{jobs: [%{id: ["This email address already exists."]}]}
+                 %{
+                   jobs: [
+                     %{id: ["This email address already exists."]},
+                     %{},
+                     %{}
+                   ]
+                 }
                ]
              }
 
@@ -333,7 +339,9 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       assert flatten_errors(changeset) == %{
                workflows: [
-                 %{triggers: [%{id: ["This email address already exists."]}]}
+                 %{
+                   triggers: [%{id: ["This email address already exists."]}, %{}]
+                 }
                ]
              }
 
@@ -353,7 +361,13 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       assert flatten_errors(changeset) == %{
                workflows: [
-                 %{edges: [%{id: ["This email address already exists."]}]}
+                 %{
+                   edges: [
+                     %{id: ["This email address already exists."]},
+                     %{},
+                     %{}
+                   ]
+                 }
                ]
              }
     end

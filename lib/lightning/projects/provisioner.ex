@@ -19,6 +19,7 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.Repo
   alias Lightning.VersionControl.ProjectRepoConnection
   alias Lightning.VersionControl.VersionControlUsageLimiter
+  alias Lightning.Workflows
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
@@ -52,7 +53,11 @@ defmodule Lightning.Projects.Provisioner do
            updated_project <- preload_dependencies(project),
            {:ok, _changes} <-
              create_snapshots(project_changeset, updated_project.workflows) do
-        Enum.each(workflows, &Lightning.Workflows.Events.workflow_updated/1)
+        Enum.each(workflows, &Workflows.Events.workflow_updated/1)
+
+        project_changeset
+        |> get_assoc(:workflows)
+        |> Enum.each(&Workflows.publish_kafka_trigger_events/1)
 
         {:ok, updated_project}
       end
@@ -183,63 +188,32 @@ defmodule Lightning.Projects.Provisioner do
 
   defp job_changeset(job, attrs) do
     job
-    |> cast(attrs, [:id, :name, :body, :adaptor, :delete, :project_credential_id])
+    |> Job.changeset(attrs)
+    |> cast(attrs, [:delete])
     |> validate_required([:id])
     |> unique_constraint(:id, name: :jobs_pkey)
-    |> Job.validate()
     |> validate_extraneous_params()
     |> maybe_mark_for_deletion()
-    |> maybe_ignore()
   end
 
   defp trigger_changeset(trigger, attrs) do
     trigger
-    |> cast(attrs, [
-      :id,
-      :comment,
-      :custom_path,
-      :type,
-      :cron_expression,
-      :delete
-    ])
+    |> Trigger.changeset(attrs)
+    |> cast(attrs, [:delete])
     |> validate_required([:id])
     |> unique_constraint(:id, name: :triggers_pkey)
-    |> Trigger.validate()
     |> validate_extraneous_params()
     |> maybe_mark_for_deletion()
-    |> maybe_ignore()
   end
 
   defp edge_changeset(edge, attrs) do
     edge
-    |> cast(attrs, [
-      :id,
-      :source_job_id,
-      :source_trigger_id,
-      :enabled,
-      :condition_expression,
-      :condition_type,
-      :condition_label,
-      :target_job_id,
-      :delete
-    ])
+    |> Edge.changeset(attrs)
+    |> cast(attrs, [:delete])
     |> validate_required([:id])
     |> unique_constraint(:id, name: :workflow_edges_pkey)
-    |> Edge.validate()
     |> validate_extraneous_params()
     |> maybe_mark_for_deletion()
-    |> maybe_ignore()
-  end
-
-  defp maybe_ignore(changeset) do
-    changeset
-    |> case do
-      %{valid?: true, changes: changes} = changeset when changes == %{} ->
-        %{changeset | action: :ignore}
-
-      changeset ->
-        changeset
-    end
   end
 
   defp maybe_mark_for_deletion(changeset) do
