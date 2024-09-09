@@ -379,8 +379,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
   defp chat_input(assigns) do
     ~H"""
-    <div class="text-xs text-center italic">
-      Do not paste PPI or sensitive business data
+    <div class="text-xs text-center font-bold">
+      Do not paste PII or sensitive business data
     </div>
     <div class="w-full max-h-72 flex flex-row rounded-lg shadow-sm ring-1 ring-inset ring-gray-300 focus-within:ring-2 focus-within:ring-indigo-600">
       <label for={@form[:content].name} class="sr-only">
@@ -531,8 +531,11 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
   defp user_avatar(assigns) do
     ~H"""
-    <span class={"inline-flex #{@size_class} items-center justify-center rounded-full bg-gray-100"}>
-      <span class="text-xs leading-none text-black uppercase">
+    <span class={"inline-flex #{@size_class} items-center justify-center rounded-full bg-gray-100 "}>
+      <span
+        class="text-xs leading-none text-black uppercase select-none"
+        title={"#{@user.first_name} #{@user.last_name}"}
+      >
         <%= String.first(@user.first_name) %><%= String.first(@user.last_name) %>
       </span>
     </span>
