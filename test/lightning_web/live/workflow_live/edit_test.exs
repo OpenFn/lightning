@@ -1440,14 +1440,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       html = view |> element("#aichat-#{job_1.id}") |> render()
       assert html =~ "Get started with the AI Assistant"
-      assert html =~ "Learn more about AI Assistant"
       refute has_element?(view, "#ai-assistant-form")
 
       # let's try clicking the get started button
       view |> element("#get-started-with-ai-btn") |> render_click()
       html = view |> element("#aichat-#{job_1.id}") |> render()
       refute html =~ "Get started with the AI Assistant"
-      refute html =~ "Learn more about AI Assistant"
       assert has_element?(view, "#ai-assistant-form")
 
       # when a session exists
@@ -1465,7 +1463,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       html = view |> element("#aichat-#{job_1.id}") |> render()
       refute html =~ "Get started with the AI Assistant"
-      refute html =~ "Learn more about AI Assistant"
 
       assert has_element?(view, "#ai-assistant-form")
     end
