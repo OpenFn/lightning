@@ -245,18 +245,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       </div>
                     <% else %>
                       <div class="flex flex-col items-center justify-center h-full">
-                        <div class="text-center">
-                          <p class="text-gray-500 text-sm">
+                        <div class="text-center w-1/2">
+                          <p class="text-gray-500 text-sm mb-2">
                             AI Assistant has not been configured for your instance.
-                            <br />Contact your admin to configure AI Assistant or try it on
-                            <br />OpenFn cloud for free.
-                            <br />Try the AI Assistant on
+                          </p>
+                          <p class="text-gray-500 text-sm mb-2">
+                            Try the AI Assistant on Openfn cloud for free at
                             <a
                               href="https://app.openfn.org"
                               target="_blank"
                               class="text-primary-600"
                             >
-                              https://app.openfn.org
+                              app.openfn.org
                             </a>
                           </p>
                         </div>
