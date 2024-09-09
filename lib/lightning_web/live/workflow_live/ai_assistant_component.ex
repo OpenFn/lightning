@@ -282,7 +282,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
           <p>
             The OpenFn AI Assistant provides a chat interface with an AI Model to help you build workflows. It can:
             <ul class="list-disc list-inside pl-4">
-              <li>Write job code for you</li>
+              <li>Draft job code for you</li>
               <li>Explain adaptor functions and how they are used</li>
               <li>Proofread and debug your job code</li>
               <li>Help understand why you are seeing an error</li>
