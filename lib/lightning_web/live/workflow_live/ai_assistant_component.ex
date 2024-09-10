@@ -63,7 +63,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
   def render(assigns) do
     ~H"""
-    <div id={@id} class="h-full">
+    <div id={@id} class="h-full relative">
       <%= if @action == :new and !@has_read_disclaimer do %>
         <.render_onboarding myself={@myself} can_edit_workflow={@can_edit_workflow} />
       <% else %>
@@ -396,6 +396,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         </.form>
       </.async_result>
     </div>
+    <.render_disclaimer />
     """
   end
 
