@@ -236,7 +236,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
       </p>
       <p class="flex-1 text-xs mt-1 text-right mr-1">
         <a
-          href="#"
+          href="https://www.openfn.org/ai"
+          target="_blank"
           phx-click={JS.show(to: "#ai-assistant-disclaimer")}
           class="text-primary-400 hover:text-primary-600"
         >
@@ -331,7 +332,11 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
           <h2 class="font-bold">Responsible AI Policy</h2>
           <p>
             Read about our approach to AI in the
-            <a href="#" target="_blank" class="text-primary-600">
+            <a
+              href="https://www.openfn.org/ai"
+              target="_blank"
+              class="text-primary-600"
+            >
               OpenFn Responsible AI Policy
             </a>
           </p>
