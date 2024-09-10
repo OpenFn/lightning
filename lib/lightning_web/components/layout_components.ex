@@ -167,26 +167,28 @@ defmodule LightningWeb.LayoutComponents do
                         else: String.at(@current_user.last_name, 0)
                   }
                 />
-                <Heroicons.chevron_down
-                  solid
+                <.icon
+                  name="hero-chevron-down"
                   class="w-4 h-4 ml-1 -mr-1 text-secondary-400 dark:text-secondary-100"
                 />
               </div>
             </:trigger_element>
             <.dropdown_menu_item link_type="live_redirect" to={~p"/profile"}>
-              <Heroicons.user_circle class="w-5 h-5 text-secondary-500" />
+              <.icon name="hero-user-circle" class="w-5 h-5 text-secondary-500" />
               User Profile
             </.dropdown_menu_item>
             <.dropdown_menu_item link_type="live_redirect" to={~p"/credentials"}>
-              <Heroicons.key class="w-5 h-5 text-secondary-500" /> Credentials
+              <.icon name="hero-key" class="w-5 h-5 text-secondary-500" />
+              Credentials
             </.dropdown_menu_item>
             <.dropdown_menu_item link_type="live_redirect" to={~p"/profile/tokens"}>
-              <Heroicons.command_line class="w-5 h-5 text-secondary-500" />
-              API Tokens
+              <.icon name="hero-key" class="w-5 h-5 text-secondary-500" /> API Tokens
             </.dropdown_menu_item>
             <.dropdown_menu_item link_type="live_redirect" to={~p"/users/log_out"}>
-              <Heroicons.arrow_right_on_rectangle class="w-5 h-5 text-secondary-500" />
-              Log out
+              <.icon
+                name="hero-arrow-right-on-rectangle"
+                class="w-5 h-5 text-secondary-500"
+              /> Log out
             </.dropdown_menu_item>
           </.dropdown>
         <% end %>
