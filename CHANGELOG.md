@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix jumpy combobox for scope switcher
+  [#2469](https://github.com/OpenFn/lightning/issues/2469)
+
 ## [v2.9.0] - 2024-09-06
 
 ### Added
