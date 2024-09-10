@@ -26,7 +26,9 @@ defmodule LightningWeb.Components.Icons do
 
   def icon(%{name: "hero-" <> _} = assigns) do
     assigns =
-      assigns |> assign(:class, get_in(assigns, [:rest, :class]) |> List.wrap())
+      assigns
+      |> assign(:class, get_in(assigns, [:rest, :class]) |> List.wrap())
+      |> update(:rest, fn rest -> Map.delete(rest, :class) end)
 
     ~H"""
     <span class={[@name, @class]} {@rest} />

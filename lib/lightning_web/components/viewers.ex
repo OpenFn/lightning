@@ -189,7 +189,7 @@ defmodule LightningWeb.Components.Viewers do
     >
       <div class="mb-4">
         <div class="h-12 w-12 border-2 border-gray-300 border-solid mx-auto flex items-center justify-center rounded-full text-gray-400">
-          <Heroicons.code_bracket class="w-4 h-4" />
+          <.icon name="hero-code-bracket" class="w-4 h-4" />
         </div>
       </div>
       <div class="text-center mb-4 text-gray-500">

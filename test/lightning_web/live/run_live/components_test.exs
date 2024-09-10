@@ -108,11 +108,11 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       )
       |> Floki.parse_fragment!()
 
-    assert html
-           |> Floki.find(
-             ~s{svg[class="mr-1.5 h-5 w-5 flex-shrink-0 inline text-gray-400"]}
+    assert has_elem_with_class?(
+             html,
+             "span",
+             "hero-ellipsis-horizontal-circle-solid text-gray-400"
            )
-           |> Enum.any?()
 
     assert has_run_step_link?(html, workflow.project, run, first_step)
 
@@ -127,11 +127,11 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       )
       |> Floki.parse_fragment!()
 
-    assert html
-           |> Floki.find(
-             ~s{svg[class="mr-1.5 h-5 w-5 flex-shrink-0 inline text-green-500"]}
+    assert has_elem_with_class?(
+             html,
+             "span",
+             "hero-check-circle-solid text-green-500"
            )
-           |> Enum.any?()
 
     assert has_run_step_link?(html, workflow.project, run, second_step)
 
@@ -146,11 +146,11 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       )
       |> Floki.parse_fragment!()
 
-    assert html
-           |> Floki.find(
-             ~s{svg[class="mr-1.5 h-5 w-5 flex-shrink-0 inline text-red-500"]}
+    assert has_elem_with_class?(
+             html,
+             "span",
+             "hero-x-circle-solid text-red-500"
            )
-           |> Enum.any?()
 
     assert has_run_step_link?(html, workflow.project, run, third_step)
 
@@ -491,6 +491,22 @@ defmodule LightningWeb.RunLive.ComponentsTest do
     |> Floki.find(
       ~s{a[href='#{~p"/projects/#{project}/runs/#{run}?#{%{step: step.id}}"}']}
     )
+    |> Enum.any?()
+  end
+
+  defp has_elem_with_class?(html, tag, class_names) do
+    html
+    |> Floki.find(tag)
+    |> Enum.filter(fn {_tag, attrs, _inner} ->
+      Enum.filter(attrs, &match?({"class", _}, &1))
+      |> Enum.find(attrs, fn {"class", value} ->
+        class_names
+        |> String.split()
+        |> Enum.all?(fn class_name ->
+          String.contains?(value, class_name)
+        end)
+      end)
+    end)
     |> Enum.any?()
   end
 end

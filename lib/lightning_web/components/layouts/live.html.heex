@@ -7,7 +7,7 @@
     >
       <div class="flex flex-col h-full">
         <div class="w-full h-20 flex items-center justify-center">
-          <.link navigate={Routes.dashboard_index_path(@socket, :index)}>
+          <.link navigate={~p"/projects"}>
             <img
               class="h-10 w-10"
               src={
@@ -22,26 +22,29 @@
           <div class="grow"></div>
           <%= if @current_user.role == :superuser do %>
             <Menu.menu_item to={Routes.project_index_path(@socket, :index)}>
-              <Heroicons.cog class="h-5 w-5 inline-block mr-2" />
+              <.icon name="hero-cog" class="h-5 w-5 inline-block mr-2" />
               <span class="inline-block align-middle">Admin Menu</span>
             </Menu.menu_item>
             <%= if function_exported?(Routes, :live_dashboard_path, 2) do %>
               <Menu.menu_item to={~p"/dashboard"}>
-                <Heroicons.exclamation_triangle class="h-5 w-5 inline-block mr-2" />
+                <.icon
+                  name="hero-exclamation-triangle"
+                  class="h-5 w-5 inline-block mr-2"
+                />
                 <span class="inline-block align-middle">Sys Info</span>
               </Menu.menu_item>
             <% end %>
           <% else %>
             <Menu.menu_item href="https://docs.openfn.org">
-              <Heroicons.book_open mini class="h-5 w-5 inline-block mr-2" />
+              <.icon name="hero-book-open" class="h-5 w-5 inline-block mr-2" />
               <span class="inline-block align-middle">Documentation</span>
             </Menu.menu_item>
             <Menu.menu_item href="https://community.openfn.org">
-              <Heroicons.user_group mini class="h-5 w-5 inline-block mr-2" />
+              <.icon name="hero-user-group" class="h-5 w-5 inline-block mr-2" />
               <span class="inline-block align-middle">Community</span>
             </Menu.menu_item>
             <Menu.menu_item href={"mailto:" <> Lightning.Config.instance_admin_email()}>
-              <Heroicons.lifebuoy mini class="h-5 w-5 inline-block mr-2" />
+              <.icon name="hero-lifebuoy" class="h-5 w-5 inline-block mr-2" />
               <span class="inline-block align-middle">Support</span>
             </Menu.menu_item>
           <% end %>

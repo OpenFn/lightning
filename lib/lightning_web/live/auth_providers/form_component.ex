@@ -270,7 +270,7 @@ defmodule LightningWeb.AuthProvidersLive.FormComponent do
 
                   <Common.button color="red" phx-click="disable" phx-target={@myself}>
                     <div class="h-full">
-                      <Heroicons.trash class="h-4 w-4 inline-block" />
+                      <.icon name="hero-trash" class="h-4 w-4 inline-block" />
                       <span class="inline-block align-middle">Remove</span>
                     </div>
                   </Common.button>
