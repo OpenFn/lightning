@@ -1375,6 +1375,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   describe "AI Assistant:" do
     setup :create_workflow
 
+    @tag email: "user@openfn.org"
     test "correct information is displayed when the assistant is not configured",
          %{
            conn: conn,
@@ -1418,6 +1419,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                "AI Assistant has not been configured for your instance"
     end
 
+    @tag email: "user@openfn.org"
     test "onboarding ui is displayed when no session exists for the project", %{
       conn: conn,
       project: project,
@@ -1470,6 +1472,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert has_element?(view, "#ai-assistant-form")
     end
 
+    @tag email: "user@openfn.org"
     test "authorized users can send a message", %{
       conn: conn,
       project: project,
@@ -1504,8 +1507,18 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # insert session so that the onboarding flow is not displayed
       insert(:chat_session, user: user, job: job_1)
 
-      for {conn, _user} <-
-            setup_project_users(conn, project, [:owner, :admin, :editor]) do
+      [:owner, :admin, :editor]
+      |> Enum.map(fn role ->
+        user =
+          insert(:user, email: "email-#{Enum.random(1..1_000)}@openfn.org")
+
+        insert(:project_user, project: project, user: user, role: role)
+
+        user
+      end)
+      |> Enum.each(fn user ->
+        conn = log_in_user(conn, user)
+
         {:ok, view, _html} =
           live(
             conn,
@@ -1535,9 +1548,20 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         refute html =~ "You are not authorized to use the Ai Assistant"
 
         assert_patch(view)
-      end
+      end)
 
-      for {conn, _user} <- setup_project_users(conn, project, [:viewer]) do
+      [:viewer]
+      |> Enum.map(fn role ->
+        user =
+          insert(:user, email: "email-#{Enum.random(1..1_000)}@openfn.org")
+
+        insert(:project_user, project: project, user: user, role: role)
+
+        user
+      end)
+      |> Enum.each(fn user ->
+        conn = log_in_user(conn, user)
+
         {:ok, view, _html} =
           live(
             conn,
@@ -1565,9 +1589,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           |> render_submit(%{content: "Hello"})
 
         assert html =~ "You are not authorized to use the Ai Assistant"
-      end
+      end)
     end
 
+    @tag email: "user@openfn.org"
     test "users can start a new session", %{
       conn: conn,
       project: project,
@@ -1640,6 +1665,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert html =~ "Pong"
     end
 
+    @tag email: "user@openfn.org"
     test "users can resume a session", %{
       conn: conn,
       project: project,
@@ -1719,6 +1745,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert html =~ expected_answer
     end
 
+    @tag email: "user@openfn.org"
     test "an error is displayed incase the assistant does not return 200", %{
       conn: conn,
       project: project,
@@ -1770,6 +1797,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                "Oops! Could not reach the Ai Server. Please try again later."
     end
 
+    @tag email: "user@openfn.org"
     test "an error is displayed incase the assistant query process crashes", %{
       conn: conn,
       project: project,
@@ -1821,13 +1849,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                "Oops! Something went wrong. Please try again."
     end
 
+    @tag email: "user@openfn.org"
     test "shows a flash error when limit has reached", %{
       conn: conn,
       project: %{id: project_id} = project,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
-      [{conn, _user}] = setup_project_users(conn, project, [:owner])
-
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001/health_check"
         :openai_api_key -> "openai_api_key"

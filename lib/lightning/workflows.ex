@@ -94,7 +94,8 @@ defmodule Lightning.Workflows do
     |> save_workflow()
   end
 
-  defp publish_kafka_trigger_events(changeset) do
+  @spec publish_kafka_trigger_events(Ecto.Changeset.t(Workflow.t())) :: :ok
+  def publish_kafka_trigger_events(changeset) do
     changeset
     |> KafkaTriggers.get_kafka_triggers_being_updated()
     |> Enum.each(fn trigger_id ->

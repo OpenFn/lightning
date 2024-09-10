@@ -23,7 +23,22 @@ and this project adheres to
 
 - Fix jumpy combobox for scope switcher
   [#2469](https://github.com/OpenFn/lightning/issues/2469)
+  
+## [v2.9.2] - 2024-09-09
 
+### Changed
+
+- Temporarily limit AI to @openfn emails while testing
+  [#2482](https://github.com/OpenFn/lightning/pull/2482)
+
+## [v2.9.1] - 2024-09-09
+
+### Fixed
+
+- Provisioner creates invalid snapshots when doing CLI deploy
+  [#2461](https://github.com/OpenFn/lightning/issues/2461)
+  [#2460](https://github.com/OpenFn/lightning/issues/2460)
+  
 ## [v2.9.0] - 2024-09-06
 
 ### Added
