@@ -179,8 +179,8 @@ defmodule LightningWeb.RunLive.Components do
               phx-hook="Tooltip"
               data-placement="bottom"
             >
-              <Heroicons.paper_clip
-                mini
+              <.icon
+                name="hero-paper-clip-mini"
                 class="mr-1 mt-1 h-3 w-3 flex-shrink-0 text-gray-500"
               />
             </span>
@@ -196,10 +196,9 @@ defmodule LightningWeb.RunLive.Components do
               }
             >
               <.icon
-                naked
                 title="Inspect Step"
                 name="hero-document-magnifying-glass-mini"
-                class="h-5 w-5"
+                class="h-5 w-5 text-gray-500 hover:text-primary-400"
               />
             </.link>
           <% end %>
@@ -363,8 +362,8 @@ defmodule LightningWeb.RunLive.Components do
                   phx-hook="Tooltip"
                   data-placement="right"
                 >
-                  <Heroicons.paper_clip
-                    mini
+                  <.icon
+                    name="hero-paper-clip-mini"
                     class="mr-1.5 mt-1 h-3 w-3 flex-shrink-0 text-gray-500"
                   />
                 </span>
@@ -385,9 +384,8 @@ defmodule LightningWeb.RunLive.Components do
               }
             >
               <.icon
-                naked
                 name="hero-document-magnifying-glass-mini"
-                class="h-5 w-5"
+                class="h-5 w-5 text-gray-500 hover:text-primary-400"
               />
             </.link>
           </div>
@@ -436,12 +434,14 @@ defmodule LightningWeb.RunLive.Components do
         end}
       >
         <.icon
-          {if not @deleted, do: [naked: true], else: []}
           name="hero-play-circle-mini"
-          class={"h-5 w-5 #{if not @deleted,
-            do: "hover:text-primary-400 cursor-pointer",
-            else: "text-gray-400 hover:text-gray-400"
-        }"}
+          class={[
+            "h-5 w-5",
+            if(not @deleted,
+              do: "hover:text-primary-400 cursor-pointer",
+              else: "text-gray-400 hover:text-gray-400"
+            )
+          ]}
         />
       </span>
     <% else %>
@@ -458,7 +458,7 @@ defmodule LightningWeb.RunLive.Components do
           )
         }
       >
-        <Heroicons.arrow_path class="h-5 w-5" />
+        <.icon name="hero-arrow-path" class="h-5 w-5" />
       </span>
     <% end %>
     """
@@ -543,46 +543,44 @@ defmodule LightningWeb.RunLive.Components do
   def step_icon(%{reason: reason, error_type: error_type} = assigns) do
     [icon, classes] =
       case {reason, error_type} do
-        {nil, _any} -> [:pending, "text-gray-400"]
-        {"success", _any} -> [:success, "text-green-500"]
-        {"fail", _any} -> [:fail, "text-red-500"]
-        {"crash", _any} -> [:crash, "text-orange-800"]
-        {"cancel", _any} -> [:cancel, "text-grey-600"]
-        {"kill", "SecurityError"} -> [:shield, "text-yellow-800"]
-        {"kill", "ImportError"} -> [:shield, "text-yellow-800"]
-        {"kill", "TimeoutError"} -> [:clock, "text-yellow-800"]
-        {"kill", "OOMError"} -> [:circle_ex, "text-yellow-800"]
-        {"exception", ""} -> [:triangle_ex, "text-black-800"]
-        {"lost", _nil} -> [:triangle_ex, "text-black-800"]
+        {nil, _any} ->
+          ["hero-ellipsis-horizontal-circle-solid", "text-gray-400"]
+
+        {"success", _any} ->
+          ["hero-check-circle-solid", "text-green-500"]
+
+        {"fail", _any} ->
+          ["hero-x-circle-solid", "text-red-500"]
+
+        {"crash", _any} ->
+          ["hero-x-circle-solid", "text-orange-800"]
+
+        {"cancel", _any} ->
+          ["hero-no-symbol-mini", "text-grey-600"]
+
+        {"kill", "SecurityError"} ->
+          ["hero-shield-exclamation-solid", "text-yellow-800"]
+
+        {"kill", "ImportError"} ->
+          ["hero-shield-exclamation-solid", "text-yellow-800"]
+
+        {"kill", "TimeoutError"} ->
+          ["hero-clock-solid", "text-yellow-800"]
+
+        {"kill", "OOMError"} ->
+          ["hero-exclamation-circle-solid", "text-yellow-800"]
+
+        {"exception", ""} ->
+          ["hero-exclamation-triangle-solid", "text-black-800"]
+
+        {"lost", _nil} ->
+          ["hero-exclamation-triangle-solid", "text-black-800"]
       end
 
-    assigns =
-      assign(assigns,
-        icon: icon,
-        classes: ["mr-1.5 h-5 w-5 flex-shrink-0 inline", classes]
-      )
+    assigns = assign(assigns, icon: icon, classes: classes)
 
     ~H"""
-    <%= case @icon do %>
-      <% :pending -> %>
-        <Heroicons.ellipsis_horizontal_circle solid class={@classes} />
-      <% :success -> %>
-        <Heroicons.check_circle solid class={@classes} />
-      <% :fail -> %>
-        <Heroicons.x_circle solid class={@classes} />
-      <% :crash -> %>
-        <Heroicons.x_circle solid class={@classes} />
-      <% :cancel -> %>
-        <Heroicons.no_symbol solid class={@classes} />
-      <% :shield -> %>
-        <Heroicons.shield_exclamation solid class={@classes} />
-      <% :clock -> %>
-        <Heroicons.clock solid class={@classes} />
-      <% :circle_ex -> %>
-        <Heroicons.exclamation_circle solid class={@classes} />
-      <% :triangle_ex -> %>
-        <Heroicons.exclamation_triangle solid class={@classes} />
-    <% end %>
+    <.icon name={@icon} class={["mr-1.5 h-5 w-5 flex-shrink-0 inline", @classes]} />
     """
   end
 

@@ -86,7 +86,7 @@ defmodule LightningWeb.ModalPortal do
                 class="text-gray-400 hover:text-gray-500"
               >
                 <div class="sr-only">Close</div>
-                <Heroicons.x_mark class="w-4 h-4" />
+                <.icon name="hero-x-mark" class="w-4 h-4" />
               </button>
             </div>
           </div>
