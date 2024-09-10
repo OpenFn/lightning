@@ -93,12 +93,9 @@ defmodule LightningWeb.RunLive.Show do
                       navigate={
                         ~p"/projects/#{@project}/w/#{@workflow.id}?v=#{run.snapshot.lock_version}"
                       }
-                      class="link link-plain text-ellipsis"
+                      class="link text-ellipsis"
                     >
-                      <span class="whitespace-nowrap text-ellipsis">
-                        <%= @workflow.name %>
-                      </span>
-                      <.icon name="hero-arrow-up-right" class="h-2 w-2 float-right" />
+                      <%= @workflow.name %>
                     </.link>
                   </:value>
                 </.list_item>
@@ -109,12 +106,9 @@ defmodule LightningWeb.RunLive.Show do
                       navigate={
                         ~p"/projects/#{@project}/history?#{%{filters: %{workorder_id: run.work_order_id}}}"
                       }
-                      class="link link-plain text-ellipsis"
+                      class="link font-mono"
                     >
-                      <span class="whitespace-nowrap text-ellipsis">
-                        <%= display_short_uuid(run.work_order_id) %>
-                      </span>
-                      <.icon name="hero-arrow-up-right" class="h-2 w-2 float-right" />
+                      <%= display_short_uuid(run.work_order_id) %>
                     </.link>
                   </:value>
                 </.list_item>
