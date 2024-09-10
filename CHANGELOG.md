@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix AI Assitant crashes on a job that is not saved yet
+  [#2479](https://github.com/OpenFn/lightning/issues/2479)
+
 ## [v2.9.2] - 2024-09-09
 
 ### Changed

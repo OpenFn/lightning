@@ -201,10 +201,10 @@ defmodule Lightning.WorkflowLive.Helpers do
     |> render_hook("push-change", %{patches: patches})
   end
 
-  def add_job_patch(name \\ "") do
+  def add_job_patch(name \\ "", id \\ Ecto.UUID.generate()) do
     Jsonpatch.diff(
       %{jobs: []},
-      %{jobs: [%{id: Ecto.UUID.generate(), name: name}]}
+      %{jobs: [%{id: id, name: name}]}
     )
     |> Jsonpatch.Mapper.to_map()
     |> List.first()
