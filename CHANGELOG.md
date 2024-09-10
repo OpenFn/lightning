@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Upgraded Heroicons to v2.1.5, from v2.0.18
+  [#2483](https://github.com/OpenFn/lightning/pull/2483)
+
 ### Fixed
 
 ## [v2.9.2] - 2024-09-09
