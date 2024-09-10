@@ -22,218 +22,239 @@ export const Combobox = {
   mounted() {
     this.input = this.el.querySelector('input');
     this.dropdown = this.el.querySelector('ul');
-    this.options = this.el.querySelectorAll('li');
+    this.options = Array.from(this.el.querySelectorAll('li'));
     this.toggleButton = this.el.querySelector('button');
-    this.highlightedOption = null;
+    this.highlightedIndex = -1;
+    this.navigatingWithKeys = false;
+    this.navigatingWithMouse = false;
 
+    this.input.addEventListener('focus', () => this.handleInputFocus());
     this.input.addEventListener(
       'input',
-      this.debounce(event => this.handleInput(event), 300)
+      this.debounce(e => this.handleInput(e), 300)
     );
-    this.input.addEventListener('click', () => this.handleInputClick());
-    this.input.addEventListener('keydown', event => this.handleKeydown(event));
-    this.toggleButton.addEventListener('click', () =>
-      this.handleToggleButtonClick()
-    );
+    this.input.addEventListener('keydown', e => this.handleKeydown(e));
+    this.toggleButton.addEventListener('click', () => this.toggleDropdown());
 
-    this.options.forEach(option => {
-      option.addEventListener('click', event => {
-        event.preventDefault();
-        this.selectOption(option);
-      });
-      option.addEventListener('mouseenter', () => this.highlightOption(option));
-      option.addEventListener('mouseleave', () => this.restoreHighlight());
+    this.options.forEach((option, index) => {
+      option.addEventListener('click', () => this.selectOption(index));
+      option.addEventListener('mouseenter', () => this.handleMouseEnter(index));
+      option.addEventListener('mousemove', () => this.handleMouseMove(index));
     });
 
-    document.addEventListener('click', event => {
-      if (!this.el.contains(event.target)) {
-        this.hideDropdown();
-      }
+    document.addEventListener('click', e => {
+      if (!this.el.contains(e.target)) this.hideDropdown();
     });
 
-    // Highlight the initially selected option, if any
-    this.highlightSelectedOption();
+    this.initializeSelectedOption();
+  },
+
+  handleInputFocus() {
+    this.showDropdown();
+    this.input.select();
   },
 
   handleInput(event) {
-    this.filterOptions(event);
+    this.filterOptions(event.target.value);
     this.showDropdown();
-    this.highlightFirstOption();
-  },
-
-  handleInputClick() {
-    this.input.select();
-    this.showAllOptions();
-    this.showDropdown();
-    this.highlightSelectedOption();
-  },
-
-  handleToggleButtonClick() {
-    this.toggleDropdown();
-    if (!this.dropdown.classList.contains('hidden')) {
-      this.input.focus();
-      this.input.select();
-      this.showAllOptions();
-      this.highlightSelectedOption();
-    }
+    this.highlightFirstMatch();
+    this.navigatingWithKeys = false;
+    this.navigatingWithMouse = false;
   },
 
   handleKeydown(event) {
-    if (event.key === 'Enter' && this.highlightedOption) {
-      event.preventDefault();
-      this.selectOption(this.highlightedOption);
-    } else if (event.key === 'ArrowDown') {
-      event.preventDefault();
-      this.showDropdown();
-      this.highlightNextOption();
-    } else if (event.key === 'ArrowUp') {
-      event.preventDefault();
-      this.showDropdown();
-      this.highlightPreviousOption();
+    if (!this.isDropdownVisible()) {
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        this.showDropdown();
+      }
+      return;
+    }
+
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        this.navigatingWithKeys = true;
+        this.navigatingWithMouse = false;
+        this.highlightNextOption();
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        this.navigatingWithKeys = true;
+        this.navigatingWithMouse = false;
+        this.highlightPreviousOption();
+        break;
+      case 'Enter':
+        event.preventDefault();
+        if (this.highlightedIndex !== -1) {
+          this.selectOption(this.highlightedIndex);
+        }
+        break;
+      case 'Escape':
+        this.hideDropdown();
+        break;
     }
   },
 
-  toggleDropdown() {
-    if (this.dropdown.classList.contains('hidden')) {
-      this.showDropdown();
-    } else {
-      this.hideDropdown();
+  handleMouseEnter(index) {
+    if (!this.navigatingWithKeys) {
+      this.navigatingWithMouse = true;
+      this.highlightOption(index);
     }
   },
 
-  showDropdown() {
-    this.dropdown.classList.remove('hidden');
-    this.input.setAttribute('aria-expanded', 'true');
+  handleMouseMove(index) {
+    if (this.navigatingWithKeys) {
+      this.navigatingWithKeys = false;
+      this.navigatingWithMouse = true;
+      this.highlightOption(index);
+    }
   },
 
-  hideDropdown() {
-    this.dropdown.classList.add('hidden');
-    this.input.setAttribute('aria-expanded', 'false');
-    this.clearHighlight();
-  },
-
-  filterOptions(event) {
-    const searchTerm = event.target.value.toLowerCase();
-    let visibleCount = 0;
+  filterOptions(searchTerm) {
+    const lowercaseSearchTerm = searchTerm.toLowerCase();
+    let hasVisibleOptions = false;
 
     this.options.forEach(option => {
       const text = option.textContent.toLowerCase();
-      if (text.includes(searchTerm)) {
+      if (text.includes(lowercaseSearchTerm)) {
         option.style.display = 'block';
-        visibleCount++;
+        hasVisibleOptions = true;
       } else {
         option.style.display = 'none';
       }
     });
 
-    if (visibleCount === 0) {
-      this.showNoResultsMessage();
+    this.updateNoResultsMessage(!hasVisibleOptions);
+    return hasVisibleOptions;
+  },
+
+  highlightFirstMatch() {
+    const visibleOptions = this.getVisibleOptions();
+    if (visibleOptions.length > 0) {
+      this.highlightedIndex = 0;
+      this.updateHighlight();
     } else {
-      this.hideNoResultsMessage();
+      this.highlightedIndex = -1;
+      this.updateHighlight();
     }
   },
 
-  showAllOptions() {
-    this.options.forEach(option => (option.style.display = 'block'));
-    this.hideNoResultsMessage();
-  },
-
-  showNoResultsMessage() {
+  updateNoResultsMessage(show) {
     let noResultsEl = this.dropdown.querySelector('.no-results');
-    if (!noResultsEl) {
-      noResultsEl = document.createElement('li');
-      noResultsEl.className =
-        'no-results text-gray-500 py-2 px-3 text-sm cursor-default hover:bg-gray-100';
-      noResultsEl.textContent = 'No projects found';
-      this.dropdown.appendChild(noResultsEl);
-    }
-    noResultsEl.style.display = 'block';
-  },
-
-  hideNoResultsMessage() {
-    const noResultsEl = this.dropdown.querySelector('.no-results');
-    if (noResultsEl) {
+    if (show) {
+      if (!noResultsEl) {
+        noResultsEl = document.createElement('li');
+        noResultsEl.className =
+          'no-results text-gray-500 py-2 px-3 text-sm cursor-default';
+        noResultsEl.textContent = 'No results found';
+        this.dropdown.appendChild(noResultsEl);
+      }
+      noResultsEl.style.display = 'block';
+    } else if (noResultsEl) {
       noResultsEl.style.display = 'none';
     }
   },
 
-  navigateToItem(url) {
-    window.location.href = url;
-  },
-
-  highlightFirstOption() {
-    const firstVisibleOption = Array.from(this.options).find(
-      option => option.style.display !== 'none'
-    );
-    if (firstVisibleOption) {
-      this.highlightOption(firstVisibleOption);
-    } else {
-      this.clearHighlight();
-    }
-  },
-
-  restoreHighlight() {
-    if (this.selectedOption) {
-      this.highlightOption(this.selectedOption);
-    } else {
-      this.clearHighlight();
-    }
-  },
-
-  selectOption(option) {
-    this.input.value = option.querySelector('span').textContent.trim();
-    this.hideDropdown();
-    this.selectedOption = option;
-    this.navigateToItem(option.dataset.url);
-  },
-
-  highlightSelectedOption() {
-    this.selectedOption = Array.from(this.options).find(
-      option =>
-        option.querySelector('span').textContent.trim() === this.input.value
-    );
-    if (this.selectedOption) {
-      this.highlightOption(this.selectedOption);
-    } else {
-      this.clearHighlight();
-    }
-  },
-
-  highlightOption(option) {
-    this.clearHighlight();
-    option.setAttribute('data-highlighted', 'true');
-    this.highlightedOption = option;
-    option.scrollIntoView({ block: 'nearest' });
-  },
-
-  clearHighlight() {
-    if (this.highlightedOption) {
-      this.highlightedOption.removeAttribute('data-highlighted');
-      this.highlightedOption = null;
-    }
+  getVisibleOptions() {
+    return this.options.filter(option => option.style.display !== 'none');
   },
 
   highlightNextOption() {
-    const visibleOptions = Array.from(this.options).filter(
-      option => option.style.display !== 'none'
-    );
-    const currentIndex = visibleOptions.indexOf(this.highlightedOption);
-    const nextOption = visibleOptions[currentIndex + 1] || visibleOptions[0];
-    if (nextOption) {
-      this.highlightOption(nextOption);
-    }
+    const visibleOptions = this.getVisibleOptions();
+    if (visibleOptions.length === 0) return;
+    this.highlightedIndex = (this.highlightedIndex + 1) % visibleOptions.length;
+    this.updateHighlight();
   },
 
   highlightPreviousOption() {
-    const visibleOptions = Array.from(this.options).filter(
-      option => option.style.display !== 'none'
+    const visibleOptions = this.getVisibleOptions();
+    if (visibleOptions.length === 0) return;
+    this.highlightedIndex =
+      (this.highlightedIndex - 1 + visibleOptions.length) %
+      visibleOptions.length;
+    this.updateHighlight();
+  },
+
+  updateHighlight() {
+    const visibleOptions = this.getVisibleOptions();
+    visibleOptions.forEach((option, index) => {
+      if (index === this.highlightedIndex) {
+        option.setAttribute('data-highlighted', 'true');
+        if (this.navigatingWithKeys) {
+          option.scrollIntoView({ block: 'nearest' });
+        }
+      } else {
+        option.removeAttribute('data-highlighted');
+      }
+    });
+  },
+
+  highlightOption(index) {
+    const visibleOptions = this.getVisibleOptions();
+    this.highlightedIndex = visibleOptions.indexOf(this.options[index]);
+    this.updateHighlight();
+  },
+
+  selectOption(index) {
+    const visibleOptions = this.getVisibleOptions();
+    const selectedOption = visibleOptions[index];
+    this.input.value = selectedOption.textContent.trim();
+    this.hideDropdown();
+    this.navigateToItem(selectedOption.dataset.url);
+  },
+
+  navigateToItem(url) {
+    if (url) {
+      window.location.href = url;
+    }
+  },
+
+  toggleDropdown() {
+    if (this.isDropdownVisible()) {
+      this.hideDropdown();
+    } else {
+      this.showDropdown();
+    }
+  },
+
+  showDropdown() {
+    this.dropdown.classList.remove('hidden');
+    this.scrollToSelectedOption();
+    if (this.highlightedIndex === -1) {
+      this.highlightedIndex = this.getSelectedOptionIndex();
+      this.updateHighlight();
+    }
+  },
+
+  hideDropdown() {
+    this.dropdown.classList.add('hidden');
+    this.highlightedIndex = -1;
+    this.navigatingWithKeys = false;
+    this.navigatingWithMouse = false;
+  },
+
+  isDropdownVisible() {
+    return !this.dropdown.classList.contains('hidden');
+  },
+
+  initializeSelectedOption() {
+    const selectedOptionIndex = this.getSelectedOptionIndex();
+    if (selectedOptionIndex !== -1) {
+      this.input.value = this.options[selectedOptionIndex].textContent.trim();
+    }
+  },
+
+  getSelectedOptionIndex() {
+    return this.options.findIndex(option =>
+      option.hasAttribute('data-item-selected')
     );
-    const currentIndex = visibleOptions.indexOf(this.highlightedOption);
-    const previousOption =
-      visibleOptions[currentIndex - 1] ||
-      visibleOptions[visibleOptions.length - 1];
-    if (previousOption) {
-      this.highlightOption(previousOption);
+  },
+
+  scrollToSelectedOption() {
+    const selectedOptionIndex = this.getSelectedOptionIndex();
+    if (selectedOptionIndex !== -1) {
+      this.options[selectedOptionIndex].scrollIntoView({ block: 'nearest' });
     }
   },
 
