@@ -55,7 +55,7 @@ defmodule LightningWeb.RunLive.Components do
             <%= render_slot(label) %>
           </dt>
         <% end %>
-        <dd class="text-gray-900 font-mono">
+        <dd class="text-gray-900">
           <%= render_slot(@value) %>
         </dd>
       </div>

@@ -22,6 +22,8 @@ and this project adheres to
 
 ### Changed
 
+- Standardize `link-uuid` style for uuid chips
+
 ### Fixed
 
 ## [v2.9.2] - 2024-09-09
