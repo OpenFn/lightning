@@ -22,6 +22,8 @@ and this project adheres to
 
 ### Changed
 
+- Enhance user profile page to add a section for updating basic information
+  [#2470](https://github.com/OpenFn/lightning/pull/2470)
 - Upgraded Heroicons to v2.1.5, from v2.0.18
   [#2483](https://github.com/OpenFn/lightning/pull/2483)
 - Standardize `link-uuid` style for uuid chips
