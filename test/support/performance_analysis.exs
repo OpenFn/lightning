@@ -1,6 +1,6 @@
 defmodule Lightning.PerformanceAnalysis do
   @moduledoc """
-  THis module can be used to load a large number of Runs into the database for
+  This module can be used to load a large number of Runs into the database for
   the purposes of evaluating query performance. The module also provides a
   a convenience method to dump query SQL to files for the purposes of comparison
   as well as determining query execution plans.
