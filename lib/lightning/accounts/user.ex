@@ -228,7 +228,7 @@ defmodule Lightning.Accounts.User do
   - last_name
   - contact_preference
   """
-  def basic_info_changeset(user, attrs) do
+  def info_changeset(user, attrs) do
     user
     |> cast(attrs, [:first_name, :last_name, :contact_preference])
     |> validate_name()

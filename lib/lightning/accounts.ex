@@ -389,12 +389,12 @@ defmodule Lightning.Accounts do
     |> Repo.update()
   end
 
-  def basic_info_changeset(%User{} = user, attrs \\ %{}) do
-    User.basic_info_changeset(user, attrs)
+  def change_user_info(%User{} = user, attrs \\ %{}) do
+    User.info_changeset(user, attrs)
   end
 
-  def update_basic_info(%User{} = user, attrs) do
-    basic_info_changeset(user, attrs) |> Repo.update()
+  def update_user_info(%User{} = user, attrs) do
+    change_user_info(user, attrs) |> Repo.update()
   end
 
   ## Settings

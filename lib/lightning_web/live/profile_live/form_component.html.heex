@@ -12,7 +12,7 @@
   <.form
     :let={f}
     as={:user}
-    for={@basic_info_changeset}
+    for={@user_info_changeset}
     id="basic-info-form"
     phx-target={@myself}
     phx-change="validate_basic_info"
@@ -54,8 +54,8 @@
     <button
       type="submit"
       disabled={
-        !@basic_info_changeset.valid? ||
-          Enum.empty?(@basic_info_changeset.changes)
+        !@user_info_changeset.valid? ||
+          Enum.empty?(@user_info_changeset.changes)
       }
       class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:w-auto"
     >
