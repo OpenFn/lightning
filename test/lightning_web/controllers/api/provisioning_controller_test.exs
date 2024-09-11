@@ -526,7 +526,10 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       body = %{
         "id" => project.id,
         "name" => "",
-        "workflows" => [%{"name" => "default"}]
+        "workflows" => [
+          %{"name" => "default"},
+          %{"id" => Ecto.UUID.generate(), "name" => "Valid Workflow"}
+        ]
       }
 
       conn = post(conn, ~p"/api/provision", body)
@@ -553,6 +556,12 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
                 "adaptor" => "@openfn/language-common@latest"
               },
               %{
+                "adaptor" => "@openfn/language-common@latest",
+                "body" => "console.log('hello world');"
+              },
+              %{
+                "id" => Ecto.UUID.generate(),
+                "name" => "valid job",
                 "adaptor" => "@openfn/language-common@latest",
                 "body" => "console.log('hello world');"
               }
