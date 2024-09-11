@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.9.3] - 2024-09-11
+
+### Added
+
 - Add utility module to seed a DB to support query performance analysis.
   [#2441](https://github.com/OpenFn/lightning/issues/2441)
 
@@ -29,8 +37,6 @@ and this project adheres to
 - Standardize `link-uuid` style for uuid chips
 - Updated PromEx configuration to align with custom Oban naming.
   [#2488](https://github.com/OpenFn/lightning/issues/2488)
-
-### Fixed
 
 ## [v2.9.2] - 2024-09-09
 
