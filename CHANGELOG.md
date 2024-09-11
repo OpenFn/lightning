@@ -23,6 +23,8 @@ and this project adheres to
 ### Changed
 
 - Standardize `link-uuid` style for uuid chips
+- Updated PromEx configuration to align with custom Oban naming.
+  [#2488](https://github.com/OpenFn/lightning/issues/2488)
 
 ### Fixed
 
