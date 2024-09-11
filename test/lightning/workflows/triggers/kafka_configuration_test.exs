@@ -145,6 +145,10 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
         initial_offset_reset_policy: "earliest",
         partition_timestamps: %{"1" => 1_717_174_749_123},
         password: "password",
+        reset_request: %{
+          requested_at: ~U[2024-09-11 12:14:11.019240Z],
+          reset_to: 1_723_633_665_366
+        },
         sasl: "plain",
         ssl: true,
         topics: ["foo", "bar"],
@@ -162,6 +166,10 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
         initial_offset_reset_policy: "earliest",
         partition_timestamps: %{"1" => 1_717_174_749_123},
         password: "password",
+        reset_request: %{
+          requested_at: ~U[2024-09-11 12:14:11.019240Z],
+          reset_to: 1_723_633_665_366
+        },
         sasl: :plain,
         ssl: true,
         topics: ["foo", "bar"],
@@ -617,6 +625,30 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
           %KafkaConfiguration{},
           base_changes
           |> Map.merge(%{connect_timeout: 0})
+        )
+
+      assert %Changeset{errors: errors, valid?: false} = changeset
+
+      assert errors == [
+               connect_timeout: {
+                 "must be greater than %{number}",
+                 [
+                   {:validation, :number},
+                   {:kind, :greater_than},
+                   {:number, 0}
+                 ]
+               }
+             ]
+    end
+
+    test "is invalid if the `reset_request` contains invalid data", %{
+      base_changes: base_changes
+    } do
+      changeset =
+        KafkaConfiguration.changeset(
+          %KafkaConfiguration{},
+          base_changes
+          |> Map.merge(%{reset_request: %{}})
         )
 
       assert %Changeset{errors: errors, valid?: false} = changeset
@@ -1233,6 +1265,71 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
       expected_types = ["plain", "scram_sha_256", "scram_sha_512"]
 
       assert KafkaConfiguration.sasl_types() == expected_types
+    end
+  end
+
+  describe ".validate_reset_request/1" do
+    setup do
+      base_changes = %{
+        connect_timeout: 7,
+        hosts: [
+          ["host1", "9092"],
+          ["host2", "9093"]
+        ],
+        hosts_string: "host1:9092, host2:9093",
+        initial_offset_reset_policy: "earliest",
+        partition_timestamps: %{"1" => 1_717_174_749_123},
+        password: "password",
+        reset_request: %{
+          requested_at: ~U[2024-09-11 12:14:11.019240Z],
+          reset_to: 1_723_633_665_366
+        },
+        sasl: "plain",
+        ssl: true,
+        topics: ["foo", "bar"],
+        topics_string: "foo, bar",
+        username: "username"
+      }
+
+      valid_changeset =
+        KafkaConfiguration.changeset(%KafkaConfiguration{}, base_changes)
+
+      error_message =
+        "must be a map with both `requested_at` and `reset_to` elements" <>
+          "populated or both set to nil"
+
+      %{
+        error_message: error_message,
+        valid_changeset: valid_changeset
+      }
+    end
+
+    test "is valid if both elements are set to nil", %{
+      valid_changeset: valid_changeset
+    } do
+      changeset =
+        valid_changeset
+        |> Changeset.put_change(
+          :reset_request,
+          %{requested_at: nil, reset_to: nil}
+        )
+
+      # TODO Check for case where reset_request is not in changeset
+
+      assert %Changeset{valid?: true} = changeset
+    end
+
+    test "is invalid if reset_request is an empty map", %{
+      error_message: error_message,
+      valid_changeset: valid_changeset
+    } do
+      changeset =
+        valid_changeset
+        |> Changeset.put_change(:reset_request, %{})
+
+      assert %Changeset{errors: errors, valid?: false} = changeset
+
+      assert errors == [reset_request: {error_message, []}]
     end
   end
 end

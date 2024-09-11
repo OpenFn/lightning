@@ -13,6 +13,7 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
              :hosts,
              :initial_offset_reset_policy,
              :partition_timestamps,
+             :reset_request,
              :password,
              :sasl,
              :ssl,
@@ -28,6 +29,7 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
     field :initial_offset_reset_policy, :string
     field :partition_timestamps, :map, default: %{}
     field :password, Lightning.Encrypted.EmbeddedBinary
+    field :reset_request, :map, default: %{requested_at: nil, reset_to: nil}
     field :sasl, Ecto.Enum, values: @sasl_types, default: nil
     field :ssl, :boolean
     field :topics, {:array, :string}
@@ -44,6 +46,7 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
       :initial_offset_reset_policy,
       :partition_timestamps,
       :password,
+      :reset_request,
       :sasl,
       :ssl,
       :topics,
@@ -64,6 +67,7 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
     |> set_group_id_if_required()
     |> validate_sasl_credentials()
     |> validate_number(:connect_timeout, greater_than: 0)
+    |> validate_reset_request()
   end
 
   def generate_hosts_string(changeset) do
@@ -320,6 +324,23 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
 
       set ->
         set
+    end
+  end
+
+  def validate_reset_request(changeset) do
+    error_message =
+      "must be a map with both `requested_at` and `reset_to` elements" <>
+        "populated or both set to nil"
+
+    changeset
+    |> get_change(:reset_request)
+    |> IO.inspect()
+    |> case do
+      %{requested_at: nil, reset_to: nil} ->
+        changeset
+      _ ->
+      changeset
+      |> add_error(:reset_request, error_message)
     end
   end
 
