@@ -11,10 +11,11 @@ defmodule LightningWeb.ProfileLive.FormComponent do
     {:ok,
      socket
      |> assign(
-       password_changeset: Accounts.change_user_password(user),
-       email_changeset: user |> Accounts.validate_change_user_email(%{}),
        user: user,
-       action: action
+       action: action,
+       email_changeset: Accounts.validate_change_user_email(user),
+       password_changeset: Accounts.change_user_password(user),
+       user_info_changeset: Accounts.change_user_info(user)
      )}
   end
 
@@ -72,6 +73,20 @@ defmodule LightningWeb.ProfileLive.FormComponent do
   end
 
   @impl true
+  def handle_event("update_basic_info", %{"user" => user_params}, socket) do
+    case Accounts.update_user_info(socket.assigns.user, user_params) do
+      {:ok, _} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "User information updated successfully")
+         |> push_navigate(to: ~p"/profile")}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, :user_info_changeset, changeset)}
+    end
+  end
+
+  @impl true
   def handle_event("validate_password", %{"user" => user_params}, socket) do
     changeset =
       socket.assigns.user
@@ -89,5 +104,26 @@ defmodule LightningWeb.ProfileLive.FormComponent do
       |> Map.put(:action, :validate_email)
 
     {:noreply, assign(socket, :email_changeset, changeset)}
+  end
+
+  @impl true
+  def handle_event("validate_basic_info", %{"user" => user_params}, socket) do
+    changeset =
+      socket.assigns.user
+      |> Accounts.change_user_info(user_params)
+      |> Map.put(:action, :validate)
+
+    {:noreply, assign(socket, :user_info_changeset, changeset)}
+  end
+
+  def enum_options(module, field) do
+    value_label_map = %{
+      critical: "Critical",
+      any: "Anytime"
+    }
+
+    module
+    |> Ecto.Enum.values(field)
+    |> Enum.map(&{Map.get(value_label_map, &1, to_string(&1)), &1})
   end
 end

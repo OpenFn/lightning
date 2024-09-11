@@ -8,6 +8,60 @@
       return_to={~p"/profile"}
     />
   <% end %>
+
+  <.form
+    :let={f}
+    as={:user}
+    for={@user_info_changeset}
+    id="basic-info-form"
+    phx-target={@myself}
+    phx-change="validate_basic_info"
+    phx-submit="update_basic_info"
+    class="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2 mb-4 px-4 py-6 sm:p-8"
+  >
+    <div class="text-xl mb-8">Change basic information</div>
+    <div class="space-y-6">
+      <div class="space-y-4">
+        <.input
+          type="text"
+          field={f[:first_name]}
+          label="First name"
+          required="true"
+        />
+      </div>
+      <div class="space-y-4">
+        <.input
+          type="text"
+          field={f[:last_name]}
+          label="Last name"
+          required="true"
+        />
+      </div>
+      <div class="space-y-4">
+        <.input
+          type="select"
+          field={f[:contact_preference]}
+          label="Contact preference"
+          required="true"
+          tooltip="How often would you like to hear from us about your OpenFn account? Choose 'Anytime' to stay in up to date with all information, or 'Critical' if you prefer to be notified only about issues affecting your projects and account status."
+          options={enum_options(Lightning.Accounts.User, :contact_preference)}
+        />
+      </div>
+    </div>
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-4"></div>
+    </div>
+    <button
+      type="submit"
+      disabled={
+        !@user_info_changeset.valid? ||
+          Enum.empty?(@user_info_changeset.changes)
+      }
+      class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:w-auto"
+    >
+      Save
+    </button>
+  </.form>
   <.form
     :let={f}
     as={:user}
@@ -15,45 +69,39 @@
     phx-change="validate_email"
     phx-submit="change_email"
     phx-target={@myself}
-    id="email_form"
-    class="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2 mb-4"
+    id="email-form"
+    class="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2 mb-4 px-4 py-6 sm:p-8"
   >
-    <div class="px-4 py-6 sm:p-8">
-      <div class="grid max-w-2xl grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
-        <div class="col-span-6 text-xl">Change email</div>
-        <div class="sm:col-span-4">
-          <%= Phoenix.HTML.Form.label(f, :email, "New email address",
-            class: "block text-sm font-medium text-secondary-700"
-          ) %>
-          <%= Phoenix.HTML.Form.text_input(f, :email,
-            class: "block w-full rounded-md"
-          ) %>
-          <.old_error field={f[:email]} />
-        </div>
-        <div class="sm:col-span-4">
-          <%= Phoenix.HTML.Form.label(
-            f,
-            :current_password,
-            "Enter password to confirm",
-            class: "block text-sm font-medium text-secondary-700"
-          ) %>
-          <%= Phoenix.HTML.Form.password_input(f, :current_password,
-            value: Phoenix.HTML.Form.input_value(f, :current_password),
-            class: "block w-full rounded-md"
-          ) %>
-          <.old_error field={f[:current_password]} />
-        </div>
-        <div class="col-span-6">
-          <LightningWeb.Components.Form.submit_button
-            disabled={!@email_changeset.valid?}
-            phx-disable-with="Sending confirmation email..."
-          >
-            Update email
-          </LightningWeb.Components.Form.submit_button>
-        </div>
-        <%= Phoenix.HTML.Form.hidden_input(f, :id) %>
+    <div class="text-xl mb-8">Change email</div>
+    <div class="space-y-6">
+      <div class="space-y-4">
+        <.input
+          type="text"
+          field={f[:email]}
+          label="New email address"
+          required="true"
+        />
+      </div>
+      <div class="space-y-4">
+        <.input
+          type="text"
+          field={f[:current_password]}
+          label="Enter password to confirm"
+          required="true"
+        />
       </div>
     </div>
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-4"></div>
+    </div>
+    <button
+      type="submit"
+      disabled={!@email_changeset.valid?}
+      phx-disable-with="Sending confirmation email..."
+      class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:w-auto"
+    >
+      Update email
+    </button>
   </.form>
 
   <.form
@@ -62,61 +110,47 @@
     phx-change="validate_password"
     phx-submit="save_password"
     phx-target={@myself}
-    id="password_form"
-    class="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2 mb-4"
+    id="password-form"
+    class="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2 mb-4 px-4 py-6 sm:p-8"
   >
-    <div class="px-4 py-6 sm:p-8">
-      <div class="grid max-w-2xl grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
-        <div class="col-span-6 text-xl">Change password</div>
-        <div class="sm:col-span-4">
-          <%= Phoenix.HTML.Form.label(f, :password, "New password",
-            class: "block text-sm font-medium text-secondary-700"
-          ) %>
-          <%= Phoenix.HTML.Form.password_input(f, :password,
-            value: Phoenix.HTML.Form.input_value(f, :password),
-            class: "block w-full rounded-md",
-            phx_debounce: "blur"
-          ) %>
-          <.old_error field={f[:password]} />
-        </div>
-
-        <div class="sm:col-span-4">
-          <%= Phoenix.HTML.Form.label(
-            f,
-            :password_confirmation,
-            "Confirm new password",
-            class: "block text-sm font-medium text-secondary-700"
-          ) %>
-          <%= Phoenix.HTML.Form.password_input(f, :password_confirmation,
-            value: Phoenix.HTML.Form.input_value(f, :password_confirmation),
-            class: "block w-full rounded-md",
-            phx_debounce: "blur"
-          ) %>
-          <.old_error field={f[:password_confirmation]} />
-        </div>
-        <div class="sm:col-span-4">
-          <%= Phoenix.HTML.Form.label(f, :current_password,
-            class: "block text-sm font-medium text-secondary-700"
-          ) %>
-          <%= Phoenix.HTML.Form.password_input(f, :current_password,
-            value: Phoenix.HTML.Form.input_value(f, :current_password),
-            class: "block w-full rounded-md",
-            phx_debounce: "blur"
-          ) %>
-          <.old_error field={f[:current_password]} />
-        </div>
-        <div class="col-span-6">
-          <span>
-            <LightningWeb.Components.Form.submit_button
-              disabled={!@password_changeset.valid?}
-              phx-disable-with="Saving..."
-            >
-              Update password
-            </LightningWeb.Components.Form.submit_button>
-          </span>
-        </div>
+    <div class="text-xl mb-8">Change password</div>
+    <div class="space-y-6">
+      <div class="space-y-4">
+        <.input
+          type="text"
+          field={f[:password]}
+          label="New password"
+          required="true"
+        />
+      </div>
+      <div class="space-y-4">
+        <.input
+          type="text"
+          field={f[:password_confirmation]}
+          label="Confirm new password"
+          required="true"
+        />
+      </div>
+      <div class="space-y-4">
+        <.input
+          type="text"
+          field={f[:current_password]}
+          label="Current password"
+          required="true"
+        />
       </div>
     </div>
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-4"></div>
+    </div>
+    <button
+      type="submit"
+      disabled={!@password_changeset.valid?}
+      phx-disable-with="Saving..."
+      class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:w-auto"
+    >
+      Update password
+    </button>
   </.form>
   <.live_component
     module={LightningWeb.ProfileLive.MfaComponent}
