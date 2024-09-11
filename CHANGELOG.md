@@ -25,6 +25,8 @@ and this project adheres to
 - Standardize `link-uuid` style for uuid chips
 - Updated PromEx configuration to align with custom Oban naming.
   [#2488](https://github.com/OpenFn/lightning/issues/2488)
+- Improve history export page UI
+  [#2442](https://github.com/OpenFn/lightning/issues/2442)
 
 ### Fixed
 
@@ -42,7 +44,7 @@ and this project adheres to
 - Provisioner creates invalid snapshots when doing CLI deploy
   [#2461](https://github.com/OpenFn/lightning/issues/2461)
   [#2460](https://github.com/OpenFn/lightning/issues/2460)
-  
+
   > This is a fix for future Workflow updates that are deployed by the CLI and
   > Github integrations. Unfortunately, there is a high likelihood that your
   > existing snapshots could be incorrect (e.g. missing steps, missing edges).
