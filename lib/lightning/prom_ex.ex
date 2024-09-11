@@ -80,7 +80,7 @@ defmodule Lightning.PromEx do
       {Plugins.Phoenix,
        router: LightningWeb.Router, endpoint: LightningWeb.Endpoint},
       Plugins.Ecto,
-      Plugins.Oban,
+      {Plugins.Oban, oban_supervisors: [Lightning.Oban]},
       Plugins.PhoenixLiveView,
       # Add your own PromEx metrics plugins
       {

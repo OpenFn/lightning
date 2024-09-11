@@ -196,10 +196,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                 <.link navigate={
                   ~p"/projects/#{@work_order.workflow.project_id}/history?filters[workorder_id]=#{@work_order.id}"
                 }>
-                  <span
-                    class="link font-normal text-xs text-ellipsis font-mono inline-block"
-                    title={@work_order.id}
-                  >
+                  <span class="link-uuid" title={@work_order.id}>
                     <%= display_short_uuid(@work_order.id) %>
                   </span>
                 </.link>
@@ -258,11 +255,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                 <div role="columnheader" class="col-span-3 pl-4">
                   Run
                   <.link navigate={~p"/projects/#{@project.id}/runs/#{run.id}"}>
-                    <span
-                      title={run.id}
-                      class="link font-normal text-xs whitespace-nowrap text-ellipsis
-                            inline-block rounded-md font-mono"
-                    >
+                    <span title={run.id} class="link font-mono">
                       <%= display_short_uuid(run.id) %>
                     </span>
                   </.link>
@@ -275,7 +268,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                         &bull; <a
                           id={"toggle_runs_for_#{@work_order.id}"}
                           href="#"
-                          class="text-indigo-400"
+                          class="link"
                           phx-click="toggle_runs"
                           phx-target={@myself}
                         >
@@ -339,12 +332,9 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
         navigate={
           ~p"/projects/#{@work_order.workflow.project_id}/dataclips/#{@work_order.dataclip_id}/show"
         }
+        class="link-uuid"
       >
-        <span
-          title={@work_order.dataclip_id}
-          class="link font-normal text-xs whitespace-nowrap text-ellipsis
-                rounded-md font-mono"
-        >
+        <span title={@work_order.dataclip_id}>
           <%= display_short_uuid(@work_order.dataclip_id) %>
         </span>
       </.link>
@@ -352,9 +342,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
       <span
         id={"view-dataclip-#{@work_order.dataclip_id}-for-#{@work_order.id}"}
         title={@work_order.dataclip_id}
-        class="font-normal text-xs whitespace-nowrap text-ellipsis
-              p-1 rounded-md font-mono text-indigo-300 cursor-pointer
-              "
+        class="link-uuid"
         phx-hook="Tooltip"
         data-placement="right"
         data-allow-html="true"

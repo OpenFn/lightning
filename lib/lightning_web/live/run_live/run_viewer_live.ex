@@ -3,7 +3,6 @@ defmodule LightningWeb.RunLive.RunViewerLive do
   use LightningWeb.RunLive.Streaming, chunk_size: 100
 
   import LightningWeb.RunLive.Components
-  import LightningWeb.Components.Icons
 
   alias Lightning.Accounts.User
   alias Lightning.Policies.Permissions
@@ -41,15 +40,9 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                         navigate={
                           ~p"/projects/#{@project}/history?#{%{filters: %{workorder_id: run.work_order_id}}}"
                         }
-                        class="link link-plain"
+                        class="link-uuid"
                       >
-                        <span class="whitespace-nowrap text-ellipsis">
-                          <%= display_short_uuid(run.work_order_id) %>
-                        </span>
-                        <.icon
-                          name="hero-arrow-up-right"
-                          class="h-2 w-2 float-right"
-                        />
+                        <%= display_short_uuid(run.work_order_id) %>
                       </.link>
                     </:value>
                   </.list_item>
@@ -60,15 +53,9 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                         patch={
                           ~p"/projects/#{@project}/runs/#{run}?step=#{@selected_step_id || ""}"
                         }
-                        class="link link-plain text-ellipsis"
+                        class="link-uuid"
                       >
-                        <span class="whitespace-nowrap text-ellipsis">
-                          <%= display_short_uuid(run.id) %>
-                        </span>
-                        <.icon
-                          name="hero-arrow-up-right"
-                          class="h-2 w-2 float-right"
-                        />
+                        <%= display_short_uuid(run.id) %>
                       </.link>
                     </:value>
                   </.list_item>
