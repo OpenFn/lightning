@@ -19,8 +19,6 @@ export default (model: Flow.Model, newSelection: string | null) => {
   if (newSelection) {
     const selectedNode = model.nodes.find(n => n.id === newSelection);
     if (selectedNode) {
-      console.log(selectedNode);
-
       neighbours = getConnectedEdges([selectedNode], model.edges).reduce(
         (obj, next) => {
           obj[next.id] = true;
