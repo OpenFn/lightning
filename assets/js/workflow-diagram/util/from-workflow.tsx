@@ -25,7 +25,12 @@ function getEdgeLabel(edge: Lightning.Edge) {
   const { condition_label } = edge;
 
   const result = [
-    <span style={edgeLabelIconStyles(edge.condition_type)}>{label}</span>,
+    <span
+      key={`${edge.id}-icon`}
+      style={edgeLabelIconStyles(edge.condition_type)}
+    >
+      {label}
+    </span>,
   ];
 
   if (condition_label) {
@@ -33,7 +38,11 @@ function getEdgeLabel(edge: Lightning.Edge) {
       condition_label.length > 22
         ? condition_label.slice(0, 22) + '...'
         : condition_label;
-    result.push(<span style={edgeLabelTextStyles}>{l}</span>);
+    result.push(
+      <span key={`${edge.id}-label`} style={edgeLabelTextStyles}>
+        {l}
+      </span>
+    );
   }
 
   return result;

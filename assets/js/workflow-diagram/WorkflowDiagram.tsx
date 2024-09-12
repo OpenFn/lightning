@@ -11,7 +11,6 @@ import ReactFlow, {
 } from 'reactflow';
 import { useStore, StoreApi } from 'zustand';
 import { shallow } from 'zustand/shallow';
-import { ViewfinderCircleIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 import layout from './layout';
 import nodeTypes from './nodes';

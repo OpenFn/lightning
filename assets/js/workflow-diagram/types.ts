@@ -75,7 +75,9 @@ export type EdgeData = {
 export namespace Flow {
   export type Node = ReactFlow.Node<NodeData>;
 
-  export type Edge = ReactFlow.Edge<EdgeData>;
+  export type Edge = ReactFlow.Edge<EdgeData> & {
+    neighbour?: boolean; // temporary flag for styling
+  };
 
   export type Model = {
     nodes: Node[];
