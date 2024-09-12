@@ -245,23 +245,6 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         </a>
       </p>
     </div>
-    <%!-- <div class="w-100 text-xs text-right mt-1">
-      <a
-        href="#"
-        phx-click={JS.show(to: "#ai-assistant-disclaimer")}
-        class="text-primary-400 hover:text-primary-600"
-      >
-        About the AI Assistant
-      </a>
-      <a class="text-xs text-primary-400 ml-1 mr-1">|</a>
-      <a
-        href="#"
-        phx-click={JS.show(to: "#ai-assistant-disclaimer")}
-        class="text-primary-400 hover:text-primary-600"
-      >
-        Responsible AI Policy
-      </a>
-    </div> --%>
     """
   end
 
