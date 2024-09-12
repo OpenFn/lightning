@@ -63,7 +63,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
   def render(assigns) do
     ~H"""
-    <div id={@id} class="h-full">
+    <div id={@id} class="h-full relative">
       <%= if @action == :new and !@has_read_disclaimer do %>
         <.render_onboarding myself={@myself} can_edit_workflow={@can_edit_workflow} />
       <% else %>
@@ -197,20 +197,16 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
   defp render_onboarding(assigns) do
     ~H"""
-    <div class="flex flex-col items-center justify-center h-full relative">
-      <div class="text-center">
-        <p class="text-gray-700 font-medium mb-4">
-          All models are wrong. <br />- Joe Clark!
+    <div class="h-full flex flex-col">
+      <div class="flex-1 flex flex-col items-center justify-center relative">
+        <p class="text-gray-700 font-medium mb-4 w-1/2 text-center">
+          The AI Assistant is an experimental new feature to help you write job code.
+          <br />
+          <br />
+          Remember that you, the human in control, are responsible for how its output is used.
+          <br />
         </p>
-        <p class="text-xs mb-2">
-          <a
-            href="#"
-            phx-click={JS.show(to: "#ai-assistant-disclaimer")}
-            class="text-primary-600"
-          >
-            Learn more about AI Assistant
-          </a>
-        </p>
+
         <.button
           id="get-started-with-ai-btn"
           phx-click="mark_disclaimer_read"
@@ -219,8 +215,35 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         >
           Get started with the AI Assistant
         </.button>
+        <.render_disclaimer />
       </div>
-      <.render_disclaimer />
+      <.render_ai_footer />
+    </div>
+    """
+  end
+
+  defp render_ai_footer(assigns) do
+    ~H"""
+    <div class="flex w-100">
+      <p class="flex-1 text-xs mt-1 text-left ml-1">
+        <a
+          href="#"
+          phx-click={JS.show(to: "#ai-assistant-disclaimer")}
+          class="text-primary-400 hover:text-primary-600"
+        >
+          About the AI Assistant
+        </a>
+      </p>
+      <p class="flex-1 text-xs mt-1 text-right mr-1">
+        <a
+          href="https://www.openfn.org/ai"
+          target="_blank"
+          phx-click={JS.show(to: "#ai-assistant-disclaimer")}
+          class="text-primary-400 hover:text-primary-600"
+        >
+          OpenFn Responsible AI Policy
+        </a>
+      </p>
     </div>
     """
   end
@@ -233,47 +256,72 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
       <div class="h-full w-full overflow-y-auto">
         <div class="bg-gray-100 p-2 flex justify-between border-solid border-t-2 border-b-2">
           <span class="font-medium text-gray-700">
-            OpenFn AI Assistant Disclaimer
+            About the AI Assistant
           </span>
           <a href="#" phx-click={JS.hide(to: "##{@id}")}>
             <.icon name="hero-x-mark" class="h-5 w-5" />
           </a>
         </div>
         <div class="p-2 pt-4 text-sm flex flex-col gap-4">
-          <div>
-            <span class="font-medium">
-              Introduction:
-            </span>
-            <p>
-              OpenFn AI Assistant helps users to build workflows faster and better. Built on Claude Sonnet 3.5 from Anthropic, here are a few ways you can use the assistant to improve your job writing experience:
-              <ul class="list-disc list-inside pl-4">
-                <li>Prompt the AI to write a job for you</li>
-                <li>Proofread and debug your job code</li>
-                <li>Understand why you are seeing an error</li>
-              </ul>
-            </p>
-          </div>
           <p>
-            When you send a question to the AI, both the question and corresponding answer is stored with reference to the step. All collaborators within a project can see questions asked by other users.
-          </p>
-          <div>
-            <span class="font-medium">
-              Warning:
-            </span>
-            <p>
-              The assistant can sometimes provide incorrect or misleading responses based on the model. We recommend that you check the responses before applying them on real life data.
-            </p>
-          </div>
-          <p>
-            Please do not include real life data with personally identifiable information or sensitive business data in your queries. OpenFn sends all queries to Anthropic for response and will not be liable for any exposure due to your prompts
+            The OpenFn AI Assistant provides a chat interface with an AI Model to help you build workflows. It can:
+            <ul class="list-disc list-inside pl-4">
+              <li>Draft job code for you</li>
+              <li>Explain adaptor functions and how they are used</li>
+              <li>Proofread and debug your job code</li>
+              <li>Help understand why you are seeing an error</li>
+            </ul>
           </p>
 
+          <h2 class="font-bold">
+            Using The Assistant Safely
+          </h2>
           <p>
-            To learn more, please see our
-            <a href="#" target="_blank" class="text-primary-600">
-              Good Use of AI Policy
+            The AI assistant uses a third-party model to process chat messages. Messages may be saved on OpenFn and Anthropic servers.
+          </p>
+          <p>
+            Although we are constantly monitoring and improving the performance of the model, the Assistant can
+            sometimes provide incorrect or misleading responses. You should consider the responses critically and verify
+            the output where possible.
+          </p>
+          <p>
+            Remember that all responses are generated by an algorithm, and you are responsible for how its output is used.
+          </p>
+          <p>
+            Do not deploy autogenerated code in production environments without thorough testing.
+          </p>
+          <p>
+            Do not include real user data, personally identifiable information, or sensitive business data in your queries.
+          </p>
+          <h2 class="font-bold">
+            How it works
+          </h2>
+          <p>
+            The Assistant uses Claude Sonnet 3.5, by <a
+              href="https://www.anthropic.com/"
+              target="_blank"
+              class="text-primary-600"
+            >Anthropic</a>, a Large Language Model (LLM) designed with a commitment to safety and privacy.
+          </p>
+          <p>
+            Chat is saved with the Step and shared with all users with access to the Workflow.
+            All collaborators within a project can see questions asked by other users.
+          </p>
+          <p>
+            We include your step code in all queries sent to Claude, including some basic documentation,
+            ensuring the model is well informed and can see what you can see.
+            Note that we do not send input data or logs to Anthropic.
+          </p>
+          <h2 class="font-bold">Responsible AI Policy</h2>
+          <p>
+            Read about our approach to AI in the
+            <a
+              href="https://www.openfn.org/ai"
+              target="_blank"
+              class="text-primary-600"
+            >
+              OpenFn Responsible AI Policy
             </a>
-            here.
           </p>
         </div>
       </div>
@@ -311,7 +359,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         <.form
           for={@form}
           phx-submit="send_message"
-          class="row-span-1 p-2 pt-0"
+          class="row-span-1 pl-2 pr-2 pb-1"
           phx-target={@myself}
           id="ai-assistant-form"
         >
@@ -336,6 +384,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         </.form>
       </.async_result>
     </div>
+    <.render_disclaimer />
     """
   end
 
@@ -358,8 +407,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
   defp chat_input(assigns) do
     ~H"""
-    <div class="text-xs text-center italic">
-      Do not paste PPI or sensitive business data
+    <div class="text-xs text-center font-bold">
+      Do not paste PII or sensitive business data
     </div>
     <div class="w-full max-h-72 flex flex-row rounded-lg shadow-sm ring-1 ring-inset ring-gray-300 focus-within:ring-2 focus-within:ring-indigo-600">
       <label for={@form[:content].name} class="sr-only">
@@ -386,6 +435,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         </div>
       </div>
     </div>
+    <.render_ai_footer />
     """
   end
 
@@ -455,14 +505,23 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             id={"message-#{message.id}"}
             class="mr-auto p-2 rounded-lg break-words text-wrap flex flex-row gap-x-2 makeup-html"
           >
-            <div class="">
+            <div>
               <div class="rounded-full p-2 bg-indigo-200 text-indigo-700 ring-4 ring-white">
                 <.icon name="hero-cpu-chip" class="" />
               </div>
             </div>
 
             <div>
-              <%= message.content |> Earmark.as_html!() |> raw() %>
+              <div>
+                <%= message.content |> Earmark.as_html!() |> raw() %>
+              </div>
+              <!-- TODO: restore this message and add a link to the docs site -->
+              <%!-- <div
+                class="flex mt-1 text-xs text-gray-400 select-none"
+                title="This message was generated using Claude, an LLM by Anthropic, and has not been verified by human experts"
+              >
+                Read, review and verify
+              </div> --%>
             </div>
           </div>
         <% end %>
@@ -510,8 +569,11 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
   defp user_avatar(assigns) do
     ~H"""
-    <span class={"inline-flex #{@size_class} items-center justify-center rounded-full bg-gray-100"}>
-      <span class="text-xs leading-none text-black uppercase">
+    <span class={"inline-flex #{@size_class} items-center justify-center rounded-full bg-gray-100 "}>
+      <span
+        class="text-xs leading-none text-black uppercase select-none"
+        title={"#{@user.first_name} #{@user.last_name}"}
+      >
         <%= String.first(@user.first_name) %><%= String.first(@user.last_name) %>
       </span>
     </span>
