@@ -1271,61 +1271,199 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
   describe ".validate_reset_request/1" do
     setup do
       base_changes = %{
-        connect_timeout: 7,
-        hosts: [
-          ["host1", "9092"],
-          ["host2", "9093"]
-        ],
-        hosts_string: "host1:9092, host2:9093",
-        initial_offset_reset_policy: "earliest",
-        partition_timestamps: %{"1" => 1_717_174_749_123},
-        password: "password",
         reset_request: %{
           requested_at: ~U[2024-09-11 12:14:11.019240Z],
           reset_to: 1_723_633_665_366
-        },
-        sasl: "plain",
-        ssl: true,
-        topics: ["foo", "bar"],
-        topics_string: "foo, bar",
-        username: "username"
+        }
       }
 
-      valid_changeset =
-        KafkaConfiguration.changeset(%KafkaConfiguration{}, base_changes)
+      base_changeset =
+        change(%KafkaConfiguration{}, base_changes)
 
       error_message =
-        "must be a map with both `requested_at` and `reset_to` elements" <>
-          "populated or both set to nil"
+        "must be a map with both `requested_at` and `reset_to` elements " <>
+          "set to nil or `requested_at` a valid DateTime and " <>
+          "`reset_to` a positive integer"
 
       %{
         error_message: error_message,
-        valid_changeset: valid_changeset
+        base_changeset: base_changeset
       }
     end
 
-    test "is valid if both elements are set to nil", %{
-      valid_changeset: valid_changeset
+    test "is valid if reset_to is a timestamp and requested_at is a datetime", %{
+      base_changeset: base_changeset
     } do
       changeset =
-        valid_changeset
-        |> Changeset.put_change(
-          :reset_request,
-          %{requested_at: nil, reset_to: nil}
-        )
-
-      # TODO Check for case where reset_request is not in changeset
+        base_changeset
+        |> KafkaConfiguration.validate_reset_request()
 
       assert %Changeset{valid?: true} = changeset
     end
 
-    test "is invalid if reset_request is an empty map", %{
-      error_message: error_message,
-      valid_changeset: valid_changeset
+    test "is valid if both elements are set to nil" do
+      config =
+        %KafkaConfiguration{
+          reset_request: %{
+            requested_at: ~U[2024-09-11 12:14:11.019240Z],
+            reset_to: 1_723_633_665_366
+          }
+        }
+
+      changeset =
+        config
+        |> Changeset.change(%{
+          reset_request: %{
+            requested_at: nil,
+            reset_to: nil
+          }
+        })
+        |> KafkaConfiguration.validate_reset_request()
+
+      assert %Changeset{valid?: true} = changeset
+    end
+
+    test "is valid if there are no changes to the reset_request", %{
+      base_changeset: base_changeset
     } do
       changeset =
-        valid_changeset
+        base_changeset
+        |> Changeset.delete_change(:reset_request)
+        |> KafkaConfiguration.validate_reset_request()
+
+      assert %Changeset{valid?: true} = changeset
+    end
+
+    test "is invalid if requested_at is absent", %{
+      error_message: error_message,
+      base_changeset: base_changeset
+    } do
+      changeset =
+        base_changeset
+        |> Changeset.put_change(:reset_request, %{reset_to: 1_723_633_665_366})
+        |> KafkaConfiguration.validate_reset_request()
+
+      assert %Changeset{errors: errors, valid?: false} = changeset
+
+      assert errors == [reset_request: {error_message, []}]
+    end
+
+    test "is invalid if requested_at is nil", %{
+      error_message: error_message,
+      base_changeset: base_changeset
+    } do
+      changeset =
+        base_changeset
+        |> Changeset.put_change(
+          :reset_request,
+          %{requested_at: nil, reset_to: 1_723_633_665_366}
+        )
+        |> KafkaConfiguration.validate_reset_request()
+
+      assert %Changeset{errors: errors, valid?: false} = changeset
+
+      assert errors == [reset_request: {error_message, []}]
+    end
+
+    test "is invalid if reset_to is absent", %{
+      error_message: error_message,
+      base_changeset: base_changeset
+    } do
+      changeset =
+        base_changeset
+        |> Changeset.put_change(
+          :reset_request,
+          %{requested_at: ~U[2024-09-11 12:14:11.019240Z]}
+        )
+        |> KafkaConfiguration.validate_reset_request()
+
+      assert %Changeset{errors: errors, valid?: false} = changeset
+
+      assert errors == [reset_request: {error_message, []}]
+    end
+
+    test "is invalid if reset_to is nil", %{
+      error_message: error_message,
+      base_changeset: base_changeset
+    } do
+      changeset =
+        base_changeset
+        |> Changeset.put_change(
+          :reset_request,
+          %{requested_at: ~U[2024-09-11 12:14:11.019240Z], reset_to: nil}
+        )
+        |> KafkaConfiguration.validate_reset_request()
+
+      assert %Changeset{errors: errors, valid?: false} = changeset
+
+      assert errors == [reset_request: {error_message, []}]
+    end
+
+    test "is invalid if requested_at is not a datetime", %{
+      error_message: error_message,
+      base_changeset: base_changeset
+    } do
+      changeset =
+        base_changeset
+        |> Changeset.put_change(
+          :reset_request,
+          %{requested_at: "foo", reset_to: 1_723_633_665_366}
+        )
+        |> KafkaConfiguration.validate_reset_request()
+
+      assert %Changeset{errors: errors, valid?: false} = changeset
+
+      assert errors == [reset_request: {error_message, []}]
+    end
+
+    test "is invalid if reset_to is not an integer", %{
+      error_message: error_message,
+      base_changeset: base_changeset
+    } do
+      changeset =
+        base_changeset
+        |> Changeset.put_change(
+          :reset_request,
+          %{
+            requested_at: ~U[2024-09-11 12:14:11.019240Z],
+            reset_to: "foo"
+          }
+        )
+        |> KafkaConfiguration.validate_reset_request()
+
+      assert %Changeset{errors: errors, valid?: false} = changeset
+
+      assert errors == [reset_request: {error_message, []}]
+    end
+
+    test "is invalid if reset_to is negative", %{
+      error_message: error_message,
+      base_changeset: base_changeset
+    } do
+      changeset =
+        base_changeset
+        |> Changeset.put_change(
+          :reset_request,
+          %{
+            requested_at: ~U[2024-09-11 12:14:11.019240Z],
+            reset_to: -1
+          }
+        )
+        |> KafkaConfiguration.validate_reset_request()
+
+      assert %Changeset{errors: errors, valid?: false} = changeset
+
+      assert errors == [reset_request: {error_message, []}]
+    end
+
+    test "is invalid if reset_request is an empty map", %{
+      error_message: error_message,
+      base_changeset: base_changeset
+    } do
+      changeset =
+        base_changeset
         |> Changeset.put_change(:reset_request, %{})
+        |> KafkaConfiguration.validate_reset_request()
 
       assert %Changeset{errors: errors, valid?: false} = changeset
 

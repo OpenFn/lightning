@@ -329,18 +329,26 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
 
   def validate_reset_request(changeset) do
     error_message =
-      "must be a map with both `requested_at` and `reset_to` elements" <>
-        "populated or both set to nil"
+      "must be a map with both `requested_at` and `reset_to` elements " <>
+        "set to nil or `requested_at` a valid DateTime and " <>
+        "`reset_to` a positive integer"
 
     changeset
     |> get_change(:reset_request)
-    |> IO.inspect()
     |> case do
+      nil ->
+        changeset
+
       %{requested_at: nil, reset_to: nil} ->
         changeset
+
+      %{requested_at: %DateTime{}, reset_to: reset_to}
+      when is_integer(reset_to) and reset_to > 0 ->
+        changeset
+
       _ ->
-      changeset
-      |> add_error(:reset_request, error_message)
+        changeset
+        |> add_error(:reset_request, error_message)
     end
   end
 
