@@ -164,4 +164,8 @@ defmodule Lightning.Workflows.Trigger do
   def kafka_partitions_changeset(trigger, _partition, _timestamp) do
     change(trigger, %{})
   end
+
+  def kafka_reset_request_changeset(trigger, _reset_to, _requested_at) do
+    change(trigger, %{})
+  end
 end

@@ -222,4 +222,35 @@ defmodule Lightning.Workflows.TriggerTest do
       assert changes == %{}
     end
   end
+
+  describe ".reset_request_changeset" do
+    test "returns changeset with changes to kafka configuration" do
+      reset_to = 1_723_633_665_366
+      requested_at = ~U[2024-09-12 12:00:00]
+
+      trigger =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: build(:triggers_kafka_configuration)
+        )
+
+      changeset =
+        trigger
+        |> Trigger.reset_request_changeset(reset_to, requested_at)
+
+      expected_request_reset = %{
+        requested_at: requested_at,
+        reset_to: reset_to
+      }
+
+      assert %Changeset{valid?: true, changes: changes} = changeset
+
+      assert %{
+               kafka_configuration: %{
+                 changes: %{reset_request: ^expected_request_reset}
+               }
+             } = changes
+    end
+  end
 end

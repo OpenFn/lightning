@@ -392,8 +392,15 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
         |> build_broadway_message()
         |> Broadway.Message.failed(:who_knows)
 
+      trigger =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: build(:triggers_kafka_configuration)
+        )
+
       %{
-        context: %{trigger_id: "my_trigger_id"},
+        context: %{trigger_id: trigger.id},
         messages: [message_1, message_2],
         timestamps: [timestamp_1, timestamp_2]
       }
@@ -477,6 +484,36 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       }
     end
 
+    test "persists reset request on a persistence failure", %{
+      context: context,
+      messages: [message_1, message_2],
+    } do
+      %{trigger_id: trigger_id} = context
+
+      timestamp = 1_723_633_665_366
+
+      persistence_failed_message =
+        [offset: 3, timestamp: timestamp]
+        |> build_broadway_message()
+        |> Broadway.Message.failed(:persistence)
+
+      messages = [message_1, persistence_failed_message, message_2]
+
+      Events.subscribe_to_kafka_trigger_events()
+
+      Pipeline.handle_failed(messages, context)
+
+      %{kafka_configuration: %{reset_request: reset_request}} =
+        Trigger |> Repo.get(trigger_id)
+
+      %{"requested_at" => requested_at, "reset_to" => reset_to} = reset_request
+
+      requested_at_window = DateTime.add(DateTime.utc_now(), 3, :second)
+
+      assert reset_to == timestamp
+      assert DateTime.compare(requested_at, requested_at_window) == :gt
+    end
+
     defp expected_duplicate_log_message(message, context) do
       "Kafka Pipeline Duplicate Message:" <>
         " Trigger_id `#{context.trigger_id}`" <>
@@ -508,6 +545,53 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
         trigger_id: context.trigger_id,
         type: type
       }
+    end
+  end
+
+  describe ".persist_reset_information/2" do
+    setup do
+      timestamp = 1_715_164_718_281
+
+      message =
+        [offset: 1, timestamp: timestamp]
+        |> build_broadway_message()
+
+      trigger =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: build(:triggers_kafka_configuration)
+        )
+
+      %{
+        context: %{trigger_id: trigger.id},
+        message: message,
+        timestamp: timestamp
+      }
+    end
+
+    test "persists reset information if processing failed due to persistence", %{
+      context: context,
+      message: message,
+      timestamp: timestamp,
+    } do
+      %{trigger_id: trigger_id} = context
+
+      failed_message =
+        message
+        |> Broadway.Message.failed(:persistence)
+
+      Pipeline.persist_reset_information(failed_message, context)
+
+      %{kafka_configuration: %{reset_request: reset_request}} =
+        Trigger |> Repo.get(trigger_id)
+
+      %{"requested_at" => requested_at, "reset_to" => reset_to} = reset_request
+
+      requested_at_window = DateTime.add(DateTime.utc_now(), 3, :second)
+
+      assert reset_to == timestamp
+      assert DateTime.compare(requested_at, requested_at_window) == :gt
     end
   end
 

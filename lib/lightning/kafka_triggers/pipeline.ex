@@ -12,6 +12,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
   alias Lightning.KafkaTriggers
   alias Lightning.KafkaTriggers.MessageHandling
   alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
+  alias Lightning.Repo
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Triggers.Events
 
@@ -148,6 +149,16 @@ defmodule Lightning.KafkaTriggers.Pipeline do
   end
 
   defp publish_failure_event(_message, _context), do: nil
+
+  def persist_reset_information(message, %{trigger_id: trigger_id}) do
+    %{metadata: %{ts: timestamp}} = message
+
+    trigger = Trigger |> Repo.get(trigger_id)
+
+    trigger
+    |> Trigger.kafka_reset_request_changeset(timestamp, DateTime.utc_now)
+    |> Repo.update()
+  end
 
   defp create_log_entry(%{status: {:failed, :duplicate}} = message, context) do
     %{
