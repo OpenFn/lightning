@@ -1038,15 +1038,11 @@
         <div class="flex justify-between content-center pb-2">
           <div class="leading-loose">
             <h6 class="font-medium text-black">
-              View and download work order history for this project
+              History Exports
             </h6>
             <small class="block text-xs text-gray-600">
-              All requested work order history exports for this project are listed in this table.
+              View export status and download work order history for this project.
             </small>
-            <.permissions_message
-              :if={!@can_create_project_credential}
-              section="available credentials."
-            />
           </div>
         </div>
         <div class="my-6">
@@ -1086,7 +1082,7 @@
               label_class="text-gray-700 uppercase"
               label="Status"
             >
-              <%= file.status |> Atom.to_string() |> String.capitalize() %>
+              <%= format_export_status(file.status) %>
             </:col>
             <:col :let={file}>
               <%= if file.status == :completed do %>

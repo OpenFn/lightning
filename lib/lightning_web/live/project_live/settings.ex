@@ -694,4 +694,11 @@ defmodule LightningWeb.ProjectLive.Settings do
         error
     end
   end
+
+  defp format_export_status(status) do
+    status
+    |> Atom.to_string()
+    |> String.replace("_", " ")
+    |> String.capitalize()
+  end
 end

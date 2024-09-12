@@ -21,6 +21,8 @@ and this project adheres to
 
 - Responsible AI review of AI Assistant
   [#2478](https://github.com/OpenFn/lightning/pull/2478)
+- Improve history export page UI
+  [#2442](https://github.com/OpenFn/lightning/issues/2442)
 
 ### Fixed
 

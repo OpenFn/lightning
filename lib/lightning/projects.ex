@@ -856,9 +856,12 @@ defmodule Lightning.Projects do
     end)
   end
 
-  def list_project_files(%Project{id: project_id}) do
+  def list_project_files(%Project{id: project_id}, opts \\ []) do
+    sort_order = Keyword.get(opts, :sort, :desc)
+
     from(pf in __MODULE__.File,
       where: pf.project_id == ^project_id,
+      order_by: [{^sort_order, pf.inserted_at}],
       preload: [:created_by]
     )
     |> Repo.all()
