@@ -1,7 +1,10 @@
-export default specifier => {
-  if (specifier) {
-    const [prefix, name] = specifier.match(/@openfn.language-(.+)@/);
-    return name || 'unknown';
+export default (specifier: string) => {
+  if (specifier && specifier.startsWith('@openfn/language')) {
+    const result = specifier.match(/@openfn\/language-(.+)@/);
+    if (result) {
+      const [_prefix, name] = result;
+      return name || 'unknown';
+    }
   }
-  return '';
+  return specifier ?? '';
 };

@@ -11,7 +11,6 @@ import ReactFlow, {
 } from 'reactflow';
 import { useStore, StoreApi } from 'zustand';
 import { shallow } from 'zustand/shallow';
-import { ViewfinderCircleIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 import layout from './layout';
 import nodeTypes from './nodes';
@@ -32,13 +31,17 @@ type WorkflowDiagramProps = {
   selection: string | null;
   onSelectionChange: (id: string | null) => void;
   store: StoreApi<WorkflowState>;
+  forceFit?: boolean;
 };
 
 type ChartCache = {
   positions: Positions;
   lastSelection: string | null;
   lastLayout?: string;
+  layoutDuration?: number;
 };
+
+const LAYOUT_DURATION = 300;
 
 export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
   (props, ref) => {
@@ -108,12 +111,13 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
             width: ref?.clientWidth ?? 0,
             height: ref?.clientHeight ?? 0,
           };
-          layout(newModel, setModel, flow, viewBounds, { duration: 300 }).then(
-            positions => {
-              // Note we don't update positions until the animation has finished
-              chartCache.current.positions = positions;
-            }
-          );
+          layout(newModel, setModel, flow, viewBounds, {
+            duration: props.layoutDuration ?? LAYOUT_DURATION,
+            forceFit: props.forceFit,
+          }).then(positions => {
+            // Note we don't update positions until the animation has finished
+            chartCache.current.positions = positions;
+          });
         } else {
           // If layout is id, ensure nodes have positions
           // This is really only needed when there's a single trigger node
@@ -229,7 +233,6 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
     }, [flow, ref, model]);
 
     const connectHandlers = useConnect(model, setModel, store);
-
     return (
       <ReactFlowProvider>
         <ReactFlow

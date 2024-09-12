@@ -9,6 +9,7 @@ import { getVisibleRect, isPointInRect } from './util/viewport';
 export type LayoutOpts = {
   duration?: number | false;
   autofit?: boolean | Flow.Node[];
+  forceFit?: boolean;
 };
 
 const calculateLayout = async (
@@ -130,6 +131,12 @@ const calculateLayout = async (
     await animate(model, newModel, update, flow, { duration, autofit });
   } else {
     update(newModel);
+
+    // Force a fit in (ugly but fine for testing purposes)
+    if (options.forceFit)
+      setTimeout(() => {
+        flow.fitView();
+      }, 20);
   }
 
   return finalPositions;

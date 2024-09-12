@@ -6,7 +6,6 @@ export default props => {
   const { fromX, fromY, toX, toY } = props;
   return (
     <BezierEdge
-      id="tmp"
       sourceX={fromX}
       sourceY={fromY}
       targetX={toX}

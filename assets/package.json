@@ -5,7 +5,8 @@
   "scripts": {
     "start": "node dev-server.mjs",
     "test": "npx ava ./test/index.test.ts",
-    "test-report": "npx ava --tap ./test/index.test.ts | tap-xunit > ../test/reports/ava.xml"
+    "test-report": "npx ava --tap ./test/index.test.ts | tap-xunit > ../test/reports/ava.xml",
+    "test:snapshots": "TS_NODE_TRANSPILE_ONLY=1 ts-node --project tsconfig.json test/workflow-snapshots.tsx"
   },
   "license": "LGPLv3",
   "dependencies": {
@@ -41,6 +42,7 @@
     "@types/react-dom": "^18.0.6",
     "ava": "^5.1.0",
     "esbuild": "^0.17.18",
+    "puppeteer": "^23.0.2",
     "tap-xunit": "^2.4.1",
     "ts-node": "^10.9.1"
   },
