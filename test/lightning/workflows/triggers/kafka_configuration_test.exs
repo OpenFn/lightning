@@ -654,16 +654,6 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
       assert %Changeset{errors: errors, valid?: false} = changeset
 
       assert [reset_request: {_message, []}] = errors
-      # assert errors == [
-      #          connect_timeout: {
-      #            "must be greater than %{number}",
-      #            [
-      #              {:validation, :number},
-      #              {:kind, :greater_than},
-      #              {:number, 0}
-      #            ]
-      #          }
-      #        ]
     end
   end
 
