@@ -222,6 +222,20 @@ defmodule Lightning.Accounts.User do
   end
 
   @doc """
+  A user changeset for basic information:
+
+  - first_name
+  - last_name
+  - contact_preference
+  """
+  def info_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:first_name, :last_name, :contact_preference])
+    |> validate_name()
+    |> trim_name()
+  end
+
+  @doc """
   A user changeset for changing the email.
 
   It requires the email to change otherwise an error is added.

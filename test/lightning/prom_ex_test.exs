@@ -44,7 +44,7 @@ defmodule Lightning.PromExTest do
       {PromEx.Plugins.Phoenix,
        router: LightningWeb.Router, endpoint: LightningWeb.Endpoint},
       PromEx.Plugins.Ecto,
-      PromEx.Plugins.Oban,
+      {PromEx.Plugins.Oban, [oban_supervisors: [Lightning.Oban]]},
       PromEx.Plugins.PhoenixLiveView,
       {
         Lightning.Runs.PromExPlugin,

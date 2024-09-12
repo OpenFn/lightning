@@ -509,7 +509,7 @@ defmodule LightningWeb.Components.Common do
       >
         <li
           :for={item <- @items}
-          class="group relative cursor-pointer select-none py-2 px-3 text-sm"
+          class="group relative cursor-pointer select-none py-2 px-3 text-sm flex items-center"
           id={"option-#{item.id}"}
           role="option"
           tabindex="0"
@@ -518,16 +518,16 @@ defmodule LightningWeb.Components.Common do
           data-url={@url_func.(item)}
         >
           <span class={[
-            "font-normal block truncate",
+            "font-normal truncate flex-grow mr-6",
             "group-data-[item-selected]:font-semibold"
           ]}>
             <%= item.name %>
           </span>
           <span class={[
-            "absolute inset-y-0 right-0 items-center pr-4",
-            "flex group-[&:not([data-item-selected])]:hidden"
+            "flex-shrink-0 ml-auto",
+            "group-[&:not([data-item-selected])]:hidden"
           ]}>
-            <.icon name="hero-check" />
+            <.icon name="hero-check" class="w-5 h-5" />
           </span>
         </li>
       </ul>

@@ -19,10 +19,32 @@ and this project adheres to
 
 ### Changed
 
+- Responsible AI review of AI Assistant
+  [#2478](https://github.com/OpenFn/lightning/pull/2478)
+
 ### Fixed
 
 - Fix AI Assitant crashes on a job that is not saved yet
   [#2479](https://github.com/OpenFn/lightning/issues/2479)
+- Fix jumpy combobox for scope switcher
+  [#2469](https://github.com/OpenFn/lightning/issues/2469)
+
+## [v2.9.3] - 2024-09-11
+
+### Added
+
+- Add utility module to seed a DB to support query performance analysis.
+  [#2441](https://github.com/OpenFn/lightning/issues/2441)
+
+### Changed
+
+- Enhance user profile page to add a section for updating basic information
+  [#2470](https://github.com/OpenFn/lightning/pull/2470)
+- Upgraded Heroicons to v2.1.5, from v2.0.18
+  [#2483](https://github.com/OpenFn/lightning/pull/2483)
+- Standardize `link-uuid` style for uuid chips
+- Updated PromEx configuration to align with custom Oban naming.
+  [#2488](https://github.com/OpenFn/lightning/issues/2488)
 
 ## [v2.9.2] - 2024-09-09
 
@@ -38,6 +60,31 @@ and this project adheres to
 - Provisioner creates invalid snapshots when doing CLI deploy
   [#2461](https://github.com/OpenFn/lightning/issues/2461)
   [#2460](https://github.com/OpenFn/lightning/issues/2460)
+
+  > This is a fix for future Workflow updates that are deployed by the CLI and
+  > Github integrations. Unfortunately, there is a high likelihood that your
+  > existing snapshots could be incorrect (e.g. missing steps, missing edges).
+  > In order to fix this, you will need to manually create new snapshots for
+  > each of your workflows. This can be done either by modifying the workflow in
+  > the UI and saving it. Or running a command on the running instance:
+  >
+  > ```elixir
+  > alias Lightning.Repo
+  > alias Lightning.Workflows.{Workflow, Snapshot}
+  >
+  > Repo.transaction(fn ->
+  >   snapshots =
+  >     Repo.all(Workflow)
+  >     |> Enum.map(&Workflow.touch/1)
+  >     |> Enum.map(&Repo.update!/1)
+  >     |> Enum.map(fn workflow ->
+  >       {:ok, snapshot} = Snapshot.create(workflow)
+  >       snapshot
+  >     end)
+  >
+  >  {:ok, snapshots}
+  > end)
+  > ```
 
 ## [v2.9.0] - 2024-09-06
 

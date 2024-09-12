@@ -20,6 +20,15 @@ config :tesla, Lightning.UsageTracking.GithubClient, adapter: Tesla.Mock
 # to provide built-in test partitioning in CI environment.
 # Run `mix help test` for more information.
 #
+
+# If we are running a performance test, set the ownership timeout to infinity.
+ownership_timeout =
+  if System.get_env("PERFORMANCE_TEST") do
+    :infinity
+  else
+    120_000
+  end
+
 # On certain machines we get db queue timeouts, so we raise `queue_target`
 # from 50 to 100 to give the DBConnection some room to respond.
 config :lightning, Lightning.Repo,
@@ -29,7 +38,8 @@ config :lightning, Lightning.Repo,
   database: "lightning_test#{System.get_env("MIX_TEST_PARTITION")}",
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: 15,
-  queue_target: 100
+  queue_target: 100,
+  ownership_timeout: ownership_timeout
 
 config :lightning, Lightning.Vault,
   primary_encryption_key: "M1zzWU6Ego6jV/FUS7e/sj7yF9kRIutgR8uLQ9czrVc="
