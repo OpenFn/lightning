@@ -21,6 +21,8 @@ and this project adheres to
 
 - Responsible AI review of AI Assistant
   [#2478](https://github.com/OpenFn/lightning/pull/2478)
+- Improve history export page UI
+  [#2442](https://github.com/OpenFn/lightning/issues/2442)
 
 ### Fixed
 
@@ -45,8 +47,6 @@ and this project adheres to
 - Standardize `link-uuid` style for uuid chips
 - Updated PromEx configuration to align with custom Oban naming.
   [#2488](https://github.com/OpenFn/lightning/issues/2488)
-- Improve history export page UI
-  [#2442](https://github.com/OpenFn/lightning/issues/2442)
 
 ## [v2.9.2] - 2024-09-09
 
