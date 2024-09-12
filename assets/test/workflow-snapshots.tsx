@@ -1,5 +1,5 @@
 import puppeteer from 'puppeteer';
-
+import path from 'node:path';
 import esbuild from 'esbuild';
 import { copy } from 'esbuild-plugin-copy';
 import postcss from 'esbuild-postcss';
@@ -55,12 +55,14 @@ async function test() {
   await wait(200);
 
   const chart = await page.$('.react-flow__pane');
+  let p;
   while (true) {
     const sel = await page.$('#select-workflow');
     const id = await page.evaluate(el => el.value, sel);
-    console.log(id);
+    p = path.resolve(`tmp/${id}.png`)
+    console.log('snapshotting', id);
     await chart.screenshot({
-      path: `tmp/${id}.png`,
+      path: p,
     });
 
     const nextButton = await page.$('#next-workflow');
@@ -76,6 +78,8 @@ async function test() {
   // await browser.close();
 
   console.log(' >> done!');
+  console.log();
+  console.log('See snapshots at ', path.dirname(p))
   process.exit(0);
 }
 
