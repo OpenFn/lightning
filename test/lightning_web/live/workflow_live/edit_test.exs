@@ -1590,6 +1590,63 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     end
 
     @tag email: "user@openfn.org"
+    test "submit btn is disabled in case the job isnt saved yet", %{
+      conn: conn,
+      project: project,
+      user: user,
+      workflow: %{jobs: [job_1 | _]} = workflow
+    } do
+      apollo_endpoint = "http://localhost:4001"
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> apollo_endpoint
+        :openai_api_key -> "openai_api_key"
+      end)
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        fn
+          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
+            {:ok, %Tesla.Env{status: 200}}
+        end
+      )
+
+      # insert session so that the onboarding flow is not displayed
+      insert(:chat_session, user: user, job: job_1)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      # add job to ui
+      job_id = Ecto.UUID.generate()
+      push_patches_to_view(view, [add_job_patch("new job", job_id)])
+
+      # open inspector
+      select_node(view, %{id: job_id})
+      view |> element("a#open-inspector-#{job_id}") |> render_click()
+
+      render_async(view)
+
+      assert view
+             |> form("#ai-assistant-form")
+             |> has_element?()
+
+      input_element = element(view, "#ai-assistant-form textarea")
+      submit_btn = element(view, "#ai-assistant-form-submit-btn")
+
+      assert has_element?(input_element)
+      assert render(input_element) =~ "disabled=\"disabled\""
+      assert has_element?(submit_btn)
+      assert render(submit_btn) =~ "disabled=\"disabled\""
+
+      assert has_element?(view, "#ai-assistant-form-submit-btn-tooltip")
+
+      assert view |> element("#ai-assistant-form-submit-btn-tooltip") |> render() =~
+               "Save the job first in order to use the AI Assistant"
+    end
+
+    @tag email: "user@openfn.org"
     test "users can start a new session", %{
       conn: conn,
       project: project,

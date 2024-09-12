@@ -24,9 +24,11 @@ and this project adheres to
 
 ### Fixed
 
+- Fix AI Assitant crashes on a job that is not saved yet
+  [#2479](https://github.com/OpenFn/lightning/issues/2479)
 - Fix jumpy combobox for scope switcher
   [#2469](https://github.com/OpenFn/lightning/issues/2469)
-  
+
 ## [v2.9.3] - 2024-09-11
 
 ### Added

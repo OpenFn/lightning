@@ -841,6 +841,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     ~H"""
     <.link
+      id={"open-inspector-#{@job.id}"}
       patch={"#{@base_url}?s=#{@job.id}&m=expand" <> (if @snapshot_lock_version, do: "&v=#{@snapshot_lock_version}", else: "") <> (if @selected_run, do: "&a=#{@selected_run}", else: "")}
       class={@button_classes}
     >

@@ -376,10 +376,18 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
           <.chat_input
             form={@form}
             disabled={
-              !@can_edit_workflow or @ai_limit_result != :ok or !endpoint_available? or
+              !@can_edit_workflow or has_reached_limit?(@ai_limit_result) or
+                job_is_unsaved?(@selected_job) or
+                !endpoint_available? or
                 !is_nil(@pending_message.loading)
             }
-            tooltip={disabled_tooltip_message(@can_edit_workflow, @ai_limit_result)}
+            tooltip={
+              disabled_tooltip_message(
+                @can_edit_workflow,
+                @ai_limit_result,
+                @selected_job
+              )
+            }
           />
         </.form>
       </.async_result>
@@ -388,13 +396,24 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     """
   end
 
-  defp disabled_tooltip_message(can_edit_workflow, ai_limit_result) do
-    case {can_edit_workflow, ai_limit_result} do
-      {false, _} ->
+  defp has_reached_limit?(ai_limit_result) do
+    ai_limit_result != :ok
+  end
+
+  defp job_is_unsaved?(selected_job) do
+    selected_job.__meta__.state == :built
+  end
+
+  defp disabled_tooltip_message(can_edit_workflow, ai_limit_result, selected_job) do
+    case {can_edit_workflow, ai_limit_result, selected_job} do
+      {false, _, _} ->
         "You are not authorized to use the Ai Assistant"
 
-      {_, {:error, _reason, _msg} = error} ->
+      {_, {:error, _reason, _msg} = error, _} ->
         error_message(error)
+
+      {_, _, %{__meta__: %{state: :built}}} ->
+        "Save the job first in order to use the AI Assistant"
 
       _ ->
         nil
