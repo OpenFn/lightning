@@ -17,18 +17,36 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+- Responsible AI review of AI Assistant
+  [#2478](https://github.com/OpenFn/lightning/pull/2478)
+
+### Fixed
+
+- Fix AI Assitant crashes on a job that is not saved yet
+  [#2479](https://github.com/OpenFn/lightning/issues/2479)
+- Fix jumpy combobox for scope switcher
+  [#2469](https://github.com/OpenFn/lightning/issues/2469)
+
+## [v2.9.3] - 2024-09-11
+
+### Added
+
 - Add utility module to seed a DB to support query performance analysis.
   [#2441](https://github.com/OpenFn/lightning/issues/2441)
 
 ### Changed
 
+- Enhance user profile page to add a section for updating basic information
+  [#2470](https://github.com/OpenFn/lightning/pull/2470)
+- Upgraded Heroicons to v2.1.5, from v2.0.18
+  [#2483](https://github.com/OpenFn/lightning/pull/2483)
 - Standardize `link-uuid` style for uuid chips
 - Updated PromEx configuration to align with custom Oban naming.
   [#2488](https://github.com/OpenFn/lightning/issues/2488)
 - Improve history export page UI
   [#2442](https://github.com/OpenFn/lightning/issues/2442)
-
-### Fixed
 
 ## [v2.9.2] - 2024-09-09
 

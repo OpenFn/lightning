@@ -389,6 +389,14 @@ defmodule Lightning.Accounts do
     |> Repo.update()
   end
 
+  def change_user_info(%User{} = user, attrs \\ %{}) do
+    User.info_changeset(user, attrs)
+  end
+
+  def update_user_info(%User{} = user, attrs) do
+    change_user_info(user, attrs) |> Repo.update()
+  end
+
   ## Settings
 
   @doc """
@@ -510,7 +518,7 @@ defmodule Lightning.Accounts do
     )
   end
 
-  def validate_change_user_email(user, params) do
+  def validate_change_user_email(user, params \\ %{}) do
     data = %{email: nil, current_password: nil}
     types = %{email: :string, current_password: :string}
 
