@@ -1566,7 +1566,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   # The manual_run_submit event is for create a new work order from a dataclip and
   # a job.
-  def handle_event("manual_run_submit", %{"manual" => params}, socket) do
+  def handle_event("manual_run_submit", params, socket) do
     %{
       project: project,
       selected_job: selected_job,
@@ -1577,8 +1577,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
       snapshot_version_tag: tag,
       has_presence_edit_priority: has_presence_edit_priority,
       changeset: changeset,
-      workflow: workflow
+      workflow: workflow,
+      manual_run_form: form
     } = socket.assigns
+
+    manual_params = Map.get(params, "manual", %{})
+
+    params = Map.merge(form.params, manual_params)
 
     socket = socket |> apply_params(workflow_params, :workflow)
 
@@ -1638,10 +1643,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
       {:error, %{text: message}} ->
         {:noreply, put_flash(socket, :error, message)}
     end
-  end
-
-  def handle_event("manual_run_submit", _params, socket) do
-    {:noreply, socket}
   end
 
   @impl true
