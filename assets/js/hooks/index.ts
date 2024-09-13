@@ -18,6 +18,33 @@ export {
   TabbedPanels,
 };
 
+export const EnableSelectForSubmission = {
+  mounted() {
+    this.wasDisabled = this.el.disabled;
+
+    const form = this.el.closest('form');
+    if (!form) {
+      console.error('No form found');
+      return;
+    }
+
+    form.addEventListener('submit', () => {
+      if (this.wasDisabled) {
+        this.el.disabled = false;
+        setTimeout(() => {
+          this.el.disabled = true;
+        }, 0);
+      }
+    });
+  },
+
+  updated() {
+    this.wasDisabled = this.el.disabled;
+  },
+};
+
+export default EnableSelectForSubmission;
+
 export const Combobox = {
   mounted() {
     this.input = this.el.querySelector('input');

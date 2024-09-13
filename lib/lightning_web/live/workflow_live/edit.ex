@@ -328,8 +328,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           selected_dataclip_wiped?(
                             @manual_run_form,
                             @selectable_dataclips
-                          ) || @snapshot_version_tag != "latest" ||
-                          !@has_presence_edit_priority
+                          ) || @snapshot_version_tag != "latest"
                       }
                     >
                       <%= if processing(@follow_run) do %>
@@ -365,8 +364,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         aria-haspopup="true"
                         disabled={
                           @save_and_run_disabled ||
-                            @snapshot_version_tag != "latest" ||
-                            !@has_presence_edit_priority
+                            @snapshot_version_tag != "latest"
                         }
                         phx-click={show_dropdown("create-new-work-order")}
                       >
@@ -392,8 +390,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           form={@manual_run_form.id}
                           disabled={
                             @save_and_run_disabled ||
-                              @snapshot_version_tag != "latest" ||
-                              !@has_presence_edit_priority
+                              @snapshot_version_tag != "latest"
                           }
                         >
                           <.icon name="hero-play-solid" class="w-4 h-4 mr-1" />
@@ -1518,21 +1515,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
       current_user: current_user,
       changeset: changeset,
       project: %{id: project_id},
-      snapshot_version_tag: tag,
-      has_presence_edit_priority: has_presence_edit_priority
+      snapshot_version_tag: tag
     } = socket.assigns
 
     with true <- can_run_workflow? || :not_authorized,
          true <- tag == "latest" || :view_only,
-         true <-
-           has_presence_edit_priority ||
-             :presence_low_priority,
          :ok <-
            UsageLimiter.limit_action(%Action{type: :new_run}, %Context{
              project_id: project_id
            }),
-         {:ok, workflow} <-
-           Helpers.save_workflow(%{changeset | action: :update}),
+         {:ok, workflow} <- save_workflow_or_get_latest(socket),
          {:ok, run} <-
            WorkOrders.retry(run_id, step_id, created_by: current_user) do
       Runs.subscribe(run)
@@ -1569,11 +1561,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
         {:noreply,
          socket
          |> put_flash(:error, "Cannot rerun in snapshot mode, switch to latest.")}
-
-      :presence_low_priority ->
-        {:noreply,
-         socket
-         |> put_flash(:error, "Cannot rerun in view-only mode")}
     end
   end
 
@@ -1588,19 +1575,25 @@ defmodule LightningWeb.WorkflowLive.Edit do
       can_edit_workflow: can_edit_workflow,
       can_run_workflow: can_run_workflow,
       snapshot_version_tag: tag,
-      has_presence_edit_priority: has_presence_edit_priority
+      has_presence_edit_priority: has_presence_edit_priority,
+      changeset: changeset,
+      workflow: workflow
     } = socket.assigns
 
     socket = socket |> apply_params(workflow_params, :workflow)
 
+    workflow_or_changeset =
+      if has_presence_edit_priority do
+        changeset
+      else
+        get_workflow_by_id(workflow.id)
+      end
+
     with true <- (can_run_workflow && can_edit_workflow) || :not_authorized,
          true <- tag == "latest" || :view_only,
-         true <-
-           has_presence_edit_priority ||
-             :presence_low_priority,
          {:ok, %{workorder: workorder, workflow: workflow}} <-
-           Helpers.save_and_run(
-             socket.assigns.changeset,
+           Helpers.run_workflow(
+             workflow_or_changeset,
              params,
              project: project,
              selected_job: selected_job,
@@ -1641,11 +1634,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
         {:noreply,
          socket
          |> put_flash(:error, "Cannot run in snapshot mode, switch to latest.")}
-
-      :presence_low_priority ->
-        {:noreply,
-         socket
-         |> put_flash(:error, "Cannot run in view-only mode")}
 
       {:error, %{text: message}} ->
         {:noreply, put_flash(socket, :error, message)}
@@ -2288,5 +2276,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
       Save
     </Form.submit_button>
     """
+  end
+
+  defp save_workflow_or_get_latest(socket) do
+    if socket.assigns.has_presence_edit_priority do
+      Helpers.save_workflow(%{socket.assigns.changeset | action: :update})
+    else
+      {:ok, get_workflow_by_id(socket.assigns.workflow.id)}
+    end
   end
 end

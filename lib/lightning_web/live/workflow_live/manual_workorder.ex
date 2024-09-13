@@ -78,6 +78,7 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
           options={@dataclips |> Enum.map(&{&1.id, &1.id})}
           prompt="Create a new input"
           disabled={@disabled}
+          phx-hook="EnableSelectForSubmission"
         />
       </div>
     </div>
