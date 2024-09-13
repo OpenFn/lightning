@@ -486,7 +486,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
 
     test "persists reset request on a persistence failure", %{
       context: context,
-      messages: [message_1, message_2],
+      messages: [message_1, message_2]
     } do
       %{trigger_id: trigger_id} = context
 
@@ -499,19 +499,14 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
 
       messages = [message_1, persistence_failed_message, message_2]
 
-      Events.subscribe_to_kafka_trigger_events()
-
       Pipeline.handle_failed(messages, context)
 
       %{kafka_configuration: %{reset_request: reset_request}} =
         Trigger |> Repo.get(trigger_id)
 
-      %{"requested_at" => requested_at, "reset_to" => reset_to} = reset_request
-
-      requested_at_window = DateTime.add(DateTime.utc_now(), 3, :second)
+      %{"reset_to" => reset_to} = reset_request
 
       assert reset_to == timestamp
-      assert DateTime.compare(requested_at, requested_at_window) == :gt
     end
 
     defp expected_duplicate_log_message(message, context) do
@@ -573,7 +568,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
     test "persists reset information if processing failed due to persistence", %{
       context: context,
       message: message,
-      timestamp: timestamp,
+      timestamp: timestamp
     } do
       %{trigger_id: trigger_id} = context
 
@@ -586,12 +581,33 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       %{kafka_configuration: %{reset_request: reset_request}} =
         Trigger |> Repo.get(trigger_id)
 
-      %{"requested_at" => requested_at, "reset_to" => reset_to} = reset_request
+      requested_at_window = DateTime.add(DateTime.utc_now(), -3, :second)
 
-      requested_at_window = DateTime.add(DateTime.utc_now(), 3, :second)
+      %{"requested_at" => requested_at_string, "reset_to" => reset_to} =
+        reset_request
+
+      {:ok, requested_at, _offset} = DateTime.from_iso8601(requested_at_string)
 
       assert reset_to == timestamp
       assert DateTime.compare(requested_at, requested_at_window) == :gt
+    end
+
+    test "does not persist reset information for non-persistence failures", %{
+      context: context,
+      message: message
+    } do
+      %{trigger_id: trigger_id} = context
+
+      failed_message =
+        message
+        |> Broadway.Message.failed(:something_else)
+
+      Pipeline.persist_reset_information(failed_message, context)
+
+      %{kafka_configuration: %{reset_request: reset_request}} =
+        Trigger |> Repo.get(trigger_id)
+
+      %{"requested_at" => nil, "reset_to" => nil} = reset_request
     end
   end
 

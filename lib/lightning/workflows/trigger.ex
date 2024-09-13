@@ -165,6 +165,23 @@ defmodule Lightning.Workflows.Trigger do
     change(trigger, %{})
   end
 
+  def kafka_reset_request_changeset(
+        %{type: :kafka, kafka_configuration: kafka_configuration} = trigger,
+        reset_to,
+        requested_at
+      ) do
+    config_changes =
+      kafka_configuration
+      |> KafkaConfiguration.changeset(%{
+        reset_request: %{
+          requested_at: requested_at,
+          reset_to: reset_to
+        }
+      })
+
+    change(trigger, %{kafka_configuration: config_changes})
+  end
+
   def kafka_reset_request_changeset(trigger, _reset_to, _requested_at) do
     change(trigger, %{})
   end

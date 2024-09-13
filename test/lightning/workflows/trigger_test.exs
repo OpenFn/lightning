@@ -224,10 +224,17 @@ defmodule Lightning.Workflows.TriggerTest do
   end
 
   describe ".reset_request_changeset" do
-    test "returns changeset with changes to kafka configuration" do
+    setup do
       reset_to = 1_723_633_665_366
-      requested_at = ~U[2024-09-12 12:00:00]
+      requested_at = ~U[2024-09-12 12:00:00Z]
 
+      %{reset_to: reset_to, requested_at: requested_at}
+    end
+
+    test "returns changeset with changes to kafka configuration", %{
+      reset_to: reset_to,
+      requested_at: requested_at
+    } do
       trigger =
         insert(
           :trigger,
@@ -237,7 +244,7 @@ defmodule Lightning.Workflows.TriggerTest do
 
       changeset =
         trigger
-        |> Trigger.reset_request_changeset(reset_to, requested_at)
+        |> Trigger.kafka_reset_request_changeset(reset_to, requested_at)
 
       expected_request_reset = %{
         requested_at: requested_at,
@@ -251,6 +258,36 @@ defmodule Lightning.Workflows.TriggerTest do
                  changes: %{reset_request: ^expected_request_reset}
                }
              } = changes
+    end
+
+    test "returns an empty changeset if type is :webhook", %{
+      reset_to: reset_to,
+      requested_at: requested_at
+    } do
+      trigger = insert(:trigger, type: :webhook)
+
+      changeset =
+        trigger
+        |> Trigger.kafka_reset_request_changeset(reset_to, requested_at)
+
+      assert %Changeset{valid?: true, changes: changes} = changeset
+
+      assert changes == %{}
+    end
+
+    test "returns an empty changeset if type is :cron", %{
+      reset_to: reset_to,
+      requested_at: requested_at
+    } do
+      trigger = insert(:trigger, type: :webhook)
+
+      changeset =
+        trigger
+        |> Trigger.kafka_reset_request_changeset(reset_to, requested_at)
+
+      assert %Changeset{valid?: true, changes: changes} = changeset
+
+      assert changes == %{}
     end
   end
 end

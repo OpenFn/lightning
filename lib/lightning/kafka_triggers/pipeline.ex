@@ -131,6 +131,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
   def handle_failed(messages, context) do
     messages
     |> Enum.each(fn message ->
+      persist_reset_information(message, context)
       publish_failure_event(message, context)
       notify_sentry(message, context)
       create_log_entry(message, context)
@@ -150,15 +151,20 @@ defmodule Lightning.KafkaTriggers.Pipeline do
 
   defp publish_failure_event(_message, _context), do: nil
 
-  def persist_reset_information(message, %{trigger_id: trigger_id}) do
+  def persist_reset_information(
+        %{status: {:failed, :persistence}} = message,
+        %{trigger_id: trigger_id}
+      ) do
     %{metadata: %{ts: timestamp}} = message
 
     trigger = Trigger |> Repo.get(trigger_id)
 
     trigger
-    |> Trigger.kafka_reset_request_changeset(timestamp, DateTime.utc_now)
+    |> Trigger.kafka_reset_request_changeset(timestamp, DateTime.utc_now())
     |> Repo.update()
   end
+
+  def persist_reset_information(_message, _context), do: nil
 
   defp create_log_entry(%{status: {:failed, :duplicate}} = message, context) do
     %{
