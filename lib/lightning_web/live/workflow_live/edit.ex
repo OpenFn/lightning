@@ -1576,20 +1576,23 @@ defmodule LightningWeb.WorkflowLive.Edit do
       can_run_workflow: can_run_workflow,
       snapshot_version_tag: tag,
       has_presence_edit_priority: has_presence_edit_priority,
-      changeset: changeset,
       workflow: workflow,
       manual_run_form: form
     } = socket.assigns
 
     manual_params = Map.get(params, "manual", %{})
 
-    params = Map.merge(form.params, manual_params)
+    params =
+      case form do
+        nil -> manual_params
+        %{params: form_params} -> Map.merge(form_params, manual_params)
+      end
 
     socket = socket |> apply_params(workflow_params, :workflow)
 
     workflow_or_changeset =
       if has_presence_edit_priority do
-        changeset
+        socket.assigns.changeset
       else
         get_workflow_by_id(workflow.id)
       end
