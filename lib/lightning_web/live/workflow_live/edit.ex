@@ -306,99 +306,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     name="hero-lock-closed"
                     class="w-5 h-5 place-self-center text-gray-300"
                   />
-                  <div id="run-buttons" class="inline-flex rounded-md shadow-sm">
-                    <.button
-                      id="save-and-run"
-                      phx-hook="DefaultRunViaCtrlEnter"
-                      {if step_retryable?(@step, @manual_run_form, @selectable_dataclips), do:
-                        [type: "button", "phx-click": "rerun", "phx-value-run_id": @follow_run.id, "phx-value-step_id": @step.id],
-                      else:
-                          [type: "submit", form: @manual_run_form.id]}
-                      class={[
-                        "relative inline-flex items-center",
-                        step_retryable?(
-                          @step,
-                          @manual_run_form,
-                          @selectable_dataclips
-                        ) && "rounded-r-none"
-                      ]}
-                      disabled={
-                        @save_and_run_disabled ||
-                          processing(@follow_run) ||
-                          selected_dataclip_wiped?(
-                            @manual_run_form,
-                            @selectable_dataclips
-                          ) || @snapshot_version_tag != "latest"
-                      }
-                    >
-                      <%= if processing(@follow_run) do %>
-                        <.icon
-                          name="hero-arrow-path"
-                          class="w-4 h-4 animate-spin mr-1"
-                        /> Processing
-                      <% else %>
-                        <%= if step_retryable?(@step, @manual_run_form, @selectable_dataclips) do %>
-                          <.icon name="hero-play-mini" class="w-4 h-4 mr-1" />
-                          Retry from here
-                        <% else %>
-                          <.icon name="hero-play-mini" class="w-4 h-4 mr-1" />
-                          Create New Work Order
-                        <% end %>
-                      <% end %>
-                    </.button>
-                    <div
-                      :if={
-                        step_retryable?(
-                          @step,
-                          @manual_run_form,
-                          @selectable_dataclips
-                        )
-                      }
-                      class="relative -ml-px block"
-                    >
-                      <.button
-                        type="button"
-                        class="h-full rounded-l-none pr-1 pl-1 focus:ring-inset"
-                        id="option-menu-button"
-                        aria-expanded="true"
-                        aria-haspopup="true"
-                        disabled={
-                          @save_and_run_disabled ||
-                            @snapshot_version_tag != "latest"
-                        }
-                        phx-click={show_dropdown("create-new-work-order")}
-                      >
-                        <span class="sr-only">Open options</span>
-                        <.icon name="hero-chevron-down" class="w-4 h-4" />
-                      </.button>
-                      <div
-                        role="menu"
-                        aria-orientation="vertical"
-                        aria-labelledby="option-menu-button"
-                        tabindex="-1"
-                      >
-                        <button
-                          phx-click-away={hide_dropdown("create-new-work-order")}
-                          phx-hook="AltRunViaCtrlShiftEnter"
-                          id="create-new-work-order"
-                          type="submit"
-                          class={[
-                            "hidden absolute right-0 bottom-9 z-10 mb-2 w-max",
-                            "rounded-md bg-white px-4 py-2 text-sm font-semibold",
-                            "text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-                          ]}
-                          form={@manual_run_form.id}
-                          disabled={
-                            @save_and_run_disabled ||
-                              @snapshot_version_tag != "latest"
-                          }
-                        >
-                          <.icon name="hero-play-solid" class="w-4 h-4 mr-1" />
-                          Create New Work Order
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                  <.run_buttons
+                    confirm={!@has_presence_edit_priority}
+                    step={@step}
+                    manual_run_form={@manual_run_form}
+                    selectable_dataclips={@selectable_dataclips}
+                    follow_run={@follow_run}
+                    save_and_run_disabled={@save_and_run_disabled}
+                    snapshot_version_tag={@snapshot_version_tag}
+                  />
                   <.with_changes_indicator changeset={@changeset}>
                     <.save_workflow_button
                       changeset={@changeset}
@@ -661,7 +577,241 @@ defmodule LightningWeb.WorkflowLive.Edit do
           }
         />
       </div>
+      <.confirm_retry_step
+        :if={!@has_presence_edit_priority && @retrying_step}
+        id="confirm-retry-step-modal"
+        run={@follow_run.id}
+        step={@step.id}
+      />
+      <.confirm_create_workorder
+        :if={!@has_presence_edit_priority && @creating_workorder}
+        id="confirm-create-workorder-modal"
+        form={@manual_run_form.id}
+      />
     </LayoutComponents.page_content>
+    """
+  end
+
+  def run_buttons(assigns) do
+    ~H"""
+    <div id="run-buttons" class="inline-flex rounded-md shadow-sm">
+      <.save_and_run_button {assigns} />
+      <.create_new_work_order_dropdown
+        :if={step_retryable?(@step, @manual_run_form, @selectable_dataclips)}
+        {assigns}
+      />
+    </div>
+    """
+  end
+
+  defp save_and_run_button(assigns) do
+    ~H"""
+    <.button
+      id="save-and-run"
+      phx-hook="DefaultRunViaCtrlEnter"
+      {save_and_run_attributes(assigns)}
+      class={save_and_run_classes(assigns)}
+      disabled={
+        assigns.save_and_run_disabled ||
+          processing(assigns.follow_run) ||
+          selected_dataclip_wiped?(
+            assigns.manual_run_form,
+            assigns.selectable_dataclips
+          ) ||
+          assigns.snapshot_version_tag != "latest"
+      }
+    >
+      <%= if processing(@follow_run) do %>
+        <.icon name="hero-arrow-path" class="w-4 h-4 animate-spin mr-1" /> Processing
+      <% else %>
+        <%= if step_retryable?(@step, @manual_run_form, @selectable_dataclips) do %>
+          <.icon name="hero-play-mini" class="w-4 h-4 mr-1" /> Retry from here
+        <% else %>
+          <.icon name="hero-play-mini" class="w-4 h-4 mr-1" /> Create New Work Order
+        <% end %>
+      <% end %>
+    </.button>
+    """
+  end
+
+  defp save_and_run_attributes(assigns) do
+    cond do
+      assigns.confirm ->
+        [
+          type: "button",
+          "phx-click": "open_run_confirmation_modal",
+          "phx-value-confirmation_type":
+            if step_retryable?(assigns) do
+              "retry"
+            else
+              "new_workorder"
+            end
+        ]
+
+      step_retryable?(assigns) ->
+        [
+          type: "button",
+          "phx-click": "rerun",
+          "phx-value-run_id": assigns.follow_run.id,
+          "phx-value-step_id": assigns.step.id
+        ]
+
+      true ->
+        [type: "submit", form: assigns.manual_run_form.id]
+    end
+  end
+
+  defp save_and_run_classes(assigns) do
+    base_class = "relative inline-flex items-center"
+
+    if step_retryable?(assigns) do
+      [base_class, "rounded-r-none"]
+    else
+      [base_class]
+    end
+  end
+
+  defp create_new_work_order_dropdown(assigns) do
+    ~H"""
+    <div class="relative -ml-px block">
+      <.button
+        type="button"
+        class="h-full rounded-l-none pr-1 pl-1 focus:ring-inset"
+        id="option-menu-button"
+        aria-expanded="true"
+        aria-haspopup="true"
+        disabled={@save_and_run_disabled || @snapshot_version_tag != "latest"}
+        phx-click={show_dropdown("create-new-work-order")}
+      >
+        <span class="sr-only">Open options</span>
+        <.icon name="hero-chevron-down" class="w-4 h-4" />
+      </.button>
+      <div
+        role="menu"
+        aria-orientation="vertical"
+        aria-labelledby="option-menu-button"
+        tabindex="-1"
+      >
+        <button
+          phx-click-away={hide_dropdown("create-new-work-order")}
+          phx-hook="AltRunViaCtrlShiftEnter"
+          id="create-new-work-order"
+          {if @confirm, do: [type: "button",
+            "phx-click": "open_run_confirmation_modal",
+            "phx-value-confirmation_type": "new_workorder"
+          ], else: [type: "submit", form: @manual_run_form.id]}
+          class={[
+            "hidden absolute right-0 bottom-9 z-10 mb-2 w-max",
+            "rounded-md bg-white px-4 py-2 text-sm font-semibold",
+            "text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+          ]}
+          disabled={@save_and_run_disabled || @snapshot_version_tag != "latest"}
+        >
+          <.icon name="hero-play-solid" class="w-4 h-4 mr-1" /> Create New Work Order
+        </button>
+      </div>
+    </div>
+    """
+  end
+
+  defp confirm_retry_step(assigns) do
+    ~H"""
+    <.modal
+      id={@id}
+      show={true}
+      close_on_click_away={false}
+      close_on_keydown={false}
+      width="max-w-md"
+    >
+      <:title>
+        <div class="flex justify-between">
+          <span class="font-bold">
+            Retry
+          </span>
+
+          <button
+            phx-click={hide_modal(@id)}
+            type="button"
+            class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
+            aria-label={gettext("close")}
+          >
+            <span class="sr-only">Close</span>
+            <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
+          </button>
+        </div>
+      </:title>
+      <div class="px-6">
+        <p class="text-sm text-gray-500">
+          Retrying this step would create a run with the latest version of this step
+        </p>
+      </div>
+      <div class="flex flex-row-reverse gap-4 mx-6 mt-2">
+        <.button
+          id={"#{@id}_confirm_button"}
+          type="button"
+          phx-click="rerun"
+          phx-value-run_id={@run}
+          phx-value-step_id={@step}
+        >
+          Retry step from here
+        </.button>
+
+        <button
+          type="button"
+          phx-click={hide_modal(@id)}
+          class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+      </div>
+    </.modal>
+    """
+  end
+
+  defp confirm_create_workorder(assigns) do
+    ~H"""
+    <.modal
+      id={@id}
+      show={true}
+      close_on_click_away={false}
+      close_on_keydown={false}
+      width="max-w-md"
+    >
+      <:title>
+        <div class="flex justify-between">
+          <span class="font-bold">
+            Create a new workorder
+          </span>
+
+          <button
+            phx-click={hide_modal(@id)}
+            type="button"
+            class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
+            aria-label={gettext("close")}
+          >
+            <span class="sr-only">Close</span>
+            <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
+          </button>
+        </div>
+      </:title>
+      <div class="px-6">
+        <p class="text-sm text-gray-500">
+          Retrying this step would create a run with the latest version of this step
+        </p>
+      </div>
+      <div class="flex flex-row-reverse gap-4 mx-6 mt-2">
+        <.button id={"#{@id}_confirm_button"} type="submit" form={@form}>
+          Retry step from here
+        </.button>
+        <button
+          type="button"
+          phx-click={hide_modal(@id)}
+          class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+      </div>
+    </.modal>
     """
   end
 
@@ -708,6 +858,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp display_switcher(snapshot, workflow) do
     snapshot && snapshot.lock_version != workflow.lock_version
   end
+
+  defp step_retryable?(assigns),
+    do:
+      step_retryable?(
+        assigns.step,
+        assigns.manual_run_form,
+        assigns.selectable_dataclips
+      )
 
   defp step_retryable?(step, form, selectable_dataclips) do
     step_dataclip_id = step && step.input_dataclip_id
@@ -1205,6 +1363,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   @impl true
+  def handle_event(
+        "open_run_confirmation_modal",
+        %{"confirmation_type" => type},
+        socket
+      ) do
+    socket =
+      case type do
+        "retry" -> assign(socket, retrying_step: true)
+        "new_workorder" -> assign(socket, creating_workorder: true)
+      end
+
+    {:noreply, socket}
+  end
+
   def handle_event("get-initial-state", _params, socket) do
     {:noreply,
      socket
