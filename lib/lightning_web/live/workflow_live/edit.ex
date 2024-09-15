@@ -724,38 +724,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   defp confirm_retry_step(assigns) do
     ~H"""
-    <.modal
+    <.confirmation_modal
       id={@id}
-      show={true}
-      close_on_click_away={false}
-      close_on_keydown={false}
-      width="max-w-md"
+      title="Retry from here"
+      prior_user={@prior_user}
+      message="If you retry the step from here, the run will be created using the latest version of the job. Do you want to proceed?"
     >
-      <:title>
-        <div class="flex justify-between">
-          <span class="font-bold">
-            Retry from here
-          </span>
-
-          <button
-            phx-click="close_confirmation_modal"
-            type="button"
-            class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
-            aria-label={gettext("close")}
-          >
-            <span class="sr-only">Close</span>
-            <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
-          </button>
-        </div>
-      </:title>
-      <div class="px-6">
-        <p class="text-sm text-gray-500">
-          <%= @prior_user.first_name %> <%= @prior_user.last_name %> is currently working on this workflow.
-          If you retry the step from here, the run will be created using the latest version of the job.<br /><br />
-          Do you wanna proceed ?
-        </p>
-      </div>
-      <div class="flex flex-row-reverse gap-4 mx-6 mt-4">
+      <:confirm_button>
         <.button
           id={"#{@id}_confirm_button"}
           type="button"
@@ -765,20 +740,29 @@ defmodule LightningWeb.WorkflowLive.Edit do
         >
           Retry from here
         </.button>
-
-        <button
-          type="button"
-          phx-click="close_confirmation_modal"
-          class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-        >
-          Cancel
-        </button>
-      </div>
-    </.modal>
+      </:confirm_button>
+    </.confirmation_modal>
     """
   end
 
   defp confirm_create_workorder(assigns) do
+    ~H"""
+    <.confirmation_modal
+      id={@id}
+      title="Create a new workorder"
+      prior_user={@prior_user}
+      message="If you create a new work order, it will be created using the latest version of this job. Do you want to proceed?"
+    >
+      <:confirm_button>
+        <.button id={"#{@id}_confirm_button"} type="submit" form={@form}>
+          Create work order
+        </.button>
+      </:confirm_button>
+    </.confirmation_modal>
+    """
+  end
+
+  defp confirmation_modal(assigns) do
     ~H"""
     <.modal
       id={@id}
@@ -790,7 +774,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       <:title>
         <div class="flex justify-between">
           <span class="font-bold">
-            Create a new workorder
+            <%= @title %>
           </span>
 
           <button
@@ -806,15 +790,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
       </:title>
       <div class="px-6">
         <p class="text-sm text-gray-500">
-          <%= @prior_user.first_name %> <%= @prior_user.last_name %> is currently working on this workflow.
-          If you create a new work order, it will be created using the latest version of this job.<br /><br />
-          Do you wanna proceed ?
+          <%= @prior_user.first_name %> <%= @prior_user.last_name %> is currently working on this workflow. <%= @message %>
         </p>
       </div>
       <div class="flex flex-row-reverse gap-4 mx-6 mt-4">
-        <.button id={"#{@id}_confirm_button"} type="submit" form={@form}>
-          Create work order
-        </.button>
+        <%= render_slot(@confirm_button) %>
         <button
           type="button"
           phx-click="close_confirmation_modal"
