@@ -580,12 +580,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
       <.confirm_retry_step
         :if={!@has_presence_edit_priority && @retrying_step}
         id="confirm-retry-step-modal"
+        prior_user={@prior_user_presence.user}
         run={@follow_run.id}
-        step={@step.id}
+        step={@step && @step.id}
       />
       <.confirm_create_workorder
         :if={!@has_presence_edit_priority && @creating_workorder}
         id="confirm-create-workorder-modal"
+        prior_user={@prior_user_presence.user}
         form={@manual_run_form.id}
       />
     </LayoutComponents.page_content>
@@ -671,6 +673,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
+  defp maybe_close_confirmation_modal(%{has_presence_edit_priority: prior}) do
+    if !prior do
+      send(self(), "close_confirmation_modal")
+    end
+  end
+
   defp create_new_work_order_dropdown(assigns) do
     ~H"""
     <div class="relative -ml-px block">
@@ -726,11 +734,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
       <:title>
         <div class="flex justify-between">
           <span class="font-bold">
-            Retry
+            Retry from here
           </span>
 
           <button
-            phx-click={hide_modal(@id)}
+            phx-click="close_confirmation_modal"
             type="button"
             class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
             aria-label={gettext("close")}
@@ -742,10 +750,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
       </:title>
       <div class="px-6">
         <p class="text-sm text-gray-500">
-          Retrying this step would create a run with the latest version of this step
+          <%= @prior_user.first_name %> <%= @prior_user.last_name %> is currently working on this workflow.
+          If you retry the step from here, the run will be created using the latest version of the job.<br /><br />
+          Do you wanna proceed ?
         </p>
       </div>
-      <div class="flex flex-row-reverse gap-4 mx-6 mt-2">
+      <div class="flex flex-row-reverse gap-4 mx-6 mt-4">
         <.button
           id={"#{@id}_confirm_button"}
           type="button"
@@ -753,12 +763,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
           phx-value-run_id={@run}
           phx-value-step_id={@step}
         >
-          Retry step from here
+          Retry from here
         </.button>
 
         <button
           type="button"
-          phx-click={hide_modal(@id)}
+          phx-click="close_confirmation_modal"
           class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
         >
           Cancel
@@ -784,7 +794,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           </span>
 
           <button
-            phx-click={hide_modal(@id)}
+            phx-click="close_confirmation_modal"
             type="button"
             class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
             aria-label={gettext("close")}
@@ -796,16 +806,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
       </:title>
       <div class="px-6">
         <p class="text-sm text-gray-500">
-          Retrying this step would create a run with the latest version of this step
+          <%= @prior_user.first_name %> <%= @prior_user.last_name %> is currently working on this workflow.
+          If you create a new work order, it will be created using the latest version of this job.<br /><br />
+          Do you wanna proceed ?
         </p>
       </div>
-      <div class="flex flex-row-reverse gap-4 mx-6 mt-2">
+      <div class="flex flex-row-reverse gap-4 mx-6 mt-4">
         <.button id={"#{@id}_confirm_button"} type="submit" form={@form}>
-          Retry step from here
+          Create work order
         </.button>
         <button
           type="button"
-          phx-click={hide_modal(@id)}
+          phx-click="close_confirmation_modal"
           class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
         >
           Cancel
@@ -1377,6 +1389,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, socket}
   end
 
+  def handle_event("close_confirmation_modal", _params, socket) do
+    {:noreply, assign(socket, retrying_step: false, creating_workorder: false)}
+  end
+
   def handle_event("get-initial-state", _params, socket) do
     {:noreply,
      socket
@@ -1690,6 +1706,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
       snapshot_version_tag: tag
     } = socket.assigns
 
+    maybe_close_confirmation_modal(socket.assigns)
+
     with true <- can_run_workflow? || :not_authorized,
          true <- tag == "latest" || :view_only,
          :ok <-
@@ -1751,6 +1769,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
       workflow: workflow,
       manual_run_form: form
     } = socket.assigns
+
+    maybe_close_confirmation_modal(socket.assigns)
 
     manual_params = Map.get(params, "manual", %{})
 
@@ -1821,6 +1841,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   @impl true
+  def handle_info("close_confirmation_modal", socket) do
+    {:noreply, assign(socket, retrying_step: false, creating_workorder: false)}
+  end
+
   def handle_info({"form_changed", %{"workflow" => params}}, socket) do
     {:noreply, handle_new_params(socket, params, :workflow)}
   end
