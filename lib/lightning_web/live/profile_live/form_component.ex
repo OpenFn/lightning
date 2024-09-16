@@ -21,7 +21,8 @@ defmodule LightningWeb.ProfileLive.FormComponent do
 
   @impl true
   def handle_event("change_email", %{"user" => user_params}, socket) do
-    Accounts.validate_change_user_email(socket.assigns.user, user_params)
+    socket.assigns.user
+    |> Accounts.validate_change_user_email(user_params, true)
     |> Ecto.Changeset.apply_action(:validate)
     |> case do
       {:ok, _} ->
@@ -100,7 +101,7 @@ defmodule LightningWeb.ProfileLive.FormComponent do
   def handle_event("validate_email", %{"user" => user_params}, socket) do
     changeset =
       socket.assigns.user
-      |> Accounts.validate_change_user_email(user_params)
+      |> Accounts.validate_change_user_email(user_params, false)
       |> Map.put(:action, :validate_email)
 
     {:noreply, assign(socket, :email_changeset, changeset)}

@@ -522,13 +522,13 @@ defmodule Lightning.Accounts do
     )
   end
 
-  def validate_change_user_email(user, params \\ %{}) do
+  def validate_change_user_email(user, params \\ %{}, validate_password \\ false) do
     data = %{email: nil, current_password: nil}
     types = %{email: :string, current_password: :string}
 
     {data, types}
     |> Ecto.Changeset.cast(params, Map.keys(types))
-    |> Ecto.Changeset.validate_required([:email, :current_password])
+    |> Ecto.Changeset.validate_required([:email])
     |> Ecto.Changeset.validate_format(:email, ~r/^[^\s]+@[^\s]+$/,
       message: "must have the @ sign and no spaces"
     )
@@ -545,6 +545,12 @@ defmodule Lightning.Accounts do
           []
       end
     end)
+    |> maybe_validate_password(validate_password, user)
+  end
+
+  defp maybe_validate_password(changeset, true, user) do
+    changeset
+    |> Ecto.Changeset.validate_required([:current_password])
     |> Ecto.Changeset.validate_change(:current_password, fn :current_password,
                                                             password ->
       if Bcrypt.verify_pass(password, user.hashed_password) do
@@ -554,6 +560,8 @@ defmodule Lightning.Accounts do
       end
     end)
   end
+
+  defp maybe_validate_password(changeset, false, _user), do: changeset
 
   @doc """
   Deletes a user.
