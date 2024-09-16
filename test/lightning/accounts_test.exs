@@ -16,6 +16,7 @@ defmodule Lightning.AccountsTest do
 
   import Lightning.AccountsFixtures
   import Lightning.Factories
+  import Swoosh.TestAssertions
 
   test "confirmation_required?/1 returns false for users who are already confirmed" do
     user = insert(:user, confirmed_at: DateTime.utc_now())
@@ -779,11 +780,13 @@ defmodule Lightning.AccountsTest do
     end
 
     test "sends token through notification", %{user: user} do
+      new_email = "current@example.com"
+
       token =
         extract_user_token(fn url ->
           Accounts.deliver_update_email_instructions(
             user,
-            "current@example.com",
+            new_email,
             url
           )
         end)
@@ -794,8 +797,23 @@ defmodule Lightning.AccountsTest do
                Repo.get_by(UserToken, token: :crypto.hash(:sha256, token))
 
       assert user_token.user_id == user.id
-      assert user_token.sent_to == "current@example.com"
+      assert user_token.sent_to == new_email
       assert user_token.context == "change:#{user.email}"
+
+      assert_email_sent(
+        subject: "Your OpenFn email was changed",
+        to: Swoosh.Email.Recipient.format(user)
+      )
+
+      assert_email_sent(
+        subject: "Please confirm your new email",
+        to:
+          Swoosh.Email.Recipient.format(%User{
+            email: new_email,
+            first_name: user.first_name,
+            last_name: user.last_name
+          })
+      )
     end
   end
 

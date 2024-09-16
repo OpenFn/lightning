@@ -513,7 +513,11 @@ defmodule Lightning.Accounts do
     )
 
     UserNotifier.deliver_update_email_instructions(
-      user,
+      %User{
+        email: current_email,
+        first_name: user.first_name,
+        last_name: user.last_name
+      },
       update_email_url_fun.(encoded_token)
     )
   end
