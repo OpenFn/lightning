@@ -19,6 +19,12 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v2.9.4] - 2024-09-16
+
+### Changed
+
 - Responsible AI review of AI Assistant
   [#2478](https://github.com/OpenFn/lightning/pull/2478)
 - Improve history export page UI
