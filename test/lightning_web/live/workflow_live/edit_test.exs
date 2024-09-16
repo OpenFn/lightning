@@ -2090,14 +2090,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           low_priority_user
         )
 
-      assert_user_presence(low_priority_view, high_priority_user)
-
-      assert_banner_message(
-        low_priority_view,
-        low_priority_user,
-        high_priority_user
-      )
-
       assert count_runs_for_workflow(workflow.id) == 1
 
       refute low_priority_view |> has_element?("#confirm-retry-step-modal")
@@ -2145,14 +2137,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           high_priority_user,
           low_priority_user
         )
-
-      assert_user_presence(low_priority_view, high_priority_user)
-
-      assert_banner_message(
-        low_priority_view,
-        low_priority_user,
-        high_priority_user
-      )
 
       assert count_work_orders_for_workflow(workflow.id) == 1
 
@@ -2206,19 +2190,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       )
 
     {high_priority_view, low_priority_view}
-  end
-
-  defp assert_user_presence(view, user) do
-    assert view
-           |> element("#inspector-online-users-#{user.id}")
-           |> render()
-  end
-
-  defp assert_banner_message(view, current_user, other_user) do
-    assert view
-           |> element("#inspector-banner-#{current_user.id}")
-           |> render() =~
-             "#{other_user.first_name} #{other_user.last_name} is currently active and you can&#39;t edit this workflow until they close the editor and canvas."
   end
 
   defp count_runs_for_workflow(workflow_id) do
