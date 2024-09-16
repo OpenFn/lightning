@@ -466,7 +466,11 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
 
       Events.subscribe_to_kafka_trigger_events()
 
-      Pipeline.handle_failed(messages, context)
+      try do
+        Pipeline.handle_failed(messages, context)
+      catch
+        _, _ -> :ok
+      end
 
       assert_received %KafkaTriggerPersistenceFailure{
         trigger_id: ^trigger_id,
@@ -499,7 +503,11 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
 
       messages = [message_1, persistence_failed_message, message_2]
 
-      Pipeline.handle_failed(messages, context)
+      try do
+        Pipeline.handle_failed(messages, context)
+      catch
+        _, _ -> :ok
+      end
 
       %{kafka_configuration: %{reset_request: reset_request}} =
         Trigger |> Repo.get(trigger_id)
@@ -507,6 +515,30 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       %{"reset_to" => reset_to} = reset_request
 
       assert reset_to == timestamp
+    end
+
+    test "stops itself on a persistence failure", %{
+      context: context,
+      messages: [message_1, message_2]
+    } do
+      timestamp = 1_723_633_665_366
+
+      persistence_failed_message =
+        [offset: 3, timestamp: timestamp]
+        |> build_broadway_message()
+        |> Broadway.Message.failed(:persistence)
+
+      messages = [message_1, persistence_failed_message, message_2]
+
+      caught =
+        try do
+          Pipeline.handle_failed(messages, context)
+        catch
+          :exit, :killed -> "Expected catch"
+          _, _ -> "Unexpected catch"
+        end
+
+      assert caught == "Expected catch"
     end
 
     defp expected_duplicate_log_message(message, context) do
@@ -608,6 +640,64 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
         Trigger |> Repo.get(trigger_id)
 
       %{"requested_at" => nil, "reset_to" => nil} = reset_request
+    end
+  end
+
+  describe ".stop_self_if_required" do
+    test "stops self if one of the messages failed due to persistence" do
+      messages = [
+        build_broadway_message(),
+        build_broadway_message() |> Broadway.Message.failed(:persistence),
+        build_broadway_message() |> Broadway.Message.failed(:duplicate)
+      ]
+
+      caught =
+        try do
+          Pipeline.stop_self_if_required(messages)
+        catch
+          :exit, :killed -> "Expected catch"
+          _, _ -> "Unexpected catch"
+        end
+
+      assert caught == "Expected catch"
+    end
+
+    test "stops self if multiple messages failed due to persistence" do
+      messages = [
+        build_broadway_message(),
+        build_broadway_message() |> Broadway.Message.failed(:persistence),
+        build_broadway_message() |> Broadway.Message.failed(:duplicate),
+        build_broadway_message(),
+        build_broadway_message() |> Broadway.Message.failed(:persistence)
+      ]
+
+      caught =
+        try do
+          Pipeline.stop_self_if_required(messages)
+        catch
+          :exit, :killed -> "Expected catch"
+          _, _ -> "Unexpected catch"
+        end
+
+      assert caught == "Expected catch"
+    end
+
+    test "does not stop self if no messages failed due to persistence" do
+      messages = [
+        build_broadway_message(),
+        build_broadway_message() |> Broadway.Message.failed(:duplicate),
+        build_broadway_message()
+      ]
+
+      caught =
+        try do
+          Pipeline.stop_self_if_required(messages)
+        catch
+          :exit, :killed -> "Expected catch"
+          _, _ -> "Unexpected catch"
+        end
+
+      assert caught == nil
     end
   end
 

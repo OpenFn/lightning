@@ -137,6 +137,8 @@ defmodule Lightning.KafkaTriggers.Pipeline do
       create_log_entry(message, context)
     end)
 
+    stop_self_if_required(messages)
+
     messages
   end
 
@@ -257,6 +259,12 @@ defmodule Lightning.KafkaTriggers.Pipeline do
 
       sasl ->
         [{:sasl, sasl} | base_config]
+    end
+  end
+
+  def stop_self_if_required(messages) do
+    if Enum.any?(messages, &(&1.status == {:failed, :persistence})) do
+      exit(:killed)
     end
   end
 end
