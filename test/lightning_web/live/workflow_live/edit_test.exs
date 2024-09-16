@@ -2100,7 +2100,27 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert count_runs_for_workflow(workflow.id) == 1
 
+      refute low_priority_view |> has_element?("#confirm-retry-step-modal")
+
       low_priority_view |> element("#save-and-run") |> render_click()
+
+      assert low_priority_view |> has_element?("#confirm-retry-step-modal")
+
+      low_priority_view
+      |> element("#confirm-retry-step-modal-cancel-button")
+      |> render_click()
+
+      refute low_priority_view |> has_element?("#confirm-retry-step-modal")
+
+      assert count_runs_for_workflow(workflow.id) == 1
+
+      low_priority_view |> element("#save-and-run") |> render_click()
+
+      assert low_priority_view |> has_element?("#confirm-retry-step-modal")
+
+      low_priority_view
+      |> element("#confirm-retry-step-modal-confirm-button")
+      |> render_click()
 
       assert count_runs_for_workflow(workflow.id) == 2
     end
@@ -2136,7 +2156,29 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert count_work_orders_for_workflow(workflow.id) == 1
 
-      low_priority_view |> element("#manual_run_form") |> render_submit()
+      refute low_priority_view |> has_element?("#confirm-create-workorder-modal")
+
+      low_priority_view |> element("#create-new-work-order") |> render_click()
+
+      assert low_priority_view |> has_element?("#confirm-create-workorder-modal")
+
+      low_priority_view
+      |> element("#confirm-create-workorder-modal-cancel-button")
+      |> render_click()
+
+      refute low_priority_view
+             |> has_element?("#confirm-create-workorder-modal")
+
+      assert count_work_orders_for_workflow(workflow.id) == 1
+
+      low_priority_view |> element("#create-new-work-order") |> render_click()
+
+      assert low_priority_view
+             |> has_element?("#confirm-create-workorder-modal")
+
+      low_priority_view
+      |> element("#manual_run_form")
+      |> render_submit()
 
       assert count_work_orders_for_workflow(workflow.id) == 2
     end

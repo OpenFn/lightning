@@ -732,7 +732,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     >
       <:confirm_button>
         <.button
-          id={"#{@id}_confirm_button"}
+          id={"#{@id}-confirm-button"}
           type="button"
           phx-click="rerun"
           phx-value-run_id={@run}
@@ -754,7 +754,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       message="If you create a new work order, it will be created using the latest version of this job. Do you want to proceed?"
     >
       <:confirm_button>
-        <.button id={"#{@id}_confirm_button"} type="submit" form={@form}>
+        <.button id={"#{@id}-confirm-button"} type="submit" form={@form}>
           Create work order
         </.button>
       </:confirm_button>
@@ -796,6 +796,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       <div class="flex flex-row-reverse gap-4 mx-6 mt-4">
         <%= render_slot(@confirm_button) %>
         <button
+          id={"#{@id}-cancel-button"}
           type="button"
           phx-click="close_confirmation_modal"
           class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
