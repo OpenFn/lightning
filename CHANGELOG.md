@@ -25,6 +25,8 @@ and this project adheres to
   [#2442](https://github.com/OpenFn/lightning/issues/2442)
 - When selecting a node in the workflow diagram, connected edges will also be
   highlighted [2396](https://github.com/OpenFn/lightning/issues/2358)
+- Hide Export Button When No Work Order
+  [2440](https://github.com/OpenFn/lightning/issues/2440)
 
 ### Fixed
 
