@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix Buggy Change Email Flow
+  [#2365](https://github.com/OpenFn/lightning/issues/2365)
+
 ## [v2.9.4] - 2024-09-16
 
 ### Changed
