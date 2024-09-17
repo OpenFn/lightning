@@ -53,7 +53,7 @@ defmodule Lightning.WorkOrders do
   alias Lightning.WorkOrder
   alias Lightning.WorkOrders.Events
   alias Lightning.WorkOrders.Manual
-  alias Lightning.Workorders.RetryManyRunsJob
+  alias Lightning.WorkOrders.RetryManyRunsJob
   alias Lightning.WorkOrders.Query
 
   @type work_order_option ::
@@ -312,7 +312,7 @@ defmodule Lightning.WorkOrders do
     |> get_workflow_steps_from(step)
     |> then(fn steps ->
       retry_workorder(
-        run.workorder,
+        run.work_order,
         step.input_dataclip,
         step.job,
         steps,
@@ -490,7 +490,7 @@ defmodule Lightning.WorkOrders do
           retry(run_step.run_id, run_step.step_id, opts)
         end)
 
-      {:ok, Enum.count(results, fn result -> match?({:ok, _}, result) end)}
+      {:ok, Enum.count(results, fn result -> match?({:ok, _}, result) end), 0}
     end
   end
 
@@ -577,7 +577,10 @@ defmodule Lightning.WorkOrders do
 
   # TODO: #snapshots what if a node doesn't exist in the current snapshot?
   defp get_workflow_steps_from(
-         %Run{steps: run_steps, workflow: %Workflow{edges: edges}},
+         %Run{
+           steps: run_steps,
+           work_order: %{workflow: %Workflow{edges: edges}}
+         },
          %Step{
            job_id: step_job_id
          }

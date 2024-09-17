@@ -1,4 +1,4 @@
-defmodule Lightning.Workorders.RetryManyRunsJob do
+defmodule Lightning.WorkOrders.RetryManyRunsJob do
   use Oban.Worker,
     queue: :scheduler,
     max_attempts: 3

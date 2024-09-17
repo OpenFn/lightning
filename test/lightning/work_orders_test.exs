@@ -637,7 +637,7 @@ defmodule Lightning.WorkOrdersTest do
                starting_job_id: job_a.id
              )
 
-      {:ok, 0} =
+      {:ok, 0, 0} =
         WorkOrders.retry_many([workorder], job_a.id,
           created_by: user,
           project_id: workflow.project_id
@@ -698,7 +698,7 @@ defmodule Lightning.WorkOrdersTest do
                starting_job_id: job_a.id
              )
 
-      {:ok, 1} =
+      {:ok, 1, 0} =
         WorkOrders.retry_many([workorder], job_a.id,
           created_by: user,
           project_id: workflow.project_id
@@ -780,7 +780,7 @@ defmodule Lightning.WorkOrdersTest do
                starting_job_id: job_b.id
              )
 
-      {:ok, 1} =
+      {:ok, 1, 0} =
         WorkOrders.retry_many([workorder], job_b.id,
           created_by: user,
           project_id: workflow.project_id
@@ -874,7 +874,7 @@ defmodule Lightning.WorkOrdersTest do
         assert run.id in [run_1.id, run_2.id]
       end
 
-      {:ok, 1} =
+      {:ok, 1, 0} =
         WorkOrders.retry_many([workorder], job_a.id,
           created_by: user,
           project_id: workflow.project_id
@@ -955,7 +955,7 @@ defmodule Lightning.WorkOrdersTest do
         assert run.id in [run_1.id, run_2.id]
       end
 
-      {:ok, 0} = WorkOrders.retry_many([workorder], job_a.id, created_by: user)
+      {:ok, 0, 0} = WorkOrders.retry_many([workorder], job_a.id, created_by: user)
 
       runs = Ecto.assoc(workorder, :runs) |> Repo.all()
 
@@ -1037,7 +1037,7 @@ defmodule Lightning.WorkOrdersTest do
       runs_ids = Enum.map(runs, & &1.id)
       assert Enum.sort(runs_ids) == Enum.sort([run_1.id, run_2.id])
 
-      {:ok, 1} =
+      {:ok, 1, 0} =
         WorkOrders.retry_many([workorder], job_b.id,
           created_by: user,
           project_id: workflow.project_id
@@ -1114,7 +1114,7 @@ defmodule Lightning.WorkOrdersTest do
              )
 
       # we've reversed the order here
-      {:ok, 2} =
+      {:ok, 2, 0} =
         WorkOrders.retry_many([workorder_2, workorder_1], job_a.id,
           created_by: user,
           project_id: workflow.project_id
@@ -1297,7 +1297,7 @@ defmodule Lightning.WorkOrdersTest do
                starting_job_id: job_b.id
              )
 
-      {:ok, 1} =
+      {:ok, 1, 0} =
         WorkOrders.retry_many([workorder_2, workorder_1], job_b.id,
           created_by: user,
           project_id: workflow.project_id
@@ -1524,7 +1524,7 @@ defmodule Lightning.WorkOrdersTest do
         assert run.id in [run_1.id, run_2.id]
       end
 
-      {:ok, 1} =
+      {:ok, 1, 0} =
         WorkOrders.retry_many([workorder],
           created_by: user,
           project_id: workflow.project_id
@@ -1605,7 +1605,7 @@ defmodule Lightning.WorkOrdersTest do
              )
 
       # we've reversed the order here
-      {:ok, 2} =
+      {:ok, 2, 0} =
         WorkOrders.retry_many([workorder_2, workorder_1],
           created_by: user,
           project_id: workflow.project_id
@@ -1661,7 +1661,7 @@ defmodule Lightning.WorkOrdersTest do
         assert run.id in [run_1.id]
       end
 
-      {:ok, 1} =
+      {:ok, 1, 0} =
         WorkOrders.retry_many([workorder],
           created_by: user,
           project_id: workflow.project_id
@@ -1724,7 +1724,7 @@ defmodule Lightning.WorkOrdersTest do
         assert run.id in [run_1.id]
       end
 
-      {:ok, 1} =
+      {:ok, 1, 0} =
         WorkOrders.retry_many([workorder],
           created_by: user,
           project_id: workflow.project_id
@@ -1813,7 +1813,7 @@ defmodule Lightning.WorkOrdersTest do
                starting_job_id: job_a.id
              )
 
-      {:ok, 1} =
+      {:ok, 1, 1} =
         WorkOrders.retry_many([workorder_2, workorder_1],
           created_by: user,
           project_id: workflow.project_id
@@ -1915,7 +1915,7 @@ defmodule Lightning.WorkOrdersTest do
                starting_job_id: job_a.id
              )
 
-      {:ok, 1} =
+      {:ok, 1, 0} =
         WorkOrders.retry_many([run_step_a],
           created_by: user,
           project_id: workflow.project_id
@@ -2004,7 +2004,7 @@ defmodule Lightning.WorkOrdersTest do
                starting_job_id: run_step_b.step.job.id
              )
 
-      {:ok, 1} =
+      {:ok, 1, 0} =
         WorkOrders.retry_many([run_step_b],
           created_by: user,
           project_id: workflow.project_id
@@ -2103,7 +2103,7 @@ defmodule Lightning.WorkOrdersTest do
              )
 
       # we've reversed the order here
-      {:ok, 2} =
+      {:ok, 2, 0} =
         WorkOrders.retry_many([run_step_2_a, run_step_1_a],
           created_by: user,
           project_id: workflow.project_id
@@ -2200,7 +2200,7 @@ defmodule Lightning.WorkOrdersTest do
                starting_job_id: job_a.id
              )
 
-      {:ok, 1} =
+      {:ok, 1, 0} =
         WorkOrders.retry_many([run_step_2_a, run_step_1_a],
           created_by: user,
           project_id: workflow.project_id
