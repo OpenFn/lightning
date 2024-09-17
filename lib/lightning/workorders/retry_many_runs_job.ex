@@ -30,7 +30,7 @@ defmodule Lightning.Workorders.RetryManyRunsJob do
 
       creating_user = Repo.get!(User, creating_user_id)
 
-      with {:error, changeset} <- WorkOrders.do_retry(
+      with {:error, changeset} <- WorkOrders.retry_workorder(
           run.work_order,
           run.dataclip,
           starting_job,

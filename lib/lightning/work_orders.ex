@@ -276,8 +276,10 @@ defmodule Lightning.WorkOrders do
           Step.t() | Ecto.UUID.t(),
           [work_order_option(), ...]
         ) ::
-          {:ok, Run.t()} | {:error, Ecto.Changeset.t(Run.t())}
-  def retry(run, step, opts)
+          {:ok, Run.t()} | {:error, Ecto.Changeset.t()}
+  def retry(%Run{id: run_id}, %Step{id: step_id}, opts) do
+    retry(run_id, step_id, opts)
+  end
 
   def retry(run_id, step_id, opts)
       when is_binary(run_id) and is_binary(step_id) do
@@ -307,8 +309,8 @@ defmodule Lightning.WorkOrders do
     run
     |> get_workflow_steps_from(step)
     |> then(fn steps ->
-      do_retry(
-        run,
+      retry_workorder(
+        run.workorder,
         step.input_dataclip,
         step.job,
         steps,
@@ -317,11 +319,9 @@ defmodule Lightning.WorkOrders do
     end)
   end
 
-  def retry(%Run{id: run_id}, %Step{id: step_id}, opts) do
-    retry(run_id, step_id, opts)
-  end
-
-  def do_retry(
+  @spec retry_workorder(WorkOrder.t(), Dataclip.t(), Job.t(), [] | [Step.t(), ...], User.t()) ::
+          {:ok, Run.t()} | {:error, Ecto.Changeset.t()}
+  def retry_workorder(
         workorder,
         %{wiped_at: nil} = dataclip,
         starting_job,
@@ -372,7 +372,7 @@ defmodule Lightning.WorkOrders do
     end
   end
 
-  def do_retry(_workorder, _wiped_dataclip, _starting_job, _steps, _user) do
+  def retry_workorder(_workorder, _wiped_dataclip, _starting_job, _steps, _user) do
     %Run{}
     |> Ecto.Changeset.change()
     |> Ecto.Changeset.add_error(
