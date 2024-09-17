@@ -553,32 +553,6 @@ defmodule Lightning.ProjectsTest do
       assert Projects.get_project_user_role(user_2, project) == :editor
     end
 
-    test "export_project/2 as yaml works on project with no workflows" do
-      project = project_fixture(name: "newly-created-project")
-
-      expected_yaml =
-        "name: newly-created-project\ndescription: null\ncredentials: null\nworkflows: null"
-
-      {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
-
-      assert generated_yaml == expected_yaml
-    end
-
-    test "export_project/2 as yaml" do
-      project =
-        canonical_project_fixture(
-          name: "a-test-project",
-          description: "This is only a test"
-        )
-
-      expected_yaml =
-        File.read!("test/fixtures/canonical_project.yaml") |> String.trim()
-
-      {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
-
-      assert generated_yaml == expected_yaml
-    end
-
     test "schedule_project_deletion/1 schedules a project for deletion and notify all project users via email." do
       user_1 = insert(:user, email: "user_1@openfn.org", first_name: "user_1")
       user_2 = insert(:user, email: "user_2@openfn.org", first_name: "user_2")
@@ -683,6 +657,59 @@ defmodule Lightning.ProjectsTest do
         |> errors_on()
 
       assert errors[:scheduled_deletion] == nil
+    end
+  end
+
+  describe "export_project/2 as yaml:" do
+    test "works on project with no workflows" do
+      project = project_fixture(name: "newly-created-project")
+
+      expected_yaml =
+        "name: newly-created-project\ndescription: null\ncredentials: null\nworkflows: null"
+
+      {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
+
+      assert generated_yaml == expected_yaml
+    end
+
+    test "adds quotes to values with special charaters" do
+      project = insert(:project, name: "project: 1")
+
+      workflow_with_bad_name =
+        insert(:simple_workflow, project: project, name: "workflow: 1")
+
+      workflow_with_good_name =
+        insert(:simple_workflow, project: project, name: "workflow 2")
+
+      assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
+
+      assert generated_yaml =~ ~s(name: '#{project.name}')
+      assert generated_yaml =~ ~s(name: '#{workflow_with_bad_name.name}')
+      # key is quoted
+      assert generated_yaml =~
+               ~s("#{String.replace(workflow_with_bad_name.name, " ", "-")}")
+
+      refute generated_yaml =~ ~s(name: '#{workflow_with_good_name.name}')
+      assert generated_yaml =~ "name: #{workflow_with_good_name.name}"
+
+      # key is not quoted
+      refute generated_yaml =~
+               ~s("#{String.replace(workflow_with_good_name.name, " ", "-")}")
+    end
+
+    test "exports canonical project" do
+      project =
+        canonical_project_fixture(
+          name: "a-test-project",
+          description: "This is only a test"
+        )
+
+      expected_yaml =
+        File.read!("test/fixtures/canonical_project.yaml") |> String.trim()
+
+      {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
+
+      assert generated_yaml == expected_yaml
     end
   end
 
