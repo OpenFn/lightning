@@ -165,18 +165,18 @@ defmodule Lightning.ExportUtils do
     # starts with alphanumeric
     # followed by alphanumeric or hyphen or underscore or @ or . or space
     # ends with alphanumeric
-    if !Regex.match?(~r/^[a-zA-Z0-9][a-zA-Z0-9_\-@\. ]*[a-zA-Z0-9]$/, value) do
-      ~s('#{value}')
-    else
+    if Regex.match?(~r/^[a-zA-Z0-9][a-zA-Z0-9_\-@\. ]*[a-zA-Z0-9]$/, value) do
       value
+    else
+      ~s('#{value}')
     end
   end
 
   defp yaml_safe_key(key) do
-    if key not in @special_keys do
-      key |> to_string() |> hyphenate() |> maybe_escape_key()
-    else
+    if key in @special_keys do
       key
+    else
+      key |> to_string() |> hyphenate() |> maybe_escape_key()
     end
   end
 
@@ -184,10 +184,10 @@ defmodule Lightning.ExportUtils do
     # starts with alphanumeric
     # followed by alphanumeric or hyphen or underscore or @ or .
     # ends with alphanumeric
-    if !Regex.match?(~r/^[a-zA-Z0-9][a-zA-Z0-9_\-@\.]*[a-zA-Z0-9]$/, key) do
-      ~s("#{key}")
-    else
+    if Regex.match?(~r/^[a-zA-Z0-9][a-zA-Z0-9_\-@\.]*[a-zA-Z0-9]$/, key) do
       key
+    else
+      ~s("#{key}")
     end
   end
 
