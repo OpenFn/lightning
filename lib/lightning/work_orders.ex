@@ -65,6 +65,8 @@ defmodule Lightning.WorkOrders do
 
   @run_many_chunk_size 20
 
+  defdelegate subscribe(project_id), to: Events
+
   @doc """
   Create a new Work Order.
 
@@ -319,7 +321,13 @@ defmodule Lightning.WorkOrders do
     end)
   end
 
-  @spec retry_workorder(WorkOrder.t(), Dataclip.t(), Job.t(), [] | [Step.t(), ...], User.t()) ::
+  @spec retry_workorder(
+          WorkOrder.t(),
+          Dataclip.t(),
+          Job.t(),
+          [] | [Step.t(), ...],
+          User.t()
+        ) ::
           {:ok, Run.t()} | {:error, Ecto.Changeset.t()}
   def retry_workorder(
         workorder,
@@ -386,7 +394,11 @@ defmodule Lightning.WorkOrders do
           [WorkOrder.t(), ...],
           job_id :: Ecto.UUID.t(),
           [work_order_option(), ...]
-        ) :: {:ok, count :: integer()}
+        ) ::
+          {:ok, enqueued_count :: non_neg_integer(),
+           discarded_count :: non_neg_integer()}
+          | UsageLimiting.error()
+          | {:error, :enqueue_error}
   def retry_many([%WorkOrder{} | _rest] = workorders, job_id, opts) do
     orders_ids = Enum.map(workorders, & &1.id)
 
@@ -422,7 +434,8 @@ defmodule Lightning.WorkOrders do
           [WorkOrder.t(), ...] | [RunStep.t(), ...],
           [work_order_option(), ...]
         ) ::
-          {:ok, count :: integer()}
+          {:ok, enqueued_count :: non_neg_integer(),
+           discarded_count :: non_neg_integer()}
           | UsageLimiting.error()
           | {:error, :enqueue_error}
   def retry_many([%WorkOrder{} | _rest] = workorders, opts) do
@@ -451,7 +464,10 @@ defmodule Lightning.WorkOrders do
       end)
       |> case do
         inserted_list when is_list(inserted_list) ->
-          {:ok, length(runs_ids)}
+          enqueued_count = length(runs_ids)
+          discarded_count = length(workorders) - enqueued_count
+
+          {:ok, enqueued_count, discarded_count}
 
         _error ->
           {:error, :enqueue_error}
@@ -479,7 +495,7 @@ defmodule Lightning.WorkOrders do
   end
 
   def retry_many([], _opts) do
-    {:ok, 0}
+    {:ok, 0, 0}
   end
 
   @doc """
@@ -519,8 +535,6 @@ defmodule Lightning.WorkOrders do
     )
     |> Repo.one()
   end
-
-  defdelegate subscribe(project_id), to: Events
 
   defp update_workorder_query(run) do
     state_query = Query.state_for(run)

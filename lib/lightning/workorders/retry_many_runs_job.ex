@@ -13,30 +13,25 @@ defmodule Lightning.Workorders.RetryManyRunsJob do
   require Logger
 
   @impl Oban.Worker
-  def perform(
-        %{
-          args: %{"runs_ids" => runs_ids, "created_by" => creating_user_id},
-        inserted_at: inserted_at}
-      ) do
+  def perform(%{
+        args: %{"runs_ids" => runs_ids, "created_by" => creating_user_id}
+      }) do
     runs_ids
     |> preload_runs_for_retry()
-    |> Enum.reject(fn %{claimed_at: claimed_at} ->
-      # TODO: Check if it was actually already enqueued
-      NaiveDateTime.after?(claimed_at, inserted_at)
-    end)
     |> Enum.each(fn run ->
       starting_job =
         run.starting_job || hd(run.starting_trigger.edges).target_job
 
       creating_user = Repo.get!(User, creating_user_id)
 
-      with {:error, changeset} <- WorkOrders.retry_workorder(
-          run.work_order,
-          run.dataclip,
-          starting_job,
-          [],
-          creating_user
-      ) do
+      with {:error, changeset} <-
+             WorkOrders.retry_workorder(
+               run.work_order,
+               run.dataclip,
+               starting_job,
+               [],
+               creating_user
+             ) do
         Logger.error("Error retrying run #{run.id}: #{inspect(changeset)}")
       end
     end)
