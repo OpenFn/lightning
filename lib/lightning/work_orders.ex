@@ -53,7 +53,7 @@ defmodule Lightning.WorkOrders do
   alias Lightning.WorkOrder
   alias Lightning.WorkOrders.Events
   alias Lightning.WorkOrders.Manual
-  alias Lightning.Workorders.RetryBatchJob
+  alias Lightning.Workorders.RetryManyRunsJob
   alias Lightning.WorkOrders.Query
 
   @type work_order_option ::
@@ -338,12 +338,12 @@ defmodule Lightning.WorkOrders do
   end
 
   def do_retry(
-         workorder,
-         %{wiped_at: nil} = dataclip,
-         starting_job,
-         steps,
-         creating_user
-       ) do
+        workorder,
+        %{wiped_at: nil} = dataclip,
+        starting_job,
+        steps,
+        creating_user
+      ) do
     Multi.new()
     |> get_or_create_snapshot(%Workflow{id: workorder.workflow_id})
     |> Multi.insert(
@@ -444,9 +444,8 @@ defmodule Lightning.WorkOrders do
   def retry_many([%WorkOrder{} | _rest] = workorders, opts) do
     runs_ids =
       workorders
-      |> Enum.filter(&is_nil(&1.wiped_at))
       |> Enum.map(& &1.id)
-      |> get_first_runs_ids()
+      |> get_first_runs_for_retry()
 
     with project_id <- Keyword.fetch!(opts, :project_id),
          :ok <-
@@ -456,11 +455,21 @@ defmodule Lightning.WorkOrders do
                project_id: project_id
              }
            ) do
-      case schedule_runs_for_retry(runs_ids) do
-        :ok ->
+      creating_user = Keyword.fetch!(opts, :created_by)
+
+      runs_ids
+      |> Enum.chunk_every(@run_many_chunk_size)
+      |> Enum.map(
+        &RetryManyRunsJob.new(%{runs_ids: &1, created_by: creating_user.id})
+      )
+      |> then(fn jobs ->
+        Oban.insert_all(Lightning.Oban, jobs)
+      end)
+      |> case do
+        inserted_list when is_list(inserted_list) ->
           {:ok, length(runs_ids)}
 
-        :error ->
+        _error ->
           {:error, :enqueue_error}
       end
     end
@@ -541,17 +550,17 @@ defmodule Lightning.WorkOrders do
     )
   end
 
-  defp get_first_runs_ids(orders_ids) do
+  defp get_first_runs_for_retry(orders_ids) do
     run_numbers_query =
-      from(att in Run,
-        where: att.work_order_id in ^orders_ids,
+      from(r in Run,
+        where: r.work_order_id in ^orders_ids,
         select: %{
-          id: att.id,
+          id: r.id,
           row_num:
             row_number()
             |> over(
-              partition_by: att.work_order_id,
-              order_by: coalesce(att.started_at, att.inserted_at)
+              partition_by: r.work_order_id,
+              order_by: coalesce(r.started_at, r.inserted_at)
             )
         }
       )
@@ -560,33 +569,11 @@ defmodule Lightning.WorkOrders do
       join: rn in subquery(run_numbers_query),
       on: r.id == rn.id,
       join: wo in assoc(r, :work_order),
-      where: rn.row_num == 1,
+      join: dc in assoc(r, :dataclip),
+      where: rn.row_num == 1 and is_nil(dc.wiped_at),
       select: r.id,
       order_by: [asc: wo.inserted_at]
     )
     |> Repo.all()
-  end
-
-  defp schedule_runs_for_retry(runs_ids) do
-    runs_ids
-    |> Enum.chunk_every(@run_many_chunk_size)
-    |> Enum.with_index()
-    |> Enum.reduce(Multi.new(), fn {chunk_idx, runs_ids_chunk}, multi ->
-      Multi.merge(multi, fn _changes ->
-        Oban.insert(
-          Multi.new(),
-          "insert-#{chunk_idx}",
-          RetryBatchJob.new(%{runs_ids: runs_ids_chunk})
-        )
-      end)
-    end)
-    |> Repo.transaction()
-    |> case do
-      {:ok, _success} ->
-        {:ok, Enum.count(runs_ids)}
-
-      error ->
-        error
-    end
   end
 end

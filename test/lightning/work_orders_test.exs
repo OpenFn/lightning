@@ -637,7 +637,11 @@ defmodule Lightning.WorkOrdersTest do
                starting_job_id: job_a.id
              )
 
-      {:ok, 0} = WorkOrders.retry_many([workorder], job_a.id, created_by: user)
+      {:ok, 0} =
+        WorkOrders.retry_many([workorder], job_a.id,
+          created_by: user,
+          project_id: workflow.project_id
+        )
 
       refute Repo.get_by(Lightning.Run,
                work_order_id: workorder.id,
