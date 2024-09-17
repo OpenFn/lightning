@@ -281,8 +281,6 @@ defmodule Lightning.WorkOrders do
 
   def retry(run_id, step_id, opts)
       when is_binary(run_id) and is_binary(step_id) do
-    attrs = Map.new(opts)
-
     run =
       from(a in Run,
         where: a.id == ^run_id,
@@ -306,31 +304,17 @@ defmodule Lightning.WorkOrders do
       )
       |> Repo.one()
 
-    # TODO: #snapshots what if a node doesn't exist in the current snapshot?
-    steps =
-      run.work_order.workflow.edges
-      |> Enum.reduce(Graph.new(), fn edge, graph ->
-        graph
-        |> Graph.add_edge(
-          edge.source_trigger_id || edge.source_job_id,
-          edge.target_job_id
-        )
-      end)
-      |> Graph.prune(step.job_id)
-      |> Graph.nodes()
-      |> then(fn nodes ->
-        Enum.filter(run.steps, fn step ->
-          step.job_id in nodes
-        end)
-      end)
-
-    do_retry(
-      run.work_order,
-      step.input_dataclip,
-      step.job,
-      steps,
-      attrs[:created_by]
-    )
+    run
+    |> get_workflow_steps_from(step)
+    |> then(fn steps ->
+      do_retry(
+        run,
+        step.input_dataclip,
+        step.job,
+        steps,
+        Keyword.fetch!(opts, :created_by)
+      )
+    end)
   end
 
   def retry(%Run{id: run_id}, %Step{id: step_id}, opts) do
@@ -575,5 +559,29 @@ defmodule Lightning.WorkOrders do
       order_by: [asc: wo.inserted_at]
     )
     |> Repo.all()
+  end
+
+  # TODO: #snapshots what if a node doesn't exist in the current snapshot?
+  defp get_workflow_steps_from(
+         %Run{steps: run_steps, workflow: %Workflow{edges: edges}},
+         %Step{
+           job_id: step_job_id
+         }
+       ) do
+    edges
+    |> Enum.reduce(Graph.new(), fn edge, graph ->
+      graph
+      |> Graph.add_edge(
+        edge.source_trigger_id || edge.source_job_id,
+        edge.target_job_id
+      )
+    end)
+    |> Graph.prune(step_job_id)
+    |> Graph.nodes()
+    |> then(fn nodes ->
+      Enum.filter(run_steps, fn step ->
+        step.job_id in nodes
+      end)
+    end)
   end
 end
