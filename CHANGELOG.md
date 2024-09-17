@@ -19,6 +19,8 @@ and this project adheres to
 
 ### Changed
 
+- Increase minimum password length to 12 in accordance with ASVS 4.0.3 "V2.1.2"
+
 ### Fixed
 
 ## [v2.9.5] - 2024-09-18

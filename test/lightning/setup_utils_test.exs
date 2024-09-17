@@ -33,7 +33,7 @@ defmodule Lightning.SetupUtilsTest do
       assert jobs |> Enum.count() == 6
 
       assert super_user.email == "super@openfn.org"
-      User.valid_password?(super_user, "welcome123")
+      User.valid_password?(super_user, "welcome12345")
 
       user_token =
         Lightning.Repo.all(UserToken)
@@ -46,13 +46,13 @@ defmodule Lightning.SetupUtilsTest do
       assert openhie_project.id == "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa"
 
       assert admin.email == "demo@openfn.org"
-      User.valid_password?(admin, "welcome123")
+      User.valid_password?(admin, "welcome12345")
 
       assert editor.email == "editor@openfn.org"
-      User.valid_password?(editor, "welcome123")
+      User.valid_password?(editor, "welcome12345")
 
       assert viewer.email == "viewer@openfn.org"
-      User.valid_password?(viewer, "welcome123")
+      User.valid_password?(viewer, "welcome12345")
 
       assert Enum.map(
                openhie_project.project_users,
