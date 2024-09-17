@@ -58,41 +58,46 @@ defmodule Lightning.KafkaTriggers.Pipeline do
   def handle_message(_processor, message, context) do
     trigger_id = context.trigger_id |> Atom.to_string()
 
-    Multi.new()
-    |> track_message(trigger_id, message)
-    |> update_partition_timestamps(trigger_id, message)
-    |> MessageHandling.persist_message(trigger_id, message)
-    |> case do
-      {:ok, _} ->
-        message
+    if !KafkaTriggers.test_persistence_failure?(trigger_id) do
+      Multi.new()
+      |> track_message(trigger_id, message)
+      |> update_partition_timestamps(trigger_id, message)
+      |> MessageHandling.persist_message(trigger_id, message)
+      |> case do
+        {:ok, _} ->
+          message
 
-      {
-        :error,
-        %{
-          errors: [
-            trigger_id: {
-              "has already been taken",
-              [
-                constraint: :unique,
-                constraint_name: "trigger_kafka_message_records_pkey"
-              ]
-            }
-          ]
-        }
-      } ->
-        Broadway.Message.failed(message, :duplicate)
+        {
+          :error,
+          %{
+            errors: [
+              trigger_id: {
+                "has already been taken",
+                [
+                  constraint: :unique,
+                  constraint_name: "trigger_kafka_message_records_pkey"
+                ]
+              }
+            ]
+          }
+        } ->
+          Broadway.Message.failed(message, :duplicate)
 
-      {:error, %Changeset{}} ->
-        Broadway.Message.failed(message, :persistence)
+        {:error, %Changeset{}} ->
+          Broadway.Message.failed(message, :persistence)
 
-      {:error, :data_is_not_json} ->
-        Broadway.Message.failed(message, :invalid_data)
+        {:error, :data_is_not_json} ->
+          Broadway.Message.failed(message, :invalid_data)
 
-      {:error, :data_is_not_json_object} ->
-        Broadway.Message.failed(message, :invalid_data)
+        {:error, :data_is_not_json_object} ->
+          Broadway.Message.failed(message, :invalid_data)
 
-      {:error, :work_order_creation_blocked, _reason} ->
-        Broadway.Message.failed(message, :work_order_creation_blocked)
+        {:error, :work_order_creation_blocked, _reason} ->
+          Broadway.Message.failed(message, :work_order_creation_blocked)
+      end
+    else
+      KafkaTriggers.tested_persistence_failure(trigger_id)
+      Broadway.Message.failed(message, :persistence)
     end
   end
 

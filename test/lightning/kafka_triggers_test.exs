@@ -9,6 +9,7 @@ defmodule Lightning.KafkaTriggersTest do
 
   alias Lightning.KafkaTriggers
   alias Lightning.KafkaTriggers.PipelineSupervisor
+  alias Lightning.Repo
   alias Lightning.Workflows.Trigger
 
   describe ".start_triggers/0" do
@@ -801,6 +802,137 @@ defmodule Lightning.KafkaTriggersTest do
       expected = %{interval: 10_000, messages_per_interval: 5}
 
       assert KafkaTriggers.convert_rate_limit() == expected
+    end
+  end
+
+  describe ".test_persistence_failure?/1" do
+    setup do
+      trigger =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: build(:triggers_kafka_configuration)
+        )
+
+      %{trigger: trigger}
+    end
+
+    test "returns true if test is configured", %{
+      trigger: trigger
+    } do
+      expect(Lightning.MockConfig, :kafka_test_persistence_failure?, fn ->
+        true
+      end)
+
+      assert KafkaTriggers.test_persistence_failure?(trigger.id)
+    end
+
+    test "returns false if test is configured", %{
+      trigger: trigger
+    } do
+      expect(Lightning.MockConfig, :kafka_test_persistence_failure?, fn ->
+        false
+      end)
+
+      refute KafkaTriggers.test_persistence_failure?(trigger.id)
+    end
+
+    test "returns false if test is configured but has already run", %{
+      trigger: trigger
+    } do
+      expect(Lightning.MockConfig, :kafka_test_persistence_failure?, fn ->
+        true
+      end)
+
+      test_already_run_change = %{performed_persistence_failure_test: true}
+
+      trigger
+      |> Trigger.changeset(%{kafka_configuration: test_already_run_change})
+      |> Repo.update()
+
+      refute KafkaTriggers.test_persistence_failure?(trigger.id)
+    end
+
+    test "returns false if trigger is not a kafka trigger", %{
+      trigger: trigger
+    } do
+      trigger
+      |> Trigger.changeset(%{type: :webhook})
+      |> Repo.update()
+
+      expect(Lightning.MockConfig, :kafka_test_persistence_failure?, fn ->
+        true
+      end)
+
+      refute KafkaTriggers.test_persistence_failure?(trigger.id)
+    end
+  end
+
+  describe ".tested_persistence_failure/1" do
+    setup do
+      kafka_configuration =
+        build(
+          :triggers_kafka_configuration,
+          performed_persistence_failure_test: false
+        )
+
+      trigger =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: kafka_configuration,
+          enabled: true
+        )
+
+      %{trigger: trigger}
+    end
+
+    test "updates trigger to indicate test was performed", %{
+      trigger: trigger
+    } do
+      KafkaTriggers.tested_persistence_failure(trigger.id)
+
+      %{
+        kafka_configuration: %{
+          performed_persistence_failure_test: performed
+        }
+      } = Repo.get(Trigger, trigger.id)
+
+      assert performed
+    end
+  end
+
+  describe ".clear_tested_persistence_failure/1" do
+    setup do
+      kafka_configuration =
+        build(
+          :triggers_kafka_configuration,
+          performed_persistence_failure_test: true
+        )
+
+      trigger =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: kafka_configuration,
+          enabled: true
+        )
+
+      %{trigger: trigger}
+    end
+
+    test "clears flag indicating that the test was performed", %{
+      trigger: trigger
+    } do
+      KafkaTriggers.clear_tested_persistence_failure(trigger.id)
+
+      %{
+        kafka_configuration: %{
+          performed_persistence_failure_test: performed
+        }
+      } = Repo.get(Trigger, trigger.id)
+
+      refute performed
     end
   end
 

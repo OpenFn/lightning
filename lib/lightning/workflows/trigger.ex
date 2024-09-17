@@ -164,4 +164,21 @@ defmodule Lightning.Workflows.Trigger do
   def kafka_partitions_changeset(trigger, _partition, _timestamp) do
     change(trigger, %{})
   end
+
+  def kafka_performed_persistence_failure_test_changeset(
+        %{type: :kafka, kafka_configuration: kafka_configuration} = trigger,
+        performed
+      ) do
+    config_changes =
+      kafka_configuration
+      |> KafkaConfiguration.changeset(%{
+        performed_persistence_failure_test: performed
+      })
+
+    change(trigger, %{kafka_configuration: config_changes})
+  end
+
+  def kafka_performed_persistence_failure_test_changeset(trigger, _performed) do
+    change(trigger, %{})
+  end
 end

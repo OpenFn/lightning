@@ -222,4 +222,59 @@ defmodule Lightning.Workflows.TriggerTest do
       assert changes == %{}
     end
   end
+
+  describe "kafka_performed_persistence_failure_test_changeset/1" do
+    setup do
+      kafka_configuration =
+        build(
+          :triggers_kafka_configuration,
+          performed_persistence_failure_test: false
+        )
+
+      trigger =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: kafka_configuration
+        )
+
+      %{trigger: trigger}
+    end
+
+    test "returns valid changeset with requested change", %{
+      trigger: trigger
+    } do
+      changeset =
+        trigger
+        |> Trigger.kafka_performed_persistence_failure_test_changeset(true)
+
+      assert %Changeset{valid?: true, changes: changes} = changeset
+
+      assert %{
+               kafka_configuration: %{
+                 changes: %{performed_persistence_failure_test: true}
+               }
+             } = changes
+    end
+
+    test "returns an empty changeset if trigger type is :webhook" do
+      trigger = insert(:trigger, type: :webhook)
+
+      changeset =
+        trigger
+        |> Trigger.kafka_performed_persistence_failure_test_changeset(true)
+
+      assert changeset.changes == %{}
+    end
+
+    test "returns an empty changeset if trigger type is :cron" do
+      trigger = insert(:trigger, type: :cron)
+
+      changeset =
+        trigger
+        |> Trigger.kafka_performed_persistence_failure_test_changeset(true)
+
+      assert changeset.changes == %{}
+    end
+  end
 end

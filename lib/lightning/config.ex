@@ -169,6 +169,11 @@ defmodule Lightning.Config do
       kafka_trigger_config() |> Keyword.get(:number_of_processors)
     end
 
+    @impl true
+    def kafka_test_persistence_failure? do
+      kafka_trigger_config() |> Keyword.get(:test_persistence_failure)
+    end
+
     defp kafka_trigger_config do
       Application.get_env(:lightning, :kafka_triggers, [])
     end
@@ -187,6 +192,7 @@ defmodule Lightning.Config do
   @callback kafka_number_of_consumers() :: integer()
   @callback kafka_number_of_messages_per_second() :: float()
   @callback kafka_number_of_processors() :: integer()
+  @callback kafka_test_persistence_failure?() :: boolean()
   @callback kafka_triggers_enabled?() :: boolean()
   @callback oauth_provider(key :: atom()) :: keyword() | nil
   @callback purge_deleted_after_days() :: integer()
@@ -316,6 +322,10 @@ defmodule Lightning.Config do
 
   def kafka_number_of_processors do
     impl().kafka_number_of_processors()
+  end
+
+  def kafka_test_persistence_failure? do
+    impl().kafka_test_persistence_failure?()
   end
 
   defp impl do

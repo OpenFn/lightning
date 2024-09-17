@@ -213,4 +213,34 @@ defmodule Lightning.KafkaTriggers do
 
     %{interval: 10_000, messages_per_interval: messages_per_interval}
   end
+
+  def test_persistence_failure?(trigger_id) do
+    Trigger
+    |> Repo.get(trigger_id)
+    |> case do
+      %{kafka_configuration: %{performed_persistence_failure_test: true}} ->
+        false
+
+      %{type: :kafka} ->
+        Lightning.Config.kafka_test_persistence_failure?()
+
+      _trigger ->
+        false
+    end
+  end
+
+  def tested_persistence_failure(trigger_id) do
+    update_tested_persistence_failure(trigger_id, true)
+  end
+
+  def clear_tested_persistence_failure(trigger_id) do
+    update_tested_persistence_failure(trigger_id, false)
+  end
+
+  defp update_tested_persistence_failure(trigger_id, performed) do
+    Trigger
+    |> Repo.get(trigger_id)
+    |> Trigger.kafka_performed_persistence_failure_test_changeset(performed)
+    |> Repo.update()
+  end
 end

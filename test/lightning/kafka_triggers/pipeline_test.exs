@@ -2,6 +2,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
   use Lightning.DataCase
 
   import Mock
+  import Mox
   import ExUnit.CaptureLog
 
   alias Ecto.Changeset
@@ -366,6 +367,109 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       %{status: status} = Pipeline.handle_message(nil, message, context)
 
       assert {:failed, :work_order_creation_blocked} = status
+    end
+  end
+
+  describe ".handle_message/3 - persistence failure testing" do
+    setup do
+      expect(Lightning.MockConfig, :kafka_test_persistence_failure?, fn ->
+        true
+      end)
+
+      trigger_1 =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: configuration(index: 1),
+          enabled: true
+        )
+
+      trigger_2 =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: configuration(index: 2, ssl: false),
+          enabled: true
+        )
+
+      context = %{trigger_id: trigger_1.id |> String.to_atom()}
+
+      message = build_broadway_message()
+
+      %{
+        context: context,
+        message: message,
+        trigger_1: trigger_1,
+        trigger_2: trigger_2
+      }
+    end
+
+    test "returns the message with a persistence error", %{
+      context: context,
+      message: message
+    } do
+      expected_message = message |> Broadway.Message.failed(:persistence)
+
+      assert Pipeline.handle_message(nil, message, context) == expected_message
+    end
+
+    test "does not update partition timestamp data for the trigger", %{
+      context: context,
+      message: message,
+      trigger_1: trigger_1
+    } do
+      Pipeline.handle_message(nil, message, context)
+
+      %{
+        kafka_configuration: %{
+          partition_timestamps: trigger_1_timestamps
+        }
+      } = Trigger |> Repo.get(trigger_1.id)
+
+      assert trigger_1_timestamps == partition_timestamps()
+    end
+
+    test "does not persist a WorkOrder", %{
+      context: context,
+      message: message,
+      trigger_1: trigger
+    } do
+      Pipeline.handle_message(nil, message, context)
+
+      assert WorkOrder |> Repo.get_by(trigger_id: trigger.id) == nil
+    end
+
+    test "does not record the message for future deduplication", %{
+      context: context,
+      message: message
+    } do
+      Pipeline.handle_message(nil, message, context)
+
+      assert Repo.one(TriggerKafkaMessageRecord) == nil
+    end
+
+    test "updates the trigger to indicate that the test was performed", %{
+      context: context,
+      message: message,
+      trigger_1: trigger_1,
+      trigger_2: trigger_2
+    } do
+      Pipeline.handle_message(nil, message, context)
+
+      %{
+        kafka_configuration: %{
+          performed_persistence_failure_test: performed_1
+        }
+      } = Trigger |> Repo.get(trigger_1.id)
+
+      %{
+        kafka_configuration: %{
+          performed_persistence_failure_test: performed_2
+        }
+      } = Trigger |> Repo.get(trigger_2.id)
+
+      assert performed_1
+      refute performed_2
     end
   end
 

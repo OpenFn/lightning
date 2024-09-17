@@ -28,6 +28,7 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
     field :initial_offset_reset_policy, :string
     field :partition_timestamps, :map, default: %{}
     field :password, Lightning.Encrypted.EmbeddedBinary
+    field :performed_persistence_failure_test, :boolean, default: false
     field :sasl, Ecto.Enum, values: @sasl_types, default: nil
     field :ssl, :boolean
     field :topics, {:array, :string}
@@ -44,6 +45,7 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
       :initial_offset_reset_policy,
       :partition_timestamps,
       :password,
+      :performed_persistence_failure_test,
       :sasl,
       :ssl,
       :topics,

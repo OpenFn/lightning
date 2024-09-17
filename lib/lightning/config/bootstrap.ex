@@ -493,7 +493,9 @@ defmodule Lightning.Config.Bootstrap do
       number_of_consumers: env!("KAFKA_NUMBER_OF_CONSUMERS", :integer, 1),
       number_of_messages_per_second:
         env!("KAFKA_NUMBER_OF_MESSAGES_PER_SECOND", :float, 1),
-      number_of_processors: env!("KAFKA_NUMBER_OF_PROCESSORS", :integer, 1)
+      number_of_processors: env!("KAFKA_NUMBER_OF_PROCESSORS", :integer, 1),
+      test_persistence_failure:
+        env!("KAFKA_TEST_PERSISTENCE_FAILURE", &Utils.ensure_boolean/1, false)
 
     # # ==============================================================================
 
