@@ -67,7 +67,7 @@ keep private!_**
 
 ```
 username: demo@openfn.org
-password: welcome123
+password: welcome12345
 ```
 
 ## Features
