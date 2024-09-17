@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix empty webhook URL when switching workflow trigger type
+  [#2050](https://github.com/OpenFn/lightning/issues/2050)
+
 ## [v2.9.4] - 2024-09-16
 
 ### Changed
