@@ -359,8 +359,14 @@ defmodule LightningWeb.RunLive.Index do
        socket
        |> put_flash(
          :info,
-         "New run#{if count > 1, do: "s", else: ""} enqueued for #{count} workorder#{if count > 1, do: "s", else: ""}" <>
-           " (#{discarded_count} having wiped dataclip were discarded)"
+         "New run#{if count > 1, do: "s", else: ""} enqueued for #{count} workorder#{if count > 1, do: "s", else: ""}"
+         |> then(fn msg ->
+           if discarded_count > 0 do
+             msg <> " (#{discarded_count} were discarded due to wiped dataclip)"
+           else
+             msg
+           end
+         end)
        )
        |> push_navigate(
          to:

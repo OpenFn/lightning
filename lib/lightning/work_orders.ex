@@ -53,8 +53,8 @@ defmodule Lightning.WorkOrders do
   alias Lightning.WorkOrder
   alias Lightning.WorkOrders.Events
   alias Lightning.WorkOrders.Manual
-  alias Lightning.WorkOrders.RetryManyRunsJob
   alias Lightning.WorkOrders.Query
+  alias Lightning.WorkOrders.RetryManyRunsJob
 
   @type work_order_option ::
           {:workflow, Workflow.t()}
@@ -145,11 +145,16 @@ defmodule Lightning.WorkOrders do
     {:error, changeset}
   end
 
-  def get_or_create_snapshot(multi, workflow \\ nil) do
+  defp get_or_create_snapshot(multi, workflow \\ nil, name \\ :snapshot) do
     multi
-    |> Multi.merge(fn changes ->
-      workflow = workflow || changes[:workflow]
-      Multi.new() |> Snapshot.get_or_create_latest_for(workflow)
+    |> Multi.merge(fn
+      %{^name => _snapshot} ->
+        # already present when enqueuing multiple runs with the same snapshot
+        Multi.new()
+
+      changes ->
+        workflow = workflow || changes[:workflow]
+        Snapshot.get_or_create_latest_for(Multi.new(), name, workflow)
     end)
   end
 
@@ -305,9 +310,6 @@ defmodule Lightning.WorkOrders do
         preload: [:job]
       )
     end)
-    |> Multi.run(:starting_job, fn _repo, %{step: step} ->
-      {:ok, step && step.job}
-    end)
     |> Multi.run(:steps, &get_workflow_steps_from/2)
     |> Multi.run(:input_dataclip_id, fn
       _repo, %{step: %Step{input_dataclip_id: input_dataclip_id}} ->
@@ -322,10 +324,10 @@ defmodule Lightning.WorkOrders do
            "cannot retry run using a wiped dataclip"
          )}
     end)
-    |> do_retry(Keyword.fetch!(opts, :created_by))
+    |> enqueue_retry(Keyword.fetch!(opts, :created_by))
   end
 
-  def do_retry(multi, creating_user) do
+  defp enqueue_retry(multi, creating_user) do
     multi
     |> Multi.run(:workflow, fn _repo, %{run: run} ->
       {:ok, run.work_order.workflow}
@@ -333,22 +335,19 @@ defmodule Lightning.WorkOrders do
     |> get_or_create_snapshot()
     |> Multi.insert(:new_run, fn %{
                                    run: run,
-                                   starting_job: starting_job,
+                                   step: step,
                                    steps: steps,
                                    snapshot: snapshot,
                                    input_dataclip_id: dataclip_id
                                  } ->
-      Run.new(%{priority: :immediate, dataclip_id: dataclip_id})
-      |> put_assoc(:snapshot, snapshot)
-      |> put_assoc(:work_order, run.work_order)
-      |> put_assoc(:starting_job, starting_job)
-      |> put_assoc(:steps, steps)
-      |> put_assoc(:created_by, creating_user)
-      |> Run.add_options(run.work_order.workflow.project_id)
-      |> validate_required_assoc(:snapshot)
-      |> validate_required_assoc(:work_order)
-      |> validate_required_assoc(:created_by)
-      |> validate_required(:dataclip_id)
+      new_retry_run(
+        snapshot,
+        run.work_order,
+        dataclip_id,
+        step.job,
+        steps,
+        creating_user
+      )
     end)
     |> Multi.update_all(
       :workorder,
@@ -466,6 +465,7 @@ defmodule Lightning.WorkOrders do
       runs_ids
       |> Enum.chunk_every(@run_many_chunk_size)
       |> Enum.map(
+        # TODO: Enqueue the first chunk directly with Runs.enqueue_many and schedule the rest with Oban
         &RetryManyRunsJob.new(%{runs_ids: &1, created_by: creating_user.id})
       )
       |> then(fn jobs ->
@@ -508,6 +508,58 @@ defmodule Lightning.WorkOrders do
   end
 
   @doc """
+  Enqueue multiple runs for retry in the same transaction.
+  """
+  def enqueue_many_for_retry(runs_ids, creating_user_id) do
+    runs = preload_runs_for_retry(runs_ids)
+    creating_user = Repo.get!(User, creating_user_id)
+
+    runs
+    |> Enum.with_index()
+    |> Enum.reduce(Multi.new(), fn {run, index}, multi ->
+      run_op = "run#{index}"
+      snapshot_op = "snapshot#{run.work_order.workflow.id}"
+
+      multi
+      |> get_or_create_snapshot(run.work_order.workflow, snapshot_op)
+      |> Multi.insert(run_op, fn %{^snapshot_op => snapshot} ->
+        starting_job =
+          run.starting_job ||
+            hd(run.starting_trigger.edges).target_job
+
+        new_retry_run(
+          snapshot,
+          run.work_order,
+          run.dataclip_id,
+          starting_job,
+          [],
+          creating_user
+        )
+      end)
+      |> Multi.update_all(
+        "workorder#{index}",
+        fn %{^run_op => run} ->
+          update_workorder_query(run)
+        end,
+        [],
+        returning: true
+      )
+    end)
+    |> Multi.put(
+      :workflow_runs_count,
+      Enum.frequencies_by(runs, & &1.work_order.workflow_id)
+    )
+    |> Runs.enqueue_many()
+    |> case do
+      {:ok, changes} ->
+        {:ok, publish_events_for_retry_many(changes)}
+
+      {:error, _name, changeset, _changes} ->
+        {:error, changeset}
+    end
+  end
+
+  @doc """
   Updates the state of a WorkOrder based on the state of a run.
 
   This considers the state of all runs on the WorkOrder, with the
@@ -543,6 +595,27 @@ defmodule Lightning.WorkOrders do
       preload: ^preloads
     )
     |> Repo.one()
+  end
+
+  defp new_retry_run(
+         snapshot,
+         workorder,
+         dataclip_id,
+         starting_job,
+         steps,
+         creating_user
+       ) do
+    Run.new(%{priority: :immediate, dataclip_id: dataclip_id})
+    |> put_assoc(:snapshot, snapshot)
+    |> put_assoc(:work_order, workorder)
+    |> put_assoc(:starting_job, starting_job)
+    |> put_assoc(:steps, steps)
+    |> put_assoc(:created_by, creating_user)
+    |> Run.add_options(workorder.workflow.project_id)
+    |> validate_required_assoc(:snapshot)
+    |> validate_required_assoc(:work_order)
+    |> validate_required_assoc(:created_by)
+    |> validate_required(:dataclip_id)
   end
 
   defp update_workorder_query(run) do
@@ -582,5 +655,45 @@ defmodule Lightning.WorkOrders do
       order_by: [asc: wo.inserted_at]
     )
     |> Repo.all()
+  end
+
+  defp preload_runs_for_retry(runs_ids) do
+    from(r in Run,
+      where: r.id in ^runs_ids,
+      order_by: [asc: r.inserted_at],
+      preload: [
+        :starting_job,
+        starting_trigger: [edges: :target_job],
+        work_order: [:workflow]
+      ]
+    )
+    |> Repo.all()
+  end
+
+  defp publish_events_for_retry_many(changes) do
+    runs = get_from_changes("run", changes)
+
+    "workorder"
+    |> get_from_changes(changes)
+    |> Enum.each(fn {1, [workorder]} ->
+      project_id =
+        Enum.find_value(runs, fn run ->
+          if run.work_order_id == workorder.id,
+            do: run.work_order.workflow.project_id
+        end)
+
+      Events.work_order_updated(project_id, workorder)
+    end)
+
+    Enum.each(runs, &Events.run_created(&1.work_order.workflow.project_id, &1))
+
+    runs
+  end
+
+  defp get_from_changes(key_prefix, changes) do
+    changes
+    |> Map.keys()
+    |> Enum.filter(&String.starts_with?(to_string(&1), key_prefix))
+    |> Enum.map(&Map.get(changes, &1))
   end
 end

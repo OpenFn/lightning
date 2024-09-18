@@ -10,6 +10,7 @@ defmodule Lightning.WorkOrdersTest do
   alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
   alias Lightning.WorkOrders
   alias Lightning.WorkOrders.Events
+  alias Lightning.WorkOrders.RetryManyRunsJob
 
   describe "create_for/2" do
     setup context do
@@ -1830,6 +1831,115 @@ defmodule Lightning.WorkOrdersTest do
                starting_job_id: job_a.id
              ),
              "workorder with wiped dataclip is not retried"
+    end
+
+    test "retrying multiple chunks of workorders enqueues in background",
+         %{
+           jobs: [job_a, job_b, job_c],
+           snapshot: snapshot,
+           trigger: trigger,
+           user: user,
+           workflow: workflow
+         } do
+      workorders =
+        insert_list(39, :workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip),
+          snapshot: snapshot,
+          runs: [
+            %{
+              state: :failed,
+              dataclip: build(:dataclip),
+              starting_trigger: trigger,
+              snapshot: snapshot,
+              steps: [
+                insert(:step,
+                  job: job_a,
+                  input_dataclip: build(:dataclip),
+                  output_dataclip: build(:dataclip)
+                ),
+                insert(:step,
+                  job: job_b,
+                  input_dataclip: build(:dataclip),
+                  output_dataclip: build(:dataclip)
+                ),
+                insert(:step,
+                  job: job_c,
+                  input_dataclip: build(:dataclip),
+                  output_dataclip: build(:dataclip)
+                )
+              ]
+            }
+          ]
+        )
+
+      workorder_1 = hd(workorders)
+      workorder_39 = hd(Enum.reverse(workorders))
+
+      refute Repo.get_by(Lightning.Run,
+               work_order_id: workorder_1.id,
+               starting_job_id: job_a.id
+             )
+
+      refute Repo.get_by(Lightning.Run,
+               work_order_id: workorder_39.id,
+               starting_job_id: job_a.id
+             )
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, 39, 0} =
+          WorkOrders.retry_many(workorders,
+            created_by: user,
+            project_id: workflow.project_id
+          )
+
+        [workorders1, workorders2] = Enum.chunk_every(workorders, 20)
+
+        runs_ids1 =
+          Enum.flat_map(workorders1, fn workorder ->
+            Enum.map(workorder.runs, & &1.id)
+          end)
+
+        runs_ids2 =
+          Enum.flat_map(workorders2, fn workorder ->
+            Enum.map(workorder.runs, & &1.id)
+          end)
+
+        user_id = user.id
+
+        assert [
+                 %Oban.Job{
+                   args:
+                     %{"runs_ids" => ^runs_ids1, "created_by" => ^user_id} =
+                       args1
+                 },
+                 %Oban.Job{
+                   args:
+                     %{"runs_ids" => ^runs_ids2, "created_by" => ^user_id} =
+                       args2
+                 }
+               ] = all_enqueued(queue: :scheduler) |> Enum.sort_by(& &1.id)
+
+        assert :ok = perform_job(RetryManyRunsJob, args1)
+
+        assert Repo.get_by(Lightning.Run,
+                 work_order_id: workorder_1.id,
+                 starting_job_id: job_a.id
+               )
+
+        refute Repo.get_by(Lightning.Run,
+                 work_order_id: workorder_39.id,
+                 starting_job_id: job_a.id
+               )
+
+        assert :ok = perform_job(RetryManyRunsJob, args2)
+
+        assert Repo.get_by(Lightning.Run,
+                 work_order_id: workorder_39.id,
+                 starting_job_id: job_a.id
+               )
+      end)
     end
   end
 
