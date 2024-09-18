@@ -438,6 +438,38 @@ docker compose run --rm web mix ecto.migrate
 docker compose up
 ```
 
+#### Apple Silicon
+
+When running `docker compose up` on Apple Silicon (M1, M2, M3), you might encounter the following error:
+
+```
+> [web 20/20] RUN npm install --prefix assets:
+0.091 rosetta error: failed to open elf at /lib64/ld-linux-x86-64.so.2
+0.091  Trace/breakpoint trap
+------
+failed to solve: process "/bin/sh -c npm install --prefix assets" did not complete successfully: exit code: 133
+```
+
+You can solve this by setting the default docker platform to `linux/amd64`, i.e. `DOCKER_DEFAULT_PLATFORM=linux/amd64`.
+You can read more on this here: https://stackoverflow.com/questions/71040681/qemu-x86-64-could-not-open-lib64-ld-linux-x86-64-so-2-no-such-file-or-direc
+
+You might also run into:
+
+```
+[notice] Application ssl exited: exited in: :ssl_app.start(:normal, [])
+ ** (EXIT) an exception was raised:
+     ** (ArgumentError) could not call Module.put_attribute/3 because the module Lightning.MixProject is already compiled
+         (elixir 1.16.2) lib/module.ex:2360: Module.assert_not_readonly!/2
+         (elixir 1.16.2) lib/module.ex:2041: Module.__put_attribute__/5
+         (ssl 11.1.4) ssl_app.erl:35: :ssl_app.stop/1
+         (kernel 9.2.4) application_master.erl:293: :application_master.start_it_old/4
+
+** (MatchError) no match of right hand side value: {:error, {:ssl, {:bad_return, {{:ssl_app, :start, [:normal, []]}, {:EXIT, {%ArgumentError{message: "could not call Module.put_attribute/3 because the module Lightning.MixProject is already compiled"}, [{Module, :assert_not_readonly!, 2, [file: ~c"lib/module.ex", line: 2360]}, {Module, :__put_attribute__, 5, [file: ~c"lib/module.ex", line: 2041]}, {:ssl_app, :stop, 1, [file: ~c"ssl_app.erl", line: 35]}, {:application_master, :start_it_old, 4, [file: ~c"application_master.erl", line: 293]}]}}}}}}
+```
+
+You can resolve this by setting `ERL_FLAGS="+JPperf true"` env to the failing stage.
+You can follow this thread on our community forum for more info: https://community.openfn.org/t/lightning-prebuilt-images-throw-no-matching-manifest-for-linux-arm64-v8-in-the-manifest-list-entries/465/15
+
 ### Problems with Rambo
 
 When running `mix compile.rambo` on Apple Silicon (an Apple M1/M2, `macarm`,

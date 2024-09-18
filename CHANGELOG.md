@@ -23,6 +23,8 @@ and this project adheres to
 
 - Fix empty webhook URL when switching workflow trigger type
   [#2050](https://github.com/OpenFn/lightning/issues/2050)
+- Add quotes when special YAML characters are present in the exported project
+  [#2446](https://github.com/OpenFn/lightning/issues/2446)
 
 ## [v2.9.4] - 2024-09-16
 
@@ -34,6 +36,8 @@ and this project adheres to
   [#2442](https://github.com/OpenFn/lightning/issues/2442)
 - When selecting a node in the workflow diagram, connected edges will also be
   highlighted [2396](https://github.com/OpenFn/lightning/issues/2358)
+- Hide export history button when no workorder is rendered in the table
+  [#2440](https://github.com/OpenFn/lightning/issues/2440)
 
 ### Fixed
 
@@ -42,6 +46,8 @@ and this project adheres to
 - Fix jumpy combobox for scope switcher
   [#2469](https://github.com/OpenFn/lightning/issues/2469)
 - Fix console errors when rending edge labels in the workflow diagram
+- Fix tooltip on export workorder button
+  [#2430](https://github.com/OpenFn/lightning/issues/2430)
 
 ## [v2.9.3] - 2024-09-11
 

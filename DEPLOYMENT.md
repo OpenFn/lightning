@@ -72,6 +72,11 @@ permissions are needed for the github app:
 | Secrets      | Read and Write |
 | Workflows    | Read and Write |
 
+Ensure you set the following URLs:
+* **Homepage URL:** `<app_url_here>`
+* **Callback URL for authorizing users:** `<app_url_here>/oauth/github/callback` (Do NOT check the two checkboxes in this section requesting Device Flow and OAuth.)
+* **Setup URL for Post installation:** `<app_url_here>/setup_vcs` (Check the box for **Redirect on update**)
+
 These envrionment variables will need to be set in order to configure the github
 app:
 
