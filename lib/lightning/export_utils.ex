@@ -8,6 +8,27 @@ defmodule Lightning.ExportUtils do
   alias Lightning.Workflows
   alias Lightning.Workflows.Snapshot
 
+  @ordering_map %{
+    project: [:name, :description, :credentials, :globals, :workflows],
+    credential: [:name, :owner],
+    workflow: [:name, :jobs, :triggers, :edges],
+    job: [:name, :adaptor, :credential, :globals, :body],
+    trigger: [:type, :cron_expression, :enabled],
+    edge: [
+      :source_trigger,
+      :source_job,
+      :target_job,
+      :condition_type,
+      :condition_label,
+      :condition_expression,
+      :enabled
+    ]
+  }
+
+  @special_keys Enum.flat_map(@ordering_map, fn {node_key, child_keys} ->
+                  [node_key | child_keys]
+                end)
+
   defp hyphenate(string) when is_binary(string) do
     string |> String.replace(" ", "-")
   end
@@ -95,27 +116,10 @@ defmodule Lightning.ExportUtils do
   end
 
   defp pick_and_sort(map) do
-    ordering_map = %{
-      project: [:name, :description, :credentials, :globals, :workflows],
-      credential: [:name, :owner],
-      workflow: [:name, :jobs, :triggers, :edges],
-      job: [:name, :adaptor, :credential, :globals, :body],
-      trigger: [:type, :cron_expression, :enabled],
-      edge: [
-        :source_trigger,
-        :source_job,
-        :target_job,
-        :condition_type,
-        :condition_label,
-        :condition_expression,
-        :enabled
-      ]
-    }
-
     map
     |> Enum.filter(fn {key, _value} ->
       if Map.has_key?(map, :node_type) do
-        ordering_map[map.node_type]
+        @ordering_map[map.node_type]
         |> Enum.member?(key)
       else
         true
@@ -124,7 +128,7 @@ defmodule Lightning.ExportUtils do
     |> Enum.sort_by(
       fn {key, _value} ->
         if Map.has_key?(map, :node_type) do
-          olist = ordering_map[map.node_type]
+          olist = @ordering_map[map.node_type]
 
           olist
           |> Enum.find_index(&(&1 == key))
@@ -149,8 +153,41 @@ defmodule Lightning.ExportUtils do
       :cron_expression ->
         "#{k}: '#{v}'"
 
+      :condition_expression ->
+        "condition_expression: #{v}"
+
       _ ->
-        "#{k}: #{v}"
+        "#{yaml_safe_key(k)}: #{yaml_safe_string(v)}"
+    end
+  end
+
+  defp yaml_safe_string(value) do
+    # starts with alphanumeric
+    # followed by alphanumeric or hyphen or underscore or @ or . or > or space
+    # ends with alphanumeric
+    if Regex.match?(~r/^[a-zA-Z0-9][a-zA-Z0-9_\-@\.> ]*[a-zA-Z0-9]$/, value) do
+      value
+    else
+      ~s('#{value}')
+    end
+  end
+
+  defp yaml_safe_key(key) do
+    if key in @special_keys do
+      key
+    else
+      key |> to_string() |> hyphenate() |> maybe_escape_key()
+    end
+  end
+
+  defp maybe_escape_key(key) do
+    # starts with alphanumeric
+    # followed by alphanumeric or hyphen or underscore or @ or . or >
+    # ends with alphanumeric
+    if Regex.match?(~r/^[a-zA-Z0-9][a-zA-Z0-9_\-@\.>]*[a-zA-Z0-9]$/, key) do
+      key
+    else
+      ~s("#{key}")
     end
   end
 
@@ -159,23 +196,23 @@ defmodule Lightning.ExportUtils do
   end
 
   defp handle_input(key, value, indentation) when is_number(value) do
-    "#{indentation}#{key}: #{value}"
+    "#{indentation}#{yaml_safe_key(key)}: #{value}"
   end
 
   defp handle_input(key, value, indentation) when is_boolean(value) do
-    "#{indentation}#{key}: #{Atom.to_string(value)}"
+    "#{indentation}#{yaml_safe_key(key)}: #{value}"
   end
 
   defp handle_input(key, value, indentation) when value in [%{}, [], nil] do
-    "#{indentation}#{key}: null"
+    "#{indentation}#{yaml_safe_key(key)}: null"
   end
 
   defp handle_input(key, value, indentation) when is_map(value) do
-    "#{indentation}#{hyphenate(key)}:\n#{to_new_yaml(value, "#{indentation}  ")}"
+    "#{indentation}#{yaml_safe_key(key)}:\n#{to_new_yaml(value, "#{indentation}  ")}"
   end
 
   defp handle_input(key, value, indentation) when is_list(value) do
-    "#{indentation}#{hyphenate(key)}:\n#{Enum.map_join(value, "\n", fn map -> "#{indentation}  #{hyphenate(map.name)}:\n#{to_new_yaml(map, "#{indentation}    ")}" end)}"
+    "#{indentation}#{yaml_safe_key(key)}:\n#{Enum.map_join(value, "\n", fn map -> "#{indentation}  #{yaml_safe_key(map.name)}:\n#{to_new_yaml(map, "#{indentation}    ")}" end)}"
   end
 
   defp to_new_yaml(map, indentation \\ "") do

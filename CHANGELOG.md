@@ -26,6 +26,21 @@ and this project adheres to
   [#2365](https://github.com/OpenFn/lightning/issues/2365)
 - User email change: Send notification of change to the old email address and
   confirmation to the new email address [#2365](https://github.com/OpenFn/lightning/issues/2365)
+## [v2.9.5] - 2024-09-18
+
+### Changed
+
+- Hide export history button when no workorder is rendered in the table
+  [#2440](https://github.com/OpenFn/lightning/issues/2440)
+- Improve docs for running lightning locally #2499
+  [#2499](https://github.com/OpenFn/lightning/pull/2499)
+
+### Fixed
+
+- Fix empty webhook URL when switching workflow trigger type
+  [#2050](https://github.com/OpenFn/lightning/issues/2050)
+- Add quotes when special YAML characters are present in the exported project
+  [#2446](https://github.com/OpenFn/lightning/issues/2446)
 
 ## [v2.9.4] - 2024-09-16
 
@@ -45,6 +60,8 @@ and this project adheres to
 - Fix jumpy combobox for scope switcher
   [#2469](https://github.com/OpenFn/lightning/issues/2469)
 - Fix console errors when rending edge labels in the workflow diagram
+- Fix tooltip on export workorder button
+  [#2430](https://github.com/OpenFn/lightning/issues/2430)
 
 ## [v2.9.3] - 2024-09-11
 

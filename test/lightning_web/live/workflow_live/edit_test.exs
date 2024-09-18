@@ -244,6 +244,42 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   describe "edit" do
     setup :create_workflow
 
+    test "Switching trigger types doesn't erase webhook URL input content", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      select_trigger(view)
+
+      trigger = List.first(workflow.triggers)
+      webhook_url = url(LightningWeb.Endpoint, ~p"/i/#{trigger.id}")
+
+      view
+      |> form("#workflow-form", %{
+        "workflow" => %{"triggers" => %{"0" => %{"type" => "cron"}}}
+      })
+      |> render_change()
+
+      click_save(view)
+
+      refute view |> has_element?("#webhookUrlInput[value='#{webhook_url}']")
+
+      select_trigger(view)
+
+      view
+      |> form("#workflow-form", %{
+        "workflow" => %{"triggers" => %{"0" => %{"type" => "webhook"}}}
+      })
+      |> render_change()
+
+      click_save(view)
+
+      assert view |> has_element?("#webhookUrlInput[value='#{webhook_url}']")
+    end
+
     test "Switching between workflow versions maintains correct read-only and edit modes",
          %{conn: conn, project: project, workflow: workflow} do
       {:ok, view, _html} =
