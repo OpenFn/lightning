@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="project" content="Lightning v2.9.4">
+
+    <title>Running Locally — Lightning v2.9.4</title>
+    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
+
+
+    <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
+    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
+    <script src="dist/sidebar_items-3A75E2B6.js"></script>
+
+      <script src="docs_config.js"></script>
+
+    <script async src="dist/html-J2ASZTQE.js"></script>
+
+
+  </head>
+  <body data-type="extras" class="page-extra">
+    <script>
+
+      try {
+        var settings = JSON.parse(localStorage.getItem('ex_doc:settings') || '{}');
+
+        if (settings.theme === 'dark' ||
+           ((settings.theme === 'system' || settings.theme == null) &&
+             window.matchMedia('(prefers-color-scheme: dark)').matches)
+           ) {
+          document.body.classList.add('dark')
+        }
+      } catch (error) { }
+    </script>
+
+<div class="main">
+
+<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+  <form class="sidebar-search" action="search.html">
+    <label class="search-label">
+      <span class="sr-only">Search documentation of Lightning</span>
+      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+    </label>
+    <button type="submit" class="search-button" aria-label="Submit Search">
+      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
+    </button>
+    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+      <i class="ri-close-line ri-lg" title="Cancel search"></i>
+    </button>
+  </form>
+
+  <div class="autocomplete">
+    <div class="autocomplete-results">
+    </div>
+  </div>
+
+  <div class="sidebar-header">
+
+      <a href="https://openfn.github.io/Lightning">
+        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
+      </a>
+
+    <div class="sidebar-projectDetails">
+      <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+Lightning
+      </a>
+      <div class="sidebar-projectVersion" translate="no">
+        v2.9.4
+      </div>
+    </div>
+    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
+      <li>
+        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
+Pages
+        </button>
+      </li>
+
+        <li>
+          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
+            Modules
+          </button>
+        </li>
+
+
+        <li>
+          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
+            <span translate="no">Mix</span> Tasks
+          </button>
+        </li>
+
+    </ul>
+  </div>
+
+  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
+    <ul id="extras-full-list" class="full-list"></ul>
+  </div>
+
+    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
+      <ul id="modules-full-list" class="full-list"></ul>
+    </div>
+
+
+    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
+      <ul id="tasks-full-list" class="full-list"></ul>
+    </div>
+
+</nav>
+
+<main class="content">
+  <output role="status" id="toast"></output>
+  <div class="content-outer">
+    <div id="content" class="content-inner">
+
+<h1>
+<button class="icon-action display-settings">
+  <i class="ri-settings-3-line"></i>
+  <span class="sr-only">Settings</span>
+</button>
+
+
+    <a href="https://github.com/OpenFn/lightning/blob/main/RUNNINGLOCAL.md#L1" title="View Source" class="icon-action" rel="help">
+      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+      <span class="sr-only">View Source</span>
+    </a>
+
+
+  <span>Running Lightning Locally</span>
+</h1>
+
+<p>This guide provides instructions for running Lightning locally, either by
+installing dependencies on your machine or using Docker.</p><h2 id="by-installing-dependencies" class="section-heading">
+  <a href="#by-installing-dependencies" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">By Installing Dependencies</span>
+</h2>
+<h3 id="setup" class="section-heading">
+  <a href="#setup" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Setup</span>
+</h3>
+<h4>Postgres</h4><p>Requires <code class="inline">postgres 15</code>.
+When running in <code class="inline">dev</code> mode, the app will use the following credentials to authenticate:</p><ul><li><code class="inline">PORT</code>: <code class="inline">5432</code></li><li><code class="inline">USER</code>: <code class="inline">postgres</code></li><li><code class="inline">PASSWORD</code>: <code class="inline">postgres</code></li><li><code class="inline">DATABASE</code>: <code class="inline">lightning_dev</code></li></ul><p>This can however be overriden by specifying a <code class="inline">DATABASE_URL</code> env var.
+e.g. <code class="inline">DATABASE_URL=postgresql://postgres:postgres@localhost:5432/lightning_dev</code></p><p>We recommend that you use docker for running postgres as you'll get an exact version that we use:</p><pre><code class="makeup sh" translate="no"><span class="">docker volume create lightning-postgres-data
+</span><span class="">
+</span><span class="">docker create \
+</span><span class="">  --name lightning-postgres \
+</span><span class="">  --mount source=lightning-postgres-data,target=/var/lib/postgresql/data \
+</span><span class="">  --publish 5432:5432 \
+</span><span class="">  -e POSTGRES_PASSWORD=postgres \
+</span><span class="">  postgres:15.3-alpine
+</span><span class="">
+</span><span class="">docker start lightning-postgres
+</span></code></pre><h4>Elixir, NodeJS</h4><p>We use <a href="https://github.com/asdf-vm/asdf">asdf</a> to configure our local
+environments. Included in the repo is a <code class="inline">.tool-versions</code> file that is read by
+asdf in order to dynamically make the specified versions of Elixir, Erlang and NodeJs
+available. You'll need asdf plugins for
+<a href="https://github.com/asdf-vm/asdf-erlang">Erlang</a>,
+<a href="https://github.com/asdf-vm/asdf-nodejs">NodeJs</a>
+<a href="https://github.com/asdf-vm/asdf-elixir">Elixir</a> and
+<a href="https://github.com/grimoh/asdf-k6">k6</a>.</p><h4>Libsodium</h4><p>We use <a href="https://doc.libsodium.org/">libsodium</a> for encoding values as required
+by the
+<a href="https://docs.github.com/en/rest/guides/encrypting-secrets-for-the-rest-api">Github API</a>.
+You'll need to install <code class="inline">libsodium</code> in order for the application to compile.</p><p>For Mac Users:</p><pre><code class="makeup sh" translate="no"><span class="">brew install libsodium
+</span></code></pre><p>For Debian Users:</p><pre><code class="makeup sh" translate="no"><span class="">sudo apt-get install libsodium-dev
+</span></code></pre><p>You can find more on
+<a href="https://doc.libsodium.org/installation">how to install libsodium here</a></p><h4>Compilation and Assets</h4><pre><code class="makeup sh" translate="no"><span class="">asdf install  # Install language versions
+</span><span class="">mix local.hex
+</span><span class="">mix deps.get
+</span><span class="">mix local.rebar --force
+</span><span class="">[[ $(uname -m) == &#39;arm64&#39; ]] &amp;&amp; CPATH=/opt/homebrew/include LIBRARY_PATH=/opt/homebrew/lib mix deps.compile enacl # Force compile enacl if on M1
+</span><span class="">[[ $(uname -m) == &#39;arm64&#39; ]] &amp;&amp; mix compile.rambo # Force compile rambo if on M1
+</span><span class="">mix lightning.install_runtime
+</span><span class="">mix lightning.install_schemas
+</span><span class="">mix lightning.install_adaptor_icons
+</span><span class="">mix ecto.create
+</span><span class="">mix ecto.migrate
+</span><span class="">npm install --prefix assets
+</span></code></pre><p>In case you encounter errors running any of these commands, see the <a href="benchmarking.md.html#troubleshooting">troubleshooting guide</a> for
+known errors.</p><h3 id="running-the-app" class="section-heading">
+  <a href="#running-the-app" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Running the App</span>
+</h3>
+<p>To start the lightning server:</p><pre><code class="makeup sh" translate="no"><span class="">mix phx.server
+</span></code></pre><p>Once the server has started, head to <a href="http://localhost:4000"><code class="inline">localhost:4000</code></a>
+in your browser.</p><p>By default, the <code class="inline">worker</code> is started when run <a href="https://hexdocs.pm/phoenix/1.7.12/Mix.Tasks.Phx.Server.html"><code class="inline">mix phx.server</code></a> in <code class="inline">dev</code> mode. In case you
+don't want to have your worker started in <code class="inline">dev</code>, set <code class="inline">RTM=false</code>:</p><pre><code class="makeup sh" translate="no"><span class="">RTM=false mix phx.server
+</span></code></pre><h2 id="using-docker" class="section-heading">
+  <a href="#using-docker" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Using Docker</span>
+</h2>
+<p>There is an existing <code class="inline">docker-compose.yaml</code> file in the project's root which has all the
+services required. To start your services:</p><pre><code class="makeup sh" translate="no"><span class="">docker compose up
+</span></code></pre><p>There 2 docker files in the root, <code class="inline">Dockerfile</code> builds the app in <code class="inline">prod</code> mode while <code class="inline">Dockerfile-dev</code>
+runs it in <code class="inline">dev</code> mode. It is important to note that <code class="inline">mix commands</code> do not work in the <code class="inline">prod</code> images.</p><p>For exmaple, to run migrations in <code class="inline">dev</code> mode you run:</p><pre><code class="makeup sh" translate="no"><span class="">docker compose run --rm web mix ecto.migrate
+</span></code></pre><p>While in <code class="inline">prod</code> mode:</p><pre><code class="makeup sh" translate="no"><span class="">docker compose run --rm web /app/bin/lightning eval &quot;Lightning.Release.migrate()&quot;
+</span></code></pre><h3 id="configuring-the-worker" class="section-heading">
+  <a href="#configuring-the-worker" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Configuring the Worker</span>
+</h3>
+<p>By default, lightning starts the <code class="inline">worker</code> when running in <code class="inline">dev</code>. This can also be configured using
+<code class="inline">RTM</code> env var. In case you don't want the hassle of configuring the worker in <code class="inline">dev</code>, you can just
+remove/comment out the <code class="inline">worker</code> service from the <code class="inline">docker-compose.yaml</code> file because lightning will
+start it for you.</p><p><a href="workers.html">Learn more about configuring workers</a></p><h3 id="problems-with-apple-silicon" class="section-heading">
+  <a href="#problems-with-apple-silicon" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Problems with Apple Silicon</span>
+</h3>
+<p>You might run into some errors when running the docker containers on Apple Silicon.
+<a href="benchmarking.md.html#problems-with-docker">We have documented the known ones here</a></p>
+<div class="bottom-actions">
+  <div class="bottom-actions-item">
+
+      <a href="readme.html" class="bottom-actions-button" rel="prev">
+        <span class="subheader">
+          ← Previous Page
+        </span>
+        <span class="title">
+Lightning
+        </span>
+      </a>
+
+  </div>
+  <div class="bottom-actions-item">
+
+      <a href="deployment.html" class="bottom-actions-button" rel="next">
+        <span class="subheader">
+          Next Page →
+        </span>
+        <span class="title">
+Deployment
+        </span>
+      </a>
+
+  </div>
+</div>
+      <footer class="footer">
+        <p>
+
+          <span class="line">
+            <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+              Search HexDocs
+            </button>
+
+              <a href="Lightning.epub" title="ePub version">
+                Download ePub version
+              </a>
+
+          </span>
+        </p>
+
+        <p class="built-using">
+          Built using
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
+
+            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+        </p>
+      </footer>
+    </div>
+  </div>
+</main>
+</div>
+
+
+  </body>
+</html>

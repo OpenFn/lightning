@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-99E29FD6.js"></script>
+    <script src="dist/sidebar_items-3A75E2B6.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -183,7 +183,7 @@ as run_results via the websocket connection from a worker.</li></ul><h3 id="gith
   <span class="text">Github</span>
 </h3>
 <p>Lightning enables connection to github via Github Apps. The following github
-permissions are needed for the github app:</p><table><thead><tr><th style="text-align: left;"><strong>Resource</strong></th><th style="text-align: left;"><strong>Access</strong></th></tr></thead><tbody><tr><td style="text-align: left;">Actions</td><td style="text-align: left;">Read and Write</td></tr><tr><td style="text-align: left;">Contents</td><td style="text-align: left;">Read and Write</td></tr><tr><td style="text-align: left;">Metadata</td><td style="text-align: left;">Read only</td></tr><tr><td style="text-align: left;">Secrets</td><td style="text-align: left;">Read and Write</td></tr><tr><td style="text-align: left;">Workflows</td><td style="text-align: left;">Read and Write</td></tr></tbody></table><p>These envrionment variables will need to be set in order to configure the github
+permissions are needed for the github app:</p><table><thead><tr><th style="text-align: left;"><strong>Resource</strong></th><th style="text-align: left;"><strong>Access</strong></th></tr></thead><tbody><tr><td style="text-align: left;">Actions</td><td style="text-align: left;">Read and Write</td></tr><tr><td style="text-align: left;">Contents</td><td style="text-align: left;">Read and Write</td></tr><tr><td style="text-align: left;">Metadata</td><td style="text-align: left;">Read only</td></tr><tr><td style="text-align: left;">Secrets</td><td style="text-align: left;">Read and Write</td></tr><tr><td style="text-align: left;">Workflows</td><td style="text-align: left;">Read and Write</td></tr></tbody></table><p>Ensure you set the following URLs:</p><ul><li><strong>Homepage URL:</strong> <code class="inline">&lt;app_url_here&gt;</code></li><li><strong>Callback URL for authorizing users:</strong> <code class="inline">&lt;app_url_here&gt;/oauth/github/callback</code> (Do NOT check the two checkboxes in this section requesting Device Flow and OAuth.)</li><li><strong>Setup URL for Post installation:</strong> <code class="inline">&lt;app_url_here&gt;/setup_vcs</code> (Check the box for <strong>Redirect on update</strong>)</li></ul><p>These envrionment variables will need to be set in order to configure the github
 app:</p><table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;"><strong>Description</strong></th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">GITHUB_APP_ID</code></td><td style="text-align: left;">the github app ID.</td></tr><tr><td style="text-align: left;"><code class="inline">GITHUB_APP_NAME</code></td><td style="text-align: left;">the github app name</td></tr><tr><td style="text-align: left;"><code class="inline">GITHUB_APP_CLIENT_ID</code></td><td style="text-align: left;">the github app Client ID</td></tr><tr><td style="text-align: left;"><code class="inline">GITHUB_APP_CLIENT_SECRET</code></td><td style="text-align: left;">the github app Client Secret</td></tr><tr><td style="text-align: left;"><code class="inline">GITHUB_CERT</code></td><td style="text-align: left;">the github app private key</td></tr></tbody></table><p>You can access these from your github app settings menu. Also needed for the
 configurtaion is:</p><ul><li><code class="inline">REPO_CONNECTION_SIGNING_SECRET</code> - secret used to sign access tokens. This
 access token is used to authenticate requests made from the github actions.
@@ -255,12 +255,12 @@ Replacing <code class="inline">ENDPOINT DOMAIN</code> with the host name of your
 <div class="bottom-actions">
   <div class="bottom-actions-item">
 
-      <a href="readme.html" class="bottom-actions-button" rel="prev">
+      <a href="runninglocal.html" class="bottom-actions-button" rel="prev">
         <span class="subheader">
           ← Previous Page
         </span>
         <span class="title">
-Lightning
+Running Locally
         </span>
       </a>
 
