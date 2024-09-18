@@ -492,29 +492,29 @@ defmodule Lightning.Accounts do
 
   ## Examples
 
-      iex> deliver_update_email_instructions(user, current_email, &Routes.user_update_email_url(conn, :edit, &1))
+      iex> deliver_update_email_instructions(user, new_email, &Routes.user_update_email_url(conn, :edit, &1))
       {:ok, %{to: ..., body: ...}}
 
   """
   def deliver_update_email_instructions(
         %User{} = user,
-        current_email,
+        new_email,
         update_email_url_fun
       )
       when is_function(update_email_url_fun, 1) do
     {encoded_token, user_token} =
-      UserToken.build_email_token(user, "change:#{user.email}", current_email)
+      UserToken.build_email_token(user, "change:#{user.email}", new_email)
 
     Repo.insert!(user_token)
 
     UserNotifier.deliver_update_email_warning(
       user,
-      current_email
+      new_email
     )
 
     UserNotifier.deliver_update_email_instructions(
       %User{
-        email: current_email,
+        email: new_email,
         first_name: user.first_name,
         last_name: user.last_name
       },
