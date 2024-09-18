@@ -2,12 +2,14 @@ defmodule Lightning.Accounts do
   @moduledoc """
   The Accounts context.
   """
+
   use Oban.Worker,
     queue: :background,
     max_attempts: 1
 
   import Ecto.Query, warn: false
 
+  alias Ecto.Changeset
   alias Ecto.Multi
   alias Lightning.Accounts.Events
   alias Lightning.Accounts.User
@@ -522,18 +524,25 @@ defmodule Lightning.Accounts do
     )
   end
 
-  def validate_change_user_email(user, params \\ %{}, validate_password \\ false) do
+  def validate_change_user_email(user, params \\ %{}, opts \\ []) do
+    validate_password? = Keyword.get(opts, :validate_password, false)
+
     data = %{email: nil, current_password: nil}
     types = %{email: :string, current_password: :string}
 
     {data, types}
-    |> Ecto.Changeset.cast(params, Map.keys(types))
-    |> Ecto.Changeset.validate_required([:email])
-    |> Ecto.Changeset.validate_format(:email, ~r/^[^\s]+@[^\s]+$/,
+    |> Changeset.cast(params, Map.keys(types))
+    |> Changeset.validate_required([:email])
+    |> Changeset.validate_format(:email, ~r/^[^\s]+@[^\s]+$/,
       message: "must have the @ sign and no spaces"
     )
-    |> Ecto.Changeset.validate_length(:email, max: 160)
-    |> Ecto.Changeset.validate_change(:email, fn :email, email ->
+    |> Changeset.validate_length(:email, max: 160)
+    |> validate_email_change(user)
+    |> maybe_validate_password(user, validate_password?)
+  end
+
+  defp validate_email_change(changeset, user) do
+    Changeset.validate_change(changeset, :email, fn :email, email ->
       cond do
         user.email == email ->
           [email: "has not changed"]
@@ -545,14 +554,13 @@ defmodule Lightning.Accounts do
           []
       end
     end)
-    |> maybe_validate_password(validate_password, user)
   end
 
-  defp maybe_validate_password(changeset, true, user) do
+  defp maybe_validate_password(changeset, user, true) do
     changeset
-    |> Ecto.Changeset.validate_required([:current_password])
-    |> Ecto.Changeset.validate_change(:current_password, fn :current_password,
-                                                            password ->
+    |> Changeset.validate_required([:current_password])
+    |> Changeset.validate_change(:current_password, fn :current_password,
+                                                       password ->
       if Bcrypt.verify_pass(password, user.hashed_password) do
         []
       else
@@ -561,7 +569,7 @@ defmodule Lightning.Accounts do
     end)
   end
 
-  defp maybe_validate_password(changeset, false, _user), do: changeset
+  defp maybe_validate_password(changeset, _user, false), do: changeset
 
   @doc """
   Deletes a user.

@@ -21,8 +21,11 @@ and this project adheres to
 
 ### Fixed
 
-- Fix Buggy Change Email Flow
+- User email change: Optimize validation by checking password only on form
+  submission, not after every keystroke
   [#2365](https://github.com/OpenFn/lightning/issues/2365)
+- User email change: Send notification of change to the old email address and
+  confirmation to the new email address [#2365](https://github.com/OpenFn/lightning/issues/2365)
 
 ## [v2.9.4] - 2024-09-16
 
