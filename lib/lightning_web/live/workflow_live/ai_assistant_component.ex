@@ -238,7 +238,6 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         <a
           href="https://www.openfn.org/ai"
           target="_blank"
-          phx-click={JS.show(to: "#ai-assistant-disclaimer")}
           class="text-primary-400 hover:text-primary-600"
         >
           OpenFn Responsible AI Policy

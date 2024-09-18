@@ -25,6 +25,7 @@ and this project adheres to
   [#2050](https://github.com/OpenFn/lightning/issues/2050)
 - Add quotes when special YAML characters are present in the exported project
   [#2446](https://github.com/OpenFn/lightning/issues/2446)
+- In the AI Assistant, don't open the help page when clicking the Responsible AI Link [#2511](https://github.com/OpenFn/lightning/issues/2511)
 
 ## [v2.9.4] - 2024-09-16
 
