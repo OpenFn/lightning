@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Add quotes when special YAML characters are present in the exported project
+  [#2446](https://github.com/OpenFn/lightning/issues/2446)
+
 ## [v2.9.4] - 2024-09-16
 
 ### Changed
