@@ -21,6 +21,17 @@ and this project adheres to
 
 ### Fixed
 
+## [v2.9.5] - 2024-09-18
+
+### Changed
+
+- Hide export history button when no workorder is rendered in the table
+  [#2440](https://github.com/OpenFn/lightning/issues/2440)
+- Improve docs for running lightning locally #2499
+  [#2499](https://github.com/OpenFn/lightning/pull/2499)
+
+### Fixed
+
 - Fix empty webhook URL when switching workflow trigger type
   [#2050](https://github.com/OpenFn/lightning/issues/2050)
 - Add quotes when special YAML characters are present in the exported project
@@ -36,8 +47,6 @@ and this project adheres to
   [#2442](https://github.com/OpenFn/lightning/issues/2442)
 - When selecting a node in the workflow diagram, connected edges will also be
   highlighted [2396](https://github.com/OpenFn/lightning/issues/2358)
-- Hide export history button when no workorder is rendered in the table
-  [#2440](https://github.com/OpenFn/lightning/issues/2440)
 
 ### Fixed
 
