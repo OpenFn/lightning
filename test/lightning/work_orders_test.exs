@@ -955,7 +955,8 @@ defmodule Lightning.WorkOrdersTest do
         assert run.id in [run_1.id, run_2.id]
       end
 
-      {:ok, 0, 0} = WorkOrders.retry_many([workorder], job_a.id, created_by: user)
+      {:ok, 0, 0} =
+        WorkOrders.retry_many([workorder], job_a.id, created_by: user)
 
       runs = Ecto.assoc(workorder, :runs) |> Repo.all()
 

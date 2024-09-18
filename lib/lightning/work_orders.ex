@@ -145,7 +145,7 @@ defmodule Lightning.WorkOrders do
     {:error, changeset}
   end
 
-  defp get_or_create_snapshot(multi, workflow \\ nil) do
+  def get_or_create_snapshot(multi, workflow \\ nil) do
     multi
     |> Multi.merge(fn changes ->
       workflow = workflow || changes[:workflow]
@@ -285,7 +285,9 @@ defmodule Lightning.WorkOrders do
 
   def retry(run_id, step_id, opts)
       when is_binary(run_id) and is_binary(step_id) do
-    run =
+    Multi.new()
+    |> Multi.one(
+      :run,
       from(a in Run,
         where: a.id == ^run_id,
         join: s in assoc(a, :steps),
@@ -295,84 +297,72 @@ defmodule Lightning.WorkOrders do
           work_order: [workflow: :edges]
         ]
       )
-      |> Repo.one()
-
-    step =
+    )
+    |> Multi.one(:step, fn %{run: run} ->
       from(s in Ecto.assoc(run, :steps),
-        where: s.id == ^step_id,
-        preload: [
-          :job,
-          :input_dataclip,
-          snapshot: [triggers: :webhook_auth_methods]
-        ]
-      )
-      |> Repo.one()
-
-    run
-    |> get_workflow_steps_from(step)
-    |> then(fn steps ->
-      retry_workorder(
-        run.work_order,
-        step.input_dataclip,
-        step.job,
-        steps,
-        Keyword.fetch!(opts, :created_by)
+        join: d in assoc(s, :input_dataclip),
+        where: s.id == ^step_id and is_nil(d.wiped_at),
+        preload: [:job]
       )
     end)
+    |> Multi.run(:starting_job, fn _repo, %{step: step} ->
+      {:ok, step && step.job}
+    end)
+    |> Multi.run(:steps, &get_workflow_steps_from/2)
+    |> Multi.run(:input_dataclip_id, fn
+      _repo, %{step: %Step{input_dataclip_id: input_dataclip_id}} ->
+        {:ok, input_dataclip_id}
+
+      _repo, _wiped ->
+        {:error,
+         %Run{}
+         |> Ecto.Changeset.change()
+         |> Ecto.Changeset.add_error(
+           :input_dataclip_id,
+           "cannot retry run using a wiped dataclip"
+         )}
+    end)
+    |> do_retry(Keyword.fetch!(opts, :created_by))
   end
 
-  @spec retry_workorder(
-          WorkOrder.t(),
-          Dataclip.t(),
-          Job.t(),
-          [] | [Step.t(), ...],
-          User.t()
-        ) ::
-          {:ok, Run.t()} | {:error, Ecto.Changeset.t()}
-  def retry_workorder(
-        workorder,
-        %{wiped_at: nil} = dataclip,
-        starting_job,
-        steps,
-        creating_user
-      ) do
-    Multi.new()
-    |> get_or_create_snapshot(%Workflow{id: workorder.workflow_id})
-    |> Multi.insert(
-      :run,
-      fn %{snapshot: snapshot} ->
-        Run.new(%{priority: :immediate})
-        |> put_assoc(:snapshot, snapshot)
-        |> put_assoc(:work_order, workorder)
-        |> put_assoc(:dataclip, dataclip)
-        |> put_assoc(:starting_job, starting_job)
-        |> put_assoc(:steps, steps)
-        |> put_assoc(:created_by, creating_user)
-        |> Run.add_options(dataclip.project_id)
-        |> validate_required_assoc(:snapshot)
-        |> validate_required_assoc(:dataclip)
-        |> validate_required_assoc(:work_order)
-        |> validate_required_assoc(:created_by)
-      end
-    )
+  def do_retry(multi, creating_user) do
+    multi
+    |> Multi.run(:workflow, fn _repo, %{run: run} ->
+      {:ok, run.work_order.workflow}
+    end)
+    |> get_or_create_snapshot()
+    |> Multi.insert(:new_run, fn %{
+                                   run: run,
+                                   starting_job: starting_job,
+                                   steps: steps,
+                                   snapshot: snapshot,
+                                   input_dataclip_id: dataclip_id
+                                 } ->
+      Run.new(%{priority: :immediate, dataclip_id: dataclip_id})
+      |> put_assoc(:snapshot, snapshot)
+      |> put_assoc(:work_order, run.work_order)
+      |> put_assoc(:starting_job, starting_job)
+      |> put_assoc(:steps, steps)
+      |> put_assoc(:created_by, creating_user)
+      |> Run.add_options(run.work_order.workflow.project_id)
+      |> validate_required_assoc(:snapshot)
+      |> validate_required_assoc(:work_order)
+      |> validate_required_assoc(:created_by)
+      |> validate_required(:dataclip_id)
+    end)
     |> Multi.update_all(
       :workorder,
-      fn %{run: run} ->
+      fn %{new_run: run} ->
         update_workorder_query(run)
       end,
       [],
       returning: true
     )
-    |> Multi.one(
-      :workflow,
-      from(w in Workflow, where: w.id == ^workorder.workflow_id)
-    )
     |> Runs.enqueue()
     |> case do
-      {:ok, %{run: run, workflow: workflow}} ->
+      {:ok, %{new_run: run, workorder: {1, [workorder]}, workflow: workflow}} ->
         Events.work_order_updated(workflow.project_id, workorder)
         Events.run_created(workflow.project_id, run)
-
         {:ok, run}
 
       {:error, _name, changeset, _changes} ->
@@ -380,15 +370,34 @@ defmodule Lightning.WorkOrders do
     end
   end
 
-  def retry_workorder(_workorder, _wiped_dataclip, _starting_job, _steps, _user) do
-    %Run{}
-    |> Ecto.Changeset.change()
-    |> Ecto.Changeset.add_error(
-      :input_dataclip_id,
-      "cannot retry run using a wiped dataclip"
-    )
-    |> Ecto.Changeset.apply_action(:insert)
+  defp get_workflow_steps_from(_repo, %{
+         run: %Run{
+           steps: run_steps,
+           work_order: %{workflow: %Workflow{edges: edges}}
+         },
+         step: %Step{
+           job_id: step_job_id
+         }
+       }) do
+    edges
+    |> Enum.reduce(Graph.new(), fn edge, graph ->
+      graph
+      |> Graph.add_edge(
+        edge.source_trigger_id || edge.source_job_id,
+        edge.target_job_id
+      )
+    end)
+    |> Graph.prune(step_job_id)
+    |> Graph.nodes()
+    |> then(fn nodes ->
+      Enum.filter(run_steps, fn step ->
+        step.job_id in nodes
+      end)
+    end)
+    |> then(&{:ok, &1})
   end
+
+  defp get_workflow_steps_from(_repo, _changes), do: {:ok, []}
 
   @spec retry_many(
           [WorkOrder.t(), ...],
@@ -573,32 +582,5 @@ defmodule Lightning.WorkOrders do
       order_by: [asc: wo.inserted_at]
     )
     |> Repo.all()
-  end
-
-  # TODO: #snapshots what if a node doesn't exist in the current snapshot?
-  defp get_workflow_steps_from(
-         %Run{
-           steps: run_steps,
-           work_order: %{workflow: %Workflow{edges: edges}}
-         },
-         %Step{
-           job_id: step_job_id
-         }
-       ) do
-    edges
-    |> Enum.reduce(Graph.new(), fn edge, graph ->
-      graph
-      |> Graph.add_edge(
-        edge.source_trigger_id || edge.source_job_id,
-        edge.target_job_id
-      )
-    end)
-    |> Graph.prune(step_job_id)
-    |> Graph.nodes()
-    |> then(fn nodes ->
-      Enum.filter(run_steps, fn step ->
-        step.job_id in nodes
-      end)
-    end)
   end
 end

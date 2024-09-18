@@ -1,10 +1,12 @@
 defmodule Lightning.WorkOrders.RetryManyRunsJob do
+  @moduledoc false
   use Oban.Worker,
     queue: :scheduler,
     max_attempts: 3
 
   import Ecto.Query
 
+  alias Ecto.Multi
   alias Lightning.Accounts.User
   alias Lightning.Repo
   alias Lightning.Run
@@ -24,15 +26,20 @@ defmodule Lightning.WorkOrders.RetryManyRunsJob do
 
       creating_user = Repo.get!(User, creating_user_id)
 
-      with {:error, changeset} <-
-             WorkOrders.retry_workorder(
-               run.work_order,
-               run.dataclip,
-               starting_job,
-               [],
-               creating_user
-             ) do
-        Logger.error("Error retrying run #{run.id}: #{inspect(changeset)}")
+      # JUST FOR TESTING TO ASSERT DO_RETRY WORKS
+      # WILL BE REPLACED WITH enqueue_many
+      Multi.new()
+      |> Multi.put(:run, run)
+      |> Multi.put(:starting_job, starting_job)
+      |> Multi.put(:steps, [])
+      |> Multi.put(:input_dataclip_id, run.dataclip_id)
+      |> WorkOrders.do_retry(creating_user)
+      |> case do
+        {:ok, _} ->
+          :ok
+
+        {:error, changeset} ->
+          Logger.error("Error retrying run #{run.id}: #{inspect(changeset)}")
       end
     end)
 
@@ -43,10 +50,9 @@ defmodule Lightning.WorkOrders.RetryManyRunsJob do
     from(r in Run,
       where: r.id in ^runs_ids,
       preload: [
-        :work_order,
-        :dataclip,
         :starting_job,
-        starting_trigger: [edges: :target_job]
+        starting_trigger: [edges: :target_job],
+        work_order: [:workflow]
       ]
     )
     |> Repo.all()
