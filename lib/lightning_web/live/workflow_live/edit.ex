@@ -218,8 +218,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         dataclips={@selectable_dataclips}
                         disabled={
                           !@can_run_workflow ||
-                            @snapshot_version_tag != "latest" ||
-                            !@has_presence_edit_priority
+                            @snapshot_version_tag != "latest"
                         }
                         project={@project}
                         admin_contacts={@admin_contacts}
