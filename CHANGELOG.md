@@ -26,7 +26,7 @@ and this project adheres to
 - When selecting a node in the workflow diagram, connected edges will also be
   highlighted [2396](https://github.com/OpenFn/lightning/issues/2358)
 - Hide export history button when no workorder is rendered in the table
-  [2440](https://github.com/OpenFn/lightning/issues/2440)
+  [#2440](https://github.com/OpenFn/lightning/issues/2440)
 
 ### Fixed
 
@@ -35,6 +35,8 @@ and this project adheres to
 - Fix jumpy combobox for scope switcher
   [#2469](https://github.com/OpenFn/lightning/issues/2469)
 - Fix console errors when rending edge labels in the workflow diagram
+- Fix tooltip on export workorder button
+  [#2430](https://github.com/OpenFn/lightning/issues/2430)
 
 ## [v2.9.3] - 2024-09-11
 
