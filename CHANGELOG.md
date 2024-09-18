@@ -21,6 +21,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix empty webhook URL when switching workflow trigger type
+  [#2050](https://github.com/OpenFn/lightning/issues/2050)
 - Add quotes when special YAML characters are present in the exported project
   [#2446](https://github.com/OpenFn/lightning/issues/2446)
 

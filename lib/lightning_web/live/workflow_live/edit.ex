@@ -607,7 +607,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       !@has_presence_edit_priority
                   }
                   can_write_webhook_auth_method={@can_write_webhook_auth_method}
-                  webhook_url={webhook_url(@selected_trigger)}
                   selected_trigger={@selected_trigger}
                   action={@live_action}
                   cancel_url={close_url(assigns, :selected_trigger, :unselect)}
@@ -1936,17 +1935,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
     else
       socket
       |> put_flash(:error, "You are not authorized to perform this action.")
-    end
-  end
-
-  defp webhook_url(trigger) do
-    trigger
-    |> case do
-      %{type: :webhook, id: id} ->
-        Routes.webhooks_url(LightningWeb.Endpoint, :create, [id])
-
-      _ ->
-        nil
     end
   end
 
