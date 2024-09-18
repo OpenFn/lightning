@@ -2,7 +2,6 @@ x-lightning: &default-app
   build:
     dockerfile: Dockerfile-dev
     context: '.'
-    target: '${MIX_ENV:-dev}'
     args:
       - 'MIX_ENV=${MIX_ENV:-dev}'
       - 'NODE_ENV=${NODE_ENV:-development}'
@@ -25,7 +24,7 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
       - POSTGRES_DB=${POSTGRES_DB:-lightning_dev}
-    image: 'postgres:14.2-alpine'
+    image: 'postgres:15.3-alpine'
     restart: '${DOCKER_RESTART_POLICY:-unless-stopped}'
     stop_grace_period: '3s'
     volumes:
@@ -62,8 +61,7 @@ services:
       web:
         condition: service_healthy
         restart: true
-    command:
-      ['pnpm', 'start:prod', '-l', 'ws://web:${URL_PORT-4000}/worker']
+    command: ['pnpm', 'start:prod', '-l', 'ws://web:${URL_PORT-4000}/worker']
     restart: '${DOCKER_RESTART_POLICY:-unless-stopped}'
     stop_grace_period: '3s'
     expose:

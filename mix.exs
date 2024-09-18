@@ -195,6 +195,7 @@ defmodule Lightning.MixProject do
       logo: "priv/static/images/square-logo.png",
       extras: [
         "README.md": [title: "Lightning"],
+        "RUNNINGLOCAL.md": [title: "Running Locally"],
         "DEPLOYMENT.md": [title: "Deployment"],
         "benchmarking/README.md": [
           title: "Benchmarking",
