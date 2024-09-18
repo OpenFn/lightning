@@ -1939,8 +1939,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  defp webhook_url(%{id: id}),
-    do: Routes.webhooks_url(LightningWeb.Endpoint, :create, [id])
+  defp webhook_url(%{id: id}), do: url(LightningWeb.Endpoint, ~p"/i/#{id}")
 
   defp send_form_changed(params) do
     send(self(), {"form_changed", params})
