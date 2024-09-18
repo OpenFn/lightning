@@ -19,7 +19,10 @@ and this project adheres to
 
 ### Changed
 
-- Increase minimum password length to 12 in accordance with ASVS 4.0.3 "V2.1.2"
+- Increase minimum password length to 12 in accordance with ASVS 4.0.3
+  recommendation V2.1.2 [#2507](https://github.com/OpenFn/lightning/pull/2507)
+- Changed the public sandbox (https://demo.openfn.org) setup script to use
+  `welcome12345` passwords to comply with a 12-character minimum
 
 ### Fixed
 
@@ -48,7 +51,7 @@ and this project adheres to
 - Improve history export page UI
   [#2442](https://github.com/OpenFn/lightning/issues/2442)
 - When selecting a node in the workflow diagram, connected edges will also be
-  highlighted [2396](https://github.com/OpenFn/lightning/issues/2358)
+  highlighted [#2396](https://github.com/OpenFn/lightning/issues/2358)
 
 ### Fixed
 
