@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Dataclip selector always shows that the dataclip is wiped even when the job wasn't run
+  [#2303](https://github.com/OpenFn/lightning/issues/2303)
+
 ## [v2.9.5] - 2024-09-18
 
 ### Changed
