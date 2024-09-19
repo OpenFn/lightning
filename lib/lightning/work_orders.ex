@@ -450,26 +450,24 @@ defmodule Lightning.WorkOrders do
         workorders
         |> Enum.sort_by(& &1.inserted_at, DateTime)
         |> Enum.map(fn %{id: workorder_id} ->
+          first_run_query =
+            from r in Run,
+              order_by: [asc: r.started_at, asc: r.inserted_at],
+              preload: [:starting_job],
+              limit: 1
+
           %{
-            dataclip: dataclip,
-            runs: runs,
-            trigger: %{edges: [%{target_job: target_job}]}
+            dataclip: dataclip
           } =
             workorder =
             Repo.get(WorkOrder, workorder_id)
             |> Repo.preload([
               :dataclip,
-              runs: [:starting_job],
+              runs: first_run_query,
               trigger: [edges: [:target_job]]
             ])
 
-          starting_job =
-            if length(runs) > 0 do
-              [%{starting_job: starting_job}] = runs
-              starting_job
-            else
-              target_job
-            end
+          starting_job = determine_starting_job(workorder)
 
           do_retry(
             workorder,
@@ -557,5 +555,18 @@ defmodule Lightning.WorkOrders do
       select: wo,
       update: [set: [state: s.state, last_activity: ^DateTime.utc_now()]]
     )
+  end
+
+  defp determine_starting_job(workorder) do
+    case workorder.runs do
+      [first_run | _] -> first_run.starting_job || get_target_job(workorder)
+      [] -> get_target_job(workorder)
+    end
+  end
+
+  defp get_target_job(workorder) do
+    workorder.trigger.edges
+    |> List.first()
+    |> Map.get(:target_job)
   end
 end
