@@ -93,6 +93,17 @@ defmodule Lightning.KafkaTriggers do
     end)
   end
 
+  def disable_trigger(trigger_id) do
+    IO.puts "TWWWWWWWWWWWWWOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO #{trigger_id}"
+    supervisor = GenServer.whereis(:kafka_pipeline_supervisor) |> IO.inspect(label: :supervisor)
+
+    trigger_id |> IO.inspect(label: :trigger_id)
+    supervisor |> Supervisor.which_children() |> IO.inspect(label: :children)
+
+    Supervisor.terminate_child(supervisor, trigger_id) |> IO.inspect(label: :terminate)
+    Supervisor.delete_child(supervisor, trigger_id) |> IO.inspect(label: :delete)
+  end
+
   @doc """
   Generate the child spec needed to start a `Pipeline` child process.
   """
@@ -242,5 +253,28 @@ defmodule Lightning.KafkaTriggers do
     |> Repo.get(trigger_id)
     |> Trigger.kafka_performed_persistence_failure_test_changeset(performed)
     |> Repo.update()
+  end
+
+  def reset_trigger(trigger_id) do
+    with supervisor when not is_nil(supervisor) <- GenServer.whereis(:kafka_pipeline_supervisor),
+         children <- Supervisor.which_children(supervisor) do
+         children
+         |> Enum.find(fn {id, _pid, _type, _modules} -> id == trigger_id end)
+         |> tap(fn {id, _pid, _type, _modules} ->
+           :persistent_term.put({__MODULE__, id, :begin_offset}, :reset)
+         end)
+         |> then(fn {_id, pid, _type, _modules} ->
+           GenServer.stop(pid, :normal, 1000)
+         end)
+    end
+    # :kafka_pipeline_supervisor
+    # |> Supervisor.which_children()
+    # |> Enum.find(fn {id, _pid, _type, _modules} -> id == trigger_id end)
+    # |> tap(fn {id, _pid, _type, _modules} ->
+    #   :persistent_term.put({__MODULE__, id, :begin_offset}, :reset)
+    # end)
+    # |> then(fn {_id, pid, _type, _modules} ->
+    #   GenServer.stop(pid, :normal, 1000)
+    # end)
   end
 end
