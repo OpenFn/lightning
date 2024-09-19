@@ -437,61 +437,26 @@ defmodule Lightning.WorkOrders do
         ) :: {:ok, count :: integer()} | UsageLimiting.error()
   def retry_many([%WorkOrder{} | _rest] = workorders, opts) do
     attrs = Map.new(opts)
-    orders_ids = Enum.map(workorders, & &1.id)
-
-    run_numbers_query =
-      from(att in Run,
-        where: att.work_order_id in ^orders_ids,
-        select: %{
-          id: att.id,
-          row_num:
-            row_number()
-            |> over(
-              partition_by: att.work_order_id,
-              order_by: coalesce(att.started_at, att.inserted_at)
-            )
-        }
-      )
-
-    first_runs_query =
-      from(att in Run,
-        join: attn in subquery(run_numbers_query),
-        on: att.id == attn.id,
-        join: wo in assoc(att, :work_order),
-        where: attn.row_num == 1,
-        order_by: [asc: wo.inserted_at],
-        preload: [
-          :dataclip,
-          :starting_job,
-          work_order: wo,
-          starting_trigger: [edges: :target_job]
-        ]
-      )
-
-    runs = Repo.all(first_runs_query)
 
     with project_id <- Keyword.fetch!(opts, :project_id),
          :ok <-
            UsageLimiter.limit_action(
-             %Action{type: :new_run, amount: length(runs)},
+             %Action{type: :new_run, amount: length(workorders)},
              %Context{
                project_id: project_id
              }
            ) do
       results =
-        Enum.map(runs, fn run ->
-          starting_job =
-            if job = run.starting_job do
-              job
-            else
-              [edge] = run.starting_trigger.edges
-              edge.target_job
-            end
+        Enum.map(workorders, fn %{id: workorder_id} ->
+          %{dataclip: dataclip, trigger: %{edges: [%{target_job: target_job}]}} =
+            workorder =
+            Repo.get(WorkOrder, workorder_id)
+            |> Repo.preload([:dataclip, trigger: [edges: [:target_job]]])
 
           do_retry(
-            run.work_order,
-            run.dataclip,
-            starting_job,
+            workorder,
+            dataclip,
+            target_job,
             [],
             attrs[:created_by]
           )
