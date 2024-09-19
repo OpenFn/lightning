@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix history page filters not working for rejected work orders
+  [#2391](https://github.com/OpenFn/lightning/issues/2391)
+
 ## [v2.9.5] - 2024-09-18
 
 ### Changed

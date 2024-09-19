@@ -642,6 +642,53 @@ defmodule LightningWeb.WorkOrderLiveTest do
   end
 
   describe "Search and Filtering" do
+    test "filtering rejected workorders returns only rejected workorders", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+
+      rejected_work_order =
+        insert(:workorder,
+          workflow: workflow,
+          dataclip: build(:dataclip),
+          state: :rejected
+        )
+
+      failed_work_order =
+        insert(:workorder,
+          workflow: workflow,
+          dataclip: build(:dataclip),
+          state: :failed
+        )
+
+      {:ok, view, _html} =
+        live_async(conn, ~p"/projects/#{project}/history")
+
+      [failed_work_order, rejected_work_order]
+      |> Enum.each(fn %{id: id} ->
+        assert view |> has_element?("#workorder-#{id}")
+      end)
+
+      view
+      |> form("#workorder-filter-form",
+        filters: %{"rejected" => "true", "failed" => "false"}
+      )
+      |> render_submit()
+
+      refute view |> has_element?("#workorder-#{failed_work_order.id}")
+      assert view |> has_element?("#workorder-#{rejected_work_order.id}")
+
+      view
+      |> form("#workorder-filter-form",
+        filters: %{"rejected" => "false", "failed" => "true"}
+      )
+      |> render_submit()
+
+      assert view |> has_element?("#workorder-#{failed_work_order.id}")
+      refute view |> has_element?("#workorder-#{rejected_work_order.id}")
+    end
+
     test "starts by rendering an animated loading of work orders", %{
       conn: conn,
       project: project
