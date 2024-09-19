@@ -1,10 +1,10 @@
-defmodule Lightning.WorkOrders.RetryManyRunsJob do
+defmodule Lightning.WorkOrders.RetryManyWorkOrdersJob do
   @moduledoc """
   Enqueue multiple work orders for retry.
   """
   use Oban.Worker,
     queue: :scheduler,
-    max_attempts: 3
+    max_attempts: 5
 
   alias Lightning.WorkOrders
 

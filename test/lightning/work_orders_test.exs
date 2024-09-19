@@ -10,7 +10,7 @@ defmodule Lightning.WorkOrdersTest do
   alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
   alias Lightning.WorkOrders
   alias Lightning.WorkOrders.Events
-  alias Lightning.WorkOrders.RetryManyRunsJob
+  alias Lightning.WorkOrders.RetryManyWorkOrdersJob
 
   describe "create_for/2" do
     setup context do
@@ -1842,7 +1842,7 @@ defmodule Lightning.WorkOrdersTest do
            workflow: workflow
          } do
       workorders =
-        insert_list(39, :workorder,
+        insert_list(101, :workorder,
           workflow: workflow,
           trigger: trigger,
           dataclip: build(:dataclip),
@@ -1875,7 +1875,7 @@ defmodule Lightning.WorkOrdersTest do
         )
 
       workorder_1 = hd(workorders)
-      workorder_39 = hd(Enum.reverse(workorders))
+      workorder_101 = hd(Enum.reverse(workorders))
 
       refute Repo.get_by(Lightning.Run,
                work_order_id: workorder_1.id,
@@ -1883,18 +1883,18 @@ defmodule Lightning.WorkOrdersTest do
              )
 
       refute Repo.get_by(Lightning.Run,
-               work_order_id: workorder_39.id,
+               work_order_id: workorder_101.id,
                starting_job_id: job_a.id
              )
 
       Oban.Testing.with_testing_mode(:manual, fn ->
-        {:ok, 39, 0} =
+        {:ok, 101, 0} =
           WorkOrders.retry_many(workorders,
             created_by: user,
             project_id: workflow.project_id
           )
 
-        [workorders1, workorders2] = Enum.chunk_every(workorders, 20)
+        [workorders1, workorders2] = Enum.chunk_every(workorders, 100)
 
         runs_ids1 =
           Enum.flat_map(workorders1, fn workorder ->
@@ -1921,7 +1921,7 @@ defmodule Lightning.WorkOrdersTest do
                  }
                ] = all_enqueued(queue: :scheduler) |> Enum.sort_by(& &1.id)
 
-        assert :ok = perform_job(RetryManyRunsJob, args1)
+        assert :ok = perform_job(RetryManyWorkOrdersJob, args1)
 
         assert Repo.get_by(Lightning.Run,
                  work_order_id: workorder_1.id,
@@ -1929,14 +1929,14 @@ defmodule Lightning.WorkOrdersTest do
                )
 
         refute Repo.get_by(Lightning.Run,
-                 work_order_id: workorder_39.id,
+                 work_order_id: workorder_101.id,
                  starting_job_id: job_a.id
                )
 
-        assert :ok = perform_job(RetryManyRunsJob, args2)
+        assert :ok = perform_job(RetryManyWorkOrdersJob, args2)
 
         assert Repo.get_by(Lightning.Run,
-                 work_order_id: workorder_39.id,
+                 work_order_id: workorder_101.id,
                  starting_job_id: job_a.id
                )
       end)

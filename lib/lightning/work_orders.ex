@@ -54,7 +54,7 @@ defmodule Lightning.WorkOrders do
   alias Lightning.WorkOrders.Events
   alias Lightning.WorkOrders.Manual
   alias Lightning.WorkOrders.Query
-  alias Lightning.WorkOrders.RetryManyRunsJob
+  alias Lightning.WorkOrders.RetryManyWorkOrdersJob
 
   @type work_order_option ::
           {:workflow, Workflow.t()}
@@ -63,7 +63,7 @@ defmodule Lightning.WorkOrders do
           | {:project_id, Ecto.UUID.t()}
           | {:without_run, boolean()}
 
-  @run_many_chunk_size 20
+  @run_many_chunk_size 100
 
   defdelegate subscribe(project_id), to: Events
 
@@ -466,7 +466,7 @@ defmodule Lightning.WorkOrders do
       |> Enum.chunk_every(@run_many_chunk_size)
       |> Enum.map(
         # TODO: Enqueue the first chunk directly with Runs.enqueue_many and schedule the rest with Oban
-        &RetryManyRunsJob.new(%{runs_ids: &1, created_by: creating_user.id})
+        &RetryManyWorkOrdersJob.new(%{runs_ids: &1, created_by: creating_user.id})
       )
       |> then(fn jobs ->
         Oban.insert_all(Lightning.Oban, jobs)
@@ -517,8 +517,8 @@ defmodule Lightning.WorkOrders do
     runs
     |> Enum.with_index()
     |> Enum.reduce(Multi.new(), fn {run, index}, multi ->
-      run_op = "run#{index}"
-      snapshot_op = "snapshot#{run.work_order.workflow.id}"
+      run_op = "run-#{index}"
+      snapshot_op = "snapshot-#{run.work_order.workflow.id}"
 
       multi
       |> get_or_create_snapshot(run.work_order.workflow, snapshot_op)
@@ -537,7 +537,7 @@ defmodule Lightning.WorkOrders do
         )
       end)
       |> Multi.update_all(
-        "workorder#{index}",
+        "workorder-#{index}",
         fn %{^run_op => run} ->
           update_workorder_query(run)
         end,
