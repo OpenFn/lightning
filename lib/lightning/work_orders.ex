@@ -447,16 +447,34 @@ defmodule Lightning.WorkOrders do
              }
            ) do
       results =
-        Enum.map(workorders, fn %{id: workorder_id} ->
-          %{dataclip: dataclip, trigger: %{edges: [%{target_job: target_job}]}} =
+        workorders
+        |> Enum.sort_by(& &1.inserted_at, DateTime)
+        |> Enum.map(fn %{id: workorder_id} ->
+          %{
+            dataclip: dataclip,
+            runs: runs,
+            trigger: %{edges: [%{target_job: target_job}]}
+          } =
             workorder =
             Repo.get(WorkOrder, workorder_id)
-            |> Repo.preload([:dataclip, trigger: [edges: [:target_job]]])
+            |> Repo.preload([
+              :dataclip,
+              runs: [:starting_job],
+              trigger: [edges: [:target_job]]
+            ])
+
+          starting_job =
+            if length(runs) > 0 do
+              [%{starting_job: starting_job}] = runs
+              starting_job
+            else
+              target_job
+            end
 
           do_retry(
             workorder,
             dataclip,
-            target_job,
+            starting_job,
             [],
             attrs[:created_by]
           )
