@@ -37,7 +37,7 @@ defmodule Lightning.Runtime.RuntimeManager do
     @moduledoc false
 
     defstruct backoff: [min: 0.5, max: 5],
-              capacity: 10,
+              capacity: 5,
               cd: Path.expand("../../../assets", __DIR__),
               cmd: ~w(node ./node_modules/.bin/worker),
               env: [],
