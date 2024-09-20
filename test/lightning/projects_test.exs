@@ -724,7 +724,8 @@ defmodule Lightning.ProjectsTest do
 
       assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
 
-      assert generated_yaml =~ "condition_expression: |\n          #{js_expression}"
+      assert generated_yaml =~
+               "condition_expression: |\n          #{js_expression}"
     end
 
     test "exports canonical project" do
