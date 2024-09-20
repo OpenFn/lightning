@@ -310,7 +310,6 @@ defmodule Lightning.WorkOrders do
         preload: [:job]
       )
     end)
-    |> Multi.run(:steps, &get_workflow_steps_from/2)
     |> Multi.run(:input_dataclip_id, fn
       _repo, %{step: %Step{input_dataclip_id: input_dataclip_id}} ->
         {:ok, input_dataclip_id}
@@ -324,6 +323,7 @@ defmodule Lightning.WorkOrders do
            "cannot retry run using a wiped dataclip"
          )}
     end)
+    |> Multi.run(:steps, &get_workflow_steps_from/2)
     |> enqueue_retry(Keyword.fetch!(opts, :created_by))
   end
 
