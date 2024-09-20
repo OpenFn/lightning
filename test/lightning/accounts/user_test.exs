@@ -3,6 +3,35 @@ defmodule Lightning.Accounts.UserTest do
 
   alias Lightning.Accounts.User
 
+  describe "password validation" do
+    test "it allows passwords between 12 and 72 characters" do
+      changeset =
+        User.password_changeset(%User{}, %{password: "12345678"})
+
+      refute changeset.valid?
+
+      assert {:password,
+              {"should be at least %{count} character(s)",
+               [count: 12, validation: :length, kind: :min, type: :string]}} in changeset.errors
+
+      changeset =
+        User.password_changeset(%User{}, %{password: "123456789abc"})
+
+      assert changeset.valid?
+
+      changeset =
+        User.password_changeset(%User{}, %{
+          password: String.duplicate(".", 72) <> "💣"
+        })
+
+      refute changeset.valid?
+
+      assert {:password,
+              {"should be at most %{count} character(s)",
+               [count: 72, validation: :length, kind: :max, type: :string]}} in changeset.errors
+    end
+  end
+
   describe "scheduled deletion changeset" do
     test "email doesn't match current users email" do
       errors =
