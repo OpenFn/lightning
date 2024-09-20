@@ -14,8 +14,9 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
     doc: "list of project admin emails"
 
   attr :can_edit_data_retention, :boolean, required: true
-  attr :follow_run_id, :string, required: true
-  attr :show_wiped_dataclip_selector, :boolean, default: false
+  attr :follow_run, :map, required: true
+  attr :step, :map, required: true
+  attr :show_missing_dataclip_selector, :boolean, default: false
 
   def component(assigns) do
     assigns =
@@ -38,8 +39,8 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
       phx-submit="manual_run_submit"
       class="h-full flex flex-col gap-4"
     >
-      <%= if @follow_run_id && is_nil(@selected_dataclip)  do %>
-        <%= if @show_wiped_dataclip_selector do %>
+      <%= if @follow_run && is_nil(@selected_dataclip)  do %>
+        <%= if @show_missing_dataclip_selector do %>
           <.dataclip_selector_fields
             form={@form}
             dataclips={@dataclips}
@@ -50,26 +51,7 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
             can_edit_data_retention={@can_edit_data_retention}
           />
         <% else %>
-          <LightningWeb.Components.Viewers.wiped_dataclip_viewer
-            input_or_output={:input}
-            project_id={@project.id}
-            admin_contacts={@admin_contacts}
-            can_edit_data_retention={@can_edit_data_retention}
-          >
-            <:footer>
-              <div class="text-center text-gray-500 text-sm mt-4">
-                <span>To create a new work order, first</span>
-                <span
-                  id="toggle_dataclip_selector_button"
-                  phx-click="toggle_wiped_dataclip_selector"
-                  class="link"
-                >
-                  click here
-                </span>
-                <span>to select/build an input.</span>
-              </div>
-            </:footer>
-          </LightningWeb.Components.Viewers.wiped_dataclip_viewer>
+          <.missing_dataclip_viewer {assigns} />
         <% end %>
       <% else %>
         <.dataclip_selector_fields
@@ -149,5 +131,64 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
       />
     </div>
     """
+  end
+
+  defp missing_dataclip_viewer(assigns) do
+    ~H"""
+    <%= if dataclip_wiped?(@step, @selected_dataclip) do %>
+      <LightningWeb.Components.Viewers.wiped_dataclip_viewer
+        input_or_output={:input}
+        project_id={@project.id}
+        admin_contacts={@admin_contacts}
+        can_edit_data_retention={@can_edit_data_retention}
+      >
+        <:footer>
+          <div class="text-center text-gray-500 text-sm mt-4">
+            <span>To create a new work order, first</span>
+            <span
+              id="toggle_dataclip_selector_button"
+              phx-click="toggle_missing_dataclip_selector"
+              class="link"
+            >
+              click here
+            </span>
+            <span>to select/build an input.</span>
+          </div>
+        </:footer>
+      </LightningWeb.Components.Viewers.wiped_dataclip_viewer>
+    <% else %>
+      <div class="border-2 border-gray-200 border-dashed rounded-lg px-8 pt-6 pb-8 mb-4 flex flex-col">
+        <div class="mb-4">
+          <div class="h-12 w-12 border-2 border-gray-300 border-solid mx-auto flex items-center justify-center rounded-full text-gray-400">
+            <.icon name="hero-code-bracket" class="w-4 h-4" />
+          </div>
+        </div>
+        <div class="text-center mb-4 text-gray-500">
+          <h3 class="font-bold text-lg">
+            <span class="capitalize">No Input Data</span> here!
+          </h3>
+          <p class="text-sm">
+            This job was not/is not yet included in this Run. Select a step from this run in the Run tab or create a new work order by
+            <span
+              id="toggle_dataclip_selector_button"
+              phx-click="toggle_missing_dataclip_selector"
+              class="link"
+            >
+              clicking here
+            </span>
+            to select/build an input
+          </p>
+        </div>
+      </div>
+    <% end %>
+    """
+  end
+
+  defp dataclip_wiped?(nil, _), do: false
+
+  defp dataclip_wiped?(_step, %{wiped_at: %_{}}), do: true
+
+  defp dataclip_wiped?(step, _dataclip) do
+    is_struct(step.finished_at) and is_nil(step.input_dataclip_id)
   end
 end

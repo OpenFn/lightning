@@ -399,9 +399,11 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     ai_limit_result != :ok
   end
 
-  defp job_is_unsaved?(selected_job) do
-    selected_job.__meta__.state == :built
+  defp job_is_unsaved?(%{__meta__: %{state: :built}} = _job) do
+    true
   end
+
+  defp job_is_unsaved?(_job), do: false
 
   defp disabled_tooltip_message(can_edit_workflow, ai_limit_result, selected_job) do
     case {can_edit_workflow, ai_limit_result, selected_job} do
