@@ -11,6 +11,8 @@ defmodule LightningWeb.RunChannel do
   alias Lightning.Workers
   alias LightningWeb.RunWithOptions
 
+  import LightningWeb.ChannelHelpers
+
   require Jason.Helpers
   require Logger
 
@@ -25,6 +27,8 @@ defmodule LightningWeb.RunChannel do
          run when is_map(run) <- Runs.get_for_worker(id) || {:error, :not_found},
          project_id when is_binary(project_id) <-
            Runs.get_project_id_for_run(run) do
+      Sentry.Context.set_extra_context(%{run_id: id})
+
       {:ok,
        socket
        |> assign(%{
@@ -51,28 +55,23 @@ defmodule LightningWeb.RunChannel do
   def handle_in("fetch:plan", _payload, socket) do
     %{run: run} = socket.assigns
 
-    {:reply, {:ok, RunWithOptions.render(run)}, socket}
+    reply_with(socket, {:ok, RunWithOptions.render(run)})
   end
 
   def handle_in("run:start", _payload, socket) do
-    socket.assigns.run
-    |> Runs.start_run()
-    |> case do
+    case Runs.start_run(socket.assigns.run) do
       {:ok, run} ->
-        {:reply, {:ok, nil}, socket |> assign(run: run)}
+        socket |> assign(run: run) |> reply_with({:ok, nil})
 
       {:error, changeset} ->
-        {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
+        reply_with(socket, {:error, LightningWeb.ChangesetJSON.error(changeset)})
     end
   end
 
   def handle_in("run:complete", payload, socket) do
-    params =
-      payload |> replace_reason_with_exit_reason()
+    params = replace_reason_with_exit_reason(payload)
 
-    socket.assigns.run
-    |> Runs.complete_run(params)
-    |> case do
+    case Runs.complete_run(socket.assigns.run, params) do
       {:ok, run} ->
         # TODO: Turn FailureAlerter into an Oban worker and process async
         # instead of blocking the channel.
@@ -80,10 +79,10 @@ defmodule LightningWeb.RunChannel do
         |> Repo.preload([:log_lines, work_order: [:workflow]])
         |> Lightning.FailureAlerter.alert_on_failure()
 
-        {:reply, {:ok, nil}, socket |> assign(run: run)}
+        socket |> assign(run: run) |> reply_with({:ok, nil})
 
       {:error, changeset} ->
-        {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
+        reply_with(socket, {:error, LightningWeb.ChangesetJSON.error(changeset)})
     end
   end
 
@@ -95,12 +94,10 @@ defmodule LightningWeb.RunChannel do
          samples <- Credentials.sensitive_values_for(credential),
          basic_auth <- Credentials.basic_auth_for(credential),
          {:ok, scrubber} <- update_scrubber(scrubber, samples, basic_auth) do
-      socket = assign(socket, scrubber: scrubber)
-
-      {:reply, {:ok, credential.body}, socket}
+      socket |> assign(scrubber: scrubber) |> reply_with({:ok, credential.body})
     else
       :not_found ->
-        {:reply, {:error, %{errors: %{id: ["Credential not found!"]}}}, socket}
+        reply_with(socket, {:error, %{errors: %{id: ["Credential not found!"]}}})
 
       {:error,
        %{
@@ -109,11 +106,10 @@ defmodule LightningWeb.RunChannel do
            "error_description" => error_description
          }
        }} ->
-        {:reply,
-         {
-           :error,
-           %{errors: %{id: ["#{inspect(error)}: #{inspect(error_description)}"]}}
-         }, socket}
+        reply_with(socket, {
+          :error,
+          %{errors: %{id: ["#{inspect(error)}: #{inspect(error_description)}"]}}
+        })
 
       {:error, error} ->
         Logger.error(fn ->
@@ -124,15 +120,16 @@ defmodule LightningWeb.RunChannel do
           """
         end)
 
-        {:reply,
-         {:error,
-          %{errors: "Something went wrong when retrieving the credential"}},
-         socket}
+        reply_with(
+          socket,
+          {:error,
+           %{errors: "Something went wrong when retrieving the credential"}}
+        )
     end
   end
 
   def handle_in("fetch:credential", _payload, socket) do
-    {:reply, {:error, %{errors: %{id: ["This field can't be blank."]}}}, socket}
+    reply_with(socket, {:error, %{errors: %{id: ["This field can't be blank."]}}})
   end
 
   @doc """
@@ -151,30 +148,28 @@ defmodule LightningWeb.RunChannel do
     unless socket.assigns.run.options.save_dataclips,
       do: Runs.wipe_dataclips(socket.assigns.run)
 
-    {:reply, {:ok, {:binary, body || "null"}}, socket}
+    reply_with(socket, {:ok, {:binary, body || "null"}})
   end
 
   def handle_in("step:start", payload, socket) do
-    Map.get(payload, "job_id", :missing_job_id)
-    |> case do
+    case Map.get(payload, "job_id", :missing_job_id) do
       job_id when is_binary(job_id) ->
-        socket.assigns.run
-        |> Runs.start_step(payload)
-        |> case do
+        case Runs.start_step(socket.assigns.run, payload) do
           {:error, changeset} ->
-            {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)},
-             socket}
+            reply_with(socket, {:error, LightningWeb.ChangesetJSON.error(changeset)})
 
           {:ok, step} ->
-            {:reply, {:ok, %{step_id: step.id}}, socket}
+            reply_with(socket, {:ok, %{step_id: step.id}})
         end
 
       :missing_job_id ->
-        {:reply, {:error, %{errors: %{job_id: ["This field can't be blank."]}}},
-         socket}
+        reply_with(
+          socket,
+          {:error, %{errors: %{job_id: ["This field can't be blank."]}}}
+        )
 
       nil ->
-        {:reply, {:error, %{errors: %{job_id: ["Job not found!"]}}}, socket}
+        reply_with(socket, {:error, %{errors: %{job_id: ["Job not found!"]}}})
     end
   end
 
@@ -187,23 +182,22 @@ defmodule LightningWeb.RunChannel do
     |> Runs.complete_step(socket.assigns.run.options)
     |> case do
       {:error, changeset} ->
-        {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
+        reply_with(socket, {:error, LightningWeb.ChangesetJSON.error(changeset)})
 
       {:ok, step} ->
-        {:reply, {:ok, %{step_id: step.id}}, socket}
+        reply_with(socket, {:ok, %{step_id: step.id}})
     end
   end
 
   def handle_in("run:log", payload, socket) do
     %{run: run, scrubber: scrubber} = socket.assigns
 
-    Runs.append_run_log(run, payload, scrubber)
-    |> case do
+    case Runs.append_run_log(run, payload, scrubber) do
       {:error, changeset} ->
-        {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
+        reply_with(socket, {:error, LightningWeb.ChangesetJSON.error(changeset)})
 
       {:ok, log_line} ->
-        {:reply, {:ok, %{log_line_id: log_line.id}}, socket}
+        reply_with(socket, {:ok, %{log_line_id: log_line.id}})
     end
   end
 
