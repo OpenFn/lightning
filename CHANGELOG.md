@@ -18,7 +18,7 @@ and this project adheres to
 ### Added
 
 - Enqueues many work orders retries in the same transaction per Oban job.
-  [#2363](https://github.com/OpenFn/lightning/pull/2363)
+  [#2363](https://github.com/OpenFn/lightning/issues/2363)
 
 ### Changed
 

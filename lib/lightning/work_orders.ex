@@ -692,8 +692,10 @@ defmodule Lightning.WorkOrders do
 
   defp get_from_changes(key_prefix, changes) do
     changes
-    |> Map.keys()
-    |> Enum.filter(&String.starts_with?(to_string(&1), key_prefix))
-    |> Enum.map(&Map.get(changes, &1))
+    |> Enum.reduce([], fn {k, v}, acc ->
+      if String.starts_with?(to_string(k), key_prefix),
+        do: [v | acc],
+        else: acc
+    end)
   end
 end
