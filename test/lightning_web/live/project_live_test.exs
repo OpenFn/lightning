@@ -459,7 +459,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert response =~ ~S[condition_type: js_expression]
       assert response =~ ~S[condition_label: not underaged]
-      assert response =~ ~S[condition_expression: state.data.age > 18]
+      assert response =~ ~s[condition_expression: |\n          state.data.age > 18]
     end
   end
 
