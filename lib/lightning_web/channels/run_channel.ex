@@ -129,7 +129,10 @@ defmodule LightningWeb.RunChannel do
   end
 
   def handle_in("fetch:credential", _payload, socket) do
-    reply_with(socket, {:error, %{errors: %{id: ["This field can't be blank."]}}})
+    reply_with(
+      socket,
+      {:error, %{errors: %{id: ["This field can't be blank."]}}}
+    )
   end
 
   @doc """
@@ -156,7 +159,10 @@ defmodule LightningWeb.RunChannel do
       job_id when is_binary(job_id) ->
         case Runs.start_step(socket.assigns.run, payload) do
           {:error, changeset} ->
-            reply_with(socket, {:error, LightningWeb.ChangesetJSON.error(changeset)})
+            reply_with(
+              socket,
+              {:error, LightningWeb.ChangesetJSON.error(changeset)}
+            )
 
           {:ok, step} ->
             reply_with(socket, {:ok, %{step_id: step.id}})
