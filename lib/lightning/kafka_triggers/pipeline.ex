@@ -138,6 +138,8 @@ defmodule Lightning.KafkaTriggers.Pipeline do
       create_log_entry(message, context)
     end)
 
+    maybe_stop_this_pipeline(messages, context)
+
     messages
   end
 
@@ -235,6 +237,12 @@ defmodule Lightning.KafkaTriggers.Pipeline do
 
       sasl ->
         [{:sasl, sasl} | base_config]
+    end
+  end
+
+  def maybe_stop_this_pipeline(messages, context) do
+    if Enum.any?(messages, &(&1.status == {:failed, :persistence})) do
+      KafkaTriggers.reset_trigger(context.trigger_id)
     end
   end
 end

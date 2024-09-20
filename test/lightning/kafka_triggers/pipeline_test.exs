@@ -528,6 +528,25 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       end
     end
 
+    test "stops pipeline process if a message has a persistence failure", %{
+      context: context,
+      messages: messages
+    } do
+      [message_1, message_2] = messages
+
+      message_3 =
+        build_broadway_message(offset: 3)
+        |> Broadway.Message.failed(:persistence)
+
+      messages = [message_1, message_3, message_2]
+
+      with_mock KafkaTriggers, reset_trigger: fn _ -> :ok end do
+        Pipeline.handle_failed(messages, context)
+
+        assert_called KafkaTriggers.reset_trigger(context.trigger_id)
+      end
+    end
+
     defp expected_duplicate_log_message(message, context) do
       "Kafka Pipeline Duplicate Message:" <>
         " Trigger_id `#{context.trigger_id}`" <>
@@ -559,6 +578,67 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
         trigger_id: context.trigger_id,
         type: type
       }
+    end
+  end
+
+  describe ".maybe_stop_this_pipeline/1" do
+    setup do
+      %{
+        context: %{
+          trigger_id: "my_trigger_id"
+        }
+      }
+    end
+
+    test "does not exit the process if there are no persistence failures", %{
+      context: context
+    } do
+      messages = [
+        build_broadway_message() |> Broadway.Message.failed(:duplicate),
+        build_broadway_message() |> Broadway.Message.failed(:duplicate),
+        build_broadway_message() |> Broadway.Message.failed(:duplicate),
+      ]
+
+      with_mock KafkaTriggers, reset_trigger: fn _ -> :ok end do
+        Pipeline.maybe_stop_this_pipeline(messages, context)
+
+        assert_not_called KafkaTriggers.reset_trigger(:_)
+      end
+    end
+
+    test "exits the process if one of the messages is a persistence failure", %{
+      context: context
+    } do
+      messages = [
+        build_broadway_message() |> Broadway.Message.failed(:duplicate),
+        build_broadway_message() |> Broadway.Message.failed(:persistence),
+        build_broadway_message() |> Broadway.Message.failed(:duplicate),
+        build_broadway_message() |> Broadway.Message.failed(:duplicate),
+      ]
+
+      with_mock KafkaTriggers, reset_trigger: fn _ -> :ok end do
+        Pipeline.maybe_stop_this_pipeline(messages, context)
+
+        assert_called KafkaTriggers.reset_trigger(context.trigger_id)
+      end
+    end
+
+    test "exits the process if multiple messages have persistence failures", %{
+      context: context
+    } do
+      messages = [
+        build_broadway_message() |> Broadway.Message.failed(:duplicate),
+        build_broadway_message() |> Broadway.Message.failed(:persistence),
+        build_broadway_message() |> Broadway.Message.failed(:duplicate),
+        build_broadway_message() |> Broadway.Message.failed(:persitence),
+        build_broadway_message() |> Broadway.Message.failed(:duplicate),
+      ]
+
+      with_mock KafkaTriggers, reset_trigger: fn _ -> :ok end do
+        Pipeline.maybe_stop_this_pipeline(messages, context)
+
+        assert_called KafkaTriggers.reset_trigger(context.trigger_id)
+      end
     end
   end
 
