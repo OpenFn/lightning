@@ -28,6 +28,8 @@ and this project adheres to
 
 - Dataclip selector always shows that the dataclip is wiped even when the job wasn't run
   [#2303](https://github.com/OpenFn/lightning/issues/2303)
+- Export edge condition expressions as multiline in project spec
+  [#2521](https://github.com/OpenFn/lightning/issues/2521)
 
 ## [v2.9.5] - 2024-09-18
 

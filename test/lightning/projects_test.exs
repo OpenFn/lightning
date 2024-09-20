@@ -697,6 +697,36 @@ defmodule Lightning.ProjectsTest do
                ~s("#{String.replace(workflow_with_good_name.name, " ", "-")}")
     end
 
+    test "js_expressions edge conditions are made multiline" do
+      project = insert(:project, name: "project 1")
+
+      trigger =
+        build(:trigger,
+          type: :webhook,
+          enabled: true
+        )
+
+      job =
+        build(:job,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      js_expression = "!state.data && !state.data"
+
+      build(:workflow, name: "workflow 1", project: project)
+      |> with_trigger(trigger)
+      |> with_job(job)
+      |> with_edge({trigger, job},
+        condition_type: :js_expression,
+        condition_expression: js_expression
+      )
+      |> insert()
+
+      assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
+
+      assert generated_yaml =~ "condition_expression: |\n          #{js_expression}"
+    end
+
     test "exports canonical project" do
       project =
         canonical_project_fixture(
