@@ -494,6 +494,7 @@ defmodule Lightning.Config.Bootstrap do
       number_of_messages_per_second:
         env!("KAFKA_NUMBER_OF_MESSAGES_PER_SECOND", :float, 1),
       number_of_processors: env!("KAFKA_NUMBER_OF_PROCESSORS", :integer, 1),
+      reset_delay_seconds: env!("KAFKA_RESET_DELAY_SECONDS", :integer, 60),
       test_persistence_failure:
         env!("KAFKA_TEST_PERSISTENCE_FAILURE", &Utils.ensure_boolean/1, false)
 

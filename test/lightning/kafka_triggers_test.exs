@@ -10,6 +10,8 @@ defmodule Lightning.KafkaTriggersTest do
 
   alias Lightning.KafkaTriggers
   alias Lightning.KafkaTriggers.PipelineSupervisor
+  alias Lightning.KafkaTriggerTestHelpers.DummyResetter
+  alias Lightning.KafkaTriggerTestHelpers.DummyServer
   alias Lightning.Repo
   alias Lightning.Workflows.Trigger
 
@@ -938,15 +940,7 @@ defmodule Lightning.KafkaTriggersTest do
   end
 
   describe ".reset_trigger/0" do
-    defmodule Lightning.KafkaTriggersDummyServer do
-      use GenServer
-
-      def start_link(name) do
-        GenServer.start_link(__MODULE__, :ok, name: name)
-      end
-
-      def init(:ok), do: {:ok, :ok}
-    end
+    setup :verify_on_exit!
 
     setup do
       trigger_id = "abc_123"
@@ -954,7 +948,8 @@ defmodule Lightning.KafkaTriggersTest do
       other_trigger_id_1 = "def_456"
       other_trigger_id_2 = "ghi_789"
 
-      pid = start_supervised!(PipelineSupervisor, restart: :permanent)
+      pid = start_supervised!(PipelineSupervisor)
+      start_supervised!({DummyResetter, [notify: self()]})
 
       {:ok, other_child_pid_1} =
         pid |> Supervisor.start_child(dummy_server_spec(other_trigger_id_1))
@@ -980,7 +975,7 @@ defmodule Lightning.KafkaTriggersTest do
       }
     end
 
-    test "restarts the requested trigger", %{
+    test "stops the requested trigger", %{
       child_pid: child_pid,
       other_child_pid_1: other_child_pid_1,
       other_child_pid_2: other_child_pid_2,
@@ -993,13 +988,22 @@ defmodule Lightning.KafkaTriggersTest do
 
       refute Process.alive?(child_pid)
 
-      # Wait for the new process to start
-      dynamically_absorb_delay(fn ->
-        GenServer.whereis(trigger_id |> String.to_atom())
-      end)
+      check_fn = fn -> GenServer.whereis(trigger_id |> String.to_atom()) end
 
-      new_child_pid = GenServer.whereis(trigger_id |> String.to_atom())
-      assert Process.alive?(new_child_pid)
+      # Wait to ensure a new process has not started
+      dynamically_absorb_delay(check_fn, iterations: 1000)
+
+      refute GenServer.whereis(trigger_id |> String.to_atom())
+    end
+
+    test "notifies the resetter that the trigger must be reset", %{
+      trigger_id: trigger_id
+    } do
+      expect(Lightning.MockConfig, :kafka_reset_delay_seconds, fn -> 1 end)
+
+      KafkaTriggers.reset_trigger(trigger_id)
+
+      assert_receive({:reset_received, ^trigger_id}, 1200)
     end
 
     test "sets scoped global indicating the trigger should reset on restart", %{
@@ -1059,7 +1063,8 @@ defmodule Lightning.KafkaTriggersTest do
 
       %{
         id: trigger_id,
-        start: {Lightning.KafkaTriggersDummyServer, :start_link, [name]},
+        start: {DummyServer, :start_link, [name]},
+        restart: :transient
       }
     end
   end
