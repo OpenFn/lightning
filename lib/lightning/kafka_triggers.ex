@@ -262,7 +262,11 @@ defmodule Lightning.KafkaTriggers do
   defp setup_trigger_reset(nil, _trigger_id), do: nil
 
   defp setup_trigger_reset({_id, pid, _type, _modules}, trigger_id) do
-    :persistent_term.put({__MODULE__, trigger_id, :begin_offset}, :reset)
     GenServer.stop(pid, :normal, 1000)
+    Process.send_after(
+      Lightning.KafkaTriggers.TriggerResetter,
+      {:reset, trigger_id},
+      Lightning.Config.kafka_reset_delay_seconds() * 1000
+    )
   end
 end

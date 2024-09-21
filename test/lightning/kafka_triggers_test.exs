@@ -960,17 +960,10 @@ defmodule Lightning.KafkaTriggersTest do
       {:ok, other_child_pid_2} =
         pid |> Supervisor.start_child(dummy_server_spec(other_trigger_id_2))
 
-      :persistent_term.erase({KafkaTriggers, trigger_id, :begin_offset})
-      :persistent_term.erase({KafkaTriggers, other_trigger_id_1, :begin_offset})
-      :persistent_term.erase({KafkaTriggers, other_trigger_id_2, :begin_offset})
-
       %{
         child_pid: child_pid,
         other_child_pid_1: other_child_pid_1,
         other_child_pid_2: other_child_pid_2,
-        other_trigger_id_1: other_trigger_id_1,
-        other_trigger_id_2: other_trigger_id_2,
-        pid: pid,
         trigger_id: trigger_id
       }
     end
@@ -1006,29 +999,6 @@ defmodule Lightning.KafkaTriggersTest do
       assert_receive({:reset_received, ^trigger_id}, 1200)
     end
 
-    test "sets scoped global indicating the trigger should reset on restart", %{
-      other_trigger_id_1: other_trigger_id_1,
-      other_trigger_id_2: other_trigger_id_2,
-      trigger_id: trigger_id
-    } do
-      KafkaTriggers.reset_trigger(trigger_id)
-
-      assert :persistent_term.get(
-               {KafkaTriggers, trigger_id, :begin_offset},
-               :fallback
-             ) == :reset
-
-      refute :persistent_term.get(
-               {KafkaTriggers, other_trigger_id_1, :begin_offset},
-               nil
-             )
-
-      refute :persistent_term.get(
-               {KafkaTriggers, other_trigger_id_2, :begin_offset},
-               nil
-             )
-    end
-
     test "does nothing if the supervisor is not running", %{
       trigger_id: trigger_id
     } do
@@ -1036,10 +1006,7 @@ defmodule Lightning.KafkaTriggersTest do
 
       KafkaTriggers.reset_trigger(trigger_id)
 
-      refute :persistent_term.get(
-               {KafkaTriggers, trigger_id, :begin_offset},
-               nil
-             )
+      refute_receive({:reset_received, ^trigger_id}, 1200)
     end
 
     test "does nothing if the trigger is not running", %{
@@ -1052,10 +1019,7 @@ defmodule Lightning.KafkaTriggersTest do
 
       assert Process.alive?(child_pid)
 
-      refute :persistent_term.get(
-               {KafkaTriggers, other_trigger_id, :begin_offset},
-               nil
-             )
+      refute_receive({:reset_received, ^trigger_id}, 1200)
     end
 
     defp dummy_server_spec(trigger_id) do
