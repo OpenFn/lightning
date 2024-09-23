@@ -497,6 +497,38 @@ defmodule Lightning.KafkaTriggersTest do
 
       assert actual_child_spec == expected_child_spec
     end
+
+    test "generates a child spec for a kafka trigger that must be reset" do
+      number_of_consumers = Lightning.Config.kafka_number_of_consumers()
+
+      assert number_of_consumers != nil
+
+      number_of_processors = Lightning.Config.kafka_number_of_processors()
+
+      assert number_of_processors != nil
+
+      trigger =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: configuration(index: 1),
+          enabled: true
+        )
+
+      expected_child_spec =
+        child_spec(
+          trigger: trigger,
+          index: 1,
+          number_of_consumers: number_of_consumers,
+          number_of_processors: number_of_processors,
+          begin_offset: :reset
+        )
+
+      actual_child_spec =
+        KafkaTriggers.generate_pipeline_child_spec(trigger, true)
+
+      assert actual_child_spec == expected_child_spec
+    end
   end
 
   describe ".get_kafka_triggers_being_updated/1" do
@@ -1033,11 +1065,90 @@ defmodule Lightning.KafkaTriggersTest do
     end
   end
 
+  describe ".reset_pipeline/1" do
+    setup do
+      {:ok, pid} = start_supervised(PipelineSupervisor)
+
+      trigger_1 =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: configuration(index: 1),
+          enabled: true
+        )
+
+      trigger_2 =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: configuration(index: 2, ssl: false),
+          enabled: true
+        )
+
+      %{pid: pid, trigger_1: trigger_1, trigger_2: trigger_2}
+    end
+
+    test "asks supervisor to start trigger with a reset setting", %{
+      pid: pid,
+      trigger_1: trigger_1,
+      trigger_2: trigger_2
+    } do
+      with_mock Supervisor,
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end do
+        KafkaTriggers.reset_pipeline(trigger_1.id)
+
+        assert_called(
+          Supervisor.start_child(
+            pid,
+            child_spec(trigger: trigger_1, index: 1, begin_offset: :reset)
+          )
+        )
+
+        assert_not_called(
+          Supervisor.start_child(
+            pid,
+            child_spec(
+              trigger: trigger_2,
+              index: 2,
+              ssl: false,
+              begin_offset: :reset
+            )
+          )
+        )
+      end
+    end
+
+    test "does nothing if the supervisor can't be found", %{
+      trigger_1: trigger_1
+    } do
+      stop_supervised!(PipelineSupervisor)
+
+      with_mock Supervisor,
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end do
+        KafkaTriggers.reset_pipeline(trigger_1.id)
+
+        assert_not_called(Supervisor.start_child(:_, :_))
+      end
+    end
+
+    test "does nothing if the trigger can't be found" do
+      trigger_id = Ecto.UUID.generate()
+
+      with_mock Supervisor,
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end do
+        KafkaTriggers.reset_pipeline(trigger_id)
+
+        assert_not_called(Supervisor.start_child(:_, :_))
+      end
+    end
+  end
+
   defp child_spec(opts) do
     trigger = opts |> Keyword.get(:trigger)
     index = opts |> Keyword.get(:index)
     sasl = opts |> Keyword.get(:sasl, true)
     ssl = opts |> Keyword.get(:ssl, true)
+    begin_offset = opts |> Keyword.get(:begin_offset, :assigned)
 
     number_of_consumers =
       opts
@@ -1062,6 +1173,7 @@ defmodule Lightning.KafkaTriggersTest do
         :start_link,
         [
           [
+            begin_offset: begin_offset,
             connect_timeout: (30 + index) * 1000,
             group_id: "lightning-#{index}",
             hosts: [{"host-#{index}", 9092}, {"other-host-#{index}", 9093}],

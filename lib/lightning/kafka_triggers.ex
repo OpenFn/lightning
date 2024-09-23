@@ -96,7 +96,7 @@ defmodule Lightning.KafkaTriggers do
   @doc """
   Generate the child spec needed to start a `Pipeline` child process.
   """
-  def generate_pipeline_child_spec(trigger) do
+  def generate_pipeline_child_spec(trigger, reset \\ false) do
     %{
       connect_timeout: connect_timeout,
       group_id: group_id,
@@ -121,6 +121,8 @@ defmodule Lightning.KafkaTriggers do
         nil
       end
 
+    begin_offset = if reset, do: :reset, else: :assigned
+
     offset_reset_policy = determine_offset_reset_policy(trigger)
 
     number_of_consumers = Lightning.Config.kafka_number_of_consumers()
@@ -133,6 +135,7 @@ defmodule Lightning.KafkaTriggers do
         :start_link,
         [
           [
+            begin_offset: begin_offset,
             connect_timeout: connect_timeout * 1000,
             group_id: group_id,
             hosts: hosts,
@@ -263,6 +266,7 @@ defmodule Lightning.KafkaTriggers do
 
   defp setup_trigger_reset({_id, pid, _type, _modules}, trigger_id) do
     GenServer.stop(pid, :normal, 1000)
+
     Process.send_after(
       Lightning.KafkaTriggers.PipelineResetter,
       {:reset, trigger_id},
@@ -270,19 +274,13 @@ defmodule Lightning.KafkaTriggers do
     )
   end
 
-  def reset_pipeline(_trigger_id) do
-    # Trigger
-    # |> Repo.get(trigger_id)
-    # |> case do
-    #   nil ->
-    #     nil
-    #
-    #   %{enabled: true} = trigger ->
-    #     update_pipeline(:kafka_pipeline_supervisor, trigger_id)
-    #
-    #   %{enabled: false} = trigger ->
-    #     Supervisor.terminate_child(:kafka_pipeline_supervisor, trigger_id)
-    #     Supervisor.delete_child(:kafka_pipeline_supervisor, trigger_id)
-    # end
+  def reset_pipeline(trigger_id) do
+    with supervisor when not is_nil(supervisor) <-
+           GenServer.whereis(:kafka_pipeline_supervisor),
+         trigger when not is_nil(trigger) <- Repo.get(Trigger, trigger_id) do
+      child_spec = generate_pipeline_child_spec(trigger, true)
+
+      Supervisor.start_child(supervisor, child_spec)
+    end
   end
 end
