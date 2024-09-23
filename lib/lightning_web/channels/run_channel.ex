@@ -64,7 +64,7 @@ defmodule LightningWeb.RunChannel do
         socket |> assign(run: run) |> reply_with({:ok, nil})
 
       {:error, changeset} ->
-        reply_with(socket, {:error, LightningWeb.ChangesetJSON.error(changeset)})
+        reply_with(socket, {:error, changeset})
     end
   end
 
@@ -82,7 +82,7 @@ defmodule LightningWeb.RunChannel do
         socket |> assign(run: run) |> reply_with({:ok, nil})
 
       {:error, changeset} ->
-        reply_with(socket, {:error, LightningWeb.ChangesetJSON.error(changeset)})
+        reply_with(socket, {:error, changeset})
     end
   end
 
@@ -159,10 +159,7 @@ defmodule LightningWeb.RunChannel do
       job_id when is_binary(job_id) ->
         case Runs.start_step(socket.assigns.run, payload) do
           {:error, changeset} ->
-            reply_with(
-              socket,
-              {:error, LightningWeb.ChangesetJSON.error(changeset)}
-            )
+            reply_with(socket, {:error, changeset})
 
           {:ok, step} ->
             reply_with(socket, {:ok, %{step_id: step.id}})
@@ -188,7 +185,7 @@ defmodule LightningWeb.RunChannel do
     |> Runs.complete_step(socket.assigns.run.options)
     |> case do
       {:error, changeset} ->
-        reply_with(socket, {:error, LightningWeb.ChangesetJSON.error(changeset)})
+        reply_with(socket, {:error, changeset})
 
       {:ok, step} ->
         reply_with(socket, {:ok, %{step_id: step.id}})
@@ -200,7 +197,7 @@ defmodule LightningWeb.RunChannel do
 
     case Runs.append_run_log(run, payload, scrubber) do
       {:error, changeset} ->
-        reply_with(socket, {:error, LightningWeb.ChangesetJSON.error(changeset)})
+        reply_with(socket, {:error, changeset})
 
       {:ok, log_line} ->
         reply_with(socket, {:ok, %{log_line_id: log_line.id}})
