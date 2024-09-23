@@ -4,14 +4,14 @@ defmodule LightningWeb.RunChannel do
   """
   use LightningWeb, :channel
 
+  import LightningWeb.ChannelHelpers
+
   alias Lightning.Credentials
   alias Lightning.Repo
   alias Lightning.Runs
   alias Lightning.Scrubber
   alias Lightning.Workers
   alias LightningWeb.RunWithOptions
-
-  import LightningWeb.ChannelHelpers
 
   require Jason.Helpers
   require Logger
