@@ -150,7 +150,8 @@ defmodule Lightning.KafkaTriggers do
             trigger_id: trigger.id |> String.to_atom()
           ]
         ]
-      }
+      },
+      restart: :transient
     }
   end
 
@@ -267,11 +268,15 @@ defmodule Lightning.KafkaTriggers do
   defp setup_trigger_reset({_id, pid, _type, _modules}, trigger_id) do
     GenServer.stop(pid, :normal, 1000)
 
+    IO.puts "WTAF BATMAN"
+    IO.inspect(pid, label: :pid)
+    IO.inspect(trigger_id, label: :trigger_id)
+
     Process.send_after(
       Lightning.KafkaTriggers.PipelineResetter,
       {:reset, trigger_id},
       Lightning.Config.kafka_reset_delay_seconds() * 1000
-    )
+    ) |> IO.inspect(label: :send_after)
   end
 
   def reset_pipeline(trigger_id) do
@@ -280,7 +285,8 @@ defmodule Lightning.KafkaTriggers do
          trigger when not is_nil(trigger) <- Repo.get(Trigger, trigger_id) do
       child_spec = generate_pipeline_child_spec(trigger, true)
 
-      Supervisor.start_child(supervisor, child_spec)
+      Supervisor.delete_child(supervisor, trigger_id) |> IO.inspect(label: :delete_result)
+      Supervisor.start_child(supervisor, child_spec) |> IO.inspect(label: :start_result)
     end
   end
 end

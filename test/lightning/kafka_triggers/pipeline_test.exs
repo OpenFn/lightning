@@ -487,7 +487,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       ]
 
       %{
-        context: %{trigger_id: "my_trigger_id"},
+        context: %{trigger_id: "my_trigger_id" |> String.to_atom()},
         messages: messages
       }
     end
@@ -549,7 +549,9 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       with_mock KafkaTriggers, reset_trigger: fn _ -> :ok end do
         Pipeline.handle_failed(messages, context)
 
-        assert_called(KafkaTriggers.reset_trigger(context.trigger_id))
+        assert_called(
+          KafkaTriggers.reset_trigger(context.trigger_id |> Atom.to_string())
+        )
       end
     end
 
@@ -591,7 +593,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
     setup do
       %{
         context: %{
-          trigger_id: "my_trigger_id"
+          trigger_id: :my_trigger_id
         }
       }
     end
@@ -625,7 +627,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       with_mock KafkaTriggers, reset_trigger: fn _ -> :ok end do
         Pipeline.maybe_stop_this_pipeline(messages, context)
 
-        assert_called(KafkaTriggers.reset_trigger(context.trigger_id))
+        assert_called(KafkaTriggers.reset_trigger("my_trigger_id"))
       end
     end
 
@@ -643,7 +645,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       with_mock KafkaTriggers, reset_trigger: fn _ -> :ok end do
         Pipeline.maybe_stop_this_pipeline(messages, context)
 
-        assert_called(KafkaTriggers.reset_trigger(context.trigger_id))
+        assert_called(KafkaTriggers.reset_trigger("my_trigger_id"))
       end
     end
   end

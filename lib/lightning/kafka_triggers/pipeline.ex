@@ -244,7 +244,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
 
   def maybe_stop_this_pipeline(messages, context) do
     if Enum.any?(messages, &(&1.status == {:failed, :persistence})) do
-      KafkaTriggers.reset_trigger(context.trigger_id)
+      KafkaTriggers.reset_trigger(context.trigger_id |> Atom.to_string())
     end
   end
 end

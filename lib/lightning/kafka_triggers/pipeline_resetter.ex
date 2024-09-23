@@ -14,6 +14,7 @@ defmodule Lightning.KafkaTriggers.PipelineResetter do
 
   @impl true
   def handle_info({:reset, trigger_id}, state) do
+    IO.inspect(trigger_id, label: :reset_received)
     KafkaTriggers.reset_pipeline(trigger_id)
 
     {:noreply, state}

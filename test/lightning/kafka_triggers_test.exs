@@ -1088,12 +1088,29 @@ defmodule Lightning.KafkaTriggersTest do
       %{pid: pid, trigger_1: trigger_1, trigger_2: trigger_2}
     end
 
+    test "asks supervisor to delete the specified child", %{
+      pid: pid,
+      trigger_1: trigger_1,
+      trigger_2: trigger_2
+    } do
+      with_mock Supervisor,
+        delete_child: fn _sup_pid, _child_id -> {:ok, "fake-pid"} end,
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end do
+        KafkaTriggers.reset_pipeline(trigger_1.id)
+
+        assert_called(Supervisor.delete_child(pid, trigger_1.id))
+
+        assert_not_called(Supervisor.delete_child(pid, trigger_2.id))
+      end
+    end
+
     test "asks supervisor to start trigger with a reset setting", %{
       pid: pid,
       trigger_1: trigger_1,
       trigger_2: trigger_2
     } do
       with_mock Supervisor,
+        delete_child: fn _sup_pid, _child_id -> {:ok, "fake-pid"} end,
         start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end do
         KafkaTriggers.reset_pipeline(trigger_1.id)
 
@@ -1124,6 +1141,7 @@ defmodule Lightning.KafkaTriggersTest do
       stop_supervised!(PipelineSupervisor)
 
       with_mock Supervisor,
+        delete_child: fn _sup_pid, _child_id -> {:ok, "fake-pid"} end,
         start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end do
         KafkaTriggers.reset_pipeline(trigger_1.id)
 
@@ -1135,6 +1153,7 @@ defmodule Lightning.KafkaTriggersTest do
       trigger_id = Ecto.UUID.generate()
 
       with_mock Supervisor,
+        delete_child: fn _sup_pid, _child_id -> {:ok, "fake-pid"} end,
         start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end do
         KafkaTriggers.reset_pipeline(trigger_id)
 
@@ -1187,7 +1206,8 @@ defmodule Lightning.KafkaTriggersTest do
             trigger_id: trigger.id |> String.to_atom()
           ]
         ]
-      }
+      },
+      restart: :transient
     }
   end
 
