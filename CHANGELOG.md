@@ -28,6 +28,8 @@ and this project adheres to
 
 - Dataclip selector always shows that the dataclip is wiped even when the job wasn't run
   [#2303](https://github.com/OpenFn/lightning/issues/2303)
+- Send run channel errors to sentry
+  [#2515](https://github.com/OpenFn/lightning/issues/2515)
 
 ## [v2.9.5] - 2024-09-18
 
