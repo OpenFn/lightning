@@ -13,6 +13,8 @@ defmodule LightningWeb.ChannelHelpers do
   end
 
   defp send_error_to_sentry(socket, error) do
-    Sentry.capture_message("#{socket.channel}.Error", extra: %{error: error})
+    Sentry.capture_message("#{socket.channel}.Error",
+      extra: %{error: inspect(error)}
+    )
   end
 end
