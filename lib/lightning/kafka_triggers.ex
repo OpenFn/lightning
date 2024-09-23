@@ -264,9 +264,25 @@ defmodule Lightning.KafkaTriggers do
   defp setup_trigger_reset({_id, pid, _type, _modules}, trigger_id) do
     GenServer.stop(pid, :normal, 1000)
     Process.send_after(
-      Lightning.KafkaTriggers.TriggerResetter,
+      Lightning.KafkaTriggers.PipelineResetter,
       {:reset, trigger_id},
       Lightning.Config.kafka_reset_delay_seconds() * 1000
     )
+  end
+
+  def reset_pipeline(_trigger_id) do
+    # Trigger
+    # |> Repo.get(trigger_id)
+    # |> case do
+    #   nil ->
+    #     nil
+    #
+    #   %{enabled: true} = trigger ->
+    #     update_pipeline(:kafka_pipeline_supervisor, trigger_id)
+    #
+    #   %{enabled: false} = trigger ->
+    #     Supervisor.terminate_child(:kafka_pipeline_supervisor, trigger_id)
+    #     Supervisor.delete_child(:kafka_pipeline_supervisor, trigger_id)
+    # end
   end
 end

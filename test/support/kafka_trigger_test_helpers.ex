@@ -19,7 +19,7 @@ defmodule Lightning.KafkaTriggerTestHelpers.DummyResetter do
     GenServer.start_link(
       __MODULE__,
       opts,
-      name: Lightning.KafkaTriggers.TriggerResetter
+      name: Lightning.KafkaTriggers.PipelineResetter
     )
   end
 
