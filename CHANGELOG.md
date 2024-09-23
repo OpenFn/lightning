@@ -19,6 +19,14 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v2.9.6] - 2024-09-23
+
+### Added
+
+### Changed
+
 - Increase minimum password length to 12 in accordance with ASVS 4.0.3
   recommendation V2.1.2 [#2507](https://github.com/OpenFn/lightning/pull/2507)
 - Changed the public sandbox (https://demo.openfn.org) setup script to use
