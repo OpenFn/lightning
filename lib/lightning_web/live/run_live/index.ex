@@ -412,7 +412,7 @@ defmodule LightningWeb.RunLive.Index do
     workorder = Enum.find(page.entries, &(&1.id == workorder_id))
 
     work_orders =
-      if selected? and nil != workorder do
+      if selected? and !is_nil(workorder) do
         selected_workorder = %Lightning.WorkOrder{
           id: workorder.id,
           workflow_id: workorder.workflow_id

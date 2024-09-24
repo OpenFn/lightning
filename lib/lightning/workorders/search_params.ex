@@ -19,7 +19,7 @@ defmodule Lightning.WorkOrders.SearchParams do
              :wo_date_before
            ]}
 
-  @statuses ~w(pending running success failed crashed killed cancelled lost exception)
+  @statuses ~w(pending running success failed crashed killed cancelled lost exception rejected)
   @statuses_set MapSet.new(@statuses)
   @search_fields ~w(id body log)
 
