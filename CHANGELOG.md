@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Export edge condition expressions as multiline in project spec
+  [#2521](https://github.com/OpenFn/lightning/issues/2521)
+
 ## [v2.9.6] - 2024-09-23
 
 ### Added
