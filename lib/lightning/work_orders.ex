@@ -447,6 +447,8 @@ defmodule Lightning.WorkOrders do
           | UsageLimiting.error()
           | {:error, :enqueue_error}
   def retry_many([%WorkOrder{} | _rest] = workorders, opts) do
+    workorders = workorders |> Enum.map(& &1.id) |> retriable_workorders()
+
     with project_id <- Keyword.fetch!(opts, :project_id),
          :ok <-
            UsageLimiter.limit_action(
@@ -459,16 +461,14 @@ defmodule Lightning.WorkOrders do
 
       workorders
       |> Enum.chunk_every(@retry_many_chunk_size)
-      |> Enum.flat_map(fn chunk ->
-        # TODO: Enqueue the first chunk directly with Runs.enqueue_many and schedule the rest with Oban
+      |> Enum.map(fn chunk ->
+        # TODO: Enqueue the first chunk directly with Runs.enqueue_many and schedule the rest
         workorder_ids = Enum.map(chunk, & &1.id)
 
-        [
-          RetryManyWorkOrdersJob.new(%{
-            workorders_ids: workorder_ids,
-            created_by: creating_user.id
-          })
-        ]
+        RetryManyWorkOrdersJob.new(%{
+          workorders_ids: workorder_ids,
+          created_by: creating_user.id
+        })
       end)
       |> then(fn jobs ->
         Oban.insert_all(Lightning.Oban, jobs)
@@ -547,7 +547,10 @@ defmodule Lightning.WorkOrders do
         returning: true
       )
     end)
-    |> workflow_runs_count(workorders)
+    |> Multi.put(
+      :workflow_runs_count,
+      Enum.frequencies_by(workorders, & &1.workflow_id)
+    )
     |> Runs.enqueue_many()
     |> case do
       {:ok, changes} ->
@@ -629,24 +632,6 @@ defmodule Lightning.WorkOrders do
     )
   end
 
-  def workorders_with_first_runs(workorders_ids) do
-    from(w in WorkOrder,
-      where: w.id in ^workorders_ids,
-      preload: [
-        :workflow,
-        runs: ^first_run_query()
-      ]
-    )
-    |> Repo.all()
-  end
-
-  defp first_run_query do
-    from r in Run,
-      order_by: [asc: coalesce(r.started_at, r.inserted_at)],
-      preload: [:starting_job, starting_trigger: [edges: :target_job]],
-      limit: 1
-  end
-
   defp publish_events_for_retry_many(changes) do
     runs = get_from_changes("run", changes)
 
@@ -676,22 +661,42 @@ defmodule Lightning.WorkOrders do
     end)
   end
 
-  def determine_starting_job(%{runs: []} = workorder) do
+  defp determine_starting_job(%{runs: []} = workorder) do
     hd(workorder.trigger.edges).target_job
   end
 
-  def determine_starting_job(%{runs: [run]} = workorder) do
+  defp determine_starting_job(%{runs: [run]} = workorder) do
     run.starting_job || hd(workorder.trigger.edges).target_job
   end
 
-  def workflow_runs_count(multi, workorders) do
-    workflow_runs_count =
-      workorders
-      |> Enum.flat_map(fn workorder ->
-        List.duplicate(workorder.workflow_id, length(workorder.runs))
-      end)
-      |> Enum.frequencies()
+  defp retriable_workorders(workorder_ids) do
+    workorder_ids
+    |> workorders_with_dataclips_query()
+    |> Repo.all()
+  end
 
-    Multi.put(multi, :workflow_runs_count, workflow_runs_count)
+  defp workorders_with_first_runs(workorder_ids) do
+    workorder_ids
+    |> workorders_with_dataclips_query()
+    |> preload(runs: ^first_run_query())
+    |> Repo.all()
+  end
+
+  defp first_run_query do
+    from r in Run,
+      order_by: [asc: coalesce(r.started_at, r.inserted_at)],
+      preload: [:starting_job, starting_trigger: [edges: :target_job]],
+      limit: 1
+  end
+
+  defp workorders_with_dataclips_query(workorder_ids) do
+    from(w in WorkOrder,
+      join: d in assoc(w, :dataclip),
+      where: w.id in ^workorder_ids and is_nil(d.wiped_at),
+      preload: [
+        :workflow,
+        :dataclip
+      ]
+    )
   end
 end
