@@ -9,8 +9,7 @@ defmodule Lightning.Accounts do
 
   import Ecto.Query, warn: false
 
-  alias Ecto.Changeset
-  alias Ecto.Multi
+  alias Ecto.{Changeset, Multi}
   alias Lightning.Accounts.Events
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserBackupCode
@@ -532,35 +531,21 @@ defmodule Lightning.Accounts do
 
     {data, types}
     |> Changeset.cast(params, Map.keys(types))
-    |> Changeset.validate_required([:email])
-    |> Changeset.validate_format(:email, ~r/^[^\s]+@[^\s]+$/,
-      message: "must have the @ sign and no spaces"
-    )
-    |> Changeset.validate_length(:email, max: 160)
-    |> validate_email_change(user)
-    |> maybe_validate_password(user, validate_password?)
+    |> Changeset.validate_required([:email, :current_password])
+    |> User.validate_email()
+    |> validate_email_changed(user)
+    |> maybe_validate_current_password(user, validate_password?)
   end
 
-  defp validate_email_change(changeset, user) do
+  defp validate_email_changed(changeset, user) do
     Changeset.validate_change(changeset, :email, fn :email, email ->
-      cond do
-        user.email == email ->
-          [email: "has not changed"]
-
-        Lightning.Repo.exists?(User |> where(email: ^email)) ->
-          [email: "has already been taken"]
-
-        true ->
-          []
-      end
+      if user.email == email, do: [email: "has not changed"], else: []
     end)
   end
 
-  defp maybe_validate_password(changeset, user, true) do
-    changeset
-    |> Changeset.validate_required([:current_password])
-    |> Changeset.validate_change(:current_password, fn :current_password,
-                                                       password ->
+  defp maybe_validate_current_password(changeset, user, true) do
+    Changeset.validate_change(changeset, :current_password, fn :current_password,
+                                                               password ->
       if Bcrypt.verify_pass(password, user.hashed_password) do
         []
       else
@@ -569,7 +554,7 @@ defmodule Lightning.Accounts do
     end)
   end
 
-  defp maybe_validate_password(changeset, _user, false), do: changeset
+  defp maybe_validate_current_password(changeset, _user, false), do: changeset
 
   @doc """
   Deletes a user.
