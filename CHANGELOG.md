@@ -19,6 +19,14 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v2.9.6] - 2024-09-23
+
+### Added
+
+### Changed
+
 - Increase minimum password length to 12 in accordance with ASVS 4.0.3
   recommendation V2.1.2 [#2507](https://github.com/OpenFn/lightning/pull/2507)
 - Changed the public sandbox (https://demo.openfn.org) setup script to use
@@ -30,6 +38,8 @@ and this project adheres to
   [#2303](https://github.com/OpenFn/lightning/issues/2303)
 - Export edge condition expressions as multiline in project spec
   [#2521](https://github.com/OpenFn/lightning/issues/2521)
+- Send run channel errors to sentry
+  [#2515](https://github.com/OpenFn/lightning/issues/2515)
 
 ## [v2.9.5] - 2024-09-18
 
