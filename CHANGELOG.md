@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Export edge condition expressions as multiline in project spec
+  [#2521](https://github.com/OpenFn/lightning/issues/2521)
+
 ## [v2.9.6] - 2024-09-23
 
 ### Added
@@ -36,8 +39,6 @@ and this project adheres to
 
 - Dataclip selector always shows that the dataclip is wiped even when the job wasn't run
   [#2303](https://github.com/OpenFn/lightning/issues/2303)
-- Export edge condition expressions as multiline in project spec
-  [#2521](https://github.com/OpenFn/lightning/issues/2521)
 - Send run channel errors to sentry
   [#2515](https://github.com/OpenFn/lightning/issues/2515)
 
