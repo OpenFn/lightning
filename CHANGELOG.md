@@ -26,6 +26,25 @@ and this project adheres to
   [#2365](https://github.com/OpenFn/lightning/issues/2365)
 - User email change: Send notification of change to the old email address and
   confirmation to the new email address [#2365](https://github.com/OpenFn/lightning/issues/2365)
+  
+## [v2.9.6] - 2024-09-23
+
+### Added
+
+### Changed
+
+- Increase minimum password length to 12 in accordance with ASVS 4.0.3
+  recommendation V2.1.2 [#2507](https://github.com/OpenFn/lightning/pull/2507)
+- Changed the public sandbox (https://demo.openfn.org) setup script to use
+  `welcome12345` passwords to comply with a 12-character minimum
+
+### Fixed
+
+- Dataclip selector always shows that the dataclip is wiped even when the job wasn't run
+  [#2303](https://github.com/OpenFn/lightning/issues/2303)
+- Send run channel errors to sentry
+  [#2515](https://github.com/OpenFn/lightning/issues/2515)
+
 ## [v2.9.5] - 2024-09-18
 
 ### Changed
@@ -41,6 +60,7 @@ and this project adheres to
   [#2050](https://github.com/OpenFn/lightning/issues/2050)
 - Add quotes when special YAML characters are present in the exported project
   [#2446](https://github.com/OpenFn/lightning/issues/2446)
+- In the AI Assistant, don't open the help page when clicking the Responsible AI Link [#2511](https://github.com/OpenFn/lightning/issues/2511)
 
 ## [v2.9.4] - 2024-09-16
 
@@ -51,7 +71,7 @@ and this project adheres to
 - Improve history export page UI
   [#2442](https://github.com/OpenFn/lightning/issues/2442)
 - When selecting a node in the workflow diagram, connected edges will also be
-  highlighted [2396](https://github.com/OpenFn/lightning/issues/2358)
+  highlighted [#2396](https://github.com/OpenFn/lightning/issues/2358)
 
 ### Fixed
 

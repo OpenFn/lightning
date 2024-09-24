@@ -123,7 +123,7 @@ defmodule Lightning.SetupUtils do
             first_name: "Sizwe",
             last_name: "Super",
             email: "super@openfn.org",
-            password: "welcome123"
+            password: "welcome12345"
           })
 
         Repo.insert!(%Lightning.Accounts.UserToken{
@@ -143,7 +143,7 @@ defmodule Lightning.SetupUtils do
         first_name: "Amy",
         last_name: "Admin",
         email: "demo@openfn.org",
-        password: "welcome123"
+        password: "welcome12345"
       })
 
     {:ok, editor} =
@@ -151,7 +151,7 @@ defmodule Lightning.SetupUtils do
         first_name: "Esther",
         last_name: "Editor",
         email: "EditOr@openfn.org",
-        password: "welcome123"
+        password: "welcome12345"
       })
 
     {:ok, viewer} =
@@ -159,7 +159,7 @@ defmodule Lightning.SetupUtils do
         first_name: "Vikram",
         last_name: "Viewer",
         email: "viewer@openfn.org",
-        password: "welcome123"
+        password: "welcome12345"
       })
 
     %{super_user: super_user, admin: admin, editor: editor, viewer: viewer}
