@@ -447,22 +447,22 @@ defmodule Lightning.WorkOrders do
           | UsageLimiting.error()
           | {:error, :enqueue_error}
   def retry_many([%WorkOrder{} | _rest] = workorders, opts) do
-    workorders = workorders |> Enum.map(& &1.id) |> retriable_workorders()
+    {retriable_workorders, non_retriable_workorders} =
+      workorders |> Enum.map(& &1.id) |> fetch_and_split_workorders()
 
     with project_id <- Keyword.fetch!(opts, :project_id),
          :ok <-
            UsageLimiter.limit_action(
-             %Action{type: :new_run, amount: length(workorders)},
+             %Action{type: :new_run, amount: length(retriable_workorders)},
              %Context{
                project_id: project_id
              }
            ) do
       creating_user = Keyword.fetch!(opts, :created_by)
 
-      workorders
+      retriable_workorders
       |> Enum.chunk_every(@retry_many_chunk_size)
       |> Enum.map(fn chunk ->
-        # TODO: Enqueue the first chunk directly with Runs.enqueue_many and schedule the rest
         workorder_ids = Enum.map(chunk, & &1.id)
 
         RetryManyWorkOrdersJob.new(%{
@@ -475,8 +475,8 @@ defmodule Lightning.WorkOrders do
       end)
       |> case do
         inserted_list when is_list(inserted_list) ->
-          enqueued_count = length(workorders)
-          discarded_count = length(workorders) - enqueued_count
+          enqueued_count = length(retriable_workorders)
+          discarded_count = length(non_retriable_workorders)
 
           {:ok, enqueued_count, discarded_count}
 
@@ -669,10 +669,23 @@ defmodule Lightning.WorkOrders do
     run.starting_job || hd(workorder.trigger.edges).target_job
   end
 
-  defp retriable_workorders(workorder_ids) do
+  defp fetch_and_split_workorders(workorder_ids) do
     workorder_ids
     |> workorders_with_dataclips_query()
     |> Repo.all()
+    |> Enum.split_with(&retriable?/1)
+  end
+
+  defp workorders_with_dataclips_query(workorder_ids) do
+    from(w in WorkOrder,
+      left_join: d in assoc(w, :dataclip),
+      where: w.id in ^workorder_ids,
+      preload: [
+        :workflow,
+        :dataclip,
+        trigger: [edges: :target_job]
+      ]
+    )
   end
 
   defp workorders_with_first_runs(workorder_ids) do
@@ -689,14 +702,7 @@ defmodule Lightning.WorkOrders do
       limit: 1
   end
 
-  defp workorders_with_dataclips_query(workorder_ids) do
-    from(w in WorkOrder,
-      join: d in assoc(w, :dataclip),
-      where: w.id in ^workorder_ids and is_nil(d.wiped_at),
-      preload: [
-        :workflow,
-        :dataclip
-      ]
-    )
+  defp retriable?(workorder) do
+    workorder.dataclip != nil and is_nil(workorder.dataclip.wiped_at)
   end
 end

@@ -1896,27 +1896,27 @@ defmodule Lightning.WorkOrdersTest do
 
         [workorders1, workorders2] = Enum.chunk_every(workorders, 100)
 
-        runs_ids1 =
-          Enum.flat_map(workorders1, fn workorder ->
-            Enum.map(workorder.runs, & &1.id)
-          end)
+        workorders_ids1 = Enum.map(workorders1, & &1.id)
 
-        runs_ids2 =
-          Enum.flat_map(workorders2, fn workorder ->
-            Enum.map(workorder.runs, & &1.id)
-          end)
+        workorders_ids2 = Enum.map(workorders2, & &1.id)
 
         user_id = user.id
 
         assert [
                  %Oban.Job{
                    args:
-                     %{"runs_ids" => ^runs_ids1, "created_by" => ^user_id} =
+                     %{
+                       "workorders_ids" => ^workorders_ids1,
+                       "created_by" => ^user_id
+                     } =
                        args1
                  },
                  %Oban.Job{
                    args:
-                     %{"runs_ids" => ^runs_ids2, "created_by" => ^user_id} =
+                     %{
+                       "workorders_ids" => ^workorders_ids2,
+                       "created_by" => ^user_id
+                     } =
                        args2
                  }
                ] = all_enqueued(queue: :scheduler) |> Enum.sort_by(& &1.id)
