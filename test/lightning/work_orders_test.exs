@@ -1691,6 +1691,42 @@ defmodule Lightning.WorkOrdersTest do
       assert retry_run |> Repo.preload(:steps) |> Map.get(:steps) == []
     end
 
+    test "rejected workorders are retryable",
+         %{
+           snapshot: snapshot,
+           trigger: trigger,
+           user: user,
+           workflow: workflow
+         } do
+      input_dataclip = insert(:dataclip)
+
+      workorder =
+        insert(:workorder,
+          dataclip: input_dataclip,
+          snapshot: snapshot,
+          trigger: trigger,
+          workflow: workflow,
+          state: :rejected
+        )
+
+      runs = workorder |> Ecto.assoc(:runs) |> Repo.all()
+
+      assert Enum.empty?(runs)
+      assert workorder.state == :rejected
+
+      {:ok, 1, 0} =
+        WorkOrders.retry_many([workorder],
+          created_by: user,
+          project_id: workflow.project_id
+        )
+
+      workorder = Repo.reload(workorder)
+      runs = workorder |> Ecto.assoc(:runs) |> Repo.all()
+
+      refute Enum.empty?(runs)
+      refute workorder.state == :rejected
+    end
+
     test "retrying a WorkOrder with a run having starting_job without steps",
          %{
            jobs: [_job_a, job_b, _job_c],
