@@ -141,11 +141,7 @@ defmodule Lightning.ExportUtils do
   defp handle_binary(k, v, i) do
     case k do
       :body ->
-        indented_expression =
-          String.split(v, "\n")
-          |> Enum.map_join("\n", fn line -> "#{i}  #{line}" end)
-
-        "body: |\n#{indented_expression}"
+        "body: |\n#{indent_multiline_value(v, i)}"
 
       :adaptor ->
         "#{k}: '#{v}'"
@@ -154,11 +150,17 @@ defmodule Lightning.ExportUtils do
         "#{k}: '#{v}'"
 
       :condition_expression ->
-        "condition_expression: #{v}"
+        "condition_expression: |\n#{indent_multiline_value(v, i)}"
 
       _ ->
         "#{yaml_safe_key(k)}: #{yaml_safe_string(v)}"
     end
+  end
+
+  defp indent_multiline_value(value, current_indent) do
+    value
+    |> String.split("\n")
+    |> Enum.map_join("\n", fn line -> "#{current_indent}  #{line}" end)
   end
 
   defp yaml_safe_string(value) do
