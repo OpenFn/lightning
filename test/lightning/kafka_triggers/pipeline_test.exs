@@ -540,17 +540,22 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
     } do
       [message_1, message_2] = messages
 
+      message_timestamp = build_timestamp(100)
+
       message_3 =
-        build_broadway_message(offset: 3)
+        build_broadway_message(offset: 3, timestamp: message_timestamp)
         |> Broadway.Message.failed(:persistence)
 
       messages = [message_1, message_3, message_2]
 
-      with_mock KafkaTriggers, reset_trigger: fn _ -> :ok end do
+      with_mock KafkaTriggers, reset_trigger: fn _id, _timestamp -> :ok end do
         Pipeline.handle_failed(messages, context)
 
         assert_called(
-          KafkaTriggers.reset_trigger(context.trigger_id |> Atom.to_string())
+          KafkaTriggers.reset_trigger(
+            context.trigger_id |> Atom.to_string(),
+            message_timestamp
+          )
         )
       end
     end
@@ -607,7 +612,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
         build_broadway_message() |> Broadway.Message.failed(:duplicate)
       ]
 
-      with_mock KafkaTriggers, reset_trigger: fn _ -> :ok end do
+      with_mock KafkaTriggers, reset_trigger: fn _id, _timestamp -> :ok end do
         Pipeline.maybe_stop_this_pipeline(messages, context)
 
         assert_not_called(KafkaTriggers.reset_trigger(:_))
@@ -617,35 +622,50 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
     test "exits the process if one of the messages is a persistence failure", %{
       context: context
     } do
+      message_timestamp = build_timestamp(100)
+
       messages = [
         build_broadway_message() |> Broadway.Message.failed(:duplicate),
-        build_broadway_message() |> Broadway.Message.failed(:persistence),
+        build_broadway_message(timestamp: message_timestamp)
+        |> Broadway.Message.failed(:persistence),
         build_broadway_message() |> Broadway.Message.failed(:duplicate),
         build_broadway_message() |> Broadway.Message.failed(:duplicate)
       ]
 
-      with_mock KafkaTriggers, reset_trigger: fn _ -> :ok end do
+      with_mock KafkaTriggers, reset_trigger: fn _id, _timestamp -> :ok end do
         Pipeline.maybe_stop_this_pipeline(messages, context)
 
-        assert_called(KafkaTriggers.reset_trigger("my_trigger_id"))
+        assert_called(
+          KafkaTriggers.reset_trigger("my_trigger_id", message_timestamp)
+        )
       end
     end
 
     test "exits the process if multiple messages have persistence failures", %{
       context: context
     } do
+      message_timestamp_1 = build_timestamp(101)
+      message_timestamp_2 = build_timestamp(102)
+      message_timestamp_3 = build_timestamp(103)
+
       messages = [
         build_broadway_message() |> Broadway.Message.failed(:duplicate),
-        build_broadway_message() |> Broadway.Message.failed(:persistence),
+        build_broadway_message(timestamp: message_timestamp_3)
+        |> Broadway.Message.failed(:persistence),
         build_broadway_message() |> Broadway.Message.failed(:duplicate),
-        build_broadway_message() |> Broadway.Message.failed(:persitence),
+        build_broadway_message(timestamp: message_timestamp_1)
+        |> Broadway.Message.failed(:persistence),
+        build_broadway_message(timestamp: message_timestamp_2)
+        |> Broadway.Message.failed(:persistence),
         build_broadway_message() |> Broadway.Message.failed(:duplicate)
       ]
 
-      with_mock KafkaTriggers, reset_trigger: fn _ -> :ok end do
+      with_mock KafkaTriggers, reset_trigger: fn _id, _timestamp -> :ok end do
         Pipeline.maybe_stop_this_pipeline(messages, context)
 
-        assert_called(KafkaTriggers.reset_trigger("my_trigger_id"))
+        assert_called(
+          KafkaTriggers.reset_trigger("my_trigger_id", message_timestamp_1)
+        )
       end
     end
   end
@@ -660,6 +680,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
 
     key = Keyword.get(opts, :key, "abc_123_def")
     offset = Keyword.get(opts, :offset, 11)
+    timestamp = Keyword.get(opts, :timestamp, build_timestamp(0))
 
     %Broadway.Message{
       data: data,
@@ -668,7 +689,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
         partition: 2,
         key: key,
         headers: [],
-        ts: 1_715_164_718_283,
+        ts: timestamp,
         topic: "bar_topic"
       },
       acknowledger: nil,
@@ -677,6 +698,10 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       batch_mode: :bulk,
       status: :ok
     }
+  end
+
+  defp build_timestamp(offset) do
+    1_715_164_718_283 + offset
   end
 
   defp configuration(opts) do

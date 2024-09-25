@@ -248,7 +248,7 @@ defmodule Lightning.KafkaTriggers do
     |> Repo.update()
   end
 
-  def reset_trigger(trigger_id) do
+  def reset_trigger(trigger_id, _timestamp) do
     :kafka_pipeline_supervisor
     |> GenServer.whereis()
     |> find_child_process(trigger_id)
@@ -266,17 +266,15 @@ defmodule Lightning.KafkaTriggers do
   defp setup_trigger_reset(nil, _trigger_id), do: nil
 
   defp setup_trigger_reset({_id, pid, _type, _modules}, trigger_id) do
-    GenServer.stop(pid, :normal, 1000)
-
-    IO.puts "WTAF BATMAN"
-    IO.inspect(pid, label: :pid)
-    IO.inspect(trigger_id, label: :trigger_id)
+    IO.puts "STOPPING #{DateTime.utc_now()}"
 
     Process.send_after(
       Lightning.KafkaTriggers.PipelineResetter,
       {:reset, trigger_id},
       Lightning.Config.kafka_reset_delay_seconds() * 1000
     ) |> IO.inspect(label: :send_after)
+
+    GenServer.stop(pid, :shutdown, 0) |> IO.inspect(label: :stop_result)
   end
 
   def reset_pipeline(trigger_id) do

@@ -243,8 +243,22 @@ defmodule Lightning.KafkaTriggers.Pipeline do
   end
 
   def maybe_stop_this_pipeline(messages, context) do
-    if Enum.any?(messages, &(&1.status == {:failed, :persistence})) do
-      KafkaTriggers.reset_trigger(context.trigger_id |> Atom.to_string())
+    messages
+    |> Enum.filter(&(&1.status == {:failed, :persistence}))
+    |> case do
+      [] -> 
+        nil
+
+      persistence_failures ->
+        earliest_timestamp = 
+          persistence_failures
+          |> Enum.map(fn %{metadata: %{ts: timestamp}} -> timestamp end)
+          |> Enum.min()
+        
+        KafkaTriggers.reset_trigger(
+          context.trigger_id |> Atom.to_string(),
+          earliest_timestamp
+        )
     end
   end
 end
