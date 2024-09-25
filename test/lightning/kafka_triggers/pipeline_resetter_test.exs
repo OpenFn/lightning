@@ -28,27 +28,32 @@ defmodule Lightning.KafkaTriggers.PipelineResetterTest do
     setup do
       %{
         state: %{stuff: "happens"},
+        timestamp: 1_715_164_718_283,
         trigger_id: "abc-123"
       }
     end
     test "resets the trigger", %{
       state: state,
+      timestamp: timestamp,
       trigger_id: trigger_id
     } do
-      with_mock KafkaTriggers, reset_pipeline: fn _trigger_id -> true end do
-        PipelineResetter.handle_info({:reset, trigger_id}, state)
+      with_mock KafkaTriggers,
+        reset_pipeline: fn _trigger_id, _timestamp -> true end do
+        PipelineResetter.handle_info({:reset, {trigger_id, timestamp}}, state)
 
-        assert_called(KafkaTriggers.reset_pipeline(trigger_id))
+        assert_called(KafkaTriggers.reset_pipeline(trigger_id, timestamp))
       end
     end
 
     test "returns :noreply with the state unchanged", %{
       state: state,
+      timestamp: timestamp,
       trigger_id: trigger_id
     } do
-      with_mock KafkaTriggers, reset_pipeline: fn _trigger_id -> true end do
+      with_mock KafkaTriggers,
+      reset_pipeline: fn _trigger_id, _timestamp -> true end do
         assert {:noreply, ^state} =
-          PipelineResetter.handle_info({:reset, trigger_id}, state)
+          PipelineResetter.handle_info({:reset, {trigger_id, timestamp}}, state)
       end
     end
   end

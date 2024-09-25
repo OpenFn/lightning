@@ -499,6 +499,8 @@ defmodule Lightning.KafkaTriggersTest do
     end
 
     test "generates a child spec for a kafka trigger that must be reset" do
+      timestamp = 1_715_164_718_283
+
       number_of_consumers = Lightning.Config.kafka_number_of_consumers()
 
       assert number_of_consumers != nil
@@ -521,11 +523,12 @@ defmodule Lightning.KafkaTriggersTest do
           index: 1,
           number_of_consumers: number_of_consumers,
           number_of_processors: number_of_processors,
-          begin_offset: :reset
+          begin_offset: :reset,
+          timestamp: timestamp
         )
 
       actual_child_spec =
-        KafkaTriggers.generate_pipeline_child_spec(trigger, true)
+        KafkaTriggers.generate_pipeline_child_spec(trigger, reset_to: timestamp)
 
       assert actual_child_spec == expected_child_spec
     end
@@ -996,6 +999,7 @@ defmodule Lightning.KafkaTriggersTest do
         child_pid: child_pid,
         other_child_pid_1: other_child_pid_1,
         other_child_pid_2: other_child_pid_2,
+        timestamp: 1_715_164_718_283,
         trigger_id: trigger_id
       }
     end
@@ -1004,9 +1008,10 @@ defmodule Lightning.KafkaTriggersTest do
       child_pid: child_pid,
       other_child_pid_1: other_child_pid_1,
       other_child_pid_2: other_child_pid_2,
+      timestamp: timestamp,
       trigger_id: trigger_id
     } do
-      KafkaTriggers.reset_trigger(trigger_id)
+      KafkaTriggers.reset_trigger(trigger_id, timestamp)
 
       assert Process.alive?(other_child_pid_1)
       assert Process.alive?(other_child_pid_2)
@@ -1022,32 +1027,35 @@ defmodule Lightning.KafkaTriggersTest do
     end
 
     test "notifies the resetter that the trigger must be reset", %{
-      trigger_id: trigger_id
+      timestamp: timestamp,
+      trigger_id: trigger_id,
     } do
       expect(Lightning.MockConfig, :kafka_reset_delay_seconds, fn -> 1 end)
 
-      KafkaTriggers.reset_trigger(trigger_id)
+      KafkaTriggers.reset_trigger(trigger_id, timestamp)
 
-      assert_receive({:reset_received, ^trigger_id}, 1200)
+      assert_receive({:reset_received, {^trigger_id, ^timestamp}}, 1200)
     end
 
     test "does nothing if the supervisor is not running", %{
-      trigger_id: trigger_id
+      timestamp: timestamp,
+      trigger_id: trigger_id,
     } do
       stop_supervised!(PipelineSupervisor)
 
-      KafkaTriggers.reset_trigger(trigger_id)
+      KafkaTriggers.reset_trigger(trigger_id, timestamp)
 
       refute_receive({:reset_received, ^trigger_id}, 1200)
     end
 
     test "does nothing if the trigger is not running", %{
       child_pid: child_pid,
+      timestamp: timestamp,
       trigger_id: trigger_id
     } do
       other_trigger_id = "not_#{trigger_id}"
 
-      KafkaTriggers.reset_trigger(other_trigger_id)
+      KafkaTriggers.reset_trigger(other_trigger_id, timestamp)
 
       assert Process.alive?(child_pid)
 
@@ -1085,18 +1093,43 @@ defmodule Lightning.KafkaTriggersTest do
           enabled: true
         )
 
-      %{pid: pid, trigger_1: trigger_1, trigger_2: trigger_2}
+      %{
+        pid: pid,
+        timestamp: 1_715_164_718_283,
+        trigger_1: trigger_1,
+        trigger_2: trigger_2
+      }
     end
 
-    test "asks supervisor to delete the specified child", %{
+    test "asks the supervisor to attempt to terminate the child", %{
       pid: pid,
+      timestamp: timestamp,
       trigger_1: trigger_1,
       trigger_2: trigger_2
     } do
       with_mock Supervisor,
-        delete_child: fn _sup_pid, _child_id -> {:ok, "fake-pid"} end,
+        terminate_child: fn _sup_pid, _child_id -> :ok end,
+        delete_child: fn _sup_pid, _child_id -> :ok end,
         start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end do
-        KafkaTriggers.reset_pipeline(trigger_1.id)
+        KafkaTriggers.reset_pipeline(trigger_1.id, timestamp)
+
+        assert_called(Supervisor.terminate_child(pid, trigger_1.id))
+
+        assert_not_called(Supervisor.terminate_child(pid, trigger_2.id))
+      end
+    end
+
+    test "asks supervisor to delete the specified child", %{
+      pid: pid,
+      timestamp: timestamp,
+      trigger_1: trigger_1,
+      trigger_2: trigger_2
+    } do
+      with_mock Supervisor,
+        terminate_child: fn _sup_pid, _child_id -> :ok end,
+        delete_child: fn _sup_pid, _child_id -> :ok end,
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end do
+        KafkaTriggers.reset_pipeline(trigger_1.id, timestamp)
 
         assert_called(Supervisor.delete_child(pid, trigger_1.id))
 
@@ -1106,18 +1139,27 @@ defmodule Lightning.KafkaTriggersTest do
 
     test "asks supervisor to start trigger with a reset setting", %{
       pid: pid,
+      timestamp: timestamp,
       trigger_1: trigger_1,
       trigger_2: trigger_2
     } do
+      reset_timestamp = timestamp - 1
+
       with_mock Supervisor,
-        delete_child: fn _sup_pid, _child_id -> {:ok, "fake-pid"} end,
+        terminate_child: fn _sup_pid, _child_id -> :ok end,
+        delete_child: fn _sup_pid, _child_id -> :ok end,
         start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end do
-        KafkaTriggers.reset_pipeline(trigger_1.id)
+        KafkaTriggers.reset_pipeline(trigger_1.id, timestamp)
 
         assert_called(
           Supervisor.start_child(
             pid,
-            child_spec(trigger: trigger_1, index: 1, begin_offset: :reset)
+            child_spec(
+              trigger: trigger_1,
+              index: 1,
+              begin_offset: :reset,
+              timestamp: reset_timestamp
+            )
           )
         )
 
@@ -1136,27 +1178,77 @@ defmodule Lightning.KafkaTriggersTest do
     end
 
     test "does nothing if the supervisor can't be found", %{
+      timestamp: timestamp,
       trigger_1: trigger_1
     } do
       stop_supervised!(PipelineSupervisor)
 
       with_mock Supervisor,
-        delete_child: fn _sup_pid, _child_id -> {:ok, "fake-pid"} end,
+        terminate_child: fn _sup_pid, _child_id -> :ok end,
+        delete_child: fn _sup_pid, _child_id -> :ok end,
         start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end do
-        KafkaTriggers.reset_pipeline(trigger_1.id)
+        KafkaTriggers.reset_pipeline(trigger_1.id, timestamp)
 
         assert_not_called(Supervisor.start_child(:_, :_))
       end
     end
 
-    test "does nothing if the trigger can't be found" do
+    test "does nothing if the trigger can't be found", %{
+      timestamp: timestamp
+    } do
       trigger_id = Ecto.UUID.generate()
 
       with_mock Supervisor,
-        delete_child: fn _sup_pid, _child_id -> {:ok, "fake-pid"} end,
+        terminate_child: fn _sup_pid, _child_id -> :ok end,
+        delete_child: fn _sup_pid, _child_id -> :ok end,
         start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end do
-        KafkaTriggers.reset_pipeline(trigger_id)
+        KafkaTriggers.reset_pipeline(trigger_id, timestamp)
 
+        assert_not_called(Supervisor.start_child(:_, :_))
+      end
+    end
+
+    test "does nothing if provided timestamp is negative", %{
+      trigger_1: trigger_1
+    } do
+      with_mock Supervisor,
+        terminate_child: fn _sup_pid, _child_id -> :ok end,
+        delete_child: fn _sup_pid, _child_id -> :ok end,
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end do
+        KafkaTriggers.reset_pipeline(trigger_1.id, -1)
+
+        assert_not_called(Supervisor.terminate_child(:_, :_))
+        assert_not_called(Supervisor.delete_child(:_, :_))
+        assert_not_called(Supervisor.start_child(:_, :_))
+      end
+    end
+
+    test "does nothing if provided timestamp is zero", %{
+      trigger_1: trigger_1
+    } do
+      with_mock Supervisor,
+        terminate_child: fn _sup_pid, _child_id -> :ok end,
+        delete_child: fn _sup_pid, _child_id -> :ok end,
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end do
+        KafkaTriggers.reset_pipeline(trigger_1.id, 0)
+
+        assert_not_called(Supervisor.terminate_child(:_, :_))
+        assert_not_called(Supervisor.delete_child(:_, :_))
+        assert_not_called(Supervisor.start_child(:_, :_))
+      end
+    end
+
+    test "does nothing if provided timestamp is 1", %{
+      trigger_1: trigger_1
+    } do
+      with_mock Supervisor,
+        terminate_child: fn _sup_pid, _child_id -> :ok end,
+        delete_child: fn _sup_pid, _child_id -> :ok end,
+        start_child: fn _sup_pid, _child_spec -> {:ok, "fake-pid"} end do
+        KafkaTriggers.reset_pipeline(trigger_1.id, 1)
+
+        assert_not_called(Supervisor.terminate_child(:_, :_))
+        assert_not_called(Supervisor.delete_child(:_, :_))
         assert_not_called(Supervisor.start_child(:_, :_))
       end
     end
@@ -1168,6 +1260,9 @@ defmodule Lightning.KafkaTriggersTest do
     sasl = opts |> Keyword.get(:sasl, true)
     ssl = opts |> Keyword.get(:ssl, true)
     begin_offset = opts |> Keyword.get(:begin_offset, :assigned)
+    offset_timestamp =
+      opts
+      |> Keyword.get(:timestamp, "171524976732#{index}" |> String.to_integer())
 
     number_of_consumers =
       opts
@@ -1182,8 +1277,6 @@ defmodule Lightning.KafkaTriggersTest do
         :number_of_processors,
         Lightning.Config.kafka_number_of_processors()
       )
-
-    offset_timestamp = "171524976732#{index}" |> String.to_integer()
 
     %{
       id: trigger.id,

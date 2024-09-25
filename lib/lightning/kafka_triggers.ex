@@ -96,7 +96,9 @@ defmodule Lightning.KafkaTriggers do
   @doc """
   Generate the child spec needed to start a `Pipeline` child process.
   """
-  def generate_pipeline_child_spec(trigger, reset \\ false) do
+  def generate_pipeline_child_spec(trigger, opts \\ []) do
+    reset_to = Keyword.get(opts, :reset_to)
+
     %{
       connect_timeout: connect_timeout,
       group_id: group_id,
@@ -121,9 +123,14 @@ defmodule Lightning.KafkaTriggers do
         nil
       end
 
-    begin_offset = if reset, do: :reset, else: :assigned
+    {begin_offset, offset_reset_policy} =
+      case reset_to do
+        nil ->
+          {:assigned, determine_offset_reset_policy(trigger)}
 
-    offset_reset_policy = determine_offset_reset_policy(trigger)
+        timestamp ->
+          {:reset, {:timestamp, timestamp}}
+      end
 
     number_of_consumers = Lightning.Config.kafka_number_of_consumers()
     number_of_processors = Lightning.Config.kafka_number_of_processors()
@@ -248,11 +255,11 @@ defmodule Lightning.KafkaTriggers do
     |> Repo.update()
   end
 
-  def reset_trigger(trigger_id, _timestamp) do
+  def reset_trigger(trigger_id, timestamp) do
     :kafka_pipeline_supervisor
     |> GenServer.whereis()
     |> find_child_process(trigger_id)
-    |> setup_trigger_reset(trigger_id)
+    |> setup_trigger_reset(trigger_id, timestamp)
   end
 
   defp find_child_process(nil, _trigger_id), do: nil
@@ -263,28 +270,28 @@ defmodule Lightning.KafkaTriggers do
     |> Enum.find(fn {id, _pid, _type, _modules} -> id == trigger_id end)
   end
 
-  defp setup_trigger_reset(nil, _trigger_id), do: nil
+  defp setup_trigger_reset(nil, _trigger_id, _timestamp), do: nil
 
-  defp setup_trigger_reset({_id, pid, _type, _modules}, trigger_id) do
-    IO.puts "STOPPING #{DateTime.utc_now()}"
-
+  defp setup_trigger_reset({_id, pid, _type, _modules}, trigger_id, timestamp) do
     Process.send_after(
       Lightning.KafkaTriggers.PipelineResetter,
-      {:reset, trigger_id},
+      {:reset, {trigger_id, timestamp}},
       Lightning.Config.kafka_reset_delay_seconds() * 1000
-    ) |> IO.inspect(label: :send_after)
+    )
 
-    GenServer.stop(pid, :shutdown, 0) |> IO.inspect(label: :stop_result)
+    # TODO Make the timeout configurable and include a try-catch?
+    GenServer.stop(pid, :shutdown, 1000)
   end
 
-  def reset_pipeline(trigger_id) do
+  def reset_pipeline(trigger_id, timestamp) do
     with supervisor when not is_nil(supervisor) <-
            GenServer.whereis(:kafka_pipeline_supervisor),
          trigger when not is_nil(trigger) <- Repo.get(Trigger, trigger_id) do
-      child_spec = generate_pipeline_child_spec(trigger, true)
+      child_spec = generate_pipeline_child_spec(trigger, reset_to: timestamp - 1)
 
-      Supervisor.delete_child(supervisor, trigger_id) |> IO.inspect(label: :delete_result)
-      Supervisor.start_child(supervisor, child_spec) |> IO.inspect(label: :start_result)
+      Supervisor.terminate_child(supervisor, trigger_id)
+      Supervisor.delete_child(supervisor, trigger_id)
+      Supervisor.start_child(supervisor, child_spec)
     end
   end
 end
