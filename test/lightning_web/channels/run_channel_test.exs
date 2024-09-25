@@ -40,21 +40,7 @@ defmodule LightningWeb.RunChannelTest do
   end
 
   describe "joining the run:* channel" do
-    setup do
-      Lightning.Stub.reset_time()
-
-      {:ok, bearer, _} =
-        Workers.Token.generate_and_sign(
-          %{},
-          Lightning.Config.worker_token_signer()
-        )
-
-      Lightning.Stub.freeze_time(DateTime.utc_now() |> DateTime.add(5, :second))
-
-      socket = LightningWeb.WorkerSocket |> socket("socket_id", %{token: bearer})
-
-      %{socket: socket}
-    end
+    setup :create_socket
 
     test "rejects joining when the token isn't valid", %{socket: socket} do
       assert {:error, %{reason: "unauthorized"}} =
@@ -185,22 +171,13 @@ defmodule LightningWeb.RunChannelTest do
              }
     end
 
+    @tag project_retention_policy: :erase_all
     test "fetch:plan for project with erase_all retention setting", %{
-      credential: credential
+      credential: credential,
+      socket: socket,
+      run: run,
+      workflow: workflow
     } do
-      project = insert(:project, retention_policy: :erase_all)
-
-      workflow_context =
-        create_workflow(%{project: project, credential: credential})
-
-      %{run: run, workflow: workflow} =
-        create_run(
-          %{project: project, credential: credential}
-          |> Map.merge(workflow_context)
-        )
-
-      %{socket: socket} = create_socket(%{run: run})
-
       id = run.id
       ref = push(socket, "fetch:plan", %{})
 
@@ -252,11 +229,9 @@ defmodule LightningWeb.RunChannelTest do
              }
     end
 
-    test "fetch:plan includes options from usage limiter", %{
-      credential: credential
-    } do
-      project = insert(:project, retention_policy: :erase_all)
-      project_id = project.id
+    @tag project_retention_policy: :erase_all
+    test "fetch:plan includes options from usage limiter", context do
+      project_id = context.project.id
 
       extra_options = [run_timeout_ms: 5000, save_dataclips: false]
       expected_worker_options = %{run_timeout_ms: 5000, output_dataclips: false}
@@ -264,21 +239,15 @@ defmodule LightningWeb.RunChannelTest do
       Mox.expect(
         Lightning.Extensions.MockUsageLimiter,
         :get_run_options,
-        fn %{project_id: ^project_id} ->
-          extra_options
-        end
+        fn %{project_id: ^project_id} -> extra_options end
       )
 
-      workflow_context =
-        create_workflow(%{project: project, credential: credential})
-
-      %{run: run} =
-        create_run(
-          %{project: project, credential: credential}
-          |> Map.merge(workflow_context)
-        )
-
-      %{socket: socket} = create_socket(%{run: run})
+      %{socket: socket} =
+        merge_setups(context, [
+          :create_run,
+          :create_socket,
+          :join_run_channel
+        ])
 
       ref = push(socket, "fetch:plan", %{})
 
@@ -324,11 +293,7 @@ defmodule LightningWeb.RunChannelTest do
 
     @tag project_retention_policy: :erase_all
     test "fetch:dataclip wipes dataclip body for projects with erase_all retention policy",
-         context do
-      %{run: run, dataclip: dataclip} = create_run(context)
-
-      %{socket: socket} = create_socket(%{run: run})
-
+         %{socket: socket, dataclip: dataclip} do
       ref = push(socket, "fetch:dataclip", %{})
 
       assert_reply ref, :ok, {:binary, _payload}
@@ -345,10 +310,7 @@ defmodule LightningWeb.RunChannelTest do
     @tag project_retention_policy: :retain_all
     test "fetch:dataclip wipes dataclip body for projects with retain_all retention policy",
          context do
-      # retain_all
-      %{run: run, dataclip: dataclip} = create_run(context)
-
-      %{socket: socket} = create_socket(%{run: run})
+      %{socket: socket, dataclip: dataclip} = context
 
       ref = push(socket, "fetch:dataclip", %{})
 
@@ -473,6 +435,8 @@ defmodule LightningWeb.RunChannelTest do
   end
 
   describe "marking steps as started and finished" do
+    setup :create_socket
+
     setup context do
       user = insert(:user)
 
@@ -517,15 +481,7 @@ defmodule LightningWeb.RunChannelTest do
             Lightning.Extensions.MockUsageLimiter.get_run_options(%Context{
               project_id: project.id
             })
-            |> Enum.into(%{})
-        )
-
-      Lightning.Stub.reset_time()
-
-      {:ok, bearer, _} =
-        Workers.Token.generate_and_sign(
-          %{},
-          Lightning.Config.worker_token_signer()
+            |> Map.new()
         )
 
       run_options =
@@ -533,15 +489,12 @@ defmodule LightningWeb.RunChannelTest do
           project_id: project.id
         })
 
-      {:ok, %{}, socket} =
-        LightningWeb.WorkerSocket
-        |> socket("socket_id", %{token: bearer})
+      {:ok, _, socket} =
+        context.socket
         |> subscribe_and_join(
           LightningWeb.RunChannel,
           "run:#{run.id}",
-          %{
-            "token" => Workers.generate_run_token(run, run_options)
-          }
+          %{"token" => Workers.generate_run_token(run, run_options)}
         )
 
       %{
@@ -588,13 +541,16 @@ defmodule LightningWeb.RunChannelTest do
     end
 
     @tag project_retention_policy: :erase_all
-    test "step:start for a project with erase_all retention policy",
-         %{
-           credential: %{id: credential_id},
-           project: project,
-           workflow: workflow
-         } = context do
-      %{socket: socket, run: %{dataclip_id: dataclip_id}} = context
+    test "step:start providing a dataclip for a project with erase_all retention policy",
+         context do
+      %{
+        socket: socket,
+        run: %{dataclip_id: dataclip_id},
+        credential: %{id: credential_id},
+        project: project,
+        workflow: workflow
+      } = context
+
       # input dataclip is saved if provided by the worker
       assert project.retention_policy == :erase_all
 
@@ -618,9 +574,16 @@ defmodule LightningWeb.RunChannelTest do
              } =
                Repo.get!(Step, step_id),
              "dataclip is saved if provided"
+    end
 
-      %{run: run} = create_run(context)
-      %{socket: socket} = create_socket(%{context | run: run})
+    @tag project_retention_policy: :erase_all
+    test "step:start without a dataclip for a project with erase_all retention policy",
+         context do
+      %{
+        socket: socket,
+        credential: %{id: credential_id},
+        workflow: workflow
+      } = context
 
       step_id = Ecto.UUID.generate()
       [%{id: job_id}] = workflow.jobs
@@ -741,8 +704,13 @@ defmodule LightningWeb.RunChannelTest do
       assert is_nil(dataclip.body), "body is wiped"
       assert is_struct(dataclip.wiped_at, DateTime)
 
-      %{run: run} = create_run(context)
-      %{socket: socket} = create_socket(%{run: run})
+      %{socket: socket} =
+        context
+        |> merge_setups([
+          :create_run,
+          :create_socket,
+          :join_run_channel
+        ])
 
       [job] = workflow.jobs
       %{id: step_id} = insert(:step, runs: [run], job: job)
@@ -791,28 +759,13 @@ defmodule LightningWeb.RunChannelTest do
             Lightning.Extensions.MockUsageLimiter.get_run_options(%Context{
               project_id: project.id
             })
-            |> Enum.into(%{})
+            |> Map.new()
         )
 
-      Lightning.Stub.reset_time()
-
-      {:ok, bearer, _} =
-        Workers.Token.generate_and_sign(
-          %{},
-          Lightning.Config.worker_token_signer()
-        )
-
-      {:ok, %{}, socket} =
-        LightningWeb.WorkerSocket
-        |> socket("socket_id", %{token: bearer})
-        |> subscribe_and_join(
-          LightningWeb.RunChannel,
-          "run:#{run.id}",
-          %{"token" => Workers.generate_run_token(run, run_timeout_ms: 2)}
-        )
-
-      %{socket: socket, run: run, workflow: workflow}
+      %{run: run, workflow: workflow}
     end
+
+    setup [:create_socket, :join_run_channel]
 
     test "run:log missing message can't be blank", %{
       socket: socket,
@@ -915,11 +868,13 @@ defmodule LightningWeb.RunChannelTest do
     end
   end
 
-  describe "marking runs as started and finished" do
+  describe "run:start" do
+    setup [:create_user, :create_project]
+
     setup context do
       run_state = Map.get(context, :run_state, :available)
 
-      project = insert(:project)
+      project = context.project
       dataclip = insert(:http_request_dataclip, project: project)
 
       %{triggers: [trigger]} =
@@ -942,33 +897,17 @@ defmodule LightningWeb.RunChannelTest do
             Lightning.Extensions.MockUsageLimiter.get_run_options(%Context{
               project_id: project.id
             })
-            |> Enum.into(%{})
-        )
-
-      Lightning.Stub.reset_time()
-
-      {:ok, bearer, _} =
-        Workers.Token.generate_and_sign(
-          %{},
-          Lightning.Config.worker_token_signer()
-        )
-
-      {:ok, %{}, socket} =
-        LightningWeb.WorkerSocket
-        |> socket("socket_id", %{token: bearer})
-        |> subscribe_and_join(
-          LightningWeb.RunChannel,
-          "run:#{run.id}",
-          %{"token" => Workers.generate_run_token(run, run_timeout_ms: 2)}
+            |> Map.new()
         )
 
       %{
-        socket: socket,
         run: run,
         workflow: workflow,
         work_order: work_order
       }
     end
+
+    setup [:create_socket, :join_run_channel]
 
     @tag run_state: :claimed
     test "run:start", %{
@@ -983,6 +922,62 @@ defmodule LightningWeb.RunChannelTest do
       assert %{state: :started} = Lightning.Repo.reload!(run)
       assert %{state: :running} = Lightning.Repo.reload!(work_order)
     end
+
+    @tag run_state: :claimed, api_version: "1.2"
+    test "run:start with API v1.2", %{
+      socket: socket,
+      run: run,
+      work_order: work_order
+    } do
+      ref = push(socket, "run:start", %{})
+
+      assert_reply ref, :ok, nil
+
+      assert %{state: :started} = Lightning.Repo.reload!(run)
+      assert %{state: :running} = Lightning.Repo.reload!(work_order)
+    end
+  end
+
+  describe "run:complete" do
+    setup [:create_user, :create_project]
+
+    setup context do
+      run_state = Map.get(context, :run_state, :available)
+
+      project = context.project
+      dataclip = insert(:http_request_dataclip, project: project)
+
+      %{triggers: [trigger]} =
+        workflow = insert(:simple_workflow, project: project)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          state: run_state,
+          options:
+            Lightning.Extensions.MockUsageLimiter.get_run_options(%Context{
+              project_id: project.id
+            })
+            |> Map.new()
+        )
+
+      %{
+        run: run,
+        workflow: workflow,
+        work_order: work_order
+      }
+    end
+
+    setup [:create_socket, :join_run_channel]
 
     @tag run_state: :claimed
     test "run:complete when claimed", %{socket: socket} do
@@ -1106,10 +1101,17 @@ defmodule LightningWeb.RunChannelTest do
   end
 
   defp create_socket_and_run(context) do
-    [&create_project/1, &create_workflow/1, &create_run/1, &create_socket/1]
-    |> Enum.reduce(context, fn f, context ->
-      Map.merge(context, f.(context))
-    end)
+    merge_setups(context, [
+      :create_project,
+      :create_workflow,
+      :create_run,
+      :create_socket,
+      :join_run_channel
+    ])
+  end
+
+  defp create_user(_context) do
+    %{user: insert(:user)}
   end
 
   defp create_project(%{user: user} = context) do
@@ -1191,7 +1193,7 @@ defmodule LightningWeb.RunChannelTest do
           Lightning.Extensions.MockUsageLimiter.get_run_options(%Context{
             project_id: project.id
           })
-          |> Enum.into(%{})
+          |> Map.new()
       )
 
     %{
@@ -1202,18 +1204,29 @@ defmodule LightningWeb.RunChannelTest do
     }
   end
 
-  defp create_socket(%{run: run}) do
-    Lightning.Stub.reset_time()
-
-    {:ok, bearer, _} =
+  defp create_socket(context) do
+    {:ok, bearer, claims} =
       Workers.Token.generate_and_sign(
         %{},
         Lightning.Config.worker_token_signer()
       )
 
-    {:ok, %{}, socket} =
+    assigns = %{
+      token: bearer,
+      claims: claims,
+      api_version: context[:api_version]
+    }
+
+    socket =
       LightningWeb.WorkerSocket
-      |> socket("socket_id", %{token: bearer})
+      |> socket("socket_id", assigns)
+
+    %{socket: socket}
+  end
+
+  defp join_run_channel(%{run: run, socket: socket}) do
+    {:ok, _, socket} =
+      socket
       |> subscribe_and_join(
         LightningWeb.RunChannel,
         "run:#{run.id}",
@@ -1225,7 +1238,7 @@ defmodule LightningWeb.RunChannelTest do
 
   defp stringify_keys(map) do
     Enum.map(map, fn {k, v} -> {Atom.to_string(k), v} end)
-    |> Enum.into(%{})
+    |> Map.new()
   end
 
   defp set_google_credential(_context) do

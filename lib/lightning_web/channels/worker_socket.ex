@@ -1,6 +1,7 @@
 defmodule LightningWeb.WorkerSocket do
   use Phoenix.Socket
 
+  alias Lightning.Workers
   # A Socket handler
   #
   # It's possible to control the websocket connection and
@@ -29,10 +30,17 @@ defmodule LightningWeb.WorkerSocket do
   # performing token verification on connect.
   @impl true
   def connect(params, socket, _connect_info) do
-    case params do
-      %{"token" => token} ->
-        {:ok, socket |> assign(token: token)}
-
+    with %{"token" => token} <- params,
+         {:ok, claims} <- Workers.verify_worker_token(token) do
+      {:ok,
+       socket
+       |> assign(
+         claims: claims,
+         token: token,
+         worker_version: params["worker_version"],
+         api_version: params["api_version"]
+       )}
+    else
       _ ->
         {:error, :unauthorized}
     end

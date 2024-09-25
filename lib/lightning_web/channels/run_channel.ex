@@ -20,10 +20,10 @@ defmodule LightningWeb.RunChannel do
   def join(
         "run:" <> id,
         %{"token" => token},
-        %{assigns: %{token: worker_token}} = socket
-      ) do
-    with {:ok, _} <- Workers.verify_worker_token(worker_token),
-         {:ok, claims} <- Workers.verify_run_token(token, %{id: id}),
+        %{assigns: %{claims: worker_claims}} = socket
+      )
+      when not is_nil(worker_claims) do
+    with {:ok, claims} <- Workers.verify_run_token(token, %{id: id}),
          run when is_map(run) <- Runs.get_for_worker(id) || {:error, :not_found},
          project_id when is_binary(project_id) <-
            Runs.get_project_id_for_run(run) do
