@@ -9,7 +9,8 @@ defmodule Lightning.Accounts do
 
   import Ecto.Query, warn: false
 
-  alias Ecto.{Changeset, Multi}
+  alias Ecto.Changeset
+  alias Ecto.Multi
   alias Lightning.Accounts.Events
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserBackupCode
