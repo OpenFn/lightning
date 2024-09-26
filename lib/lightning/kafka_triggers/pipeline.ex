@@ -112,8 +112,8 @@ defmodule Lightning.KafkaTriggers.Pipeline do
   def handle_failed(messages, context) do
     messages
     |> Enum.each(fn message ->
-      notify_sentry(message, context)
       create_log_entry(message, context)
+      notify_sentry(message, context)
     end)
 
     messages
