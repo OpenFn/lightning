@@ -283,10 +283,11 @@ defmodule Lightning.KafkaTriggers do
     GenServer.stop(pid, :shutdown, 1000)
   end
 
-  def reset_pipeline(trigger_id, timestamp) do
+  def reset_pipeline(trigger_id, failure_timestamp) do
     with supervisor when not is_nil(supervisor) <-
            GenServer.whereis(:kafka_pipeline_supervisor),
-         trigger when not is_nil(trigger) <- Repo.get(Trigger, trigger_id) do
+         trigger when not is_nil(trigger) <- Repo.get(Trigger, trigger_id),
+         {:ok, timestamp} <- calculate_reset_timestamp(failure_timestamp) do
       child_spec = generate_pipeline_child_spec(trigger, reset_to: timestamp - 1)
 
       Supervisor.terminate_child(supervisor, trigger_id)
@@ -294,4 +295,10 @@ defmodule Lightning.KafkaTriggers do
       Supervisor.start_child(supervisor, child_spec)
     end
   end
+
+  defp calculate_reset_timestamp(timestamp) when timestamp > 1 do
+    {:ok, timestamp}
+  end
+
+  defp calculate_reset_timestamp(_timestamp), do: :error
 end

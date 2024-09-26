@@ -1043,6 +1043,8 @@ defmodule Lightning.KafkaTriggersTest do
     } do
       stop_supervised!(PipelineSupervisor)
 
+      expect(Lightning.MockConfig, :kafka_reset_delay_seconds, fn -> 1 end)
+
       KafkaTriggers.reset_trigger(trigger_id, timestamp)
 
       refute_receive({:reset_received, ^trigger_id}, 1200)
@@ -1055,11 +1057,29 @@ defmodule Lightning.KafkaTriggersTest do
     } do
       other_trigger_id = "not_#{trigger_id}"
 
+      expect(Lightning.MockConfig, :kafka_reset_delay_seconds, fn -> 1 end)
+
       KafkaTriggers.reset_trigger(other_trigger_id, timestamp)
 
       assert Process.alive?(child_pid)
 
       refute_receive({:reset_received, ^trigger_id}, 1200)
+    end
+
+    test "absorbs the error if stopping the trigger times out", %{
+      child_pid: child_pid,
+      timestamp: timestamp,
+      trigger_id: trigger_id
+    } do
+      expect(
+        Lightning.MockConfig,
+        :kafka_reset_stop_timeout_seconds,
+        fn -> 0 end
+      )
+
+      KafkaTriggers.reset_trigger(trigger_id, timestamp)
+
+      refute Process.alive?(child_pid)
     end
 
     defp dummy_server_spec(trigger_id) do
