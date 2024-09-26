@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Do not track partition timestamps when ingesting Kafka messages.
+  [#2531] (https://github.com/OpenFn/lightning/issues/2531)
+
 ### Fixed
 
 - Fix item selection (project / billing account) in the context switcher
