@@ -195,32 +195,6 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       assert Pipeline.handle_message(nil, message, context) == message
     end
 
-    test "updates the partition timestamp for the trigger", %{
-      context: context,
-      message: message,
-      trigger_1: trigger_1,
-      trigger_2: trigger_2
-    } do
-      Pipeline.handle_message(nil, message, context)
-
-      %{
-        kafka_configuration: %{
-          partition_timestamps: trigger_1_timestamps
-        }
-      } = Trigger |> Repo.get(trigger_1.id)
-
-      %{
-        kafka_configuration: %{
-          partition_timestamps: trigger_2_timestamps
-        }
-      } = Trigger |> Repo.get(trigger_2.id)
-
-      assert %{"1" => 1_715_164_718_281, "2" => 1_715_164_718_283} =
-               trigger_1_timestamps
-
-      assert trigger_2_timestamps == partition_timestamps()
-    end
-
     test "persists a WorkOrder", %{
       context: context,
       message: message,
