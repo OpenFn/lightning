@@ -33,6 +33,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   require Lightning.Run
 
+  @topic_workflow_saved "workflow-saved"
+
   on_mount {LightningWeb.Hooks, :project_scope}
 
   attr :changeset, :map, required: true
@@ -306,7 +308,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     class="w-5 h-5 place-self-center text-gray-300"
                   />
                   <.run_buttons
-                    confirm={!@has_presence_edit_priority}
                     step={@step}
                     manual_run_form={@manual_run_form}
                     selectable_dataclips={@selectable_dataclips}
@@ -576,19 +577,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
           }
         />
       </div>
-      <.confirm_retry_step
-        :if={!@has_presence_edit_priority && @retrying_step}
-        id="confirm-retry-step-modal"
-        prior_user={@prior_user_presence.user}
-        run={@follow_run.id}
-        step={@step && @step.id}
-      />
-      <.confirm_create_workorder
-        :if={!@has_presence_edit_priority && @creating_workorder}
-        id="confirm-create-workorder-modal"
-        prior_user={@prior_user_presence.user}
-        form={@manual_run_form.id}
-      />
     </LayoutComponents.page_content>
     """
   end
@@ -636,29 +624,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp save_and_run_attributes(assigns) do
-    cond do
-      assigns.confirm ->
-        [
-          type: "button",
-          "phx-click": "open_run_confirmation_modal",
-          "phx-value-confirmation_type":
-            if step_retryable?(assigns) do
-              "retry"
-            else
-              "new_workorder"
-            end
-        ]
-
-      step_retryable?(assigns) ->
-        [
-          type: "button",
-          "phx-click": "rerun",
-          "phx-value-run_id": assigns.follow_run.id,
-          "phx-value-step_id": assigns.step.id
-        ]
-
-      true ->
-        [type: "submit", form: assigns.manual_run_form.id]
+    if step_retryable?(assigns) do
+      [
+        type: "button",
+        "phx-click": "rerun",
+        "phx-value-run_id": assigns.follow_run.id,
+        "phx-value-step_id": assigns.step.id
+      ]
+    else
+      [type: "submit", form: assigns.manual_run_form.id]
     end
   end
 
@@ -669,12 +643,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
       [base_class, "rounded-r-none"]
     else
       [base_class]
-    end
-  end
-
-  defp maybe_close_confirmation_modal(%{has_presence_edit_priority: prior}) do
-    if !prior do
-      send(self(), "close_confirmation_modal")
     end
   end
 
@@ -703,10 +671,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
           phx-click-away={hide_dropdown("create-new-work-order")}
           phx-hook="AltRunViaCtrlShiftEnter"
           id="create-new-work-order"
-          {if @confirm, do: [type: "button",
-            "phx-click": "open_run_confirmation_modal",
-            "phx-value-confirmation_type": "new_workorder"
-          ], else: [type: "submit", form: @manual_run_form.id]}
+          type="submit"
+          form={@manual_run_form.id}
           class={[
             "hidden absolute right-0 bottom-9 z-10 mb-2 w-max",
             "rounded-md bg-white px-4 py-2 text-sm font-semibold",
@@ -718,92 +684,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
         </button>
       </div>
     </div>
-    """
-  end
-
-  defp confirm_retry_step(assigns) do
-    ~H"""
-    <.confirmation_modal
-      id={@id}
-      title="Retry from here"
-      prior_user={@prior_user}
-      message="If you retry the step from here, the run will be created using the latest version of the job. Do you want to proceed?"
-    >
-      <:confirm_button>
-        <.button
-          id={"#{@id}-confirm-button"}
-          type="button"
-          phx-click="rerun"
-          phx-value-run_id={@run}
-          phx-value-step_id={@step}
-        >
-          Retry from here
-        </.button>
-      </:confirm_button>
-    </.confirmation_modal>
-    """
-  end
-
-  defp confirm_create_workorder(assigns) do
-    ~H"""
-    <.confirmation_modal
-      id={@id}
-      title="Create a new workorder"
-      prior_user={@prior_user}
-      message="If you create a new work order, it will be created using the latest version of this job. Do you want to proceed?"
-    >
-      <:confirm_button>
-        <.button id={"#{@id}-confirm-button"} type="submit" form={@form}>
-          Create work order
-        </.button>
-      </:confirm_button>
-    </.confirmation_modal>
-    """
-  end
-
-  defp confirmation_modal(assigns) do
-    ~H"""
-    <.modal
-      id={@id}
-      show={true}
-      close_on_click_away={false}
-      close_on_keydown={false}
-      width="max-w-md"
-    >
-      <:title>
-        <div class="flex justify-between">
-          <span class="font-bold">
-            <%= @title %>
-          </span>
-
-          <button
-            phx-click="close_confirmation_modal"
-            type="button"
-            class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
-            aria-label={gettext("close")}
-          >
-            <span class="sr-only">Close</span>
-            <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
-          </button>
-        </div>
-      </:title>
-      <div class="px-6">
-        <p class="text-sm text-gray-500">
-          <%= @prior_user.first_name %> <%= @prior_user.last_name %> is currently working on this workflow. <%= @message %>
-        </p>
-      </div>
-      <div class="flex flex-row-reverse gap-4 mx-6 mt-4">
-        <%= render_slot(@confirm_button) %>
-        <button
-          id={"#{@id}-cancel-button"}
-          type="button"
-          phx-click="close_confirmation_modal"
-          class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-        >
-          Cancel
-        </button>
-      </div>
-    </.modal>
     """
   end
 
@@ -1186,6 +1066,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> maybe_show_manual_run()
      |> tap(fn socket ->
        if connected?(socket) do
+         Lightning.subscribe(@topic_workflow_saved)
+
          if changed?(socket, :selected_job) do
            Helpers.broadcast_updated_params(socket, %{
              job_id:
@@ -1355,24 +1237,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   @impl true
-  def handle_event(
-        "open_run_confirmation_modal",
-        %{"confirmation_type" => type},
-        socket
-      ) do
-    socket =
-      case type do
-        "retry" -> assign(socket, retrying_step: true)
-        "new_workorder" -> assign(socket, creating_workorder: true)
-      end
-
-    {:noreply, socket}
-  end
-
-  def handle_event("close_confirmation_modal", _params, socket) do
-    {:noreply, assign(socket, retrying_step: false, creating_workorder: false)}
-  end
-
   def handle_event("get-initial-state", _params, socket) do
     {:noreply,
      socket
@@ -1564,6 +1428,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       case Helpers.save_workflow(changeset) do
         {:ok, workflow} ->
+          broadcast_workflow_save(socket, workflow.id)
+
           snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
 
           query_params =
@@ -1686,8 +1552,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
       snapshot_version_tag: tag
     } = socket.assigns
 
-    maybe_close_confirmation_modal(socket.assigns)
-
     with true <- can_run_workflow? || :not_authorized,
          true <- tag == "latest" || :view_only,
          :ok <-
@@ -1697,6 +1561,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
          {:ok, workflow} <- save_workflow_or_get_latest(socket),
          {:ok, run} <-
            WorkOrders.retry(run_id, step_id, created_by: current_user) do
+      broadcast_workflow_save(socket, workflow.id)
+
       Runs.subscribe(run)
 
       snapshot = Snapshot.get_by_version(workflow.id, workflow.lock_version)
@@ -1750,8 +1616,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
       manual_run_form: form
     } = socket.assigns
 
-    maybe_close_confirmation_modal(socket.assigns)
-
     manual_params = Map.get(params, "manual", %{})
 
     params =
@@ -1779,6 +1643,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
              selected_job: selected_job,
              created_by: current_user
            ) do
+      broadcast_workflow_save(socket, workflow.id)
+
       %{runs: [run]} = workorder
 
       Runs.subscribe(run)
@@ -1821,8 +1687,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   @impl true
-  def handle_info("close_confirmation_modal", socket) do
-    {:noreply, assign(socket, retrying_step: false, creating_workorder: false)}
+  def handle_info({:workflow_saved, workflow_id}, socket) do
+    workflow = get_workflow_by_id(workflow_id)
+
+    {:noreply,
+     socket
+     |> assign_workflow(workflow, socket.assigns.snapshot)
+     |> put_flash(:info, "The form was updated by another user.")}
   end
 
   def handle_info({"form_changed", %{"workflow" => params}}, socket) do
@@ -2463,6 +2334,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
       Helpers.save_workflow(%{socket.assigns.changeset | action: :update})
     else
       {:ok, get_workflow_by_id(socket.assigns.workflow.id)}
+    end
+  end
+
+  defp broadcast_workflow_save(socket, workflow_id) do
+    if socket.assigns.has_presence_edit_priority do
+      Lightning.broadcast_from(
+        self(),
+        @topic_workflow_saved,
+        {:workflow_saved, workflow_id}
+      )
     end
   end
 end

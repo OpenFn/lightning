@@ -26,6 +26,10 @@ defmodule Lightning do
       Phoenix.PubSub.broadcast(@pubsub, topic, msg)
     end
 
+    def broadcast_from(from, topic, msg) do
+      Phoenix.PubSub.broadcast_from(@pubsub, from, topic, msg)
+    end
+
     @impl true
     def local_broadcast(topic, msg) do
       Phoenix.PubSub.local_broadcast(@pubsub, topic, msg)
@@ -70,6 +74,9 @@ defmodule Lightning do
   def current_time, do: impl().current_time()
 
   def broadcast(topic, msg), do: impl().broadcast(topic, msg)
+
+  def broadcast_from(from, topic, msg),
+    do: impl().broadcast_from(from, topic, msg)
 
   def local_broadcast(topic, msg), do: impl().local_broadcast(topic, msg)
 
