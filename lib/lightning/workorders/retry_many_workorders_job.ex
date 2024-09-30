@@ -12,10 +12,13 @@ defmodule Lightning.WorkOrders.RetryManyWorkOrdersJob do
 
   @impl Oban.Worker
   def perform(%{
-        args: %{"runs_ids" => runs_ids, "created_by" => creating_user_id}
+        args: %{
+          "workorders_ids" => workorders_ids,
+          "created_by" => creating_user_id
+        }
       }) do
     with {:error, changeset} <-
-           WorkOrders.enqueue_many_for_retry(runs_ids, creating_user_id) do
+           WorkOrders.enqueue_many_for_retry(workorders_ids, creating_user_id) do
       Logger.error("Error retrying workorders: #{inspect(changeset)}")
     end
 

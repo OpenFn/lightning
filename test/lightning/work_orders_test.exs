@@ -1691,6 +1691,42 @@ defmodule Lightning.WorkOrdersTest do
       assert retry_run |> Repo.preload(:steps) |> Map.get(:steps) == []
     end
 
+    test "rejected workorders are retryable",
+         %{
+           snapshot: snapshot,
+           trigger: trigger,
+           user: user,
+           workflow: workflow
+         } do
+      input_dataclip = insert(:dataclip)
+
+      workorder =
+        insert(:workorder,
+          dataclip: input_dataclip,
+          snapshot: snapshot,
+          trigger: trigger,
+          workflow: workflow,
+          state: :rejected
+        )
+
+      runs = workorder |> Ecto.assoc(:runs) |> Repo.all()
+
+      assert Enum.empty?(runs)
+      assert workorder.state == :rejected
+
+      {:ok, 1, 0} =
+        WorkOrders.retry_many([workorder],
+          created_by: user,
+          project_id: workflow.project_id
+        )
+
+      workorder = Repo.reload(workorder)
+      runs = workorder |> Ecto.assoc(:runs) |> Repo.all()
+
+      refute Enum.empty?(runs)
+      refute workorder.state == :rejected
+    end
+
     test "retrying a WorkOrder with a run having starting_job without steps",
          %{
            jobs: [_job_a, job_b, _job_c],
@@ -1896,32 +1932,45 @@ defmodule Lightning.WorkOrdersTest do
 
         [workorders1, workorders2] = Enum.chunk_every(workorders, 100)
 
-        runs_ids1 =
-          Enum.flat_map(workorders1, fn workorder ->
-            Enum.map(workorder.runs, & &1.id)
-          end)
+        workorders_ids1 = Enum.map(workorders1, & &1.id)
 
-        runs_ids2 =
-          Enum.flat_map(workorders2, fn workorder ->
-            Enum.map(workorder.runs, & &1.id)
-          end)
+        workorders_ids2 = Enum.map(workorders2, & &1.id)
 
         user_id = user.id
 
-        assert [
-                 %Oban.Job{
-                   args:
-                     %{"runs_ids" => ^runs_ids1, "created_by" => ^user_id} =
-                       args1
-                 },
-                 %Oban.Job{
-                   args:
-                     %{"runs_ids" => ^runs_ids2, "created_by" => ^user_id} =
-                       args2
-                 }
-               ] = all_enqueued(queue: :scheduler) |> Enum.sort_by(& &1.id)
+        enqueued_jobs = all_enqueued(queue: :scheduler)
 
-        assert :ok = perform_job(RetryManyWorkOrdersJob, args1)
+        assert length(enqueued_jobs) == 2,
+               "Expected 2 jobs, got #{length(enqueued_jobs)}"
+
+        all_expected_ids = workorders_ids1 ++ workorders_ids2
+
+        all_actual_ids =
+          Enum.flat_map(enqueued_jobs, fn job ->
+            assert %{"created_by" => ^user_id, "workorders_ids" => ids} =
+                     job.args
+
+            ids
+          end)
+
+        assert Enum.sort(all_actual_ids) == Enum.sort(all_expected_ids),
+               "The workorder IDs in the enqueued jobs do not match the expected IDs"
+
+        job_with_workorder_1 =
+          Enum.find(enqueued_jobs, fn job ->
+            "#{workorder_1.id}" in job.args["workorders_ids"]
+          end)
+
+        job_with_workorder_101 =
+          Enum.find(enqueued_jobs, fn job ->
+            "#{workorder_101.id}" in job.args["workorders_ids"]
+          end)
+
+        assert job_with_workorder_1, "No job found containing workorder_1"
+        assert job_with_workorder_101, "No job found containing workorder_101"
+
+        assert :ok =
+                 perform_job(RetryManyWorkOrdersJob, job_with_workorder_1.args)
 
         assert Repo.get_by(Lightning.Run,
                  work_order_id: workorder_1.id,
@@ -1933,7 +1982,8 @@ defmodule Lightning.WorkOrdersTest do
                  starting_job_id: job_a.id
                )
 
-        assert :ok = perform_job(RetryManyWorkOrdersJob, args2)
+        assert :ok =
+                 perform_job(RetryManyWorkOrdersJob, job_with_workorder_101.args)
 
         assert Repo.get_by(Lightning.Run,
                  work_order_id: workorder_101.id,
