@@ -47,7 +47,7 @@ defmodule Lightning.KafkaTriggers do
 
   # Converts the initial_offset_reset_policy configuration value to a format
   # suitable for use by a `Pipeline` process.
-  defp initial_policy(%{initial_offset_reset_policy: initial_policy}) do
+  def initial_policy(%{initial_offset_reset_policy: initial_policy}) do
     cond do
       initial_policy in ["earliest", "latest"] ->
         initial_policy |> String.to_atom()
@@ -121,7 +121,7 @@ defmodule Lightning.KafkaTriggers do
         nil
       end
 
-    offset_reset_policy = determine_offset_reset_policy(trigger)
+    offset_reset_policy = initial_policy(trigger.kafka_configuration)
 
     number_of_consumers = Lightning.Config.kafka_number_of_consumers()
     number_of_processors = Lightning.Config.kafka_number_of_processors()
