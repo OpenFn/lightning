@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-91753532.js"></script>
+    <script src="dist/sidebar_items-D4C29E21.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -221,6 +221,16 @@ Work Order.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#enqueue_many_for_retry/2" translate="no">enqueue_many_for_retry(workorders_ids, creating_user_id)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Enqueue multiple runs for retry in the same transaction.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#get/2" translate="no">get(id, opts \\ [])</a>
 
       </div>
@@ -231,7 +241,7 @@ Work Order.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#retry/3" translate="no">retry(run, step, opts)</a>
+        <a href="#retry/3" translate="no">retry(run_id, step_id, opts)</a>
 
       </div>
 
@@ -297,7 +307,7 @@ Work Order.</p>
     </a>
     <h1 class="signature" translate="no">work_order_option()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L58" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L59" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -342,7 +352,7 @@ Work Order.</p>
     </a>
     <h1 class="signature" translate="no">build(attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L197" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L207" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -364,7 +374,7 @@ Work Order.</p>
     </a>
     <h1 class="signature" translate="no">build_for(trigger, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L208" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L218" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -393,7 +403,7 @@ Work Order.</p>
     </a>
     <h1 class="signature" translate="no">create_for(manual)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L113" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L118" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -417,7 +427,7 @@ Work Order.</p>
     </a>
     <h1 class="signature" translate="no">create_for(target, multi \\ Multi.new(), opts)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L76" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L81" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -441,7 +451,29 @@ Work Order.</p>
 
       </div>
 
-<p>Create a new Work Order.</p><p><strong>For a webhook</strong></p><pre><code class="makeup elixir" translate="no"><span class="n">create_for</span><span class="p" data-group-id="1214852237-1">(</span><span class="n">trigger</span><span class="p">,</span><span class="w"> </span><span class="ss">workflow</span><span class="p">:</span><span class="w"> </span><span class="n">workflow</span><span class="p">,</span><span class="w"> </span><span class="ss">dataclip</span><span class="p">:</span><span class="w"> </span><span class="n">dataclip</span><span class="p" data-group-id="1214852237-1">)</span></code></pre><p><strong>For a user</strong></p><pre><code class="makeup elixir" translate="no"><span class="n">create_for</span><span class="p" data-group-id="7621777061-1">(</span><span class="n">job</span><span class="p">,</span><span class="w"> </span><span class="ss">workflow</span><span class="p">:</span><span class="w"> </span><span class="n">workflow</span><span class="p">,</span><span class="w"> </span><span class="ss">dataclip</span><span class="p">:</span><span class="w"> </span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="7621777061-1">)</span></code></pre>
+<p>Create a new Work Order.</p><p><strong>For a webhook</strong></p><pre><code class="makeup elixir" translate="no"><span class="n">create_for</span><span class="p" data-group-id="2811174091-1">(</span><span class="n">trigger</span><span class="p">,</span><span class="w"> </span><span class="ss">workflow</span><span class="p">:</span><span class="w"> </span><span class="n">workflow</span><span class="p">,</span><span class="w"> </span><span class="ss">dataclip</span><span class="p">:</span><span class="w"> </span><span class="n">dataclip</span><span class="p" data-group-id="2811174091-1">)</span></code></pre><p><strong>For a user</strong></p><pre><code class="makeup elixir" translate="no"><span class="n">create_for</span><span class="p" data-group-id="3579213490-1">(</span><span class="n">job</span><span class="p">,</span><span class="w"> </span><span class="ss">workflow</span><span class="p">:</span><span class="w"> </span><span class="n">workflow</span><span class="p">,</span><span class="w"> </span><span class="ss">dataclip</span><span class="p">:</span><span class="w"> </span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="3579213490-1">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="enqueue_many_for_retry/2">
+
+  <div class="detail-header">
+    <a href="#enqueue_many_for_retry/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">enqueue_many_for_retry(workorders_ids, creating_user_id)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L515" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Enqueue multiple runs for retry in the same transaction.</p>
   </section>
 </section>
 <section class="detail" id="get/2">
@@ -455,7 +487,7 @@ Work Order.</p>
     </a>
     <h1 class="signature" translate="no">get(id, opts \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L555" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L592" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -471,7 +503,7 @@ Work Order.</p>
 
       </div>
 
-<p>Get a Work Order by id.</p><p>Optionally preload associations by passing a list of atoms to <code class="inline">:include</code>.</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.WorkOrders</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="0863732919-1">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0863732919-2">[</span><span class="ss">:runs</span><span class="p" data-group-id="0863732919-2">]</span><span class="p" data-group-id="0863732919-1">)</span></code></pre>
+<p>Get a Work Order by id.</p><p>Optionally preload associations by passing a list of atoms to <code class="inline">:include</code>.</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.WorkOrders</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="2597573649-1">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2597573649-2">[</span><span class="ss">:runs</span><span class="p" data-group-id="2597573649-2">]</span><span class="p" data-group-id="2597573649-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="retry/3">
@@ -481,9 +513,9 @@ Work Order.</p>
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">retry(run, step, opts)</h1>
+    <h1 class="signature" translate="no">retry(run_id, step_id, opts)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L277" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L287" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -499,7 +531,7 @@ Work Order.</p>
   <a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>() | <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
   <a href="Lightning.Invocation.Step.html#t:t/0">Lightning.Invocation.Step.t</a>() | <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
   [<a href="#t:work_order_option/0">work_order_option</a>(), ...]
-) :: {:ok, <a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>())}</pre>
+) :: {:ok, <a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
 
       </div>
 
@@ -518,7 +550,7 @@ this new run, but not executed again.</p>
     </a>
     <h1 class="signature" translate="no">retry_many(workorders, opts)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L438" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L449" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -533,7 +565,11 @@ this new run, but not executed again.</p>
           <pre translate="no"><span class="attribute">@spec</span> retry_many(
   [<a href="Lightning.WorkOrder.html#t:t/0">Lightning.WorkOrder.t</a>(), ...] | [<a href="Lightning.RunStep.html#t:t/0">Lightning.RunStep.t</a>(), ...],
   [<a href="#t:work_order_option/0">work_order_option</a>(), ...]
-) :: {:ok, count :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>()} | <a href="Lightning.Extensions.UsageLimiting.html#t:error/0">Lightning.Extensions.UsageLimiting.error</a>()</pre>
+) ::
+  {:ok, enqueued_count :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>(),
+   discarded_count :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()}
+  | <a href="Lightning.Extensions.UsageLimiting.html#t:error/0">Lightning.Extensions.UsageLimiting.error</a>()
+  | {:error, :enqueue_error}</pre>
 
       </div>
 
@@ -549,7 +585,7 @@ this new run, but not executed again.</p>
     </a>
     <h1 class="signature" translate="no">retry_many(workorders, job_id, opts)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L403" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L410" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -565,7 +601,10 @@ this new run, but not executed again.</p>
   <a href="#t:work_order_option/0">work_order_option</a>(),
   ...
 ]) ::
-  {:ok, count :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>()}</pre>
+  {:ok, enqueued_count :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>(),
+   discarded_count :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()}
+  | <a href="Lightning.Extensions.UsageLimiting.html#t:error/0">Lightning.Extensions.UsageLimiting.error</a>()
+  | {:error, :enqueue_error}</pre>
 
       </div>
 
@@ -581,7 +620,7 @@ this new run, but not executed again.</p>
     </a>
     <h1 class="signature" translate="no">subscribe(project_id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L565" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L68" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -603,7 +642,7 @@ this new run, but not executed again.</p>
     </a>
     <h1 class="signature" translate="no">update_state(run)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L536" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L573" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>

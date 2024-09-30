@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-91753532.js"></script>
+    <script src="dist/sidebar_items-D4C29E21.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -229,7 +229,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_or_create_latest_for/2" translate="no">get_or_create_latest_for(multi, workflow)</a>
+        <a href="#get_or_create_latest_for/3" translate="no">get_or_create_latest_for(multi, name \\ :snapshot, workflow)</a>
 
       </div>
 
@@ -536,16 +536,18 @@ workflow has been updated elsewhere.</p>
 <p>Get the latest snapshot for a workflow, or create one if it doesn't exist.</p>
   </section>
 </section>
-<section class="detail" id="get_or_create_latest_for/2">
+<section class="detail" id="get_or_create_latest_for/3">
+
+    <span id="get_or_create_latest_for/2"></span>
 
   <div class="detail-header">
-    <a href="#get_or_create_latest_for/2" class="detail-link" title="Link to this function">
+    <a href="#get_or_create_latest_for/3" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_or_create_latest_for(multi, workflow)</h1>
+    <h1 class="signature" translate="no">get_or_create_latest_for(multi, name \\ :snapshot, workflow)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L215" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L216" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -557,7 +559,11 @@ workflow has been updated elsewhere.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> get_or_create_latest_for(<a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Multi.html#t:t/0">Ecto.Multi.t</a>(), <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>()) ::
+          <pre translate="no"><span class="attribute">@spec</span> get_or_create_latest_for(
+  <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Multi.html#t:t/0">Ecto.Multi.t</a>(),
+  <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>() | :snapshot,
+  <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>()
+) ::
   <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Multi.html#t:t/0">Ecto.Multi.t</a>()</pre>
 
       </div>

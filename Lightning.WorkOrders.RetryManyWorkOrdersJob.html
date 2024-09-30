@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v2.9.6">
 
-    <title>Lightning.Runs.PromExPlugin — Lightning v2.9.6</title>
+    <title>Lightning.WorkOrders.RetryManyWorkOrdersJob — Lightning v2.9.6</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
@@ -125,171 +125,22 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/prom_ex_plugin.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workorders/retry_many_workorders_job.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.Runs.PromExPlugin</span> 
+  <span translate="no">Lightning.WorkOrders.RetryManyWorkOrdersJob</span> 
   <small class="app-vsn" translate="no">(Lightning v2.9.6)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Metrics callbacks implementation for the PromEx plugin.</p><p>Event metrics are used to publish the dispatched events in the system.
-Polling metrics are used to publish metrics that are calculated by polling data periodically.</p>
+<p>Enqueue multiple work orders for retry.</p>
   </section>
 
 
-  <section id="summary" class="details-list">
-    <h1 class="section-heading">
-      <a class="hover-link" href="#summary">
-        <i class="ri-link-m" aria-hidden="true"></i>
-      </a>
-      <span class="text">Summary</span>
-    </h1>
-<div class="summary-functions summary">
-  <h2>
-    <a href="#functions">Functions</a>
-  </h2>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#calculate_average_claim_duration/2" translate="no">calculate_average_claim_duration(reference_time, run_age_seconds)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#count_finalised_runs/1" translate="no">count_finalised_runs(threshold_time)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#run_queue_metrics/2" translate="no">run_queue_metrics(run_age_seconds, consideration_window_seconds)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#stalled_run_count/1" translate="no">stalled_run_count(threshold_seconds)</a>
-
-      </div>
-
-    </div>
-
-</div>
-
-  </section>
-
-
-  <section id="functions" class="details-list">
-    <h1 class="section-heading">
-      <a class="hover-link" href="#functions">
-        <i class="ri-link-m" aria-hidden="true"></i>
-      </a>
-      <span class="text">Functions</span>
-    </h1>
-    <div class="functions-list">
-<section class="detail" id="calculate_average_claim_duration/2">
-
-  <div class="detail-header">
-    <a href="#calculate_average_claim_duration/2" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">calculate_average_claim_duration(reference_time, run_age_seconds)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/prom_ex_plugin.ex#L180" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="count_finalised_runs/1">
-
-  <div class="detail-header">
-    <a href="#count_finalised_runs/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">count_finalised_runs(threshold_time)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/prom_ex_plugin.ex#L240" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="run_queue_metrics/2">
-
-  <div class="detail-header">
-    <a href="#run_queue_metrics/2" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">run_queue_metrics(run_age_seconds, consideration_window_seconds)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/prom_ex_plugin.ex#L155" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="stalled_run_count/1">
-
-  <div class="detail-header">
-    <a href="#stalled_run_count/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">stalled_run_count(threshold_seconds)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/prom_ex_plugin.ex#L92" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-
-    </div>
-  </section>
 
       <footer class="footer">
         <p>

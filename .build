@@ -166,6 +166,7 @@ Lightning.WorkOrder.html
 Lightning.WorkOrders.ExportWorker.html
 Lightning.WorkOrders.Manual.html
 Lightning.WorkOrders.Query.html
+Lightning.WorkOrders.RetryManyWorkOrdersJob.html
 Lightning.WorkOrders.SearchParams.html
 Lightning.WorkOrders.html
 Lightning.Workers.RunToken.html
@@ -335,8 +336,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-4710A5F9.js
-dist/sidebar_items-91753532.js
+dist/search_data-5038AEA1.js
+dist/sidebar_items-D4C29E21.js
 index.html
 provisioning.html
 readme.html

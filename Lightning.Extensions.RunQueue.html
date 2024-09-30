@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-91753532.js"></script>
+    <script src="dist/sidebar_items-D4C29E21.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -177,6 +177,14 @@ Pages
 
     </div>
 
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#c:enqueue_many/1" translate="no">enqueue_many(runs)</a>
+
+      </div>
+
+    </div>
+
 </div>
 
   </section>
@@ -199,7 +207,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">claim(demand)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/run_queue.ex#L11" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/run_queue.ex#L16" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -227,7 +235,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">dequeue(run)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/run_queue.ex#L14" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/run_queue.ex#L19" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -268,6 +276,36 @@ Pages
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@callback</span> enqueue(run :: <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Multi.html#t:t/0">Ecto.Multi.t</a>()) ::
+  {:ok, %{required(<a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Multi.html#t:name/0">Ecto.Multi.name</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}}
+  | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Multi.html#t:name/0">Ecto.Multi.name</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), %{required(<a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Multi.html#t:name/0">Ecto.Multi.name</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}}</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="c:enqueue_many/1">
+
+  <div class="detail-header">
+    <a href="#c:enqueue_many/1" class="detail-link" title="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this callback</span>
+    </a>
+    <h1 class="signature" translate="no">enqueue_many(runs)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/run_queue.ex#L11" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> enqueue_many(runs :: <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Multi.html#t:t/0">Ecto.Multi.t</a>()) ::
   {:ok, %{required(<a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Multi.html#t:name/0">Ecto.Multi.name</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}}
   | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Multi.html#t:name/0">Ecto.Multi.name</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), %{required(<a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Multi.html#t:name/0">Ecto.Multi.name</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}}</pre>
 
