@@ -12,7 +12,6 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
              :group_id,
              :hosts,
              :initial_offset_reset_policy,
-             :partition_timestamps,
              :password,
              :sasl,
              :ssl,
@@ -26,7 +25,6 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
     field :hosts, {:array, {:array, :string}}
     field :hosts_string, :string, virtual: true
     field :initial_offset_reset_policy, :string
-    field :partition_timestamps, :map, default: %{}
     field :password, Lightning.Encrypted.EmbeddedBinary
     field :sasl, Ecto.Enum, values: @sasl_types, default: nil
     field :ssl, :boolean
@@ -42,7 +40,6 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
       :hosts,
       :hosts_string,
       :initial_offset_reset_policy,
-      :partition_timestamps,
       :password,
       :sasl,
       :ssl,
