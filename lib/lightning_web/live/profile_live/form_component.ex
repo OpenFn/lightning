@@ -2,10 +2,11 @@ defmodule LightningWeb.ProfileLive.FormComponent do
   @moduledoc """
   Form component update profile email and password
   """
-  require Logger
   use LightningWeb, :live_component
 
   alias Lightning.Accounts
+
+  require Logger
 
   @impl true
   def update(%{user: user, action: action}, socket) do
