@@ -203,16 +203,6 @@ defmodule Lightning.KafkaTriggersTest do
 
       assert policy == {:timestamp, 1_715_312_900_120}
     end
-
-    defp build_trigger(initial_offset_reset, partition_timestamps \\ %{}) do
-      kafka_configuration =
-        configuration(
-          initial_offset_reset_policy: initial_offset_reset,
-          partition_timestamps: partition_timestamps
-        )
-
-      build(:trigger, type: :kafka, kafka_configuration: kafka_configuration)
-    end
   end
 
   describe ".build_topic_partition_offset" do
@@ -804,6 +794,42 @@ defmodule Lightning.KafkaTriggersTest do
     end
   end
 
+  describe "initial_policy" do
+    test "returns :earliest if 'earliest'" do
+      trigger = "earliest" |> build_trigger()
+
+      policy = KafkaTriggers.initial_policy(trigger.kafka_configuration)
+
+      assert policy == :earliest
+    end
+
+    test "returns :latest if 'latest'" do
+      trigger = "latest" |> build_trigger()
+
+      policy = KafkaTriggers.initial_policy(trigger.kafka_configuration)
+
+      assert policy == :latest
+    end
+
+    test "returns policy if timestamp as a string" do
+      timestamp = "1715312900123"
+
+      trigger = timestamp |> build_trigger()
+
+      policy = KafkaTriggers.initial_policy(trigger.kafka_configuration)
+
+      assert policy == {:timestamp, timestamp |> String.to_integer()}
+    end
+
+    test "returns :latest if unrecognised string" do
+      trigger = "woteva" |> build_trigger()
+
+      policy = KafkaTriggers.initial_policy(trigger.kafka_configuration)
+
+      assert policy == :latest
+    end
+  end
+
   defp child_spec(opts) do
     trigger = opts |> Keyword.get(:trigger)
     index = opts |> Keyword.get(:index)
@@ -882,4 +908,14 @@ defmodule Lightning.KafkaTriggersTest do
   end
 
   defp sasl_config(_index, false = _sasl), do: nil
+
+  defp build_trigger(initial_offset_reset, partition_timestamps \\ %{}) do
+    kafka_configuration =
+      configuration(
+        initial_offset_reset_policy: initial_offset_reset,
+        partition_timestamps: partition_timestamps
+      )
+
+    build(:trigger, type: :kafka, kafka_configuration: kafka_configuration)
+  end
 end
