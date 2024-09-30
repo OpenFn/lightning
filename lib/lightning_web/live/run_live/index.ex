@@ -354,12 +354,19 @@ defmodule LightningWeb.RunLive.Index do
 
   def handle_event("bulk-rerun", attrs, socket) do
     with true <- socket.assigns.can_run_workflow,
-         {:ok, count} <- handle_bulk_rerun(socket, attrs) do
+         {:ok, count, discarded_count} <- handle_bulk_rerun(socket, attrs) do
       {:noreply,
        socket
        |> put_flash(
          :info,
          "New run#{if count > 1, do: "s", else: ""} enqueued for #{count} workorder#{if count > 1, do: "s", else: ""}"
+         |> then(fn msg ->
+           if discarded_count > 0 do
+             msg <> " (#{discarded_count} were discarded due to wiped dataclip)"
+           else
+             msg
+           end
+         end)
        )
        |> push_navigate(
          to:
@@ -405,7 +412,7 @@ defmodule LightningWeb.RunLive.Index do
     workorder = Enum.find(page.entries, &(&1.id == workorder_id))
 
     work_orders =
-      if selected? and nil != workorder do
+      if selected? and !is_nil(workorder) do
         selected_workorder = %Lightning.WorkOrder{
           id: workorder.id,
           workflow_id: workorder.workflow_id

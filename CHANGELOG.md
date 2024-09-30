@@ -17,10 +17,19 @@ and this project adheres to
 
 ### Added
 
+- Enqueues many work orders retries in the same transaction per Oban job.
+  [#2363](https://github.com/OpenFn/lightning/issues/2363)
+- Added the ability to retry rejected work orders.
+  [#2391](https://github.com/OpenFn/lightning/issues/2391)
+
 ### Changed
 
 ### Fixed
 
+- Fixes filters to properly handle the "rejected" status for work orders.
+  [#2391](https://github.com/OpenFn/lightning/issues/2391)
+- Fix item selection (project / billing account) in the context switcher
+  [#2518](https://github.com/OpenFn/lightning/issues/2518)
 - Export edge condition expressions as multiline in project spec
   [#2521](https://github.com/OpenFn/lightning/issues/2521)
 
@@ -37,8 +46,8 @@ and this project adheres to
 
 ### Fixed
 
-- Dataclip selector always shows that the dataclip is wiped even when the job wasn't run
-  [#2303](https://github.com/OpenFn/lightning/issues/2303)
+- Dataclip selector always shows that the dataclip is wiped even when the job
+  wasn't run [#2303](https://github.com/OpenFn/lightning/issues/2303)
 - Send run channel errors to sentry
   [#2515](https://github.com/OpenFn/lightning/issues/2515)
 
@@ -57,7 +66,8 @@ and this project adheres to
   [#2050](https://github.com/OpenFn/lightning/issues/2050)
 - Add quotes when special YAML characters are present in the exported project
   [#2446](https://github.com/OpenFn/lightning/issues/2446)
-- In the AI Assistant, don't open the help page when clicking the Responsible AI Link [#2511](https://github.com/OpenFn/lightning/issues/2511)
+- In the AI Assistant, don't open the help page when clicking the Responsible AI
+  Link [#2511](https://github.com/OpenFn/lightning/issues/2511)
 
 ## [v2.9.4] - 2024-09-16
 

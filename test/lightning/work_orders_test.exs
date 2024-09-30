@@ -10,6 +10,7 @@ defmodule Lightning.WorkOrdersTest do
   alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
   alias Lightning.WorkOrders
   alias Lightning.WorkOrders.Events
+  alias Lightning.WorkOrders.RetryManyWorkOrdersJob
 
   describe "create_for/2" do
     setup context do
@@ -637,7 +638,11 @@ defmodule Lightning.WorkOrdersTest do
                starting_job_id: job_a.id
              )
 
-      {:ok, 0} = WorkOrders.retry_many([workorder], job_a.id, created_by: user)
+      {:ok, 0, 0} =
+        WorkOrders.retry_many([workorder], job_a.id,
+          created_by: user,
+          project_id: workflow.project_id
+        )
 
       refute Repo.get_by(Lightning.Run,
                work_order_id: workorder.id,
@@ -694,7 +699,7 @@ defmodule Lightning.WorkOrdersTest do
                starting_job_id: job_a.id
              )
 
-      {:ok, 1} =
+      {:ok, 1, 0} =
         WorkOrders.retry_many([workorder], job_a.id,
           created_by: user,
           project_id: workflow.project_id
@@ -776,7 +781,7 @@ defmodule Lightning.WorkOrdersTest do
                starting_job_id: job_b.id
              )
 
-      {:ok, 1} =
+      {:ok, 1, 0} =
         WorkOrders.retry_many([workorder], job_b.id,
           created_by: user,
           project_id: workflow.project_id
@@ -870,7 +875,7 @@ defmodule Lightning.WorkOrdersTest do
         assert run.id in [run_1.id, run_2.id]
       end
 
-      {:ok, 1} =
+      {:ok, 1, 0} =
         WorkOrders.retry_many([workorder], job_a.id,
           created_by: user,
           project_id: workflow.project_id
@@ -951,7 +956,8 @@ defmodule Lightning.WorkOrdersTest do
         assert run.id in [run_1.id, run_2.id]
       end
 
-      {:ok, 0} = WorkOrders.retry_many([workorder], job_a.id, created_by: user)
+      {:ok, 0, 0} =
+        WorkOrders.retry_many([workorder], job_a.id, created_by: user)
 
       runs = Ecto.assoc(workorder, :runs) |> Repo.all()
 
@@ -1033,7 +1039,7 @@ defmodule Lightning.WorkOrdersTest do
       runs_ids = Enum.map(runs, & &1.id)
       assert Enum.sort(runs_ids) == Enum.sort([run_1.id, run_2.id])
 
-      {:ok, 1} =
+      {:ok, 1, 0} =
         WorkOrders.retry_many([workorder], job_b.id,
           created_by: user,
           project_id: workflow.project_id
@@ -1110,7 +1116,7 @@ defmodule Lightning.WorkOrdersTest do
              )
 
       # we've reversed the order here
-      {:ok, 2} =
+      {:ok, 2, 0} =
         WorkOrders.retry_many([workorder_2, workorder_1], job_a.id,
           created_by: user,
           project_id: workflow.project_id
@@ -1293,7 +1299,7 @@ defmodule Lightning.WorkOrdersTest do
                starting_job_id: job_b.id
              )
 
-      {:ok, 1} =
+      {:ok, 1, 0} =
         WorkOrders.retry_many([workorder_2, workorder_1], job_b.id,
           created_by: user,
           project_id: workflow.project_id
@@ -1520,7 +1526,7 @@ defmodule Lightning.WorkOrdersTest do
         assert run.id in [run_1.id, run_2.id]
       end
 
-      {:ok, 1} =
+      {:ok, 1, 0} =
         WorkOrders.retry_many([workorder],
           created_by: user,
           project_id: workflow.project_id
@@ -1601,7 +1607,7 @@ defmodule Lightning.WorkOrdersTest do
              )
 
       # we've reversed the order here
-      {:ok, 2} =
+      {:ok, 2, 0} =
         WorkOrders.retry_many([workorder_2, workorder_1],
           created_by: user,
           project_id: workflow.project_id
@@ -1657,7 +1663,7 @@ defmodule Lightning.WorkOrdersTest do
         assert run.id in [run_1.id]
       end
 
-      {:ok, 1} =
+      {:ok, 1, 0} =
         WorkOrders.retry_many([workorder],
           created_by: user,
           project_id: workflow.project_id
@@ -1683,6 +1689,42 @@ defmodule Lightning.WorkOrdersTest do
       assert retry_run.state == :available
 
       assert retry_run |> Repo.preload(:steps) |> Map.get(:steps) == []
+    end
+
+    test "rejected workorders are retryable",
+         %{
+           snapshot: snapshot,
+           trigger: trigger,
+           user: user,
+           workflow: workflow
+         } do
+      input_dataclip = insert(:dataclip)
+
+      workorder =
+        insert(:workorder,
+          dataclip: input_dataclip,
+          snapshot: snapshot,
+          trigger: trigger,
+          workflow: workflow,
+          state: :rejected
+        )
+
+      runs = workorder |> Ecto.assoc(:runs) |> Repo.all()
+
+      assert Enum.empty?(runs)
+      assert workorder.state == :rejected
+
+      {:ok, 1, 0} =
+        WorkOrders.retry_many([workorder],
+          created_by: user,
+          project_id: workflow.project_id
+        )
+
+      workorder = Repo.reload(workorder)
+      runs = workorder |> Ecto.assoc(:runs) |> Repo.all()
+
+      refute Enum.empty?(runs)
+      refute workorder.state == :rejected
     end
 
     test "retrying a WorkOrder with a run having starting_job without steps",
@@ -1720,7 +1762,7 @@ defmodule Lightning.WorkOrdersTest do
         assert run.id in [run_1.id]
       end
 
-      {:ok, 1} =
+      {:ok, 1, 0} =
         WorkOrders.retry_many([workorder],
           created_by: user,
           project_id: workflow.project_id
@@ -1809,7 +1851,7 @@ defmodule Lightning.WorkOrdersTest do
                starting_job_id: job_a.id
              )
 
-      {:ok, 1} =
+      {:ok, 1, 1} =
         WorkOrders.retry_many([workorder_2, workorder_1],
           created_by: user,
           project_id: workflow.project_id
@@ -1825,6 +1867,129 @@ defmodule Lightning.WorkOrdersTest do
                starting_job_id: job_a.id
              ),
              "workorder with wiped dataclip is not retried"
+    end
+
+    test "retrying multiple chunks of workorders enqueues in background",
+         %{
+           jobs: [job_a, job_b, job_c],
+           snapshot: snapshot,
+           trigger: trigger,
+           user: user,
+           workflow: workflow
+         } do
+      workorders =
+        insert_list(101, :workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip),
+          snapshot: snapshot,
+          runs: [
+            %{
+              state: :failed,
+              dataclip: build(:dataclip),
+              starting_trigger: trigger,
+              snapshot: snapshot,
+              steps: [
+                insert(:step,
+                  job: job_a,
+                  input_dataclip: build(:dataclip),
+                  output_dataclip: build(:dataclip)
+                ),
+                insert(:step,
+                  job: job_b,
+                  input_dataclip: build(:dataclip),
+                  output_dataclip: build(:dataclip)
+                ),
+                insert(:step,
+                  job: job_c,
+                  input_dataclip: build(:dataclip),
+                  output_dataclip: build(:dataclip)
+                )
+              ]
+            }
+          ]
+        )
+
+      workorder_1 = hd(workorders)
+      workorder_101 = hd(Enum.reverse(workorders))
+
+      refute Repo.get_by(Lightning.Run,
+               work_order_id: workorder_1.id,
+               starting_job_id: job_a.id
+             )
+
+      refute Repo.get_by(Lightning.Run,
+               work_order_id: workorder_101.id,
+               starting_job_id: job_a.id
+             )
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, 101, 0} =
+          WorkOrders.retry_many(workorders,
+            created_by: user,
+            project_id: workflow.project_id
+          )
+
+        [workorders1, workorders2] = Enum.chunk_every(workorders, 100)
+
+        workorders_ids1 = Enum.map(workorders1, & &1.id)
+
+        workorders_ids2 = Enum.map(workorders2, & &1.id)
+
+        user_id = user.id
+
+        enqueued_jobs = all_enqueued(queue: :scheduler)
+
+        assert length(enqueued_jobs) == 2,
+               "Expected 2 jobs, got #{length(enqueued_jobs)}"
+
+        all_expected_ids = workorders_ids1 ++ workorders_ids2
+
+        all_actual_ids =
+          Enum.flat_map(enqueued_jobs, fn job ->
+            assert %{"created_by" => ^user_id, "workorders_ids" => ids} =
+                     job.args
+
+            ids
+          end)
+
+        assert Enum.sort(all_actual_ids) == Enum.sort(all_expected_ids),
+               "The workorder IDs in the enqueued jobs do not match the expected IDs"
+
+        job_with_workorder_1 =
+          Enum.find(enqueued_jobs, fn job ->
+            "#{workorder_1.id}" in job.args["workorders_ids"]
+          end)
+
+        job_with_workorder_101 =
+          Enum.find(enqueued_jobs, fn job ->
+            "#{workorder_101.id}" in job.args["workorders_ids"]
+          end)
+
+        assert job_with_workorder_1, "No job found containing workorder_1"
+        assert job_with_workorder_101, "No job found containing workorder_101"
+
+        assert :ok =
+                 perform_job(RetryManyWorkOrdersJob, job_with_workorder_1.args)
+
+        assert Repo.get_by(Lightning.Run,
+                 work_order_id: workorder_1.id,
+                 starting_job_id: job_a.id
+               )
+
+        refute Repo.get_by(Lightning.Run,
+                 work_order_id: workorder_101.id,
+                 starting_job_id: job_a.id
+               )
+
+        assert :ok =
+                 perform_job(RetryManyWorkOrdersJob, job_with_workorder_101.args)
+
+        assert Repo.get_by(Lightning.Run,
+                 work_order_id: workorder_101.id,
+                 starting_job_id: job_a.id
+               )
+      end)
     end
   end
 
@@ -1911,7 +2076,7 @@ defmodule Lightning.WorkOrdersTest do
                starting_job_id: job_a.id
              )
 
-      {:ok, 1} =
+      {:ok, 1, 0} =
         WorkOrders.retry_many([run_step_a],
           created_by: user,
           project_id: workflow.project_id
@@ -2000,7 +2165,7 @@ defmodule Lightning.WorkOrdersTest do
                starting_job_id: run_step_b.step.job.id
              )
 
-      {:ok, 1} =
+      {:ok, 1, 0} =
         WorkOrders.retry_many([run_step_b],
           created_by: user,
           project_id: workflow.project_id
@@ -2099,7 +2264,7 @@ defmodule Lightning.WorkOrdersTest do
              )
 
       # we've reversed the order here
-      {:ok, 2} =
+      {:ok, 2, 0} =
         WorkOrders.retry_many([run_step_2_a, run_step_1_a],
           created_by: user,
           project_id: workflow.project_id
@@ -2196,7 +2361,7 @@ defmodule Lightning.WorkOrdersTest do
                starting_job_id: job_a.id
              )
 
-      {:ok, 1} =
+      {:ok, 1, 0} =
         WorkOrders.retry_many([run_step_2_a, run_step_1_a],
           created_by: user,
           project_id: workflow.project_id

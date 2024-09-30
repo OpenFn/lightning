@@ -211,31 +211,36 @@ defmodule Lightning.Workflows.Snapshot do
     end
   end
 
-  @spec get_or_create_latest_for(Multi.t(), Workflow.t()) :: Multi.t()
-  def get_or_create_latest_for(multi, workflow) do
+  @spec get_or_create_latest_for(Multi.t(), binary() | :snapshot, Workflow.t()) ::
+          Multi.t()
+  def get_or_create_latest_for(multi, name \\ :snapshot, workflow) do
+    unique_op = "_existing#{System.unique_integer()}"
+
     multi
-    |> Multi.one(:__existing, get_current_query(workflow))
-    |> Multi.merge(fn %{__existing: snapshot} ->
-      return_or_create(snapshot, workflow)
+    |> Multi.one(unique_op, get_current_query(workflow))
+    |> Multi.merge(fn %{^unique_op => snapshot} ->
+      return_or_create(name, snapshot, workflow)
     end)
   end
 
-  defp return_or_create(snapshot, workflow) do
+  defp return_or_create(name, snapshot, workflow) do
     if snapshot do
-      Multi.new() |> Multi.put(:snapshot, snapshot)
+      Multi.new() |> Multi.put(name, snapshot)
     else
+      unique_op = "_workflow#{System.unique_integer()}"
+
       Multi.new()
       |> Multi.one(
-        :__workflow,
+        unique_op,
         from(w in Workflow,
           where: w.id == ^workflow.id,
           preload: [:jobs, :triggers, :edges],
           lock: "FOR UPDATE"
         )
       )
-      |> Multi.merge(fn %{__workflow: workflow} ->
+      |> Multi.merge(fn %{^unique_op => workflow} ->
         if workflow do
-          Multi.new() |> Multi.insert(:snapshot, build(workflow))
+          Multi.new() |> Multi.insert(name, build(workflow))
         else
           Multi.new() |> Multi.error(:workflow, :no_workflow)
         end
