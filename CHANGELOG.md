@@ -17,10 +17,17 @@ and this project adheres to
 
 ### Added
 
+- Enqueues many work orders retries in the same transaction per Oban job.
+  [#2363](https://github.com/OpenFn/lightning/issues/2363)
+- Added the ability to retry rejected work orders.
+  [#2391](https://github.com/OpenFn/lightning/issues/2391)
+
 ### Changed
 
 ### Fixed
 
+- Fixes filters to properly handle the "rejected" status for work orders.
+  [#2391](https://github.com/OpenFn/lightning/issues/2391)
 - Fix item selection (project / billing account) in the context switcher
   [#2518](https://github.com/OpenFn/lightning/issues/2518)
 - Export edge condition expressions as multiline in project spec

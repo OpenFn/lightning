@@ -26,6 +26,11 @@ defmodule Lightning.Runs do
     RunQueue.enqueue(run)
   end
 
+  @impl Lightning.Extensions.RunQueue
+  def enqueue_many(run) do
+    RunQueue.enqueue_many(run)
+  end
+
   # @doc """
   # Claim an available run.
   #
