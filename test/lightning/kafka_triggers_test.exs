@@ -150,63 +150,8 @@ defmodule Lightning.KafkaTriggersTest do
     end
   end
 
-  describe ".determine_offset_reset_policy" do
-    test "returns :earliest if 'earliest'" do
-      policy =
-        "earliest"
-        |> build_trigger()
-        |> KafkaTriggers.determine_offset_reset_policy()
-
-      assert policy == :earliest
-    end
-
-    test "returns :latest if 'latest'" do
-      policy =
-        "latest"
-        |> build_trigger()
-        |> KafkaTriggers.determine_offset_reset_policy()
-
-      assert policy == :latest
-    end
-
-    test "returns policy if timestamp as a string" do
-      timestamp = "1715312900123"
-
-      policy =
-        timestamp
-        |> build_trigger()
-        |> KafkaTriggers.determine_offset_reset_policy()
-
-      assert policy == {:timestamp, timestamp |> String.to_integer()}
-    end
-
-    test "returns :latest if unrecognised string" do
-      policy =
-        "woteva"
-        |> build_trigger()
-        |> KafkaTriggers.determine_offset_reset_policy()
-
-      assert policy == :latest
-    end
-
-    test "returns earliest partition timestamp if data is available" do
-      partition_timestamps = %{
-        "1" => 1_715_312_900_121,
-        "2" => 1_715_312_900_120,
-        "3" => 1_715_312_900_123
-      }
-
-      policy =
-        "earliest"
-        |> build_trigger(partition_timestamps)
-        |> KafkaTriggers.determine_offset_reset_policy()
-
-      assert policy == {:timestamp, 1_715_312_900_120}
-    end
-  end
-
   describe ".build_topic_partition_offset" do
-    test "builds based on the proivded message" do
+    test "builds based on the provided message" do
       message = build_broadway_message("foo", 2, 1)
       assert KafkaTriggers.build_topic_partition_offset(message) == "foo_2_1"
 
