@@ -823,7 +823,6 @@ defmodule Lightning.KafkaTriggersTest do
 
   defp configuration(opts) do
     index = opts |> Keyword.get(:index, 1)
-    partition_timestamps = opts |> Keyword.get(:partition_timestamps, %{})
     sasl = opts |> Keyword.get(:sasl, true)
     ssl = opts |> Keyword.get(:ssl, true)
 
@@ -839,7 +838,6 @@ defmodule Lightning.KafkaTriggersTest do
       group_id: "lightning-#{index}",
       hosts: [["host-#{index}", "9092"], ["other-host-#{index}", "9093"]],
       initial_offset_reset_policy: initial_offset_reset_policy,
-      partition_timestamps: partition_timestamps,
       password: password,
       sasl: sasl_type,
       ssl: ssl,
@@ -854,11 +852,10 @@ defmodule Lightning.KafkaTriggersTest do
 
   defp sasl_config(_index, false = _sasl), do: nil
 
-  defp build_trigger(initial_offset_reset, partition_timestamps \\ %{}) do
+  defp build_trigger(initial_offset_reset) do
     kafka_configuration =
       configuration(
-        initial_offset_reset_policy: initial_offset_reset,
-        partition_timestamps: partition_timestamps
+        initial_offset_reset_policy: initial_offset_reset
       )
 
     build(:trigger, type: :kafka, kafka_configuration: kafka_configuration)

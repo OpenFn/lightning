@@ -14,7 +14,6 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
   alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
   alias Lightning.KafkaTriggers.Pipeline
   alias Lightning.Repo
-  alias Lightning.Workflows.Trigger
   alias Lightning.WorkOrder
 
   describe ".start_link/1" do
@@ -224,34 +223,6 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
                trigger_id: ^trigger_id,
                topic_partition_offset: "bar_topic_2_11"
              } = message_record
-    end
-
-    test "does not update partition timestamps if message is duplicate", %{
-      context: context,
-      message: message,
-      trigger_1: trigger_1,
-      trigger_2: trigger_2
-    } do
-      trigger_id = context.trigger_id |> Atom.to_string()
-
-      insert_message_record(trigger_id)
-
-      Pipeline.handle_message(nil, message, context)
-
-      %{
-        kafka_configuration: %{
-          partition_timestamps: trigger_1_timestamps
-        }
-      } = Trigger |> Repo.get(trigger_1.id)
-
-      %{
-        kafka_configuration: %{
-          partition_timestamps: trigger_2_timestamps
-        }
-      } = Trigger |> Repo.get(trigger_2.id)
-
-      assert trigger_1_timestamps == partition_timestamps()
-      assert trigger_2_timestamps == partition_timestamps()
     end
 
     test "does not create WorkOrder if message is duplicate", %{
@@ -475,20 +446,12 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       hosts: [["host-#{index}", "9092"], ["other-host-#{index}", "9093"]],
       hosts_string: "host-#{index}:9092, other-host-#{index}:9093",
       initial_offset_reset_policy: "earliest",
-      partition_timestamps: partition_timestamps(),
       password: password,
       sasl: sasl_type,
       ssl: ssl,
       topics: ["topic-#{index}-1", "topic-#{index}-2"],
       topics_string: "topic-#{index}-1, topic-#{index}-2",
       username: username
-    }
-  end
-
-  defp partition_timestamps do
-    %{
-      "1" => 1_715_164_718_281,
-      "2" => 1_715_164_718_282
     }
   end
 
