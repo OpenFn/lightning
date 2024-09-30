@@ -854,9 +854,7 @@ defmodule Lightning.KafkaTriggersTest do
 
   defp build_trigger(initial_offset_reset) do
     kafka_configuration =
-      configuration(
-        initial_offset_reset_policy: initial_offset_reset
-      )
+      configuration(initial_offset_reset_policy: initial_offset_reset)
 
     build(:trigger, type: :kafka, kafka_configuration: kafka_configuration)
   end
