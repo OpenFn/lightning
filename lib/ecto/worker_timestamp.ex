@@ -10,7 +10,7 @@ defmodule Lightning.Ecto.WorkerTimestamp do
   def cast(timestamp) when is_binary(timestamp) do
     timestamp
     |> String.to_integer()
-    |> DateTime.from_naive(:microsecond)
+    |> DateTime.from_unix(:microsecond)
     |> case do
       {:ok, datetime} ->
         {:ok, datetime}

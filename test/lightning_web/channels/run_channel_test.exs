@@ -1078,8 +1078,7 @@ defmodule LightningWeb.RunChannelTest do
     @tag run_state: :started, api_version: "1.2"
     test "run:complete with API v1.2", %{
       socket: socket,
-      run: run,
-      work_order: work_order
+      run: run
     } do
       timestamp = 1_727_423_491_748_984
 
