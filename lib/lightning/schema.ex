@@ -8,6 +8,8 @@ defmodule Lightning.Schema do
 
       import Ecto.Changeset
 
+      alias Lightning.Ecto.WorkerTimestamp
+
       @schema_prefix "public"
       @primary_key {:id, :binary_id, autogenerate: true}
       @foreign_key_type :binary_id

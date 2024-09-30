@@ -509,6 +509,44 @@ defmodule LightningWeb.RunChannelTest do
       }
     end
 
+    @tag api_version: "1.2"
+    test "step:start with API v1.2", %{
+      socket: socket,
+      run: %{dataclip_id: dataclip_id},
+      workflow: workflow,
+      credential: %{id: credential_id},
+      project: project
+    } do
+      # { id, job_id, input_dataclip_id }
+      step_id = Ecto.UUID.generate()
+      [%{id: job_id}] = workflow.jobs
+
+      timestamp = 1_727_423_491_748_984
+
+      ref =
+        push(socket, "step:start", %{
+          "step_id" => step_id,
+          "credential_id" => credential_id,
+          "job_id" => job_id,
+          "input_dataclip_id" => dataclip_id,
+          "timestamp" => to_string(timestamp)
+        })
+
+      assert_reply ref, :ok, %{step_id: ^step_id}, 1_000
+
+      assert project.retention_policy == :retain_all
+
+      assert %{
+               credential_id: ^credential_id,
+               job_id: ^job_id,
+               input_dataclip_id: ^dataclip_id,
+               started_at: started_at
+             } =
+               Repo.get!(Step, step_id)
+
+      assert DateTime.to_unix(started_at, :microsecond) == timestamp
+    end
+
     test "step:start", %{
       socket: socket,
       run: %{dataclip_id: dataclip_id},
@@ -602,6 +640,34 @@ defmodule LightningWeb.RunChannelTest do
                job_id: ^job_id,
                input_dataclip_id: nil
              } = Repo.get!(Step, step_id)
+    end
+
+    @tag api_version: "1.2"
+    test "step:complete succeeds with API v1.2", %{
+      socket: socket,
+      run: run,
+      workflow: workflow
+    } do
+      [job] = workflow.jobs
+      %{id: step_id} = step = insert(:step, runs: [run], job: job)
+
+      timestamp = 1_727_423_491_748_984
+
+      ref =
+        push(socket, "step:complete", %{
+          "step_id" => step.id,
+          "output_dataclip_id" => Ecto.UUID.generate(),
+          "output_dataclip" => ~s({"foo": "bar"}),
+          "reason" => "normal",
+          "timestamp" => to_string(timestamp)
+        })
+
+      assert_reply ref, :ok, %{step_id: ^step_id}
+
+      assert %{exit_reason: "normal", finished_at: finished_at} =
+               Repo.get(Step, step.id)
+
+      assert DateTime.to_unix(finished_at, :microsecond) == timestamp
     end
 
     test "step:complete succeeds with normal reason", %{
@@ -929,11 +995,16 @@ defmodule LightningWeb.RunChannelTest do
       run: run,
       work_order: work_order
     } do
-      ref = push(socket, "run:start", %{})
+      timestamp = 1_727_423_491_748_984
+
+      ref = push(socket, "run:start", %{"timestamp" => to_string(timestamp)})
 
       assert_reply ref, :ok, nil
 
-      assert %{state: :started} = Lightning.Repo.reload!(run)
+      assert %{state: :started, started_at: started_at} =
+               Lightning.Repo.reload!(run)
+
+      assert DateTime.to_unix(started_at, :microsecond) == timestamp
       assert %{state: :running} = Lightning.Repo.reload!(work_order)
     end
   end
@@ -1002,6 +1073,30 @@ defmodule LightningWeb.RunChannelTest do
       assert errors == %{
                state: ["already in completed state"]
              }
+    end
+
+    @tag run_state: :started, api_version: "1.2"
+    test "run:complete with API v1.2", %{
+      socket: socket,
+      run: run,
+      work_order: work_order
+    } do
+      timestamp = 1_727_423_491_748_984
+
+      ref =
+        push(socket, "run:complete", %{
+          "timestamp" => to_string(timestamp),
+          "reason" => "success",
+          "error_type" => nil,
+          "error_message" => nil
+        })
+
+      assert_reply ref, :ok, nil
+
+      assert %{state: :success, finished_at: finished_at} =
+               Lightning.Repo.reload!(run)
+
+      assert DateTime.to_unix(finished_at, :microsecond) == timestamp
     end
 
     @tag run_state: :started

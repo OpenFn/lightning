@@ -58,8 +58,8 @@ defmodule LightningWeb.RunChannel do
     reply_with(socket, {:ok, RunWithOptions.render(run)})
   end
 
-  def handle_in("run:start", _payload, socket) do
-    case Runs.start_run(socket.assigns.run) do
+  def handle_in("run:start", payload, socket) do
+    case Runs.start_run(socket.assigns.run, payload) do
       {:ok, run} ->
         socket |> assign(run: run) |> reply_with({:ok, nil})
 
@@ -69,9 +69,7 @@ defmodule LightningWeb.RunChannel do
   end
 
   def handle_in("run:complete", payload, socket) do
-    params = replace_reason_with_exit_reason(payload)
-
-    case Runs.complete_run(socket.assigns.run, params) do
+    case Runs.complete_run(socket.assigns.run, payload) do
       {:ok, run} ->
         # TODO: Turn FailureAlerter into an Oban worker and process async
         # instead of blocking the channel.
@@ -202,24 +200,6 @@ defmodule LightningWeb.RunChannel do
       {:ok, log_line} ->
         reply_with(socket, {:ok, %{log_line_id: log_line.id}})
     end
-  end
-
-  defp replace_reason_with_exit_reason(params) do
-    {reason, payload} = Map.pop(params, "reason")
-
-    Map.put(
-      payload,
-      "state",
-      case reason do
-        "ok" -> :success
-        "fail" -> :failed
-        "crash" -> :crashed
-        "cancel" -> :cancelled
-        "kill" -> :killed
-        "exception" -> :exception
-        unknown -> unknown
-      end
-    )
   end
 
   defp update_scrubber(nil, samples, basic_auth) do

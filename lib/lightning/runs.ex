@@ -178,23 +178,14 @@ defmodule Lightning.Runs do
     |> Repo.one()
   end
 
-  def start_run(%Run{} = run) do
-    Run.start(run)
-    |> update_run()
-    |> tap(&track_run_queue_delay/1)
+  def start_run(%Run{} = run, params \\ %{}) do
+    Handlers.StartRun.call(run, params)
   end
 
   @spec complete_run(Run.t(), %{optional(any()) => any()}) ::
           {:ok, Run.t()} | {:error, Ecto.Changeset.t(Run.t())}
   def complete_run(run, params) do
-    Run.complete(run, params)
-    |> case do
-      %{valid?: false} = changeset ->
-        {:error, changeset}
-
-      changeset ->
-        changeset |> update_run()
-    end
+    Handlers.CompleteRun.call(run, params)
   end
 
   @spec update_run(Ecto.Changeset.t(Run.t())) ::
@@ -332,18 +323,4 @@ defmodule Lightning.Runs do
     |> order_by([{^order, :timestamp}])
     |> Repo.stream()
   end
-
-  defp track_run_queue_delay({:ok, run}) do
-    %Run{inserted_at: inserted_at, started_at: started_at} = run
-
-    delay = DateTime.diff(started_at, inserted_at, :millisecond)
-
-    :telemetry.execute(
-      [:domain, :run, :queue],
-      %{delay: delay},
-      %{}
-    )
-  end
-
-  defp track_run_queue_delay({:error, _changeset}), do: nil
 end
