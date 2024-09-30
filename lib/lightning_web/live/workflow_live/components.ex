@@ -221,7 +221,6 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :cancel_url, :string, required: true
   attr :disabled, :boolean, required: true
   attr :can_write_webhook_auth_method, :boolean, required: true
-  attr :webhook_url, :string, required: true
   attr :on_change, :any, required: true
   attr :selected_trigger, :any, required: true
   attr :action, :any, required: true
@@ -292,7 +291,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                 type="text"
                 id="webhookUrlInput"
                 class="block w-full flex-1 rounded-l-lg text-slate-900 disabled:bg-gray-50 disabled:text-gray-500 border border-r-0 border-secondary-300 sm:text-sm sm:leading-6"
-                value={@webhook_url}
+                value={url(~p"/i/#{@form[:id].value}")}
                 disabled="disabled"
               />
 

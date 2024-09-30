@@ -30,8 +30,8 @@ defmodule LightningWeb.FirstSetupLiveTest do
         show_live
         |> form("#superuser-registration-form",
           superuser_registration: %{
-            password: "aaaaaaaa",
-            password_confirmation: "aaaaaaaa",
+            password: "1234567890ab",
+            password_confirmation: "1234567890ab",
             first_name: "Test",
             last_name: "McTest",
             email: "foo@example.com"

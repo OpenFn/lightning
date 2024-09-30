@@ -19,13 +19,55 @@ and this project adheres to
 
 - Enqueues many work orders retries in the same transaction per Oban job.
   [#2363](https://github.com/OpenFn/lightning/issues/2363)
+- Added the ability to retry rejected work orders.
+  [#2391](https://github.com/OpenFn/lightning/issues/2391)
 
 ### Changed
 
 ### Fixed
 
-- Fix history page filters not working for rejected work orders
+- Fixes filters to properly handle the "rejected" status for work orders.
   [#2391](https://github.com/OpenFn/lightning/issues/2391)
+- Fix item selection (project / billing account) in the context switcher
+  [#2518](https://github.com/OpenFn/lightning/issues/2518)
+- Export edge condition expressions as multiline in project spec
+  [#2521](https://github.com/OpenFn/lightning/issues/2521)
+
+## [v2.9.6] - 2024-09-23
+
+### Added
+
+### Changed
+
+- Increase minimum password length to 12 in accordance with ASVS 4.0.3
+  recommendation V2.1.2 [#2507](https://github.com/OpenFn/lightning/pull/2507)
+- Changed the public sandbox (https://demo.openfn.org) setup script to use
+  `welcome12345` passwords to comply with a 12-character minimum
+
+### Fixed
+
+- Dataclip selector always shows that the dataclip is wiped even when the job
+  wasn't run [#2303](https://github.com/OpenFn/lightning/issues/2303)
+- Send run channel errors to sentry
+  [#2515](https://github.com/OpenFn/lightning/issues/2515)
+
+## [v2.9.5] - 2024-09-18
+
+### Changed
+
+- Hide export history button when no workorder is rendered in the table
+  [#2440](https://github.com/OpenFn/lightning/issues/2440)
+- Improve docs for running lightning locally #2499
+  [#2499](https://github.com/OpenFn/lightning/pull/2499)
+
+### Fixed
+
+- Fix empty webhook URL when switching workflow trigger type
+  [#2050](https://github.com/OpenFn/lightning/issues/2050)
+- Add quotes when special YAML characters are present in the exported project
+  [#2446](https://github.com/OpenFn/lightning/issues/2446)
+- In the AI Assistant, don't open the help page when clicking the Responsible AI
+  Link [#2511](https://github.com/OpenFn/lightning/issues/2511)
 
 ## [v2.9.4] - 2024-09-16
 
@@ -36,7 +78,7 @@ and this project adheres to
 - Improve history export page UI
   [#2442](https://github.com/OpenFn/lightning/issues/2442)
 - When selecting a node in the workflow diagram, connected edges will also be
-  highlighted [2396](https://github.com/OpenFn/lightning/issues/2358)
+  highlighted [#2396](https://github.com/OpenFn/lightning/issues/2358)
 
 ### Fixed
 
@@ -45,6 +87,8 @@ and this project adheres to
 - Fix jumpy combobox for scope switcher
   [#2469](https://github.com/OpenFn/lightning/issues/2469)
 - Fix console errors when rending edge labels in the workflow diagram
+- Fix tooltip on export workorder button
+  [#2430](https://github.com/OpenFn/lightning/issues/2430)
 
 ## [v2.9.3] - 2024-09-11
 

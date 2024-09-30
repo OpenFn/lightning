@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.9.4",
+      version: "2.9.6",
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -195,6 +195,7 @@ defmodule Lightning.MixProject do
       logo: "priv/static/images/square-logo.png",
       extras: [
         "README.md": [title: "Lightning"],
+        "RUNNINGLOCAL.md": [title: "Running Locally"],
         "DEPLOYMENT.md": [title: "Deployment"],
         "benchmarking/README.md": [
           title: "Benchmarking",

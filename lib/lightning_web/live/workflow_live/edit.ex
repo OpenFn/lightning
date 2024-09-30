@@ -224,8 +224,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         project={@project}
                         admin_contacts={@admin_contacts}
                         can_edit_data_retention={@can_edit_data_retention}
-                        follow_run_id={@follow_run && @follow_run.id}
-                        show_wiped_dataclip_selector={@show_wiped_dataclip_selector}
+                        follow_run={@follow_run}
+                        step={@step}
+                        show_missing_dataclip_selector={
+                          @show_missing_dataclip_selector
+                        }
                       />
                     </div>
                   </:panel>
@@ -607,7 +610,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       !@has_presence_edit_priority
                   }
                   can_write_webhook_auth_method={@can_write_webhook_auth_method}
-                  webhook_url={webhook_url(@selected_trigger)}
                   selected_trigger={@selected_trigger}
                   action={@live_action}
                   cancel_url={close_url(assigns, :selected_trigger, :unselect)}
@@ -1022,7 +1024,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
        workflow_params: %{},
        selected_credential_type: nil,
        oauth_clients: OauthClients.list_clients(assigns.project),
-       show_wiped_dataclip_selector: false,
+       show_missing_dataclip_selector: false,
        admin_contacts: Projects.list_project_admin_emails(assigns.project.id)
      )
      |> assign(initial_presence_summary(socket.assigns.current_user))}
@@ -1479,8 +1481,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> put_flash(:info, "Copied webhook URL to clipboard")}
   end
 
-  def handle_event("toggle_wiped_dataclip_selector", _, socket) do
-    {:noreply, update(socket, :show_wiped_dataclip_selector, fn val -> !val end)}
+  def handle_event("toggle_missing_dataclip_selector", _, socket) do
+    {:noreply,
+     update(socket, :show_missing_dataclip_selector, fn val -> !val end)}
   end
 
   def handle_event("manual_run_change", %{"manual" => params}, socket) do
@@ -1820,7 +1823,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       selectable_dataclips:
         maybe_add_selected_dataclip(selectable_dataclips, step_dataclip)
     )
-    |> assign(show_wiped_dataclip_selector: is_map(step_dataclip))
+    |> assign(show_missing_dataclip_selector: is_map(step_dataclip))
   end
 
   defp get_selected_dataclip(run, job_id) do
@@ -1936,17 +1939,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
     else
       socket
       |> put_flash(:error, "You are not authorized to perform this action.")
-    end
-  end
-
-  defp webhook_url(trigger) do
-    trigger
-    |> case do
-      %{type: :webhook, id: id} ->
-        Routes.webhooks_url(LightningWeb.Endpoint, :create, [id])
-
-      _ ->
-        nil
     end
   end
 

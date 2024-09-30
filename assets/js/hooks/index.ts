@@ -37,7 +37,9 @@ export const Combobox = {
     this.toggleButton.addEventListener('click', () => this.toggleDropdown());
 
     this.options.forEach((option, index) => {
-      option.addEventListener('click', () => this.selectOption(index));
+      option.addEventListener('click', () =>
+        this.selectOption(this.options.indexOf(option))
+      );
       option.addEventListener('mouseenter', () => this.handleMouseEnter(index));
       option.addEventListener('mousemove', () => this.handleMouseMove(index));
     });
@@ -87,7 +89,11 @@ export const Combobox = {
       case 'Enter':
         event.preventDefault();
         if (this.highlightedIndex !== -1) {
-          this.selectOption(this.highlightedIndex);
+          const visibleOptions = this.getVisibleOptions();
+          const selectedOptionIndex = this.options.indexOf(
+            visibleOptions[this.highlightedIndex]
+          );
+          this.selectOption(selectedOptionIndex);
         }
         break;
       case 'Escape':
@@ -197,11 +203,13 @@ export const Combobox = {
   },
 
   selectOption(index) {
-    const visibleOptions = this.getVisibleOptions();
-    const selectedOption = visibleOptions[index];
-    this.input.value = selectedOption.textContent.trim();
-    this.hideDropdown();
-    this.navigateToItem(selectedOption.dataset.url);
+    const selectedOption = this.options[index];
+
+    if (selectedOption && selectedOption.style.display !== 'none') {
+      this.input.value = selectedOption.textContent.trim();
+      this.hideDropdown();
+      this.navigateToItem(selectedOption.dataset.url);
+    }
   },
 
   navigateToItem(url) {
