@@ -69,7 +69,6 @@ defmodule Lightning.Workflows.TriggerTest do
             ],
             hosts_string: "host1:9092, host2:9093",
             initial_offset_reset_policy: "earliest",
-            partition_timestamps: %{"1" => 1_717_174_749_123},
             password: "password",
             sasl: "plain",
             ssl: true,
