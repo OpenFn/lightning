@@ -186,7 +186,7 @@ defmodule LightningWeb.RunLive.ShowTest do
              )
              |> Enum.count() == 1
 
-      {:ok, _} = Lightning.Runs.complete_run(run, %{state: :failed})
+      {:ok, _} = Lightning.Runs.complete_run(run, %{state: "failed"})
 
       assert view
              |> element("#run-detail-#{run_id}")

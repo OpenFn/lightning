@@ -1573,7 +1573,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
           "error_message" => "Unexpected token (6:9)",
           "error_type" => "CompileError",
           "final_dataclip_id" => "",
-          "state" => :crashed
+          "state" => "crashed"
         })
 
       assert_received %Lightning.Runs.Events.RunUpdated{
