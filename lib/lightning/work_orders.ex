@@ -54,6 +54,7 @@ defmodule Lightning.WorkOrders do
   alias Lightning.WorkOrders.Events
   alias Lightning.WorkOrders.Manual
   alias Lightning.WorkOrders.Query
+  alias Lightning.WorkOrders.RetryManyWorkOrdersJob
 
   @type work_order_option ::
           {:workflow, Workflow.t()}
@@ -61,6 +62,10 @@ defmodule Lightning.WorkOrders do
           | {:created_by, User.t()}
           | {:project_id, Ecto.UUID.t()}
           | {:without_run, boolean()}
+
+  @retry_many_chunk_size 100
+
+  defdelegate subscribe(project_id), to: Events
 
   @doc """
   Create a new Work Order.
@@ -140,11 +145,16 @@ defmodule Lightning.WorkOrders do
     {:error, changeset}
   end
 
-  defp get_or_create_snapshot(multi, workflow \\ nil) do
+  defp get_or_create_snapshot(multi, workflow \\ nil, name \\ :snapshot) do
     multi
-    |> Multi.merge(fn changes ->
-      workflow = workflow || changes[:workflow]
-      Multi.new() |> Snapshot.get_or_create_latest_for(workflow)
+    |> Multi.merge(fn
+      %{^name => _snapshot} ->
+        # already present when enqueuing multiple runs with the same snapshot
+        Multi.new()
+
+      changes ->
+        workflow = workflow || changes[:workflow]
+        Snapshot.get_or_create_latest_for(Multi.new(), name, workflow)
     end)
   end
 
@@ -273,14 +283,16 @@ defmodule Lightning.WorkOrders do
           Step.t() | Ecto.UUID.t(),
           [work_order_option(), ...]
         ) ::
-          {:ok, Run.t()} | {:error, Ecto.Changeset.t(Run.t())}
-  def retry(run, step, opts)
+          {:ok, Run.t()} | {:error, Ecto.Changeset.t()}
+  def retry(%Run{id: run_id}, %Step{id: step_id}, opts) do
+    retry(run_id, step_id, opts)
+  end
 
   def retry(run_id, step_id, opts)
       when is_binary(run_id) and is_binary(step_id) do
-    attrs = Map.new(opts)
-
-    run =
+    Multi.new()
+    |> Multi.one(
+      :run,
       from(a in Run,
         where: a.id == ^run_id,
         join: s in assoc(a, :steps),
@@ -290,94 +302,66 @@ defmodule Lightning.WorkOrders do
           work_order: [workflow: :edges]
         ]
       )
-      |> Repo.one()
-
-    step =
+    )
+    |> Multi.one(:step, fn %{run: run} ->
       from(s in Ecto.assoc(run, :steps),
-        where: s.id == ^step_id,
-        preload: [
-          :job,
-          :input_dataclip,
-          snapshot: [triggers: :webhook_auth_methods]
-        ]
+        join: d in assoc(s, :input_dataclip),
+        where: s.id == ^step_id and is_nil(d.wiped_at),
+        preload: [:job]
       )
-      |> Repo.one()
+    end)
+    |> Multi.run(:input_dataclip_id, fn
+      _repo, %{step: %Step{input_dataclip_id: input_dataclip_id}} ->
+        {:ok, input_dataclip_id}
 
-    # TODO: #snapshots what if a node doesn't exist in the current snapshot?
-    steps =
-      run.work_order.workflow.edges
-      |> Enum.reduce(Graph.new(), fn edge, graph ->
-        graph
-        |> Graph.add_edge(
-          edge.source_trigger_id || edge.source_job_id,
-          edge.target_job_id
-        )
-      end)
-      |> Graph.prune(step.job_id)
-      |> Graph.nodes()
-      |> then(fn nodes ->
-        Enum.filter(run.steps, fn step ->
-          step.job_id in nodes
-        end)
-      end)
-
-    do_retry(
-      run.work_order,
-      step.input_dataclip,
-      step.job,
-      steps,
-      attrs[:created_by]
-    )
+      _repo, _wiped ->
+        {:error,
+         %Run{}
+         |> Ecto.Changeset.change()
+         |> Ecto.Changeset.add_error(
+           :input_dataclip_id,
+           "cannot retry run using a wiped dataclip"
+         )}
+    end)
+    |> Multi.run(:steps, &get_workflow_steps_from/2)
+    |> enqueue_retry(Keyword.fetch!(opts, :created_by))
   end
 
-  def retry(%Run{id: run_id}, %Step{id: step_id}, opts) do
-    retry(run_id, step_id, opts)
-  end
-
-  defp do_retry(
-         workorder,
-         %{wiped_at: nil} = dataclip,
-         starting_job,
-         steps,
-         creating_user
-       ) do
-    Multi.new()
-    |> get_or_create_snapshot(%Workflow{id: workorder.workflow_id})
-    |> Multi.insert(
-      :run,
-      fn %{snapshot: snapshot} ->
-        Run.new(%{priority: :immediate})
-        |> put_assoc(:snapshot, snapshot)
-        |> put_assoc(:work_order, workorder)
-        |> put_assoc(:dataclip, dataclip)
-        |> put_assoc(:starting_job, starting_job)
-        |> put_assoc(:steps, steps)
-        |> put_assoc(:created_by, creating_user)
-        |> Run.add_options(dataclip.project_id)
-        |> validate_required_assoc(:snapshot)
-        |> validate_required_assoc(:dataclip)
-        |> validate_required_assoc(:work_order)
-        |> validate_required_assoc(:created_by)
-      end
-    )
+  defp enqueue_retry(multi, creating_user) do
+    multi
+    |> Multi.run(:workflow, fn _repo, %{run: run} ->
+      {:ok, run.work_order.workflow}
+    end)
+    |> get_or_create_snapshot()
+    |> Multi.insert(:new_run, fn %{
+                                   run: run,
+                                   step: step,
+                                   steps: steps,
+                                   snapshot: snapshot,
+                                   input_dataclip_id: dataclip_id
+                                 } ->
+      new_retry_run(
+        snapshot,
+        run.work_order,
+        dataclip_id,
+        step.job,
+        steps,
+        creating_user
+      )
+    end)
     |> Multi.update_all(
       :workorder,
-      fn %{run: run} ->
+      fn %{new_run: run} ->
         update_workorder_query(run)
       end,
       [],
       returning: true
     )
-    |> Multi.one(
-      :workflow,
-      from(w in Workflow, where: w.id == ^workorder.workflow_id)
-    )
     |> Runs.enqueue()
     |> case do
-      {:ok, %{run: run, workflow: workflow}} ->
+      {:ok, %{new_run: run, workorder: {1, [workorder]}, workflow: workflow}} ->
         Events.work_order_updated(workflow.project_id, workorder)
         Events.run_created(workflow.project_id, run)
-
         {:ok, run}
 
       {:error, _name, changeset, _changes} ->
@@ -385,21 +369,44 @@ defmodule Lightning.WorkOrders do
     end
   end
 
-  defp do_retry(_workorder, _wiped_dataclip, _starting_job, _steps, _user) do
-    %Run{}
-    |> Ecto.Changeset.change()
-    |> Ecto.Changeset.add_error(
-      :input_dataclip_id,
-      "cannot retry run using a wiped dataclip"
-    )
-    |> Ecto.Changeset.apply_action(:insert)
+  defp get_workflow_steps_from(_repo, %{
+         run: %Run{
+           steps: run_steps,
+           work_order: %{workflow: %Workflow{edges: edges}}
+         },
+         step: %Step{
+           job_id: step_job_id
+         }
+       }) do
+    edges
+    |> Enum.reduce(Graph.new(), fn edge, graph ->
+      graph
+      |> Graph.add_edge(
+        edge.source_trigger_id || edge.source_job_id,
+        edge.target_job_id
+      )
+    end)
+    |> Graph.prune(step_job_id)
+    |> Graph.nodes()
+    |> then(fn nodes ->
+      Enum.filter(run_steps, fn step ->
+        step.job_id in nodes
+      end)
+    end)
+    |> then(&{:ok, &1})
   end
+
+  defp get_workflow_steps_from(_repo, _changes), do: {:ok, []}
 
   @spec retry_many(
           [WorkOrder.t(), ...],
           job_id :: Ecto.UUID.t(),
           [work_order_option(), ...]
-        ) :: {:ok, count :: integer()}
+        ) ::
+          {:ok, enqueued_count :: non_neg_integer(),
+           discarded_count :: non_neg_integer()}
+          | UsageLimiting.error()
+          | {:error, :enqueue_error}
   def retry_many([%WorkOrder{} | _rest] = workorders, job_id, opts) do
     orders_ids = Enum.map(workorders, & &1.id)
 
@@ -434,70 +441,48 @@ defmodule Lightning.WorkOrders do
   @spec retry_many(
           [WorkOrder.t(), ...] | [RunStep.t(), ...],
           [work_order_option(), ...]
-        ) :: {:ok, count :: integer()} | UsageLimiting.error()
+        ) ::
+          {:ok, enqueued_count :: non_neg_integer(),
+           discarded_count :: non_neg_integer()}
+          | UsageLimiting.error()
+          | {:error, :enqueue_error}
   def retry_many([%WorkOrder{} | _rest] = workorders, opts) do
-    attrs = Map.new(opts)
-    orders_ids = Enum.map(workorders, & &1.id)
-
-    run_numbers_query =
-      from(att in Run,
-        where: att.work_order_id in ^orders_ids,
-        select: %{
-          id: att.id,
-          row_num:
-            row_number()
-            |> over(
-              partition_by: att.work_order_id,
-              order_by: coalesce(att.started_at, att.inserted_at)
-            )
-        }
-      )
-
-    first_runs_query =
-      from(att in Run,
-        join: attn in subquery(run_numbers_query),
-        on: att.id == attn.id,
-        join: wo in assoc(att, :work_order),
-        where: attn.row_num == 1,
-        order_by: [asc: wo.inserted_at],
-        preload: [
-          :dataclip,
-          :starting_job,
-          work_order: wo,
-          starting_trigger: [edges: :target_job]
-        ]
-      )
-
-    runs = Repo.all(first_runs_query)
+    {retriable_workorders, non_retriable_workorders} =
+      workorders |> Enum.map(& &1.id) |> fetch_and_split_workorders()
 
     with project_id <- Keyword.fetch!(opts, :project_id),
          :ok <-
            UsageLimiter.limit_action(
-             %Action{type: :new_run, amount: length(runs)},
+             %Action{type: :new_run, amount: length(retriable_workorders)},
              %Context{
                project_id: project_id
              }
            ) do
-      results =
-        Enum.map(runs, fn run ->
-          starting_job =
-            if job = run.starting_job do
-              job
-            else
-              [edge] = run.starting_trigger.edges
-              edge.target_job
-            end
+      creating_user = Keyword.fetch!(opts, :created_by)
 
-          do_retry(
-            run.work_order,
-            run.dataclip,
-            starting_job,
-            [],
-            attrs[:created_by]
-          )
-        end)
+      retriable_workorders
+      |> Enum.chunk_every(@retry_many_chunk_size)
+      |> Enum.map(fn chunk ->
+        workorder_ids = Enum.map(chunk, & &1.id)
 
-      {:ok, Enum.count(results, fn result -> match?({:ok, _}, result) end)}
+        RetryManyWorkOrdersJob.new(%{
+          workorders_ids: workorder_ids,
+          created_by: creating_user.id
+        })
+      end)
+      |> then(fn jobs ->
+        Oban.insert_all(Lightning.Oban, jobs)
+      end)
+      |> case do
+        inserted_list when is_list(inserted_list) ->
+          enqueued_count = length(retriable_workorders)
+          discarded_count = length(non_retriable_workorders)
+
+          {:ok, enqueued_count, discarded_count}
+
+        _error ->
+          {:error, :enqueue_error}
+      end
     end
   end
 
@@ -516,12 +501,64 @@ defmodule Lightning.WorkOrders do
           retry(run_step.run_id, run_step.step_id, opts)
         end)
 
-      {:ok, Enum.count(results, fn result -> match?({:ok, _}, result) end)}
+      {:ok, Enum.count(results, fn result -> match?({:ok, _}, result) end), 0}
     end
   end
 
   def retry_many([], _opts) do
-    {:ok, 0}
+    {:ok, 0, 0}
+  end
+
+  @doc """
+  Enqueue multiple runs for retry in the same transaction.
+  """
+  def enqueue_many_for_retry(workorders_ids, creating_user_id) do
+    workorders = workorders_with_first_runs(workorders_ids)
+    creating_user = Repo.get!(User, creating_user_id)
+
+    workorders
+    |> Enum.with_index()
+    |> Enum.reduce(Multi.new(), fn {workorder, index}, multi ->
+      %{workflow: workflow, dataclip_id: dataclip_id} = workorder
+
+      run_op = "run-#{index}"
+      snapshot_op = "snapshot-#{workflow.id}"
+
+      multi
+      |> get_or_create_snapshot(workflow, snapshot_op)
+      |> Multi.insert(run_op, fn %{^snapshot_op => snapshot} ->
+        starting_job = determine_starting_job(workorder)
+
+        new_retry_run(
+          snapshot,
+          workorder,
+          dataclip_id,
+          starting_job,
+          [],
+          creating_user
+        )
+      end)
+      |> Multi.update_all(
+        "workorder-#{index}",
+        fn %{^run_op => run} ->
+          update_workorder_query(run)
+        end,
+        [],
+        returning: true
+      )
+    end)
+    |> Multi.put(
+      :workflow_runs_count,
+      Enum.frequencies_by(workorders, & &1.workflow_id)
+    )
+    |> Runs.enqueue_many()
+    |> case do
+      {:ok, changes} ->
+        {:ok, publish_events_for_retry_many(changes)}
+
+      {:error, _name, changeset, _changes} ->
+        {:error, changeset}
+    end
   end
 
   @doc """
@@ -562,7 +599,26 @@ defmodule Lightning.WorkOrders do
     |> Repo.one()
   end
 
-  defdelegate subscribe(project_id), to: Events
+  defp new_retry_run(
+         snapshot,
+         workorder,
+         dataclip_id,
+         starting_job,
+         steps,
+         creating_user
+       ) do
+    Run.new(%{priority: :immediate, dataclip_id: dataclip_id})
+    |> put_assoc(:snapshot, snapshot)
+    |> put_assoc(:work_order, workorder)
+    |> put_assoc(:starting_job, starting_job)
+    |> put_assoc(:steps, steps)
+    |> put_assoc(:created_by, creating_user)
+    |> Run.add_options(workorder.workflow.project_id)
+    |> validate_required_assoc(:snapshot)
+    |> validate_required_assoc(:work_order)
+    |> validate_required_assoc(:created_by)
+    |> validate_required(:dataclip_id)
+  end
 
   defp update_workorder_query(run) do
     state_query = Query.state_for(run)
@@ -574,5 +630,79 @@ defmodule Lightning.WorkOrders do
       select: wo,
       update: [set: [state: s.state, last_activity: ^DateTime.utc_now()]]
     )
+  end
+
+  defp publish_events_for_retry_many(changes) do
+    runs = get_from_changes("run", changes)
+
+    "workorder"
+    |> get_from_changes(changes)
+    |> Enum.each(fn {1, [workorder]} ->
+      project_id =
+        Enum.find_value(runs, fn run ->
+          if run.work_order_id == workorder.id,
+            do: run.work_order.workflow.project_id
+        end)
+
+      Events.work_order_updated(project_id, workorder)
+    end)
+
+    Enum.each(runs, &Events.run_created(&1.work_order.workflow.project_id, &1))
+
+    runs
+  end
+
+  defp get_from_changes(key_prefix, changes) do
+    changes
+    |> Enum.reduce([], fn {k, v}, acc ->
+      if String.starts_with?(to_string(k), key_prefix),
+        do: [v | acc],
+        else: acc
+    end)
+  end
+
+  defp determine_starting_job(%{runs: []} = workorder) do
+    hd(workorder.trigger.edges).target_job
+  end
+
+  defp determine_starting_job(%{runs: [run]} = workorder) do
+    run.starting_job || hd(workorder.trigger.edges).target_job
+  end
+
+  defp fetch_and_split_workorders(workorder_ids) do
+    workorder_ids
+    |> workorders_with_dataclips_query()
+    |> Repo.all()
+    |> Enum.split_with(&retriable?/1)
+  end
+
+  defp workorders_with_dataclips_query(workorder_ids) do
+    from(w in WorkOrder,
+      left_join: d in assoc(w, :dataclip),
+      where: w.id in ^workorder_ids,
+      preload: [
+        :workflow,
+        :dataclip,
+        trigger: [edges: :target_job]
+      ]
+    )
+  end
+
+  defp workorders_with_first_runs(workorder_ids) do
+    workorder_ids
+    |> workorders_with_dataclips_query()
+    |> preload(runs: ^first_run_query())
+    |> Repo.all()
+  end
+
+  defp first_run_query do
+    from r in Run,
+      order_by: [asc: coalesce(r.started_at, r.inserted_at)],
+      preload: [:starting_job, starting_trigger: [edges: :target_job]],
+      limit: 1
+  end
+
+  defp retriable?(workorder) do
+    workorder.dataclip != nil and is_nil(workorder.dataclip.wiped_at)
   end
 end

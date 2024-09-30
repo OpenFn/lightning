@@ -12,6 +12,11 @@ defmodule Lightning.Services.RunQueue do
   end
 
   @impl true
+  def enqueue_many(run) do
+    adapter().enqueue_many(run)
+  end
+
+  @impl true
   def claim(demand) do
     adapter().claim(demand)
   end

@@ -8,6 +8,11 @@ defmodule Lightning.Extensions.RunQueue do
               | {:error, Ecto.Multi.name(), any(),
                  %{required(Ecto.Multi.name()) => any()}}
 
+  @callback enqueue_many(runs :: Ecto.Multi.t()) ::
+              {:ok, %{required(Ecto.Multi.name()) => any()}}
+              | {:error, Ecto.Multi.name(), any(),
+                 %{required(Ecto.Multi.name()) => any()}}
+
   @callback claim(demand :: non_neg_integer()) ::
               {:ok, [Lightning.Run.t()]}
 
