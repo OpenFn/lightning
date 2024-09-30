@@ -774,7 +774,7 @@ defmodule Lightning.AccountsTest do
     end
   end
 
-  describe "deliver_update_email_instructions/3" do
+  describe "request_email_update/2" do
     setup do
       %{user: insert(:user)}
     end
@@ -782,14 +782,9 @@ defmodule Lightning.AccountsTest do
     test "sends token through notification", %{user: user} do
       new_email = "current@example.com"
 
-      token =
-        extract_user_token(fn url ->
-          Accounts.deliver_update_email_instructions(
-            user,
-            new_email,
-            url
-          )
-        end)
+      {:ok, instructions_email} = Accounts.request_email_update(user, new_email)
+
+      token = extract_token_from_email(instructions_email)
 
       {:ok, token} = Base.url_decode64(token, padding: false)
 
@@ -820,17 +815,11 @@ defmodule Lightning.AccountsTest do
   describe "update_user_email/2" do
     setup do
       user = insert(:user)
-      # email = "current@example.com"
       email = unique_user_email()
 
-      token =
-        extract_user_token(fn url ->
-          Accounts.deliver_update_email_instructions(
-            user,
-            email,
-            url
-          )
-        end)
+      {:ok, instructions_email} = Accounts.request_email_update(user, email)
+
+      token = extract_token_from_email(instructions_email)
 
       %{user: user, token: token, email: email}
     end

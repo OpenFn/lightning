@@ -80,6 +80,7 @@
           field={f[:email]}
           label="New email address"
           required="true"
+          phx-debounce="blur"
         />
       </div>
       <div class="space-y-4">
@@ -88,6 +89,7 @@
           field={f[:current_password]}
           label="Enter password to confirm"
           required="true"
+          phx-debounce="blur"
         />
       </div>
     </div>

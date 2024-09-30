@@ -494,39 +494,53 @@ defmodule Lightning.Accounts do
 
   ## Examples
 
-      iex> deliver_update_email_instructions(user, new_email, &Routes.user_update_email_url(conn, :edit, &1))
-      {:ok, %{to: ..., body: ...}}
+      iex> request_email_update(user, new_email)
+      :ok
 
   """
-  def deliver_update_email_instructions(
-        %User{} = user,
-        new_email,
-        update_email_url_fun
-      )
-      when is_function(update_email_url_fun, 1) do
+  def request_email_update(%User{} = user, new_email) do
     {encoded_token, user_token} =
       UserToken.build_email_token(user, "change:#{user.email}", new_email)
 
-    Repo.insert!(user_token)
-
-    UserNotifier.deliver_update_email_warning(
-      user,
-      new_email
-    )
-
-    UserNotifier.deliver_update_email_instructions(
-      %User{
-        email: new_email,
-        first_name: user.first_name,
-        last_name: user.last_name
-      },
-      update_email_url_fun.(encoded_token)
-    )
+    with {:ok, _user_token} <- Repo.insert(user_token),
+         {:ok, _warning_email} <-
+           UserNotifier.deliver_update_email_warning(user, new_email),
+         {:ok, instructions_email} <-
+           UserNotifier.deliver_update_email_instructions(
+             %{user | email: new_email},
+             encoded_token
+           ) do
+      {:ok, instructions_email}
+    else
+      {:error, reason} -> {:error, reason}
+    end
   end
 
-  def validate_change_user_email(user, params \\ %{}, opts \\ []) do
-    validate_password? = Keyword.get(opts, :validate_password, false)
+  @doc """
+  Validates the changes for updating a user's email address.
 
+  This function ensures that:
+  - The `email` and `current_password` fields are present.
+  - The new email is in a valid format.
+  - The new email is different from the current one.
+  - The provided `current_password` matches the user's password.
+
+  ## Parameters
+
+  - `user`: The `%User{}` struct representing the current user.
+  - `params`: A map of parameters containing the new email and current password.
+
+  ## Returns
+
+  An `Ecto.Changeset` containing any validation errors.
+
+  ## Examples
+
+      iex> validate_change_user_email(user, %{"email" => "new@example.com", "current_password" => "secret"})
+      %Ecto.Changeset{...}
+
+  """
+  def validate_change_user_email(user, params \\ %{}) do
     data = %{email: nil, current_password: nil}
     types = %{email: :string, current_password: :string}
 
@@ -535,16 +549,20 @@ defmodule Lightning.Accounts do
     |> Changeset.validate_required([:email, :current_password])
     |> User.validate_email()
     |> validate_email_changed(user)
-    |> maybe_validate_current_password(user, validate_password?)
+    |> validate_current_password(user)
   end
 
   defp validate_email_changed(changeset, user) do
     Changeset.validate_change(changeset, :email, fn :email, email ->
-      if user.email == email, do: [email: "has not changed"], else: []
+      if user.email == email do
+        [email: "has not changed"]
+      else
+        []
+      end
     end)
   end
 
-  defp maybe_validate_current_password(changeset, user, true) do
+  defp validate_current_password(changeset, user) do
     Changeset.validate_change(changeset, :current_password, fn :current_password,
                                                                password ->
       if Bcrypt.verify_pass(password, user.hashed_password) do
@@ -554,8 +572,6 @@ defmodule Lightning.Accounts do
       end
     end)
   end
-
-  defp maybe_validate_current_password(changeset, _user, false), do: changeset
 
   @doc """
   Deletes a user.

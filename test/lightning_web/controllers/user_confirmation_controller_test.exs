@@ -172,14 +172,13 @@ defmodule LightningWeb.UserConfirmationControllerTest do
     setup %{user: user} do
       email = unique_user_email()
 
-      token =
-        extract_user_token(fn url ->
-          Accounts.deliver_update_email_instructions(
-            user,
-            "#{email}",
-            url
-          )
-        end)
+      {:ok, instructions_email} =
+        Accounts.request_email_update(
+          user,
+          "#{email}"
+        )
+
+      token = extract_token_from_email(instructions_email)
 
       %{token: token, email: email}
     end

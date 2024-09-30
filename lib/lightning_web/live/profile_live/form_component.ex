@@ -2,6 +2,7 @@ defmodule LightningWeb.ProfileLive.FormComponent do
   @moduledoc """
   Form component update profile email and password
   """
+  require Logger
   use LightningWeb, :live_component
 
   alias Lightning.Accounts
@@ -21,26 +22,33 @@ defmodule LightningWeb.ProfileLive.FormComponent do
 
   @impl true
   def handle_event("change_email", %{"user" => user_params}, socket) do
-    socket.assigns.user
-    |> Accounts.validate_change_user_email(user_params, validate_password: true)
-    |> Ecto.Changeset.apply_action(:validate)
-    |> case do
-      {:ok, _} ->
-        Accounts.deliver_update_email_instructions(
-          socket.assigns.user,
-          user_params["email"],
-          &Routes.user_confirmation_url(socket, :confirm_email, &1)
-        )
+    %{user: user} = socket.assigns
+
+    changeset = Accounts.validate_change_user_email(user, user_params)
+
+    with {:ok, _data} <-
+           Ecto.Changeset.apply_action(changeset, :validate),
+         {:ok, _email} <-
+           Accounts.request_email_update(user, user_params["email"]) do
+      {:noreply,
+       put_flash(
+         socket,
+         :info,
+         "You will receive an email with instructions shortly."
+       )}
+    else
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, assign(socket, email_changeset: changeset)}
+
+      {:error, reason} ->
+        Logger.error("Failed to request email update #{inspect(reason)}")
 
         {:noreply,
-         socket
-         |> put_flash(
-           :info,
-           "You will receive an email with instructions shortly."
+         put_flash(
+           socket,
+           :error,
+           "Failed to request email update"
          )}
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, :email_changeset, changeset)}
     end
   end
 
