@@ -24,6 +24,9 @@ and this project adheres to
 
 ### Changed
 
+- Use timestamps sent from worker when starting and completing runs
+  [#2434](https://github.com/OpenFn/lightning/issues/2434)
+
 ### Fixed
 
 - Fixes filters to properly handle the "rejected" status for work orders.
