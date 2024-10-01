@@ -815,7 +815,9 @@ defmodule Lightning.RunsTest do
         insert(:run,
           work_order: work_order,
           starting_trigger: trigger,
-          dataclip: dataclip
+          dataclip: dataclip,
+          state: :started,
+          claimed_at: DateTime.utc_now() |> DateTime.add(-3600)
         )
 
       finished_step =
