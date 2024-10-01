@@ -148,7 +148,7 @@ defmodule Lightning.Accounts.User do
     |> put_change(:role, :superuser)
   end
 
-  defp validate_email(changeset) do
+  def validate_email(changeset) do
     changeset
     |> validate_required(:email, message: "can't be blank")
     |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/,
@@ -188,7 +188,6 @@ defmodule Lightning.Accounts.User do
 
     if hash_password? && password && changeset.valid? do
       changeset
-      # If using Bcrypt, then further validate it is at most 72 bytes long
       |> validate_length(:password, min: 8, max: 72, count: :bytes)
       |> put_change(:hashed_password, Bcrypt.hash_pwd_salt(password))
       |> delete_change(:password)

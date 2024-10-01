@@ -16,6 +16,7 @@ defmodule Lightning.AccountsTest do
 
   import Lightning.AccountsFixtures
   import Lightning.Factories
+  import Swoosh.TestAssertions
 
   test "confirmation_required?/1 returns false for users who are already confirmed" do
     user = insert(:user, confirmed_at: DateTime.utc_now())
@@ -773,20 +774,17 @@ defmodule Lightning.AccountsTest do
     end
   end
 
-  describe "deliver_update_email_instructions/3" do
+  describe "request_email_update/2" do
     setup do
       %{user: insert(:user)}
     end
 
     test "sends token through notification", %{user: user} do
-      token =
-        extract_user_token(fn url ->
-          Accounts.deliver_update_email_instructions(
-            user,
-            "current@example.com",
-            url
-          )
-        end)
+      new_email = "current@example.com"
+
+      {:ok, instructions_email} = Accounts.request_email_update(user, new_email)
+
+      token = extract_token_from_email(instructions_email)
 
       {:ok, token} = Base.url_decode64(token, padding: false)
 
@@ -794,25 +792,34 @@ defmodule Lightning.AccountsTest do
                Repo.get_by(UserToken, token: :crypto.hash(:sha256, token))
 
       assert user_token.user_id == user.id
-      assert user_token.sent_to == "current@example.com"
+      assert user_token.sent_to == new_email
       assert user_token.context == "change:#{user.email}"
+
+      assert_email_sent(
+        subject: "Your OpenFn email was changed",
+        to: Swoosh.Email.Recipient.format(user)
+      )
+
+      assert_email_sent(
+        subject: "Please confirm your new email",
+        to:
+          Swoosh.Email.Recipient.format(%User{
+            email: new_email,
+            first_name: user.first_name,
+            last_name: user.last_name
+          })
+      )
     end
   end
 
   describe "update_user_email/2" do
     setup do
       user = insert(:user)
-      # email = "current@example.com"
       email = unique_user_email()
 
-      token =
-        extract_user_token(fn url ->
-          Accounts.deliver_update_email_instructions(
-            user,
-            email,
-            url
-          )
-        end)
+      {:ok, instructions_email} = Accounts.request_email_update(user, email)
+
+      token = extract_token_from_email(instructions_email)
 
       %{user: user, token: token, email: email}
     end

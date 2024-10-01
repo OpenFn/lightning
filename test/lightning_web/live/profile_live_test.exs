@@ -148,8 +148,13 @@ defmodule LightningWeb.ProfileLiveTest do
         live(conn, Routes.profile_edit_path(conn, :edit))
 
       assert profile_live
-             |> form("#email-form", user: %{current_password: "invalid"})
-             |> render_change() =~ "Your passwords do not match."
+             |> form("#email-form",
+               user: %{
+                 email: "new_email_123@openfn.org",
+                 current_password: "invalid"
+               }
+             )
+             |> render_submit() =~ "Your passwords do not match."
     end
 
     test "validate email", %{conn: conn, user: user} do

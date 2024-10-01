@@ -41,4 +41,18 @@ defmodule Lightning.AccountsFixtures do
     [_, token | _] = String.split(captured_email.text_body, "[TOKEN]")
     token
   end
+
+  def extract_token_from_email(email) do
+    # Define a regex pattern to match any URL ending with '/:token'
+    regex = ~r{https?://[^\s]+/([\w-]+)(?:\s|$)}
+
+    case Regex.scan(regex, email.text_body) do
+      matches when is_list(matches) and length(matches) > 0 ->
+        tokens = Enum.map(matches, fn [_, token] -> token end)
+        List.last(tokens)
+
+      _ ->
+        nil
+    end
+  end
 end

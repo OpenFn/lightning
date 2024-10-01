@@ -26,6 +26,10 @@ and this project adheres to
 
 ### Fixed
 
+- User email change: Add debounce on blur to input forms to avoid validation after every keystroke
+  [#2365](https://github.com/OpenFn/lightning/issues/2365)
+- User email change: Send notification of change to the old email address and
+  confirmation to the new email address [#2365](https://github.com/OpenFn/lightning/issues/2365)
 - Fixes filters to properly handle the "rejected" status for work orders.
   [#2391](https://github.com/OpenFn/lightning/issues/2391)
 - Fix item selection (project / billing account) in the context switcher

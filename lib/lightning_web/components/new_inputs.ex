@@ -235,7 +235,7 @@ defmodule LightningWeb.Components.NewInputs do
           :if={Map.get(@rest, :required, false)}
           class="text-red-500"
         > *</span>
-        <.tooltip_for_label :if={@tooltip} id={@id} tooltip={@tooltip} />
+        <.tooltip_for_label :if={@tooltip} id={"#{@id}-tooltip"} tooltip={@tooltip} />
       </.label>
       <div class="flex w-full">
         <div class="relative items-center">

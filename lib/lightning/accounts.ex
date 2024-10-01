@@ -2,12 +2,14 @@ defmodule Lightning.Accounts do
   @moduledoc """
   The Accounts context.
   """
+
   use Oban.Worker,
     queue: :background,
     max_attempts: 1
 
   import Ecto.Query, warn: false
 
+  alias Ecto.Changeset
   alias Ecto.Multi
   alias Lightning.Accounts.Events
   alias Lightning.Accounts.User
@@ -492,57 +494,77 @@ defmodule Lightning.Accounts do
 
   ## Examples
 
-      iex> deliver_update_email_instructions(user, current_email, &Routes.user_update_email_url(conn, :edit, &1))
-      {:ok, %{to: ..., body: ...}}
+      iex> request_email_update(user, new_email)
+      :ok
 
   """
-  def deliver_update_email_instructions(
-        %User{} = user,
-        current_email,
-        update_email_url_fun
-      )
-      when is_function(update_email_url_fun, 1) do
+  def request_email_update(%User{} = user, new_email) do
     {encoded_token, user_token} =
-      UserToken.build_email_token(user, "change:#{user.email}", current_email)
+      UserToken.build_email_token(user, "change:#{user.email}", new_email)
 
-    Repo.insert!(user_token)
-
-    UserNotifier.deliver_update_email_warning(
-      user,
-      current_email
-    )
-
-    UserNotifier.deliver_update_email_instructions(
-      user,
-      update_email_url_fun.(encoded_token)
-    )
+    with {:ok, _user_token} <- Repo.insert(user_token),
+         {:ok, _warning_email} <-
+           UserNotifier.deliver_update_email_warning(user, new_email),
+         {:ok, instructions_email} <-
+           UserNotifier.deliver_update_email_instructions(
+             %{user | email: new_email},
+             encoded_token
+           ) do
+      {:ok, instructions_email}
+    else
+      {:error, reason} -> {:error, reason}
+    end
   end
 
+  @doc """
+  Validates the changes for updating a user's email address.
+
+  This function ensures that:
+  - The `email` and `current_password` fields are present.
+  - The new email is in a valid format.
+  - The new email is different from the current one.
+  - The provided `current_password` matches the user's password.
+
+  ## Parameters
+
+  - `user`: The `%User{}` struct representing the current user.
+  - `params`: A map of parameters containing the new email and current password.
+
+  ## Returns
+
+  An `Ecto.Changeset` containing any validation errors.
+
+  ## Examples
+
+      iex> validate_change_user_email(user, %{"email" => "new@example.com", "current_password" => "secret"})
+      %Ecto.Changeset{...}
+
+  """
   def validate_change_user_email(user, params \\ %{}) do
     data = %{email: nil, current_password: nil}
     types = %{email: :string, current_password: :string}
 
     {data, types}
-    |> Ecto.Changeset.cast(params, Map.keys(types))
-    |> Ecto.Changeset.validate_required([:email, :current_password])
-    |> Ecto.Changeset.validate_format(:email, ~r/^[^\s]+@[^\s]+$/,
-      message: "must have the @ sign and no spaces"
-    )
-    |> Ecto.Changeset.validate_length(:email, max: 160)
-    |> Ecto.Changeset.validate_change(:email, fn :email, email ->
-      cond do
-        user.email == email ->
-          [email: "has not changed"]
+    |> Changeset.cast(params, Map.keys(types))
+    |> Changeset.validate_required([:email, :current_password])
+    |> User.validate_email()
+    |> validate_email_changed(user)
+    |> validate_current_password(user)
+  end
 
-        Lightning.Repo.exists?(User |> where(email: ^email)) ->
-          [email: "has already been taken"]
-
-        true ->
-          []
+  defp validate_email_changed(changeset, user) do
+    Changeset.validate_change(changeset, :email, fn :email, email ->
+      if user.email == email do
+        [email: "has not changed"]
+      else
+        []
       end
     end)
-    |> Ecto.Changeset.validate_change(:current_password, fn :current_password,
-                                                            password ->
+  end
+
+  defp validate_current_password(changeset, user) do
+    Changeset.validate_change(changeset, :current_password, fn :current_password,
+                                                               password ->
       if Bcrypt.verify_pass(password, user.hashed_password) do
         []
       else

@@ -240,7 +240,7 @@ defmodule Lightning.Accounts.UserNotifier do
   @doc """
   Deliver instructions to update a user.
   """
-  def deliver_update_email_instructions(user, url) do
+  def deliver_update_email_instructions(user, token) do
     deliver(user, "Please confirm your new email", """
     Hi #{user.first_name},
 
@@ -248,7 +248,7 @@ defmodule Lightning.Accounts.UserNotifier do
 
     To proceed, please visit the URL below:
 
-    #{url}
+    #{url(~p"/profile/confirm_email/#{token}")}
 
     If you didn't request this change, please ignore this.
 
