@@ -7,6 +7,7 @@ defmodule Lightning.KafkaTriggersTest do
 
   require Lightning.Run
 
+  alias Lightning.AccountsFixtures
   alias Lightning.KafkaTriggers
   alias Lightning.KafkaTriggers.PipelineSupervisor
   alias Lightning.Workflows.Trigger
@@ -772,6 +773,66 @@ defmodule Lightning.KafkaTriggersTest do
       policy = KafkaTriggers.initial_policy(trigger.kafka_configuration)
 
       assert policy == :latest
+    end
+  end
+
+  describe ".notify_users_of_trigger_failure/1" do
+    setup do
+      super_user_1 = AccountsFixtures.superuser_fixture()
+      super_user_2 = AccountsFixtures.superuser_fixture()
+
+      user = AccountsFixtures.user_fixture()
+
+      project = 
+        insert(
+          :project,
+          users: [
+            build(:project_user, user: super_user_1),
+            build(:project_user, user: user),
+            build(:project_user, user: super_user_2),
+          ]
+        )
+      workflow = insert(:workflow, project: project)
+
+      kafka_configuration = build(:triggers_kafka_cnfiguration)
+
+      trigger =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: kafka_configuration,
+          workflow: workflow
+        )
+
+      %{
+        proejct_id: project.id,
+        trigger_id: trigger.id,
+        super_user_1: super_user_1,
+        super_user_2: super_user_2,
+        user: user,
+      }
+    end
+
+    test "sends an email to all associated superusers" do
+      assert_email_sent(
+        subject: "Kafka Trigger Failure",
+        to: 
+      )
+
+    end
+
+    defp build_superuser(domain) do
+      build(
+        :project_user,
+        user: build(:user, email: "super@#{domain}", role: :superuser)
+      )
+    end
+
+    defp build_user(domain) do
+      build(
+        :project_user,
+        user: build(:user, email: "notsosuper@#{domain}", role: :user)
+      )
     end
   end
 

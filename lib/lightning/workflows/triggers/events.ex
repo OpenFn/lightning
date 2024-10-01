@@ -7,6 +7,11 @@ defmodule Lightning.Workflows.Triggers.Events do
     defstruct trigger_id: nil
   end
 
+  defmodule KafkaTriggerNotificationSent do
+    @moduledoc false
+    defstruct trigger_id: nil, sent_at: nil
+  end
+
   def kafka_trigger_updated(trigger_id) do
     Lightning.broadcast(
       kafka_trigger_updated_topic(),
@@ -19,4 +24,10 @@ defmodule Lightning.Workflows.Triggers.Events do
   end
 
   def kafka_trigger_updated_topic, do: "kafka_trigger_updated"
+
+  def subscribe_to_kafka_trigger_failed do
+    Lightning.subscribe(kafka_trigger_failed_topic())
+  end
+
+  def kafka_trigger_failed_topic, do: "kafka_trigger_notification_sent"
 end

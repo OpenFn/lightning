@@ -14,6 +14,8 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
   alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
   alias Lightning.KafkaTriggers.Pipeline
   alias Lightning.Repo
+  alias Lightning.Workflows.Triggers.Events
+  alias Lightning.Workflows.Triggers.Events.KafkaTriggerNotificationSent
   alias Lightning.WorkOrder
 
   describe ".start_link/1" do
@@ -393,7 +395,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       ]
 
       %{
-        context: %{trigger_id: "my_trigger_id"},
+        context: %{trigger_id: :my_trigger_id},
         messages: messages
       }
     end
@@ -440,6 +442,29 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       end
     end
 
+    test "notifies the project admin of a persistence failure", %{
+      context: context,
+      messages: [message_1, message_2]
+    } do
+      trigger_id = context.trigger_id |> Atom.to_string()
+
+      persistence_failure_message =
+        build_broadway_message(offset: 3)
+        |> Broadway.Message.failed(:persistence)
+
+      messages = [
+        message_1,
+        persistence_failure_message,
+        message_2
+      ]
+
+      Events.subscribe_to_kafka_trigger_failed()
+
+      Pipeline.handle_failed(messages, context)
+
+      assert_receive %KafkaTriggerNotificationSent{trigger_id: ^trigger_id}
+    end
+
     defp expected_duplicate_log_message(message, context) do
       "Kafka Pipeline Duplicate Message:" <>
         " Trigger_id `#{context.trigger_id}`" <>
@@ -471,6 +496,45 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
         trigger_id: context.trigger_id,
         type: type
       }
+    end
+  end
+
+  describe "maybe_notify_users/2" do
+    setup do
+      Events.subscribe_to_kafka_trigger_failed()
+
+      %{
+        trigger_id: "my-trigger-id"
+      }
+    end
+    test "notifies users if there is a message with a persistence failure", %{
+      trigger_id: trigger_id
+    } do
+      messages = [
+        build_broadway_message() |> Broadway.Message.failed(:other),
+        build_broadway_message() |> Broadway.Message.failed(:persistence),
+        build_broadway_message() |> Broadway.Message.failed(:other),
+      ]
+
+      Pipeline.maybe_notify_users(messages, trigger_id)
+
+      assert_receive %KafkaTriggerNotificationSent{trigger_id: ^trigger_id}
+    end
+    
+    test "notifies users if there are multiple persistence failures", %{
+      trigger_id: trigger_id
+    } do
+      messages = [
+        build_broadway_message() |> Broadway.Message.failed(:other),
+        build_broadway_message() |> Broadway.Message.failed(:persistence),
+        build_broadway_message() |> Broadway.Message.failed(:other),
+        build_broadway_message() |> Broadway.Message.failed(:persistence),
+        build_broadway_message() |> Broadway.Message.failed(:other),
+      ]
+
+      Pipeline.maybe_notify_users(messages, trigger_id)
+
+      assert_receive %KafkaTriggerNotificationSent{trigger_id: ^trigger_id}
     end
   end
 

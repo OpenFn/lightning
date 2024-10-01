@@ -3,6 +3,7 @@ defmodule Lightning.Workflows.Triggers.EventsTest do
 
   alias Lightning.Workflows.Triggers.Events
   alias Lightning.Workflows.Triggers.Events.KafkaTriggerUpdated
+  alias Lightning.Workflows.Triggers.Events.KafkaTriggerNotificationSent
 
   test "can subscribe to events relating to a Kafka trigger being updated" do
     trigger_id = "a-b-c-1-2-3"
@@ -25,5 +26,21 @@ defmodule Lightning.Workflows.Triggers.EventsTest do
     Events.kafka_trigger_updated(trigger_id)
 
     assert_receive %KafkaTriggerUpdated{trigger_id: ^trigger_id}
+  end
+
+  test "can subscribe to events relating to Kafka trigger notifications" do
+    trigger_id = "a-b-c-1-2-3"
+    sent_at = System.os_time(:second)
+
+    Events.subscribe_to_kafka_trigger_failed()
+
+    Lightning.broadcast(
+      "kafka_trigger_notification_sent",
+      %KafkaTriggerNotificationSent{trigger_id: trigger_id, sent_at: sent_at}
+    )
+
+    assert_receive(
+      %KafkaTriggerNotificationSent{trigger_id: ^trigger_id, sent_at: ^sent_at}
+    )
   end
 end

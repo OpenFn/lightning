@@ -191,4 +191,8 @@ defmodule Lightning.KafkaTriggers do
 
     %{interval: 10_000, messages_per_interval: messages_per_interval}
   end
+
+  def notify_users_of_trigger_failure(_trigger_id) do
+
+  end
 end
