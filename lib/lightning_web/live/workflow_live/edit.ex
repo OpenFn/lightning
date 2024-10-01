@@ -1428,7 +1428,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       case Helpers.save_workflow(changeset) do
         {:ok, workflow} ->
-          broadcast_workflow_save(socket, workflow.id)
+          maybe_broadcast_workflow_save(socket, workflow.id)
 
           snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
 
@@ -1561,7 +1561,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
          {:ok, workflow} <- save_workflow_or_get_latest(socket),
          {:ok, run} <-
            WorkOrders.retry(run_id, step_id, created_by: current_user) do
-      broadcast_workflow_save(socket, workflow.id)
+      maybe_broadcast_workflow_save(socket, workflow.id)
 
       Runs.subscribe(run)
 
@@ -1643,7 +1643,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
              selected_job: selected_job,
              created_by: current_user
            ) do
-      broadcast_workflow_save(socket, workflow.id)
+      maybe_broadcast_workflow_save(socket, workflow.id)
 
       %{runs: [run]} = workorder
 
@@ -1690,10 +1690,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
   def handle_info({:workflow_saved, workflow_id}, socket) do
     workflow = get_workflow_by_id(workflow_id)
 
-    {:noreply,
-     socket
-     |> assign_workflow(workflow, socket.assigns.snapshot)
-     |> put_flash(:info, "The form was updated by another user.")}
+    socket =
+      if socket.assigns.snapshot_version_tag == "latest" do
+        put_flash(socket, :info, "The form was updated by another user.")
+      else
+        socket
+      end
+
+    {:noreply, assign_workflow(socket, workflow, socket.assigns.snapshot)}
   end
 
   def handle_info({"form_changed", %{"workflow" => params}}, socket) do
@@ -2337,8 +2341,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  defp broadcast_workflow_save(socket, workflow_id) do
-    if socket.assigns.has_presence_edit_priority do
+  defp maybe_broadcast_workflow_save(socket, workflow_id) do
+    %{has_presence_edit_priority: is_prior, presences: presences} =
+      socket.assigns
+
+    if is_prior and length(presences) > 1 do
       Lightning.broadcast_from(
         self(),
         @topic_workflow_saved,
