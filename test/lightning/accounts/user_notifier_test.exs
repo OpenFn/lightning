@@ -434,5 +434,35 @@ defmodule Lightning.Accounts.UserNotifierTest do
         """
       )
     end
+
+    test "Kafka trigger failure" do
+      timestamp = DateTime.utc_now()
+
+      displayed_timestamp =
+        timestamp
+        |> DateTime.truncate(:second)
+        |> DateTime.to_iso8601()
+
+      user = Lightning.AccountsFixtures.user_fixture()
+      workflow = insert(:workflow)
+
+      workflow_url =
+        LightningWeb.Endpoint
+        |> url(~p"/projects/#{workflow.project_id}/w/#{workflow.id}")
+
+      UserNotifier.send_trigger_failure_mail(user, workflow, timestamp)
+
+      assert_email_sent(
+        subject: "Kafka trigger failure on #{workflow.name}",
+        to: Swoosh.Email.Recipient.format(user),
+        text_body: """
+        As of #{displayed_timestamp}, the Kafka trigger associated with the workflow `#{workflow.name}` (#{workflow_url}) has failed to persist at least one message.
+
+        If you have access to the system logs, please look for entries containing 'Kafka Pipeline Error'.
+
+        OpenFn
+        """
+      )
+    end
   end
 end

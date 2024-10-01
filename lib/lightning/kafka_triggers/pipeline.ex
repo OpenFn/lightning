@@ -127,11 +127,15 @@ defmodule Lightning.KafkaTriggers.Pipeline do
 
   @impl true
   def handle_failed(messages, context) do
+    trigger_id = context.trigger_id |> Atom.to_string()
+
     messages
     |> Enum.each(fn message ->
       create_log_entry(message, context)
       notify_sentry(message, context)
     end)
+
+    maybe_notify_users(messages, trigger_id)
 
     messages
   end
@@ -230,6 +234,12 @@ defmodule Lightning.KafkaTriggers.Pipeline do
 
       sasl ->
         [{:sasl, sasl} | base_config]
+    end
+  end
+
+  def maybe_notify_users(messages, trigger_id) do
+    if messages |> Enum.any?(&(&1.status == {:failed, :persistence})) do
+      KafkaTriggers.notify_users_of_trigger_failure(trigger_id)
     end
   end
 end
