@@ -305,7 +305,7 @@ defmodule Lightning.Runs do
     end)
 
     Repo.transaction(fn ->
-      complete_run(run, %{state: :lost, error_type: error_type})
+      {:ok, _run} = complete_run(run, %{state: "lost", error_type: error_type})
 
       Ecto.assoc(run, :steps)
       |> where([r], is_nil(r.exit_reason))
