@@ -63,20 +63,20 @@ defmodule Lightning.KafkaTriggers.Pipeline do
         {:ok, _} ->
           message
 
-          {
-            :error,
-            %{
-              errors: [
-                trigger_id: {
-                  "has already been taken",
-                  [
-                    constraint: :unique,
-                    constraint_name: "trigger_kafka_message_records_pkey"
-                  ]
-                }
-              ]
-            }
-          } ->
+        {
+          :error,
+          %{
+            errors: [
+              trigger_id: {
+                "has already been taken",
+                [
+                  constraint: :unique,
+                  constraint_name: "trigger_kafka_message_records_pkey"
+                ]
+              }
+            ]
+          }
+        } ->
           Broadway.Message.failed(message, :duplicate)
 
         {:error, %Changeset{}} ->
