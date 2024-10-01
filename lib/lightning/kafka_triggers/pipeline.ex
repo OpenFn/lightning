@@ -47,14 +47,31 @@ defmodule Lightning.KafkaTriggers.Pipeline do
     )
   end
 
-  # Dialyzer does not correctly match the types that can be returned by
-  # MessageHandling.persist_message/3. The {:ok, _} match fails.
-  @dialyzer {:no_match, handle_message: 3}
-
   @impl true
   def handle_message(_processor, message, context) do
     trigger_id = context.trigger_id |> Atom.to_string()
 
+    if simulate_failure?(trigger_id) do
+      simulate_failure(trigger_id, message)
+    else
+      process_message(trigger_id, message)
+    end
+  end
+
+  defp simulate_failure?(trigger_id) do
+    :persistent_term.get({:kafka_trigger_test_failure, trigger_id}, nil)
+  end
+
+  defp simulate_failure(trigger_id, message) do
+    :persistent_term.put({:kafka_trigger_test_failure, trigger_id}, false)
+
+    Broadway.Message.failed(message, :persistence)
+  end
+
+  # Dialyzer does not correctly match the types that can be returned by
+  # MessageHandling.persist_message/3. The {:ok, _} match fails.
+  @dialyzer {:no_match, process_message: 2}
+  defp process_message(trigger_id, message) do
     Multi.new()
     |> track_message(trigger_id, message)
     |> MessageHandling.persist_message(trigger_id, message)

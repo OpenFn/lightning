@@ -314,6 +314,77 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
     end
   end
 
+  describe ".handle_message - failure testing enabled" do
+    setup do
+      trigger_1 =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: configuration(index: 1),
+          enabled: true
+        )
+
+      trigger_2 =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: configuration(index: 2, ssl: false),
+          enabled: true
+        )
+
+      context = %{trigger_id: trigger_1.id |> String.to_atom()}
+
+      message = build_broadway_message()
+
+      :persistent_term.put({:kafka_trigger_test_failure, trigger_1.id}, true)
+
+      %{
+        context: context,
+        message: message,
+        trigger_1: trigger_1,
+        trigger_2: trigger_2
+      }
+    end
+
+    test "marks message as as a persistence failure", %{
+      context: context,
+      message: message
+    } do
+      %{status: status} = Pipeline.handle_message(nil, message, context)
+
+      assert {:failed, :persistence} = status
+    end
+
+    test "does not persist a WorkOrder", %{
+      context: context,
+      message: message,
+      trigger_1: trigger
+    } do
+      Pipeline.handle_message(nil, message, context)
+
+      assert WorkOrder |> Repo.get_by(trigger_id: trigger.id) == nil
+    end
+
+    test "does not record the message", %{
+      context: context,
+      message: message
+    } do
+      Pipeline.handle_message(nil, message, context)
+
+      assert Repo.one(TriggerKafkaMessageRecord) == nil
+    end
+
+    test "indicates that the test was completed", %{
+      context: context,
+      message: message,
+      trigger_1: trigger
+    } do
+      Pipeline.handle_message(nil, message, context)
+
+      refute :persistent_term.get({:kafka_trigger_test_failure, trigger.id})
+    end
+  end
+
   describe ".handle_failed/2" do
     setup do
       messages = [
