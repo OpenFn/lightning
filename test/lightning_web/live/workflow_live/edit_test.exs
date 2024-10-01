@@ -10,11 +10,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
   alias Lightning.Helpers
   alias Lightning.Repo
-  alias Lightning.Run
+  # alias Lightning.Run
   alias Lightning.Workflows
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Workflow
-  alias Lightning.WorkOrder
+  # alias Lightning.WorkOrder
   alias LightningWeb.CredentialLiveHelpers
 
   setup :register_and_log_in_user
@@ -1989,223 +1989,165 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     end
   end
 
-  # describe "Allow low priority access users to retry steps and create workorders" do
-  #   setup do
-  #     project = insert(:project)
+  describe "Allow low priority access users to retry steps and create workorders" do
+    setup do
+      project = insert(:project)
 
-  #     high_priority_user =
-  #       insert(:user,
-  #         email: "amy@openfn.org",
-  #         first_name: "Amy",
-  #         last_name: "Ly"
-  #       )
+      high_priority_user =
+        insert(:user,
+          email: "amy@openfn.org",
+          first_name: "Amy",
+          last_name: "Ly"
+        )
 
-  #     low_priority_user =
-  #       insert(:user,
-  #         email: "ana@openfn.org",
-  #         first_name: "Ana",
-  #         last_name: "Ba"
-  #       )
+      low_priority_user =
+        insert(:user,
+          email: "ana@openfn.org",
+          first_name: "Ana",
+          last_name: "Ba"
+        )
 
-  #     insert(:project_user,
-  #       project: project,
-  #       user: high_priority_user,
-  #       role: :admin
-  #     )
+      insert(:project_user,
+        project: project,
+        user: high_priority_user,
+        role: :admin
+      )
 
-  #     insert(:project_user,
-  #       project: project,
-  #       user: low_priority_user,
-  #       role: :admin
-  #     )
+      insert(:project_user,
+        project: project,
+        user: low_priority_user,
+        role: :admin
+      )
 
-  #     workflow = insert(:simple_workflow, project: project)
+      workflow = insert(:simple_workflow, project: project)
 
-  #     {:ok, snapshot} = Snapshot.get_or_create_latest_for(workflow)
+      {:ok, snapshot} = Snapshot.get_or_create_latest_for(workflow)
 
-  #     %{jobs: [job], triggers: [trigger]} = workflow
+      %{jobs: [job], triggers: [trigger]} = workflow
 
-  #     [input_dataclip, output_dataclip] =
-  #       insert_list(2, :dataclip,
-  #         body: %{player: "sadio mane"},
-  #         project: workflow.project
-  #       )
+      [input_dataclip, output_dataclip] =
+        insert_list(2, :dataclip,
+          body: %{player: "sadio mane"},
+          project: workflow.project
+        )
 
-  #     %{runs: [run]} =
-  #       insert(:workorder,
-  #         trigger: trigger,
-  #         dataclip: input_dataclip,
-  #         workflow: workflow,
-  #         snapshot: snapshot,
-  #         state: :success,
-  #         runs: [
-  #           build(:run,
-  #             starting_trigger: trigger,
-  #             dataclip: input_dataclip,
-  #             steps: [
-  #               build(:step,
-  #                 input_dataclip: input_dataclip,
-  #                 output_dataclip: output_dataclip,
-  #                 job: job,
-  #                 inserted_at: Timex.now() |> Timex.shift(seconds: -10),
-  #                 started_at: Timex.now() |> Timex.shift(seconds: -10),
-  #                 snapshot: snapshot
-  #               )
-  #             ],
-  #             inserted_at: Timex.now() |> Timex.shift(seconds: -12),
-  #             snapshot: snapshot,
-  #             state: :success
-  #           )
-  #         ]
-  #       )
+      %{runs: [run]} =
+        insert(:workorder,
+          trigger: trigger,
+          dataclip: input_dataclip,
+          workflow: workflow,
+          snapshot: snapshot,
+          state: :success,
+          runs: [
+            build(:run,
+              starting_trigger: trigger,
+              dataclip: input_dataclip,
+              steps: [
+                build(:step,
+                  input_dataclip: input_dataclip,
+                  output_dataclip: output_dataclip,
+                  job: job,
+                  inserted_at: Timex.now() |> Timex.shift(seconds: -10),
+                  started_at: Timex.now() |> Timex.shift(seconds: -10),
+                  snapshot: snapshot
+                )
+              ],
+              inserted_at: Timex.now() |> Timex.shift(seconds: -12),
+              snapshot: snapshot,
+              state: :success
+            )
+          ]
+        )
 
-  #     %{
-  #       project: project,
-  #       high_priority_user: high_priority_user,
-  #       low_priority_user: low_priority_user,
-  #       workflow: workflow,
-  #       run: run,
-  #       job: job
-  #     }
-  #   end
+      %{
+        project: project,
+        high_priority_user: high_priority_user,
+        low_priority_user: low_priority_user,
+        workflow: workflow,
+        snapshot: snapshot,
+        run: run,
+        job: job
+      }
+    end
 
-  #   test "Users with low priority access to the workflow canvas can still retry steps",
-  #        %{
-  #          conn: conn,
-  #          project: project,
-  #          workflow: workflow,
-  #          run: run,
-  #          job: job,
-  #          high_priority_user: high_priority_user,
-  #          low_priority_user: low_priority_user
-  #        } do
-  #     {_high_priority_view, low_priority_view} =
-  #       access_views(
-  #         conn,
-  #         project,
-  #         workflow,
-  #         run,
-  #         job,
-  #         high_priority_user,
-  #         low_priority_user
-  #       )
+    test "Users with low priority access to the workflow canvas will automatically be locked in a snapshot when the high prior uses saves the workflow",
+         %{
+           conn: conn,
+           project: project,
+           workflow: workflow,
+           snapshot: snapshot,
+           run: run,
+           job: job,
+           high_priority_user: high_priority_user,
+           low_priority_user: low_priority_user
+         } do
+      {high_priority_view, low_priority_view} =
+        access_views(
+          conn,
+          project,
+          workflow,
+          run,
+          job,
+          high_priority_user,
+          low_priority_user
+        )
 
-  #     assert count_runs_for_workflow(workflow.id) == 1
+      assert high_priority_view
+             |> has_element?("#inspector-workflow-version", "latest")
 
-  #     refute low_priority_view |> has_element?("#confirm-retry-step-modal")
+      assert low_priority_view
+             |> has_element?("#inspector-workflow-version", "latest")
 
-  #     low_priority_view |> element("#save-and-run") |> render_click()
+      high_priority_view |> select_node(%{id: job.id})
 
-  #     assert low_priority_view |> has_element?("#confirm-retry-step-modal")
+      high_priority_view |> click_edit(%{id: job.id})
 
-  #     low_priority_view
-  #     |> element("#confirm-retry-step-modal-cancel-button")
-  #     |> render_click()
+      high_priority_view |> change_editor_text("Job expression 1")
 
-  #     refute low_priority_view |> has_element?("#confirm-retry-step-modal")
+      high_priority_view |> form("#workflow-form") |> render_submit()
 
-  #     assert count_runs_for_workflow(workflow.id) == 1
+      assert high_priority_view
+             |> has_element?("#inspector-workflow-version", "latest")
 
-  #     low_priority_view |> element("#save-and-run") |> render_click()
+      refute low_priority_view
+             |> has_element?("#inspector-workflow-version", "latest")
 
-  #     assert low_priority_view |> has_element?("#confirm-retry-step-modal")
+      assert low_priority_view
+             |> has_element?(
+               "#inspector-workflow-version",
+               "#{String.slice(snapshot.id, 0..6)}"
+             )
 
-  #     low_priority_view
-  #     |> element("#confirm-retry-step-modal-confirm-button")
-  #     |> render_click()
+      assert low_priority_view |> render() =~
+               "The form was updated by another user"
 
-  #     assert count_runs_for_workflow(workflow.id) == 2
-  #   end
+      workflow = Repo.reload(workflow)
 
-  #   test "Users with low priority access to the workflow canvas can still create new work orders",
-  #        %{
-  #          conn: conn,
-  #          project: project,
-  #          workflow: workflow,
-  #          run: run,
-  #          job: job,
-  #          high_priority_user: high_priority_user,
-  #          low_priority_user: low_priority_user
-  #        } do
-  #     {_high_priority_view, low_priority_view} =
-  #       access_views(
-  #         conn,
-  #         project,
-  #         workflow,
-  #         run,
-  #         job,
-  #         high_priority_user,
-  #         low_priority_user
-  #       )
+      assert workflow.lock_version == snapshot.lock_version + 1
+    end
+  end
 
-  #     assert count_work_orders_for_workflow(workflow.id) == 1
+  defp access_views(
+         conn,
+         project,
+         workflow,
+         run,
+         job,
+         high_priority_user,
+         low_priority_user
+       ) do
+    {:ok, high_priority_view, _html} =
+      live(
+        log_in_user(conn, high_priority_user),
+        ~p"/projects/#{project}/w/#{workflow}?#{[a: run, s: job, m: "expand"]}"
+      )
 
-  #     refute low_priority_view |> has_element?("#confirm-create-workorder-modal")
+    {:ok, low_priority_view, _html} =
+      live(
+        log_in_user(conn, low_priority_user),
+        ~p"/projects/#{project}/w/#{workflow}?#{[a: run, s: job, m: "expand"]}"
+      )
 
-  #     low_priority_view |> element("#create-new-work-order") |> render_click()
-
-  #     assert low_priority_view |> has_element?("#confirm-create-workorder-modal")
-
-  #     low_priority_view
-  #     |> element("#confirm-create-workorder-modal-cancel-button")
-  #     |> render_click()
-
-  #     refute low_priority_view
-  #            |> has_element?("#confirm-create-workorder-modal")
-
-  #     assert count_work_orders_for_workflow(workflow.id) == 1
-
-  #     low_priority_view |> element("#create-new-work-order") |> render_click()
-
-  #     assert low_priority_view
-  #            |> has_element?("#confirm-create-workorder-modal")
-
-  #     low_priority_view
-  #     |> element("#manual_run_form")
-  #     |> render_submit()
-
-  #     assert count_work_orders_for_workflow(workflow.id) == 2
-  #   end
-  # end
-
-  # defp access_views(
-  #        conn,
-  #        project,
-  #        workflow,
-  #        run,
-  #        job,
-  #        high_priority_user,
-  #        low_priority_user
-  #      ) do
-  #   {:ok, high_priority_view, _html} =
-  #     live(
-  #       log_in_user(conn, high_priority_user),
-  #       ~p"/projects/#{project}/w/#{workflow}?#{[a: run, s: job, m: "expand"]}"
-  #     )
-
-  #   {:ok, low_priority_view, _html} =
-  #     live(
-  #       log_in_user(conn, low_priority_user),
-  #       ~p"/projects/#{project}/w/#{workflow}?#{[a: run, s: job, m: "expand"]}"
-  #     )
-
-  #   {high_priority_view, low_priority_view}
-  # end
-
-  # defp count_runs_for_workflow(workflow_id) do
-  #   from(r in Run,
-  #     join: wo in assoc(r, :work_order),
-  #     where: wo.workflow_id == ^workflow_id,
-  #     select: count(r.id)
-  #   )
-  #   |> Repo.one()
-  # end
-
-  # defp count_work_orders_for_workflow(workflow_id) do
-  #   from(wo in WorkOrder,
-  #     where: wo.workflow_id == ^workflow_id,
-  #     select: count(wo.id)
-  #   )
-  #   |> Repo.one()
-  # end
+    {high_priority_view, low_priority_view}
+  end
 end
