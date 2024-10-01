@@ -2119,7 +2119,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
              )
 
       assert low_priority_view |> render() =~
-               "The form was updated by another user"
+               "This workflow has been updated. You&#39;re no longer on the latest version."
 
       workflow = Repo.reload(workflow)
 

@@ -1695,7 +1695,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
       workflow ->
         updated_socket =
           if socket.assigns.snapshot_version_tag == "latest" do
-            put_flash(socket, :info, "The form was updated by another user.")
+            put_flash(
+              socket,
+              :info,
+              "This workflow has been updated. You're no longer on the latest version."
+            )
           else
             socket
           end
