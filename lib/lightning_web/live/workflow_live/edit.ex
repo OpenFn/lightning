@@ -1688,16 +1688,21 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   @impl true
   def handle_info({:workflow_saved, workflow_id}, socket) do
-    workflow = get_workflow_by_id(workflow_id)
+    case get_workflow_by_id(workflow_id) do
+      nil ->
+        {:noreply, socket}
 
-    socket =
-      if socket.assigns.snapshot_version_tag == "latest" do
-        put_flash(socket, :info, "The form was updated by another user.")
-      else
-        socket
-      end
+      workflow ->
+        updated_socket =
+          if socket.assigns.snapshot_version_tag == "latest" do
+            put_flash(socket, :info, "The form was updated by another user.")
+          else
+            socket
+          end
 
-    {:noreply, assign_workflow(socket, workflow, socket.assigns.snapshot)}
+        {:noreply,
+         assign_workflow(updated_socket, workflow, socket.assigns.snapshot)}
+    end
   end
 
   def handle_info({"form_changed", %{"workflow" => params}}, socket) do
