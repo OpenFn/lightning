@@ -20,6 +20,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Lightning.Runs.Events.StepCompleted
   alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows
+  alias Lightning.Workflows.Events.WorkflowUpdated
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Presence
   alias Lightning.Workflows.Snapshot
@@ -32,8 +33,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Phoenix.LiveView.JS
 
   require Lightning.Run
-
-  @topic_workflow_saved "workflow-saved"
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
@@ -1066,7 +1065,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> maybe_show_manual_run()
      |> tap(fn socket ->
        if connected?(socket) do
-         Lightning.subscribe(@topic_workflow_saved)
+         Workflows.Events.subscribe(socket.assigns.project.id)
 
          if changed?(socket, :selected_job) do
            Helpers.broadcast_updated_params(socket, %{
@@ -1428,8 +1427,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       case Helpers.save_workflow(changeset) do
         {:ok, workflow} ->
-          maybe_broadcast_workflow_save(socket, workflow.id)
-
           snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
 
           query_params =
@@ -1544,35 +1541,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
         %{"run_id" => run_id, "step_id" => step_id},
         socket
       ) do
-    %{
-      can_run_workflow: can_run_workflow?,
-      current_user: current_user,
-      changeset: changeset,
-      project: %{id: project_id},
-      snapshot_version_tag: tag
-    } = socket.assigns
+    case rerun(socket, run_id, step_id) do
+      {:ok, socket} ->
+        {:noreply, socket}
 
-    with true <- can_run_workflow? || :not_authorized,
-         true <- tag == "latest" || :view_only,
-         :ok <-
-           UsageLimiter.limit_action(%Action{type: :new_run}, %Context{
-             project_id: project_id
-           }),
-         {:ok, workflow} <- save_workflow_or_get_latest(socket),
-         {:ok, run} <-
-           WorkOrders.retry(run_id, step_id, created_by: current_user) do
-      maybe_broadcast_workflow_save(socket, workflow.id)
-
-      Runs.subscribe(run)
-
-      snapshot = Snapshot.get_by_version(workflow.id, workflow.lock_version)
-
-      {:noreply,
-       socket
-       |> assign_workflow(workflow, snapshot)
-       |> follow_run(run)
-       |> push_event("push-hash", %{"hash" => "log"})}
-    else
       {:error, _reason, %{text: error_text}} ->
         {:noreply, put_flash(socket, :error, error_text)}
 
@@ -1580,13 +1552,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
         {:noreply, put_flash(socket, :error, message)}
 
       {:error, _changeset} ->
-        {
-          :noreply,
-          socket
-          |> assign_changeset(changeset)
-          |> mark_validated()
-          |> put_flash(:error, "Workflow could not be saved")
-        }
+        {:noreply,
+         socket
+         |> assign_changeset(socket.assigns.changeset)
+         |> mark_validated()
+         |> put_flash(:error, "Workflow could not be saved")}
 
       :not_authorized ->
         {:noreply,
@@ -1643,8 +1613,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
              selected_job: selected_job,
              created_by: current_user
            ) do
-      maybe_broadcast_workflow_save(socket, workflow.id)
-
       %{runs: [run]} = workorder
 
       Runs.subscribe(run)
@@ -1687,25 +1655,36 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   @impl true
-  def handle_info({:workflow_saved, workflow_id}, socket) do
-    case get_workflow_by_id(workflow_id) do
-      nil ->
-        {:noreply, socket}
+  def handle_info(
+        %WorkflowUpdated{workflow: updated_workflow},
+        socket
+      ) do
+    %{
+      workflow: current_workflow,
+      snapshot_version_tag: version_tag,
+      has_presence_edit_priority: has_edit_priority?,
+      snapshot: snapshot
+    } = socket.assigns
 
-      workflow ->
-        updated_socket =
-          if socket.assigns.snapshot_version_tag == "latest" do
-            put_flash(
-              socket,
-              :info,
-              "This workflow has been updated. You're no longer on the latest version."
-            )
-          else
-            socket
-          end
+    is_same_workflow? = current_workflow.id == updated_workflow.id
+    is_latest_version? = version_tag == "latest"
+    should_update? = is_same_workflow? and not has_edit_priority?
 
-        {:noreply,
-         assign_workflow(updated_socket, workflow, socket.assigns.snapshot)}
+    if should_update? do
+      updated_socket =
+        if is_latest_version? do
+          put_flash(
+            socket,
+            :info,
+            "This workflow has been updated. You're no longer on the latest version."
+          )
+        else
+          socket
+        end
+
+      {:noreply, assign_workflow(updated_socket, updated_workflow, snapshot)}
+    else
+      {:noreply, socket}
     end
   end
 
@@ -2342,24 +2321,42 @@ defmodule LightningWeb.WorkflowLive.Edit do
     """
   end
 
-  defp save_workflow_or_get_latest(socket) do
-    if socket.assigns.has_presence_edit_priority do
-      Helpers.save_workflow(%{socket.assigns.changeset | action: :update})
-    else
-      {:ok, get_workflow_by_id(socket.assigns.workflow.id)}
-    end
-  end
+  defp rerun(socket, run_id, step_id) do
+    %{
+      can_run_workflow: can_run_workflow?,
+      current_user: current_user,
+      changeset: changeset,
+      project: %{id: project_id},
+      snapshot_version_tag: tag,
+      has_presence_edit_priority: has_edit_priority?,
+      workflow: %{id: workflow_id}
+    } = socket.assigns
 
-  defp maybe_broadcast_workflow_save(socket, workflow_id) do
-    %{has_presence_edit_priority: is_prior, presences: presences} =
-      socket.assigns
+    save_or_get_workflow =
+      if has_edit_priority? do
+        Helpers.save_workflow(%{changeset | action: :update})
+      else
+        {:ok, get_workflow_by_id(workflow_id)}
+      end
 
-    if is_prior and length(presences) > 1 do
-      Lightning.broadcast_from(
-        self(),
-        @topic_workflow_saved,
-        {:workflow_saved, workflow_id}
-      )
+    with true <- can_run_workflow? || :not_authorized,
+         true <- tag == "latest" || :view_only,
+         :ok <-
+           UsageLimiter.limit_action(%Action{type: :new_run}, %Context{
+             project_id: project_id
+           }),
+         {:ok, workflow} <- save_or_get_workflow,
+         {:ok, run} <-
+           WorkOrders.retry(run_id, step_id, created_by: current_user) do
+      Runs.subscribe(run)
+
+      snapshot = Snapshot.get_by_version(workflow.id, workflow.lock_version)
+
+      {:ok,
+       socket
+       |> assign_workflow(workflow, snapshot)
+       |> follow_run(run)
+       |> push_event("push-hash", %{"hash" => "log"})}
     end
   end
 end

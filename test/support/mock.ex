@@ -9,10 +9,6 @@ defmodule Lightning.Stub do
   def broadcast(topic, msg), do: Lightning.API.broadcast(topic, msg)
 
   @impl true
-  def broadcast_from(from, topic, msg),
-    do: Lightning.API.broadcast_from(from, topic, msg)
-
-  @impl true
   def local_broadcast(topic, msg), do: Lightning.API.local_broadcast(topic, msg)
 
   @impl true

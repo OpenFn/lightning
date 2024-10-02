@@ -27,11 +27,6 @@ defmodule Lightning do
     end
 
     @impl true
-    def broadcast_from(from, topic, msg) do
-      Phoenix.PubSub.broadcast_from(@pubsub, from, topic, msg)
-    end
-
-    @impl true
     def local_broadcast(topic, msg) do
       Phoenix.PubSub.local_broadcast(@pubsub, topic, msg)
     end
@@ -65,8 +60,6 @@ defmodule Lightning do
   # credo:disable-for-next-line
   @callback current_time() :: DateTime.t()
   @callback broadcast(binary(), {atom(), any()}) :: :ok | {:error, term()}
-  @callback broadcast_from(any(), binary(), {atom(), any()}) ::
-              :ok | {:error, term()}
   @callback local_broadcast(binary(), {atom(), any()}) :: :ok | {:error, term()}
   @callback subscribe(binary()) :: :ok | {:error, term()}
   @callback release() :: release_info()
@@ -77,9 +70,6 @@ defmodule Lightning do
   def current_time, do: impl().current_time()
 
   def broadcast(topic, msg), do: impl().broadcast(topic, msg)
-
-  def broadcast_from(from, topic, msg),
-    do: impl().broadcast_from(from, topic, msg)
 
   def local_broadcast(topic, msg), do: impl().local_broadcast(topic, msg)
 
