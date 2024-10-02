@@ -186,7 +186,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             >
               <.collapsible_panel
                 id={"manual-job-#{@selected_job.id}"}
-                class="h-full border border-l-0"
+                class="h-full border border-l-0 manual-job-panel"
               >
                 <:tabs>
                   <LightningWeb.Components.Tabbed.tabs
