@@ -17,6 +17,17 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+- Fix panel icons overlays on top title when collapsed
+  [#2537](https://github.com/OpenFn/lightning/issues/2537)
+
+## [v2.9.7] - 2024-10-02
+
+### Added
+
 - Enqueues many work orders retries in the same transaction per Oban job.
   [#2363](https://github.com/OpenFn/lightning/issues/2363)
 - Added the ability to retry rejected work orders.
@@ -31,6 +42,13 @@ and this project adheres to
 
 - User email change: Add debounce on blur to input forms to avoid validation
   after every keystroke [#2365](https://github.com/OpenFn/lightning/issues/2365)
+- Use timestamps sent from worker when starting and completing runs
+  [#2434](https://github.com/OpenFn/lightning/issues/2434)
+- User email change: Add debounce on blur to input forms to avoid validation
+  after every keystroke [#2365](https://github.com/OpenFn/lightning/issues/2365)
+
+### Fixed
+
 - User email change: Send notification of change to the old email address and
   confirmation to the new email address
   [#2365](https://github.com/OpenFn/lightning/issues/2365)
@@ -40,6 +58,8 @@ and this project adheres to
   [#2518](https://github.com/OpenFn/lightning/issues/2518)
 - Export edge condition expressions as multiline in project spec
   [#2521](https://github.com/OpenFn/lightning/issues/2521)
+- Fix line spacing on AI Assistant
+  [#2498](https://github.com/OpenFn/lightning/issues/2498)
 
 ## [v2.9.6] - 2024-09-23
 

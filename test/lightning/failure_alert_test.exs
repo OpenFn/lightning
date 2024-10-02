@@ -257,7 +257,7 @@ defmodule Lightning.FailureAlertTest do
     } do
       Lightning.Stub.reset_time()
 
-      {:ok, bearer, _} =
+      {:ok, bearer, claims} =
         Workers.Token.generate_and_sign(
           %{},
           Lightning.Config.worker_token_signer()
@@ -272,7 +272,7 @@ defmodule Lightning.FailureAlertTest do
 
       {:ok, %{}, socket} =
         LightningWeb.WorkerSocket
-        |> socket("socket_id", %{token: bearer})
+        |> socket("socket_id", %{token: bearer, claims: claims})
         |> subscribe_and_join(
           LightningWeb.RunChannel,
           "run:#{run.id}",

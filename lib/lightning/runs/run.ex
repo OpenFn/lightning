@@ -86,7 +86,7 @@ defmodule Lightning.Run do
       values: [immediate: 0, normal: 1],
       default: :normal
 
-    timestamps type: :utc_datetime_usec, updated_at: false
+    timestamps(type: :utc_datetime_usec)
   end
 
   def for(%Trigger{} = trigger, attrs) do
@@ -144,12 +144,11 @@ defmodule Lightning.Run do
     )
   end
 
-  def start(run) do
+  def start(run, params) do
     run
-    |> change(
-      state: :started,
-      started_at: DateTime.utc_now()
-    )
+    |> cast(params, [:started_at])
+    |> put_change(:state, :started)
+    |> validate_required([:started_at])
     |> validate_state_change()
   end
 
@@ -159,9 +158,8 @@ defmodule Lightning.Run do
     run
     |> change()
     |> put_change(:state, nil)
-    |> cast(params, [:state, :error_type])
-    |> put_change(:finished_at, DateTime.utc_now())
-    |> validate_required([:state])
+    |> cast(params, [:state, :error_type, :finished_at])
+    |> validate_required([:state, :finished_at])
     |> validate_inclusion(:state, @final_states)
     |> validate_state_change()
   end

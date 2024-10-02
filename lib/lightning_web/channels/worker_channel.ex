@@ -10,14 +10,9 @@ defmodule LightningWeb.WorkerChannel do
   alias Lightning.Workers
 
   @impl true
-  def join("worker:queue", _payload, %{assigns: %{token: token}} = socket) do
-    case Workers.verify_worker_token(token) do
-      {:ok, claims} ->
-        {:ok, assign(socket, :claims, claims)}
-
-      {:error, _} ->
-        {:error, %{reason: "unauthorized"}}
-    end
+  def join("worker:queue", _payload, %{assigns: %{claims: claims}} = socket)
+      when not is_nil(claims) do
+    {:ok, socket}
   end
 
   def join("worker:queue", _payload, _socket) do
@@ -33,8 +28,7 @@ defmodule LightningWeb.WorkerChannel do
           |> Enum.map(fn run ->
             opts = run_options(run)
 
-            token =
-              Lightning.Workers.generate_run_token(run, opts)
+            token = Workers.generate_run_token(run, opts)
 
             %{
               "id" => run.id,
