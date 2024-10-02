@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix panel icons overlays on top title when collapsed
+  [#2537](https://github.com/OpenFn/lightning/issues/2537)
+
 ## [v2.9.7] - 2024-10-02
 
 ### Added
