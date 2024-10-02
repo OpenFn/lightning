@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-C605191D.js"></script>
+    <script src="dist/sidebar_items-708C7D67.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -214,7 +214,7 @@ and memory usage, etc.) to the run before storing in the DB.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#start/1" translate="no">start(run)</a>
+        <a href="#start/2" translate="no">start(run, params)</a>
 
       </div>
 
@@ -278,6 +278,7 @@ and memory usage, etc.) to the run before storing in the DB.</p></div>
   starting_trigger_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   state: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   steps: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  updated_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   work_order: <a href="Lightning.WorkOrder.html#t:t/0">Lightning.WorkOrder.t</a>() | <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>(),
   work_order_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   workflow: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()
@@ -332,7 +333,7 @@ and memory usage, etc.) to the run before storing in the DB.</p>
     </a>
     <h1 class="signature" translate="no">complete(run, params)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L158" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L157" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -369,6 +370,7 @@ and memory usage, etc.) to the run before storing in the DB.</p>
     starting_trigger_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
     state: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
     steps: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+    updated_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
     work_order: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
     work_order_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
     workflow: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()
@@ -451,14 +453,14 @@ and memory usage, etc.) to the run before storing in the DB.</p>
 
   </section>
 </section>
-<section class="detail" id="start/1">
+<section class="detail" id="start/2">
 
   <div class="detail-header">
-    <a href="#start/1" class="detail-link" title="Link to this function">
+    <a href="#start/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">start(run)</h1>
+    <h1 class="signature" translate="no">start(run, params)</h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L147" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>

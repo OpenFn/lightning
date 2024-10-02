@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-C605191D.js"></script>
+    <script src="dist/sidebar_items-708C7D67.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -271,7 +271,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#start_run/1" translate="no">start_run(run)</a>
+        <a href="#start_run/2" translate="no">start_run(run, params \\ %{})</a>
 
       </div>
 
@@ -347,7 +347,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">append_run_log(run, params, scrubber \\ nil)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L259" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L250" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -369,7 +369,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">complete_run(run, params)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L194" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L192" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -400,7 +400,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">complete_step(params, options \\ Lightning.Runs.RunOptions)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L298" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L289" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -469,7 +469,7 @@ Pages
 
       </div>
 
-<p>Get a run by id.</p><p>Optionally preload associations by passing a list of atoms to <code class="inline">:include</code>.</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Runs</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="7451359360-1">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7451359360-2">[</span><span class="ss">:workflow</span><span class="p" data-group-id="7451359360-2">]</span><span class="p" data-group-id="7451359360-1">)</span></code></pre>
+<p>Get a run by id.</p><p>Optionally preload associations by passing a list of atoms to <code class="inline">:include</code>.</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Runs</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="2174828868-1">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2174828868-2">[</span><span class="ss">:workflow</span><span class="p" data-group-id="2174828868-2">]</span><span class="p" data-group-id="2174828868-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_credential/2">
@@ -608,7 +608,7 @@ for more details.</p>
     </a>
     <h1 class="signature" translate="no">get_log_lines(run, order \\ :asc)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L335" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L326" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -630,7 +630,7 @@ for more details.</p>
     </a>
     <h1 class="signature" translate="no">get_project_id_for_run(run)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L329" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L320" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -652,7 +652,7 @@ for more details.</p>
     </a>
     <h1 class="signature" translate="no">mark_run_lost(run)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L304" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L295" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -671,14 +671,16 @@ for more details.</p>
 
   </section>
 </section>
-<section class="detail" id="start_run/1">
+<section class="detail" id="start_run/2">
+
+    <span id="start_run/1"></span>
 
   <div class="detail-header">
-    <a href="#start_run/1" class="detail-link" title="Link to this function">
+    <a href="#start_run/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">start_run(run)</h1>
+    <h1 class="signature" translate="no">start_run(run, params \\ %{})</h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L186" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
@@ -702,7 +704,7 @@ for more details.</p>
     </a>
     <h1 class="signature" translate="no">start_step(run, params)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L292" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L283" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -731,7 +733,7 @@ for more details.</p>
     </a>
     <h1 class="signature" translate="no">subscribe(run)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L327" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L318" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -753,7 +755,7 @@ for more details.</p>
     </a>
     <h1 class="signature" translate="no">update_run(changeset)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L207" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L198" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -782,7 +784,7 @@ for more details.</p>
     </a>
     <h1 class="signature" translate="no">update_runs(update_query, updates)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L231" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L222" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
