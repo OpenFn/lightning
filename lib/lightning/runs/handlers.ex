@@ -21,7 +21,7 @@ defmodule Lightning.Runs.Handlers do
 
     @primary_key false
     embedded_schema do
-      field :timestamp, WorkerTimestamp
+      field :timestamp, Lightning.UnixDateTime
     end
 
     def call(run, params) do
