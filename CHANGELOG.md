@@ -36,6 +36,8 @@ and this project adheres to
   [#2518](https://github.com/OpenFn/lightning/issues/2518)
 - Export edge condition expressions as multiline in project spec
   [#2521](https://github.com/OpenFn/lightning/issues/2521)
+- Fix line spacing on AI Assistant
+  [#2498](https://github.com/OpenFn/lightning/issues/2498)
 
 ## [v2.9.6] - 2024-09-23
 
