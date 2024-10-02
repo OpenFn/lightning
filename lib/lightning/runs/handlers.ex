@@ -72,7 +72,7 @@ defmodule Lightning.Runs.Handlers do
       field :state, :string
       field :reason, :string
       field :error_type, :string
-      field :timestamp, WorkerTimestamp
+      field :timestamp, Lightning.UnixDateTime
     end
 
     def call(run, params) do
@@ -138,7 +138,7 @@ defmodule Lightning.Runs.Handlers do
       field :job_id, Ecto.UUID
       field :run_id, Ecto.UUID
       field :snapshot_id, Ecto.UUID
-      field :timestamp, WorkerTimestamp
+      field :timestamp, Lightning.UnixDateTime
       field :step_id, Ecto.UUID
     end
 
@@ -267,7 +267,7 @@ defmodule Lightning.Runs.Handlers do
       field :error_type, :string
       field :error_message, :string
       field :step_id, Ecto.UUID
-      field :timestamp, Lightning.Ecto.WorkerTimestamp
+      field :timestamp, Lightning.UnixDateTime
     end
 
     def new(params, options) do
