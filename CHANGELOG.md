@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.9.7] - 2024-10-02
+
+### Added
+
 - Enqueues many work orders retries in the same transaction per Oban job.
   [#2363](https://github.com/OpenFn/lightning/issues/2363)
 - Added the ability to retry rejected work orders.
@@ -26,13 +34,14 @@ and this project adheres to
 
 - Use timestamps sent from worker when starting and completing runs
   [#2434](https://github.com/OpenFn/lightning/issues/2434)
+- User email change: Add debounce on blur to input forms to avoid validation
+  after every keystroke [#2365](https://github.com/OpenFn/lightning/issues/2365)
 
 ### Fixed
 
-- User email change: Add debounce on blur to input forms to avoid validation after every keystroke
-  [#2365](https://github.com/OpenFn/lightning/issues/2365)
 - User email change: Send notification of change to the old email address and
-  confirmation to the new email address [#2365](https://github.com/OpenFn/lightning/issues/2365)
+  confirmation to the new email address
+  [#2365](https://github.com/OpenFn/lightning/issues/2365)
 - Fixes filters to properly handle the "rejected" status for work orders.
   [#2391](https://github.com/OpenFn/lightning/issues/2391)
 - Fix item selection (project / billing account) in the context switcher
