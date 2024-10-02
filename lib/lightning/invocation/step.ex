@@ -62,18 +62,14 @@ defmodule Lightning.Invocation.Step do
     |> validate()
   end
 
-  def finished(
-        step,
-        output_dataclip_id,
-        # Should this be a specified type?
-        {exit_reason, error_type, _error_message}
-      ) do
-    change(step, %{
-      finished_at: DateTime.utc_now(),
-      output_dataclip_id: output_dataclip_id,
-      exit_reason: exit_reason,
-      error_type: error_type
-    })
+  def finished(step, params) do
+    step
+    |> cast(params, [
+      :output_dataclip_id,
+      :exit_reason,
+      :error_type,
+      :finished_at
+    ])
     |> validate_required([:finished_at, :exit_reason])
   end
 

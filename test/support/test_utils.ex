@@ -18,4 +18,30 @@ defmodule Lightning.TestUtils do
 
     :ok
   end
+
+  @doc """
+  Merge the given setups into the given context.
+  Just works a bit like `setup` on ExUnit.Case.
+
+  Useful when writing tests, which have some nice setups but you need to
+  make a new context inside the test.
+
+  Use with care, chances are you should be writing another test or refactoring
+  the tests to use tags.
+  """
+  defmacro merge_setups(context, fns) do
+    fns =
+      Enum.map(fns, fn f ->
+        quote do
+          fn c -> unquote(f)(c) end
+        end
+      end)
+
+    quote do
+      unquote(fns)
+      |> Enum.reduce(unquote(context), fn f, context ->
+        Map.merge(context, f.(context))
+      end)
+    end
+  end
 end

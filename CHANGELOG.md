@@ -24,6 +24,9 @@ and this project adheres to
 
 ### Changed
 
+- Use timestamps sent from worker when starting and completing runs
+  [#2434](https://github.com/OpenFn/lightning/issues/2434)
+
 ### Fixed
 
 - User email change: Add debounce on blur to input forms to avoid validation after every keystroke

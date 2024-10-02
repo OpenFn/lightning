@@ -11,6 +11,117 @@ defmodule Lightning.Runs.Handlers do
   alias Lightning.RunStep
   alias Lightning.WorkOrders
 
+  defmodule StartRun do
+    @moduledoc """
+    Schema to validate the input attributes of a started run.
+    """
+    use Lightning.Schema
+
+    import Lightning.ChangesetUtils
+
+    @primary_key false
+    embedded_schema do
+      field :timestamp, Lightning.UnixDateTime
+    end
+
+    def call(run, params) do
+      with {:ok, start_run} <- params |> new() |> apply_action(:validate) do
+        run
+        |> Run.start(to_run_params(start_run))
+        |> Runs.update_run()
+        |> tap(&track_run_queue_delay/1)
+      end
+    end
+
+    def new(params) do
+      %__MODULE__{}
+      |> cast(params, [:timestamp])
+      |> put_new_change(:timestamp, DateTime.utc_now())
+      |> validate_required([:timestamp])
+    end
+
+    defp to_run_params(%__MODULE__{} = start_run) do
+      %{started_at: start_run.timestamp}
+    end
+
+    defp track_run_queue_delay({:ok, run}) do
+      %Run{inserted_at: inserted_at, started_at: started_at} = run
+
+      delay = DateTime.diff(started_at, inserted_at, :millisecond)
+
+      :telemetry.execute(
+        [:domain, :run, :queue],
+        %{delay: delay},
+        %{}
+      )
+    end
+
+    defp track_run_queue_delay({:error, _changeset}), do: nil
+  end
+
+  defmodule CompleteRun do
+    @moduledoc """
+    Schema to validate the input attributes of a completed run.
+    """
+    use Lightning.Schema
+
+    import Lightning.ChangesetUtils
+
+    @primary_key false
+    embedded_schema do
+      field :state, :string
+      field :reason, :string
+      field :error_type, :string
+      field :timestamp, Lightning.UnixDateTime
+    end
+
+    def call(run, params) do
+      with {:ok, complete_run} <- params |> new() |> apply_action(:validate) do
+        run
+        |> Run.complete(to_run_params(complete_run))
+        |> case do
+          %{valid?: false} = changeset ->
+            {:error, changeset}
+
+          changeset ->
+            Runs.update_run(changeset)
+        end
+      end
+    end
+
+    def new(params) do
+      %__MODULE__{}
+      |> cast(params, [:state, :reason, :error_type, :timestamp])
+      |> put_new_change(:timestamp, DateTime.utc_now())
+      |> then(fn changeset ->
+        if reason = get_change(changeset, :reason) do
+          put_new_change(changeset, :state, reason_to_state(reason))
+        else
+          changeset
+        end
+      end)
+      |> validate_required([:state, :timestamp])
+    end
+
+    defp reason_to_state(reason) do
+      case reason do
+        "ok" -> :success
+        "fail" -> :failed
+        "crash" -> :crashed
+        "cancel" -> :cancelled
+        "kill" -> :killed
+        "exception" -> :exception
+        unknown -> unknown
+      end
+    end
+
+    defp to_run_params(%__MODULE__{} = complete_run) do
+      complete_run
+      |> Map.take([:state, :error_type])
+      |> Map.put(:finished_at, complete_run.timestamp)
+    end
+  end
+
   defmodule StartStep do
     @moduledoc """
     Schema to validate the input attributes of a started step.
@@ -27,7 +138,7 @@ defmodule Lightning.Runs.Handlers do
       field :job_id, Ecto.UUID
       field :run_id, Ecto.UUID
       field :snapshot_id, Ecto.UUID
-      field :started_at, :utc_datetime_usec
+      field :timestamp, Lightning.UnixDateTime
       field :step_id, Ecto.UUID
     end
 
@@ -50,17 +161,17 @@ defmodule Lightning.Runs.Handlers do
         :credential_id,
         :input_dataclip_id,
         :job_id,
-        :started_at,
+        :timestamp,
         :step_id
       ])
       |> put_change(:run_id, run.id)
       |> put_change(:snapshot_id, run.snapshot_id)
-      |> put_new_change(:started_at, DateTime.utc_now())
+      |> put_new_change(:timestamp, DateTime.utc_now())
       |> validate_required([
         :job_id,
         :run_id,
         :snapshot_id,
-        :started_at,
+        :timestamp,
         :step_id
       ])
       |> then(&validate_job_reachable/1)
@@ -81,10 +192,10 @@ defmodule Lightning.Runs.Handlers do
         :credential_id,
         :input_dataclip_id,
         :job_id,
-        :started_at,
         :snapshot_id
       ])
       |> Map.put(:id, step_id)
+      |> Map.put(:started_at, start_step.timestamp)
       |> Step.new()
     end
 
@@ -156,7 +267,7 @@ defmodule Lightning.Runs.Handlers do
       field :error_type, :string
       field :error_message, :string
       field :step_id, Ecto.UUID
-      field :finished_at, :utc_datetime_usec
+      field :timestamp, Lightning.UnixDateTime
     end
 
     def new(params, options) do
@@ -169,9 +280,9 @@ defmodule Lightning.Runs.Handlers do
         :error_type,
         :error_message,
         :step_id,
-        :finished_at
+        :timestamp
       ])
-      |> put_new_change(:finished_at, DateTime.utc_now())
+      |> put_new_change(:timestamp, DateTime.utc_now())
       |> then(fn changeset ->
         output_dataclip_id = get_change(changeset, :output_dataclip_id)
         output_dataclip = get_change(changeset, :output_dataclip)
@@ -190,7 +301,7 @@ defmodule Lightning.Runs.Handlers do
       end)
       |> validate_required([
         :run_id,
-        :finished_at,
+        :timestamp,
         :project_id,
         :reason,
         :step_id
@@ -214,11 +325,7 @@ defmodule Lightning.Runs.Handlers do
              {:ok, _} <-
                maybe_save_dataclip(complete_step, options) do
           step
-          |> Step.finished(
-            complete_step.output_dataclip_id,
-            {complete_step.reason, complete_step.error_type,
-             complete_step.error_message}
-          )
+          |> Step.finished(to_step_params(complete_step))
           |> Repo.update()
         else
           nil ->
@@ -231,6 +338,13 @@ defmodule Lightning.Runs.Handlers do
             error
         end
       end)
+    end
+
+    defp to_step_params(%__MODULE__{} = complete_step) do
+      complete_step
+      |> Map.take([:output_dataclip_id, :error_type, :error_message])
+      |> Map.put(:exit_reason, complete_step.reason)
+      |> Map.put(:finished_at, complete_step.timestamp)
     end
 
     defp get_step(id) do

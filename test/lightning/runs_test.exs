@@ -601,7 +601,7 @@ defmodule Lightning.RunsTest do
         |> insert()
 
       {:error, changeset} =
-        Runs.complete_run(run, %{state: :success})
+        Runs.complete_run(run, %{state: "success"})
 
       assert {:state,
               {"cannot mark run success that has not been claimed by a worker",
@@ -618,7 +618,7 @@ defmodule Lightning.RunsTest do
 
       Lightning.WorkOrders.subscribe(workflow.project_id)
 
-      {:ok, run} = Runs.complete_run(run, %{state: :success})
+      {:ok, run} = Runs.complete_run(run, %{state: "success"})
 
       assert run.state == :success
       assert DateTime.after?(DateTime.utc_now(), run.finished_at)
@@ -644,7 +644,7 @@ defmodule Lightning.RunsTest do
         |> Repo.update()
 
       {:error, changeset} =
-        Runs.complete_run(run, %{state: :lost, error_type: "Lost"})
+        Runs.complete_run(run, %{state: "lost", error_type: "Lost"})
 
       assert changeset.errors == [
                state:
@@ -667,7 +667,7 @@ defmodule Lightning.RunsTest do
         |> Repo.update()
 
       {:ok, run} =
-        Runs.complete_run(run, %{state: :lost, error_type: "Lost"})
+        Runs.complete_run(run, %{state: "lost", error_type: "Lost"})
 
       assert run.state == :lost
     end
@@ -815,7 +815,9 @@ defmodule Lightning.RunsTest do
         insert(:run,
           work_order: work_order,
           starting_trigger: trigger,
-          dataclip: dataclip
+          dataclip: dataclip,
+          state: :started,
+          claimed_at: DateTime.utc_now() |> DateTime.add(-3600)
         )
 
       finished_step =

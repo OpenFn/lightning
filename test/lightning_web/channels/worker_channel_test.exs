@@ -6,9 +6,14 @@ defmodule LightningWeb.WorkerChannelTest do
   import Lightning.Factories
 
   describe "joining" do
-    test "with an invalid token" do
-      assert LightningWeb.UserSocket
+    test "with an invalid claim" do
+      assert LightningWeb.WorkerSocket
              |> socket("socket_id", %{})
+             |> subscribe_and_join(LightningWeb.WorkerChannel, "worker:queue") ==
+               {:error, %{reason: "unauthorized"}}
+
+      assert LightningWeb.WorkerSocket
+             |> socket("socket_id", %{token: "foo"})
              |> subscribe_and_join(LightningWeb.WorkerChannel, "worker:queue") ==
                {:error, %{reason: "unauthorized"}}
     end
@@ -16,17 +21,15 @@ defmodule LightningWeb.WorkerChannelTest do
 
   describe "worker:queue channel" do
     setup do
-      Lightning.Stub.reset_time()
-
-      {:ok, bearer, _} =
+      {:ok, bearer, claims} =
         Workers.Token.generate_and_sign(
           %{},
           Lightning.Config.worker_token_signer()
         )
 
-      Lightning.Stub.freeze_time(DateTime.utc_now() |> DateTime.add(5, :second))
-
-      socket = LightningWeb.WorkerSocket |> socket("socket_id", %{token: bearer})
+      socket =
+        LightningWeb.WorkerSocket
+        |> socket("socket_id", %{token: bearer, claims: claims})
 
       {:ok, _, socket} =
         socket |> subscribe_and_join(LightningWeb.WorkerChannel, "worker:queue")
