@@ -226,7 +226,9 @@ defmodule Lightning.KafkaTriggers.Pipeline do
     end
   end
 
-  def maybe_notify_users(_messages, trigger_id) do
-    KafkaTriggers.notify_users_of_trigger_failure(trigger_id)
+  def maybe_notify_users(messages, trigger_id) do
+    if messages |> Enum.any?(&(&1.status == {:failed, :persistence})) do
+      KafkaTriggers.notify_users_of_trigger_failure(trigger_id)
+    end
   end
 end

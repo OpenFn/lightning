@@ -1505,6 +1505,7 @@ defmodule Lightning.ProjectsTest do
 
       superuser_1 = insert(:user, email: "super1@test.com", role: :superuser)
       superuser_2 = insert(:user, email: "super2@test.com", role: :superuser)
+
       other_project_superuser =
         insert(:user, email: "other@test.com", role: :superuser)
 
@@ -1525,24 +1526,28 @@ defmodule Lightning.ProjectsTest do
         user: user,
         role: :viewer
       )
+
       insert(
         :project_user,
         project: project,
         user: superuser_1,
         role: :viewer
       )
+
       insert(
         :project_user,
         project: project,
         user: superuser_2,
         role: :admin
       )
+
       insert(
         :project_user,
         project: project,
         user: admin_user,
         role: :admin
       )
+
       insert(
         :project_user,
         project: project,
@@ -1566,17 +1571,17 @@ defmodule Lightning.ProjectsTest do
       owner_user: owner_user,
       project: project,
       superuser_1: superuser_1,
-      superuser_2: superuser_2,
+      superuser_2: superuser_2
     } do
       expected_emails =
         [admin_user, owner_user, superuser_1, superuser_2]
-        |> Enum.map(&(&1.email))
+        |> Enum.map(& &1.email)
         |> Enum.sort()
 
       actual_emails =
         project.id
         |> Projects.find_users_to_notify_of_trigger_failure()
-        |> Enum.map(&(&1.email))
+        |> Enum.map(& &1.email)
         |> Enum.sort()
 
       assert actual_emails == expected_emails

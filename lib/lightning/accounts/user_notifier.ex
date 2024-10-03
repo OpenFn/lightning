@@ -408,6 +408,7 @@ defmodule Lightning.Accounts.UserNotifier do
     OpenFn
     """)
   end
+
   defp pluralize_with_s(1, string), do: string
   defp pluralize_with_s(_integer, string), do: "#{string}s"
 end

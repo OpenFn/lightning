@@ -155,6 +155,11 @@ defmodule Lightning.Config do
     end
 
     @impl true
+    def kafka_notification_embargo_seconds do
+      kafka_trigger_config() |> Keyword.get(:notification_embargo_seconds)
+    end
+
+    @impl true
     def kafka_number_of_consumers do
       kafka_trigger_config() |> Keyword.get(:number_of_consumers)
     end
@@ -184,6 +189,7 @@ defmodule Lightning.Config do
   @callback grace_period() :: integer()
   @callback instance_admin_email() :: String.t()
   @callback kafka_duplicate_tracking_retention_seconds() :: integer()
+  @callback kafka_notification_embargo_seconds() :: integer()
   @callback kafka_number_of_consumers() :: integer()
   @callback kafka_number_of_messages_per_second() :: float()
   @callback kafka_number_of_processors() :: integer()
@@ -308,6 +314,10 @@ defmodule Lightning.Config do
 
   def kafka_number_of_consumers do
     impl().kafka_number_of_consumers()
+  end
+
+  def kafka_notification_embargo_seconds do
+    impl().kafka_notification_embargo_seconds()
   end
 
   def kafka_number_of_messages_per_second do

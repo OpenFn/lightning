@@ -196,24 +196,41 @@ defmodule Lightning.KafkaTriggers do
   end
 
   def notify_users_of_trigger_failure(trigger_id) do
-    sent_at = DateTime.utc_now()
+    last_sent_at =
+      :persistent_term.get(
+        {:kafka_trigger_failure_notification_sent_at, trigger_id},
+        nil
+      )
 
-    %{workflow: workflow} =
-      Trigger
-      |> Repo.get(trigger_id)
-      |> Repo.preload(:workflow)
+    sending_at = DateTime.utc_now()
 
-    workflow.project_id
-    |> Projects.find_users_to_notify_of_trigger_failure()
-    |> Enum.each(fn user ->
-      UserNotifier.send_trigger_failure_mail(user, workflow)
-    end)
+    if send_notification?(sending_at, last_sent_at) do
+      %{workflow: workflow} =
+        Trigger
+        |> Repo.get(trigger_id)
+        |> Repo.preload(:workflow)
 
-    :persistent_term.put(
-      {:kafka_trigger_failure_notification_sent_at, trigger_id},
-       sent_at
-    )
+      workflow.project_id
+      |> Projects.find_users_to_notify_of_trigger_failure()
+      |> Enum.each(fn user ->
+        UserNotifier.send_trigger_failure_mail(user, workflow)
+      end)
 
-    Events.kafka_trigger_notification_sent(trigger_id, sent_at)
+      :persistent_term.put(
+        {:kafka_trigger_failure_notification_sent_at, trigger_id},
+        sending_at
+      )
+
+      Events.kafka_trigger_notification_sent(trigger_id, sending_at)
+    end
+  end
+
+  def send_notification?(_sending_at, nil), do: true
+
+  def send_notification?(sending_at, last_sent_at) do
+    embargo_period =
+      Lightning.Config.kafka_notification_embargo_seconds()
+
+    DateTime.diff(sending_at, last_sent_at, :second) > embargo_period
   end
 end

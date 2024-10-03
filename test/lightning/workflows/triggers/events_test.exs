@@ -39,9 +39,10 @@ defmodule Lightning.Workflows.Triggers.EventsTest do
       %KafkaTriggerNotificationSent{trigger_id: trigger_id, sent_at: sent_at}
     )
 
-    assert_receive(
-      %KafkaTriggerNotificationSent{trigger_id: ^trigger_id, sent_at: ^sent_at}
-    )
+    assert_receive(%KafkaTriggerNotificationSent{
+      trigger_id: ^trigger_id,
+      sent_at: ^sent_at
+    })
   end
 
   test "can broadcast a kafka trigger notification sent event" do
@@ -52,8 +53,9 @@ defmodule Lightning.Workflows.Triggers.EventsTest do
 
     Events.kafka_trigger_notification_sent(trigger_id, sent_at)
 
-    assert_receive(
-      %KafkaTriggerNotificationSent{trigger_id: ^trigger_id, sent_at: ^sent_at}
-    )
+    assert_receive(%KafkaTriggerNotificationSent{
+      trigger_id: ^trigger_id,
+      sent_at: ^sent_at
+    })
   end
 end

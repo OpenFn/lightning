@@ -436,7 +436,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
     end
 
     test "Kafka trigger failure" do
-      user = Lightning.AccountsFixtures.user_fixture
+      user = Lightning.AccountsFixtures.user_fixture()
       workflow = insert(:workflow)
 
       workflow_url =

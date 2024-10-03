@@ -871,7 +871,9 @@ defmodule Lightning.Projects do
     query =
       from u in User,
         join: pu in assoc(u, :project_users),
-        where: pu.project_id == ^project_id and (pu.role in ^[:admin, :owner] or u.role == ^:superuser)
+        where:
+          pu.project_id == ^project_id and
+            (pu.role in ^[:admin, :owner] or u.role == ^:superuser)
 
     query |> Repo.all()
   end
