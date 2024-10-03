@@ -36,7 +36,7 @@ defmodule Lightning.KafkaTriggers.EventListener do
     %{trigger_id: trigger_id, sent_at: sent_at} = notification
 
     :persistent_term.put(
-      {:kafka_trigger_failure_notification_sent_at, trigger_id},
+      KafkaTriggers.failure_notification_tracking_key(trigger_id),
       sent_at
     )
 

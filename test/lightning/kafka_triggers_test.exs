@@ -968,6 +968,16 @@ defmodule Lightning.KafkaTriggersTest do
     end
   end
 
+  describe "failure_notification_tracking_key/1" do
+    test "returns the keys used to track when a failure notificaton was sent" do
+      trigger_id = Ecto.UUID.generate()
+
+      key = KafkaTriggers.failure_notification_tracking_key(trigger_id)
+
+      assert key == {:kafka_trigger_failure_notification_sent_at, trigger_id}
+    end
+  end
+
   defp child_spec(opts) do
     trigger = opts |> Keyword.get(:trigger)
     index = opts |> Keyword.get(:index)

@@ -5,8 +5,8 @@ defmodule Lightning.KafkaTriggers.EventListenerTest do
   alias Lightning.KafkaTriggers.EventListener
   alias Lightning.KafkaTriggers.PipelineSupervisor
   alias Lightning.Workflows.Triggers.Events
-  alias Lightning.Workflows.Triggers.Events.KafkaTriggerUpdated
   alias Lightning.Workflows.Triggers.Events.KafkaTriggerNotificationSent
+  alias Lightning.Workflows.Triggers.Events.KafkaTriggerUpdated
 
   import Mox
 

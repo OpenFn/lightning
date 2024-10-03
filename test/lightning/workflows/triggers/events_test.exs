@@ -2,8 +2,8 @@ defmodule Lightning.Workflows.Triggers.EventsTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Workflows.Triggers.Events
-  alias Lightning.Workflows.Triggers.Events.KafkaTriggerUpdated
   alias Lightning.Workflows.Triggers.Events.KafkaTriggerNotificationSent
+  alias Lightning.Workflows.Triggers.Events.KafkaTriggerUpdated
 
   test "can subscribe to events relating to a Kafka trigger being updated" do
     trigger_id = "a-b-c-1-2-3"

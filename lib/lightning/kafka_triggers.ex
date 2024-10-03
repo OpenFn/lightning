@@ -196,33 +196,47 @@ defmodule Lightning.KafkaTriggers do
   end
 
   def notify_users_of_trigger_failure(trigger_id) do
-    last_sent_at =
-      :persistent_term.get(
-        {:kafka_trigger_failure_notification_sent_at, trigger_id},
-        nil
-      )
-
     sending_at = DateTime.utc_now()
 
-    if send_notification?(sending_at, last_sent_at) do
-      %{workflow: workflow} =
-        Trigger
-        |> Repo.get(trigger_id)
-        |> Repo.preload(:workflow)
+    if send_notification?(sending_at, last_notification_sent_at(trigger_id)) do
+      notify_users(trigger_id)
 
-      workflow.project_id
-      |> Projects.find_users_to_notify_of_trigger_failure()
-      |> Enum.each(fn user ->
-        UserNotifier.send_trigger_failure_mail(user, workflow)
-      end)
+      track_notification_sent(trigger_id, sending_at)
 
-      :persistent_term.put(
-        {:kafka_trigger_failure_notification_sent_at, trigger_id},
-        sending_at
-      )
-
-      Events.kafka_trigger_notification_sent(trigger_id, sending_at)
+      notify_any_other_nodes(trigger_id, sending_at)
     end
+  end
+
+  defp last_notification_sent_at(trigger_id) do
+    :persistent_term.get(failure_notification_tracking_key(trigger_id), nil)
+  end
+
+  def failure_notification_tracking_key(trigger_id) do
+    {:kafka_trigger_failure_notification_sent_at, trigger_id}
+  end
+
+  defp notify_users(trigger_id) do
+    %{workflow: workflow} =
+      Trigger
+      |> Repo.get(trigger_id)
+      |> Repo.preload(:workflow)
+
+    workflow.project_id
+    |> Projects.find_users_to_notify_of_trigger_failure()
+    |> Enum.each(fn user ->
+      UserNotifier.send_trigger_failure_mail(user, workflow)
+    end)
+  end
+
+  defp track_notification_sent(trigger_id, sent_at) do
+    :persistent_term.put(
+      failure_notification_tracking_key(trigger_id),
+      sent_at
+    )
+  end
+
+  defp notify_any_other_nodes(trigger_id, sent_at) do
+    Events.kafka_trigger_notification_sent(trigger_id, sent_at)
   end
 
   def send_notification?(_sending_at, nil), do: true

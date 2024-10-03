@@ -522,7 +522,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       }
     end
 
-    test "doe snot notify the user if there are no persistence failures", %{
+    test "does not notify the user if there are no persistence failures", %{
       trigger_id: trigger_id
     } do
       messages = [

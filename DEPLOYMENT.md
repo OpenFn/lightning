@@ -233,7 +233,8 @@ consider this when disabling a Kafka trigger for an extended period.
 Under certain failure conditions, a Kafka trigger will send an email to certain
 user that are associated with a project. After each email an embargo is applied
 to ensure that Lightning does not flood the recipients with email. The length
-of the embargo is controlled by the `KAFKA_NOTIFICATION_EMBARGO_SECONDS`
+of the embargo is controlled by the `KAFKA_NOTIFICATION_EMBARGO_SECONDS` ENV
+variable.
 
 ### Google Oauth2
 
