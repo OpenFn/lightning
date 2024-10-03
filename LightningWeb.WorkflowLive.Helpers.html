@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-D4AAB3B2.js"></script>
+    <script src="dist/sidebar_items-9D7279AD.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -163,7 +163,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#save_and_run/3" translate="no">save_and_run(workflow_changeset, params, opts)</a>
+        <a href="#run_workflow/3" translate="no">run_workflow(workflow_or_changeset, params, opts)</a>
 
       </div>
 
@@ -207,7 +207,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">broadcast_updated_params(socket, params)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L21" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L22" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -220,16 +220,16 @@ Pages
 
   </section>
 </section>
-<section class="detail" id="save_and_run/3">
+<section class="detail" id="run_workflow/3">
 
   <div class="detail-header">
-    <a href="#save_and_run/3" class="detail-link" title="Link to this function">
+    <a href="#run_workflow/3" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">save_and_run(workflow_changeset, params, opts)</h1>
+    <h1 class="signature" translate="no">run_workflow(workflow_or_changeset, params, opts)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L54" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L55" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -241,8 +241,9 @@ Pages
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> save_and_run(
-  <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>()),
+          <pre translate="no"><span class="attribute">@spec</span> run_workflow(
+  <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>())
+  | <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>(),
   <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(),
   selected_job: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(),
   created_by: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(),
@@ -272,7 +273,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">save_workflow(changeset)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L28" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L29" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -302,7 +303,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">subscribe_to_params_update(socket_id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L17" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L18" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
