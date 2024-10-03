@@ -35,6 +35,13 @@ and this project adheres to
 
 ### Changed
 
+- Notify other present users when the promoted user saves the workflow
+  [#2282](https://github.com/OpenFn/lightning/issues/2282)
+
+### Fixed
+
+- User email change: Add debounce on blur to input forms to avoid validation
+  after every keystroke [#2365](https://github.com/OpenFn/lightning/issues/2365)
 - Use timestamps sent from worker when starting and completing runs
   [#2434](https://github.com/OpenFn/lightning/issues/2434)
 - User email change: Add debounce on blur to input forms to avoid validation

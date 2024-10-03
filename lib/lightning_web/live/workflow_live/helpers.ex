@@ -10,6 +10,7 @@ defmodule LightningWeb.WorkflowLive.Helpers do
   alias Lightning.Services.UsageLimiter
 
   alias Lightning.Workflows
+  alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.WorkflowUsageLimiter
   alias Lightning.WorkOrder
   alias Lightning.WorkOrders
@@ -35,8 +36,8 @@ defmodule LightningWeb.WorkflowLive.Helpers do
     end
   end
 
-  @spec save_and_run(
-          Ecto.Changeset.t(Workflows.Workflow.t()),
+  @spec run_workflow(
+          Ecto.Changeset.t(Workflows.Workflow.t()) | Workflows.Workflow.t(),
           map(),
           selected_job: map(),
           created_by: map(),
@@ -51,7 +52,7 @@ defmodule LightningWeb.WorkflowLive.Helpers do
           | {:error, Ecto.Changeset.t(Workflows.Workflow.t())}
           | {:error, Ecto.Changeset.t(WorkOrders.Manual.t())}
           | {:error, UsageLimiting.message()}
-  def save_and_run(workflow_changeset, params, opts) do
+  def run_workflow(workflow_or_changeset, params, opts) do
     Lightning.Repo.transact(fn ->
       %{id: project_id} = Keyword.fetch!(opts, :project)
 
@@ -62,13 +63,21 @@ defmodule LightningWeb.WorkflowLive.Helpers do
           {:error, message}
 
         :ok ->
-          with {:ok, workflow} <- Workflows.save_workflow(workflow_changeset),
+          with {:ok, workflow} <- maybe_save_workflow(workflow_or_changeset),
                {:ok, manual} <- build_manual_workorder(params, workflow, opts),
                {:ok, workorder} <- WorkOrders.create_for(manual) do
             {:ok, %{workorder: workorder, workflow: workflow}}
           end
       end
     end)
+  end
+
+  defp maybe_save_workflow(%Ecto.Changeset{} = changeset) do
+    Workflows.save_workflow(changeset)
+  end
+
+  defp maybe_save_workflow(%Workflow{} = workflow) do
+    {:ok, workflow}
   end
 
   defp build_manual_workorder(params, workflow, opts) do
