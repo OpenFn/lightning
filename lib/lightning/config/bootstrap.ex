@@ -487,6 +487,10 @@ defmodule Lightning.Config.Bootstrap do
       daily_batch_size: env!("USAGE_TRACKING_DAILY_BATCH_SIZE", :integer, 10)
 
     config :lightning, :kafka_triggers,
+      alternate_storage_enabled:
+        env!("KAFKA_ALTERNATE_STORAGE_ENABLED", &Utils.ensure_boolean/1, false),
+      alternate_storage_file_path:
+        env!("KAFKA_ALTERNATE_STORAGE_FILE_PATH", :string, nil),
       duplicate_tracking_retention_seconds:
         env!("KAFKA_DUPLICATE_TRACKING_RETENTION_SECONDS", :integer, 3600),
       enabled: env!("KAFKA_TRIGGERS_ENABLED", &Utils.ensure_boolean/1, false),
