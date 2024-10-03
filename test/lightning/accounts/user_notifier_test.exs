@@ -434,5 +434,28 @@ defmodule Lightning.Accounts.UserNotifierTest do
         """
       )
     end
+
+    test "Kafka trigger failure" do
+      user = Lightning.AccountsFixtures.user_fixture
+      workflow = insert(:workflow)
+
+      workflow_url =
+        LightningWeb.Endpoint
+        |> url(~p"/projects/#{workflow.project_id}/w/#{workflow.id}")
+
+      UserNotifier.send_trigger_failure_mail(user, workflow)
+
+      assert_email_sent(
+        subject: "Kafka trigger failure on #{workflow.name}",
+        to: Swoosh.Email.Recipient.format(user),
+        text_body: """
+        The Kafka trigger associated with the workflow #{workflow.name} (#{workflow_url}) has failed to persist at least one message.
+
+        Please check the logs for more information.
+
+        OpenFn
+        """
+      )
+    end
   end
 end

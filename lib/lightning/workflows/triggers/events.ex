@@ -25,9 +25,18 @@ defmodule Lightning.Workflows.Triggers.Events do
 
   def kafka_trigger_updated_topic, do: "kafka_trigger_updated"
 
-  def subscribe_to_kafka_trigger_failed do
-    Lightning.subscribe(kafka_trigger_failed_topic())
+  def subscribe_to_kafka_trigger_notification_sent do
+    Lightning.subscribe(kafka_trigger_notification_sent_topic())
   end
 
-  def kafka_trigger_failed_topic, do: "kafka_trigger_notification_sent"
+  def kafka_trigger_notification_sent(trigger_id, sent_at) do
+    Lightning.broadcast(
+      kafka_trigger_notification_sent_topic(),
+      %KafkaTriggerNotificationSent{trigger_id: trigger_id, sent_at: sent_at}
+    )
+  end
+
+  def kafka_trigger_notification_sent_topic do
+    "kafka_trigger_notification_sent"
+  end
 end

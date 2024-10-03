@@ -5,8 +5,11 @@ defmodule Lightning.KafkaTriggers do
   import Ecto.Query
 
   alias Ecto.Changeset
+  alias Lightning.Accounts.UserNotifier
+  alias Lightning.Projects
   alias Lightning.Repo
   alias Lightning.Workflows.Trigger
+  alias Lightning.Workflows.Triggers.Events
 
   def start_triggers do
     if supervisor = GenServer.whereis(:kafka_pipeline_supervisor) do
@@ -192,7 +195,25 @@ defmodule Lightning.KafkaTriggers do
     %{interval: 10_000, messages_per_interval: messages_per_interval}
   end
 
-  def notify_users_of_trigger_failure(_trigger_id) do
+  def notify_users_of_trigger_failure(trigger_id) do
+    sent_at = DateTime.utc_now()
 
+    %{workflow: workflow} =
+      Trigger
+      |> Repo.get(trigger_id)
+      |> Repo.preload(:workflow)
+
+    workflow.project_id
+    |> Projects.find_users_to_notify_of_trigger_failure()
+    |> Enum.each(fn user ->
+      UserNotifier.send_trigger_failure_mail(user, workflow)
+    end)
+
+    :persistent_term.put(
+      {:kafka_trigger_failure_notification_sent_at, trigger_id},
+       sent_at
+    )
+
+    Events.kafka_trigger_notification_sent(trigger_id, sent_at)
   end
 end

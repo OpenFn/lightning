@@ -11,6 +11,7 @@ defmodule Lightning.KafkaTriggersTest do
   alias Lightning.KafkaTriggers
   alias Lightning.KafkaTriggers.PipelineSupervisor
   alias Lightning.Workflows.Trigger
+  alias Lightning.Workflows.Triggers.Events
 
   describe ".start_triggers/0" do
     setup do
@@ -778,60 +779,111 @@ defmodule Lightning.KafkaTriggersTest do
 
   describe ".notify_users_of_trigger_failure/1" do
     setup do
-      super_user_1 = AccountsFixtures.superuser_fixture()
-      super_user_2 = AccountsFixtures.superuser_fixture()
+      admin_user = AccountsFixtures.user_fixture()
+      owner_user = AccountsFixtures.user_fixture()
+      other_user = AccountsFixtures.user_fixture()
 
-      user = AccountsFixtures.user_fixture()
+      _other_trigger = setup_trigger([{other_user, :admin}])
 
-      project = 
-        insert(
-          :project,
-          users: [
-            build(:project_user, user: super_user_1),
-            build(:project_user, user: user),
-            build(:project_user, user: super_user_2),
-          ]
-        )
-      workflow = insert(:workflow, project: project)
-
-      kafka_configuration = build(:triggers_kafka_cnfiguration)
-
-      trigger =
-        insert(
-          :trigger,
-          type: :kafka,
-          kafka_configuration: kafka_configuration,
-          workflow: workflow
-        )
+      trigger = setup_trigger([{admin_user, :admin}, {owner_user, :owner}])
 
       %{
-        proejct_id: project.id,
-        trigger_id: trigger.id,
-        super_user_1: super_user_1,
-        super_user_2: super_user_2,
-        user: user,
+        admin_user: admin_user,
+        other_user: other_user,
+        owner_user: owner_user,
+        trigger: trigger,
       }
     end
 
-    test "sends an email to all associated superusers" do
-      assert_email_sent(
-        subject: "Kafka Trigger Failure",
-        to: 
-      )
+    test "sends an email to all associated superusers only", %{
+      admin_user: admin_user,
+      other_user: other_user,
+      owner_user: owner_user,
+      trigger: %{id: trigger_id, workflow: workflow}
+    } do
+      expected_subject = "Kafka trigger failure on #{workflow.name}"
 
+      admin_user_recipient = Swoosh.Email.Recipient.format(admin_user)
+      other_user_recipient = Swoosh.Email.Recipient.format(other_user)
+      owner_user_recipient = Swoosh.Email.Recipient.format(owner_user)
+
+      KafkaTriggers.notify_users_of_trigger_failure(trigger_id)
+
+      # Swoosh test matchers seem to have a blind spot wrt multiple
+      # `deliver` calls.
+      assert_received({
+        :email,
+        %Swoosh.Email{subject: ^expected_subject, to: [^admin_user_recipient]}
+      })
+
+      assert_received({
+        :email,
+        %Swoosh.Email{subject: ^expected_subject, to: [^owner_user_recipient]}
+      })
+
+      refute_received({
+        :email,
+        %Swoosh.Email{to: [^other_user_recipient]}
+      })
     end
 
-    defp build_superuser(domain) do
-      build(
-        :project_user,
-        user: build(:user, email: "super@#{domain}", role: :superuser)
-      )
+    test "sets an indicator of when last a notification was sent for trigger", %{
+      trigger: %{id: trigger_id}
+    } do
+      KafkaTriggers.notify_users_of_trigger_failure(trigger_id)
+
+      sent_at =
+        :persistent_term.get(
+          {:kafka_trigger_failure_notification_sent_at, trigger_id}
+        )
+
+      assert DateTime.diff(DateTime.utc_now(), sent_at, :second) < 2
     end
 
-    defp build_user(domain) do
-      build(
-        :project_user,
-        user: build(:user, email: "notsosuper@#{domain}", role: :user)
+    test "publishes an event wih the notification time", %{
+      trigger: %{id: trigger_id}
+    } do
+      Events.subscribe_to_kafka_trigger_notification_sent()
+
+      KafkaTriggers.notify_users_of_trigger_failure(trigger_id)
+
+      assert_received(
+        %Events.KafkaTriggerNotificationSent{
+          trigger_id: ^trigger_id,
+          sent_at: sent_at
+        }
+      )
+
+      assert DateTime.diff(DateTime.utc_now(), sent_at, :second) < 2
+    end
+
+    defp setup_trigger(users_and_roles) do
+      kafka_configuration = build(:triggers_kafka_configuration)
+
+      project_users =
+        users_and_roles
+        |> Enum.map(fn {user, role} ->
+          build(:project_user, user: user, role: role)
+        end)
+
+      project =
+        insert(
+          :project,
+          project_users: project_users
+          # project_users: [
+          #   build(:project_user, user: admin_user, role: :admin),
+          #   build(:project_user, user: user),
+          #   build(:project_user, user: owner_user, role: :owner),
+          # ]
+        )
+
+      workflow = insert(:workflow, project: project)
+
+      insert(
+        :trigger,
+        type: :kafka,
+        kafka_configuration: kafka_configuration,
+        workflow: workflow
       )
     end
   end
