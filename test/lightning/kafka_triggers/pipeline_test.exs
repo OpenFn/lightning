@@ -2,6 +2,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
   use Lightning.DataCase
 
   import Mock
+  import Mox
   import ExUnit.CaptureLog
 
   alias Ecto.Changeset
@@ -14,6 +15,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
   alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
   alias Lightning.KafkaTriggers.Pipeline
   alias Lightning.Repo
+  alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Triggers.Events
   alias Lightning.Workflows.Triggers.Events.KafkaTriggerNotificationSent
   alias Lightning.WorkOrder
@@ -472,11 +474,46 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       assert_receive %KafkaTriggerNotificationSent{trigger_id: ^trigger_id}
     end
 
-    test "dumps the messages to alternate storage if enabled", %{
+    @tag :tmp_dir
+    test "dumps persistence_failed messages to alternate storage if enabled", %{
       context: context,
-      messages: [message_1, message_2]
+      messages: [message_1, message_2],
+      tmp_dir: tmp_dir
     } do
+      expect(Lightning.MockConfig, :kafka_alternate_storage_enabled?, fn ->
+        true
+      end)
 
+      expect(Lightning.MockConfig, :kafka_alternate_storage_file_path, fn ->
+        tmp_dir
+      end)
+
+      %{workflow: workflow} =
+        Trigger
+        |> Repo.get(context.trigger_id |> Atom.to_string())
+        |> Repo.preload(:workflow)
+
+      persistence_failure_message_1 =
+        build_broadway_message(offset: 3)
+        |> Broadway.Message.failed(:persistence)
+      persistence_failure_message_2 =
+        build_broadway_message(offset: 4)
+        |> Broadway.Message.failed(:persistence)
+
+      messages = [
+        message_1,
+        persistence_failure_message_1,
+        message_2,
+        persistence_failure_message_2,
+      ]
+
+      Pipeline.handle_failed(messages, context)
+
+      path = Path.join(tmp_dir, workflow.id)
+
+      {:ok, files} = File.ls!(path)
+
+      assert files |> Enum.count() == 2
     end
 
     defp expected_duplicate_log_message(message, context) do

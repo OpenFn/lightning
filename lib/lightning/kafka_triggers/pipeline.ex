@@ -124,6 +124,8 @@ defmodule Lightning.KafkaTriggers.Pipeline do
       notify_sentry(message, context)
     end)
 
+    maybe_write_to_alternate_storage(messages, trigger_id)
+
     maybe_notify_users(messages, trigger_id)
 
     messages
@@ -193,6 +195,11 @@ defmodule Lightning.KafkaTriggers.Pipeline do
         type: type
       }
     )
+  end
+
+  defp maybe_write_to_alternate_storage(_messages, _trigger_id) do
+    # This is a placeholder for writing messages to an alternate storage
+    # system in the event of a failure.
   end
 
   defp build_producer_opts(opts) do
