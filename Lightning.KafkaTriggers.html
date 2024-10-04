@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-856B2899.js"></script>
+    <script src="dist/sidebar_items-A8DDE292.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -174,17 +174,6 @@ association with the trigger id.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#determine_offset_reset_policy/1" translate="no">determine_offset_reset_policy(trigger)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Selects the appropriate offset reset policy for a given trigger based on the
-presence of partition-specific timestamps.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
         <a href="#enable_disable_triggers/1" translate="no">enable_disable_triggers(triggers)</a>
 
       </div>
@@ -212,6 +201,14 @@ presence of partition-specific timestamps.</p></div>
     <div class="summary-row">
       <div class="summary-signature">
         <a href="#get_kafka_triggers_being_updated/1" translate="no">get_kafka_triggers_being_updated(changeset)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#initial_policy/1" translate="no">initial_policy(map)</a>
 
       </div>
 
@@ -255,7 +252,7 @@ presence of partition-specific timestamps.</p></div>
     </a>
     <h1 class="signature" translate="no">build_topic_partition_offset(message)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L74" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L52" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -278,7 +275,7 @@ association with the trigger id.</p>
     </a>
     <h1 class="signature" translate="no">convert_rate_limit()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L207" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L185" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -289,29 +286,6 @@ association with the trigger id.</p>
   <section class="docstring">
 
 
-  </section>
-</section>
-<section class="detail" id="determine_offset_reset_policy/1">
-
-  <div class="detail-header">
-    <a href="#determine_offset_reset_policy/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">determine_offset_reset_policy(trigger)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L36" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-<p>Selects the appropriate offset reset policy for a given trigger based on the
-presence of partition-specific timestamps.</p>
   </section>
 </section>
 <section class="detail" id="enable_disable_triggers/1">
@@ -323,7 +297,7 @@ presence of partition-specific timestamps.</p>
     </a>
     <h1 class="signature" translate="no">enable_disable_triggers(triggers)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L80" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L58" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -367,7 +341,7 @@ presence of partition-specific timestamps.</p>
     </a>
     <h1 class="signature" translate="no">generate_pipeline_child_spec(trigger)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L99" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L77" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -389,7 +363,29 @@ presence of partition-specific timestamps.</p>
     </a>
     <h1 class="signature" translate="no">get_kafka_triggers_being_updated(changeset)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L154" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L132" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="initial_policy/1">
+
+  <div class="detail-header">
+    <a href="#initial_policy/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">initial_policy(map)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L34" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -433,7 +429,7 @@ presence of partition-specific timestamps.</p>
     </a>
     <h1 class="signature" translate="no">update_pipeline(supervisor, trigger_id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L177" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L155" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>

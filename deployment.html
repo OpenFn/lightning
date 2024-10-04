@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-856B2899.js"></script>
+    <script src="dist/sidebar_items-A8DDE292.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -234,7 +234,16 @@ by <code class="inline">KAFKA_NUMBER_OF_MESSAGES_PER_SECOND</code>). The default
 message received. This to protect against the ingestion of duplicate messages
 from the cluster. These records are periodically cleaned out. The duration for
 which they are retained is controlled by
-<code class="inline">KAFKA_DUPLICATE_TRACKING_RETENTION_SECONDS</code>. The default value is 3600.</p><h3 id="google-oauth2" class="section-heading">
+<code class="inline">KAFKA_DUPLICATE_TRACKING_RETENTION_SECONDS</code>. The default value is 3600.</p><h4>Disabling Kafka Triggers</h4><p>After a Kafka consumer group connects to a Kafka cluster, the cluster will track
+the last committed offset for a given consumer group ,to ensure that the consumer
+group receives the correct messages.</p><p>This data is retained for a finite period. If an enabled Kafka trigger is 
+disabled for longer than the offset retention period the consumer group offset
+data will be cleared.</p><p>If the Kafka trigger is re-enabled after the offset data has been cleared, this
+will result in the consumer group reverting to what has been configured as the
+'Initial offset reset policy' for the trigger. This may result in the
+duplication of messages or even data loss.</p><p>It is recommended that you check the value of the <code class="inline">offsets.retention.minutes</code> for
+the Kafka cluster to determine what the cluster's retention period is, and
+consider this when disabling a Kafka trigger for an extended period.</p><h3 id="google-oauth2" class="section-heading">
   <a href="#google-oauth2" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
