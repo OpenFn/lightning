@@ -3,6 +3,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
   import Phoenix.LiveViewTest
   import Lightning.Factories
+  import Lightning.ApplicationHelpers, only: [dynamically_absorb_delay: 1]
 
   alias Lightning.Runs
   alias Lightning.WorkOrders.Events
@@ -684,6 +685,10 @@ defmodule LightningWeb.WorkOrderLiveTest do
         filters: %{"rejected" => "false", "failed" => "true"}
       )
       |> render_submit()
+
+      dynamically_absorb_delay(fn ->
+        view |> has_element?("#workorder-#{failed_work_order.id}")
+      end)
 
       assert view |> has_element?("#workorder-#{failed_work_order.id}")
       refute view |> has_element?("#workorder-#{rejected_work_order.id}")

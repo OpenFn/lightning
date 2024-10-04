@@ -19,6 +19,11 @@ and this project adheres to
 
 ### Changed
 
+- Do not track partition timestamps when ingesting Kafka messages.
+  [#2531] (https://github.com/OpenFn/lightning/issues/2531)
+- Always use the `initial_offset_reset_policy` when enabling a Kafka pipeline.
+  [#2531] (https://github.com/OpenFn/lightning/issues/2531)
+
 ### Fixed
 
 ## [v2.9.8] - 2024-10-03

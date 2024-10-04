@@ -29,25 +29,9 @@ defmodule Lightning.KafkaTriggers do
     query |> Repo.all()
   end
 
-  @doc """
-  Selects the appropriate offset reset policy for a given trigger based on the
-  presence of partition-specific timestamps.
-  """
-  def determine_offset_reset_policy(trigger) do
-    %Trigger{kafka_configuration: kafka_configuration} = trigger
-
-    case kafka_configuration do
-      config = %{partition_timestamps: ts} when map_size(ts) == 0 ->
-        initial_policy(config)
-
-      %{partition_timestamps: ts} ->
-        earliest_timestamp(ts)
-    end
-  end
-
   # Converts the initial_offset_reset_policy configuration value to a format
   # suitable for use by a `Pipeline` process.
-  defp initial_policy(%{initial_offset_reset_policy: initial_policy}) do
+  def initial_policy(%{initial_offset_reset_policy: initial_policy}) do
     cond do
       initial_policy in ["earliest", "latest"] ->
         initial_policy |> String.to_atom()
@@ -59,12 +43,6 @@ defmodule Lightning.KafkaTriggers do
       true ->
         :latest
     end
-  end
-
-  defp earliest_timestamp(timestamps) do
-    timestamp = timestamps |> Map.values() |> Enum.sort() |> hd()
-
-    {:timestamp, timestamp}
   end
 
   @doc """
@@ -121,7 +99,7 @@ defmodule Lightning.KafkaTriggers do
         nil
       end
 
-    offset_reset_policy = determine_offset_reset_policy(trigger)
+    offset_reset_policy = initial_policy(trigger.kafka_configuration)
 
     number_of_consumers = Lightning.Config.kafka_number_of_consumers()
     number_of_processors = Lightning.Config.kafka_number_of_processors()

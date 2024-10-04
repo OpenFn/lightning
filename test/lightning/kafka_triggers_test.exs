@@ -150,73 +150,8 @@ defmodule Lightning.KafkaTriggersTest do
     end
   end
 
-  describe ".determine_offset_reset_policy" do
-    test "returns :earliest if 'earliest'" do
-      policy =
-        "earliest"
-        |> build_trigger()
-        |> KafkaTriggers.determine_offset_reset_policy()
-
-      assert policy == :earliest
-    end
-
-    test "returns :latest if 'latest'" do
-      policy =
-        "latest"
-        |> build_trigger()
-        |> KafkaTriggers.determine_offset_reset_policy()
-
-      assert policy == :latest
-    end
-
-    test "returns policy if timestamp as a string" do
-      timestamp = "1715312900123"
-
-      policy =
-        timestamp
-        |> build_trigger()
-        |> KafkaTriggers.determine_offset_reset_policy()
-
-      assert policy == {:timestamp, timestamp |> String.to_integer()}
-    end
-
-    test "returns :latest if unrecognised string" do
-      policy =
-        "woteva"
-        |> build_trigger()
-        |> KafkaTriggers.determine_offset_reset_policy()
-
-      assert policy == :latest
-    end
-
-    test "returns earliest partition timestamp if data is available" do
-      partition_timestamps = %{
-        "1" => 1_715_312_900_121,
-        "2" => 1_715_312_900_120,
-        "3" => 1_715_312_900_123
-      }
-
-      policy =
-        "earliest"
-        |> build_trigger(partition_timestamps)
-        |> KafkaTriggers.determine_offset_reset_policy()
-
-      assert policy == {:timestamp, 1_715_312_900_120}
-    end
-
-    defp build_trigger(initial_offset_reset, partition_timestamps \\ %{}) do
-      kafka_configuration =
-        configuration(
-          initial_offset_reset_policy: initial_offset_reset,
-          partition_timestamps: partition_timestamps
-        )
-
-      build(:trigger, type: :kafka, kafka_configuration: kafka_configuration)
-    end
-  end
-
   describe ".build_topic_partition_offset" do
-    test "builds based on the proivded message" do
+    test "builds based on the provided message" do
       message = build_broadway_message("foo", 2, 1)
       assert KafkaTriggers.build_topic_partition_offset(message) == "foo_2_1"
 
@@ -804,6 +739,42 @@ defmodule Lightning.KafkaTriggersTest do
     end
   end
 
+  describe "initial_policy" do
+    test "returns :earliest if 'earliest'" do
+      trigger = "earliest" |> build_trigger()
+
+      policy = KafkaTriggers.initial_policy(trigger.kafka_configuration)
+
+      assert policy == :earliest
+    end
+
+    test "returns :latest if 'latest'" do
+      trigger = "latest" |> build_trigger()
+
+      policy = KafkaTriggers.initial_policy(trigger.kafka_configuration)
+
+      assert policy == :latest
+    end
+
+    test "returns policy if timestamp as a string" do
+      timestamp = "1715312900123"
+
+      trigger = timestamp |> build_trigger()
+
+      policy = KafkaTriggers.initial_policy(trigger.kafka_configuration)
+
+      assert policy == {:timestamp, timestamp |> String.to_integer()}
+    end
+
+    test "returns :latest if unrecognised string" do
+      trigger = "woteva" |> build_trigger()
+
+      policy = KafkaTriggers.initial_policy(trigger.kafka_configuration)
+
+      assert policy == :latest
+    end
+  end
+
   defp child_spec(opts) do
     trigger = opts |> Keyword.get(:trigger)
     index = opts |> Keyword.get(:index)
@@ -852,7 +823,6 @@ defmodule Lightning.KafkaTriggersTest do
 
   defp configuration(opts) do
     index = opts |> Keyword.get(:index, 1)
-    partition_timestamps = opts |> Keyword.get(:partition_timestamps, %{})
     sasl = opts |> Keyword.get(:sasl, true)
     ssl = opts |> Keyword.get(:ssl, true)
 
@@ -868,7 +838,6 @@ defmodule Lightning.KafkaTriggersTest do
       group_id: "lightning-#{index}",
       hosts: [["host-#{index}", "9092"], ["other-host-#{index}", "9093"]],
       initial_offset_reset_policy: initial_offset_reset_policy,
-      partition_timestamps: partition_timestamps,
       password: password,
       sasl: sasl_type,
       ssl: ssl,
@@ -882,4 +851,11 @@ defmodule Lightning.KafkaTriggersTest do
   end
 
   defp sasl_config(_index, false = _sasl), do: nil
+
+  defp build_trigger(initial_offset_reset) do
+    kafka_configuration =
+      configuration(initial_offset_reset_policy: initial_offset_reset)
+
+    build(:trigger, type: :kafka, kafka_configuration: kafka_configuration)
+  end
 end

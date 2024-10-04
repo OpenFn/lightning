@@ -143,7 +143,6 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
         ],
         hosts_string: "host1:9092, host2:9093",
         initial_offset_reset_policy: "earliest",
-        partition_timestamps: %{"1" => 1_717_174_749_123},
         password: "password",
         sasl: "plain",
         ssl: true,
@@ -160,7 +159,6 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
         ],
         hosts_string: "host1:9092, host2:9093",
         initial_offset_reset_policy: "earliest",
-        partition_timestamps: %{"1" => 1_717_174_749_123},
         password: "password",
         sasl: :plain,
         ssl: true,
@@ -972,100 +970,6 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
     end
   end
 
-  describe ".partitions_changeset/3" do
-    setup do
-      %{partition: 7, timestamp: 124}
-    end
-
-    test "adds data for partition if there is no partition data", %{
-      partition: partition,
-      timestamp: timestamp
-    } do
-      config =
-        build(:triggers_kafka_configuration, partition_timestamps: %{})
-
-      expected_timestamps = %{
-        "#{partition}" => timestamp
-      }
-
-      changeset =
-        config
-        |> KafkaConfiguration.partitions_changeset(partition, timestamp)
-
-      assert %Changeset{changes: changes, valid?: true} = changeset
-
-      assert %{partition_timestamps: ^expected_timestamps} = changes
-    end
-
-    test "adds data for partition if partition is new but there is data", %{
-      partition: partition,
-      timestamp: timestamp
-    } do
-      config =
-        build(:triggers_kafka_configuration, partition_timestamps: %{"3" => 123})
-
-      expected_timestamps = %{
-        "3" => 123,
-        "#{partition}" => timestamp
-      }
-
-      changeset =
-        config
-        |> KafkaConfiguration.partitions_changeset(partition, timestamp)
-
-      assert %Changeset{changes: changes, valid?: true} = changeset
-
-      assert %{partition_timestamps: ^expected_timestamps} = changes
-    end
-
-    test "does not update partition data if persisted timestamp is newer", %{
-      partition: partition,
-      timestamp: timestamp
-    } do
-      config =
-        build(
-          :triggers_kafka_configuration,
-          partition_timestamps: %{
-            "3" => 123,
-            "#{partition}" => timestamp + 1
-          }
-        )
-
-      changeset =
-        config
-        |> KafkaConfiguration.partitions_changeset(partition, timestamp)
-
-      assert changeset |> Changeset.get_change(:partition_timestamps) == nil
-    end
-
-    test "updates persisted partition data if persisted timestamp is older", %{
-      partition: partition,
-      timestamp: timestamp
-    } do
-      config =
-        build(
-          :triggers_kafka_configuration,
-          partition_timestamps: %{
-            "3" => 123,
-            "#{partition}" => timestamp - 1
-          }
-        )
-
-      expected_timestamps = %{
-        "3" => 123,
-        "#{partition}" => timestamp
-      }
-
-      changeset =
-        config
-        |> KafkaConfiguration.partitions_changeset(partition, timestamp)
-
-      assert %Changeset{changes: changes, valid?: true} = changeset
-
-      assert %{partition_timestamps: ^expected_timestamps} = changes
-    end
-  end
-
   describe ".validate_initial_offset_reset_policy/1" do
     setup do
       base_changes = %{
@@ -1076,7 +980,6 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
         ],
         hosts_string: "host1:9092, host2:9093",
         initial_offset_reset_policy: "earliest",
-        partition_timestamps: %{"1" => 1_717_174_749_123},
         password: "password",
         sasl: "plain",
         ssl: true,

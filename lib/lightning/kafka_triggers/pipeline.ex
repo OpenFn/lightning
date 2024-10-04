@@ -5,14 +5,11 @@ defmodule Lightning.KafkaTriggers.Pipeline do
   """
   use Broadway
 
-  import Ecto.Query
-
   alias Ecto.Changeset
   alias Ecto.Multi
   alias Lightning.KafkaTriggers
   alias Lightning.KafkaTriggers.MessageHandling
   alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
-  alias Lightning.Workflows.Trigger
 
   require Logger
 
@@ -60,7 +57,6 @@ defmodule Lightning.KafkaTriggers.Pipeline do
 
     Multi.new()
     |> track_message(trigger_id, message)
-    |> update_partition_timestamps(trigger_id, message)
     |> MessageHandling.persist_message(trigger_id, message)
     |> case do
       {:ok, _} ->
@@ -112,25 +108,12 @@ defmodule Lightning.KafkaTriggers.Pipeline do
     multi |> Multi.insert(:record, record_changeset)
   end
 
-  defp update_partition_timestamps(multi, trigger_id, message) do
-    %{metadata: %{partition: partition, ts: timestamp}} = message
-
-    trigger_query =
-      from t in Trigger, where: t.id == ^trigger_id, lock: "FOR UPDATE"
-
-    multi
-    |> Multi.one(:trigger, trigger_query)
-    |> Multi.update(:update_trigger, fn %{trigger: trigger} ->
-      trigger |> Trigger.kafka_partitions_changeset(partition, timestamp)
-    end)
-  end
-
   @impl true
   def handle_failed(messages, context) do
     messages
     |> Enum.each(fn message ->
-      notify_sentry(message, context)
       create_log_entry(message, context)
+      notify_sentry(message, context)
     end)
 
     messages
