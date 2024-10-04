@@ -472,6 +472,13 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       assert_receive %KafkaTriggerNotificationSent{trigger_id: ^trigger_id}
     end
 
+    test "dumps the messages to alternate storage if enabled", %{
+      context: context,
+      messages: [message_1, message_2]
+    } do
+
+    end
+
     defp expected_duplicate_log_message(message, context) do
       "Kafka Pipeline Duplicate Message:" <>
         " Trigger_id `#{context.trigger_id}`" <>
