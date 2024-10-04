@@ -86,7 +86,7 @@ defmodule Lightning.Run do
       values: [immediate: 0, normal: 1],
       default: :normal
 
-    timestamps type: :utc_datetime_usec, updated_at: false
+    timestamps(type: :utc_datetime_usec)
   end
 
   def for(%Trigger{} = trigger, attrs) do
