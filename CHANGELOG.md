@@ -34,6 +34,8 @@ and this project adheres to
   [#2542](https://github.com/OpenFn/lightning/issues/2542)
 - Perform data retention purging in batches to avoid timeouts
   [#2528](https://github.com/OpenFn/lightning/issues/2528)
+- Fix editor panel title gets pushed away when collapsed
+  [#2545](https://github.com/OpenFn/lightning/issues/2545)
 
 ## [v2.9.8] - 2024-10-03
 

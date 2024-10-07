@@ -76,15 +76,13 @@ defmodule LightningWeb.WorkflowLive.JobView do
   end
 
   def job_edit_view(assigns) do
-    {editor_disabled?, editor_disabled_message, editor_panel_title} =
-      editor_disabled?(assigns)
+    {editor_disabled?, editor_disabled_message} = editor_disabled?(assigns)
 
     assigns =
       assigns
       |> assign(
         editor_disabled?: editor_disabled?,
-        editor_disabled_message: editor_disabled_message,
-        editor_panel_title: editor_panel_title
+        editor_disabled_message: editor_disabled_message
       )
 
     ~H"""
@@ -154,8 +152,8 @@ defmodule LightningWeb.WorkflowLive.JobView do
       <%= render_slot(@inner_block) %>
       <.collapsible_panel
         id="job-editor-panel"
-        class="h-full border border-l-0 job-editor-panel"
-        panel_title={@editor_panel_title}
+        class={"h-full border border-l-0 job-editor-panel #{if(@editor_disabled?, do: " disabled")}"}
+        panel_title={if(@editor_disabled?, do: "Editor (read-only)", else: "Editor")}
       >
         <.live_component
           module={EditorPane}
@@ -221,14 +219,13 @@ defmodule LightningWeb.WorkflowLive.JobView do
     cond do
       is_struct(params.form.source.data, Lightning.Workflows.Snapshot.Job) ->
         {true,
-         "You can't edit while viewing a snapshot, switch to the latest version.",
-         "Editor (read-only)"}
+         "You can't edit while viewing a snapshot, switch to the latest version."}
 
       params.display_banner ->
-        {true, params.banner_message, "Editor (read-only)"}
+        {true, params.banner_message}
 
       true ->
-        {false, "", "Editor"}
+        {false, ""}
     end
   end
 
