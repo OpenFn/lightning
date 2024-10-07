@@ -19,8 +19,10 @@ and this project adheres to
 
 ### Changed
 
+- Make project description multiline in project.yaml
+  [#2534](https://github.com/OpenFn/lightning/issues/2534)
 - Do not track partition timestamps when ingesting Kafka messages.
-  [#2531] (https://github.com/OpenFn/lightning/issues/2531)
+  [#2531](https://github.com/OpenFn/lightning/issues/2531)
 - Always use the `initial_offset_reset_policy` when enabling a Kafka pipeline.
   [#2531] (https://github.com/OpenFn/lightning/issues/2531)
 
