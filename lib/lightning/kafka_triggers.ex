@@ -249,25 +249,29 @@ defmodule Lightning.KafkaTriggers do
   end
 
   def maybe_write_to_alternate_storage(trigger_id, message) do
-    export =
-      message |> Map.filter(fn {key,_val} -> key in [:data, :metadata] end)
+    if path = build_file_path(trigger_id, message) do
+      export =
+        message |> Map.filter(fn {key,_val} -> key in [:data, :metadata] end)
 
-    path = build_file_path(trigger_id, message)
-
-    File.write!(path, Jason.encode!(export))
+      File.write!(path, Jason.encode!(export))
+    end
   end
 
   defp build_file_path(trigger_id, message) do
-    base_path =
-      Lightning.Config.kafka_alternate_storage_file_path()
+    with true <- Lightning.Config.kafka_alternate_storage_enabled?(),
+         base_path when not is_nil(base_path) <- Lightning.Config.kafka_alternate_storage_file_path(),
+         true <- File.exists?(base_path),
+         %{workflow_id: workflow_id} <- Trigger |> Repo.get(trigger_id) do
 
-    %{workflow_id: workflow_id} = Trigger |> Repo.get(trigger_id)
+      file_name = "#{trigger_id}_#{build_topic_partition_offset(message)}.json"
 
-    file_name = "#{trigger_id}_#{build_topic_partition_offset(message)}.json"
-
-    base_path
-      |> Path.join(workflow_id)
-      |> tap(&File.mkdir/1)
-      |> Path.join(file_name)
+      base_path
+        |> Path.join(workflow_id)
+        |> tap(&File.mkdir/1)
+        |> Path.join(file_name)
+    else
+      _anything ->
+        nil
+    end
   end
 end

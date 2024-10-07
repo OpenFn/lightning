@@ -1000,7 +1000,7 @@ defmodule Lightning.KafkaTriggersTest do
 
       file_path = tmp_dir |> Path.join(workflow_id) |> Path.join(file_name)
 
-      KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message)
+      assert KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message) == :ok
 
       file_contents = File.read!(file_path)
 
@@ -1031,11 +1031,117 @@ defmodule Lightning.KafkaTriggersTest do
 
       file_path = dir_path |> Path.join(file_name)
 
-      KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message)
+      assert KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message) == :ok
 
       file_contents = File.read!(file_path)
 
       assert file_contents == expected_file_contents
+    end
+
+    @tag :tmp_dir
+    test "does not write if alternate storage is disabled", %{
+      file_name: file_name,
+      message: message,
+      trigger_id: trigger_id,
+      tmp_dir: tmp_dir,
+      workflow_id: workflow_id
+    } do
+      expect(Lightning.MockConfig, :kafka_alternate_storage_enabled?, fn ->
+        false
+      end)
+
+      expect(Lightning.MockConfig, :kafka_alternate_storage_file_path, fn ->
+        tmp_dir
+      end)
+
+      dir_path =
+        tmp_dir
+        |> Path.join(workflow_id)
+        |> tap(&File.mkdir!(&1))
+
+      file_path = dir_path |> Path.join(file_name)
+
+      assert KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message) == :ok
+
+      refute File.exists?(file_path)
+    end
+
+    test "does not write if alternate storage path does not exist", %{
+      message: message,
+      trigger_id: trigger_id,
+    } do
+      non_existent_path = Path.join("tmp", "does_not_exist")
+
+      expect(Lightning.MockConfig, :kafka_alternate_storage_enabled?, fn ->
+        true
+      end)
+
+      expect(Lightning.MockConfig, :kafka_alternate_storage_file_path, fn ->
+        non_existent_path
+      end)
+
+      assert KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message) == {:error, :path_error}
+
+      refute File.exists?(non_existent_path)
+    end
+
+    test "does not write if configured path is nil", %{
+      message: message,
+      trigger_id: trigger_id,
+      workflow_id: workflow_id
+    } do
+      expect(Lightning.MockConfig, :kafka_alternate_storage_enabled?, fn ->
+        true
+      end)
+
+      expect(Lightning.MockConfig, :kafka_alternate_storage_file_path, fn ->
+        nil
+      end)
+
+      assert KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message) == {:error, :path_error}
+
+      refute File.exists?(workflow_id)
+    end
+
+    test "does not write if configured path is an empty string", %{
+      message: message,
+      trigger_id: trigger_id,
+      workflow_id: workflow_id
+    } do
+      expect(Lightning.MockConfig, :kafka_alternate_storage_enabled?, fn ->
+        true
+      end)
+
+      expect(Lightning.MockConfig, :kafka_alternate_storage_file_path, fn ->
+        ""
+      end)
+
+      assert KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message) == {:error, :path_error}
+
+      refute File.exists?(workflow_id)
+    end
+
+    @tag :tmp_dir
+    test "does not write if the trigger does not exist", %{
+      file_name: file_name,
+      message: message,
+      tmp_dir: tmp_dir,
+    } do
+      trigger_id = Ecto.UUID.generate()
+
+      expect(Lightning.MockConfig, :kafka_alternate_storage_enabled?, fn ->
+        true
+      end)
+
+      expect(Lightning.MockConfig, :kafka_alternate_storage_file_path, fn ->
+        tmp_dir
+      end)
+      
+      file_path = tmp_dir |> Path.join(file_name)
+
+      assert KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message) == {:error, :path_error}
+
+      refute File.exists?(file_path)
     end
   end
 
