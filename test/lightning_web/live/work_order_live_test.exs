@@ -678,6 +678,11 @@ defmodule LightningWeb.WorkOrderLiveTest do
       |> render_submit()
 
       refute view |> has_element?("#workorder-#{failed_work_order.id}")
+
+      dynamically_absorb_delay(fn ->
+        view |> has_element?("#workorder-#{rejected_work_order.id}")
+      end)
+
       assert view |> has_element?("#workorder-#{rejected_work_order.id}")
 
       view
