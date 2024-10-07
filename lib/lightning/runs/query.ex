@@ -8,6 +8,25 @@ defmodule Lightning.Runs.Query do
 
   require Lightning.Run
 
+  @spec forfeited :: Ecto.Queryable.t()
+  def forfeited do
+    now = Lightning.current_time()
+
+    max_pull_timeout_seconds = Lightning.Config.max_pull_timeout_seconds()
+    grace_period_ms = Lightning.Config.grace_period() * 1000
+
+    fallback_oldest_claim =
+      now
+      |> DateTime.add(-max_pull_timeout_seconds, :second)
+      |> DateTime.add(-grace_period_ms, :millisecond)
+
+    from(r in Run,
+      where: r.claimed_at < ^fallback_oldest_claim,
+      where: is_nil(r.started_at),
+      where: r.state == "claimed"
+    )
+  end
+
   @doc """
   Return all runs that have been claimed by a worker before the earliest
   acceptable start time (determined by the run options and grace period) but are
