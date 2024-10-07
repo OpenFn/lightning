@@ -248,7 +248,26 @@ defmodule Lightning.KafkaTriggers do
     DateTime.diff(sending_at, last_sent_at, :second) > embargo_period
   end
 
-  def maybe_write_to_alternate_storage(_trigger_id, _message) do
+  def maybe_write_to_alternate_storage(trigger_id, message) do
+    export =
+      message |> Map.filter(fn {key,_val} -> key in [:data, :metadata] end)
 
+    path = build_file_path(trigger_id, message)
+
+    File.write!(path, Jason.encode!(export))
+  end
+
+  defp build_file_path(trigger_id, message) do
+    base_path =
+      Lightning.Config.kafka_alternate_storage_file_path()
+
+    %{workflow_id: workflow_id} = Trigger |> Repo.get(trigger_id)
+
+    file_name = "#{trigger_id}_#{build_topic_partition_offset(message)}.json"
+
+    base_path
+      |> Path.join(workflow_id)
+      |> tap(&File.mkdir/1)
+      |> Path.join(file_name)
   end
 end

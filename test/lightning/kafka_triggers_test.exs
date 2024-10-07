@@ -961,26 +961,35 @@ defmodule Lightning.KafkaTriggersTest do
 
   describe ".maybe_write_to_alternate_storage/2" do
     setup do
-      trigger = insert(
-        :trigger,
-        type: :kafka,
-        kafka_configuration: build(:triggers_kafka_configuration)
-      )
+      %{id: trigger_id, workflow_id: workflow_id} =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: build(:triggers_kafka_configuration)
+        )
 
       message = build_broadway_message("foo", 2, 1)
+      expected_file_contents =
+        %{data: message.data, metadata: message.metadata} |> Jason.encode!()
 
-      %{message: message, trigger: trigger}
+      %{
+        expected_file_contents: expected_file_contents,
+        file_name: "#{trigger_id}_foo_2_1.json",
+        message: message,
+        trigger_id: trigger_id,
+        workflow_id: workflow_id,
+      }
     end
 
     @tag :tmp_dir
-    test "writes the entire message object as JSON to a file", %{
+    test "writes the message object as JSON to a file", %{
+      expected_file_contents: expected_file_contents,
+      file_name: file_name,
       message: message,
-      trigger: trigger,
-      tmp_dir: tmp_dir
-    }do
-      %{id: trigger_id, workflow_id: workflow_id} = trigger
-      %{topic: topic, partition: partition, offset: offset} = message.metadata
-
+      trigger_id: trigger_id,
+      tmp_dir: tmp_dir,
+      workflow_id: workflow_id
+    } do
       expect(Lightning.MockConfig, :kafka_alternate_storage_enabled?, fn ->
         true
       end)
@@ -989,14 +998,44 @@ defmodule Lightning.KafkaTriggersTest do
         tmp_dir
       end)
 
-      file_name = "#{trigger_id}_#{topic}_#{partition}_#{offset}.json"
       file_path = tmp_dir |> Path.join(workflow_id) |> Path.join(file_name)
 
-      KafkaTriggers.maybe_write_to_alternate_storage(trigger, message)
+      KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message)
 
       file_contents = File.read!(file_path)
 
-      assert file_contents == message |> Jason.encode!()
+      assert file_contents == expected_file_contents
+    end
+
+    @tag :tmp_dir
+    test "writes the message object to file if dir already exists", %{
+      expected_file_contents: expected_file_contents,
+      file_name: file_name,
+      message: message,
+      trigger_id: trigger_id,
+      tmp_dir: tmp_dir,
+      workflow_id: workflow_id
+    } do
+      expect(Lightning.MockConfig, :kafka_alternate_storage_enabled?, fn ->
+        true
+      end)
+
+      expect(Lightning.MockConfig, :kafka_alternate_storage_file_path, fn ->
+        tmp_dir
+      end)
+
+      dir_path =
+        tmp_dir
+        |> Path.join(workflow_id)
+        |> tap(&File.mkdir!(&1))
+
+      file_path = dir_path |> Path.join(file_name)
+
+      KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message)
+
+      file_contents = File.read!(file_path)
+
+      assert file_contents == expected_file_contents
     end
   end
 
