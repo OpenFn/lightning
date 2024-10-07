@@ -25,15 +25,12 @@ defmodule Lightning.ObanManager do
     if timeout? do
       Sentry.capture_message("Processor Timeout",
         level: "warning",
-        message: error,
-        extra: context,
+        extra: Map.merge(context, %{exception: inspect(error)}),
         tags: %{type: "timeout"}
       )
     else
       Sentry.capture_exception(error,
         stacktrace: meta.stacktrace,
-        message: error,
-        error: error,
         extra: context,
         tags: %{type: "oban"}
       )
