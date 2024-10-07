@@ -197,9 +197,12 @@ defmodule Lightning.KafkaTriggers.Pipeline do
     )
   end
 
-  defp maybe_write_to_alternate_storage(_messages, _trigger_id) do
-    # This is a placeholder for writing messages to an alternate storage
-    # system in the event of a failure.
+  defp maybe_write_to_alternate_storage(messages, trigger_id) do
+    messages
+    |> Enum.filter(&(&1.status == {:failed, :persistence}))
+    |> Enum.each(fn message ->
+      KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message)
+    end)
   end
 
   defp build_producer_opts(opts) do

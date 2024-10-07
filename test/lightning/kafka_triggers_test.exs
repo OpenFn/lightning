@@ -160,25 +160,6 @@ defmodule Lightning.KafkaTriggersTest do
       message = build_broadway_message("bar", 4, 2)
       assert KafkaTriggers.build_topic_partition_offset(message) == "bar_4_2"
     end
-
-    defp build_broadway_message(topic, partition, offset) do
-      %Broadway.Message{
-        data: %{interesting: "stuff"} |> Jason.encode!(),
-        metadata: %{
-          offset: offset,
-          partition: partition,
-          key: "",
-          headers: [],
-          ts: 1_715_164_718_283,
-          topic: topic
-        },
-        acknowledger: nil,
-        batcher: :default,
-        batch_key: {"bar_topic", 2},
-        batch_mode: :bulk,
-        status: :ok
-      }
-    end
   end
 
   describe ".enable_disable_triggers/1" do
@@ -978,6 +959,47 @@ defmodule Lightning.KafkaTriggersTest do
     end
   end
 
+  describe ".maybe_write_to_alternate_storage/2" do
+    setup do
+      trigger = insert(
+        :trigger,
+        type: :kafka,
+        kafka_configuration: build(:triggers_kafka_configuration)
+      )
+
+      message = build_broadway_message("foo", 2, 1)
+
+      %{message: message, trigger: trigger}
+    end
+
+    @tag :tmp_dir
+    test "writes the entire message object as JSON to a file", %{
+      message: message,
+      trigger: trigger,
+      tmp_dir: tmp_dir
+    }do
+      %{id: trigger_id, workflow_id: workflow_id} = trigger
+      %{topic: topic, partition: partition, offset: offset} = message.metadata
+
+      expect(Lightning.MockConfig, :kafka_alternate_storage_enabled?, fn ->
+        true
+      end)
+
+      expect(Lightning.MockConfig, :kafka_alternate_storage_file_path, fn ->
+        tmp_dir
+      end)
+
+      file_name = "#{trigger_id}_#{topic}_#{partition}_#{offset}.json"
+      file_path = tmp_dir |> Path.join(workflow_id) |> Path.join(file_name)
+
+      KafkaTriggers.maybe_write_to_alternate_storage(trigger, message)
+
+      file_contents = File.read!(file_path)
+
+      assert file_contents == message |> Jason.encode!()
+    end
+  end
+
   defp child_spec(opts) do
     trigger = opts |> Keyword.get(:trigger)
     index = opts |> Keyword.get(:index)
@@ -1085,5 +1107,24 @@ defmodule Lightning.KafkaTriggersTest do
       kafka_configuration: kafka_configuration,
       workflow: workflow
     )
+  end
+
+  defp build_broadway_message(topic, partition, offset) do
+    %Broadway.Message{
+      data: %{interesting: "stuff"} |> Jason.encode!(),
+      metadata: %{
+        offset: offset,
+        partition: partition,
+        key: "",
+        headers: [],
+        ts: 1_715_164_718_283,
+        topic: topic
+      },
+      acknowledger: nil,
+      batcher: :default,
+      batch_key: {"bar_topic", 2},
+      batch_mode: :bulk,
+      status: :ok
+    }
   end
 end

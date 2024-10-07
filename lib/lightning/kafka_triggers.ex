@@ -247,4 +247,8 @@ defmodule Lightning.KafkaTriggers do
 
     DateTime.diff(sending_at, last_sent_at, :second) > embargo_period
   end
+
+  def maybe_write_to_alternate_storage(_trigger_id, _message) do
+
+  end
 end
