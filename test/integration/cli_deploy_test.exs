@@ -156,7 +156,7 @@ defmodule Lightning.CliDeployTest do
                |> Lightning.Repo.preload(workflows: [:jobs, :triggers, :edges])
 
       assert project.name == "a-test-project"
-      assert project.description == "This is only a test"
+      assert project.description == "This is only a test\n"
 
       assert Enum.count(project.workflows) == 2
 

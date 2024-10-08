@@ -143,6 +143,9 @@ defmodule Lightning.ExportUtils do
       :body ->
         "body: |\n#{indent_multiline_value(v, i)}"
 
+      :description ->
+        "description: |\n#{indent_multiline_value(v, i)}"
+
       :adaptor ->
         "#{k}: '#{v}'"
 
