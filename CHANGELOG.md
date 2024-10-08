@@ -28,6 +28,11 @@ and this project adheres to
 
 ### Fixed
 
+- Fix Oban erros not getting logged in Sentry
+  [#2542](https://github.com/OpenFn/lightning/issues/2542)
+- Perform data retention purging in batches to avoid timeouts
+  [#2528](https://github.com/OpenFn/lightning/issues/2528)
+
 ## [v2.9.8] - 2024-10-03
 
 ### Added
