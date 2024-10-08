@@ -154,9 +154,10 @@ and this project adheres to
   </a>
   <span class="text">Changed</span>
 </h3>
-<ul><li>Do not track partition timestamps when ingesting Kafka messages.
-[#2531] (<a href="https://github.com/OpenFn/lightning/issues/2531">https://github.com/OpenFn/lightning/issues/2531</a>)</li><li>Always use the <code class="inline">initial_offset_reset_policy</code> when enabling a Kafka pipeline.
-[#2531] (<a href="https://github.com/OpenFn/lightning/issues/2531">https://github.com/OpenFn/lightning/issues/2531</a>)</li></ul><h3 id="fixed" class="section-heading">
+<ul><li>Make project description multiline in project.yaml
+<a href="https://github.com/OpenFn/lightning/issues/2534">#2534</a></li><li>Do not track partition timestamps when ingesting Kafka messages.
+<a href="https://github.com/OpenFn/lightning/issues/2531">#2531</a></li><li>Always use the <code class="inline">initial_offset_reset_policy</code> when enabling a Kafka pipeline.
+<a href="https://github.com/OpenFn/lightning/issues/2531">#2531</a></li></ul><h3 id="fixed" class="section-heading">
   <a href="#fixed" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -354,20 +355,20 @@ existing snapshots could be incorrect (e.g. missing steps, missing edges).
 In order to fix this, you will need to manually create new snapshots for
 each of your workflows. This can be done either by modifying the workflow in
 the UI and saving it. Or running a command on the running instance:</p><pre><code class="makeup elixir" translate="no"><span class="kn">alias</span><span class="w"> </span><span class="nc">Lightning.Repo</span><span class="w">
-</span><span class="kn">alias</span><span class="w"> </span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="p" data-group-id="7902617318-1">{</span><span class="nc">Workflow</span><span class="p">,</span><span class="w"> </span><span class="nc">Snapshot</span><span class="p" data-group-id="7902617318-1">}</span><span class="w">
+</span><span class="kn">alias</span><span class="w"> </span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="p" data-group-id="0634566104-1">{</span><span class="nc">Workflow</span><span class="p">,</span><span class="w"> </span><span class="nc">Snapshot</span><span class="p" data-group-id="0634566104-1">}</span><span class="w">
 
-</span><span class="nc">Repo</span><span class="o">.</span><span class="n">transaction</span><span class="p" data-group-id="7902617318-2">(</span><span class="k" data-group-id="7902617318-3">fn</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+</span><span class="nc">Repo</span><span class="o">.</span><span class="n">transaction</span><span class="p" data-group-id="0634566104-2">(</span><span class="k" data-group-id="0634566104-3">fn</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
   </span><span class="n">snapshots</span><span class="w"> </span><span class="o">=</span><span class="w">
-    </span><span class="nc">Repo</span><span class="o">.</span><span class="n">all</span><span class="p" data-group-id="7902617318-4">(</span><span class="nc">Workflow</span><span class="p" data-group-id="7902617318-4">)</span><span class="w">
-    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="7902617318-5">(</span><span class="o">&amp;</span><span class="nc">Workflow</span><span class="o">.</span><span class="n">touch</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="7902617318-5">)</span><span class="w">
-    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="7902617318-6">(</span><span class="o">&amp;</span><span class="nc">Repo</span><span class="o">.</span><span class="n">update!</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="7902617318-6">)</span><span class="w">
-    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="7902617318-7">(</span><span class="k" data-group-id="7902617318-8">fn</span><span class="w"> </span><span class="n">workflow</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
-      </span><span class="p" data-group-id="7902617318-9">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshot</span><span class="p" data-group-id="7902617318-9">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Snapshot</span><span class="o">.</span><span class="n">create</span><span class="p" data-group-id="7902617318-10">(</span><span class="n">workflow</span><span class="p" data-group-id="7902617318-10">)</span><span class="w">
+    </span><span class="nc">Repo</span><span class="o">.</span><span class="n">all</span><span class="p" data-group-id="0634566104-4">(</span><span class="nc">Workflow</span><span class="p" data-group-id="0634566104-4">)</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="0634566104-5">(</span><span class="o">&amp;</span><span class="nc">Workflow</span><span class="o">.</span><span class="n">touch</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="0634566104-5">)</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="0634566104-6">(</span><span class="o">&amp;</span><span class="nc">Repo</span><span class="o">.</span><span class="n">update!</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="0634566104-6">)</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="0634566104-7">(</span><span class="k" data-group-id="0634566104-8">fn</span><span class="w"> </span><span class="n">workflow</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+      </span><span class="p" data-group-id="0634566104-9">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshot</span><span class="p" data-group-id="0634566104-9">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Snapshot</span><span class="o">.</span><span class="n">create</span><span class="p" data-group-id="0634566104-10">(</span><span class="n">workflow</span><span class="p" data-group-id="0634566104-10">)</span><span class="w">
       </span><span class="n">snapshot</span><span class="w">
-    </span><span class="k" data-group-id="7902617318-8">end</span><span class="p" data-group-id="7902617318-7">)</span><span class="w">
+    </span><span class="k" data-group-id="0634566104-8">end</span><span class="p" data-group-id="0634566104-7">)</span><span class="w">
 
- </span><span class="p" data-group-id="7902617318-11">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshots</span><span class="p" data-group-id="7902617318-11">}</span><span class="w">
-</span><span class="k" data-group-id="7902617318-3">end</span><span class="p" data-group-id="7902617318-2">)</span></code></pre></blockquote></li></ul><h2 id="v2-9-0-2024-09-06" class="section-heading">
+ </span><span class="p" data-group-id="0634566104-11">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshots</span><span class="p" data-group-id="0634566104-11">}</span><span class="w">
+</span><span class="k" data-group-id="0634566104-3">end</span><span class="p" data-group-id="0634566104-2">)</span></code></pre></blockquote></li></ul><h2 id="v2-9-0-2024-09-06" class="section-heading">
   <a href="#v2-9-0-2024-09-06" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -572,7 +573,7 @@ if they are running in an <code class="inline">http</code> environment (rather t
 <ul><li>Kafka messages without keys are synchronously converted into a Workorder,
 Dataclip and Run. Messages with keys are stored as TriggerKafkaMessage
 records, however the code needed to process them has been disabled, pending
-removal. [#2351] (<a href="https://github.com/OpenFn/lightning/issues/2351">https://github.com/OpenFn/lightning/issues/2351</a>)</li></ul><h2 id="v2-7-14-2024-08-05" class="section-heading">
+removal. <a href="https://github.com/OpenFn/lightning/issues/2351">#2351</a></li></ul><h2 id="v2-7-14-2024-08-05" class="section-heading">
   <a href="#v2-7-14-2024-08-05" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -2400,7 +2401,7 @@ work orders up to <code class="inline">v0.10.0</code>, though the granularity of
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="1491764589-1">(</span><span class="p" data-group-id="1491764589-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="0627737557-1">(</span><span class="p" data-group-id="0627737557-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added-43" class="section-heading">
