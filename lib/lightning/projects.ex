@@ -17,6 +17,7 @@ defmodule Lightning.Projects do
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
   alias Lightning.Projects.Events
+  alias Lightning.Projects.File
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Projects.ProjectUser
@@ -65,9 +66,7 @@ defmodule Lightning.Projects do
     jobs =
       list_projects_having_history_retention()
       |> Enum.map(fn project ->
-        __MODULE__.new(%{project_id: project.id, type: "data_retention"},
-          max_attempts: 3
-        )
+        new(%{project_id: project.id, type: "data_retention"}, max_attempts: 3)
       end)
 
     Oban.insert_all(Lightning.Oban, jobs)
@@ -891,7 +890,7 @@ defmodule Lightning.Projects do
   def list_project_files(%Project{id: project_id}, opts \\ []) do
     sort_order = Keyword.get(opts, :sort, :desc)
 
-    from(pf in __MODULE__.File,
+    from(pf in File,
       where: pf.project_id == ^project_id,
       order_by: [{^sort_order, pf.inserted_at}],
       preload: [:created_by]
