@@ -480,13 +480,19 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       messages: [message_1, message_2],
       tmp_dir: tmp_dir
     } do
-      expect(Lightning.MockConfig, :kafka_alternate_storage_enabled?, fn ->
-        true
-      end)
+      expect(
+        Lightning.MockConfig,
+        :kafka_alternate_storage_enabled?,
+        2,
+        fn -> true end
+      )
 
-      expect(Lightning.MockConfig, :kafka_alternate_storage_file_path, fn ->
-        tmp_dir
-      end)
+      expect(
+        Lightning.MockConfig,
+        :kafka_alternate_storage_file_path,
+        2,
+        fn -> tmp_dir end
+      )
 
       %{workflow: workflow} =
         Trigger
@@ -511,7 +517,7 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
 
       path = Path.join(tmp_dir, workflow.id)
 
-      {:ok, files} = File.ls!(path)
+      files = File.ls!(path)
 
       assert files |> Enum.count() == 2
     end

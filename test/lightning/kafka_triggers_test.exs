@@ -969,6 +969,7 @@ defmodule Lightning.KafkaTriggersTest do
         )
 
       message = build_broadway_message("foo", 2, 1)
+
       expected_file_contents =
         %{data: message.data, metadata: message.metadata} |> Jason.encode!()
 
@@ -977,7 +978,7 @@ defmodule Lightning.KafkaTriggersTest do
         file_name: "#{trigger_id}_foo_2_1.json",
         message: message,
         trigger_id: trigger_id,
-        workflow_id: workflow_id,
+        workflow_id: workflow_id
       }
     end
 
@@ -986,8 +987,8 @@ defmodule Lightning.KafkaTriggersTest do
       expected_file_contents: expected_file_contents,
       file_name: file_name,
       message: message,
-      trigger_id: trigger_id,
       tmp_dir: tmp_dir,
+      trigger_id: trigger_id,
       workflow_id: workflow_id
     } do
       expect(Lightning.MockConfig, :kafka_alternate_storage_enabled?, fn ->
@@ -1000,7 +1001,10 @@ defmodule Lightning.KafkaTriggersTest do
 
       file_path = tmp_dir |> Path.join(workflow_id) |> Path.join(file_name)
 
-      assert KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message) == :ok
+      assert(
+        KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message) ==
+               :ok
+      )
 
       file_contents = File.read!(file_path)
 
@@ -1012,8 +1016,8 @@ defmodule Lightning.KafkaTriggersTest do
       expected_file_contents: expected_file_contents,
       file_name: file_name,
       message: message,
-      trigger_id: trigger_id,
       tmp_dir: tmp_dir,
+      trigger_id: trigger_id,
       workflow_id: workflow_id
     } do
       expect(Lightning.MockConfig, :kafka_alternate_storage_enabled?, fn ->
@@ -1031,7 +1035,8 @@ defmodule Lightning.KafkaTriggersTest do
 
       file_path = dir_path |> Path.join(file_name)
 
-      assert KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message) == :ok
+      assert KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message) ==
+               :ok
 
       file_contents = File.read!(file_path)
 
@@ -1061,14 +1066,15 @@ defmodule Lightning.KafkaTriggersTest do
 
       file_path = dir_path |> Path.join(file_name)
 
-      assert KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message) == :ok
+      assert KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message) ==
+               :ok
 
       refute File.exists?(file_path)
     end
 
     test "does not write if alternate storage path does not exist", %{
       message: message,
-      trigger_id: trigger_id,
+      trigger_id: trigger_id
     } do
       non_existent_path = Path.join("tmp", "does_not_exist")
 
@@ -1080,7 +1086,8 @@ defmodule Lightning.KafkaTriggersTest do
         non_existent_path
       end)
 
-      assert KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message) == {:error, :path_error}
+      assert KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message) ==
+               {:error, :path_error}
 
       refute File.exists?(non_existent_path)
     end
@@ -1098,7 +1105,8 @@ defmodule Lightning.KafkaTriggersTest do
         nil
       end)
 
-      assert KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message) == {:error, :path_error}
+      assert KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message) ==
+               {:error, :path_error}
 
       refute File.exists?(workflow_id)
     end
@@ -1116,7 +1124,8 @@ defmodule Lightning.KafkaTriggersTest do
         ""
       end)
 
-      assert KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message) == {:error, :path_error}
+      assert KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message) ==
+               {:error, :path_error}
 
       refute File.exists?(workflow_id)
     end
@@ -1125,7 +1134,7 @@ defmodule Lightning.KafkaTriggersTest do
     test "does not write if the trigger does not exist", %{
       file_name: file_name,
       message: message,
-      tmp_dir: tmp_dir,
+      tmp_dir: tmp_dir
     } do
       trigger_id = Ecto.UUID.generate()
 
@@ -1136,12 +1145,66 @@ defmodule Lightning.KafkaTriggersTest do
       expect(Lightning.MockConfig, :kafka_alternate_storage_file_path, fn ->
         tmp_dir
       end)
-      
+
       file_path = tmp_dir |> Path.join(file_name)
 
-      assert KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message) == {:error, :path_error}
+      assert KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message) ==
+               {:error, :path_error}
 
       refute File.exists?(file_path)
+    end
+
+    @tag :tmp_dir
+    test "does not write if the message cannot be encoded as JSON", %{
+      file_name: file_name,
+      tmp_dir: tmp_dir,
+      trigger_id: trigger_id,
+      workflow_id: workflow_id
+    } do
+      message = build_unserialisable_broadway_message("foo", 2, 1)
+
+      expect(Lightning.MockConfig, :kafka_alternate_storage_enabled?, fn ->
+        true
+      end)
+
+      expect(Lightning.MockConfig, :kafka_alternate_storage_file_path, fn ->
+        tmp_dir
+      end)
+
+      file_path = tmp_dir |> Path.join(workflow_id) |> Path.join(file_name)
+
+      assert(
+        KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message) ==
+          {:error, :serialisation}
+      )
+
+      refute File.exists?(file_path)
+    end
+
+    @tag :tmp_dir
+    test "returns an error if there is an issue writing the file", %{
+      message: message,
+      tmp_dir: tmp_dir,
+      trigger_id: trigger_id,
+      workflow_id: workflow_id
+    } do
+      expect(Lightning.MockConfig, :kafka_alternate_storage_enabled?, fn ->
+        true
+      end)
+
+      expect(Lightning.MockConfig, :kafka_alternate_storage_file_path, fn ->
+        tmp_dir
+      end)
+
+      tmp_dir
+      |> Path.join(workflow_id)
+      |> tap(&File.mkdir!(&1))
+      |> tap(&File.chmod!(&1, 0o000))
+
+      assert(
+        KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message) ==
+          {:error, :writing}
+      )
     end
   end
 
@@ -1257,6 +1320,25 @@ defmodule Lightning.KafkaTriggersTest do
   defp build_broadway_message(topic, partition, offset) do
     %Broadway.Message{
       data: %{interesting: "stuff"} |> Jason.encode!(),
+      metadata: %{
+        offset: offset,
+        partition: partition,
+        key: "",
+        headers: [],
+        ts: 1_715_164_718_283,
+        topic: topic
+      },
+      acknowledger: nil,
+      batcher: :default,
+      batch_key: {"bar_topic", 2},
+      batch_mode: :bulk,
+      status: :ok
+    }
+  end
+
+  defp build_unserialisable_broadway_message(topic, partition, offset) do
+    %Broadway.Message{
+      data: {:json, :does, :not, :like, :tuples},
       metadata: %{
         offset: offset,
         partition: partition,

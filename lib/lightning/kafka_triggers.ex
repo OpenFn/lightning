@@ -248,18 +248,35 @@ defmodule Lightning.KafkaTriggers do
     DateTime.diff(sending_at, last_sent_at, :second) > embargo_period
   end
 
-  def maybe_write_to_alternate_storage(trigger_id, message) do
-    if path = build_file_path(trigger_id, message) do
-      export =
-        message |> Map.filter(fn {key,_val} -> key in [:data, :metadata] end)
+  def maybe_write_to_alternate_storage(
+    trigger_id,
+    message = %Broadway.Message{}
+  ) do
+    if Lightning.Config.kafka_alternate_storage_enabled?() do
+      if path = build_file_path(trigger_id, message) do
+        export =
+          message |> Map.filter(fn {key,_val} -> key in [:data, :metadata] end)
 
-      File.write!(path, Jason.encode!(export))
+        if data = encode_message(export) do
+          with :ok <- File.write(path, data) do
+            :ok
+          else
+            _anything ->
+              {:error, :writing}
+          end
+        else
+          {:error, :serialisation}
+        end
+      else
+        {:error, :path_error}
+      end
+    else
+      :ok
     end
   end
 
   defp build_file_path(trigger_id, message) do
-    with true <- Lightning.Config.kafka_alternate_storage_enabled?(),
-         base_path when not is_nil(base_path) <- Lightning.Config.kafka_alternate_storage_file_path(),
+    with base_path when not is_nil(base_path) <- Lightning.Config.kafka_alternate_storage_file_path(),
          true <- File.exists?(base_path),
          %{workflow_id: workflow_id} <- Trigger |> Repo.get(trigger_id) do
 
@@ -273,5 +290,15 @@ defmodule Lightning.KafkaTriggers do
       _anything ->
         nil
     end
+  end
+
+  defp encode_message(message) do
+    message
+    |> Map.filter(fn {key,_val} -> key in [:data, :metadata] end)
+    |> Jason.encode()
+    |> then(fn 
+      {:ok, encoded} -> encoded
+      {:error, _reason} -> nil
+    end)
   end
 end
