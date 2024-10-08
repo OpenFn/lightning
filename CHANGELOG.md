@@ -19,12 +19,14 @@ and this project adheres to
 
 ### Changed
 
+- Make project description multiline in project.yaml
+  [#2534](https://github.com/OpenFn/lightning/issues/2534)
 - Do not track partition timestamps when ingesting Kafka messages.
-  [#2531] (https://github.com/OpenFn/lightning/issues/2531)
+  [#2531](https://github.com/OpenFn/lightning/issues/2531)
 - Always use the `initial_offset_reset_policy` when enabling a Kafka pipeline.
-  [#2531] (https://github.com/OpenFn/lightning/issues/2531)
+  [#2531](https://github.com/OpenFn/lightning/issues/2531)
 - Add plumbing to simulate a persistence failure in a Kafka trigger pipeline.
-  [#2386] (https://github.com/OpenFn/lightning/issues/2386)
+  [#2386](https://github.com/OpenFn/lightning/issues/2386)
 
 ### Fixed
 
@@ -336,7 +338,7 @@ and this project adheres to
 - Kafka messages without keys are synchronously converted into a Workorder,
   Dataclip and Run. Messages with keys are stored as TriggerKafkaMessage
   records, however the code needed to process them has been disabled, pending
-  removal. [#2351] (https://github.com/OpenFn/lightning/issues/2351)
+  removal. [#2351](https://github.com/OpenFn/lightning/issues/2351)
 
 ## [v2.7.14] - 2024-08-05
 

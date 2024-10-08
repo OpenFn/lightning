@@ -728,6 +728,60 @@ defmodule Lightning.ProjectsTest do
                "condition_expression: |\n          #{js_expression}"
     end
 
+    test "project descriptions with multiline and special characters are correctly represented" do
+      project =
+        insert(:project,
+          name: "project_multiline_special",
+          description: """
+          This is a multiline description.
+          It includes special characters: :, #, &, *, ?, |, -, <, >, =, !, %, @, *, &, ?.
+          Also, YAML indicators: *alias, &anchor, ?key, !tag.
+          Line breaks and special characters should be preserved.
+          """
+        )
+
+      assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
+
+      expected_yaml = """
+      name: project_multiline_special
+      description: |
+        This is a multiline description.
+        It includes special characters: :, #, &, *, ?, |, -, <, >, =, !, %, @, *, &, ?.
+        Also, YAML indicators: *alias, &anchor, ?key, !tag.
+        Line breaks and special characters should be preserved.
+      """
+
+      assert generated_yaml =~ expected_yaml
+    end
+
+    test "projects with empty and nil descriptions are correctly represented" do
+      project_empty =
+        insert(:project, name: "project_empty_description", description: "")
+
+      assert {:ok, generated_yaml} =
+               Projects.export_project(:yaml, project_empty.id)
+
+      expected_yaml = """
+      name: project_empty_description
+      description: |
+      """
+
+      assert generated_yaml =~ expected_yaml
+
+      project_nil =
+        insert(:project, name: "project_nil_description", description: nil)
+
+      assert {:ok, generated_yaml} =
+               Projects.export_project(:yaml, project_nil.id)
+
+      expected_yaml = """
+      name: project_nil_description
+      description: null
+      """
+
+      assert generated_yaml =~ expected_yaml
+    end
+
     test "exports canonical project" do
       project =
         canonical_project_fixture(

@@ -1,5 +1,6 @@
 name: a-test-project
-description: This is only a test
+description: |
+  This is only a test
 credentials:
   cannonical-user@lightning.com-new-credential:
     name: new credential
