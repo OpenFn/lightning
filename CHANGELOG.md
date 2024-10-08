@@ -25,6 +25,8 @@ and this project adheres to
   [#2531](https://github.com/OpenFn/lightning/issues/2531)
 - Always use the `initial_offset_reset_policy` when enabling a Kafka pipeline.
   [#2531](https://github.com/OpenFn/lightning/issues/2531)
+- Add plumbing to simulate a persistence failure in a Kafka trigger pipeline.
+  [#2386](https://github.com/OpenFn/lightning/issues/2386)
 
 ### Fixed
 

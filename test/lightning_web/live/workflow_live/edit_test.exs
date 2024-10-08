@@ -2,7 +2,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   use LightningWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
-  import Lightning.ApplicationHelpers, only: [dynamically_absorb_delay: 1]
+  import Lightning.ApplicationHelpers, only: [dynamically_absorb_delay: 2]
   import Lightning.WorkflowLive.Helpers
   import Lightning.WorkflowsFixtures
   import Lightning.JobsFixtures
@@ -2110,10 +2110,13 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert high_priority_view
              |> has_element?("#inspector-workflow-version", "latest")
 
-      dynamically_absorb_delay(fn ->
-        !(low_priority_view
-          |> has_element?("#inspector-workflow-version", "latest"))
-      end)
+      dynamically_absorb_delay(
+        fn ->
+          !(low_priority_view
+            |> has_element?("#inspector-workflow-version", "latest"))
+        end,
+        sleep: 2
+      )
 
       assert low_priority_view
              |> has_element?(
