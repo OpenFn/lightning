@@ -520,6 +520,137 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       files = File.ls!(path)
 
       assert files |> Enum.count() == 2
+
+      file_name_1 =
+        context.trigger_id
+        |> KafkaTriggers.alternate_storage_file_name(
+          persistence_failure_message_1
+        )
+      file_name_2 =
+        context.trigger_id
+        |> KafkaTriggers.alternate_storage_file_name(
+          persistence_failure_message_2
+        )
+
+      assert file_name_1 in files
+      assert file_name_2 in files
+    end
+
+    @tag :tmp_dir
+    test "writes to log if there is an error writing to alternate storage", %{
+      context: context,
+      messages: [message_1, message_2],
+      tmp_dir: tmp_dir
+    } do
+      expect(
+        Lightning.MockConfig,
+        :kafka_alternate_storage_enabled?,
+        4,
+        fn -> true end
+      )
+
+      expect(
+        Lightning.MockConfig,
+        :kafka_alternate_storage_file_path,
+        4,
+        fn -> tmp_dir end
+      )
+
+      %{workflow_id: workflow_id} =
+        Trigger
+        |> Repo.get(context.trigger_id |> Atom.to_string())
+
+      tmp_dir
+      |> Path.join(workflow_id)
+      |> tap(&File.mkdir!(&1))
+      |> tap(&File.chmod!(&1, 0o000))
+
+      persistence_failure_message_1 =
+        build_broadway_message(offset: 3)
+        |> Broadway.Message.failed(:persistence)
+      persistence_failure_message_2 =
+        build_broadway_message(offset: 4)
+        |> Broadway.Message.failed(:persistence)
+
+      messages = [
+        message_1,
+        persistence_failure_message_1,
+        message_2,
+        persistence_failure_message_2,
+      ]
+
+      expected_entry_1 =
+        persistence_failure_message_1
+        |> expected_alternate_storage_error_message(context)
+      expected_entry_2 =
+        persistence_failure_message_1
+        |> expected_alternate_storage_error_message(context)
+
+      fun = fn -> Pipeline.handle_failed(messages, context) end
+
+      assert capture_log(fun) =~ expected_entry_1
+      assert capture_log(fun) =~ expected_entry_2
+    end
+
+    @tag :tmp_dir
+    test "notifies Sentry if there is an error writing to alternate storage", %{
+      context: context,
+      messages: [message_1, message_2],
+      tmp_dir: tmp_dir
+    } do
+      expect(
+        Lightning.MockConfig,
+        :kafka_alternate_storage_enabled?,
+        4,
+        fn -> true end
+      )
+
+      expect(
+        Lightning.MockConfig,
+        :kafka_alternate_storage_file_path,
+        4,
+        fn -> tmp_dir end
+      )
+
+      %{workflow_id: workflow_id} =
+        Trigger
+        |> Repo.get(context.trigger_id |> Atom.to_string())
+
+      tmp_dir
+      |> Path.join(workflow_id)
+      |> tap(&File.mkdir!(&1))
+      |> tap(&File.chmod!(&1, 0o000))
+
+      persistence_failure_message_1 =
+        build_broadway_message(offset: 3)
+        |> Broadway.Message.failed(:persistence)
+      persistence_failure_message_2 =
+        build_broadway_message(offset: 4)
+        |> Broadway.Message.failed(:persistence)
+
+      messages = [
+        message_1,
+        persistence_failure_message_1,
+        message_2,
+        persistence_failure_message_2,
+      ]
+
+      extra_1 =
+        persistence_failure_message_1
+        |> expected_alternate_storage_sentry_data(context)
+      extra_2 =
+        persistence_failure_message_2
+        |> expected_alternate_storage_sentry_data(context)
+
+      notification = "Kafka pipeline - alternate storage failed: writing"
+
+      with_mock Sentry,
+        capture_message: fn _data, _extra -> :ok end do
+        Pipeline.handle_failed(messages, context)
+
+        assert_called(Sentry.capture_message(notification, extra: extra_1))
+        assert_called(Sentry.capture_message(notification, extra: extra_2))
+      end
     end
 
     defp expected_duplicate_log_message(message, context) do
@@ -542,6 +673,16 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
         " Key `#{message.metadata.key}`"
     end
 
+    defp expected_alternate_storage_error_message(message, context) do
+      "Kafka Pipeline Error:" <>
+        " Type `alternate_storage_failed: writing`" <>
+        " Trigger_id `#{context.trigger_id}`" <>
+        " Topic `#{message.metadata.topic}`" <>
+        " Partition `#{message.metadata.partition}`" <>
+        " Offset `#{message.metadata.offset}`" <>
+        " Key `#{message.metadata.key}`"
+    end
+
     defp expected_extra_sentry_data(message, context) do
       %{status: {:failed, type}} = message
 
@@ -552,6 +693,16 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
         topic: message.metadata.topic,
         trigger_id: context.trigger_id,
         type: type
+      }
+    end
+
+    defp expected_alternate_storage_sentry_data(message, context) do
+      %{
+        key: message.metadata.key,
+        offset: message.metadata.offset,
+        partition: message.metadata.partition,
+        topic: message.metadata.topic,
+        trigger_id: context.trigger_id |> Atom.to_string(),
       }
     end
   end

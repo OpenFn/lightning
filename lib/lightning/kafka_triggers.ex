@@ -280,16 +280,18 @@ defmodule Lightning.KafkaTriggers do
          true <- File.exists?(base_path),
          %{workflow_id: workflow_id} <- Trigger |> Repo.get(trigger_id) do
 
-      file_name = "#{trigger_id}_#{build_topic_partition_offset(message)}.json"
-
       base_path
         |> Path.join(workflow_id)
         |> tap(&File.mkdir/1)
-        |> Path.join(file_name)
+        |> Path.join(alternate_storage_file_name(trigger_id, message))
     else
       _anything ->
         nil
     end
+  end
+
+  def alternate_storage_file_name(trigger_id, message) do
+    "#{trigger_id}_#{build_topic_partition_offset(message)}.json"
   end
 
   defp encode_message(message) do

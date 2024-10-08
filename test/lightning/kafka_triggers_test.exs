@@ -1208,6 +1208,23 @@ defmodule Lightning.KafkaTriggersTest do
     end
   end
 
+  describe "./alternate_storage_file_name/2" do
+    test "builds a file name based on trigger_id and message metadata" do
+      %{id: trigger_id} =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: build(:triggers_kafka_configuration)
+        )
+
+      message = build_broadway_message("foo", 2, 1)
+
+      file_name = KafkaTriggers.alternate_storage_file_name(trigger_id, message)
+
+      assert file_name == "#{trigger_id}_foo_2_1.json"
+    end
+  end
+
   defp child_spec(opts) do
     trigger = opts |> Keyword.get(:trigger)
     index = opts |> Keyword.get(:index)

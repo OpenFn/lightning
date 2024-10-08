@@ -197,12 +197,68 @@ defmodule Lightning.KafkaTriggers.Pipeline do
     )
   end
 
+  defp notify_sentry(message, context, error_message) do
+    %{
+      metadata: %{
+        key: key,
+        offset: offset,
+        partition: partition,
+        topic: topic
+      }
+    } = message
+
+    Sentry.capture_message(
+      error_message,
+      extra: %{
+        key: key,
+        offset: offset,
+        partition: partition,
+        topic: topic,
+        trigger_id: context.trigger_id,
+      }
+    )
+  end
+
   defp maybe_write_to_alternate_storage(messages, trigger_id) do
     messages
     |> Enum.filter(&(&1.status == {:failed, :persistence}))
     |> Enum.each(fn message ->
-      KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message)
+      trigger_id
+      |> KafkaTriggers.maybe_write_to_alternate_storage(message)
+      |> case do
+        :ok ->
+          nil
+        {:error, reason} ->
+          create_alternate_storage_log_entry(message, trigger_id, reason)
+          notify_sentry(
+            message,
+            %{trigger_id: trigger_id},
+            "Kafka pipeline - alternate storage failed: #{reason}"
+          )
+      end
     end)
+  end
+
+  defp create_alternate_storage_log_entry(message, trigger_id, reason) do
+    %{
+      metadata: %{
+        key: key,
+        offset: offset,
+        partition: partition,
+        topic: topic
+      }
+    } = message
+
+    log_message =
+      "Kafka Pipeline Error:" <>
+        " Type `alternate_storage_failed: #{reason}`" <>
+        " Trigger_id `#{trigger_id}`" <>
+        " Topic `#{topic}`" <>
+        " Partition `#{partition}`" <>
+        " Offset `#{offset}`" <>
+        " Key `#{key}`"
+
+    Logger.error(log_message)
   end
 
   defp build_producer_opts(opts) do
