@@ -4,6 +4,7 @@ defmodule Lightning.Runs.Query do
   """
   import Ecto.Query
 
+  alias Lightning.Invocation.Step
   alias Lightning.Run
 
   require Lightning.Run
@@ -46,6 +47,16 @@ defmodule Lightning.Runs.Query do
           ^now
         ) or (is_nil(r.options) and r.claimed_at < ^fallback_oldest_claim)
     )
+  end
+
+  @spec lost_steps() :: Ecto.Queryable.t()
+  def lost_steps do
+    final_states = Run.final_states()
+
+    from s in Step,
+      join: r in assoc(s, :runs),
+      on: r.state in ^final_states,
+      where: is_nil(s.exit_reason) and is_nil(s.finished_at)
   end
 
   @doc """

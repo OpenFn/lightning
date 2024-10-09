@@ -42,6 +42,8 @@ defmodule Lightning.Janitor do
         Runs.mark_run_lost(run)
       end)
       |> Stream.run()
+
+      Runs.Query.lost_steps() |> Runs.mark_steps_lost()
     end)
   end
 end
