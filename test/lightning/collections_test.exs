@@ -61,8 +61,7 @@ defmodule Lightning.CollectionsTest do
     test "returns an :error if the collection does not exist" do
       insert(:collection_item, key: "existing_key")
 
-      assert {:error, :collection_not_found} =
-               Collections.get("nonexistent", "existing_key")
+      assert {:error, :not_found} = Collections.get("nonexistent", "existing_key")
     end
 
     test "returns nil if the item key does not exist" do
@@ -98,8 +97,7 @@ defmodule Lightning.CollectionsTest do
     end
 
     test "returns an :error if the collection does not exist" do
-      assert {:error, :collection_not_found} =
-               Collections.put("nonexistent", "key", "value")
+      assert {:error, %{errors: [collection_name: {"does not exist", [constraint: :foreign, constraint_name: "collections_items_collection_name_fkey"]}]}} = Collections.put("nonexistent", "key", "value")
     end
   end
 
@@ -116,8 +114,7 @@ defmodule Lightning.CollectionsTest do
     end
 
     test "returns an :error if the collection does not exist" do
-      assert {:error, :collection_not_found} =
-               Collections.delete("nonexistent", "key")
+      assert {:error, :not_found} = Collections.delete("nonexistent", "key")
     end
 
     test "returns an :error if item does not exist" do

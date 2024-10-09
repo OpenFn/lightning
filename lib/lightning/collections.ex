@@ -23,39 +23,21 @@ defmodule Lightning.Collections do
     end
   end
 
-  @spec get(String.t(), String.t()) ::
-          {:ok, Item.t()}
-          | {:error, :not_found}
-          | {:error, :collection_not_found}
+  @spec get(String.t(), String.t()) :: {:ok, Item.t()} | {:error, :not_found}
   def get(col_name, key) do
-    with {:col, %{id: collection_id}} <-
-           {:col, Repo.get_by(Collection, name: col_name)},
-         {:item, %Item{} = item} <-
-           {:item, Repo.get_by(Item, collection_id: collection_id, key: key)} do
-      {:ok, item}
-    else
-      {:col, nil} ->
-        {:error, :collection_not_found}
-
-      {:item, nil} ->
-        {:error, :not_found}
+    case Repo.get_by(Item, collection_name: col_name, key: key) do
+      nil -> {:error, :not_found}
+      item -> {:ok, item}
     end
   end
 
-  @spec put(String.t(), String.t(), String.t()) ::
-          :ok | {:error, :collection_not_found}
+  @spec put(String.t(), String.t(), String.t()) :: {:ok, Item.t()} | {:error, Ecto.Changeset.t()}
   def put(col_name, key, value) do
-    case Repo.get_by(Collection, name: col_name) do
-      nil ->
-        {:error, :collection_not_found}
-
-      collection ->
-        with nil <- Repo.get_by(Item, collection_id: collection.id, key: key) do
-          %Item{}
-        end
-        |> Item.changeset(%{collection_id: collection.id, key: key, value: value})
-        |> Repo.insert_or_update()
+    with nil <- Repo.get_by(Item, collection_name: col_name, key: key) do
+      %Item{}
     end
+    |> Item.changeset(%{collection_name: col_name, key: key, value: value})
+    |> Repo.insert_or_update()
   end
 
   @spec delete(String.t(), String.t()) ::
@@ -63,15 +45,9 @@ defmodule Lightning.Collections do
           | {:error, :not_found}
           | {:error, :collection_not_found}
   def delete(col_name, key) do
-    case Repo.get_by(Collection, name: col_name) do
-      nil ->
-        {:error, :collection_not_found}
-
-      collection ->
-        case Repo.get_by(Item, collection_id: collection.id, key: key) do
-          nil -> {:error, :not_found}
-          item -> Repo.delete(item)
-        end
+    case Repo.get_by(Item, collection_name: col_name, key: key) do
+      nil -> {:error, :not_found}
+      item -> Repo.delete(item)
     end
   end
 end
