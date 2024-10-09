@@ -570,15 +570,18 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :class, :string, default: ""
   attr :id, :string, required: true
   attr :panel_title, :string, default: ""
+  attr :rest, :global
 
   def collapsible_panel(assigns) do
     ~H"""
     <div
       id={@id}
+      lv-keep-class
       class={[
         "w-full flex flex-col collapsible-panel bg-slate-100 overflow-hidden",
         @class
       ]}
+      {@rest}
     >
       <div
         id={"#{@id}-panel-header"}

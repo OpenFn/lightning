@@ -152,8 +152,9 @@ defmodule LightningWeb.WorkflowLive.JobView do
       <%= render_slot(@inner_block) %>
       <.collapsible_panel
         id="job-editor-panel"
-        class={"h-full border border-l-0 job-editor-panel #{if(@editor_disabled?, do: " disabled")}"}
+        class="h-full border border-l-0 job-editor-panel"
         panel_title={if(@editor_disabled?, do: "Editor (read-only)", else: "Editor")}
+        data-editor-disabled={"#{@editor_disabled?}"}
       >
         <.live_component
           module={EditorPane}

@@ -275,7 +275,7 @@ div[id^='tippy-'] {
   @apply min-h-20;
 }
 
-.job-editor-panel.disabled.collapsed .close-button {
+.job-editor-panel.collapsed[data-editor-disabled='true'] .close-button {
   @apply min-h-16;
 }
 
