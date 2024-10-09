@@ -18,6 +18,30 @@ export {
   TabbedPanels,
 };
 
+export const BoundedInputHook = {
+  mounted() {
+    this.min = parseInt(this.el.dataset.min);
+    this.max = parseInt(this.el.dataset.max);
+
+    this.el.addEventListener('blur', event => this.validateInput(event.target));
+  },
+  updated() {
+    this.min = parseInt(this.el.dataset.min);
+    this.max = parseInt(this.el.dataset.max);
+  },
+  validateInput(input) {
+    let value = parseInt(input.value);
+
+    if (value < this.min) {
+      value = this.min;
+    } else if (value > this.max) {
+      value = this.max;
+    }
+
+    input.value = value;
+  },
+};
+
 export const Combobox = {
   mounted() {
     this.input = this.el.querySelector('input');
