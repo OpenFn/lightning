@@ -5,6 +5,20 @@ defmodule Lightning.CollectionsTest do
   alias Lightning.Collections.Collection
   alias Lightning.Collections.Item
 
+  describe "get_collection/1" do
+    test "get a collection" do
+      %{id: collection_id, name: collection_name} = insert(:collection)
+
+      assert {:ok, %Collection{id: ^collection_id}} =
+               Collections.get_collection(collection_name)
+    end
+
+    test "returns an error when the collection does not exist" do
+      assert {:error, :collection_not_found} =
+               Collections.get_collection("nonexistent")
+    end
+  end
+
   describe "create_collection/2" do
     test "creates a new collection" do
       %{id: project_id} = insert(:project)
@@ -52,24 +66,88 @@ defmodule Lightning.CollectionsTest do
 
   describe "get/2" do
     test "returns an entry for the given collection" do
-      %{key: key, value: value, collection: %{name: name}} =
+      %{key: key, value: value, collection: collection} =
         insert(:collection_item) |> Repo.preload(:collection)
 
-      assert {:ok, %Item{key: ^key, value: ^value}} = Collections.get(name, key)
-    end
-
-    test "returns an :error if the collection does not exist" do
-      insert(:collection_item, key: "existing_key")
-
-      assert {:error, :not_found} =
-               Collections.get("nonexistent", "existing_key")
+      assert %Item{key: ^key, value: ^value} = Collections.get(collection, key)
     end
 
     test "returns nil if the item key does not exist" do
       collection = insert(:collection)
 
-      assert {:error, :not_found} =
-               Collections.get(collection.name, "nonexistent")
+      refute Collections.get(collection, "nonexistent")
+    end
+
+    test "returns nil if the collection does not exist" do
+      insert(:collection_item, key: "existing_key")
+
+      refute Collections.get(%{id: Ecto.UUID.generate()}, "existing_key")
+    end
+  end
+
+  describe "stream_all/3" do
+    test "returns all items for the given collection" do
+      collection = insert(:collection)
+      items = insert_list(11, :collection_item, collection: collection)
+
+      Repo.transaction(fn ->
+        assert stream = Collections.stream_all(collection)
+        assert stream_items = Stream.take(stream, 12)
+
+        assert MapSet.new(items) ==
+                 stream_items
+                 |> Enum.to_list()
+                 |> Repo.preload(collection: :project)
+                 |> MapSet.new()
+      end)
+    end
+
+    test "returns the items after a cursor up to a limited amount" do
+      collection = insert(:collection)
+
+      items = insert_list(30, :collection_item, collection: collection)
+      %{key: cursor} = Enum.at(items, 4)
+
+      Repo.transaction(fn ->
+        assert stream = Collections.stream_all(collection, cursor)
+        assert Enum.count(stream) == 30 - (4 + 1)
+      end)
+
+      Repo.transaction(fn ->
+        assert stream = Collections.stream_all(collection, cursor, 10)
+        assert Enum.count(stream) == 10
+      end)
+    end
+
+    test "returns empty list when collection is empty" do
+      collection = insert(:collection)
+
+      Repo.transaction(fn ->
+        assert stream = Collections.stream_all(collection)
+        assert Enum.count(stream) == 0
+      end)
+    end
+
+    test "returns empty list when the collection doesn't exist" do
+      insert(:collection_item, key: "existing_key")
+
+      Repo.transaction(fn ->
+        assert stream = Collections.stream_all(%{id: Ecto.UUID.generate()})
+        assert Enum.count(stream) == 0
+      end)
+    end
+
+    test "fails when outside of an explicit transaction" do
+      collection = insert(:collection)
+      _items = insert_list(5, :collection_item, collection: collection)
+
+      assert stream = Collections.stream_all(collection)
+
+      assert_raise RuntimeError,
+                   ~r/cannot reduce stream outside of transaction/,
+                   fn ->
+                     Enum.take(stream, 5) |> Enum.each(&IO.inspect/1)
+                   end
     end
   end
 
@@ -77,7 +155,7 @@ defmodule Lightning.CollectionsTest do
     test "creates a new entry in the collection for the given collection" do
       collection = insert(:collection)
 
-      assert {:ok, entry} = Collections.put(collection.name, "key", "value")
+      assert {:ok, entry} = Collections.put(collection, "key", "value")
 
       assert entry.key == "key"
       assert entry.value == "value"
@@ -86,12 +164,12 @@ defmodule Lightning.CollectionsTest do
     test "updates the value of an item when key exists" do
       collection = insert(:collection)
 
-      assert {:ok, entry} = Collections.put(collection.name, "key", "value1")
+      assert {:ok, entry} = Collections.put(collection, "key", "value1")
 
       assert entry.key == "key"
       assert entry.value == "value1"
 
-      assert {:ok, entry} = Collections.put(collection.name, "key", "value2")
+      assert {:ok, entry} = Collections.put(collection, "key", "value2")
 
       assert entry.key == "key"
       assert entry.value == "value2"
@@ -101,14 +179,14 @@ defmodule Lightning.CollectionsTest do
       assert {:error,
               %{
                 errors: [
-                  collection_name:
+                  collection_id:
                     {"does not exist",
                      [
                        constraint: :foreign,
-                       constraint_name: "collections_items_collection_name_fkey"
+                       constraint_name: "collections_items_collection_id_fkey"
                      ]}
                 ]
-              }} = Collections.put("nonexistent", "key", "value")
+              }} = Collections.put(%{id: Ecto.UUID.generate()}, "key", "value")
     end
   end
 
@@ -119,20 +197,21 @@ defmodule Lightning.CollectionsTest do
       %{key: key} =
         insert(:collection_item, collection: collection) |> Repo.reload()
 
-      assert {:ok, %{key: ^key}} = Collections.delete(collection.name, key)
+      assert {:ok, %{key: ^key}} = Collections.delete(collection, key)
 
-      assert {:error, :not_found} = Collections.get(collection.name, key)
+      refute Collections.get(collection, key)
     end
 
     test "returns an :error if the collection does not exist" do
-      assert {:error, :not_found} = Collections.delete("nonexistent", "key")
+      assert {:error, :not_found} =
+               Collections.delete(%{id: Ecto.UUID.generate()}, "key")
     end
 
     test "returns an :error if item does not exist" do
       collection = insert(:collection)
 
       assert {:error, :not_found} =
-               Collections.delete(collection.name, "nonexistent")
+               Collections.delete(collection, "nonexistent")
     end
   end
 end
