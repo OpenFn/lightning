@@ -27,6 +27,7 @@ defmodule LightningWeb.ConnCase do
       import Plug.Conn
       import Phoenix.ConnTest
       import LightningWeb.ConnCase
+      import LightningWeb.ConnHelpers
 
       alias LightningWeb.Router.Helpers, as: Routes
       alias Lightning.Repo
