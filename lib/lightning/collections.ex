@@ -24,14 +24,21 @@ defmodule Lightning.Collections do
   end
 
   @spec get(String.t(), String.t()) ::
-          Item.t() | nil | {:error, :collection_not_found}
+          {:ok, Item.t()}
+          | {:error, :not_found}
+          | {:error, :collection_not_found}
   def get(col_name, key) do
-    case Repo.get_by(Collection, name: col_name) do
-      nil ->
+    with {:col, %{id: collection_id}} <-
+           {:col, Repo.get_by(Collection, name: col_name)},
+         {:item, %Item{} = item} <-
+           {:item, Repo.get_by(Item, collection_id: collection_id, key: key)} do
+      {:ok, item}
+    else
+      {:col, nil} ->
         {:error, :collection_not_found}
 
-      collection ->
-        Repo.get_by(Item, collection_id: collection.id, key: key)
+      {:item, nil} ->
+        {:error, :not_found}
     end
   end
 

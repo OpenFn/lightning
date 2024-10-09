@@ -6,6 +6,15 @@ defmodule Lightning.Collections.Item do
 
   import Ecto.Changeset
 
+  @type t :: %__MODULE__{
+          id: Ecto.UUID.t(),
+          collection_id: Ecto.UUID.t(),
+          key: String.t(),
+          value: String.t(),
+          inserted_at: NaiveDateTime.t(),
+          updated_at: NaiveDateTime.t()
+        }
+
   schema "collections_items" do
     field :value, :string
     field :key, :string

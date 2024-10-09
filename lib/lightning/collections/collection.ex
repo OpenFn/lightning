@@ -6,6 +6,14 @@ defmodule Lightning.Collections.Collection do
 
   import Ecto.Changeset
 
+  @type t :: %__MODULE__{
+          id: Ecto.UUID.t(),
+          project_id: Ecto.UUID.t(),
+          name: String.t(),
+          inserted_at: NaiveDateTime.t(),
+          updated_at: NaiveDateTime.t()
+        }
+
   schema "collections" do
     field :name, :string
     belongs_to :project, Lightning.Projects.Project

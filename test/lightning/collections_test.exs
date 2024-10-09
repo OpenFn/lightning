@@ -45,7 +45,8 @@ defmodule Lightning.CollectionsTest do
     end
 
     test "returns an error when collection does not exist" do
-      assert {:error, :collection_not_found} = Collections.delete_collection(Ecto.UUID.generate())
+      assert {:error, :collection_not_found} =
+               Collections.delete_collection(Ecto.UUID.generate())
     end
   end
 
@@ -54,7 +55,7 @@ defmodule Lightning.CollectionsTest do
       %{key: key, value: value, collection: %{name: name}} =
         insert(:collection_item) |> Repo.preload(:collection)
 
-      assert %Item{key: ^key, value: ^value} = Collections.get(name, key)
+      assert {:ok, %Item{key: ^key, value: ^value}} = Collections.get(name, key)
     end
 
     test "returns an :error if the collection does not exist" do
@@ -67,7 +68,8 @@ defmodule Lightning.CollectionsTest do
     test "returns nil if the item key does not exist" do
       collection = insert(:collection)
 
-      refute Collections.get(collection.name, "nonexistent")
+      assert {:error, :not_found} =
+               Collections.get(collection.name, "nonexistent")
     end
   end
 
@@ -110,7 +112,7 @@ defmodule Lightning.CollectionsTest do
 
       assert {:ok, %{key: ^key}} = Collections.delete(collection.name, key)
 
-      refute Collections.get(collection.name, key)
+      assert {:error, :not_found} = Collections.get(collection.name, key)
     end
 
     test "returns an :error if the collection does not exist" do
