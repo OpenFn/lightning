@@ -19,6 +19,12 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v2.9.9] - 2024-10-09
+
+### Changed
+
 - Make project description multiline in project.yaml
   [#2534](https://github.com/OpenFn/lightning/issues/2534)
 - Do not track partition timestamps when ingesting Kafka messages.
@@ -30,7 +36,7 @@ and this project adheres to
 
 ### Fixed
 
-- Fix Oban erros not getting logged in Sentry
+- Fix Oban errors not getting logged in Sentry
   [#2542](https://github.com/OpenFn/lightning/issues/2542)
 - Perform data retention purging in batches to avoid timeouts
   [#2528](https://github.com/OpenFn/lightning/issues/2528)
