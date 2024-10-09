@@ -31,7 +31,8 @@ defmodule Lightning.Collections do
     end
   end
 
-  @spec put(String.t(), String.t(), String.t()) :: {:ok, Item.t()} | {:error, Ecto.Changeset.t()}
+  @spec put(String.t(), String.t(), String.t()) ::
+          {:ok, Item.t()} | {:error, Ecto.Changeset.t()}
   def put(col_name, key, value) do
     with nil <- Repo.get_by(Item, collection_name: col_name, key: key) do
       %Item{}
