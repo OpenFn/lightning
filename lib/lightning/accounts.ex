@@ -399,6 +399,21 @@ defmodule Lightning.Accounts do
     change_user_info(user, attrs) |> Repo.update()
   end
 
+  @doc """
+  Updates the user preferences.
+
+  ## Examples
+
+      iex> update_user_preferences(%User{}, %{"editor.orientaion" => "vertical"})
+  """
+  @spec update_user_preferences(User.t(), map()) ::
+          {:ok, User.t()} | {:error, Ecto.Changeset.t()}
+  def update_user_preferences(%User{} = user, preferences) do
+    user
+    |> User.preferences_changeset(preferences)
+    |> Repo.update()
+  end
+
   ## Settings
 
   @doc """
