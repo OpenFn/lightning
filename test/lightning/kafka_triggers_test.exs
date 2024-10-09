@@ -1003,7 +1003,7 @@ defmodule Lightning.KafkaTriggersTest do
 
       assert(
         KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message) ==
-               :ok
+          :ok
       )
 
       file_contents = File.read!(file_path)
@@ -1204,6 +1204,28 @@ defmodule Lightning.KafkaTriggersTest do
       assert(
         KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message) ==
           {:error, :writing}
+      )
+    end
+
+    @tag :tmp_dir
+    test "returns an error if it can't create a workflow storage dir", %{
+      message: message,
+      tmp_dir: tmp_dir,
+      trigger_id: trigger_id
+    } do
+      expect(Lightning.MockConfig, :kafka_alternate_storage_enabled?, fn ->
+        true
+      end)
+
+      expect(Lightning.MockConfig, :kafka_alternate_storage_file_path, fn ->
+        tmp_dir
+      end)
+
+      tmp_dir |> tap(&File.chmod!(&1, 0o000))
+
+      assert(
+        KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message) ==
+          {:error, :workflow_dir_error}
       )
     end
   end

@@ -249,45 +249,48 @@ defmodule Lightning.KafkaTriggers do
   end
 
   def maybe_write_to_alternate_storage(
-    trigger_id,
-    message = %Broadway.Message{}
-  ) do
+        trigger_id,
+        message = %Broadway.Message{}
+      ) do
     if Lightning.Config.kafka_alternate_storage_enabled?() do
-      if path = build_file_path(trigger_id, message) do
-        export =
-          message |> Map.filter(fn {key,_val} -> key in [:data, :metadata] end)
-
-        if data = encode_message(export) do
-          with :ok <- File.write(path, data) do
-            :ok
-          else
-            _anything ->
-              {:error, :writing}
-          end
-        else
-          {:error, :serialisation}
-        end
+      with {:ok, workflow_path} <- build_workflow_storage_path(trigger_id),
+           :ok <- create_workflow_storage_directory(workflow_path),
+           path <- build_file_path(workflow_path, trigger_id, message),
+           {:ok, data} <- encode_message(message) do
+        write_to_file(path, data)
       else
-        {:error, :path_error}
+        error ->
+          error
       end
     else
       :ok
     end
   end
 
-  defp build_file_path(trigger_id, message) do
-    with base_path when not is_nil(base_path) <- Lightning.Config.kafka_alternate_storage_file_path(),
+  defp build_workflow_storage_path(trigger_id) do
+    with base_path when not is_nil(base_path) <-
+           Lightning.Config.kafka_alternate_storage_file_path(),
          true <- File.exists?(base_path),
          %{workflow_id: workflow_id} <- Trigger |> Repo.get(trigger_id) do
-
-      base_path
-        |> Path.join(workflow_id)
-        |> tap(&File.mkdir/1)
-        |> Path.join(alternate_storage_file_name(trigger_id, message))
+      {:ok, Path.join(base_path, workflow_id)}
     else
       _anything ->
-        nil
+        {:error, :path_error}
     end
+  end
+
+  defp create_workflow_storage_directory(workflow_path) do
+    case File.mkdir(workflow_path) do
+      resp when resp == :ok or resp == {:error, :eexist} ->
+        :ok
+
+      _anything_else ->
+        {:error, :workflow_dir_error}
+    end
+  end
+
+  defp build_file_path(workflow_path, trigger_id, message) do
+    workflow_path |> Path.join(alternate_storage_file_name(trigger_id, message))
   end
 
   def alternate_storage_file_name(trigger_id, message) do
@@ -296,11 +299,22 @@ defmodule Lightning.KafkaTriggers do
 
   defp encode_message(message) do
     message
-    |> Map.filter(fn {key,_val} -> key in [:data, :metadata] end)
+    |> Map.filter(fn {key, _val} -> key in [:data, :metadata] end)
     |> Jason.encode()
-    |> then(fn 
-      {:ok, encoded} -> encoded
-      {:error, _reason} -> nil
-    end)
+    |> case do
+      {:error, _reason} ->
+        {:error, :serialisation}
+
+      ok_response ->
+        ok_response
+    end
+  end
+
+  defp write_to_file(path, data) do
+    if File.write(path, data) == :ok do
+      :ok
+    else
+      {:error, :writing}
+    end
   end
 end
