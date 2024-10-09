@@ -4,15 +4,6 @@ defmodule LightningWeb.RouteHelpers do
   """
   alias LightningWeb.Router.Helpers, as: Routes
 
-  def show_run_url(project_id, run_id) do
-    Routes.project_run_show_url(
-      LightningWeb.Endpoint,
-      :show,
-      project_id,
-      run_id
-    )
-  end
-
   def project_dashboard_url(project_id) do
     Routes.project_workflow_index_url(
       LightningWeb.Endpoint,
