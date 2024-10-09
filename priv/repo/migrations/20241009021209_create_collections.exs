@@ -19,17 +19,12 @@ defmodule Lightning.Repo.Migrations.CreateCollectionsEntries do
       add :key, :string
       add :value, :string
 
-      add :collection_name,
-          references(:collections,
-            column: :name,
-            type: :string,
-            on_delete: :delete_all,
-            null: false
-          )
+      add :collection_id,
+          references(:collections, type: :binary_id, on_delete: :delete_all, null: false)
 
       timestamps(type: :naive_datetime_usec)
     end
 
-    create unique_index(:collections_items, [:collection_name, :key])
+    create unique_index(:collections_items, [:collection_id, :key])
   end
 end
