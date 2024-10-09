@@ -209,6 +209,42 @@ defmodule Lightning.Config.BootstrapTest do
     end
   end
 
+  describe "kafka alternate storage" do
+    setup %{tmp_dir: tmp_dir, enabled: enabled, misconfigured: misconfigured} do
+      [
+        %{
+          "KAFKA_ALTERNATE_STORAGE_ENABLED" => enabled,
+          "KAFKA_ALTERNATE_STORAGE_FILE_PATH" => tmp_dir
+        }
+      ]
+      |> Dotenvy.source()
+
+      if misconfigured do
+        tmp_dir |> File.chmod!(0o000)
+      end
+
+      :ok
+    end
+
+    @tag tmp_dir: true, enabled: "true", misconfigured: true
+    test "raises an error if enabled and misconfigured", %{
+    } do
+      assert_raise RuntimeError, ~r/must be a writable directory/, fn ->
+        Bootstrap.configure()
+      end
+    end
+
+    @tag tmp_dir: true, enabled: "false", misconfigured: true
+    test "does not raise an error if disabled and misconfigured" do
+      Bootstrap.configure()
+    end
+
+    @tag tmp_dir: true, enabled: "true", misconfigured: false
+    test "does not raise an error if enabled and properly configured" do
+      Bootstrap.configure()
+    end
+  end
+
   # A helper function to get a value from the process dictionary
   # that is stored by the Config module.
   defp get_env(app) do
