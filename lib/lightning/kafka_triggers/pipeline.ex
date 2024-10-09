@@ -214,7 +214,7 @@ defmodule Lightning.KafkaTriggers.Pipeline do
         offset: offset,
         partition: partition,
         topic: topic,
-        trigger_id: context.trigger_id,
+        trigger_id: context.trigger_id
       }
     )
   end
@@ -223,20 +223,30 @@ defmodule Lightning.KafkaTriggers.Pipeline do
     messages
     |> Enum.filter(&(&1.status == {:failed, :persistence}))
     |> Enum.each(fn message ->
-      trigger_id
-      |> KafkaTriggers.maybe_write_to_alternate_storage(message)
-      |> case do
-        :ok ->
-          nil
-        {:error, reason} ->
-          create_alternate_storage_log_entry(message, trigger_id, reason)
-          notify_sentry(
-            message,
-            %{trigger_id: trigger_id},
-            "Kafka pipeline - alternate storage failed: #{reason}"
-          )
-      end
+      write_to_alternate_storage(message, trigger_id)
     end)
+  end
+
+  defp write_to_alternate_storage(message, trigger_id) do
+    trigger_id
+    |> KafkaTriggers.maybe_write_to_alternate_storage(message)
+    |> case do
+      :ok ->
+        nil
+
+      {:error, reason} ->
+        handle_alternate_storage_failure(message, trigger_id, reason)
+    end
+  end
+
+  defp handle_alternate_storage_failure(message, trigger_id, reason) do
+    create_alternate_storage_log_entry(message, trigger_id, reason)
+
+    notify_sentry(
+      message,
+      %{trigger_id: trigger_id},
+      "Kafka pipeline - alternate storage failed: #{reason}"
+    )
   end
 
   defp create_alternate_storage_log_entry(message, trigger_id, reason) do
