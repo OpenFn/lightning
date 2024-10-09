@@ -22,7 +22,7 @@ defmodule Lightning.Repo.Migrations.CreateCollectionsEntries do
       add :collection_id,
           references(:collections, on_delete: :delete_all, type: :binary_id, null: false)
 
-      timestamps()
+      timestamps(type: :naive_datetime_usec)
     end
 
     create unique_index(:collections_items, [:collection_id, :key])
