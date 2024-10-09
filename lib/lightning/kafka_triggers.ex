@@ -250,7 +250,7 @@ defmodule Lightning.KafkaTriggers do
 
   def maybe_write_to_alternate_storage(
         trigger_id,
-        message = %Broadway.Message{}
+        %Broadway.Message{} = message
       ) do
     if Lightning.Config.kafka_alternate_storage_enabled?() do
       with {:ok, workflow_path} <- build_workflow_storage_path(trigger_id),
