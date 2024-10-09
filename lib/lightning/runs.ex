@@ -309,10 +309,20 @@ defmodule Lightning.Runs do
 
       Ecto.assoc(run, :steps)
       |> where([r], is_nil(r.exit_reason))
-      |> Repo.update_all(
-        set: [exit_reason: "lost", finished_at: DateTime.utc_now()]
-      )
+      |> mark_steps_lost()
     end)
+  end
+
+  @spec mark_steps_lost(Ecto.Queryable.t()) :: {:ok, non_neg_integer()}
+  def mark_steps_lost(steps_query) do
+    {updated_count, nil} =
+      Repo.update_all(
+        steps_query,
+        [set: [exit_reason: "lost", finished_at: DateTime.utc_now()]],
+        returning: false
+      )
+
+    {:ok, updated_count}
   end
 
   defdelegate subscribe(run), to: Events

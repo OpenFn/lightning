@@ -83,7 +83,7 @@ defmodule Lightning.MixProject do
       {:esbuild, "~> 0.3", runtime: Mix.env() == :dev},
       {:ex_doc, "~> 0.28", only: :dev, runtime: false},
       {:ex_json_schema, "~> 0.9.1"},
-      {:ex_machina, "~> 2.7.0", only: :test},
+      {:ex_machina, "~> 2.8.0", only: :test},
       {:excoveralls, "~> 0.15.0", only: [:test, :dev]},
       {:floki, ">= 0.30.0", only: :test},
       {:gettext, "~> 0.18"},

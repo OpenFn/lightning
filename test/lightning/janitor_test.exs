@@ -1,4 +1,5 @@
 defmodule Lightning.JanitorTest do
+  require Lightning.Run
   use Lightning.DataCase, async: true
   alias Lightning.Janitor
   alias Lightning.Invocation
@@ -92,6 +93,108 @@ defmodule Lightning.JanitorTest do
       # should be marked lost, despite having a long runtime
       reloaded_lost_long_run = Repo.get(Run, lost_long_run.id)
       assert reloaded_lost_long_run.state == :lost
+    end
+
+    test "updates steps whose run has finished but step hasn't" do
+      %{triggers: [trigger], jobs: [job_1 | _]} =
+        workflow = insert(:simple_workflow)
+
+      dataclip = insert(:dataclip)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      finished_runs_with_unfinished_steps =
+        Run.final_states()
+        |> Enum.map(fn state ->
+          insert(:run,
+            work_order: work_order,
+            starting_trigger: trigger,
+            dataclip: dataclip,
+            state: state,
+            steps: [
+              build(:step,
+                job: job_1,
+                finished_at: nil,
+                exit_reason: nil
+              )
+            ]
+          )
+        end)
+
+      finished_runs_with_finished_steps =
+        Run.final_states()
+        |> Enum.map(fn state ->
+          insert(:run,
+            work_order: work_order,
+            starting_trigger: trigger,
+            dataclip: dataclip,
+            state: state,
+            steps: [
+              build(:step,
+                job: job_1,
+                finished_at: DateTime.utc_now(),
+                exit_reason: to_string(state)
+              )
+            ]
+          )
+        end)
+
+      unfinished_runs_with_unfinished_steps =
+        Enum.map(
+          [:available, :claimed, :started],
+          fn state ->
+            insert(:run,
+              work_order: work_order,
+              starting_trigger: trigger,
+              dataclip: dataclip,
+              state: state,
+              steps: [
+                build(:step,
+                  job: job_1,
+                  finished_at: nil,
+                  exit_reason: nil
+                )
+              ]
+            )
+          end
+        )
+
+      Janitor.find_and_update_lost()
+
+      # unfinished steps having finished runs gets updated
+      for run <- finished_runs_with_unfinished_steps do
+        step = hd(run.steps)
+        reloaded_step = Repo.reload(step)
+
+        assert is_nil(step.finished_at)
+        assert is_nil(step.exit_reason)
+
+        assert is_struct(reloaded_step.finished_at, DateTime)
+        assert reloaded_step.exit_reason == "lost"
+      end
+
+      # finished steps having finished runs don't get updated
+      for run <- finished_runs_with_finished_steps do
+        step = hd(run.steps)
+        reloaded_step = Repo.reload(step)
+
+        assert step.finished_at == reloaded_step.finished_at
+        assert step.exit_reason == reloaded_step.exit_reason
+      end
+
+      # unfinished steps having unfinished runs don't get updated
+      for run <- unfinished_runs_with_unfinished_steps do
+        step = hd(run.steps)
+        reloaded_step = Repo.reload(step)
+
+        assert step.finished_at == reloaded_step.finished_at
+        assert step.exit_reason == reloaded_step.exit_reason
+      end
     end
   end
 end
