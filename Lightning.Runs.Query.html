@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-A8DDE292.js"></script>
+    <script src="dist/sidebar_items-AB975E23.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -186,6 +186,14 @@ still incomplete.</p></div>
 
     </div>
 
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#lost_steps/0" translate="no">lost_steps()</a>
+
+      </div>
+
+    </div>
+
 </div>
 
   </section>
@@ -208,7 +216,7 @@ still incomplete.</p></div>
     </a>
     <h1 class="signature" translate="no">eligible_for_claim()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/query.ex#L104" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/query.ex#L115" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -233,7 +241,7 @@ available state and have not reached the concurrency limit for their workflow.</
 </h3>
 <p>This query does not currently take into account the priority of the run.
 To allow for prioritization, the query should be updated to order by
-priority.</p><pre><code class="makeup elixir" translate="no"><span class="n">eligible_for_claim</span><span class="p" data-group-id="9384874490-1">(</span><span class="p" data-group-id="9384874490-1">)</span><span class="w"> </span><span class="o">|&gt;</span><span class="w"> </span><span class="n">prepend_order_by</span><span class="p" data-group-id="9384874490-2">(</span><span class="p" data-group-id="9384874490-3">[</span><span class="ss">:priority</span><span class="p" data-group-id="9384874490-3">]</span><span class="p" data-group-id="9384874490-2">)</span></code></pre></blockquote>
+priority.</p><pre><code class="makeup elixir" translate="no"><span class="n">eligible_for_claim</span><span class="p" data-group-id="7109809268-1">(</span><span class="p" data-group-id="7109809268-1">)</span><span class="w"> </span><span class="o">|&gt;</span><span class="w"> </span><span class="n">prepend_order_by</span><span class="p" data-group-id="7109809268-2">(</span><span class="p" data-group-id="7109809268-3">[</span><span class="ss">:priority</span><span class="p" data-group-id="7109809268-3">]</span><span class="p" data-group-id="7109809268-2">)</span></code></pre></blockquote>
   </section>
 </section>
 <section class="detail" id="in_progress_window/0">
@@ -245,7 +253,7 @@ priority.</p><pre><code class="makeup elixir" translate="no"><span class="n">eli
     </a>
     <h1 class="signature" translate="no">in_progress_window()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/query.ex#L62" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/query.ex#L73" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -274,7 +282,7 @@ or available.</p><p>The select clause includes:</p><ul><li><code class="inline">
     </a>
     <h1 class="signature" translate="no">lost()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/query.ex#L20" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/query.ex#L21" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -294,6 +302,34 @@ or available.</p><p>The select clause includes:</p><ul><li><code class="inline">
 acceptable start time (determined by the run options and grace period) but are
 still incomplete.</p><p>This indicates that we may have lost contact with the worker
 that was responsible for executing the run.</p>
+  </section>
+</section>
+<section class="detail" id="lost_steps/0">
+
+  <div class="detail-header">
+    <a href="#lost_steps/0" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">lost_steps()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/query.ex#L53" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> lost_steps() :: <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+
+      </div>
+
+
   </section>
 </section>
 
