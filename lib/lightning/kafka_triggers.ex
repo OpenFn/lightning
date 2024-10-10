@@ -248,15 +248,12 @@ defmodule Lightning.KafkaTriggers do
     DateTime.diff(sending_at, last_sent_at, :second) > embargo_period
   end
 
-  def maybe_write_to_alternate_storage(
-        trigger_id,
-        %Broadway.Message{} = message
-      ) do
+  def maybe_write_to_alternate_storage(trigger_id, %Broadway.Message{} = msg) do
     if Lightning.Config.kafka_alternate_storage_enabled?() do
       with {:ok, workflow_path} <- build_workflow_storage_path(trigger_id),
            :ok <- create_workflow_storage_directory(workflow_path),
-           path <- build_file_path(workflow_path, trigger_id, message),
-           {:ok, data} <- encode_message(message) do
+           path <- build_file_path(workflow_path, trigger_id, msg),
+           {:ok, data} <- encode_message(msg) do
         write_to_file(path, data)
       else
         error ->
@@ -268,9 +265,8 @@ defmodule Lightning.KafkaTriggers do
   end
 
   defp build_workflow_storage_path(trigger_id) do
-    with base_path when not is_nil(base_path) <-
-           Lightning.Config.kafka_alternate_storage_file_path(),
-         true <- File.exists?(base_path),
+    with base_path <- Lightning.Config.kafka_alternate_storage_file_path(),
+         true <- base_path |> to_string() |> File.exists?(),
          %{workflow_id: workflow_id} <- Trigger |> Repo.get(trigger_id) do
       {:ok, Path.join(base_path, workflow_id)}
     else
