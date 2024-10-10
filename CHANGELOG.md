@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Introduces collections, a programatic workflow data sharing resource.
+  [#2551](https://github.com/OpenFn/lightning/issues/2551)
+
 ### Changed
 
 ### Fixed

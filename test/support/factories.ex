@@ -318,6 +318,21 @@ defmodule Lightning.Factories do
     }
   end
 
+  def collection_factory do
+    %Lightning.Collections.Collection{
+      project: build(:project),
+      name: sequence(:name, &"collection-#{&1}")
+    }
+  end
+
+  def collection_item_factory do
+    %Lightning.Collections.Item{
+      collection: build(:collection),
+      key: sequence(:key, &"key-#{&1}"),
+      value: sequence(:value, &"value-#{&1}")
+    }
+  end
+
   # ----------------------------------------------------------------------------
   # Helpers
   # ----------------------------------------------------------------------------
