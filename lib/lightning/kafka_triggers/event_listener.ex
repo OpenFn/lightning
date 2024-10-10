@@ -7,6 +7,8 @@ defmodule Lightning.KafkaTriggers.EventListener do
 
   alias Lightning.KafkaTriggers
   alias Lightning.Workflows.Triggers.Events
+  alias Lightning.Workflows.Triggers.Events.KafkaTriggerNotificationSent
+  alias Lightning.Workflows.Triggers.Events.KafkaTriggerUpdated
 
   def start_link(_opts) do
     GenServer.start_link(__MODULE__, [], name: :kafka_event_listener)
@@ -20,10 +22,22 @@ defmodule Lightning.KafkaTriggers.EventListener do
   end
 
   @impl true
-  def handle_info(%Events.KafkaTriggerUpdated{trigger_id: trigger_id}, state) do
+  def handle_info(%KafkaTriggerUpdated{trigger_id: trigger_id}, state) do
     if supervisor = GenServer.whereis(:kafka_pipeline_supervisor) do
       supervisor |> KafkaTriggers.update_pipeline(trigger_id)
     end
+
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_info(%KafkaTriggerNotificationSent{} = notification, state) do
+    %{trigger_id: trigger_id, sent_at: sent_at} = notification
+
+    :persistent_term.put(
+      KafkaTriggers.failure_notification_tracking_key(trigger_id),
+      sent_at
+    )
 
     {:noreply, state}
   end

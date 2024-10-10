@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Notify users when a Kafka trigger can not persist a message to the database.
+  [#2386](https://github.com/OpenFn/lightning/issues/2386)
+
 ### Changed
 
 ### Fixed
