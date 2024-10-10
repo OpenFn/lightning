@@ -488,20 +488,35 @@ defmodule Lightning.Config.Bootstrap do
 
     config :lightning, :kafka_triggers,
       alternate_storage_enabled:
-      env!(
-        "KAFKA_ALTERNATE_STORAGE_ENABLED",
-        &Utils.ensure_boolean/1,
-        false
-      )
-      |> tap(fn enabled ->
-        if enabled do
-          raise """
-          KAFKA_ALTERNATE_STORAGE_ENABLED is set to yes/true.
+        env!(
+          "KAFKA_ALTERNATE_STORAGE_ENABLED",
+          &Utils.ensure_boolean/1,
+          false
+        )
+        |> tap(fn enabled ->
+          if enabled do
+            error = """
+            KAFKA_ALTERNATE_STORAGE_ENABLED is set to yes/true.
 
-          KAFKA_ALTERNATE_STORAGE_FILE_PATH must be a writable directory.
-          """
-        end
-      end),
+            KAFKA_ALTERNATE_STORAGE_FILE_PATH must be a writable directory.
+            """
+
+            path = env!("KAFKA_ALTERNATE_STORAGE_FILE_PATH", :string, nil)
+
+            unless path |> to_string() |> String.length() > 0 do
+              raise error
+            end
+
+            touch_result =
+              path
+              |> Path.join(".lightning_storage_check")
+              |> File.touch()
+
+            unless touch_result == :ok do
+              raise error
+            end
+          end
+        end),
       alternate_storage_file_path:
         env!("KAFKA_ALTERNATE_STORAGE_FILE_PATH", :string, nil),
       duplicate_tracking_retention_seconds:
