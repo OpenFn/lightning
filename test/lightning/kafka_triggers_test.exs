@@ -1221,7 +1221,7 @@ defmodule Lightning.KafkaTriggersTest do
         tmp_dir
       end)
 
-      tmp_dir |> tap(&File.chmod!(&1, 0o000))
+      tmp_dir |> File.chmod!(0o000)
 
       assert(
         KafkaTriggers.maybe_write_to_alternate_storage(trigger_id, message) ==
