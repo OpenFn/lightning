@@ -245,6 +245,13 @@ defmodule Lightning.Config.BootstrapTest do
       end
     end
 
+    @tag tmp_dir: true, enabled: "true", misconfigured: false, path: "xxx/yyy"
+    test "raises an error if enabled and path does not exist" do
+      assert_raise RuntimeError, ~r/must be a writable directory/, fn ->
+        Bootstrap.configure()
+      end
+    end
+
     @tag tmp_dir: true, enabled: "true", misconfigured: false, path: nil
     test "raises an error if enabled and path is nil" do
       assert_raise RuntimeError, ~r/must be a writable directory/, fn ->
@@ -276,6 +283,11 @@ defmodule Lightning.Config.BootstrapTest do
 
     @tag tmp_dir: true, enabled: "false", misconfigured: false, path: ""
     test "does not raise an error if disabled and path is empty string" do
+      Bootstrap.configure()
+    end
+
+    @tag tmp_dir: true, enabled: "false", misconfigured: false, path: "xxx/yyy"
+    test "does not raise an error if disabled and path does not exist" do
       Bootstrap.configure()
     end
   end

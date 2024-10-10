@@ -495,25 +495,25 @@ defmodule Lightning.Config.Bootstrap do
         )
         |> tap(fn enabled ->
           if enabled do
-            error = """
-            KAFKA_ALTERNATE_STORAGE_ENABLED is set to yes/true.
-
-            KAFKA_ALTERNATE_STORAGE_FILE_PATH must be a writable directory.
-            """
-
-            path = env!("KAFKA_ALTERNATE_STORAGE_FILE_PATH", :string, nil)
-
-            unless path |> to_string() |> String.length() > 0 do
-              raise error
-            end
-
             touch_result =
-              path
-              |> Path.join(".lightning_storage_check")
-              |> File.touch()
+              env!("KAFKA_ALTERNATE_STORAGE_FILE_PATH", :string, nil)
+              |> to_string()
+              |> then(fn path ->
+                if File.exists?(path) do
+                  path
+                  |> Path.join(".lightning_storage_check")
+                  |> File.touch()
+                else
+                  :error
+                end
+              end)
 
             unless touch_result == :ok do
-              raise error
+              raise """
+              KAFKA_ALTERNATE_STORAGE_ENABLED is set to yes/true.
+
+              KAFKA_ALTERNATE_STORAGE_FILE_PATH must be a writable directory.
+              """
             end
           end
         end),
