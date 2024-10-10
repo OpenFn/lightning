@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix editor panel overlays output panel when scrolled
+  [#2291](https://github.com/OpenFn/lightning/issues/2291)
+
 ## [v2.9.9] - 2024-10-09
 
 ### Changed
