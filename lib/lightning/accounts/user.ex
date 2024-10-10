@@ -35,7 +35,7 @@ defmodule Lightning.Accounts.User do
       values: [:critical, :any],
       default: :critical
 
-    field :preferences, :map
+    field :preferences, :map, default: %{}
 
     has_one :user_totp, Lightning.Accounts.UserTOTP
     has_many :credentials, Lightning.Credentials.Credential

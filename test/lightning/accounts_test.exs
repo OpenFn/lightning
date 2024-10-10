@@ -540,6 +540,35 @@ defmodule Lightning.AccountsTest do
     end
   end
 
+  describe "update_user_preferences/2" do
+    test "updates the user with provided preferences" do
+      user = insert(:user)
+
+      assert user.preferences == %{}
+
+      {:ok, updated_user} =
+        Accounts.update_user_preferences(user, %{"hello" => "world"})
+
+      assert updated_user.preferences == %{"hello" => "world"}
+    end
+
+    test "does not replace existing prefrences" do
+      user = insert(:user, preferences: %{"hello" => "world"})
+
+      assert user.preferences == %{"hello" => "world"}
+
+      {:ok, updated_user} =
+        Accounts.update_user_preferences(user, %{"x" => 2})
+
+      assert updated_user.preferences == %{"hello" => "world", "x" => 2}
+
+      {:ok, updated_user} =
+        Accounts.update_user_preferences(updated_user, %{"x" => 12})
+
+      assert updated_user.preferences == %{"hello" => "world", "x" => 12}
+    end
+  end
+
   describe "purge user" do
     test "purging a user removes that user from projects they are members of and deletes them from the system" do
       %{project_users: [proj_user1]} =
