@@ -236,6 +236,24 @@ to ensure that Lightning does not flood the recipients with email. The length
 of the embargo is controlled by the `KAFKA_NOTIFICATION_EMBARGO_SECONDS` ENV
 variable.
 
+#### Persisting Failed Messages
+
+If a Kafka message files to be persisted as a WorkOrder, Run and Dataclip, the 
+option exists to write the failed message to a location on the local file system.
+If this option is enabled by setting `KAFKA_ALTERNATE_STORAGE_ENABLED`, then the
+`KAFKA_ALTERNATE_STORAGE_PATH` ENV variable must be set to the path that exists
+and is writable by Lightning. The location shoudl also be suitably protected to
+prevent data exposure as Lightning **will not encrypt** the message contents when
+writing it.
+
+If the option is enabled and a message fails to be persisted, Lightning will
+create a subdirectory named with the id if the affected trigger's workflow 
+in the location specified by `KAFKA_ALTERNATE_STORAGE_PATH` (assuming such a
+subdirectory does not already exist). Lightning will serialise the message
+headers and data as received by the Kafka pipeline and write this to a file
+within the subdirectory. The file will be named bsaed on the pattern 
+`<trigger_id>_<message_topic>_<message_partition>_<message_offset>.json`.
+
 ### Google Oauth2
 
 Using your Google Cloud account, provision a new OAuth 2.0 Client with the 'Web
