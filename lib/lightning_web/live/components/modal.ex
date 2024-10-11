@@ -11,8 +11,8 @@ defmodule LightningWeb.Components.Modal do
 
   attr :id, :string, required: true
   attr :show, :boolean, default: false
-  attr :type, :string, default: "default"
-  attr :position, :string, default: "relative"
+  attr :with_frame, :boolean, default: true
+  attr :position, :string, default: "fixed inset-0"
   attr :width, :string, default: "max-w-3xl"
   attr :close_on_click_away, :boolean, default: true
   attr :close_on_keydown, :boolean, default: true
@@ -29,7 +29,7 @@ defmodule LightningWeb.Components.Modal do
     attr :class, :string
   end
 
-  def modal(%{type: "default"} = assigns) do
+  def modal(assigns) do
     ~H"""
     <div
       id={@id}
@@ -60,9 +60,13 @@ defmodule LightningWeb.Components.Modal do
               phx-window-keydown={@close_on_keydown && hide_modal(@on_close, @id)}
               phx-key="escape"
               phx-click-away={@close_on_click_away && hide_modal(@on_close, @id)}
-              class="hidden relative rounded-xl bg-white py-[24px] shadow-lg shadow-zinc-700/10 ring-1 ring-zinc-700/10 transition"
+              class={[
+                "hidden relative rounded-xl transition",
+                @with_frame &&
+                  "bg-white py-[24px] shadow-lg shadow-zinc-700/10 ring-1 ring-zinc-700/10"
+              ]}
             >
-              <header :if={@title != []} class="pl-[24px] pr-[24px]">
+              <header :if={@title != [] && @with_frame} class="pl-[24px] pr-[24px]">
                 <h1
                   id={"#{@id}-title"}
                   class="text-lg font-semibold leading-5 text-zinc-800"
@@ -75,12 +79,16 @@ defmodule LightningWeb.Components.Modal do
                   </p>
                 <% end %>
               </header>
-              <div class="flex-grow bg-gray-100 h-0.5 my-[16px]"></div>
-              <section class="pl-[0px] pr-[0px]">
+              <div
+                :if={@title != [] && @with_frame}
+                class="flex-grow bg-gray-100 h-0.5 my-[16px]"
+              >
+              </div>
+              <section class={if(@with_frame, do: "pl-[24px] pr-[24px]", else: "")}>
                 <%= render_slot(@inner_block) %>
               </section>
               <%= for footer <- @footer do %>
-                <.modal_footer class={footer |> Map.get(:class)}>
+                <.modal_footer :if={@with_frame} class={footer |> Map.get(:class)}>
                   <%= render_slot(footer) %>
                 </.modal_footer>
               <% end %>

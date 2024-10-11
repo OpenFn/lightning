@@ -204,13 +204,26 @@ defmodule LightningWeb.DashboardLiveTest do
       assert project_names_from_html == projects_sorted_by_name
 
       # Click to sort by name descending
-      view |> element("span[phx-click='sort_by_name']") |> render_click()
+      view
+      |> element("span[phx-click='sort'][phx-value-by='name']")
+      |> render_click()
 
       projects_sorted_by_name_desc = get_sorted_projects_by_name(projects, :desc)
       html = render(view)
       project_names_from_html = extract_project_names_from_html(html)
 
       assert project_names_from_html == projects_sorted_by_name_desc
+
+      # Click again to sort by name ascending
+      view
+      |> element("span[phx-click='sort'][phx-value-by='name']")
+      |> render_click()
+
+      projects_sorted_by_name_asc = get_sorted_projects_by_name(projects, :asc)
+      html = render(view)
+      project_names_from_html = extract_project_names_from_html(html)
+
+      assert project_names_from_html == projects_sorted_by_name_asc
     end
 
     test "Users can sort the project table by last activity", %{
@@ -243,7 +256,9 @@ defmodule LightningWeb.DashboardLiveTest do
                projects_sorted_by_last_activity
 
       # Click to sort by last activity descending
-      view |> element("span[phx-click='sort_by_activity']") |> render_click()
+      view
+      |> element("span[phx-click='sort'][phx-value-by='activity']")
+      |> render_click()
 
       projects_sorted_by_last_activity_desc =
         get_sorted_projects_by_last_activity(projects, :desc)
@@ -261,6 +276,55 @@ defmodule LightningWeb.DashboardLiveTest do
 
       assert project_last_activities_from_html ==
                projects_sorted_by_last_activity_desc
+    end
+
+    test "Toggles the welcome banner", %{conn: conn, user: user} do
+      {:ok, view, _html} = live(conn, ~p"/projects")
+
+      # Assert that the banner is initially expanded
+      assert view
+             |> has_element?("#welcome-banner-content[class~='max-h-[500px]']")
+
+      # Click to collapse the banner
+      view
+      |> element("button[phx-click='toggle-welcome-banner']")
+      |> render_click()
+
+      # Assert that the banner is now collapsed
+      refute view
+             |> has_element?("#welcome-banner-content[class~='max-h-[500px]']")
+
+      assert view
+             |> has_element?("#welcome-banner-content[class~='max-h-0']")
+
+      assert Repo.reload(user)
+             |> Map.get(:preferences)
+             |> Map.get("welcome.collapsed")
+
+      # Click again to expand the banner back
+      view
+      |> element("button[phx-click='toggle-welcome-banner']")
+      |> render_click()
+
+      # Assert that the banner is expanded again
+      assert view
+             |> has_element?("#welcome-banner-content[class~='max-h-[500px]']")
+
+      refute Repo.reload(user)
+             |> Map.get(:preferences)
+             |> Map.get("welcome.collapsed")
+    end
+
+    test "Selects an arcade resource", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/projects")
+
+      view
+      |> element(
+        "button[phx-click='select-arcade-resource'][phx-value-resource='1']"
+      )
+      |> render_click()
+
+      assert view |> has_element?("div#arcade-modal-1")
     end
   end
 
