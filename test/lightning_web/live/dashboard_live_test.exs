@@ -243,7 +243,9 @@ defmodule LightningWeb.DashboardLiveTest do
                projects_sorted_by_last_activity
 
       # Click to sort by last activity descending
-      view |> element("span[phx-click='sort_by_activity']") |> render_click()
+      view
+      |> element("span[phx-click='sort' phx-value-by='activity']")
+      |> render_click()
 
       projects_sorted_by_last_activity_desc =
         get_sorted_projects_by_last_activity(projects, :desc)
