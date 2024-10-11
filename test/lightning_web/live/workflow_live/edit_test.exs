@@ -2109,9 +2109,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
              |> has_element?("#inspector-workflow-version", "latest")
 
       wait constant_backoff(100) |> expiry(1_000) do
-      end
-
-      wait constant_backoff(100) |> expiry(1_000) do
         refute low_priority_view
                |> has_element?("#inspector-workflow-version", "latest")
 
