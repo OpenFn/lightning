@@ -585,7 +585,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     >
       <div
         id={"#{@id}-panel-header"}
-        class="flex justify-between items-center p-2 px-4 panel-header"
+        class="flex justify-between items-center p-2 px-4 panel-header z-50"
       >
         <div
           id={"#{@id}-panel-header-title"}
