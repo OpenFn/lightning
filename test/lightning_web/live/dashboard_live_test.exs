@@ -204,7 +204,9 @@ defmodule LightningWeb.DashboardLiveTest do
       assert project_names_from_html == projects_sorted_by_name
 
       # Click to sort by name descending
-      view |> element("span[phx-click='sort_by_name']") |> render_click()
+      view
+      |> element("span[phx-click='sort'][phx-value-by='name']")
+      |> render_click()
 
       projects_sorted_by_name_desc = get_sorted_projects_by_name(projects, :desc)
       html = render(view)
@@ -244,7 +246,7 @@ defmodule LightningWeb.DashboardLiveTest do
 
       # Click to sort by last activity descending
       view
-      |> element("span[phx-click='sort' phx-value-by='activity']")
+      |> element("span[phx-click='sort'][phx-value-by='activity']")
       |> render_click()
 
       projects_sorted_by_last_activity_desc =
@@ -263,6 +265,55 @@ defmodule LightningWeb.DashboardLiveTest do
 
       assert project_last_activities_from_html ==
                projects_sorted_by_last_activity_desc
+    end
+
+    test "Toggles the arcade banner", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/projects")
+
+      # Assert that the banner is initially expanded
+      assert view
+             |> has_element?(
+               "#arcade-banner-content[class='transition-all duration-500 ease-in-out overflow-hidden max-h-[500px]']"
+             )
+
+      # Click to collapse the banner
+      view
+      |> element("button[phx-click='toggle-arcade-banner']")
+      |> render_click()
+
+      # Assert that the banner is now collapsed
+      refute view
+             |> has_element?(
+               "#arcade-banner-content[class='transition-all duration-500 ease-in-out overflow-hidden max-h-[500px]']"
+             )
+
+      assert view
+             |> has_element?(
+               "#arcade-banner-content[class='transition-all duration-500 ease-in-out overflow-hidden max-h-0']"
+             )
+
+      # Click again to expand the banner back
+      view
+      |> element("button[phx-click='toggle-arcade-banner']")
+      |> render_click()
+
+      # Assert that the banner is expanded again
+      assert view
+             |> has_element?(
+               "#arcade-banner-content[class='transition-all duration-500 ease-in-out overflow-hidden max-h-[500px]']"
+             )
+    end
+
+    test "Selects an arcade resource", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/projects")
+
+      view
+      |> element(
+        "button[phx-click='select-arcade-resource'][phx-value-resource='1']"
+      )
+      |> render_click()
+
+      assert view |> has_element?("div#arcade-modal-1")
     end
   end
 

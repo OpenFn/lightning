@@ -540,6 +540,35 @@ defmodule Lightning.AccountsTest do
     end
   end
 
+  describe "update_user_preferences/2" do
+    test "updates the user with provided preferences" do
+      user = insert(:user)
+
+      assert user.preferences == %{}
+
+      {:ok, updated_user} =
+        Accounts.update_user_preferences(user, %{"hello" => "world"})
+
+      assert updated_user.preferences == %{"hello" => "world"}
+    end
+
+    test "does not replace existing prefrences" do
+      user = insert(:user, preferences: %{"hello" => "world"})
+
+      assert user.preferences == %{"hello" => "world"}
+
+      {:ok, updated_user} =
+        Accounts.update_user_preferences(user, %{"x" => 2})
+
+      assert updated_user.preferences == %{"hello" => "world", "x" => 2}
+
+      {:ok, updated_user} =
+        Accounts.update_user_preferences(updated_user, %{"x" => 12})
+
+      assert updated_user.preferences == %{"hello" => "world", "x" => 12}
+    end
+  end
+
   describe "purge user" do
     test "purging a user removes that user from projects they are members of and deletes them from the system" do
       %{project_users: [proj_user1]} =
@@ -1454,6 +1483,56 @@ defmodule Lightning.AccountsTest do
 
     insert(:user, role: :superuser)
     assert Accounts.has_one_superuser?()
+  end
+
+  describe "get_preference/2" do
+    test "returns the correct preference value" do
+      user = insert(:user, preferences: %{"editor.orientation" => "vertical"})
+
+      result = Accounts.get_preference(user, "editor.orientation")
+      assert result == "vertical"
+    end
+
+    test "converts 'true' to boolean true" do
+      user = insert(:user, preferences: %{"notifications.enabled" => "true"})
+
+      result = Accounts.get_preference(user, "notifications.enabled")
+      assert result == true
+    end
+
+    test "converts 'false' to boolean false" do
+      user = insert(:user, preferences: %{"notifications.enabled" => "false"})
+
+      result = Accounts.get_preference(user, "notifications.enabled")
+      assert result == false
+    end
+
+    test "returns nil for non-existent preference" do
+      user = insert(:user)
+
+      result = Accounts.get_preference(user, "non.existent.key")
+      assert result == nil
+    end
+  end
+
+  describe "update_user_preference/3" do
+    test "updates the user's preference" do
+      user = insert(:user, preferences: %{"editor.orientation" => "vertical"})
+
+      {:ok, updated_user} =
+        Accounts.update_user_preference(user, "editor.orientation", "horizontal")
+
+      assert updated_user.preferences["editor.orientation"] == "horizontal"
+    end
+
+    test "adds a new preference key" do
+      user = insert(:user)
+
+      {:ok, updated_user} =
+        Accounts.update_user_preference(user, "notifications.enabled", true)
+
+      assert updated_user.preferences["notifications.enabled"] == true
+    end
   end
 
   defp count_project_credentials_for_user(user) do

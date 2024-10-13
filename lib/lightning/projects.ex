@@ -17,7 +17,7 @@ defmodule Lightning.Projects do
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
   alias Lightning.Projects.Events
-  alias Lightning.Projects.File
+  alias Lightning.Projects.File, as: ProjectFile
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Projects.ProjectUser
@@ -890,7 +890,7 @@ defmodule Lightning.Projects do
   def list_project_files(%Project{id: project_id}, opts \\ []) do
     sort_order = Keyword.get(opts, :sort, :desc)
 
-    from(pf in File,
+    from(pf in ProjectFile,
       where: pf.project_id == ^project_id,
       order_by: [{^sort_order, pf.inserted_at}],
       preload: [:created_by]
@@ -907,5 +907,70 @@ defmodule Lightning.Projects do
             (pu.role in ^[:admin, :owner] or u.role == ^:superuser)
 
     query |> Repo.all()
+  end
+
+  @doc """
+  Fetches arcade resources from the JSDelivr CDN.
+
+  If the request is successful, it returns the decoded JSON data.
+  If the CDN is unavailable (404, network error, etc.), it falls back to reading local resources.
+
+  Returns:
+    - List of resources (decoded JSON) on success.
+    - Empty list if both remote and local fetch operations fail.
+  """
+  def fetch_arcade_resources do
+    resources_url =
+      "https://cdn.jsdelivr.net/gh/OpenFn/lightning/priv/static/resources.json"
+
+    case Tesla.get(resources_url) do
+      {:ok, %Tesla.Env{status: 200, body: body}} ->
+        decode_json(body, fn -> [] end)
+
+      {:ok, %Tesla.Env{status: status, body: body}} when status != 200 ->
+        Logger.error("""
+        [JSDelivr Fetch Error]
+        Status: #{status}
+        Message: #{String.trim(body)}
+
+        Falling back to local resources.
+        """)
+
+        local_arcade_resources()
+
+      {:error, reason} ->
+        Logger.error("""
+        [JSDelivr Fetch Error]
+        Reason: #{inspect(reason)}
+
+        Falling back to local resources.
+        """)
+
+        local_arcade_resources()
+    end
+  end
+
+  defp local_arcade_resources do
+    local_path = Lightning.Config.arcade_resources()
+
+    case File.read(local_path) do
+      {:ok, body} ->
+        decode_json(body, fn -> [] end)
+
+      {:error, reason} ->
+        Logger.error("Failed to load local resources: #{inspect(reason)}")
+        []
+    end
+  end
+
+  defp decode_json(body, fallback) do
+    case Jason.decode(body) do
+      {:ok, data} ->
+        data
+
+      {:error, reason} ->
+        Logger.error("JSON decoding error: #{inspect(reason)}")
+        fallback.()
+    end
   end
 end

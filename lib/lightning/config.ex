@@ -57,6 +57,11 @@ defmodule Lightning.Config do
     end
 
     @impl true
+    def arcade_resources do
+      Path.join(:code.priv_dir(:lightning), "static/arcade_resources.json")
+    end
+
+    @impl true
     def oauth_provider(key) do
       Application.get_env(:lightning, :oauth_clients)
       |> Keyword.get(key)
@@ -205,6 +210,14 @@ defmodule Lightning.Config do
   @callback usage_tracking_cron_opts() :: [Oban.Plugins.Cron.cron_input()]
   @callback worker_secret() :: binary() | nil
   @callback worker_token_signer() :: Joken.Signer.t()
+  @callback arcade_resources() :: String.t()
+
+  @doc """
+  Returns the path to the arcade resources JSON file.
+  """
+  def arcade_resources do
+    impl().arcade_resources()
+  end
 
   @doc """
   Returns the Apollo server configuration.

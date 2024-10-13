@@ -1,49 +1,34 @@
 defmodule LightningWeb.DashboardLive.Index do
   use LightningWeb, :live_view
+
   import LightningWeb.DashboardLive.Components
 
+  alias Lightning.Accounts
   alias Lightning.Accounts.User
   alias Lightning.Projects
 
-  on_mount {LightningWeb.Hooks, :project_scope}
+  require Logger
 
-  @resources [
-    %{
-      id: 1,
-      title: "Getting Started with OpenFn",
-      link:
-        "https://demo.arcade.software/WhOK61AiXdG73Dd5lfSa?embed&embed_mobile=inline&embed_desktop=inline&show_copy_link=true"
-    },
-    %{
-      id: 2,
-      title: "Creating your first workflow",
-      link:
-        "https://demo.arcade.software/WhOK61AiXdG73Dd5lfSa?embed&embed_mobile=inline&embed_desktop=inline&show_copy_link=true"
-    },
-    %{
-      id: 3,
-      title: "How to use the IDE",
-      link:
-        "https://demo.arcade.software/WhOK61AiXdG73Dd5lfSa?embed&embed_mobile=inline&embed_desktop=inline&show_copy_link=true"
-    },
-    %{
-      id: 4,
-      title: "Managing project history",
-      link:
-        "https://demo.arcade.software/WhOK61AiXdG73Dd5lfSa?embed&embed_mobile=inline&embed_desktop=inline&show_copy_link=true"
-    }
-  ]
+  on_mount {LightningWeb.Hooks, :project_scope}
 
   @impl true
   def mount(_params, _session, socket) do
     projects = projects_for_user(socket.assigns.current_user)
 
+    arcade_resources = Projects.fetch_arcade_resources()
+
+    arcade_banner_collapsed =
+      Accounts.get_preference(
+        socket.assigns.current_user,
+        "arcade_banner_collapsed"
+      )
+
     {:ok,
      assign_new(socket, :projects, fn -> projects end)
-     |> assign(:resources, @resources)
+     |> assign(:arcade_resources, arcade_resources)
+     |> assign(:selected_arcade_resource, nil)
+     |> assign(:arcade_banner_collapsed, arcade_banner_collapsed)
      |> assign(:active_menu_item, :projects)
-     |> assign(:arcade_banner_collapsed, true)
-     |> assign(:open_modal, nil)
      |> assign(:name_sort_direction, :asc)
      |> assign(:activity_sort_direction, :asc)}
   end
@@ -75,22 +60,35 @@ defmodule LightningWeb.DashboardLive.Index do
   end
 
   def handle_event(
-        "open-arcade-modal",
-        %{"id" => id, "title" => title, "link" => link},
+        "select-arcade-resource",
+        %{"resource" => resource_id},
         socket
       ) do
-    {:noreply, assign(socket, open_modal: %{id: id, title: title, link: link})}
+    resource =
+      Enum.find(socket.assigns.arcade_resources, fn resource ->
+        resource["id"] == String.to_integer(resource_id)
+      end)
+
+    {:noreply, assign(socket, selected_arcade_resource: resource)}
   end
 
-  def handle_event("close_arcade_modal", _, socket) do
-    {:noreply, assign(socket, open_modal: nil)}
-  end
+  def handle_event("toggle-arcade-banner", _params, socket) do
+    arcade_banner_collapsed = !socket.assigns.arcade_banner_collapsed
 
-  def handle_event("toggle_arcade_banner", _params, socket) do
-    {:noreply,
-     assign(socket,
-       arcade_banner_collapsed: !socket.assigns.arcade_banner_collapsed
-     )}
+    Accounts.update_user_preference(
+      socket.assigns.current_user,
+      "arcade_banner_collapsed",
+      arcade_banner_collapsed
+    )
+    |> case do
+      {:ok, _user} ->
+        {:noreply,
+         assign(socket, arcade_banner_collapsed: arcade_banner_collapsed)}
+
+      {:error, reason} ->
+        Logger.error("Couldn't update user preferences: #{inspect(reason)}")
+        {:noreply, socket}
+    end
   end
 
   defp switch_sort_direction(:asc), do: :desc
@@ -120,10 +118,10 @@ defmodule LightningWeb.DashboardLive.Index do
       <LayoutComponents.centered>
         <div class="w-full">
           <.arcade_banner
-            resources={@resources}
-            collapsed={@arcade_banner_collapsed}
-            open_modal={@open_modal}
             current_user={@current_user}
+            resources={@arcade_resources}
+            collapsed={@arcade_banner_collapsed}
+            selected_resource={@selected_arcade_resource}
           />
 
           <.user_projects_table
@@ -172,11 +170,11 @@ defmodule LightningWeb.DashboardLive.Index do
     ~H"""
     <div class="rounded-lg pb-6">
       <div class="flex justify-between items-center pt-6">
-        <h1 class="text-xl font-bold">
+        <h1 class="text-2xl font-medium">
           Good day, <%= @current_user.first_name %>!
         </h1>
         <button
-          phx-click="toggle_arcade_banner"
+          phx-click="toggle-arcade-banner"
           class="text-gray-500 focus:outline-none"
         >
           <span class="text-lg">
@@ -193,38 +191,33 @@ defmodule LightningWeb.DashboardLive.Index do
           Here are some resources to help you get started with OpenFn
         </p>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <%= for %{id: id, title: title, link: link} <- @resources do %>
-            <.resource_card id={id} title={title} link={link} />
+          <%= for resource <- @resources do %>
+            <.resource_card resource={resource} />
           <% end %>
         </div>
       </div>
 
       <hr class="border-t border-gray-300 mt-4" />
-      <.arcade_modal
-        :if={@open_modal}
-        id={"arcade-modal-#{@open_modal.id}"}
-        title={@open_modal.title}
-        link={@open_modal.link}
-      />
+      <.arcade_modal :if={@selected_resource} resource={@selected_resource} />
     </div>
     """
   end
 
   defp banner_content_classes(true), do: "max-h-0"
-  # Adjust as needed
   defp banner_content_classes(false), do: "max-h-[500px]"
+  defp banner_content_classes(nil), do: "max-h-[500px]"
 
   def resource_card(assigns) do
     ~H"""
     <button
       type="button"
-      phx-click="open-arcade-modal"
-      phx-value-id={@id}
-      phx-value-title={@title}
-      phx-value-link={@link}
-      class="relative flex items-end h-[150px] bg-gradient-to-r from-blue-400 to-purple-500 text-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 p-4"
+      phx-click="select-arcade-resource"
+      phx-value-resource={@resource["id"]}
+      class="relative flex items-end h-[150px] bg-gradient-to-r from-blue-400 to-purple-500 text-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 p-4 text-left"
     >
-      <h2 class="text-lg font-semibold absolute bottom-4 left-4"><%= @title %></h2>
+      <h2 class="text-lg font-semibold absolute bottom-4 left-4">
+        <%= @resource["title"] %>
+      </h2>
     </button>
     """
   end
@@ -232,11 +225,16 @@ defmodule LightningWeb.DashboardLive.Index do
   def arcade_modal(assigns) do
     ~H"""
     <div class="text-xs">
-      <.modal id={@id} with_frame={false} show={true} width="w-5/6">
+      <.modal
+        id={"arcade-modal-#{@resource["id"]}"}
+        with_frame={false}
+        show={true}
+        width="w-5/6"
+      >
         <div style="position: relative; padding-bottom: calc(56.67989417989418% + 41px); height: 0; width: 100%;">
           <iframe
-            src={@link}
-            title={@title}
+            src={@resource["link"]}
+            title={@resource["title"]}
             frameborder="0"
             loading="lazy"
             webkitallowfullscreen
