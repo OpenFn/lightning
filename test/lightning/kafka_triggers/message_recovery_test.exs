@@ -232,7 +232,10 @@ defmodule Lightning.KafkaTriggers.MessageRecoveryTest do
         offset: offset,
         partition: partition,
         key: "",
-        headers: [],
+        headers: [
+          ["foo_header", "foo_value"],
+          ["bar_header", "bar_value"]
+        ],
         ts: 1_715_164_718_283,
         topic: topic
       },
