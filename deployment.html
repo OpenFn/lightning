@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-B10CD3B4.js"></script>
+    <script src="dist/sidebar_items-4A1FBDB3.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -243,7 +243,11 @@ will result in the consumer group reverting to what has been configured as the
 'Initial offset reset policy' for the trigger. This may result in the
 duplication of messages or even data loss.</p><p>It is recommended that you check the value of the <code class="inline">offsets.retention.minutes</code> for
 the Kafka cluster to determine what the cluster's retention period is, and
-consider this when disabling a Kafka trigger for an extended period.</p><h3 id="google-oauth2" class="section-heading">
+consider this when disabling a Kafka trigger for an extended period.</p><h4>Failure notifications</h4><p>Under certain failure conditions, a Kafka trigger will send an email to certain
+user that are associated with a project. After each email an embargo is applied
+to ensure that Lightning does not flood the recipients with email. The length
+of the embargo is controlled by the <code class="inline">KAFKA_NOTIFICATION_EMBARGO_SECONDS</code> ENV
+variable.</p><h3 id="google-oauth2" class="section-heading">
   <a href="#google-oauth2" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>

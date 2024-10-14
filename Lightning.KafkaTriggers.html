@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-B10CD3B4.js"></script>
+    <script src="dist/sidebar_items-4A1FBDB3.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -182,6 +182,14 @@ association with the trigger id.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#failure_notification_tracking_key/1" translate="no">failure_notification_tracking_key(trigger_id)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#find_enabled_triggers/0" translate="no">find_enabled_triggers()</a>
 
       </div>
@@ -209,6 +217,22 @@ association with the trigger id.</p></div>
     <div class="summary-row">
       <div class="summary-signature">
         <a href="#initial_policy/1" translate="no">initial_policy(map)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#notify_users_of_trigger_failure/1" translate="no">notify_users_of_trigger_failure(trigger_id)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#send_notification?/2" translate="no">send_notification?(sending_at, last_sent_at)</a>
 
       </div>
 
@@ -252,7 +276,7 @@ association with the trigger id.</p></div>
     </a>
     <h1 class="signature" translate="no">build_topic_partition_offset(message)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L52" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L55" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -275,7 +299,7 @@ association with the trigger id.</p>
     </a>
     <h1 class="signature" translate="no">convert_rate_limit()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L185" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L188" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -297,7 +321,29 @@ association with the trigger id.</p>
     </a>
     <h1 class="signature" translate="no">enable_disable_triggers(triggers)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L58" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L61" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="failure_notification_tracking_key/1">
+
+  <div class="detail-header">
+    <a href="#failure_notification_tracking_key/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">failure_notification_tracking_key(trigger_id)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L214" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -319,7 +365,7 @@ association with the trigger id.</p>
     </a>
     <h1 class="signature" translate="no">find_enabled_triggers()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L23" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L26" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -341,7 +387,7 @@ association with the trigger id.</p>
     </a>
     <h1 class="signature" translate="no">generate_pipeline_child_spec(trigger)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L77" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L80" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -363,7 +409,7 @@ association with the trigger id.</p>
     </a>
     <h1 class="signature" translate="no">get_kafka_triggers_being_updated(changeset)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L132" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L135" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -385,7 +431,51 @@ association with the trigger id.</p>
     </a>
     <h1 class="signature" translate="no">initial_policy(map)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L34" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L37" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="notify_users_of_trigger_failure/1">
+
+  <div class="detail-header">
+    <a href="#notify_users_of_trigger_failure/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">notify_users_of_trigger_failure(trigger_id)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L198" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="send_notification?/2">
+
+  <div class="detail-header">
+    <a href="#send_notification?/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">send_notification?(sending_at, last_sent_at)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L242" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -407,7 +497,7 @@ association with the trigger id.</p>
     </a>
     <h1 class="signature" translate="no">start_triggers()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L11" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L14" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -429,7 +519,7 @@ association with the trigger id.</p>
     </a>
     <h1 class="signature" translate="no">update_pipeline(supervisor, trigger_id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L155" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L158" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
