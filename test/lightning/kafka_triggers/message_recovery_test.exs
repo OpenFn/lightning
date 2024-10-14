@@ -1,9 +1,12 @@
 defmodule Lightning.KafkaTriggers.MessageRecoveryTest do
   use Lightning.DataCase
 
+  import Ecto.Query
+
   alias Lightning.Invocation
   alias Lightning.KafkaTriggers
   alias Lightning.KafkaTriggers.MessageRecovery
+  alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
   alias Lightning.Repo
   alias Lightning.WorkOrder
 
@@ -60,10 +63,161 @@ defmodule Lightning.KafkaTriggers.MessageRecoveryTest do
 
       MessageRecovery.recover_messages(tmp_dir)
 
-      assert_recovery(trigger_1, message_1)
-      assert_recovery(trigger_1, message_2)
-      assert_recovery(trigger_2, message_3)
-      assert_recovery(trigger_3, message_4)
+      assert_recovery(trigger_1, [message_1, message_2])
+      assert_recovery(trigger_2, [message_3])
+      assert_recovery(trigger_3, [message_4])
+    end
+
+    @tag :tmp_dir
+    test "updates file extension to indicate that it has been recovered", %{
+      tmp_dir: tmp_dir,
+      trigger_1: trigger_1,
+      trigger_2: trigger_2,
+      trigger_3: trigger_3,
+    } do
+      message_1 = message_contents_for_serialisation("topic-1", 1, 100)
+      message_2 = message_contents_for_serialisation("topic-2", 2, 200)
+      message_3 = message_contents_for_serialisation("topic-3", 3, 300)
+      message_4 = message_contents_for_serialisation("topic-4", 4, 400)
+
+      write_file(tmp_dir, trigger_1, message_1)
+      write_file(tmp_dir, trigger_1, message_2)
+      write_file(tmp_dir, trigger_2, message_3)
+      write_file(tmp_dir, trigger_3, message_4)
+
+      MessageRecovery.recover_messages(tmp_dir)
+
+      assert_renamed_file(tmp_dir, trigger_1, message_1)
+      assert_renamed_file(tmp_dir, trigger_1, message_2)
+      assert_renamed_file(tmp_dir, trigger_2, message_3)
+      assert_renamed_file(tmp_dir, trigger_3, message_4)
+    end
+
+    @tag :tmp_dir
+    test "returns :ok if there were no recovery errors", %{
+      tmp_dir: tmp_dir,
+      trigger_1: trigger_1,
+      trigger_2: trigger_2,
+      trigger_3: trigger_3,
+    } do
+      message_1 = message_contents_for_serialisation("topic-1", 1, 100)
+      message_2 = message_contents_for_serialisation("topic-2", 2, 200)
+      message_3 = message_contents_for_serialisation("topic-3", 3, 300)
+      message_4 = message_contents_for_serialisation("topic-4", 4, 400)
+
+      write_file(tmp_dir, trigger_1, message_1)
+      write_file(tmp_dir, trigger_1, message_2)
+      write_file(tmp_dir, trigger_2, message_3)
+      write_file(tmp_dir, trigger_3, message_4)
+
+      assert MessageRecovery.recover_messages(tmp_dir) == :ok
+    end
+
+    @tag :tmp_dir
+    test "does not update the file extension if message reflects an error", %{
+      tmp_dir: tmp_dir,
+      trigger_1: trigger_1,
+      trigger_2: trigger_2,
+      trigger_3: trigger_3,
+    } do
+      message_1 = message_contents_for_serialisation("topic-1", 1, 100)
+      message_2 = message_contents_for_serialisation("topic-2", 2, 200)
+      message_3 = message_contents_for_serialisation("topic-3", 3, 300)
+      message_4 = message_contents_for_serialisation("topic-4", 4, 400)
+
+      # Ensure that persisting message_2 fails
+      %TriggerKafkaMessageRecord{
+        trigger_id: trigger_1.id,
+        topic_partition_offset: topic_partition_offset(message_2)
+      }
+      |> Repo.insert!()
+
+      write_file(tmp_dir, trigger_1, message_1)
+      write_file(tmp_dir, trigger_1, message_2)
+      write_file(tmp_dir, trigger_2, message_3)
+      write_file(tmp_dir, trigger_3, message_4)
+
+      MessageRecovery.recover_messages(tmp_dir)
+
+      assert_renamed_file(tmp_dir, trigger_1, message_1)
+      refute_renamed_file(tmp_dir, trigger_1, message_2)
+      assert_renamed_file(tmp_dir, trigger_2, message_3)
+      assert_renamed_file(tmp_dir, trigger_3, message_4)
+    end
+
+    @tag :tmp_dir
+    test "returns an indication of the number of failed recoveries, if any", %{
+      tmp_dir: tmp_dir,
+      trigger_1: trigger_1,
+      trigger_2: trigger_2,
+      trigger_3: trigger_3,
+    } do
+      message_1 = message_contents_for_serialisation("topic-1", 1, 100)
+      message_2 = message_contents_for_serialisation("topic-2", 2, 200)
+      message_3 = message_contents_for_serialisation("topic-3", 3, 300)
+      message_4 = message_contents_for_serialisation("topic-4", 4, 400)
+
+      ensure_failure(trigger_1, message_2)
+      ensure_failure(trigger_3, message_4)
+
+      write_file(tmp_dir, trigger_1, message_1)
+      write_file(tmp_dir, trigger_1, message_2)
+      write_file(tmp_dir, trigger_2, message_3)
+      write_file(tmp_dir, trigger_3, message_4)
+
+      assert MessageRecovery.recover_messages(tmp_dir) == {:error, 2}
+    end
+
+    @tag :tmp_dir
+    test "ignores entries in the base directory that are not directories", %{
+      tmp_dir: tmp_dir,
+      trigger_1: trigger_1,
+      trigger_2: trigger_2,
+      trigger_3: trigger_3,
+    } do
+      File.touch!(Path.join(tmp_dir, ".lightning_storage_check"))
+
+      message_1 = message_contents_for_serialisation("topic-1", 1, 100)
+      message_2 = message_contents_for_serialisation("topic-2", 2, 200)
+      message_3 = message_contents_for_serialisation("topic-3", 3, 300)
+      message_4 = message_contents_for_serialisation("topic-4", 4, 400)
+
+      write_file(tmp_dir, trigger_1, message_1)
+      write_file(tmp_dir, trigger_1, message_2)
+      write_file(tmp_dir, trigger_2, message_3)
+      write_file(tmp_dir, trigger_3, message_4)
+
+      MessageRecovery.recover_messages(tmp_dir)
+
+      assert_recovery(trigger_1, [message_1, message_2])
+      assert_recovery(trigger_2, [message_3])
+      assert_recovery(trigger_3, [message_4])
+    end
+
+    @tag :tmp_dir
+    test "ignores files that do have a `.json` extension", %{
+      tmp_dir: tmp_dir,
+      trigger_1: trigger_1,
+      trigger_2: trigger_2,
+      trigger_3: trigger_3,
+    } do
+      File.touch!(Path.join(tmp_dir, ".lightning_storage_check"))
+
+      message_1 = message_contents_for_serialisation("topic-1", 1, 100)
+      message_2 = message_contents_for_serialisation("topic-2", 2, 200)
+      message_3 = message_contents_for_serialisation("topic-3", 3, 300)
+      message_4 = message_contents_for_serialisation("topic-4", 4, 400)
+
+      write_file(tmp_dir, trigger_1, message_1)
+      write_recovered_file(tmp_dir, trigger_1, message_2)
+      write_file(tmp_dir, trigger_2, message_3)
+      write_file(tmp_dir, trigger_3, message_4)
+
+      MessageRecovery.recover_messages(tmp_dir)
+
+      assert_recovery(trigger_1, [message_1])
+      assert_recovery(trigger_2, [message_3])
+      assert_recovery(trigger_3, [message_4])
     end
   end
 
@@ -86,33 +240,86 @@ defmodule Lightning.KafkaTriggers.MessageRecoveryTest do
   end
 
   defp write_file(base_dir_path, trigger, message) do
+    dump_file_path(base_dir_path, trigger, message)
+    |> File.write!(Jason.encode!(message))
+  end
+
+  defp dump_file_path(base_dir_path, trigger, message) do
     directory_path =
       base_dir_path
       |> Path.join(trigger.workflow_id)
       |> tap(&File.mkdir/1)
 
-    file_path =
-      directory_path
-      |> Path.join(
-        KafkaTriggers.alternate_storage_file_name(
-          trigger.id,
-          %Broadway.Message{
-            acknowledger: %{},
-            data: %{},
-            metadata: message.metadata
-          }
-        )
+    directory_path
+    |> Path.join(
+      KafkaTriggers.alternate_storage_file_name(
+        trigger.id,
+        %Broadway.Message{
+          acknowledger: %{},
+          data: %{},
+          metadata: message.metadata
+        }
       )
-    
-    File.write!(file_path, Jason.encode!(message))
+    )
   end
 
-  defp assert_recovery(trigger, message) do
-    assert %WorkOrder{dataclip: dataclip} =
-      WorkOrder
-      |> Repo.get_by(trigger_id: trigger.id)
-      |> Repo.preload(dataclip: Invocation.Query.dataclip_with_body())
+  defp assert_recovery(trigger, messages) do
+    expected_bodies =
+      messages
+      |> Enum.map(& &1.data |> Jason.decode!())
+      |> Enum.sort()
 
-    assert dataclip.body["data"] == message.data |> Jason.decode!()
+    query = from w in WorkOrder, where: w.trigger_id == ^trigger.id
+
+    actual_bodies =
+      query
+      |> Repo.all()
+      |> Repo.preload(dataclip: Invocation.Query.dataclip_with_body())
+      |> Enum.map(& &1.dataclip.body["data"])
+      |> Enum.sort()
+
+    assert actual_bodies == expected_bodies
+  end
+
+  defp assert_renamed_file(base_dir_path, trigger, message) do
+    old_file_path = dump_file_path(base_dir_path, trigger, message)
+    new_file_path = recovered_file_path(old_file_path)
+
+    assert File.exists?(new_file_path)
+    assert !File.exists?(old_file_path)
+  end
+
+  defp recovered_file_path(file_path), do: "#{file_path}.recovered"
+
+  defp ensure_failure(trigger, message) do
+    %TriggerKafkaMessageRecord{
+      trigger_id: trigger.id,
+      topic_partition_offset: topic_partition_offset(message)
+    }
+    |> Repo.insert!()
+  end
+
+  defp topic_partition_offset(message) do
+    KafkaTriggers.build_topic_partition_offset(
+      %Broadway.Message{
+        acknowledger: nil,
+        data: nil,
+        metadata: message.metadata
+      }
+    )
+  end
+
+  defp refute_renamed_file(base_dir_path, trigger, message) do
+    old_file_path = dump_file_path(base_dir_path, trigger, message)
+    new_file_path = "#{old_file_path}.recovered"
+
+    assert !File.exists?(new_file_path)
+    assert File.exists?(old_file_path)
+  end
+
+  defp write_recovered_file(base_dir_path, trigger, message) do
+    dump_file_path(base_dir_path, trigger, message)
+    |> recovered_file_path()
+    |> File.write!(Jason.encode!(message))
   end
 end
