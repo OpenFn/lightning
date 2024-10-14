@@ -96,7 +96,6 @@ defmodule LightningWeb.DashboardLive.Index do
 
   defp map_sort_field_to_column("name"), do: :name
   defp map_sort_field_to_column("activity"), do: :updated_at
-  defp map_sort_field_to_column(_), do: :name
 
   defp projects_for_user(%User{} = user, opts \\ []) do
     include = Keyword.get(opts, :include, [:project_users, :workflows])

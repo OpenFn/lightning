@@ -213,6 +213,17 @@ defmodule LightningWeb.DashboardLiveTest do
       project_names_from_html = extract_project_names_from_html(html)
 
       assert project_names_from_html == projects_sorted_by_name_desc
+
+      # Click again to sort by name ascending
+      view
+      |> element("span[phx-click='sort'][phx-value-by='name']")
+      |> render_click()
+
+      projects_sorted_by_name_asc = get_sorted_projects_by_name(projects, :asc)
+      html = render(view)
+      project_names_from_html = extract_project_names_from_html(html)
+
+      assert project_names_from_html == projects_sorted_by_name_asc
     end
 
     test "Users can sort the project table by last activity", %{
