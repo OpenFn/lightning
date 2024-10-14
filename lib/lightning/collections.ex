@@ -8,7 +8,9 @@ defmodule Lightning.Collections do
   alias Lightning.Collections.Item
   alias Lightning.Repo
 
-  @query_all_limit Application.compile_env!(:lightning, __MODULE__)[:query_all_limit]
+  @query_all_limit Application.compile_env!(:lightning, __MODULE__)[
+                     :query_all_limit
+                   ]
 
   @spec get_collection(String.t()) ::
           {:ok, Collection.t()} | {:error, :collection_not_found}
@@ -45,15 +47,28 @@ defmodule Lightning.Collections do
 
   @spec stream_all(Collection.t(), String.t() | nil, integer()) :: Enum.t()
   def stream_all(%{id: collection_id}, cursor \\ nil, limit \\ @query_all_limit) do
-    Item
-    |> where([i], i.collection_id == ^collection_id)
-    |> limit(^limit)
-    |> then(fn query ->
-      case cursor do
-        nil -> query
-        cursor_key -> where(query, [i], i.key > ^cursor_key)
-      end
-    end)
+    collection_id
+    |> stream_query(cursor, limit)
+    |> Repo.stream()
+  end
+
+  @spec stream_match(Collection.t(), String.t(), String.t() | nil, integer()) ::
+          Enum.t()
+  def stream_match(
+        %{id: collection_id},
+        pattern,
+        cursor \\ nil,
+        limit \\ @query_all_limit
+      ) do
+    pattern =
+      pattern
+      |> String.replace("\\", "\\\\")
+      |> String.replace("%", "\\%")
+      |> String.replace("*", "%")
+
+    collection_id
+    |> stream_query(cursor, limit)
+    |> where([i], like(i.key, ^pattern))
     |> Repo.stream()
   end
 
@@ -74,5 +89,17 @@ defmodule Lightning.Collections do
       nil -> {:error, :not_found}
       item -> Repo.delete(item)
     end
+  end
+
+  defp stream_query(collection_id, cursor, limit) do
+    Item
+    |> where([i], i.collection_id == ^collection_id)
+    |> limit(^limit)
+    |> then(fn query ->
+      case cursor do
+        nil -> query
+        cursor_key -> where(query, [i], i.key > ^cursor_key)
+      end
+    end)
   end
 end
