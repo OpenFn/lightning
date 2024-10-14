@@ -11,46 +11,33 @@ defmodule Lightning.KafkaTriggers.MessageRecoveryTest do
   alias Lightning.WorkOrder
 
   describe ".recover_messages" do
-    setup do
+    setup %{tmp_dir: tmp_dir} do
       workflow_1 = insert(:workflow)
       workflow_2 = insert(:workflow)
 
+      kafka_configuration = build(:triggers_kafka_configuration)
       trigger_1 =
         insert(
           :trigger,
           type: :kafka,
-          kafka_configuration: build(:triggers_kafka_configuration),
+          kafka_configuration: kafka_configuration,
           workflow: workflow_1
         )
       trigger_2 =
         insert(
           :trigger,
           type: :kafka,
-          kafka_configuration: build(:triggers_kafka_configuration),
+          kafka_configuration: kafka_configuration,
           workflow: workflow_2
         )
       trigger_3 =
         insert(
           :trigger,
           type: :kafka,
-          kafka_configuration: build(:triggers_kafka_configuration),
+          kafka_configuration: kafka_configuration,
           workflow: workflow_2
         )
 
-      %{
-        trigger_1: trigger_1,
-        trigger_2: trigger_2,
-        trigger_3: trigger_3
-      }
-    end
-
-    @tag :tmp_dir
-    test "recovers messages from filesystem - processes them via pipeline", %{
-      tmp_dir: tmp_dir,
-      trigger_1: trigger_1,
-      trigger_2: trigger_2,
-      trigger_3: trigger_3,
-    } do
       message_1 = message_contents_for_serialisation("topic-1", 1, 100)
       message_2 = message_contents_for_serialisation("topic-2", 2, 200)
       message_3 = message_contents_for_serialisation("topic-3", 3, 300)
@@ -61,6 +48,28 @@ defmodule Lightning.KafkaTriggers.MessageRecoveryTest do
       write_file(tmp_dir, trigger_2, message_3)
       write_file(tmp_dir, trigger_3, message_4)
 
+      %{
+        message_1: message_1,
+        message_2: message_2,
+        message_3: message_3,
+        message_4: message_4,
+        trigger_1: trigger_1,
+        trigger_2: trigger_2,
+        trigger_3: trigger_3
+      }
+    end
+
+    @tag :tmp_dir
+    test "recovers messages from filesystem - processes them via pipeline", %{
+      message_1: message_1,
+      message_2: message_2,
+      message_3: message_3,
+      message_4: message_4,
+      tmp_dir: tmp_dir,
+      trigger_1: trigger_1,
+      trigger_2: trigger_2,
+      trigger_3: trigger_3,
+    } do
       MessageRecovery.recover_messages(tmp_dir)
 
       assert_recovery(trigger_1, [message_1, message_2])
@@ -70,21 +79,15 @@ defmodule Lightning.KafkaTriggers.MessageRecoveryTest do
 
     @tag :tmp_dir
     test "updates file extension to indicate that it has been recovered", %{
+      message_1: message_1,
+      message_2: message_2,
+      message_3: message_3,
+      message_4: message_4,
       tmp_dir: tmp_dir,
       trigger_1: trigger_1,
       trigger_2: trigger_2,
       trigger_3: trigger_3,
     } do
-      message_1 = message_contents_for_serialisation("topic-1", 1, 100)
-      message_2 = message_contents_for_serialisation("topic-2", 2, 200)
-      message_3 = message_contents_for_serialisation("topic-3", 3, 300)
-      message_4 = message_contents_for_serialisation("topic-4", 4, 400)
-
-      write_file(tmp_dir, trigger_1, message_1)
-      write_file(tmp_dir, trigger_1, message_2)
-      write_file(tmp_dir, trigger_2, message_3)
-      write_file(tmp_dir, trigger_3, message_4)
-
       MessageRecovery.recover_messages(tmp_dir)
 
       assert_renamed_file(tmp_dir, trigger_1, message_1)
@@ -96,46 +99,22 @@ defmodule Lightning.KafkaTriggers.MessageRecoveryTest do
     @tag :tmp_dir
     test "returns :ok if there were no recovery errors", %{
       tmp_dir: tmp_dir,
-      trigger_1: trigger_1,
-      trigger_2: trigger_2,
-      trigger_3: trigger_3,
     } do
-      message_1 = message_contents_for_serialisation("topic-1", 1, 100)
-      message_2 = message_contents_for_serialisation("topic-2", 2, 200)
-      message_3 = message_contents_for_serialisation("topic-3", 3, 300)
-      message_4 = message_contents_for_serialisation("topic-4", 4, 400)
-
-      write_file(tmp_dir, trigger_1, message_1)
-      write_file(tmp_dir, trigger_1, message_2)
-      write_file(tmp_dir, trigger_2, message_3)
-      write_file(tmp_dir, trigger_3, message_4)
-
       assert MessageRecovery.recover_messages(tmp_dir) == :ok
     end
 
     @tag :tmp_dir
     test "does not update the file extension if message reflects an error", %{
+      message_1: message_1,
+      message_2: message_2,
+      message_3: message_3,
+      message_4: message_4,
       tmp_dir: tmp_dir,
       trigger_1: trigger_1,
       trigger_2: trigger_2,
       trigger_3: trigger_3,
     } do
-      message_1 = message_contents_for_serialisation("topic-1", 1, 100)
-      message_2 = message_contents_for_serialisation("topic-2", 2, 200)
-      message_3 = message_contents_for_serialisation("topic-3", 3, 300)
-      message_4 = message_contents_for_serialisation("topic-4", 4, 400)
-
-      # Ensure that persisting message_2 fails
-      %TriggerKafkaMessageRecord{
-        trigger_id: trigger_1.id,
-        topic_partition_offset: topic_partition_offset(message_2)
-      }
-      |> Repo.insert!()
-
-      write_file(tmp_dir, trigger_1, message_1)
-      write_file(tmp_dir, trigger_1, message_2)
-      write_file(tmp_dir, trigger_2, message_3)
-      write_file(tmp_dir, trigger_3, message_4)
+      ensure_failure(trigger_1, message_2)
 
       MessageRecovery.recover_messages(tmp_dir)
 
@@ -147,45 +126,30 @@ defmodule Lightning.KafkaTriggers.MessageRecoveryTest do
 
     @tag :tmp_dir
     test "returns an indication of the number of failed recoveries, if any", %{
+      message_2: message_2,
+      message_4: message_4,
       tmp_dir: tmp_dir,
       trigger_1: trigger_1,
-      trigger_2: trigger_2,
       trigger_3: trigger_3,
     } do
-      message_1 = message_contents_for_serialisation("topic-1", 1, 100)
-      message_2 = message_contents_for_serialisation("topic-2", 2, 200)
-      message_3 = message_contents_for_serialisation("topic-3", 3, 300)
-      message_4 = message_contents_for_serialisation("topic-4", 4, 400)
-
       ensure_failure(trigger_1, message_2)
       ensure_failure(trigger_3, message_4)
-
-      write_file(tmp_dir, trigger_1, message_1)
-      write_file(tmp_dir, trigger_1, message_2)
-      write_file(tmp_dir, trigger_2, message_3)
-      write_file(tmp_dir, trigger_3, message_4)
 
       assert MessageRecovery.recover_messages(tmp_dir) == {:error, 2}
     end
 
     @tag :tmp_dir
     test "ignores entries in the base directory that are not directories", %{
+      message_1: message_1,
+      message_2: message_2,
+      message_3: message_3,
+      message_4: message_4,
       tmp_dir: tmp_dir,
       trigger_1: trigger_1,
       trigger_2: trigger_2,
       trigger_3: trigger_3,
     } do
       File.touch!(Path.join(tmp_dir, ".lightning_storage_check"))
-
-      message_1 = message_contents_for_serialisation("topic-1", 1, 100)
-      message_2 = message_contents_for_serialisation("topic-2", 2, 200)
-      message_3 = message_contents_for_serialisation("topic-3", 3, 300)
-      message_4 = message_contents_for_serialisation("topic-4", 4, 400)
-
-      write_file(tmp_dir, trigger_1, message_1)
-      write_file(tmp_dir, trigger_1, message_2)
-      write_file(tmp_dir, trigger_2, message_3)
-      write_file(tmp_dir, trigger_3, message_4)
 
       MessageRecovery.recover_messages(tmp_dir)
 
@@ -196,22 +160,16 @@ defmodule Lightning.KafkaTriggers.MessageRecoveryTest do
 
     @tag :tmp_dir
     test "ignores files that do have a `.json` extension", %{
+      message_1: message_1,
+      message_2: message_2,
+      message_3: message_3,
+      message_4: message_4,
       tmp_dir: tmp_dir,
       trigger_1: trigger_1,
       trigger_2: trigger_2,
       trigger_3: trigger_3,
     } do
-      File.touch!(Path.join(tmp_dir, ".lightning_storage_check"))
-
-      message_1 = message_contents_for_serialisation("topic-1", 1, 100)
-      message_2 = message_contents_for_serialisation("topic-2", 2, 200)
-      message_3 = message_contents_for_serialisation("topic-3", 3, 300)
-      message_4 = message_contents_for_serialisation("topic-4", 4, 400)
-
-      write_file(tmp_dir, trigger_1, message_1)
-      write_recovered_file(tmp_dir, trigger_1, message_2)
-      write_file(tmp_dir, trigger_2, message_3)
-      write_file(tmp_dir, trigger_3, message_4)
+      mark_file_as_recovered(tmp_dir, trigger_1, message_2)
 
       MessageRecovery.recover_messages(tmp_dir)
 
@@ -320,9 +278,10 @@ defmodule Lightning.KafkaTriggers.MessageRecoveryTest do
     assert File.exists?(old_file_path)
   end
 
-  defp write_recovered_file(base_dir_path, trigger, message) do
-    dump_file_path(base_dir_path, trigger, message)
-    |> recovered_file_path()
-    |> File.write!(Jason.encode!(message))
+  defp mark_file_as_recovered(base_dir_path, trigger, message) do
+    old_file_path = dump_file_path(base_dir_path, trigger, message)
+    new_file_path = recovered_file_path(old_file_path)
+
+    File.rename!(old_file_path, new_file_path)
   end
 end
