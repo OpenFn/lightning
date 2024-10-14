@@ -154,10 +154,10 @@ defmodule Lightning.KafkaTriggersTest do
 
   describe ".build_topic_partition_offset" do
     test "builds based on the provided message" do
-      message = build_broadway_message("foo", 2, 1)
+      message = build_broadway_message(topic: "foo", partition: 2, offset: 1)
       assert KafkaTriggers.build_topic_partition_offset(message) == "foo_2_1"
 
-      message = build_broadway_message("bar", 4, 2)
+      message = build_broadway_message(topic: "bar", partition: 4, offset: 2)
       assert KafkaTriggers.build_topic_partition_offset(message) == "bar_4_2"
     end
   end
@@ -980,10 +980,30 @@ defmodule Lightning.KafkaTriggersTest do
           kafka_configuration: build(:triggers_kafka_configuration)
         )
 
-      message = build_broadway_message("foo", 2, 1)
+      message =
+        build_broadway_message(
+          topic: "foo",
+          partition: 2,
+          offset: 1,
+          headers: [
+            {"foo_header", "foo_value"},
+            {"bar_header", "bar_value"},
+          ]
+        )
+
+      expected_metadata =
+        message.metadata
+        |> Map.merge(%{headers: [
+            ["foo_header", "foo_value"],
+            ["bar_header", "bar_value"]
+        ]})
 
       expected_file_contents =
-        %{data: message.data, metadata: message.metadata} |> Jason.encode!()
+        %{
+          data: message.data,
+          metadata: expected_metadata
+        }
+        |> Jason.encode!()
 
       file_name = "#{trigger_id}_foo_2_1.json"
 
@@ -1159,7 +1179,7 @@ defmodule Lightning.KafkaTriggersTest do
           kafka_configuration: build(:triggers_kafka_configuration)
         )
 
-      message = build_broadway_message("foo", 2, 1)
+      message = build_broadway_message(topic: "foo", partition: 2, offset: 1)
 
       file_name = KafkaTriggers.alternate_storage_file_name(trigger_id, message)
 
@@ -1276,14 +1296,19 @@ defmodule Lightning.KafkaTriggersTest do
     )
   end
 
-  defp build_broadway_message(topic, partition, offset) do
+  defp build_broadway_message(opts) do
+    topic = Keyword.fetch!(opts, :topic)
+    partition= Keyword.fetch!(opts, :partition)
+    offset = Keyword.fetch!(opts, :offset)
+    headers = Keyword.get(opts, :headers, [])
+
     %Broadway.Message{
       data: %{interesting: "stuff"} |> Jason.encode!(),
       metadata: %{
         offset: offset,
         partition: partition,
         key: "",
-        headers: [],
+        headers: headers,
         ts: 1_715_164_718_283,
         topic: topic
       },

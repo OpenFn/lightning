@@ -6,6 +6,7 @@ defmodule Lightning.KafkaTriggers do
 
   alias Ecto.Changeset
   alias Lightning.Accounts.UserNotifier
+  alias Lightning.KafkaTriggers.MessageHandling
   alias Lightning.Projects
   alias Lightning.Repo
   alias Lightning.Workflows.Trigger
@@ -296,6 +297,13 @@ defmodule Lightning.KafkaTriggers do
   defp encode_message(message) do
     message
     |> Map.filter(fn {key, _val} -> key in [:data, :metadata] end)
+    |> then(fn %{metadata: metadata} = message_export -> 
+      message_export
+      |> Map.put(
+        :metadata,
+        MessageHandling.convert_headers_for_serialisation(metadata)
+      )
+    end)
     |> Jason.encode()
     |> case do
       {:error, _reason} ->

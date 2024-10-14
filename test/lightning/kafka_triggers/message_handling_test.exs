@@ -321,6 +321,33 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
     end
   end
 
+  describe ".convert_headers_for_serialisation/1" do
+    test "converts headers in a metadata map to a list of lists" do
+      metadata = %{
+        headers: [
+          {"foo_header", "foo_value"},
+          {"bar_header", "bar_value"},
+        ],
+        offset: 999,
+        topic:  "bar"
+      }
+
+      expected_metadata = %{
+        headers: [
+          ["foo_header", "foo_value"],
+          ["bar_header", "bar_value"],
+        ],
+        offset: 999,
+        topic:  "bar"
+      }
+
+      actual_metadata =
+        MessageHandling.convert_headers_for_serialisation(metadata)
+
+      assert actual_metadata == expected_metadata
+    end
+  end
+
   # Put this in a helper
   defp stringify_keys(map) do
     map
