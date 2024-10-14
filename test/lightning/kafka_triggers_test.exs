@@ -7,9 +7,11 @@ defmodule Lightning.KafkaTriggersTest do
 
   require Lightning.Run
 
+  alias Lightning.AccountsFixtures
   alias Lightning.KafkaTriggers
   alias Lightning.KafkaTriggers.PipelineSupervisor
   alias Lightning.Workflows.Trigger
+  alias Lightning.Workflows.Triggers.Events
 
   describe ".start_triggers/0" do
     setup do
@@ -775,6 +777,222 @@ defmodule Lightning.KafkaTriggersTest do
     end
   end
 
+  describe ".notify_users_of_trigger_failure/1" do
+    setup do
+      admin_user = AccountsFixtures.user_fixture()
+      owner_user = AccountsFixtures.user_fixture()
+      other_user = AccountsFixtures.user_fixture()
+
+      _other_trigger = setup_users_for_trigger([{other_user, :admin}])
+
+      trigger =
+        setup_users_for_trigger([{admin_user, :admin}, {owner_user, :owner}])
+
+      %{
+        admin_user: admin_user,
+        other_user: other_user,
+        owner_user: owner_user,
+        trigger: trigger
+      }
+    end
+
+    test "sends an email to all associated superusers only", %{
+      admin_user: admin_user,
+      other_user: other_user,
+      owner_user: owner_user,
+      trigger: %{id: trigger_id, workflow: workflow}
+    } do
+      expected_subject = "Kafka trigger failure on #{workflow.name}"
+
+      admin_user_recipient = Swoosh.Email.Recipient.format(admin_user)
+      other_user_recipient = Swoosh.Email.Recipient.format(other_user)
+      owner_user_recipient = Swoosh.Email.Recipient.format(owner_user)
+
+      KafkaTriggers.notify_users_of_trigger_failure(trigger_id)
+
+      # Swoosh test matchers seem to have a blind spot wrt multiple
+      # `deliver` calls.
+      assert_received({
+        :email,
+        %Swoosh.Email{
+          subject: subject,
+          to: [^admin_user_recipient],
+          text_body: body
+        }
+      })
+
+      assert subject == expected_subject
+
+      timestamp =
+        ~r/(?<ts>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z)/
+        |> Regex.named_captures(body)
+        |> Map.get("ts")
+        |> DateTime.from_iso8601()
+        |> then(fn {:ok, ts, _offset} -> ts end)
+
+      assert DateTime.diff(DateTime.utc_now(), timestamp, :second) < 2
+
+      assert_received({
+        :email,
+        %Swoosh.Email{to: [^owner_user_recipient]}
+      })
+
+      refute_received({
+        :email,
+        %Swoosh.Email{to: [^other_user_recipient]}
+      })
+    end
+
+    test "sets an indicator of when last a notification was sent for trigger", %{
+      trigger: %{id: trigger_id}
+    } do
+      KafkaTriggers.notify_users_of_trigger_failure(trigger_id)
+
+      sent_at =
+        :persistent_term.get(
+          {:kafka_trigger_failure_notification_sent_at, trigger_id}
+        )
+
+      assert DateTime.diff(DateTime.utc_now(), sent_at, :second) < 2
+    end
+
+    test "publishes an event wih the notification time", %{
+      trigger: %{id: trigger_id}
+    } do
+      Events.subscribe_to_kafka_trigger_updated()
+
+      KafkaTriggers.notify_users_of_trigger_failure(trigger_id)
+
+      assert_received(%Events.KafkaTriggerNotificationSent{
+        trigger_id: ^trigger_id,
+        sent_at: sent_at
+      })
+
+      assert DateTime.diff(DateTime.utc_now(), sent_at, :second) < 2
+    end
+  end
+
+  describe ".notify_users_of_trigger_failure/1 - within notification embargo" do
+    setup do
+      admin_user = AccountsFixtures.user_fixture()
+      owner_user = AccountsFixtures.user_fixture()
+
+      trigger =
+        setup_users_for_trigger([{admin_user, :admin}, {owner_user, :owner}])
+
+      last_sent_at = DateTime.add(DateTime.utc_now(), -1, :second)
+
+      :persistent_term.put(
+        {:kafka_trigger_failure_notification_sent_at, trigger.id},
+        last_sent_at
+      )
+
+      expect(Lightning.MockConfig, :kafka_notification_embargo_seconds, fn ->
+        60
+      end)
+
+      %{
+        admin_user: admin_user,
+        last_sent_at: last_sent_at,
+        owner_user: owner_user,
+        trigger: trigger
+      }
+    end
+
+    test "does not send emails if within the notification embargo", %{
+      admin_user: admin_user,
+      owner_user: owner_user,
+      trigger: %{id: trigger_id}
+    } do
+      admin_user_recipient = Swoosh.Email.Recipient.format(admin_user)
+      owner_user_recipient = Swoosh.Email.Recipient.format(owner_user)
+
+      KafkaTriggers.notify_users_of_trigger_failure(trigger_id)
+
+      refute_received({:email, %Swoosh.Email{to: [^admin_user_recipient]}})
+
+      refute_received({:email, %Swoosh.Email{to: [^owner_user_recipient]}})
+    end
+
+    test "does not update the indicator if within the notification embargo", %{
+      last_sent_at: last_sent_at,
+      trigger: %{id: trigger_id}
+    } do
+      KafkaTriggers.notify_users_of_trigger_failure(trigger_id)
+
+      sent_at =
+        :persistent_term.get(
+          {:kafka_trigger_failure_notification_sent_at, trigger_id}
+        )
+
+      assert sent_at == last_sent_at
+    end
+
+    test "does not publish an event if within the notification embargo", %{
+      trigger: %{id: trigger_id}
+    } do
+      Events.subscribe_to_kafka_trigger_updated()
+
+      KafkaTriggers.notify_users_of_trigger_failure(trigger_id)
+
+      refute_received(%Events.KafkaTriggerNotificationSent{})
+    end
+  end
+
+  describe ".send_notification?/2" do
+    setup do
+      %{
+        embargo_period: Lightning.Config.kafka_notification_embargo_seconds(),
+        sending_at: DateTime.utc_now()
+      }
+    end
+
+    test "true if we have never sent a notification", %{
+      sending_at: sending_at
+    } do
+      last_sent_at = nil
+
+      assert KafkaTriggers.send_notification?(sending_at, last_sent_at)
+    end
+
+    test "true if last notification was outside embargo period", %{
+      embargo_period: embargo_period,
+      sending_at: sending_at
+    } do
+      last_sent_at = DateTime.add(sending_at, -(embargo_period + 1), :second)
+
+      assert KafkaTriggers.send_notification?(sending_at, last_sent_at)
+    end
+
+    test "false if last notification is on the border of the embargo period", %{
+      embargo_period: embargo_period,
+      sending_at: sending_at
+    } do
+      last_sent_at = DateTime.add(sending_at, embargo_period, :second)
+
+      refute KafkaTriggers.send_notification?(sending_at, last_sent_at)
+    end
+
+    test "false if last notification is within the embargo period", %{
+      embargo_period: embargo_period,
+      sending_at: sending_at
+    } do
+      last_sent_at = DateTime.add(sending_at, -(embargo_period - 1), :second)
+
+      refute KafkaTriggers.send_notification?(sending_at, last_sent_at)
+    end
+  end
+
+  describe "failure_notification_tracking_key/1" do
+    test "returns the keys used to track when a failure notificaton was sent" do
+      trigger_id = Ecto.UUID.generate()
+
+      key = KafkaTriggers.failure_notification_tracking_key(trigger_id)
+
+      assert key == {:kafka_trigger_failure_notification_sent_at, trigger_id}
+    end
+  end
+
   defp child_spec(opts) do
     trigger = opts |> Keyword.get(:trigger)
     index = opts |> Keyword.get(:index)
@@ -857,5 +1075,30 @@ defmodule Lightning.KafkaTriggersTest do
       configuration(initial_offset_reset_policy: initial_offset_reset)
 
     build(:trigger, type: :kafka, kafka_configuration: kafka_configuration)
+  end
+
+  defp setup_users_for_trigger(users_and_roles) do
+    kafka_configuration = build(:triggers_kafka_configuration)
+
+    project_users =
+      users_and_roles
+      |> Enum.map(fn {user, role} ->
+        build(:project_user, user: user, role: role)
+      end)
+
+    project =
+      insert(
+        :project,
+        project_users: project_users
+      )
+
+    workflow = insert(:workflow, project: project)
+
+    insert(
+      :trigger,
+      type: :kafka,
+      kafka_configuration: kafka_configuration,
+      workflow: workflow
+    )
   end
 end

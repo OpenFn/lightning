@@ -897,4 +897,15 @@ defmodule Lightning.Projects do
     )
     |> Repo.all()
   end
+
+  def find_users_to_notify_of_trigger_failure(project_id) do
+    query =
+      from u in User,
+        join: pu in assoc(u, :project_users),
+        where:
+          pu.project_id == ^project_id and
+            (pu.role in ^[:admin, :owner] or u.role == ^:superuser)
+
+    query |> Repo.all()
+  end
 end

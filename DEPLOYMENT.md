@@ -228,6 +228,14 @@ It is recommended that you check the value of the `offsets.retention.minutes` fo
 the Kafka cluster to determine what the cluster's retention period is, and
 consider this when disabling a Kafka trigger for an extended period.
 
+#### Failure notifications
+
+Under certain failure conditions, a Kafka trigger will send an email to certain
+user that are associated with a project. After each email an embargo is applied
+to ensure that Lightning does not flood the recipients with email. The length
+of the embargo is controlled by the `KAFKA_NOTIFICATION_EMBARGO_SECONDS` ENV
+variable.
+
 ### Google Oauth2
 
 Using your Google Cloud account, provision a new OAuth 2.0 Client with the 'Web

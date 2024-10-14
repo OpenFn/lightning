@@ -63,7 +63,7 @@ defmodule Lightning.Accounts.UserNotifier do
 
     Welcome to OpenFn. Please confirm your account by visiting the URL below:
 
-    #{url(LightningWeb.Endpoint, ~p"/users/confirm/#{token}")}
+    #{url(~p"/users/confirm/#{token}")}
 
     If you didn't create an account with us, please ignore this.
 
@@ -80,7 +80,7 @@ defmodule Lightning.Accounts.UserNotifier do
 
     #{enroller.first_name} has just created an OpenFn account for you. You can complete your registration by visiting the URL below:
 
-    #{url(LightningWeb.Endpoint, ~p"/users/confirm/#{token}")}
+    #{url(~p"/users/confirm/#{token}")}
 
     If you think this account was created by mistake, you can contact #{enroller.first_name} (#{enroller.email}) or ignore this email.
 
@@ -94,7 +94,7 @@ defmodule Lightning.Accounts.UserNotifier do
 
     Please confirm your OpenFn account by clicking on the URL below:
 
-    #{url(LightningWeb.Endpoint, ~p"/users/confirm/#{token}")}
+    #{url(~p"/users/confirm/#{token}")}
 
     If you have not requested an account confirmation email, please ignore this.
 
@@ -107,14 +107,15 @@ defmodule Lightning.Accounts.UserNotifier do
   """
   def deliver_project_addition_notification(user, project) do
     role = Projects.get_project_user_role(user, project) |> Atom.to_string()
-    url = LightningWeb.RouteHelpers.project_dashboard_url(project.id)
 
     deliver(user, "You now have access to \"#{project.name}\"", """
     Hi #{user.first_name},
 
     You've been granted "#{role}" access to the "#{project.name}" project on OpenFn.
 
-    Visit the URL below to check it out:\n\n#{url}
+    Visit the URL below to check it out:
+
+    #{url(~p"/projects/#{project}/w")}
 
     OpenFn
     """)
@@ -145,12 +146,6 @@ defmodule Lightning.Accounts.UserNotifier do
 
     io_data_saved = updated_project.retention_policy != :erase_all
 
-    settings_page_url =
-      url(
-        LightningWeb.Endpoint,
-        ~p"/projects/#{updated_project.id}/settings#data-storage"
-      )
-
     deliver(
       user,
       "The data retention policy for #{updated_project.name} has been modified",
@@ -165,7 +160,7 @@ defmodule Lightning.Accounts.UserNotifier do
 
       This policy can be changed by owners and administrators. If you haven't approved this change, please reset the policy by visiting the URL below:
 
-      #{settings_page_url}
+      #{url(~p"/projects/#{updated_project.id}/settings#data-storage")}
 
       OpenFn
       """
@@ -279,7 +274,7 @@ defmodule Lightning.Accounts.UserNotifier do
 
     You history export started requested on #{Helpers.format_date(project_file.inserted_at)} is completed. Please visit this URL to download the file:acceptor
 
-    #{url(LightningWeb.Endpoint, ~p"/project_files/#{project_file.id}/download")}
+    #{url(~p"/project_files/#{project_file.id}/download")}
 
     OpenFn
     """)
@@ -294,7 +289,6 @@ defmodule Lightning.Accounts.UserNotifier do
       })
 
     url(
-      LightningWeb.Endpoint,
       ~p"/projects/#{workflow.project_id}/history?#{%{"filters" => uri_params}}"
     )
   end
@@ -387,9 +381,22 @@ defmodule Lightning.Accounts.UserNotifier do
 
     #{inviter.first_name} has invited you to join project "#{project.name}" and granted you "#{role}" access. Since you don't have an OpenFn account yet, we've set one up for you.
 
-    Please click the link below to complete your account setup: #{url(LightningWeb.Endpoint, ~p"/users/reset_password/#{token}")}
+    Please click the link below to complete your account setup: #{url(~p"/users/reset_password/#{token}")}
 
     If you did not request to join this project, please ignore this email.
+
+    OpenFn
+    """)
+  end
+
+  def send_trigger_failure_mail(user, workflow, timestamp) do
+    display_timestamp =
+      timestamp |> DateTime.truncate(:second) |> DateTime.to_iso8601()
+
+    deliver(user, "Kafka trigger failure on #{workflow.name}", """
+    As of #{display_timestamp}, the Kafka trigger associated with the workflow `#{workflow.name}` (#{url(~p"/projects/#{workflow.project_id}/w/#{workflow.id}")}) has failed to persist at least one message.
+
+    If you have access to the system logs, please look for entries containing 'Kafka Pipeline Error'.
 
     OpenFn
     """)

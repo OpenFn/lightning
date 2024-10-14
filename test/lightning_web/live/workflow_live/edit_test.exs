@@ -1,21 +1,19 @@
 defmodule LightningWeb.WorkflowLive.EditTest do
   use LightningWeb.ConnCase, async: true
+  use Retry
 
-  import Phoenix.LiveViewTest
-  import Lightning.ApplicationHelpers, only: [dynamically_absorb_delay: 2]
+  import Ecto.Query
+  import Lightning.Factories
+  import Lightning.JobsFixtures
   import Lightning.WorkflowLive.Helpers
   import Lightning.WorkflowsFixtures
-  import Lightning.JobsFixtures
-  import Lightning.Factories
-  import Ecto.Query
+  import Phoenix.LiveViewTest
 
   alias Lightning.Helpers
   alias Lightning.Repo
-  # alias Lightning.Run
   alias Lightning.Workflows
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Workflow
-  # alias Lightning.WorkOrder
   alias LightningWeb.CredentialLiveHelpers
 
   setup :register_and_log_in_user
@@ -2110,22 +2108,22 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert high_priority_view
              |> has_element?("#inspector-workflow-version", "latest")
 
-      dynamically_absorb_delay(
-        fn ->
-          !(low_priority_view
-            |> has_element?("#inspector-workflow-version", "latest"))
-        end,
-        sleep: 2
-      )
+      wait constant_backoff(100) |> expiry(1_000) do
+      end
 
-      assert low_priority_view
-             |> has_element?(
-               "#inspector-workflow-version",
-               "#{String.slice(snapshot.id, 0..6)}"
-             )
+      wait constant_backoff(100) |> expiry(1_000) do
+        refute low_priority_view
+               |> has_element?("#inspector-workflow-version", "latest")
 
-      assert low_priority_view |> render() =~
-               "This workflow has been updated. You&#39;re no longer on the latest version."
+        assert low_priority_view
+               |> has_element?(
+                 "#inspector-workflow-version",
+                 "#{String.slice(snapshot.id, 0..6)}"
+               )
+
+        assert low_priority_view |> render() =~
+                 "This workflow has been updated. You&#39;re no longer on the latest version."
+      end
 
       workflow = Repo.reload(workflow)
 

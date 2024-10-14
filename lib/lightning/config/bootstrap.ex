@@ -490,6 +490,8 @@ defmodule Lightning.Config.Bootstrap do
       duplicate_tracking_retention_seconds:
         env!("KAFKA_DUPLICATE_TRACKING_RETENTION_SECONDS", :integer, 3600),
       enabled: env!("KAFKA_TRIGGERS_ENABLED", &Utils.ensure_boolean/1, false),
+      notification_embargo_seconds:
+        env!("KAFKA_NOTIFICATION_EMBARGO_SECONDS", :integer, 3600),
       number_of_consumers: env!("KAFKA_NUMBER_OF_CONSUMERS", :integer, 1),
       number_of_messages_per_second:
         env!("KAFKA_NUMBER_OF_MESSAGES_PER_SECOND", :float, 1),
