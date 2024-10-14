@@ -76,6 +76,16 @@ defmodule Lightning.KafkaTriggers.MessageHandling do
   end
 
   def convert_headers_for_serialisation(%{headers: headers} = metadata) do
-    Map.put(metadata, :headers, Enum.map(headers, &Tuple.to_list/1))
+    converted_headers =
+      headers
+      |> Enum.map(fn 
+        {key, value} ->
+          [key, value]
+
+        [key, value] ->
+          [key, value]
+      end)
+
+    Map.put(metadata, :headers, converted_headers)
   end
 end

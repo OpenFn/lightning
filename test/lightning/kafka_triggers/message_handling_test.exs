@@ -341,10 +341,26 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
         topic:  "bar"
       }
 
-      actual_metadata =
+      returned_metadata =
         MessageHandling.convert_headers_for_serialisation(metadata)
 
-      assert actual_metadata == expected_metadata
+      assert returned_metadata == expected_metadata
+    end
+
+    test "passes headers through unchanged if aready a list of lists" do
+      metadata = %{
+        headers: [
+          ["foo_header", "foo_value"],
+          ["bar_header", "bar_value"],
+        ],
+        offset: 999,
+        topic:  "bar"
+      }
+
+      returned_metadata =
+        MessageHandling.convert_headers_for_serialisation(metadata)
+
+      assert returned_metadata == metadata
     end
   end
 
