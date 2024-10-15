@@ -22,7 +22,7 @@ defmodule LightningWeb.CollectionsController do
 
       {:ok, bearer_token} ->
         bearer_token
-        |> Lightning.Workers.verify_run_token(%{})
+        |> Lightning.Tokens.verify()
         |> case do
           {:ok, _claims} ->
             # determine is run belongs to project which owns the collection
