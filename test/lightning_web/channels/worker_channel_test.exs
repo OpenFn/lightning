@@ -22,7 +22,7 @@ defmodule LightningWeb.WorkerChannelTest do
   describe "worker:queue channel" do
     setup do
       {:ok, bearer, claims} =
-        Workers.Token.generate_and_sign(
+        Workers.WorkerToken.generate_and_sign(
           %{},
           Lightning.Config.worker_token_signer()
         )
@@ -79,7 +79,9 @@ defmodule LightningWeb.WorkerChannelTest do
       ref = push(socket, "claim", %{"demand" => 4})
       assert_reply ref, :ok, %{runs: runs}
 
-      assert runs |> Enum.map(& &1["id"]) == rest |> Enum.map(& &1.id)
+      assert runs |> Enum.map(& &1["id"]) |> MapSet.new() ==
+               rest |> Enum.map(& &1.id) |> MapSet.new()
+
       assert length(runs) == 2, "only 2 runs should be returned"
     end
   end

@@ -47,15 +47,6 @@ defmodule Lightning.Accounts.UserToken do
     timestamps updated_at: false
   end
 
-  def token_config do
-    default_claims(skip: [:exp])
-    |> add_claim(
-      "my_key",
-      fn -> "My custom claim" end,
-      &(&1 == "My custom claim")
-    )
-  end
-
   @doc """
   Generates a token that will be stored in a signed place,
   such as session or cookie. As they are signed, those
@@ -65,9 +56,10 @@ defmodule Lightning.Accounts.UserToken do
           {binary(), Ecto.Changeset.t(%__MODULE__{})}
   def build_token(user, "api" = context) do
     token =
-      Joken.generate_and_sign!(default_claims(skip: [:exp]), %{
-        "user_id" => user.id
-      })
+      Lightning.Tokens.PersonalAccessToken.generate_and_sign!(
+        %{"sub" => "user:#{user.id}"},
+        Lightning.Config.token_signer()
+      )
 
     {token,
      changeset(%__MODULE__{}, %{token: token, context: context, user_id: user.id})}
@@ -103,48 +95,36 @@ defmodule Lightning.Accounts.UserToken do
   not expired (after @auth_validity_in_seconds or @session_validity_in_days).
   """
   def verify_token_query(token, "auth" = context) do
-    query =
-      from(token in token_and_context_query(token, context),
-        join: user in assoc(token, :user),
-        where: token.inserted_at > ago(@auth_validity_in_seconds, "second"),
-        select: user
-      )
-
-    {:ok, query}
+    from(token in token_and_context_query(token, context),
+      join: user in assoc(token, :user),
+      where: token.inserted_at > ago(@auth_validity_in_seconds, "second"),
+      select: user
+    )
   end
 
   def verify_token_query(token, "api" = context) do
-    query =
-      from(token in token_and_context_query(token, context),
-        join: user in assoc(token, :user),
-        select: user
-      )
-
-    {:ok, query}
+    from(token in token_and_context_query(token, context),
+      join: user in assoc(token, :user),
+      select: user
+    )
   end
 
   def verify_token_query(token, "session" = context) do
-    query =
-      from(token in token_and_context_query(token, context),
-        join: user in assoc(token, :user),
-        where: token.inserted_at > ago(@session_validity_in_days, "day"),
-        select: user
-      )
-
-    {:ok, query}
+    from(token in token_and_context_query(token, context),
+      join: user in assoc(token, :user),
+      where: token.inserted_at > ago(@session_validity_in_days, "day"),
+      select: user
+    )
   end
 
   def verify_token_query(token, "sudo_session" = context) do
-    query =
-      from(token in token_and_context_query(token, context),
-        join: user in assoc(token, :user),
-        where:
-          token.inserted_at >
-            ago(@sudo_session_validity_in_seconds, "second"),
-        select: user
-      )
-
-    {:ok, query}
+    from(token in token_and_context_query(token, context),
+      join: user in assoc(token, :user),
+      where:
+        token.inserted_at >
+          ago(@sudo_session_validity_in_seconds, "second"),
+      select: user
+    )
   end
 
   @doc """
