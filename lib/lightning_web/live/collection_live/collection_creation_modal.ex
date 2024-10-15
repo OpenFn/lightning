@@ -1,9 +1,9 @@
 defmodule LightningWeb.CollectionLive.CollectionCreationModal do
-  alias Lightning.Projects
-  alias Lightning.Collections
   use LightningWeb, :live_component
 
+  alias Lightning.Collections
   alias Lightning.Collections.Collection
+  alias Lightning.Projects
 
   @impl true
   def update(assigns, socket) do
@@ -60,7 +60,6 @@ defmodule LightningWeb.CollectionLive.CollectionCreationModal do
             collection_params
           )
       end
-      |> IO.inspect()
 
     case result do
       {:ok, _collection} ->

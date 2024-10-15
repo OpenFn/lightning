@@ -1,13 +1,14 @@
 defmodule LightningWeb.CollectionLive.Index do
-  require Logger
-  alias Lightning.Collections.Collection
   use LightningWeb, :live_view
 
   import LightningWeb.CollectionLive.Components
 
   alias Lightning.Collections
+  alias Lightning.Collections.Collection
   alias Lightning.Policies.Users
   alias Lightning.Policies.Permissions
+
+  require Logger
 
   def mount(_params, _session, socket) do
     can_access_admin_space =
