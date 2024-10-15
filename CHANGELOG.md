@@ -24,6 +24,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix work order retry sorting and avoids loading dataclips
+  [#2581](https://github.com/OpenFn/lightning/issues/2581)
 - Fix editor panel overlays output panel when scrolled
   [#2291](https://github.com/OpenFn/lightning/issues/2291)
 
