@@ -47,15 +47,6 @@ defmodule Lightning.Accounts.UserToken do
     timestamps updated_at: false
   end
 
-  def token_config do
-    default_claims(skip: [:exp])
-    |> add_claim(
-      "my_key",
-      fn -> "My custom claim" end,
-      &(&1 == "My custom claim")
-    )
-  end
-
   @doc """
   Generates a token that will be stored in a signed place,
   such as session or cookie. As they are signed, those
@@ -65,9 +56,10 @@ defmodule Lightning.Accounts.UserToken do
           {binary(), Ecto.Changeset.t(%__MODULE__{})}
   def build_token(user, "api" = context) do
     token =
-      Joken.generate_and_sign!(default_claims(skip: [:exp]), %{
-        "user_id" => user.id
-      })
+      Joken.generate_and_sign!(
+        default_claims(iss: "Lightning", skip: [:exp, :aud]),
+        %{"user_id" => user.id, "sub" => "user:#{user.id}"}
+      )
 
     {token,
      changeset(%__MODULE__{}, %{token: token, context: context, user_id: user.id})}
