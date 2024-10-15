@@ -9,13 +9,38 @@ defmodule LightningWeb.DashboardLive.Index do
 
   require Logger
 
+  @arcade_resources [
+    %{
+      id: 1,
+      title: "Getting Started with OpenFn",
+      link:
+        "https://demo.arcade.software/WhOK61AiXdG73Dd5lfSa?embed&embed_mobile=inline&embed_desktop=inline&show_copy_link=true"
+    },
+    %{
+      id: 2,
+      title: "Creating your first workflow",
+      link:
+        "https://demo.arcade.software/WhOK61AiXdG73Dd5lfSa?embed&embed_mobile=inline&embed_desktop=inline&show_copy_link=true"
+    },
+    %{
+      id: 3,
+      title: "How to use the IDE",
+      link:
+        "https://demo.arcade.software/WhOK61AiXdG73Dd5lfSa?embed&embed_mobile=inline&embed_desktop=inline&show_copy_link=true"
+    },
+    %{
+      id: 4,
+      title: "Managing project history",
+      link:
+        "https://demo.arcade.software/WhOK61AiXdG73Dd5lfSa?embed&embed_mobile=inline&embed_desktop=inline&show_copy_link=true"
+    }
+  ]
+
   on_mount {LightningWeb.Hooks, :project_scope}
 
   @impl true
   def mount(_params, _session, socket) do
     projects = projects_for_user(socket.assigns.current_user)
-
-    arcade_resources = Projects.fetch_arcade_resources()
 
     arcade_banner_collapsed =
       Accounts.get_preference(
@@ -25,7 +50,7 @@ defmodule LightningWeb.DashboardLive.Index do
 
     {:ok,
      assign_new(socket, :projects, fn -> projects end)
-     |> assign(:arcade_resources, arcade_resources)
+     |> assign(:arcade_resources, @arcade_resources)
      |> assign(:selected_arcade_resource, nil)
      |> assign(:arcade_banner_collapsed, arcade_banner_collapsed)
      |> assign(:active_menu_item, :projects)
@@ -66,7 +91,7 @@ defmodule LightningWeb.DashboardLive.Index do
       ) do
     resource =
       Enum.find(socket.assigns.arcade_resources, fn resource ->
-        resource["id"] == String.to_integer(resource_id)
+        resource.id == String.to_integer(resource_id)
       end)
 
     {:noreply, assign(socket, selected_arcade_resource: resource)}
@@ -211,11 +236,11 @@ defmodule LightningWeb.DashboardLive.Index do
     <button
       type="button"
       phx-click="select-arcade-resource"
-      phx-value-resource={@resource["id"]}
+      phx-value-resource={@resource.id}
       class="relative flex items-end h-[150px] bg-gradient-to-r from-blue-400 to-purple-500 text-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 p-4 text-left"
     >
       <h2 class="text-lg font-semibold absolute bottom-4 left-4">
-        <%= @resource["title"] %>
+        <%= @resource.title %>
       </h2>
     </button>
     """
@@ -225,15 +250,15 @@ defmodule LightningWeb.DashboardLive.Index do
     ~H"""
     <div class="text-xs">
       <.modal
-        id={"arcade-modal-#{@resource["id"]}"}
+        id={"arcade-modal-#{@resource.id}"}
         with_frame={false}
         show={true}
         width="w-5/6"
       >
         <div style="position: relative; padding-bottom: calc(56.67989417989418% + 41px); height: 0; width: 100%;">
           <iframe
-            src={@resource["link"]}
-            title={@resource["title"]}
+            src={@resource.link}
+            title={@resource.title}
             frameborder="0"
             loading="lazy"
             webkitallowfullscreen

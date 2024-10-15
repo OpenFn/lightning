@@ -1642,67 +1642,6 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
-  describe "fetch_arcade_resources/0" do
-    setup do
-      {:ok, tmp_file} = Briefly.create(extname: ".json")
-      File.write!(tmp_file, ~s([{"name": "Tetris"}]))
-
-      Mox.stub(Lightning.MockConfig, :arcade_resources, fn -> tmp_file end)
-
-      on_exit(fn -> File.rm(tmp_file) end)
-
-      :ok
-    end
-
-    test "returns decoded JSON when JSDelivr request is successful" do
-      expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
-        assert env.url ==
-                 "https://cdn.jsdelivr.net/gh/OpenFn/lightning/priv/static/resources.json"
-
-        {:ok, %Tesla.Env{status: 200, body: "[{\"name\": \"Pacman\"}]"}}
-      end)
-
-      result = Projects.fetch_arcade_resources()
-      assert result == [%{"name" => "Pacman"}]
-    end
-
-    test "falls back to local resources on non-200 status" do
-      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
-        {:ok, %Tesla.Env{status: 500, body: "Server Error"}}
-      end)
-
-      tmp_file = Lightning.MockConfig.arcade_resources()
-      assert File.exists?(tmp_file), "Temporary file was not created properly"
-
-      result = Projects.fetch_arcade_resources()
-      assert result == [%{"name" => "Tetris"}]
-    end
-
-    test "returns empty list if both remote and local fetches fail" do
-      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
-        {:error, :timeout}
-      end)
-
-      tmp_file = Lightning.MockConfig.arcade_resources()
-      File.rm(tmp_file)
-
-      result = Projects.fetch_arcade_resources()
-      assert result == []
-    end
-
-    test "uses fallback when JSON decoding fails for local resources" do
-      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
-        {:ok, %Tesla.Env{status: 500, body: "Server Error"}}
-      end)
-
-      tmp_file = Lightning.MockConfig.arcade_resources()
-      File.write!(tmp_file, "invalid_json")
-
-      result = Projects.fetch_arcade_resources()
-      assert result == []
-    end
-  end
-
   @spec full_project_fixture(attrs :: Keyword.t()) :: %{optional(any) => any}
   def full_project_fixture(attrs \\ []) when is_list(attrs) do
     %{workflows: [workflow_1, workflow_2]} =
