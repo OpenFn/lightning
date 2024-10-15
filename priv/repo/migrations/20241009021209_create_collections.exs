@@ -1,4 +1,4 @@
-defmodule Lightning.Repo.Migrations.CreateCollectionsEntries do
+defmodule Lightning.Repo.Migrations.CreateCollections do
   use Ecto.Migration
 
   def change do
@@ -25,6 +25,12 @@ defmodule Lightning.Repo.Migrations.CreateCollectionsEntries do
       timestamps(type: :naive_datetime_usec)
     end
 
+    execute "CREATE EXTENSION IF NOT EXISTS pg_trgm",
+            "DROP EXTENSION IF EXISTS pg_trgm"
+
     create unique_index(:collections_items, [:collection_id, :key])
+
+    execute "CREATE INDEX collections_items_key_trgm_idx ON collections_items USING GIN (key gin_trgm_ops)",
+            "DROP INDEX IF EXISTS collections_items_key_trgm_idx"
   end
 end
