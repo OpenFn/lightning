@@ -5,8 +5,8 @@ defmodule LightningWeb.CollectionLive.Index do
 
   alias Lightning.Collections
   alias Lightning.Collections.Collection
-  alias Lightning.Policies.Users
   alias Lightning.Policies.Permissions
+  alias Lightning.Policies.Users
 
   require Logger
 
