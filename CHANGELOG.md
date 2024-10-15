@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Introduces collections, a programatic workflow data sharing resource.
+  [#2551](https://github.com/OpenFn/lightning/issues/2551)
 - Notify users when a Kafka trigger can not persist a message to the database.
   [#2386](https://github.com/OpenFn/lightning/issues/2386)
 
