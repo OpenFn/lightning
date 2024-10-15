@@ -8,12 +8,19 @@ defmodule Lightning.ExportUtils do
   alias Lightning.Workflows
   alias Lightning.Workflows.Snapshot
 
+  @kafka_trigger_fields [
+    :hosts,
+    :topics,
+    :initial_offset_reset_policy,
+    :connect_timeout
+  ]
+
   @ordering_map %{
     project: [:name, :description, :credentials, :globals, :workflows],
     credential: [:name, :owner],
     workflow: [:name, :jobs, :triggers, :edges],
     job: [:name, :adaptor, :credential, :globals, :body],
-    trigger: [:type, :cron_expression, :enabled],
+    trigger: [:type, :cron_expression, :enabled, :kafka_configuration],
     edge: [
       :source_trigger,
       :source_job,
@@ -62,9 +69,28 @@ defmodule Lightning.ExportUtils do
       type: Atom.to_string(trigger.type)
     }
 
-    if trigger.type == :cron,
-      do: Map.put(base, :cron_expression, trigger.cron_expression),
-      else: base
+    case trigger.type do
+      :cron ->
+        Map.put(base, :cron_expression, trigger.cron_expression)
+
+      :kafka ->
+        kafka_config =
+          trigger.kafka_configuration
+          |> Map.take(@kafka_trigger_fields)
+          |> Map.new(fn
+            {:hosts, hosts} when is_list(hosts) ->
+              {:hosts,
+               Enum.map(hosts, fn host_port -> Enum.join(host_port, ":") end)}
+
+            other ->
+              other
+          end)
+
+        Map.put(base, :kafka_configuration, kafka_config)
+
+      _ ->
+        base
+    end
   end
 
   defp edge_to_treenode(%{source_job_id: nil} = edge, triggers, jobs) do
@@ -217,7 +243,20 @@ defmodule Lightning.ExportUtils do
   end
 
   defp handle_input(key, value, indentation) when is_list(value) do
-    "#{indentation}#{yaml_safe_key(key)}:\n#{Enum.map_join(value, "\n", fn map -> "#{indentation}  #{yaml_safe_key(map.name)}:\n#{to_new_yaml(map, "#{indentation}    ")}" end)}"
+    "#{indentation}#{yaml_safe_key(key)}:\n#{handle_list_value(value, indentation)}"
+  end
+
+  defp handle_list_value(value, indentation) do
+    Enum.map_join(value, "\n", fn
+      map when is_map(map) ->
+        "#{indentation}  #{yaml_safe_key(map.name)}:\n#{to_new_yaml(map, "#{indentation}    ")}"
+
+      val when is_binary(val) ->
+        "#{indentation}  - #{yaml_safe_string(val)}"
+
+      val ->
+        "#{indentation}  - #{val}"
+    end)
   end
 
   defp to_new_yaml(map, indentation \\ "") do

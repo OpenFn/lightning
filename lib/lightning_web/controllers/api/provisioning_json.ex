@@ -77,8 +77,18 @@ defmodule LightningWeb.API.ProvisioningJSON do
   end
 
   def as_json(%module{} = trigger) when module in [Trigger, Snapshot.Trigger] do
-    Ecto.embedded_dump(trigger, :json)
+    trigger = Ecto.embedded_dump(trigger, :json)
+
+    kafka_configuration =
+      trigger.kafka_configuration &&
+        Map.take(
+          trigger.kafka_configuration,
+          ~w(hosts topics initial_offset_reset_policy connect_timeout)a
+        )
+
+    trigger
     |> Map.take(~w(id type cron_expression enabled)a)
+    |> Map.put(:kafka_configuration, kafka_configuration)
     |> drop_keys_with_nil_value()
   end
 

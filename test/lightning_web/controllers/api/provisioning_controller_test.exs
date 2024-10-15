@@ -255,6 +255,64 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       assert Enum.count(workflows) == 2
     end
 
+    test "returns a project with kafka trigger workflow", %{
+      conn: conn,
+      user: user
+    } do
+      project = insert(:project, project_users: [%{user_id: user.id}])
+
+      trigger =
+        build(:trigger,
+          type: :kafka,
+          kafka_configuration: %{
+            hosts: [["localhost", "9092"]],
+            topics: ["dummy"],
+            initial_offset_reset_policy: "earliest"
+          }
+        )
+
+      job =
+        build(:job,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      %{triggers: [%{id: trigger_id}]} =
+        build(:workflow,
+          project: project,
+          name: "Workflow123"
+        )
+        |> with_trigger(trigger)
+        |> with_job(job)
+        |> with_edge({trigger, job}, condition_type: :always)
+        |> insert()
+
+      conn = get(conn, ~p"/api/provision/#{project.id}")
+      response = json_response(conn, 200)
+
+      assert %{
+               "workflows" => [
+                 %{
+                   "triggers" => [
+                     %{
+                       "type" => "kafka",
+                       "id" => ^trigger_id,
+                       "kafka_configuration" => exported_kafka_config
+                     }
+                   ]
+                 }
+               ]
+             } = response["data"]
+
+      assert match?(
+               %{
+                 "hosts" => [["localhost", "9092"]],
+                 "topics" => ["dummy"],
+                 "initial_offset_reset_policy" => "earliest"
+               },
+               exported_kafka_config
+             )
+    end
+
     test "returns a project if user has owner access", %{
       conn: conn,
       user: user
