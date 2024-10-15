@@ -19,10 +19,51 @@ and this project adheres to
 
 - Introduces collections, a programatic workflow data sharing resource.
   [#2551](https://github.com/OpenFn/lightning/issues/2551)
+- Notify users when a Kafka trigger can not persist a message to the database.
+  [#2386](https://github.com/OpenFn/lightning/issues/2386)
 
 ### Changed
 
 ### Fixed
+
+- Fix editor panel overlays output panel when scrolled
+  [#2291](https://github.com/OpenFn/lightning/issues/2291)
+
+## [v2.9.9] - 2024-10-09
+
+### Changed
+
+- Make project description multiline in project.yaml
+  [#2534](https://github.com/OpenFn/lightning/issues/2534)
+- Do not track partition timestamps when ingesting Kafka messages.
+  [#2531](https://github.com/OpenFn/lightning/issues/2531)
+- Always use the `initial_offset_reset_policy` when enabling a Kafka pipeline.
+  [#2531](https://github.com/OpenFn/lightning/issues/2531)
+- Add plumbing to simulate a persistence failure in a Kafka trigger pipeline.
+  [#2386](https://github.com/OpenFn/lightning/issues/2386)
+
+### Fixed
+
+- Fix Oban errors not getting logged in Sentry
+  [#2542](https://github.com/OpenFn/lightning/issues/2542)
+- Perform data retention purging in batches to avoid timeouts
+  [#2528](https://github.com/OpenFn/lightning/issues/2528)
+- Fix editor panel title gets pushed away when collapsed
+  [#2545](https://github.com/OpenFn/lightning/issues/2545)
+- Mark unfinished steps having finished runs as `lost`
+  [#2416](https://github.com/OpenFn/lightning/issues/2416)
+
+## [v2.9.8] - 2024-10-03
+
+### Added
+
+- Ability for users to to retry Runs and create manual Work Orders from the job
+  inspector #2496 [#2496](https://github.com/OpenFn/lightning/issues/2496)
+
+### Fixed
+
+- Fix panel icons overlays on top title when collapsed
+  [#2537](https://github.com/OpenFn/lightning/issues/2537)
 
 ## [v2.9.7] - 2024-10-02
 
@@ -34,6 +75,13 @@ and this project adheres to
   [#2391](https://github.com/OpenFn/lightning/issues/2391)
 
 ### Changed
+
+- Notify other present users when the promoted user saves the workflow
+  [#2282](https://github.com/OpenFn/lightning/issues/2282)
+- User email change: Add debounce on blur to input forms to avoid validation
+  after every keystroke [#2365](https://github.com/OpenFn/lightning/issues/2365)
+
+### Fixed
 
 - Use timestamps sent from worker when starting and completing runs
   [#2434](https://github.com/OpenFn/lightning/issues/2434)
@@ -313,7 +361,7 @@ and this project adheres to
 - Kafka messages without keys are synchronously converted into a Workorder,
   Dataclip and Run. Messages with keys are stored as TriggerKafkaMessage
   records, however the code needed to process them has been disabled, pending
-  removal. [#2351] (https://github.com/OpenFn/lightning/issues/2351)
+  removal. [#2351](https://github.com/OpenFn/lightning/issues/2351)
 
 ## [v2.7.14] - 2024-08-05
 

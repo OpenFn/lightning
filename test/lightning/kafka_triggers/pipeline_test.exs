@@ -14,7 +14,8 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
   alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
   alias Lightning.KafkaTriggers.Pipeline
   alias Lightning.Repo
-  alias Lightning.Workflows.Trigger
+  alias Lightning.Workflows.Triggers.Events
+  alias Lightning.Workflows.Triggers.Events.KafkaTriggerNotificationSent
   alias Lightning.WorkOrder
 
   describe ".start_link/1" do
@@ -195,32 +196,6 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       assert Pipeline.handle_message(nil, message, context) == message
     end
 
-    test "updates the partition timestamp for the trigger", %{
-      context: context,
-      message: message,
-      trigger_1: trigger_1,
-      trigger_2: trigger_2
-    } do
-      Pipeline.handle_message(nil, message, context)
-
-      %{
-        kafka_configuration: %{
-          partition_timestamps: trigger_1_timestamps
-        }
-      } = Trigger |> Repo.get(trigger_1.id)
-
-      %{
-        kafka_configuration: %{
-          partition_timestamps: trigger_2_timestamps
-        }
-      } = Trigger |> Repo.get(trigger_2.id)
-
-      assert %{"1" => 1_715_164_718_281, "2" => 1_715_164_718_283} =
-               trigger_1_timestamps
-
-      assert trigger_2_timestamps == partition_timestamps()
-    end
-
     test "persists a WorkOrder", %{
       context: context,
       message: message,
@@ -250,34 +225,6 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
                trigger_id: ^trigger_id,
                topic_partition_offset: "bar_topic_2_11"
              } = message_record
-    end
-
-    test "does not update partition timestamps if message is duplicate", %{
-      context: context,
-      message: message,
-      trigger_1: trigger_1,
-      trigger_2: trigger_2
-    } do
-      trigger_id = context.trigger_id |> Atom.to_string()
-
-      insert_message_record(trigger_id)
-
-      Pipeline.handle_message(nil, message, context)
-
-      %{
-        kafka_configuration: %{
-          partition_timestamps: trigger_1_timestamps
-        }
-      } = Trigger |> Repo.get(trigger_1.id)
-
-      %{
-        kafka_configuration: %{
-          partition_timestamps: trigger_2_timestamps
-        }
-      } = Trigger |> Repo.get(trigger_2.id)
-
-      assert trigger_1_timestamps == partition_timestamps()
-      assert trigger_2_timestamps == partition_timestamps()
     end
 
     test "does not create WorkOrder if message is duplicate", %{
@@ -369,6 +316,77 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
     end
   end
 
+  describe ".handle_message - failure testing enabled" do
+    setup do
+      trigger_1 =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: configuration(index: 1),
+          enabled: true
+        )
+
+      trigger_2 =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: configuration(index: 2, ssl: false),
+          enabled: true
+        )
+
+      context = %{trigger_id: trigger_1.id |> String.to_atom()}
+
+      message = build_broadway_message()
+
+      :persistent_term.put({:kafka_trigger_test_failure, trigger_1.id}, true)
+
+      %{
+        context: context,
+        message: message,
+        trigger_1: trigger_1,
+        trigger_2: trigger_2
+      }
+    end
+
+    test "marks message as as a persistence failure", %{
+      context: context,
+      message: message
+    } do
+      %{status: status} = Pipeline.handle_message(nil, message, context)
+
+      assert {:failed, :persistence} = status
+    end
+
+    test "does not persist a WorkOrder", %{
+      context: context,
+      message: message,
+      trigger_1: trigger
+    } do
+      Pipeline.handle_message(nil, message, context)
+
+      assert WorkOrder |> Repo.get_by(trigger_id: trigger.id) == nil
+    end
+
+    test "does not record the message", %{
+      context: context,
+      message: message
+    } do
+      Pipeline.handle_message(nil, message, context)
+
+      assert Repo.one(TriggerKafkaMessageRecord) == nil
+    end
+
+    test "indicates that the test was completed", %{
+      context: context,
+      message: message,
+      trigger_1: trigger
+    } do
+      Pipeline.handle_message(nil, message, context)
+
+      refute :persistent_term.get({:kafka_trigger_test_failure, trigger.id})
+    end
+  end
+
   describe ".handle_failed/2" do
     setup do
       messages = [
@@ -376,8 +394,15 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
         build_broadway_message(offset: 2) |> Broadway.Message.failed(:who_knows)
       ]
 
+      trigger =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: build(:triggers_kafka_configuration)
+        )
+
       %{
-        context: %{trigger_id: "my_trigger_id"},
+        context: %{trigger_id: trigger.id |> String.to_atom()},
         messages: messages
       }
     end
@@ -424,6 +449,29 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       end
     end
 
+    test "notifies the project admin of a persistence failure", %{
+      context: context,
+      messages: [message_1, message_2]
+    } do
+      trigger_id = context.trigger_id |> Atom.to_string()
+
+      persistence_failure_message =
+        build_broadway_message(offset: 3)
+        |> Broadway.Message.failed(:persistence)
+
+      messages = [
+        message_1,
+        persistence_failure_message,
+        message_2
+      ]
+
+      Events.subscribe_to_kafka_trigger_updated()
+
+      Pipeline.handle_failed(messages, context)
+
+      assert_receive %KafkaTriggerNotificationSent{trigger_id: ^trigger_id}
+    end
+
     defp expected_duplicate_log_message(message, context) do
       "Kafka Pipeline Duplicate Message:" <>
         " Trigger_id `#{context.trigger_id}`" <>
@@ -455,6 +503,66 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
         trigger_id: context.trigger_id,
         type: type
       }
+    end
+  end
+
+  describe "maybe_notify_users/2" do
+    setup do
+      Events.subscribe_to_kafka_trigger_updated()
+
+      trigger =
+        insert(
+          :trigger,
+          type: :kafka,
+          kafka_configuration: build(:triggers_kafka_configuration)
+        )
+
+      %{
+        trigger_id: trigger.id
+      }
+    end
+
+    test "does not notify the user if there are no persistence failures", %{
+      trigger_id: trigger_id
+    } do
+      messages = [
+        build_broadway_message() |> Broadway.Message.failed(:other),
+        build_broadway_message() |> Broadway.Message.failed(:other)
+      ]
+
+      Pipeline.maybe_notify_users(messages, trigger_id)
+
+      refute_receive %KafkaTriggerNotificationSent{}
+    end
+
+    test "notifies users if there is a message with a persistence failure", %{
+      trigger_id: trigger_id
+    } do
+      messages = [
+        build_broadway_message() |> Broadway.Message.failed(:other),
+        build_broadway_message() |> Broadway.Message.failed(:persistence),
+        build_broadway_message() |> Broadway.Message.failed(:other)
+      ]
+
+      Pipeline.maybe_notify_users(messages, trigger_id)
+
+      assert_receive %KafkaTriggerNotificationSent{trigger_id: ^trigger_id}
+    end
+
+    test "notifies users if there are multiple persistence failures", %{
+      trigger_id: trigger_id
+    } do
+      messages = [
+        build_broadway_message() |> Broadway.Message.failed(:other),
+        build_broadway_message() |> Broadway.Message.failed(:persistence),
+        build_broadway_message() |> Broadway.Message.failed(:other),
+        build_broadway_message() |> Broadway.Message.failed(:persistence),
+        build_broadway_message() |> Broadway.Message.failed(:other)
+      ]
+
+      Pipeline.maybe_notify_users(messages, trigger_id)
+
+      assert_receive %KafkaTriggerNotificationSent{trigger_id: ^trigger_id}
     end
   end
 
@@ -501,20 +609,12 @@ defmodule Lightning.KafkaTriggers.PipelineTest do
       hosts: [["host-#{index}", "9092"], ["other-host-#{index}", "9093"]],
       hosts_string: "host-#{index}:9092, other-host-#{index}:9093",
       initial_offset_reset_policy: "earliest",
-      partition_timestamps: partition_timestamps(),
       password: password,
       sasl: sasl_type,
       ssl: ssl,
       topics: ["topic-#{index}-1", "topic-#{index}-2"],
       topics_string: "topic-#{index}-1, topic-#{index}-2",
       username: username
-    }
-  end
-
-  defp partition_timestamps do
-    %{
-      "1" => 1_715_164_718_281,
-      "2" => 1_715_164_718_282
     }
   end
 

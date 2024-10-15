@@ -1,7 +1,6 @@
 defmodule Lightning.Workflows.TriggerTest do
   use Lightning.DataCase, async: true
 
-  alias Ecto.Changeset
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Triggers.KafkaConfiguration
 
@@ -70,7 +69,6 @@ defmodule Lightning.Workflows.TriggerTest do
             ],
             hosts_string: "host1:9092, host2:9093",
             initial_offset_reset_policy: "earliest",
-            partition_timestamps: %{"1" => 1_717_174_749_123},
             password: "password",
             sasl: "plain",
             ssl: true,
@@ -157,69 +155,6 @@ defmodule Lightning.Workflows.TriggerTest do
         )
 
       assert get_field(changeset, :kafka_configuration) == nil
-    end
-  end
-
-  describe ".kafka_partitions_changeset/3" do
-    setup do
-      %{partition: 7, timestamp: 124}
-    end
-
-    test "returns a kafka configuration changeset if type is kafka", %{
-      partition: partition,
-      timestamp: timestamp
-    } do
-      kafka_configuration =
-        build(:triggers_kafka_configuration, partition_timestamps: %{})
-
-      trigger =
-        insert(:trigger, type: :kafka, kafka_configuration: kafka_configuration)
-
-      expected_timestamps = %{
-        "#{partition}" => timestamp
-      }
-
-      changeset =
-        trigger
-        |> Trigger.kafka_partitions_changeset(partition, timestamp)
-
-      assert %Changeset{data: ^trigger, changes: changes} = changeset
-
-      assert %{
-               kafka_configuration: %{
-                 changes: %{partition_timestamps: ^expected_timestamps}
-               }
-             } = changes
-    end
-
-    test "returns an empty changeset if type is :webhook", %{
-      partition: partition,
-      timestamp: timestamp
-    } do
-      trigger = insert(:trigger, type: :webhook)
-
-      changeset =
-        trigger
-        |> Trigger.kafka_partitions_changeset(partition, timestamp)
-
-      assert %Changeset{data: ^trigger, changes: changes} = changeset
-
-      assert changes == %{}
-    end
-
-    test "returns an empty changeset if type is :cron", %{
-      partition: partition,
-      timestamp: timestamp
-    } do
-      trigger = insert(:trigger, type: :cron)
-
-      changeset =
-        trigger
-        |> Trigger.kafka_partitions_changeset(partition, timestamp)
-
-      assert %Changeset{data: ^trigger, changes: changes} = changeset
-
-      assert changes == %{}
     end
   end
 end

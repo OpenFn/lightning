@@ -728,6 +728,60 @@ defmodule Lightning.ProjectsTest do
                "condition_expression: |\n          #{js_expression}"
     end
 
+    test "project descriptions with multiline and special characters are correctly represented" do
+      project =
+        insert(:project,
+          name: "project_multiline_special",
+          description: """
+          This is a multiline description.
+          It includes special characters: :, #, &, *, ?, |, -, <, >, =, !, %, @, *, &, ?.
+          Also, YAML indicators: *alias, &anchor, ?key, !tag.
+          Line breaks and special characters should be preserved.
+          """
+        )
+
+      assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
+
+      expected_yaml = """
+      name: project_multiline_special
+      description: |
+        This is a multiline description.
+        It includes special characters: :, #, &, *, ?, |, -, <, >, =, !, %, @, *, &, ?.
+        Also, YAML indicators: *alias, &anchor, ?key, !tag.
+        Line breaks and special characters should be preserved.
+      """
+
+      assert generated_yaml =~ expected_yaml
+    end
+
+    test "projects with empty and nil descriptions are correctly represented" do
+      project_empty =
+        insert(:project, name: "project_empty_description", description: "")
+
+      assert {:ok, generated_yaml} =
+               Projects.export_project(:yaml, project_empty.id)
+
+      expected_yaml = """
+      name: project_empty_description
+      description: |
+      """
+
+      assert generated_yaml =~ expected_yaml
+
+      project_nil =
+        insert(:project, name: "project_nil_description", description: nil)
+
+      assert {:ok, generated_yaml} =
+               Projects.export_project(:yaml, project_nil.id)
+
+      expected_yaml = """
+      name: project_nil_description
+      description: null
+      """
+
+      assert generated_yaml =~ expected_yaml
+    end
+
     test "exports canonical project" do
       project =
         canonical_project_fixture(
@@ -1495,6 +1549,96 @@ defmodule Lightning.ProjectsTest do
 
       assert {:ok, _} =
                Projects.invite_collaborators(project, collaborators, user)
+    end
+  end
+
+  describe ".find_users_to_notify_of_trigger_failure/1" do
+    setup do
+      other_project = insert(:project)
+      project = insert(:project)
+
+      superuser_1 = insert(:user, email: "super1@test.com", role: :superuser)
+      superuser_2 = insert(:user, email: "super2@test.com", role: :superuser)
+
+      other_project_superuser =
+        insert(:user, email: "other@test.com", role: :superuser)
+
+      admin_user = insert(:user, email: "admin@test.com", role: :user)
+      owner_user = insert(:user, email: "owner@test.com", role: :user)
+      user = insert(:user, email: "user@test.com", role: :user)
+
+      insert(
+        :project_user,
+        project: other_project,
+        user: other_project_superuser,
+        role: :viewer
+      )
+
+      insert(
+        :project_user,
+        project: project,
+        user: user,
+        role: :viewer
+      )
+
+      insert(
+        :project_user,
+        project: project,
+        user: superuser_1,
+        role: :viewer
+      )
+
+      insert(
+        :project_user,
+        project: project,
+        user: superuser_2,
+        role: :admin
+      )
+
+      insert(
+        :project_user,
+        project: project,
+        user: admin_user,
+        role: :admin
+      )
+
+      insert(
+        :project_user,
+        project: project,
+        user: owner_user,
+        role: :owner
+      )
+
+      %{
+        admin_user: admin_user,
+        other_project_superuser: other_project_superuser,
+        owner_user: owner_user,
+        project: project,
+        superuser_1: superuser_1,
+        superuser_2: superuser_2,
+        user: user
+      }
+    end
+
+    test "returns associated superusers or users with admin/owner role", %{
+      admin_user: admin_user,
+      owner_user: owner_user,
+      project: project,
+      superuser_1: superuser_1,
+      superuser_2: superuser_2
+    } do
+      expected_emails =
+        [admin_user, owner_user, superuser_1, superuser_2]
+        |> Enum.map(& &1.email)
+        |> Enum.sort()
+
+      actual_emails =
+        project.id
+        |> Projects.find_users_to_notify_of_trigger_failure()
+        |> Enum.map(& &1.email)
+        |> Enum.sort()
+
+      assert actual_emails == expected_emails
     end
   end
 

@@ -271,8 +271,16 @@ div[id^='tippy-'] {
   display: block !important;
 }
 
+.manual-job-panel.collapsed .close-button {
+  @apply min-h-20;
+}
+
+.job-editor-panel.collapsed[data-editor-disabled='true'] .close-button {
+  @apply min-h-16;
+}
+
 #output-logs.collapsed .close-button {
-  @apply !block mb-24;
+  @apply !block mb-20;
 }
 
 .collapsible-panel.collapsed .panel-collapse-icon {

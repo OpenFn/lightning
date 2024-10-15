@@ -20,6 +20,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Lightning.Runs.Events.StepCompleted
   alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows
+  alias Lightning.Workflows.Events.WorkflowUpdated
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Presence
   alias Lightning.Workflows.Snapshot
@@ -186,7 +187,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             >
               <.collapsible_panel
                 id={"manual-job-#{@selected_job.id}"}
-                class="h-full border border-l-0"
+                class="h-full border border-l-0 manual-job-panel"
               >
                 <:tabs>
                   <LightningWeb.Components.Tabbed.tabs
@@ -218,8 +219,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         dataclips={@selectable_dataclips}
                         disabled={
                           !@can_run_workflow ||
-                            @snapshot_version_tag != "latest" ||
-                            !@has_presence_edit_priority
+                            @snapshot_version_tag != "latest"
                         }
                         project={@project}
                         admin_contacts={@admin_contacts}
@@ -306,102 +306,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     name="hero-lock-closed"
                     class="w-5 h-5 place-self-center text-gray-300"
                   />
-                  <div id="run-buttons" class="inline-flex rounded-md shadow-sm">
-                    <.button
-                      id="save-and-run"
-                      phx-hook="DefaultRunViaCtrlEnter"
-                      {if step_retryable?(@step, @manual_run_form, @selectable_dataclips), do:
-                        [type: "button", "phx-click": "rerun", "phx-value-run_id": @follow_run.id, "phx-value-step_id": @step.id],
-                      else:
-                          [type: "submit", form: @manual_run_form.id]}
-                      class={[
-                        "relative inline-flex items-center",
-                        step_retryable?(
-                          @step,
-                          @manual_run_form,
-                          @selectable_dataclips
-                        ) && "rounded-r-none"
-                      ]}
-                      disabled={
-                        @save_and_run_disabled ||
-                          processing(@follow_run) ||
-                          selected_dataclip_wiped?(
-                            @manual_run_form,
-                            @selectable_dataclips
-                          ) || @snapshot_version_tag != "latest" ||
-                          !@has_presence_edit_priority
-                      }
-                    >
-                      <%= if processing(@follow_run) do %>
-                        <.icon
-                          name="hero-arrow-path"
-                          class="w-4 h-4 animate-spin mr-1"
-                        /> Processing
-                      <% else %>
-                        <%= if step_retryable?(@step, @manual_run_form, @selectable_dataclips) do %>
-                          <.icon name="hero-play-mini" class="w-4 h-4 mr-1" />
-                          Retry from here
-                        <% else %>
-                          <.icon name="hero-play-mini" class="w-4 h-4 mr-1" />
-                          Create New Work Order
-                        <% end %>
-                      <% end %>
-                    </.button>
-                    <div
-                      :if={
-                        step_retryable?(
-                          @step,
-                          @manual_run_form,
-                          @selectable_dataclips
-                        )
-                      }
-                      class="relative -ml-px block"
-                    >
-                      <.button
-                        type="button"
-                        class="h-full rounded-l-none pr-1 pl-1 focus:ring-inset"
-                        id="option-menu-button"
-                        aria-expanded="true"
-                        aria-haspopup="true"
-                        disabled={
-                          @save_and_run_disabled ||
-                            @snapshot_version_tag != "latest" ||
-                            !@has_presence_edit_priority
-                        }
-                        phx-click={show_dropdown("create-new-work-order")}
-                      >
-                        <span class="sr-only">Open options</span>
-                        <.icon name="hero-chevron-down" class="w-4 h-4" />
-                      </.button>
-                      <div
-                        role="menu"
-                        aria-orientation="vertical"
-                        aria-labelledby="option-menu-button"
-                        tabindex="-1"
-                      >
-                        <button
-                          phx-click-away={hide_dropdown("create-new-work-order")}
-                          phx-hook="AltRunViaCtrlShiftEnter"
-                          id="create-new-work-order"
-                          type="submit"
-                          class={[
-                            "hidden absolute right-0 bottom-9 z-10 mb-2 w-max",
-                            "rounded-md bg-white px-4 py-2 text-sm font-semibold",
-                            "text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-                          ]}
-                          form={@manual_run_form.id}
-                          disabled={
-                            @save_and_run_disabled ||
-                              @snapshot_version_tag != "latest" ||
-                              !@has_presence_edit_priority
-                          }
-                        >
-                          <.icon name="hero-play-solid" class="w-4 h-4 mr-1" />
-                          Create New Work Order
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                  <.run_buttons
+                    step={@step}
+                    manual_run_form={@manual_run_form}
+                    selectable_dataclips={@selectable_dataclips}
+                    follow_run={@follow_run}
+                    save_and_run_disabled={@save_and_run_disabled}
+                    snapshot_version_tag={@snapshot_version_tag}
+                  />
                   <.with_changes_indicator changeset={@changeset}>
                     <.save_workflow_button
                       changeset={@changeset}
@@ -668,6 +580,112 @@ defmodule LightningWeb.WorkflowLive.Edit do
     """
   end
 
+  def run_buttons(assigns) do
+    ~H"""
+    <div id="run-buttons" class="inline-flex rounded-md shadow-sm">
+      <.save_and_run_button {assigns} />
+      <.create_new_work_order_dropdown
+        :if={step_retryable?(@step, @manual_run_form, @selectable_dataclips)}
+        {assigns}
+      />
+    </div>
+    """
+  end
+
+  defp save_and_run_button(assigns) do
+    ~H"""
+    <.button
+      id="save-and-run"
+      phx-hook="DefaultRunViaCtrlEnter"
+      {save_and_run_attributes(assigns)}
+      class={save_and_run_classes(assigns)}
+      disabled={
+        assigns.save_and_run_disabled ||
+          processing(assigns.follow_run) ||
+          selected_dataclip_wiped?(
+            assigns.manual_run_form,
+            assigns.selectable_dataclips
+          ) ||
+          assigns.snapshot_version_tag != "latest"
+      }
+    >
+      <%= if processing(@follow_run) do %>
+        <.icon name="hero-arrow-path" class="w-4 h-4 animate-spin mr-1" /> Processing
+      <% else %>
+        <%= if step_retryable?(@step, @manual_run_form, @selectable_dataclips) do %>
+          <.icon name="hero-play-mini" class="w-4 h-4 mr-1" /> Retry from here
+        <% else %>
+          <.icon name="hero-play-mini" class="w-4 h-4 mr-1" /> Create New Work Order
+        <% end %>
+      <% end %>
+    </.button>
+    """
+  end
+
+  defp save_and_run_attributes(assigns) do
+    if step_retryable?(assigns) do
+      [
+        type: "button",
+        "phx-click": "rerun",
+        "phx-value-run_id": assigns.follow_run.id,
+        "phx-value-step_id": assigns.step.id
+      ]
+    else
+      [type: "submit", form: assigns.manual_run_form.id]
+    end
+  end
+
+  defp save_and_run_classes(assigns) do
+    base_class = "relative inline-flex items-center"
+
+    if step_retryable?(assigns) do
+      [base_class, "rounded-r-none"]
+    else
+      [base_class]
+    end
+  end
+
+  defp create_new_work_order_dropdown(assigns) do
+    ~H"""
+    <div class="relative -ml-px block">
+      <.button
+        type="button"
+        class="h-full rounded-l-none pr-1 pl-1 focus:ring-inset"
+        id="option-menu-button"
+        aria-expanded="true"
+        aria-haspopup="true"
+        disabled={@save_and_run_disabled || @snapshot_version_tag != "latest"}
+        phx-click={show_dropdown("create-new-work-order")}
+      >
+        <span class="sr-only">Open options</span>
+        <.icon name="hero-chevron-down" class="w-4 h-4" />
+      </.button>
+      <div
+        role="menu"
+        aria-orientation="vertical"
+        aria-labelledby="option-menu-button"
+        tabindex="-1"
+      >
+        <button
+          phx-click-away={hide_dropdown("create-new-work-order")}
+          phx-hook="AltRunViaCtrlShiftEnter"
+          id="create-new-work-order"
+          type="submit"
+          form={@manual_run_form.id}
+          class={[
+            "hidden absolute right-0 bottom-9 z-10 mb-2 w-max",
+            "rounded-md bg-white px-4 py-2 text-sm font-semibold",
+            "text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+          ]}
+          disabled={@save_and_run_disabled || @snapshot_version_tag != "latest"}
+        >
+          <.icon name="hero-play-solid" class="w-4 h-4 mr-1" /> Create New Work Order
+        </button>
+      </div>
+    </div>
+    """
+  end
+
   defp banner_message(current_user_presence, prior_user_presence) do
     prior_user_name =
       "#{prior_user_presence.user.first_name} #{prior_user_presence.user.last_name}"
@@ -711,6 +729,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp display_switcher(snapshot, workflow) do
     snapshot && snapshot.lock_version != workflow.lock_version
   end
+
+  defp step_retryable?(assigns),
+    do:
+      step_retryable?(
+        assigns.step,
+        assigns.manual_run_form,
+        assigns.selectable_dataclips
+      )
 
   defp step_retryable?(step, form, selectable_dataclips) do
     step_dataclip_id = step && step.input_dataclip_id
@@ -1039,6 +1065,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> maybe_show_manual_run()
      |> tap(fn socket ->
        if connected?(socket) do
+         Workflows.Events.subscribe(socket.assigns.project.id)
+
          if changed?(socket, :selected_job) do
            Helpers.broadcast_updated_params(socket, %{
              job_id:
@@ -1513,38 +1541,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
         %{"run_id" => run_id, "step_id" => step_id},
         socket
       ) do
-    %{
-      can_run_workflow: can_run_workflow?,
-      current_user: current_user,
-      changeset: changeset,
-      project: %{id: project_id},
-      snapshot_version_tag: tag,
-      has_presence_edit_priority: has_presence_edit_priority
-    } = socket.assigns
+    case rerun(socket, run_id, step_id) do
+      {:ok, socket} ->
+        {:noreply, socket}
 
-    with true <- can_run_workflow? || :not_authorized,
-         true <- tag == "latest" || :view_only,
-         true <-
-           has_presence_edit_priority ||
-             :presence_low_priority,
-         :ok <-
-           UsageLimiter.limit_action(%Action{type: :new_run}, %Context{
-             project_id: project_id
-           }),
-         {:ok, workflow} <-
-           Helpers.save_workflow(%{changeset | action: :update}),
-         {:ok, run} <-
-           WorkOrders.retry(run_id, step_id, created_by: current_user) do
-      Runs.subscribe(run)
-
-      snapshot = Snapshot.get_by_version(workflow.id, workflow.lock_version)
-
-      {:noreply,
-       socket
-       |> assign_workflow(workflow, snapshot)
-       |> follow_run(run)
-       |> push_event("push-hash", %{"hash" => "log"})}
-    else
       {:error, _reason, %{text: error_text}} ->
         {:noreply, put_flash(socket, :error, error_text)}
 
@@ -1552,13 +1552,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
         {:noreply, put_flash(socket, :error, message)}
 
       {:error, _changeset} ->
-        {
-          :noreply,
-          socket
-          |> assign_changeset(changeset)
-          |> mark_validated()
-          |> put_flash(:error, "Workflow could not be saved")
-        }
+        {:noreply,
+         socket
+         |> assign_changeset(socket.assigns.changeset)
+         |> mark_validated()
+         |> put_flash(:error, "Workflow could not be saved")}
 
       :not_authorized ->
         {:noreply,
@@ -1569,17 +1567,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
         {:noreply,
          socket
          |> put_flash(:error, "Cannot rerun in snapshot mode, switch to latest.")}
-
-      :presence_low_priority ->
-        {:noreply,
-         socket
-         |> put_flash(:error, "Cannot rerun in view-only mode")}
     end
   end
 
   # The manual_run_submit event is for create a new work order from a dataclip and
   # a job.
-  def handle_event("manual_run_submit", %{"manual" => params}, socket) do
+  def handle_event("manual_run_submit", params, socket) do
     %{
       project: project,
       selected_job: selected_job,
@@ -1588,19 +1581,33 @@ defmodule LightningWeb.WorkflowLive.Edit do
       can_edit_workflow: can_edit_workflow,
       can_run_workflow: can_run_workflow,
       snapshot_version_tag: tag,
-      has_presence_edit_priority: has_presence_edit_priority
+      has_presence_edit_priority: has_presence_edit_priority,
+      workflow: workflow,
+      manual_run_form: form
     } = socket.assigns
+
+    manual_params = Map.get(params, "manual", %{})
+
+    params =
+      case form do
+        nil -> manual_params
+        %{params: form_params} -> Map.merge(form_params, manual_params)
+      end
 
     socket = socket |> apply_params(workflow_params, :workflow)
 
+    workflow_or_changeset =
+      if has_presence_edit_priority do
+        socket.assigns.changeset
+      else
+        get_workflow_by_id(workflow.id)
+      end
+
     with true <- (can_run_workflow && can_edit_workflow) || :not_authorized,
          true <- tag == "latest" || :view_only,
-         true <-
-           has_presence_edit_priority ||
-             :presence_low_priority,
          {:ok, %{workorder: workorder, workflow: workflow}} <-
-           Helpers.save_and_run(
-             socket.assigns.changeset,
+           Helpers.run_workflow(
+             workflow_or_changeset,
              params,
              project: project,
              selected_job: selected_job,
@@ -1642,21 +1649,45 @@ defmodule LightningWeb.WorkflowLive.Edit do
          socket
          |> put_flash(:error, "Cannot run in snapshot mode, switch to latest.")}
 
-      :presence_low_priority ->
-        {:noreply,
-         socket
-         |> put_flash(:error, "Cannot run in view-only mode")}
-
       {:error, %{text: message}} ->
         {:noreply, put_flash(socket, :error, message)}
     end
   end
 
-  def handle_event("manual_run_submit", _params, socket) do
-    {:noreply, socket}
+  @impl true
+  def handle_info(
+        %WorkflowUpdated{workflow: updated_workflow},
+        socket
+      ) do
+    %{
+      workflow: current_workflow,
+      snapshot_version_tag: version_tag,
+      has_presence_edit_priority: has_edit_priority?,
+      snapshot: snapshot
+    } = socket.assigns
+
+    is_same_workflow? = current_workflow.id == updated_workflow.id
+    is_latest_version? = version_tag == "latest"
+    should_update? = is_same_workflow? and not has_edit_priority?
+
+    if should_update? do
+      updated_socket =
+        if is_latest_version? do
+          put_flash(
+            socket,
+            :info,
+            "This workflow has been updated. You're no longer on the latest version."
+          )
+        else
+          socket
+        end
+
+      {:noreply, assign_workflow(updated_socket, updated_workflow, snapshot)}
+    else
+      {:noreply, socket}
+    end
   end
 
-  @impl true
   def handle_info({"form_changed", %{"workflow" => params}}, socket) do
     {:noreply, handle_new_params(socket, params, :workflow)}
   end
@@ -2288,5 +2319,44 @@ defmodule LightningWeb.WorkflowLive.Edit do
       Save
     </Form.submit_button>
     """
+  end
+
+  defp rerun(socket, run_id, step_id) do
+    %{
+      can_run_workflow: can_run_workflow?,
+      current_user: current_user,
+      changeset: changeset,
+      project: %{id: project_id},
+      snapshot_version_tag: tag,
+      has_presence_edit_priority: has_edit_priority?,
+      workflow: %{id: workflow_id}
+    } = socket.assigns
+
+    save_or_get_workflow =
+      if has_edit_priority? do
+        Helpers.save_workflow(%{changeset | action: :update})
+      else
+        {:ok, get_workflow_by_id(workflow_id)}
+      end
+
+    with true <- can_run_workflow? || :not_authorized,
+         true <- tag == "latest" || :view_only,
+         :ok <-
+           UsageLimiter.limit_action(%Action{type: :new_run}, %Context{
+             project_id: project_id
+           }),
+         {:ok, workflow} <- save_or_get_workflow,
+         {:ok, run} <-
+           WorkOrders.retry(run_id, step_id, created_by: current_user) do
+      Runs.subscribe(run)
+
+      snapshot = Snapshot.get_by_version(workflow.id, workflow.lock_version)
+
+      {:ok,
+       socket
+       |> assign_workflow(workflow, snapshot)
+       |> follow_run(run)
+       |> push_event("push-hash", %{"hash" => "log"})}
+    end
   end
 end

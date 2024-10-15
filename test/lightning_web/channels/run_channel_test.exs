@@ -298,13 +298,12 @@ defmodule LightningWeb.RunChannelTest do
 
       assert_reply ref, :ok, {:binary, _payload}
 
-      updated_dataclip = get_dataclip_with_body(dataclip.id)
+      %{wiped_at: wiped_at, body: body} = get_dataclip_with_body(dataclip.id)
 
       # dataclip body is cleared
-      assert updated_dataclip.wiped_at ==
-               DateTime.utc_now() |> DateTime.truncate(:second)
+      assert DateTime.diff(DateTime.utc_now(), wiped_at, :second) < 1
 
-      refute updated_dataclip.body
+      refute body
     end
 
     @tag project_retention_policy: :retain_all

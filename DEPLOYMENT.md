@@ -209,6 +209,33 @@ from the cluster. These records are periodically cleaned out. The duration for
 which they are retained is controlled by
 `KAFKA_DUPLICATE_TRACKING_RETENTION_SECONDS`. The default value is 3600.
 
+#### Disabling Kafka Triggers
+
+After a Kafka consumer group connects to a Kafka cluster, the cluster will track
+the last committed offset for a given consumer group ,to ensure that the consumer
+group receives the correct messages.
+
+This data is retained for a finite period. If an enabled Kafka trigger is 
+disabled for longer than the offset retention period the consumer group offset
+data will be cleared.
+
+If the Kafka trigger is re-enabled after the offset data has been cleared, this
+will result in the consumer group reverting to what has been configured as the
+'Initial offset reset policy' for the trigger. This may result in the
+duplication of messages or even data loss.
+
+It is recommended that you check the value of the `offsets.retention.minutes` for
+the Kafka cluster to determine what the cluster's retention period is, and
+consider this when disabling a Kafka trigger for an extended period.
+
+#### Failure notifications
+
+Under certain failure conditions, a Kafka trigger will send an email to certain
+user that are associated with a project. After each email an embargo is applied
+to ensure that Lightning does not flood the recipients with email. The length
+of the embargo is controlled by the `KAFKA_NOTIFICATION_EMBARGO_SECONDS` ENV
+variable.
+
 ### Google Oauth2
 
 Using your Google Cloud account, provision a new OAuth 2.0 Client with the 'Web

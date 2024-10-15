@@ -5,14 +5,11 @@ defmodule Lightning.KafkaTriggers.Pipeline do
   """
   use Broadway
 
-  import Ecto.Query
-
   alias Ecto.Changeset
   alias Ecto.Multi
   alias Lightning.KafkaTriggers
   alias Lightning.KafkaTriggers.MessageHandling
   alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
-  alias Lightning.Workflows.Trigger
 
   require Logger
 
@@ -50,17 +47,33 @@ defmodule Lightning.KafkaTriggers.Pipeline do
     )
   end
 
-  # Dialyzer does not correctly match the types that can be returned by
-  # MessageHandling.persist_message/3. The {:ok, _} match fails.
-  @dialyzer {:no_match, handle_message: 3}
-
   @impl true
   def handle_message(_processor, message, context) do
     trigger_id = context.trigger_id |> Atom.to_string()
 
+    if simulate_failure?(trigger_id) do
+      simulate_failure(trigger_id, message)
+    else
+      process_message(trigger_id, message)
+    end
+  end
+
+  defp simulate_failure?(trigger_id) do
+    :persistent_term.get({:kafka_trigger_test_failure, trigger_id}, nil)
+  end
+
+  defp simulate_failure(trigger_id, message) do
+    :persistent_term.put({:kafka_trigger_test_failure, trigger_id}, false)
+
+    Broadway.Message.failed(message, :persistence)
+  end
+
+  # Dialyzer does not correctly match the types that can be returned by
+  # MessageHandling.persist_message/3. The {:ok, _} match fails.
+  @dialyzer {:no_match, process_message: 2}
+  defp process_message(trigger_id, message) do
     Multi.new()
     |> track_message(trigger_id, message)
-    |> update_partition_timestamps(trigger_id, message)
     |> MessageHandling.persist_message(trigger_id, message)
     |> case do
       {:ok, _} ->
@@ -112,26 +125,17 @@ defmodule Lightning.KafkaTriggers.Pipeline do
     multi |> Multi.insert(:record, record_changeset)
   end
 
-  defp update_partition_timestamps(multi, trigger_id, message) do
-    %{metadata: %{partition: partition, ts: timestamp}} = message
-
-    trigger_query =
-      from t in Trigger, where: t.id == ^trigger_id, lock: "FOR UPDATE"
-
-    multi
-    |> Multi.one(:trigger, trigger_query)
-    |> Multi.update(:update_trigger, fn %{trigger: trigger} ->
-      trigger |> Trigger.kafka_partitions_changeset(partition, timestamp)
-    end)
-  end
-
   @impl true
   def handle_failed(messages, context) do
+    trigger_id = context.trigger_id |> Atom.to_string()
+
     messages
     |> Enum.each(fn message ->
-      notify_sentry(message, context)
       create_log_entry(message, context)
+      notify_sentry(message, context)
     end)
+
+    maybe_notify_users(messages, trigger_id)
 
     messages
   end
@@ -230,6 +234,12 @@ defmodule Lightning.KafkaTriggers.Pipeline do
 
       sasl ->
         [{:sasl, sasl} | base_config]
+    end
+  end
+
+  def maybe_notify_users(messages, trigger_id) do
+    if messages |> Enum.any?(&(&1.status == {:failed, :persistence})) do
+      KafkaTriggers.notify_users_of_trigger_failure(trigger_id)
     end
   end
 end

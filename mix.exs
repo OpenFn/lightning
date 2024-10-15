@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.9.7",
+      version: "2.9.9",
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -83,7 +83,7 @@ defmodule Lightning.MixProject do
       {:esbuild, "~> 0.3", runtime: Mix.env() == :dev},
       {:ex_doc, "~> 0.28", only: :dev, runtime: false},
       {:ex_json_schema, "~> 0.9.1"},
-      {:ex_machina, "~> 2.7.0", only: :test},
+      {:ex_machina, "~> 2.8.0", only: :test},
       {:excoveralls, "~> 0.15.0", only: [:test, :dev]},
       {:floki, ">= 0.30.0", only: :test},
       {:gettext, "~> 0.18"},
@@ -124,6 +124,7 @@ defmodule Lightning.MixProject do
       {:postgrex, ">= 0.0.0"},
       {:prom_ex, "~> 1.8.0"},
       {:rambo, "~> 0.3.4"},
+      {:retry, "~> 0.18"},
       {:scrivener, "~> 2.7"},
       {:sentry, "~> 10.5.0"},
       {:sobelow, "~> 0.13.0", only: [:test, :dev]},

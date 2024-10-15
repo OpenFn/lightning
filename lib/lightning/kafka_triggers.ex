@@ -5,8 +5,11 @@ defmodule Lightning.KafkaTriggers do
   import Ecto.Query
 
   alias Ecto.Changeset
+  alias Lightning.Accounts.UserNotifier
+  alias Lightning.Projects
   alias Lightning.Repo
   alias Lightning.Workflows.Trigger
+  alias Lightning.Workflows.Triggers.Events
 
   def start_triggers do
     if supervisor = GenServer.whereis(:kafka_pipeline_supervisor) do
@@ -29,25 +32,9 @@ defmodule Lightning.KafkaTriggers do
     query |> Repo.all()
   end
 
-  @doc """
-  Selects the appropriate offset reset policy for a given trigger based on the
-  presence of partition-specific timestamps.
-  """
-  def determine_offset_reset_policy(trigger) do
-    %Trigger{kafka_configuration: kafka_configuration} = trigger
-
-    case kafka_configuration do
-      config = %{partition_timestamps: ts} when map_size(ts) == 0 ->
-        initial_policy(config)
-
-      %{partition_timestamps: ts} ->
-        earliest_timestamp(ts)
-    end
-  end
-
   # Converts the initial_offset_reset_policy configuration value to a format
   # suitable for use by a `Pipeline` process.
-  defp initial_policy(%{initial_offset_reset_policy: initial_policy}) do
+  def initial_policy(%{initial_offset_reset_policy: initial_policy}) do
     cond do
       initial_policy in ["earliest", "latest"] ->
         initial_policy |> String.to_atom()
@@ -59,12 +46,6 @@ defmodule Lightning.KafkaTriggers do
       true ->
         :latest
     end
-  end
-
-  defp earliest_timestamp(timestamps) do
-    timestamp = timestamps |> Map.values() |> Enum.sort() |> hd()
-
-    {:timestamp, timestamp}
   end
 
   @doc """
@@ -121,7 +102,7 @@ defmodule Lightning.KafkaTriggers do
         nil
       end
 
-    offset_reset_policy = determine_offset_reset_policy(trigger)
+    offset_reset_policy = initial_policy(trigger.kafka_configuration)
 
     number_of_consumers = Lightning.Config.kafka_number_of_consumers()
     number_of_processors = Lightning.Config.kafka_number_of_processors()
@@ -212,5 +193,58 @@ defmodule Lightning.KafkaTriggers do
     messages_per_interval = (per_second * seconds_in_interval) |> trunc()
 
     %{interval: 10_000, messages_per_interval: messages_per_interval}
+  end
+
+  def notify_users_of_trigger_failure(trigger_id) do
+    now = DateTime.utc_now()
+
+    if send_notification?(now, last_notification_sent_at(trigger_id)) do
+      notify_users(trigger_id, now)
+
+      track_notification_sent(trigger_id, now)
+
+      notify_any_other_nodes(trigger_id, now)
+    end
+  end
+
+  defp last_notification_sent_at(trigger_id) do
+    :persistent_term.get(failure_notification_tracking_key(trigger_id), nil)
+  end
+
+  def failure_notification_tracking_key(trigger_id) do
+    {:kafka_trigger_failure_notification_sent_at, trigger_id}
+  end
+
+  defp notify_users(trigger_id, timestamp) do
+    %{workflow: workflow} =
+      Trigger
+      |> Repo.get(trigger_id)
+      |> Repo.preload(:workflow)
+
+    workflow.project_id
+    |> Projects.find_users_to_notify_of_trigger_failure()
+    |> Enum.each(fn user ->
+      UserNotifier.send_trigger_failure_mail(user, workflow, timestamp)
+    end)
+  end
+
+  defp track_notification_sent(trigger_id, sent_at) do
+    :persistent_term.put(
+      failure_notification_tracking_key(trigger_id),
+      sent_at
+    )
+  end
+
+  defp notify_any_other_nodes(trigger_id, sent_at) do
+    Events.kafka_trigger_notification_sent(trigger_id, sent_at)
+  end
+
+  def send_notification?(_sending_at, nil), do: true
+
+  def send_notification?(sending_at, last_sent_at) do
+    embargo_period =
+      Lightning.Config.kafka_notification_embargo_seconds()
+
+    DateTime.diff(sending_at, last_sent_at, :second) > embargo_period
   end
 end

@@ -570,6 +570,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :class, :string, default: ""
   attr :id, :string, required: true
   attr :panel_title, :string, default: ""
+  attr :rest, :global
 
   def collapsible_panel(assigns) do
     ~H"""
@@ -580,45 +581,44 @@ defmodule LightningWeb.WorkflowLive.Components do
         "w-full flex flex-col collapsible-panel bg-slate-100 overflow-hidden",
         @class
       ]}
+      {@rest}
     >
-      <div class="flex-0 m-0">
+      <div
+        id={"#{@id}-panel-header"}
+        class="flex justify-between items-center p-2 px-4 panel-header z-50"
+      >
         <div
-          id={"#{@id}-panel-header"}
-          class="flex justify-between items-center p-2 px-4 panel-header"
+          id={"#{@id}-panel-header-title"}
+          class="text-center font-semibold text-secondary-700 panel-header-title text-xs"
         >
-          <div
-            id={"#{@id}-panel-header-title"}
-            class="text-center font-semibold text-secondary-700 panel-header-title text-xs"
+          <%= for tabs <- @tabs do %>
+            <%= render_slot(tabs) %>
+          <% end %>
+          <div><%= @panel_title %></div>
+        </div>
+        <div class="close-button">
+          <a
+            id={"#{@id}-panel-collapse-icon"}
+            class="panel-collapse-icon"
+            href="#"
+            phx-click={JS.dispatch("collapse", to: "##{@id}")}
           >
-            <%= for tabs <- @tabs do %>
-              <%= render_slot(tabs) %>
-            <% end %>
-            <%= @panel_title %>
-          </div>
-          <div class="close-button">
-            <a
-              id={"#{@id}-panel-collapse-icon"}
-              class="panel-collapse-icon"
-              href="#"
-              phx-click={JS.dispatch("collapse", to: "##{@id}")}
-            >
-              <.icon
-                name="hero-minus-circle"
-                class="w-5 h-5 hover:bg-slate-400 text-slate-500"
-              />
-            </a>
-            <a
-              id={"#{@id}-panel-expand-icon"}
-              href="#"
-              class="hidden panel-expand-icon"
-              phx-click={JS.dispatch("expand-panel", to: "##{@id}")}
-            >
-              <.icon
-                name="hero-plus-circle"
-                class="w-5 h-5 hover:bg-slate-400 text-slate-500"
-              />
-            </a>
-          </div>
+            <.icon
+              name="hero-minus-circle"
+              class="w-5 h-5 hover:bg-slate-400 text-slate-500"
+            />
+          </a>
+          <a
+            id={"#{@id}-panel-expand-icon"}
+            href="#"
+            class="hidden panel-expand-icon"
+            phx-click={JS.dispatch("expand-panel", to: "##{@id}")}
+          >
+            <.icon
+              name="hero-plus-circle"
+              class="w-5 h-5 hover:bg-slate-400 text-slate-500"
+            />
+          </a>
         </div>
       </div>
       <div
