@@ -814,10 +814,10 @@ defmodule Lightning.ProjectsTest do
               kafka_configuration:
                 hosts:
                   - 'localhost:9092'
-                connect_timeout: 30
                 topics:
                   - dummy
                 initial_offset_reset_policy: earliest
+                connect_timeout: 30
       """
 
       assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)

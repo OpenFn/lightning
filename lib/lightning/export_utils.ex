@@ -77,7 +77,7 @@ defmodule Lightning.ExportUtils do
         kafka_config =
           trigger.kafka_configuration
           |> Map.take(@kafka_trigger_fields)
-          |> Map.new(fn
+          |> Enum.map(fn
             {:hosts, hosts} when is_list(hosts) ->
               {:hosts,
                Enum.map(hosts, fn host_port -> Enum.join(host_port, ":") end)}
@@ -85,6 +85,12 @@ defmodule Lightning.ExportUtils do
             other ->
               other
           end)
+          |> Enum.sort_by(
+            fn {key, _val} ->
+              Enum.find_index(@kafka_trigger_fields, &(&1 == key))
+            end,
+            :asc
+          )
 
         Map.put(base, :kafka_configuration, kafka_config)
 
@@ -243,7 +249,14 @@ defmodule Lightning.ExportUtils do
   end
 
   defp handle_input(key, value, indentation) when is_list(value) do
-    "#{indentation}#{yaml_safe_key(key)}:\n#{handle_list_value(value, indentation)}"
+    yaml_value =
+      if Keyword.keyword?(value) do
+        to_new_yaml(value, "#{indentation}  ")
+      else
+        handle_list_value(value, indentation)
+      end
+
+    "#{indentation}#{yaml_safe_key(key)}:\n#{yaml_value}"
   end
 
   defp handle_list_value(value, indentation) do
@@ -259,9 +272,16 @@ defmodule Lightning.ExportUtils do
     end)
   end
 
-  defp to_new_yaml(map, indentation \\ "") do
+  defp to_new_yaml(map, indentation \\ "")
+
+  defp to_new_yaml(map, indentation) when is_map(map) do
     map
     |> pick_and_sort()
+    |> to_new_yaml(indentation)
+  end
+
+  defp to_new_yaml(keyword, indentation) do
+    keyword
     |> Enum.map(fn {key, value} ->
       handle_input(key, value, indentation)
     end)
