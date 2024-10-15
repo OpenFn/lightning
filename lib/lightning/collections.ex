@@ -12,6 +12,28 @@ defmodule Lightning.Collections do
                      :query_all_limit
                    ]
 
+  def url_safe_name(nil), do: ""
+
+  def url_safe_name(name) when is_binary(name) do
+    name
+    |> String.downcase()
+    |> String.replace(~r/[^a-z-_\.\d]+/, "-")
+    |> String.replace(~r/^\-+|\-+$/, "")
+  end
+
+  @doc """
+  Returns the list of collections.
+
+  ## Examples
+
+      iex> list_collections()
+      [%Collection{}, ...]
+
+  """
+  def list_collections do
+    Repo.all(from(c in Collection, order_by: c.name, preload: :project))
+  end
+
   @spec get_collection(String.t()) ::
           {:ok, Collection.t()} | {:error, :collection_not_found}
   def get_collection(name) do
@@ -19,6 +41,18 @@ defmodule Lightning.Collections do
       nil -> {:error, :collection_not_found}
       collection -> {:ok, collection}
     end
+  end
+
+  def create_collection(attrs) do
+    %Collection{}
+    |> Collection.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  def update_collection(collection, attrs) do
+    collection
+    |> Collection.changeset(attrs)
+    |> Repo.update()
   end
 
   @spec create_collection(Ecto.UUID.t(), String.t()) ::
