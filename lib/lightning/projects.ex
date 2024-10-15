@@ -17,7 +17,7 @@ defmodule Lightning.Projects do
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
   alias Lightning.Projects.Events
-  alias Lightning.Projects.File, as: ProjectFile
+  alias Lightning.Projects.File
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Projects.ProjectUser
@@ -890,7 +890,7 @@ defmodule Lightning.Projects do
   def list_project_files(%Project{id: project_id}, opts \\ []) do
     sort_order = Keyword.get(opts, :sort, :desc)
 
-    from(pf in ProjectFile,
+    from(pf in File,
       where: pf.project_id == ^project_id,
       order_by: [{^sort_order, pf.inserted_at}],
       preload: [:created_by]
