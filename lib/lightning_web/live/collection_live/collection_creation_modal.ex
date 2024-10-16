@@ -1,9 +1,9 @@
 defmodule LightningWeb.CollectionLive.CollectionCreationModal do
-  alias Lightning.Helpers
   use LightningWeb, :live_component
 
   alias Lightning.Collections
   alias Lightning.Collections.Collection
+  alias Lightning.Helpers
   alias Lightning.Projects
 
   @impl true

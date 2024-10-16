@@ -1,7 +1,7 @@
 defmodule LightningWeb.DashboardLive.ProjectCreationModal do
-  alias Lightning.Helpers
   use LightningWeb, :live_component
 
+  alias Lightning.Helpers
   alias Lightning.Projects
   alias Lightning.Projects.Project
 
