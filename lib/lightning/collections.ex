@@ -12,15 +12,6 @@ defmodule Lightning.Collections do
                      :query_all_limit
                    ]
 
-  def url_safe_name(nil), do: ""
-
-  def url_safe_name(name) when is_binary(name) do
-    name
-    |> String.downcase()
-    |> String.replace(~r/[^a-z-_\.\d]+/, "-")
-    |> String.replace(~r/^\-+|\-+$/, "")
-  end
-
   @doc """
   Returns the list of collections with optional ordering and preloading.
 
