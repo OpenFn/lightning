@@ -447,8 +447,8 @@ defmodule Lightning.WorkOrders do
           | UsageLimiting.error()
           | {:error, :enqueue_error}
   def retry_many([%WorkOrder{} | _rest] = workorders, opts) do
-    {retriable_workorders, non_retriable_workorders} =
-      workorders |> Enum.map(& &1.id) |> fetch_and_split_workorders()
+    retriable_workorders =
+      workorders |> Enum.map(& &1.id) |> fetch_retriable_workorders()
 
     with project_id <- Keyword.fetch!(opts, :project_id),
          :ok <-
@@ -476,7 +476,7 @@ defmodule Lightning.WorkOrders do
       |> case do
         inserted_list when is_list(inserted_list) ->
           enqueued_count = length(retriable_workorders)
-          discarded_count = length(non_retriable_workorders)
+          discarded_count = length(workorders) - enqueued_count
 
           {:ok, enqueued_count, discarded_count}
 
@@ -669,11 +669,13 @@ defmodule Lightning.WorkOrders do
     run.starting_job || hd(workorder.trigger.edges).target_job
   end
 
-  defp fetch_and_split_workorders(workorder_ids) do
-    workorder_ids
-    |> workorders_with_dataclips_query()
+  defp fetch_retriable_workorders(workorder_ids) do
+    from(w in WorkOrder,
+      join: d in assoc(w, :dataclip),
+      where: w.id in ^workorder_ids and is_nil(d.wiped_at),
+      order_by: [asc: w.inserted_at]
+    )
     |> Repo.all()
-    |> Enum.split_with(&retriable?/1)
   end
 
   defp workorders_with_dataclips_query(workorder_ids) do
@@ -700,9 +702,5 @@ defmodule Lightning.WorkOrders do
       order_by: [asc: coalesce(r.started_at, r.inserted_at)],
       preload: [:starting_job, starting_trigger: [edges: :target_job]],
       limit: 1
-  end
-
-  defp retriable?(workorder) do
-    workorder.dataclip != nil and is_nil(workorder.dataclip.wiped_at)
   end
 end
