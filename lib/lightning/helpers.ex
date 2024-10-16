@@ -124,4 +124,33 @@ defmodule Lightning.Helpers do
       changeset
     end
   end
+
+  @doc """
+  Converts a string into a URL-safe format by converting it to lowercase,
+  replacing unwanted characters with hyphens, and trimming leading/trailing hyphens.
+
+  This function allows international characters, which will be automatically
+  percent-encoded in URLs by browsers.
+
+  ## Parameters
+
+    - `name`: The string to convert. If `nil` is passed, it returns an empty string.
+
+  ## Examples
+
+      iex> url_safe_name("My Project!!")
+      "my-project"
+
+      iex> url_safe_name(nil)
+      ""
+  """
+  @spec url_safe_name(String.t() | nil) :: String.t()
+  def url_safe_name(nil), do: ""
+
+  def url_safe_name(name) when is_binary(name) do
+    name
+    |> String.downcase()
+    |> String.replace(~r/[^\p{L}0-9_\.\-]+/u, "-")
+    |> String.trim("-")
+  end
 end

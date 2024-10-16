@@ -15,6 +15,7 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   import Ecto.Changeset, only: [fetch_field!: 2]
   import LightningWeb.Components.Form
 
+  alias Lightning.Helpers
   alias Lightning.Projects
   alias Lightning.Projects.Project
 
@@ -49,7 +50,7 @@ defmodule LightningWeb.ProjectLive.FormComponent do
      |> assign(:changeset, changeset)
      |> assign(
        :name,
-       Projects.url_safe_project_name(fetch_field!(changeset, :name))
+       Helpers.url_safe_name(fetch_field!(changeset, :name))
      )}
   end
 
@@ -125,7 +126,7 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   end
 
   defp coerce_raw_name_to_safe_name(%{"raw_name" => raw_name} = params) do
-    new_name = Projects.url_safe_project_name(raw_name)
+    new_name = Helpers.url_safe_name(raw_name)
 
     params |> Map.put("name", new_name)
   end
