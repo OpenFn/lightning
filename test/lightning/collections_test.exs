@@ -40,7 +40,7 @@ defmodule Lightning.CollectionsTest do
               %{
                 errors: [
                   name:
-                    {"has already been taken",
+                    {"A collection with this name already exists",
                      [
                        constraint: :unique,
                        constraint_name: "collections_name_index"
@@ -412,9 +412,9 @@ defmodule Lightning.CollectionsTest do
   describe "create_collection/1" do
     test "creates a new collection with valid attributes" do
       %{id: project_id} = insert(:project)
-      attrs = %{name: "New Collection", project_id: project_id}
+      attrs = %{name: "new-collection", project_id: project_id}
 
-      assert {:ok, %Collection{name: "New Collection"}} =
+      assert {:ok, %Collection{name: "new-collection"}} =
                Collections.create_collection(attrs)
     end
 
@@ -431,9 +431,9 @@ defmodule Lightning.CollectionsTest do
   describe "update_collection/2" do
     test "updates an existing collection with valid attributes" do
       collection = insert(:collection, name: "Old Name")
-      attrs = %{name: "Updated Name"}
+      attrs = %{name: "updated-name"}
 
-      assert {:ok, %Collection{name: "Updated Name"}} =
+      assert {:ok, %Collection{name: "updated-name"}} =
                Collections.update_collection(collection, attrs)
     end
 
