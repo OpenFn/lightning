@@ -86,19 +86,43 @@ defmodule Lightning.CollectionsTest do
   end
 
   describe "stream_all/3" do
-    test "returns all items for the given collection" do
+    test "returns all items for the given collection sorted by upsert timestamp" do
       collection = insert(:collection)
-      items = insert_list(12, :collection_item, collection: collection)
+
+      items =
+        1..11
+        |> Enum.map(fn _i ->
+          insert(:collection_item,
+            key: "rkey#{:rand.uniform()}",
+            collection: collection
+          )
+        end)
+
+      orig_first = List.first(items)
+      :ok = Collections.put(collection, orig_first.key, "new value for last")
+
+      new_last =
+        Repo.get_by!(Item,
+          collection_id: collection.id,
+          key: orig_first.key
+        )
+        |> Repo.preload(collection: :project)
 
       Repo.transaction(fn ->
         assert stream = Collections.stream_all(collection)
-        assert stream_items = Stream.take(stream, 15)
 
-        assert MapSet.new(items) ==
-                 stream_items
+        assert stream_items =
+                 stream
+                 |> Stream.take(15)
                  |> Enum.to_list()
                  |> Repo.preload(collection: :project)
-                 |> MapSet.new()
+
+        assert List.last(stream_items) == new_last
+
+        assert MapSet.new(Enum.reject(items, &(&1.key == orig_first.key))) ==
+                 MapSet.new(
+                   Enum.reject(stream_items, &(&1.key == orig_first.key))
+                 )
       end)
     end
 
@@ -176,7 +200,7 @@ defmodule Lightning.CollectionsTest do
       end)
     end
 
-    test "returns matching items for the given collection" do
+    test "returns matching items for the given collection sorted by upsert timestamp" do
       collection = insert(:collection)
 
       items =
@@ -187,7 +211,16 @@ defmodule Lightning.CollectionsTest do
             collection: collection
           )
         end)
-        |> Enum.sort_by(& &1.key)
+
+        orig_first = List.first(items)
+        :ok = Collections.put(collection, orig_first.key, "new value for last")
+
+        new_last =
+          Repo.get_by!(Item,
+            collection_id: collection.id,
+            key: orig_first.key
+          )
+          |> Repo.preload(collection: :project)
 
       for _i <- 1..5,
           do:
@@ -199,12 +232,14 @@ defmodule Lightning.CollectionsTest do
       Repo.transaction(fn ->
         assert stream = Collections.stream_match(collection, "rkeyA*")
         assert stream_items = Stream.take(stream, 12)
+        |> Enum.to_list()
+        |> Repo.preload(collection: :project)
 
-        assert MapSet.new(items) ==
-                 stream_items
-                 |> Enum.to_list()
-                 |> Repo.preload(collection: :project)
-                 |> MapSet.new()
+        assert List.last(stream_items) == new_last
+        assert MapSet.new(Enum.reject(items, &(&1.key == orig_first.key))) ==
+          MapSet.new(
+            Enum.reject(stream_items, &(&1.key == orig_first.key))
+          )
       end)
     end
 
@@ -320,24 +355,18 @@ defmodule Lightning.CollectionsTest do
     test "creates a new entry in the collection for the given collection" do
       collection = insert(:collection)
 
-      assert {:ok, entry} = Collections.put(collection, "key", "value")
-
-      assert entry.key == "key"
-      assert entry.value == "value"
+      assert :ok = Collections.put(collection, "some-key", "some-value")
+      assert %{key: "some-key", value: "some-value"} = Repo.get_by!(Item, key: "some-key")
     end
 
     test "updates the value of an item when key exists" do
       collection = insert(:collection)
 
-      assert {:ok, entry} = Collections.put(collection, "key", "value1")
+      assert :ok = Collections.put(collection, "some-key", "some-value1")
+      assert %{key: "some-key", value: "some-value1"} = Repo.get_by!(Item, key: "some-key")
 
-      assert entry.key == "key"
-      assert entry.value == "value1"
-
-      assert {:ok, entry} = Collections.put(collection, "key", "value2")
-
-      assert entry.key == "key"
-      assert entry.value == "value2"
+      assert :ok = Collections.put(collection, "some-key", "some-value2")
+      assert %{key: "some-key", value: "some-value2"} = Repo.get_by!(Item, key: "some-key")
     end
 
     test "returns an :error if the collection does not exist" do
