@@ -15,6 +15,12 @@ defmodule Lightning.Collections do
   @doc """
   Returns the list of collections with optional ordering and preloading.
 
+  ## Parameters
+
+    - `opts`: A keyword list of options.
+      - `:order_by` (optional): The field by which to order the results. Default is `[asc: :name]`.
+      - `:preload` (optional): A list of associations to preload. Default is `[:project]`.
+
   ## Examples
 
       iex> list_collections()
@@ -23,6 +29,9 @@ defmodule Lightning.Collections do
       iex> list_collections(order_by: [asc: :inserted_at], preload: [:project, :user])
       [%Collection{}, ...]
 
+  ## Returns
+
+    - A list of `%Collection{}` structs, preloaded and ordered as specified.
   """
   @spec list_collections(keyword()) :: [Collection.t()]
   def list_collections(opts \\ []) do
@@ -41,12 +50,57 @@ defmodule Lightning.Collections do
     end
   end
 
+  @doc """
+  Creates a new collection with the given attributes.
+
+  ## Parameters
+
+    - `attrs`: A map of attributes to create the collection.
+
+  ## Examples
+
+      iex> create_collection(%{name: "New Collection", description: "Description here"})
+      {:ok, %Collection{}}
+
+      iex> create_collection(%{name: nil})
+      {:error, %Ecto.Changeset{}}
+
+  ## Returns
+
+    - `{:ok, %Collection{}}` on success.
+    - `{:error, %Ecto.Changeset{}}` on failure due to validation errors.
+  """
+  @spec create_collection(map()) ::
+          {:ok, Collection.t()} | {:error, Ecto.Changeset.t()}
   def create_collection(attrs) do
     %Collection{}
     |> Collection.changeset(attrs)
     |> Repo.insert()
   end
 
+  @doc """
+  Updates an existing collection with the given attributes.
+
+  ## Parameters
+
+    - `collection`: The existing `%Collection{}` struct to update.
+    - `attrs`: A map of attributes to update the collection.
+
+  ## Examples
+
+      iex> update_collection(collection, %{name: "Updated Name"})
+      {:ok, %Collection{}}
+
+      iex> update_collection(collection, %{name: nil})
+      {:error, %Ecto.Changeset{}}
+
+  ## Returns
+
+    - `{:ok, %Collection{}}` on success.
+    - `{:error, %Ecto.Changeset{}}` on failure due to validation errors.
+  """
+  @spec update_collection(Collection.t(), map()) ::
+          {:ok, Collection.t()} | {:error, Ecto.Changeset.t()}
   def update_collection(collection, attrs) do
     collection
     |> Collection.changeset(attrs)
