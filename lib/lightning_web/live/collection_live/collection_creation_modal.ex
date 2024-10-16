@@ -1,4 +1,5 @@
 defmodule LightningWeb.CollectionLive.CollectionCreationModal do
+  alias Lightning.Helpers
   use LightningWeb, :live_component
 
   alias Lightning.Collections
@@ -82,7 +83,7 @@ defmodule LightningWeb.CollectionLive.CollectionCreationModal do
   end
 
   defp coerce_raw_name_to_safe_name(%{"raw_name" => raw_name} = params) do
-    new_name = Collections.url_safe_name(raw_name)
+    new_name = Helpers.url_safe_name(raw_name)
 
     params |> Map.put("name", new_name)
   end
