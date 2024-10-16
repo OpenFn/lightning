@@ -796,6 +796,16 @@ defmodule Lightning.Accounts do
   @doc """
   Gets the user with the given signed token.
   """
+  def get_user_by_api_token(claims) when is_map(claims) do
+    case claims do
+      %{sub: "user:" <> id} ->
+        Repo.get(User, id)
+
+      _ ->
+        nil
+    end
+  end
+
   def get_user_by_api_token(token) do
     {:ok, query} = UserToken.verify_token_query(token, "api")
     Repo.one(query)

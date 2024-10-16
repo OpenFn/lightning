@@ -57,8 +57,15 @@ defmodule Lightning.Accounts.UserToken do
   def build_token(user, "api" = context) do
     token =
       Joken.generate_and_sign!(
-        default_claims(iss: "Lightning", skip: [:exp, :aud]),
-        %{"user_id" => user.id, "sub" => "user:#{user.id}"}
+        default_claims(
+          iss: "Lightning",
+          skip: [:exp, :aud, :nbf]
+        ),
+        %{
+          "sub" => "user:#{user.id}",
+          "iat" => Lightning.current_time() |> DateTime.to_unix()
+        },
+        Lightning.Config.token_signer()
       )
 
     {token,
