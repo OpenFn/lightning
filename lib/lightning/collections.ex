@@ -73,13 +73,17 @@ defmodule Lightning.Collections do
   end
 
   @spec put(Collection.t(), String.t(), String.t()) ::
-          {:ok, Item.t()} | {:error, Ecto.Changeset.t()}
+          :ok | {:error, Ecto.Changeset.t()}
   def put(%{id: collection_id}, key, value) do
-    with nil <- Repo.get_by(Item, collection_id: collection_id, key: key) do
-      %Item{}
-    end
+    %Item{}
     |> Item.changeset(%{collection_id: collection_id, key: key, value: value})
-    |> Repo.insert_or_update()
+    |> Repo.insert(
+      conflict_target: [:collection_id, :key],
+      on_conflict: [set: [value: value, updated_at: NaiveDateTime.utc_now()]]
+    )
+    |> then(fn result ->
+      with {:ok, _no_return} <- result, do: :ok
+    end)
   end
 
   @spec delete(Collection.t(), String.t()) ::
@@ -94,6 +98,7 @@ defmodule Lightning.Collections do
   defp stream_query(collection_id, cursor, limit) do
     Item
     |> where([i], i.collection_id == ^collection_id)
+    |> order_by([i], asc: i.updated_at)
     |> limit(^limit)
     |> then(fn query ->
       case cursor do
