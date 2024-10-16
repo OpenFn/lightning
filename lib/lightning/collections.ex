@@ -22,16 +22,23 @@ defmodule Lightning.Collections do
   end
 
   @doc """
-  Returns the list of collections.
+  Returns the list of collections with optional ordering and preloading.
 
   ## Examples
 
       iex> list_collections()
       [%Collection{}, ...]
 
+      iex> list_collections(order_by: [asc: :inserted_at], preload: [:project, :user])
+      [%Collection{}, ...]
+
   """
-  def list_collections do
-    Repo.all(from(c in Collection, order_by: c.name, preload: :project))
+  @spec list_collections(keyword()) :: [Collection.t()]
+  def list_collections(opts \\ []) do
+    order_by = Keyword.get(opts, :order_by, asc: :name)
+    preload = Keyword.get(opts, :preload, [:project])
+
+    Repo.all(from(c in Collection, order_by: ^order_by, preload: ^preload))
   end
 
   @spec get_collection(String.t()) ::
