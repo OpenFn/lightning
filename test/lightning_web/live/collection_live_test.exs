@@ -104,6 +104,24 @@ defmodule LightningWeb.CollectionLiveTest do
       assert html =~ "new-collection"
       assert html =~ project.name
     end
+
+    test "Canceling collection creation modal closes the modal", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/settings/collections")
+
+      assert has_element?(view, "#collection-form-new")
+
+      view
+      |> form("#collection-form-new", collection: %{raw_name: "New Collection"})
+      |> render_change()
+
+      {:ok, _view, html} =
+        view
+        |> element("#cancel-collection-creation-new")
+        |> render_click()
+        |> follow_redirect(conn, ~p"/settings/collections")
+
+      refute html =~ "new-collection"
+    end
   end
 
   defp get_sorted_collection_names(view) do
