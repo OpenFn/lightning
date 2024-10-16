@@ -122,6 +122,61 @@ defmodule LightningWeb.CollectionLiveTest do
 
       refute html =~ "new-collection"
     end
+
+    test "Superuser can update a collection via the modal", %{
+      conn: conn,
+      user: user
+    } do
+      project = insert(:project, project_users: [%{user: user}])
+      collection = insert(:collection, name: "Old Collection", project: project)
+
+      {:ok, view, _html} = live(conn, ~p"/settings/collections")
+
+      assert has_element?(view, "#collection-form-#{collection.id}")
+
+      view
+      |> form("#collection-form-#{collection.id}",
+        collection: %{raw_name: "Updated Collection"}
+      )
+      |> render_change()
+
+      assert has_element?(view, "input[type='text'][value='updated-collection']")
+
+      {:ok, _view, html} =
+        view
+        |> form("#collection-form-#{collection.id}",
+          collection: %{raw_name: "Updated Collection", project_id: project.id}
+        )
+        |> render_submit()
+        |> follow_redirect(conn, ~p"/settings/collections")
+
+      assert html =~ "Collection updated successfully"
+      assert html =~ "updated-collection"
+      assert html =~ project.name
+    end
+
+    test "Creating a collection with a name that already exists fails", %{
+      conn: conn,
+      user: user
+    } do
+      project = insert(:project, project_users: [%{user: user}])
+
+      collection = insert(:collection, name: "duplicate-name", project: project)
+
+      {:ok, view, _html} = live(conn, ~p"/settings/collections")
+
+      assert has_element?(view, "#collection-form-new")
+
+      view
+      |> form("#collection-form-new",
+        collection: %{raw_name: collection.name, project_id: project.id}
+      )
+      |> render_change()
+
+      view
+      |> form("#collection-form-new")
+      |> render_submit() =~ "A collection with this name already exists"
+    end
   end
 
   defp get_sorted_collection_names(view) do
