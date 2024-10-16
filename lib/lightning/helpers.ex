@@ -89,4 +89,39 @@ defmodule Lightning.Helpers do
   def json_safe(a) when is_atom(a) and not is_boolean(a), do: Atom.to_string(a)
 
   def json_safe(any), do: any
+
+  @doc """
+  Copies an error from one key to another in the given changeset.
+
+  ## Parameters
+
+    - `changeset`: The changeset to modify.
+    - `original_key`: The key where the error currently exists.
+    - `new_key`: The key where the error should be duplicated.
+    - `opts`: A keyword list of options. Supports `overwrite`, which is a boolean indicating whether to overwrite the `new_key` error if it already exists. Defaults to `true`.
+
+  ## Example
+
+      iex> changeset = %Ecto.Changeset{errors: [name: {"has already been taken", []}]}
+      iex> updated_changeset = Lightning.Helpers.copy_error(changeset, :name, :raw_name)
+      iex> updated_changeset.errors
+      [name: {"has already been taken", []}, raw_name: {"has already been taken", []}]
+
+  If the `original_key` doesn't exist in the errors, or if the `new_key` already exists and `overwrite` is set to `false`, the changeset is returned unchanged.
+  """
+  def copy_error(changeset, original_key, new_key, opts \\ [overwrite: true]) do
+    overwrite = Keyword.get(opts, :overwrite, true)
+
+    if Keyword.has_key?(changeset.errors, original_key) do
+      {error_msg, error_opts} = Keyword.fetch!(changeset.errors, original_key)
+
+      if Keyword.has_key?(changeset.errors, new_key) and not overwrite do
+        changeset
+      else
+        Ecto.Changeset.add_error(changeset, new_key, error_msg, error_opts)
+      end
+    else
+      changeset
+    end
+  end
 end
