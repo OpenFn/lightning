@@ -19,6 +19,8 @@ and this project adheres to
 
 - Notify users when a Kafka trigger can not persist a message to the database.
   [#2386](https://github.com/OpenFn/lightning/issues/2386)
+- Support `kafka` trigger type in the provisioner
+  [#2506](https://github.com/OpenFn/lightning/issues/2506)
 
 ### Changed
 
