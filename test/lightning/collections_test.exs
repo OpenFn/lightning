@@ -379,4 +379,72 @@ defmodule Lightning.CollectionsTest do
                Collections.delete(collection, "nonexistent")
     end
   end
+
+  describe "list_collections/1" do
+    test "returns a list of collections with default ordering and preloading" do
+      collection1 = insert(:collection, name: "B Collection")
+      collection2 = insert(:collection, name: "A Collection")
+
+      result = Collections.list_collections()
+
+      assert Enum.map(result, & &1.id) == [collection2.id, collection1.id]
+    end
+
+    test "returns collections ordered by specified field" do
+      collection1 = insert(:collection, inserted_at: ~N[2024-01-01 00:00:00])
+      collection2 = insert(:collection, inserted_at: ~N[2024-02-01 00:00:00])
+
+      result = Collections.list_collections(order_by: [asc: :inserted_at])
+
+      assert Enum.map(result, & &1.id) == [collection1.id, collection2.id]
+    end
+
+    test "preloads specified associations" do
+      project = insert(:project)
+      insert(:collection, project: project)
+
+      result = Collections.list_collections(preload: [:project])
+
+      assert Enum.map(result, & &1.project.id) == [project.id]
+    end
+  end
+
+  describe "create_collection/1" do
+    test "creates a new collection with valid attributes" do
+      %{id: project_id} = insert(:project)
+      attrs = %{name: "New Collection", project_id: project_id}
+
+      assert {:ok, %Collection{name: "New Collection"}} =
+               Collections.create_collection(attrs)
+    end
+
+    test "returns an error if invalid attributes are provided" do
+      attrs = %{name: nil}
+
+      assert {:error, changeset} = Collections.create_collection(attrs)
+
+      assert %{name: ["can't be blank"], project_id: ["can't be blank"]} ==
+               errors_on(changeset)
+    end
+  end
+
+  describe "update_collection/2" do
+    test "updates an existing collection with valid attributes" do
+      collection = insert(:collection, name: "Old Name")
+      attrs = %{name: "Updated Name"}
+
+      assert {:ok, %Collection{name: "Updated Name"}} =
+               Collections.update_collection(collection, attrs)
+    end
+
+    test "returns an error if invalid attributes are provided" do
+      collection = insert(:collection)
+      attrs = %{name: nil}
+
+      assert {:error, changeset} =
+               Collections.update_collection(collection, attrs)
+
+      assert %{name: ["can't be blank"]} == errors_on(changeset)
+    end
+  end
 end
