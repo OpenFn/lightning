@@ -696,8 +696,8 @@ defmodule Lightning.Accounts do
   Gets the user with the given signed token.
   """
   def get_user_by_session_token(token) do
-    {:ok, query} = UserToken.verify_token_query(token, "session")
-    Repo.one(query)
+    UserToken.verify_token_query(token, "session")
+    |> Repo.one()
   end
 
   @doc """
@@ -723,8 +723,7 @@ defmodule Lightning.Accounts do
   Checks if the given sudo token for the user is valid
   """
   def sudo_session_token_valid?(user, token) do
-    {:ok, token_query} =
-      UserToken.verify_token_query(token, "sudo_session")
+    token_query = UserToken.verify_token_query(token, "sudo_session")
 
     query = from t in token_query, where: t.user_id == ^user.id
     Repo.exists?(query)
@@ -770,8 +769,8 @@ defmodule Lightning.Accounts do
   Gets the user with the given signed token.
   """
   def get_user_by_auth_token(token) do
-    {:ok, query} = UserToken.verify_token_query(token, "auth")
-    Repo.one(query)
+    UserToken.verify_token_query(token, "auth")
+    |> Repo.one()
   end
 
   @doc """
@@ -807,8 +806,8 @@ defmodule Lightning.Accounts do
   end
 
   def get_user_by_api_token(token) do
-    {:ok, query} = UserToken.verify_token_query(token, "api")
-    Repo.one(query)
+    UserToken.verify_token_query(token, "api")
+    |> Repo.one()
   end
 
   @doc """

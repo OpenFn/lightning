@@ -102,48 +102,36 @@ defmodule Lightning.Accounts.UserToken do
   not expired (after @auth_validity_in_seconds or @session_validity_in_days).
   """
   def verify_token_query(token, "auth" = context) do
-    query =
-      from(token in token_and_context_query(token, context),
-        join: user in assoc(token, :user),
-        where: token.inserted_at > ago(@auth_validity_in_seconds, "second"),
-        select: user
-      )
-
-    {:ok, query}
+    from(token in token_and_context_query(token, context),
+      join: user in assoc(token, :user),
+      where: token.inserted_at > ago(@auth_validity_in_seconds, "second"),
+      select: user
+    )
   end
 
   def verify_token_query(token, "api" = context) do
-    query =
-      from(token in token_and_context_query(token, context),
-        join: user in assoc(token, :user),
-        select: user
-      )
-
-    {:ok, query}
+    from(token in token_and_context_query(token, context),
+      join: user in assoc(token, :user),
+      select: user
+    )
   end
 
   def verify_token_query(token, "session" = context) do
-    query =
-      from(token in token_and_context_query(token, context),
-        join: user in assoc(token, :user),
-        where: token.inserted_at > ago(@session_validity_in_days, "day"),
-        select: user
-      )
-
-    {:ok, query}
+    from(token in token_and_context_query(token, context),
+      join: user in assoc(token, :user),
+      where: token.inserted_at > ago(@session_validity_in_days, "day"),
+      select: user
+    )
   end
 
   def verify_token_query(token, "sudo_session" = context) do
-    query =
-      from(token in token_and_context_query(token, context),
-        join: user in assoc(token, :user),
-        where:
-          token.inserted_at >
-            ago(@sudo_session_validity_in_seconds, "second"),
-        select: user
-      )
-
-    {:ok, query}
+    from(token in token_and_context_query(token, context),
+      join: user in assoc(token, :user),
+      where:
+        token.inserted_at >
+          ago(@sudo_session_validity_in_seconds, "second"),
+      select: user
+    )
   end
 
   @doc """
