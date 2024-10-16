@@ -10,6 +10,7 @@ defmodule LightningWeb.CollectionLive.Index do
 
   require Logger
 
+  @impl true
   def mount(_params, _session, socket) do
     can_access_admin_space =
       Users
@@ -32,6 +33,25 @@ defmodule LightningWeb.CollectionLive.Index do
     end
   end
 
+  @impl true
+  def handle_event("sort", %{"by" => field}, socket) do
+    sort_key = String.to_atom("#{field}_sort_direction")
+    sort_direction = Map.get(socket.assigns, sort_key, :asc)
+    new_sort_direction = switch_sort_direction(sort_direction)
+
+    order_column = map_sort_field_to_column(field)
+
+    collections =
+      Collections.list_collections(
+        order_by: [{new_sort_direction, order_column}]
+      )
+
+    {:noreply,
+     socket
+     |> assign(:collections, collections)
+     |> assign(sort_key, new_sort_direction)}
+  end
+
   def handle_event("delete_collection", %{"collection" => collection_id}, socket) do
     case Collections.delete_collection(collection_id) do
       {:ok, _collection} ->
@@ -50,6 +70,12 @@ defmodule LightningWeb.CollectionLive.Index do
     end
   end
 
+  defp switch_sort_direction(:asc), do: :desc
+  defp switch_sort_direction(:desc), do: :asc
+
+  defp map_sort_field_to_column("name"), do: :name
+
+  @impl true
   def render(assigns) do
     ~H"""
     <LayoutComponents.page_content>
