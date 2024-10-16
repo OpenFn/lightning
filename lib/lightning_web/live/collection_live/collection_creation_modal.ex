@@ -42,7 +42,10 @@ defmodule LightningWeb.CollectionLive.CollectionCreationModal do
 
     {:noreply,
      socket
-     |> assign(:changeset, changeset)
+     |> assign(
+       :changeset,
+       Lightning.Helpers.copy_error(changeset, :name, :raw_name)
+     )
      |> assign(:name, Ecto.Changeset.fetch_field!(changeset, :name))}
   end
 
@@ -69,7 +72,12 @@ defmodule LightningWeb.CollectionLive.CollectionCreationModal do
          |> push_navigate(to: return_to)}
 
       {:error, changeset} ->
-        {:noreply, assign(socket, :changeset, changeset)}
+        {:noreply,
+         assign(
+           socket,
+           :changeset,
+           Lightning.Helpers.copy_error(changeset, :name, :raw_name)
+         )}
     end
   end
 
