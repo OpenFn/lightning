@@ -17,8 +17,6 @@ and this project adheres to
 
 ### Added
 
-- Notify users when a Kafka trigger can not persist a message to the database.
-  [#2386](https://github.com/OpenFn/lightning/issues/2386)
 - Projects page welcome section: allow users to learn how to use the app thru
   Arcade videos [#2563](https://github.com/OpenFn/lightning/issues/2563)
 - Store user preferences in database
@@ -28,6 +26,19 @@ and this project adheres to
 
 ### Fixed
 
+## [v2.9.10] - 2024-10-16
+
+### Added
+
+- Notify users when a Kafka trigger can not persist a message to the database.
+  [#2386](https://github.com/OpenFn/lightning/issues/2386)
+- Support `kafka` trigger type in the provisioner
+  [#2506](https://github.com/OpenFn/lightning/issues/2506)
+
+### Fixed
+
+- Fix work order retry sorting and avoids loading dataclips
+  [#2581](https://github.com/OpenFn/lightning/issues/2581)
 - Fix editor panel overlays output panel when scrolled
   [#2291](https://github.com/OpenFn/lightning/issues/2291)
 

@@ -55,26 +55,27 @@ defmodule Lightning.Workflows.Trigger do
 
   @doc false
   def changeset(trigger, attrs) do
-    changeset =
-      trigger
-      |> cast(attrs, [
-        :id,
-        :comment,
-        :custom_path,
-        :enabled,
-        :type,
-        :workflow_id,
-        :cron_expression,
-        :has_auth_method
-      ])
-      |> cast_embed(
-        :kafka_configuration,
-        required: false,
-        with: &KafkaConfiguration.changeset/2
-      )
-
-    changeset
+    trigger
+    |> cast_changeset(attrs)
+    |> cast_embed(
+      :kafka_configuration,
+      required: false,
+      with: &KafkaConfiguration.changeset/2
+    )
     |> validate()
+  end
+
+  def cast_changeset(trigger, attrs) do
+    cast(trigger, attrs, [
+      :id,
+      :comment,
+      :custom_path,
+      :enabled,
+      :type,
+      :workflow_id,
+      :cron_expression,
+      :has_auth_method
+    ])
   end
 
   def validate(changeset) do

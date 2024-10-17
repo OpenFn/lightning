@@ -782,6 +782,49 @@ defmodule Lightning.ProjectsTest do
       assert generated_yaml =~ expected_yaml
     end
 
+    test "kafka triggers are included in the export" do
+      project = insert(:project, name: "project 1")
+
+      trigger =
+        build(:trigger,
+          type: :kafka,
+          kafka_configuration: %{
+            hosts: [["localhost", "9092"]],
+            topics: ["dummy"],
+            initial_offset_reset_policy: "earliest"
+          }
+        )
+
+      job =
+        build(:job,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      build(:workflow, name: "workflow 1", project: project)
+      |> with_trigger(trigger)
+      |> with_job(job)
+      |> with_edge({trigger, job}, condition_type: :always)
+      |> insert()
+
+      expected_yaml_trigger = """
+          triggers:
+            kafka:
+              type: kafka
+              enabled: true
+              kafka_configuration:
+                hosts:
+                  - 'localhost:9092'
+                topics:
+                  - dummy
+                initial_offset_reset_policy: earliest
+                connect_timeout: 30
+      """
+
+      assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
+
+      assert generated_yaml =~ expected_yaml_trigger
+    end
+
     test "exports canonical project" do
       project =
         canonical_project_fixture(

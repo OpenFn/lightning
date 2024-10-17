@@ -70,6 +70,57 @@ defmodule Lightning.Projects.ProvisionerTest do
                base: ["extraneous parameters: baz, foo"]
              }
     end
+
+    test "with sensitive kafka trigger fields" do
+      %{body: body} = valid_document()
+
+      body =
+        body
+        |> Map.update!("workflows", fn workflows ->
+          workflows
+          |> Enum.map(fn workflow ->
+            workflow
+            |> Map.update!("triggers", fn [trigger] ->
+              [
+                Map.merge(trigger, %{
+                  "type" => "kafka",
+                  "kafka_configuration" => %{
+                    "hosts" => [["localhost", "9092"]],
+                    "topics" => ["topic"],
+                    "initial_offset_reset_policy" => "earliest",
+                    "username" => "heyoo",
+                    "password" => "secret"
+                  }
+                })
+              ]
+            end)
+          end)
+        end)
+
+      changeset =
+        Provisioner.parse_document(%Lightning.Projects.Project{}, body)
+
+      assert %{
+               workflows: [
+                 %{
+                   triggers: [
+                     %{
+                       kafka_configuration: %{
+                         username: [
+                           "credentials can only be changed through the dashboard"
+                           | _
+                         ],
+                         password: [
+                           "credentials can only be changed through the dashboard"
+                           | _
+                         ]
+                       }
+                     }
+                   ]
+                 }
+               ]
+             } = flatten_errors(changeset)
+    end
   end
 
   describe "import_document/2 with a new project" do

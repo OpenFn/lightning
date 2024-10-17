@@ -24,6 +24,7 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
+  alias Lightning.Workflows.Triggers.KafkaConfiguration
   alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.WorkflowUsageLimiter
 
@@ -198,12 +199,29 @@ defmodule Lightning.Projects.Provisioner do
 
   defp trigger_changeset(trigger, attrs) do
     trigger
-    |> Trigger.changeset(attrs)
+    |> Trigger.cast_changeset(attrs)
+    |> cast_embed(
+      :kafka_configuration,
+      required: false,
+      with: &kafka_config_changeset/2
+    )
+    |> Trigger.validate()
     |> cast(attrs, [:delete])
     |> validate_required([:id])
     |> unique_constraint(:id, name: :triggers_pkey)
     |> validate_extraneous_params()
     |> maybe_mark_for_deletion()
+  end
+
+  defp kafka_config_changeset(kafka_config, attrs) do
+    kafka_config
+    |> KafkaConfiguration.changeset(attrs)
+    |> validate_change(:username, fn :username, _change ->
+      [username: "credentials can only be changed through the dashboard"]
+    end)
+    |> validate_change(:password, fn :password, _change ->
+      [password: "credentials can only be changed through the dashboard"]
+    end)
   end
 
   defp edge_changeset(edge, attrs) do
