@@ -1,4 +1,5 @@
 defmodule LightningWeb.DashboardLiveTest do
+  require Ecto.Query
   use LightningWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
@@ -131,6 +132,36 @@ defmodule LightningWeb.DashboardLiveTest do
                  formatted_date
                )
       end)
+    end
+
+    test "projects list do not count deleted workflows", %{
+      conn: conn,
+      user: user
+    } do
+      project = insert(:project, project_users: [%{user: user, role: :owner}])
+
+      insert_list(2, :simple_workflow, project: project)
+
+      insert(:workflow, deleted_at: Timex.now(), project: project)
+
+      import Ecto.Query
+
+      workflows_count =
+        from(w in Ecto.assoc(project, :workflows),
+          or_where: not is_nil(w.deleted_at),
+          select: count(w)
+        )
+        |> Repo.one()
+
+      {:ok, view, _html} = live(conn, ~p"/projects")
+
+      assert has_element?(view, "tr#projects-table-row-#{project.id}")
+
+      assert has_element?(
+               view,
+               "tr#projects-table-row-#{project.id} > td:nth-child(3)",
+               "#{workflows_count - 1}"
+             )
     end
 
     test "User can create a new project", %{conn: conn, user: user} do
