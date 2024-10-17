@@ -33,6 +33,8 @@ and this project adheres to
 
 - Fix retry many workorders when built for job
   [#2597](https://github.com/OpenFn/lightning/issues/2597)
+- Do not count deleted workflows in the projects table
+  [#2540](https://github.com/OpenFn/lightning/issues/2540)
 
 ## [v2.9.10] - 2024-10-16
 
