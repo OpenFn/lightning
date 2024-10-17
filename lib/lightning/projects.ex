@@ -16,6 +16,7 @@ defmodule Lightning.Projects do
   alias Lightning.ExportUtils
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
+  alias Lightning.Projects.Audit
   alias Lightning.Projects.Events
   alias Lightning.Projects.File
   alias Lightning.Projects.Project
@@ -286,23 +287,49 @@ defmodule Lightning.Projects do
       {:error, %Ecto.Changeset{}}
 
   """
-  def update_project(%Project{} = project, attrs) do
+  def update_project(%Project{} = project, attrs, user \\ nil) do
     changeset =
       project
       |> Project.changeset(attrs)
       |> ProjectHook.handle_project_validation()
 
-    case Repo.update(changeset) do
-      {:ok, updated_project} ->
+    Multi.new()
+    |> Multi.update(:project, changeset)
+    |> maybe_audit_changes(changeset, user)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{project: updated_project}} ->
         if retention_setting_updated?(changeset) do
           send_data_retention_change_email(updated_project)
         end
 
         {:ok, updated_project}
 
-      error ->
-        error
+      {:error, :project, changeset, _changes_so_far} ->
+        {:error, changeset}
+
+      # 2024-10-29 Not tested at module-level
+      # due to the difficulty of simulating a failure
+      # without mocking
+      {:error, _operation, _changeset, _changes_so_far} ->
+        {:error, :not_related_to_project}
     end
+  end
+
+  defp maybe_audit_changes(multi, _changeset, nil), do: multi
+
+  defp maybe_audit_changes(multi, changeset, user) do
+    multi
+    |> Multi.merge(
+      Audit,
+      :history_retention_auditing_operation,
+      [changeset, user]
+    )
+    |> Multi.merge(
+      Audit,
+      :dataclip_retention_auditing_operation,
+      [changeset, user]
+    )
   end
 
   @spec update_project_with_users(Project.t(), map(), boolean()) ::

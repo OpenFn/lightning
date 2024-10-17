@@ -65,9 +65,12 @@ defmodule LightningWeb.WorkerChannelTest do
 
       ref = push(socket, "claim", %{"demand" => 1})
 
-      assert_reply ref, :ok, %{
-        runs: [%{"id" => ^run_id, "token" => token}]
-      }
+      assert_reply ref,
+                   :ok,
+                   %{
+                     runs: [%{"id" => ^run_id, "token" => token}]
+                   },
+                   1_000
 
       Lightning.Stub.freeze_time(DateTime.utc_now() |> DateTime.add(5, :second))
 
