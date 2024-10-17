@@ -177,130 +177,6 @@ defmodule Lightning.ProjectsTest do
                Projects.create_project(%{"name" => "Can't have spaces!"})
     end
 
-    test "update_project/2 with valid data updates the project" do
-      project = project_fixture()
-      update_attrs = %{name: "some-updated-name"}
-
-      assert {:ok, %Project{} = project} =
-               Projects.update_project(project, update_attrs)
-
-      assert project.name == "some-updated-name"
-    end
-
-    test "update_project/2 updates the MFA requirement" do
-      project = insert(:project)
-
-      refute project.requires_mfa
-      update_attrs = %{requires_mfa: true}
-
-      assert {:ok, %Project{} = project} =
-               Projects.update_project(project, update_attrs)
-
-      assert project.requires_mfa
-    end
-
-    test "update_project/2 updates the data retention periods" do
-      project =
-        insert(:project,
-          project_users:
-            Enum.map(
-              [
-                :viewer,
-                :editor,
-                :admin,
-                :owner
-              ],
-              fn role -> build(:project_user, user: build(:user), role: role) end
-            )
-        )
-
-      update_attrs = %{
-        history_retention_period: 14,
-        dataclip_retention_period: 7
-      }
-
-      assert {:ok, %Project{} = updated_project} =
-               Projects.update_project(project, update_attrs)
-
-      # admins and owners receives an email
-      admins =
-        Enum.filter(project.project_users, fn %{role: role} ->
-          role in [:admin, :owner]
-        end)
-
-      assert Enum.count(admins) == 2
-
-      %{subject: subject, body: body} = data_retention_email(updated_project)
-
-      for %{user: user} <- admins do
-        email = Swoosh.Email.Recipient.format(user)
-
-        assert_receive {:email,
-                        %Swoosh.Email{
-                          subject: ^subject,
-                          to: [^email],
-                          text_body: ^body
-                        }}
-      end
-
-      # editors and viewers do not receive any email
-      non_admins =
-        Enum.filter(project.project_users, fn %{role: role} ->
-          role in [:editor, :viewer]
-        end)
-
-      assert Enum.count(non_admins) == 2
-
-      for %{user: %{email: email}} <- non_admins do
-        refute_receive {:email,
-                        %Swoosh.Email{
-                          subject: ^subject,
-                          to: [{"", ^email}],
-                          text_body: ^body
-                        }}
-
-        # data_retention_email(user, updated_project) |> assert_email_not_sent()
-      end
-
-      # no email is sent when there's no change
-      assert {:ok, updated_project} =
-               Projects.update_project(updated_project, update_attrs)
-
-      for %{user: %{email: email}} <- project.project_users do
-        refute_receive {:email,
-                        %Swoosh.Email{
-                          subject: ^subject,
-                          to: [{"", ^email}],
-                          text_body: ^body
-                        }}
-      end
-
-      # no email is sent when there's an error in the changeset
-      assert {:error, _changeset} =
-               Projects.update_project(updated_project, %{
-                 history_retention_period: "xyz",
-                 dataclip_retention_period: 7
-               })
-
-      for %{user: %{email: email}} <- project.project_users do
-        refute_receive {:email,
-                        %Swoosh.Email{
-                          subject: ^subject,
-                          to: [{"", ^email}],
-                          text_body: ^body
-                        }}
-      end
-    end
-
-    test "update_project/2 with invalid data returns error changeset" do
-      project = project_fixture() |> unload_relation(:project_users)
-
-      assert {:error, %Ecto.Changeset{}} =
-               Projects.update_project(project, @invalid_attrs)
-
-      assert project == Projects.get_project!(project.id)
-    end
-
     test "update_project_user/2 with valid data updates the project_user" do
       project =
         project_fixture(
@@ -1683,6 +1559,132 @@ defmodule Lightning.ProjectsTest do
         |> Enum.sort()
 
       assert actual_emails == expected_emails
+    end
+  end
+
+  describe ".update_project/2" do
+    test "update_project/2 with valid data updates the project" do
+      project = project_fixture()
+      update_attrs = %{name: "some-updated-name"}
+
+      assert {:ok, %Project{} = project} =
+               Projects.update_project(project, update_attrs)
+
+      assert project.name == "some-updated-name"
+    end
+
+    test "update_project/2 updates the MFA requirement" do
+      project = insert(:project)
+
+      refute project.requires_mfa
+      update_attrs = %{requires_mfa: true}
+
+      assert {:ok, %Project{} = project} =
+               Projects.update_project(project, update_attrs)
+
+      assert project.requires_mfa
+    end
+
+    test "update_project/2 updates the data retention periods" do
+      project =
+        insert(:project,
+          project_users:
+            Enum.map(
+              [
+                :viewer,
+                :editor,
+                :admin,
+                :owner
+              ],
+              fn role -> build(:project_user, user: build(:user), role: role) end
+            )
+        )
+
+      update_attrs = %{
+        history_retention_period: 14,
+        dataclip_retention_period: 7
+      }
+
+      assert {:ok, %Project{} = updated_project} =
+               Projects.update_project(project, update_attrs)
+
+      # admins and owners receives an email
+      admins =
+        Enum.filter(project.project_users, fn %{role: role} ->
+          role in [:admin, :owner]
+        end)
+
+      assert Enum.count(admins) == 2
+
+      %{subject: subject, body: body} = data_retention_email(updated_project)
+
+      for %{user: user} <- admins do
+        email = Swoosh.Email.Recipient.format(user)
+
+        assert_receive {:email,
+                        %Swoosh.Email{
+                          subject: ^subject,
+                          to: [^email],
+                          text_body: ^body
+                        }}
+      end
+
+      # editors and viewers do not receive any email
+      non_admins =
+        Enum.filter(project.project_users, fn %{role: role} ->
+          role in [:editor, :viewer]
+        end)
+
+      assert Enum.count(non_admins) == 2
+
+      for %{user: %{email: email}} <- non_admins do
+        refute_receive {:email,
+                        %Swoosh.Email{
+                          subject: ^subject,
+                          to: [{"", ^email}],
+                          text_body: ^body
+                        }}
+
+        # data_retention_email(user, updated_project) |> assert_email_not_sent()
+      end
+
+      # no email is sent when there's no change
+      assert {:ok, updated_project} =
+               Projects.update_project(updated_project, update_attrs)
+
+      for %{user: %{email: email}} <- project.project_users do
+        refute_receive {:email,
+                        %Swoosh.Email{
+                          subject: ^subject,
+                          to: [{"", ^email}],
+                          text_body: ^body
+                        }}
+      end
+
+      # no email is sent when there's an error in the changeset
+      assert {:error, _changeset} =
+               Projects.update_project(updated_project, %{
+                 history_retention_period: "xyz",
+                 dataclip_retention_period: 7
+               })
+
+      for %{user: %{email: email}} <- project.project_users do
+        refute_receive {:email,
+                        %Swoosh.Email{
+                          subject: ^subject,
+                          to: [{"", ^email}],
+                          text_body: ^body
+                        }}
+      end
+    end
+
+    test "update_project/2 with invalid data returns error changeset" do
+      project = project_fixture() |> unload_relation(:project_users)
+
+      assert {:error, %Ecto.Changeset{}} =
+               Projects.update_project(project, @invalid_attrs)
+
+      assert project == Projects.get_project!(project.id)
     end
   end
 
