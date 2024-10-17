@@ -17,6 +17,12 @@ defmodule LightningWeb.DashboardLive.Components do
     |> String.capitalize()
   end
 
+  defp count_workflows(%Project{workflows: workflows}) do
+    workflows
+    |> Enum.reject(fn workflow -> workflow.deleted_at end)
+    |> length()
+  end
+
   defp table_title(assigns) do
     ~H"""
     <h3 class="text-3xl font-bold">
@@ -96,7 +102,7 @@ defmodule LightningWeb.DashboardLive.Components do
             <%= project_role(@user, project) %>
           </.td>
           <.td class="break-words max-w-[10rem]">
-            <%= length(project.workflows) %>
+            <%= count_workflows(project) %>
           </.td>
           <.td class="break-words max-w-[5rem]">
             <.link
