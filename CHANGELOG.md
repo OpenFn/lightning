@@ -19,6 +19,11 @@ and this project adheres to
 
 ### Changed
 
+- Remove superuser flag for oauth clients creation
+  [#2417](https://github.com/OpenFn/lightning/issues/2417)
+- Make URL validator more flexible to support URLs with dashes and other cases
+  [#2417](https://github.com/OpenFn/lightning/issues/2417)
+
 ### Fixed
 
 ## [v2.9.10] - 2024-10-16
