@@ -209,6 +209,89 @@ defmodule Lightning.Config.BootstrapTest do
     end
   end
 
+  describe "kafka alternate storage" do
+    setup %{
+            tmp_dir: tmp_dir,
+            enabled: enabled,
+            misconfigured: misconfigured
+          } = context do
+      path = Map.get(context, :path, tmp_dir)
+
+      %{
+        "KAFKA_ALTERNATE_STORAGE_ENABLED" => enabled
+      }
+      |> then(fn vars ->
+        if path do
+          vars
+          |> Map.put("KAFKA_ALTERNATE_STORAGE_FILE_PATH", path)
+        else
+          vars
+        end
+      end)
+      |> List.wrap()
+      |> Dotenvy.source()
+
+      if misconfigured do
+        tmp_dir |> File.chmod!(0o000)
+      end
+
+      :ok
+    end
+
+    @tag tmp_dir: true, enabled: "true", misconfigured: true
+    test "raises an error if enabled and misconfigured" do
+      assert_raise RuntimeError, ~r/must be a writable directory/, fn ->
+        Bootstrap.configure()
+      end
+    end
+
+    @tag tmp_dir: true, enabled: "true", misconfigured: false, path: "xxx/yyy"
+    test "raises an error if enabled and path does not exist" do
+      assert_raise RuntimeError, ~r/must be a writable directory/, fn ->
+        Bootstrap.configure()
+      end
+    end
+
+    @tag tmp_dir: true, enabled: "true", misconfigured: false, path: nil
+    test "raises an error if enabled and path is nil" do
+      assert_raise RuntimeError, ~r/must be a writable directory/, fn ->
+        Bootstrap.configure()
+      end
+    end
+
+    @tag tmp_dir: true, enabled: "true", misconfigured: false, path: ""
+    test "raises an error if enabled and path is empty string" do
+      assert_raise RuntimeError, ~r/must be a writable directory/, fn ->
+        Bootstrap.configure()
+      end
+    end
+
+    @tag tmp_dir: true, enabled: "true", misconfigured: false
+    test "does not raise an error if enabled and properly configured" do
+      Bootstrap.configure()
+    end
+
+    @tag tmp_dir: true, enabled: "false", misconfigured: true
+    test "does not raise an error if disabled and misconfigured" do
+      Bootstrap.configure()
+    end
+
+    @tag tmp_dir: true, enabled: "false", misconfigured: false, path: nil
+    test "does not raise an error if disabled and path is nil" do
+      Bootstrap.configure()
+    end
+
+    @tag tmp_dir: true, enabled: "false", misconfigured: false, path: ""
+    test "does not raise an error if disabled and path is empty string" do
+      Bootstrap.configure()
+    end
+
+    @tag tmp_dir: true, enabled: "false", misconfigured: false, path: "xxx/yyy"
+    test "does not raise an error if disabled and path does not exist" do
+      Bootstrap.configure()
+    end
+  end
+
   # A helper function to get a value from the process dictionary
   # that is stored by the Config module.
   defp get_env(app) do

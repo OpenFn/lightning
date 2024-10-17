@@ -25,7 +25,7 @@ defmodule Lightning.KafkaTriggers.MessageHandling do
     %{data: data, metadata: metadata} = message
     %{workflow: workflow} = trigger
 
-    request = metadata |> convert_for_serialisation()
+    request = metadata |> convert_headers_for_serialisation()
 
     with {:ok, body} <- Jason.decode(data),
          true <- is_map(body),
@@ -75,7 +75,17 @@ defmodule Lightning.KafkaTriggers.MessageHandling do
     end
   end
 
-  defp convert_for_serialisation(%{headers: headers} = metadata) do
-    Map.put(metadata, :headers, Enum.map(headers, &Tuple.to_list/1))
+  def convert_headers_for_serialisation(%{headers: headers} = metadata) do
+    converted_headers =
+      headers
+      |> Enum.map(fn
+        {key, value} ->
+          [key, value]
+
+        [key, value] ->
+          [key, value]
+      end)
+
+    Map.put(metadata, :headers, converted_headers)
   end
 end
