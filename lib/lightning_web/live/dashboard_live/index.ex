@@ -40,8 +40,6 @@ defmodule LightningWeb.DashboardLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    projects = projects_for_user(socket.assigns.current_user)
-
     welcome_collapsed =
       Accounts.get_preference(
         socket.assigns.current_user,
@@ -49,13 +47,18 @@ defmodule LightningWeb.DashboardLive.Index do
       )
 
     {:ok,
-     assign_new(socket, :projects, fn -> projects end)
-     |> assign(:arcade_resources, @arcade_resources)
-     |> assign(:selected_arcade_resource, nil)
-     |> assign(:welcome_collapsed, welcome_collapsed)
-     |> assign(:active_menu_item, :projects)
-     |> assign(:name_sort_direction, :asc)
-     |> assign(:activity_sort_direction, :asc)}
+     socket
+     |> assign_new(:projects, fn ->
+       projects_for_user(socket.assigns.current_user)
+     end)
+     |> assign(
+       arcade_resources: @arcade_resources,
+       selected_arcade_resource: nil,
+       welcome_collapsed: welcome_collapsed,
+       active_menu_item: :projects,
+       name_sort_direction: :asc,
+       activity_sort_direction: :asc
+     )}
   end
 
   @impl true
