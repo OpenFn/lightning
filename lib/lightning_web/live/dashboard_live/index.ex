@@ -42,17 +42,17 @@ defmodule LightningWeb.DashboardLive.Index do
   def mount(_params, _session, socket) do
     projects = projects_for_user(socket.assigns.current_user)
 
-    arcade_banner_collapsed =
+    weclome_collapsed =
       Accounts.get_preference(
         socket.assigns.current_user,
-        "arcade_banner_collapsed"
+        "welcome.collapsed"
       )
 
     {:ok,
      assign_new(socket, :projects, fn -> projects end)
      |> assign(:arcade_resources, @arcade_resources)
      |> assign(:selected_arcade_resource, nil)
-     |> assign(:arcade_banner_collapsed, arcade_banner_collapsed)
+     |> assign(:weclome_collapsed, weclome_collapsed)
      |> assign(:active_menu_item, :projects)
      |> assign(:name_sort_direction, :asc)
      |> assign(:activity_sort_direction, :asc)}
@@ -98,17 +98,16 @@ defmodule LightningWeb.DashboardLive.Index do
   end
 
   def handle_event("toggle-arcade-banner", _params, socket) do
-    arcade_banner_collapsed = !socket.assigns.arcade_banner_collapsed
+    weclome_collapsed = !socket.assigns.weclome_collapsed
 
     Accounts.update_user_preference(
       socket.assigns.current_user,
-      "arcade_banner_collapsed",
-      arcade_banner_collapsed
+      "weclome_collapsed",
+      weclome_collapsed
     )
     |> case do
       {:ok, _user} ->
-        {:noreply,
-         assign(socket, arcade_banner_collapsed: arcade_banner_collapsed)}
+        {:noreply, assign(socket, weclome_collapsed: weclome_collapsed)}
 
       {:error, reason} ->
         Logger.error("Couldn't update user preferences: #{inspect(reason)}")
@@ -144,7 +143,7 @@ defmodule LightningWeb.DashboardLive.Index do
           <.arcade_banner
             current_user={@current_user}
             resources={@arcade_resources}
-            collapsed={@arcade_banner_collapsed}
+            collapsed={@weclome_collapsed}
             selected_resource={@selected_arcade_resource}
           />
 
@@ -209,7 +208,10 @@ defmodule LightningWeb.DashboardLive.Index do
 
       <div
         id="arcade-banner-content"
-        class={"transition-all duration-500 ease-in-out overflow-hidden #{banner_content_classes(@collapsed)}"}
+        class={[
+          "overflow-visible transition-all duration-500 ease-in-out overflow-hidden",
+          banner_content_classes(@collapsed)
+        ]}
       >
         <p class="mb-6 mt-4">
           Here are some resources to help you get started with OpenFn
@@ -227,9 +229,13 @@ defmodule LightningWeb.DashboardLive.Index do
     """
   end
 
-  defp banner_content_classes(true), do: "max-h-0"
-  defp banner_content_classes(false), do: "max-h-[500px]"
-  defp banner_content_classes(nil), do: "max-h-[500px]"
+  defp banner_content_classes(collapsed) do
+    case collapsed do
+      true -> "max-h-0"
+      false -> "max-h-[500px]"
+      nil -> "max-h-[500px]"
+    end
+  end
 
   def resource_card(assigns) do
     ~H"""
@@ -237,7 +243,7 @@ defmodule LightningWeb.DashboardLive.Index do
       type="button"
       phx-click="select-arcade-resource"
       phx-value-resource={@resource.id}
-      class="relative flex items-end h-[150px] bg-gradient-to-r from-blue-400 to-purple-500 text-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 p-4 text-left"
+      class="relative flex items-end h-[150px] bg-gradient-to-r from-blue-400 to-purple-500 text-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 p-4 text-left"
     >
       <h2 class="text-lg font-semibold absolute bottom-4 left-4">
         <%= @resource.title %>
@@ -255,7 +261,7 @@ defmodule LightningWeb.DashboardLive.Index do
         show={true}
         width="w-5/6"
       >
-        <div style="position: relative; padding-bottom: calc(56.67989417989418% + 41px); height: 0; width: 100%;">
+        <div class="relative h-0 w-full pb-[60%]">
           <iframe
             src={@resource.link}
             title={@resource.title}

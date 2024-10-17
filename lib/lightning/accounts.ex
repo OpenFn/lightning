@@ -1014,7 +1014,8 @@ defmodule Lightning.Accounts do
   @doc """
   Retrieves a specific preference value for a given user.
 
-  Returns the value of the specified key from the user's preferences. If the value is the string `"true"` or `"false"`, it is converted to a boolean.
+  Returns the value of the specified key from the user's preferences.
+  If the value is the string `"true"` or `"false"`, it is converted to a boolean.
 
   ## Examples
 
