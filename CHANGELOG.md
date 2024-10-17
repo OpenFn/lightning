@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Do not count deleted workflows in the projects table
+  [#2540](https://github.com/OpenFn/lightning/issues/2540)
+
 ## [v2.9.10] - 2024-10-16
 
 ### Added
