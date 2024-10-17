@@ -283,9 +283,7 @@ defmodule LightningWeb.DashboardLiveTest do
 
       # Assert that the banner is initially expanded
       assert view
-             |> has_element?(
-               "#arcade-banner-content[class~='max-h-[500px]']"
-             )
+             |> has_element?("#arcade-banner-content[class~='max-h-[500px]']")
 
       # Click to collapse the banner
       view
@@ -294,14 +292,10 @@ defmodule LightningWeb.DashboardLiveTest do
 
       # Assert that the banner is now collapsed
       refute view
-             |> has_element?(
-               "#arcade-banner-content[class~='max-h-[500px]']"
-             )
+             |> has_element?("#arcade-banner-content[class~='max-h-[500px]']")
 
       assert view
-             |> has_element?(
-               "#arcade-banner-content[class~='max-h-0']"
-             )
+             |> has_element?("#arcade-banner-content[class~='max-h-0']")
 
       # Click again to expand the banner back
       view
@@ -310,9 +304,7 @@ defmodule LightningWeb.DashboardLiveTest do
 
       # Assert that the banner is expanded again
       assert view
-             |> has_element?(
-               "#arcade-banner-content[class~='max-h-[500px]']"
-             )
+             |> has_element?("#arcade-banner-content[class~='max-h-[500px]']")
     end
 
     test "Selects an arcade resource", %{conn: conn} do
