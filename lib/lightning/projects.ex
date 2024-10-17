@@ -7,6 +7,14 @@ defmodule Lightning.Projects do
     queue: :background,
     max_attempts: 1
 
+  use Lightning.Auditing.Audit,
+    repo: Lightning.Repo,
+    item: "project",
+    events: [
+      "dataclip_retention_period_updated",
+      "history_retention_period_updated"
+    ]
+
   import Ecto.Query, warn: false
 
   alias Ecto.Multi
@@ -16,6 +24,7 @@ defmodule Lightning.Projects do
   alias Lightning.ExportUtils
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
+  alias Lightning.Projects.Audit
   alias Lightning.Projects.Events
   alias Lightning.Projects.File
   alias Lightning.Projects.Project
@@ -242,13 +251,18 @@ defmodule Lightning.Projects do
       {:error, %Ecto.Changeset{}}
 
   """
-  def update_project(%Project{} = project, attrs) do
+  def update_project(%Project{} = project, attrs, user \\ nil) do
     changeset = Project.changeset(project, attrs)
 
     case Repo.update(changeset) do
       {:ok, updated_project} ->
         if retention_setting_updated?(changeset) do
           send_data_retention_change_email(updated_project)
+        end
+
+        if user do
+          Audit.audit_history_retention_period_updated(project, changeset, user)
+          Audit.audit_dataclip_retention_period_updated(project, changeset, user)
         end
 
         {:ok, updated_project}
