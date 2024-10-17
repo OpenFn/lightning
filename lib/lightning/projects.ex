@@ -242,7 +242,7 @@ defmodule Lightning.Projects do
       {:error, %Ecto.Changeset{}}
 
   """
-  def update_project(%Project{} = project, attrs) do
+  def update_project(%Project{} = project, attrs, _user \\ nil) do
     changeset = Project.changeset(project, attrs)
 
     case Repo.update(changeset) do

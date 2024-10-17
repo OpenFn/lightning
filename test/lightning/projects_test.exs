@@ -1561,8 +1561,12 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
-  describe ".update_project/2" do
-    test "update_project/2 with valid data updates the project" do
+  describe ".update_project/3" do
+    setup do
+      %{user: insert(:user)}
+    end
+
+    test "update_project/3 with valid data updates the project" do
       project = project_fixture()
       update_attrs = %{name: "some-updated-name"}
 
@@ -1662,10 +1666,10 @@ defmodule Lightning.ProjectsTest do
 
       # no email is sent when there's an error in the changeset
       assert {:error, _changeset} =
-               Projects.update_project(updated_project, %{
-                 history_retention_period: "xyz",
-                 dataclip_retention_period: 7
-               })
+        Projects.update_project(updated_project, %{
+          history_retention_period: "xyz",
+          dataclip_retention_period: 7
+        })
 
       for %{user: %{email: email}} <- project.project_users do
         refute_receive {:email,
@@ -1677,7 +1681,7 @@ defmodule Lightning.ProjectsTest do
       end
     end
 
-    test "update_project/2 with invalid data returns error changeset" do
+    test "update_project/3 with invalid data returns error changeset" do
       project = project_fixture() |> unload_relation(:project_users)
 
       assert {:error, %Ecto.Changeset{}} =
