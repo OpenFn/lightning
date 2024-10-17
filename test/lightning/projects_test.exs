@@ -3,6 +3,7 @@ defmodule Lightning.ProjectsTest do
   alias Swoosh.Email
   use Lightning.DataCase, async: true
 
+  alias Lightning.Auditing.Audit
   alias Lightning.Invocation.Dataclip
   alias Lightning.Projects.ProjectUser
   alias Lightning.Projects
@@ -1688,6 +1689,114 @@ defmodule Lightning.ProjectsTest do
                Projects.update_project(project, @invalid_attrs)
 
       assert project == Projects.get_project!(project.id)
+    end
+
+    test "creates an audit event if the history_retention_period is updated", %{
+      user: %{id: user_id} = user
+    } do
+      %{id: project_id} = project =
+        insert(
+          :project,
+          history_retention_period: 7,
+          retention_policy: :retain_all
+        )
+
+      update_attrs = %{
+        history_retention_period: 14,
+        retention_policy: :erase_all
+      }
+
+      Projects.update_project(project, update_attrs, user)
+
+      audit_event = Audit |> Repo.one!()
+
+      assert %{
+        event: "history_retention_period_updated",
+        item_type: "project",
+        item_id:  ^project_id,
+        actor_id: ^user_id,
+        changes: changes
+      } = audit_event
+
+      assert changes == %Audit.Changes{
+        before: %{"history_retention_period" => 7},
+        after: %{"history_retention_period" => 14}
+      }
+    end
+
+    test "does not create an event if the history_retention_period is updated", %{
+      user: user
+    } do
+      project =
+        insert(
+          :project,
+          history_retention_period: 7,
+          retention_policy: :retain_all
+        )
+
+      update_attrs = %{
+        history_retention_period: 7,
+        retention_policy: :erase_all
+      }
+
+      Projects.update_project(project, update_attrs, user)
+
+      assert Audit |> Repo.one() == nil
+    end
+
+    test "creates an audit event if the dataclip_retention_period is updated", %{
+      user: %{id: user_id} = user
+    } do
+      %{id: project_id} = project =
+        insert(
+          :project,
+          history_retention_period: 14,
+          dataclip_retention_period: 7,
+          retention_policy: :retain_all
+        )
+
+      update_attrs = %{
+        dataclip_retention_period: 14,
+        retention_policy: :erase_all
+      }
+
+      Projects.update_project(project, update_attrs, user)
+
+      audit_event = Audit |> Repo.one!()
+
+      assert %{
+        event: "dataclip_retention_period_updated",
+        item_type: "project",
+        item_id:  ^project_id,
+        actor_id: ^user_id,
+        changes: changes
+      } = audit_event
+
+      assert changes == %Audit.Changes{
+        before: %{"dataclip_retention_period" => 7},
+        after: %{"dataclip_retention_period" => 14}
+      }
+    end
+
+    test "does not create event if dataclip_retention_period is not updated", %{
+      user: user
+    } do
+      project =
+        insert(
+          :project,
+          history_retention_period: 14,
+          dataclip_retention_period: 7,
+          retention_policy: :retain_all
+        )
+
+      update_attrs = %{
+        dataclip_retention_period: 7,
+        retention_policy: :erase_all
+      }
+
+      Projects.update_project(project, update_attrs, user)
+
+      assert Audit |> Repo.one() == nil
     end
   end
 

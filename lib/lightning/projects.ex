@@ -7,6 +7,13 @@ defmodule Lightning.Projects do
     queue: :background,
     max_attempts: 1
 
+  use Lightning.Auditing.Audit,
+    repo: Lightning.Repo,
+    item: "project",
+    events: [
+      "history_retention_period_updated"
+    ]
+
   import Ecto.Query, warn: false
 
   alias Ecto.Multi
@@ -242,8 +249,19 @@ defmodule Lightning.Projects do
       {:error, %Ecto.Changeset{}}
 
   """
-  def update_project(%Project{} = project, attrs, _user \\ nil) do
+  def update_project(%Project{} = project, attrs, user \\ nil) do
     changeset = Project.changeset(project, attrs)
+
+    # changes_of_interest =
+    #   changeset
+    #   |> delete_change(:retention_policy)
+
+    event(
+      "history_retention_period_updated",
+      project.id,
+      user.id,
+      changeset
+    ) |> Lightning.Auditing.Audit.save(Repo)
 
     case Repo.update(changeset) do
       {:ok, updated_project} ->
