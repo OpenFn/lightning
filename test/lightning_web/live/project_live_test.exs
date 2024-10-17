@@ -16,6 +16,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
   import Mox
 
+  alias Lightning.Auditing.Audit
   alias Lightning.Name
   alias Lightning.Projects
   alias Lightning.Repo
@@ -1935,6 +1936,29 @@ defmodule LightningWeb.ProjectLiveTest do
         |> render_submit()
 
       assert html =~ "Project updated successfully"
+    end
+
+    @tag role: :admin
+    test "creates event linked to user when retention period is updated", %{
+      conn: conn,
+      project: project,
+      user: %{id: user_id}
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#data-storage"
+        )
+
+      view
+      |> form("#retention-settings-form",
+        project: %{
+          history_retention_period: 7
+        }
+      )
+      |> render_submit()
+
+      assert %{actor_id: ^user_id} = Audit |> Repo.one!()
     end
   end
 

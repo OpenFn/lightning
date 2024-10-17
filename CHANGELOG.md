@@ -26,6 +26,9 @@ and this project adheres to
   Arcade videos [#2563](https://github.com/OpenFn/lightning/issues/2563)
 - Store user preferences in database
   [#2564](https://github.com/OpenFn/lightning/issues/2564)
+- Create audit events when the retention periods for a project's dataclips
+  and history are modified.
+  [#2589](https://github.com/OpenFn/lightning/issues/2589)
 
 ### Changed
 

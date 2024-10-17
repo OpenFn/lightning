@@ -590,7 +590,9 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   defp save_project(socket, project_params) do
-    case Projects.update_project(socket.assigns.project, project_params) do
+    socket.assigns.project
+    |> Projects.update_project(project_params, socket.assigns.current_user)
+    |> case do
       {:ok, project} ->
         {:noreply,
          socket
