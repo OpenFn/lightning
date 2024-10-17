@@ -19,35 +19,42 @@
         </div>
         <div class="mt-4"></div>
         <Menu.menu_item
-          to={Routes.project_index_path(@socket, :index)}
+          to={~p"/settings/projects"}
           active={@active_menu_item == :projects}
         >
           <Heroicons.building_library class="h-5 w-5 inline-block mr-2" />
           <span class="inline-block align-middle">Projects</span>
         </Menu.menu_item>
         <Menu.menu_item
-          to={Routes.user_index_path(@socket, :index)}
+          to={~p"/settings/users"}
           active={@active_menu_item == :users}
         >
           <Heroicons.user_group class="h-5 w-5 inline-block mr-2" />
           <span class="inline-block align-middle">Users</span>
         </Menu.menu_item>
         <Menu.menu_item
-          to={Routes.auth_providers_index_path(@socket, :edit)}
+          to={~p"/settings/authentication/new"}
           active={@active_menu_item == :authentication}
         >
           <Heroicons.key class="h-5 w-5 inline-block mr-2" />
           <span class="inline-block align-middle">Authentication</span>
         </Menu.menu_item>
         <Menu.menu_item
-          to={Routes.audit_index_path(@socket, :index)}
+          to={~p"/settings/audit"}
           active={@active_menu_item == :audit}
         >
           <Heroicons.archive_box class="h-5 w-5 inline-block mr-2" />
           <span class="inline-block align-middle">Audit</span>
         </Menu.menu_item>
+        <Menu.menu_item
+          to={~p"/settings/collections"}
+          active={@active_menu_item == :collections}
+        >
+          <Heroicons.circle_stack class="h-5 w-5 inline-block mr-2" />
+          <span class="inline-block align-middle">Collections</span>
+        </Menu.menu_item>
         <div class="grow"></div>
-        <Menu.menu_item to={Routes.dashboard_index_path(@socket, :index)}>
+        <Menu.menu_item to={~p"/projects"}>
           <Icon.left class="h-5 w-5 inline-block mr-2" />
           <span class="inline-block align-middle">Back</span>
         </Menu.menu_item>

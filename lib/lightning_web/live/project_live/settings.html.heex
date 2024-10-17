@@ -642,31 +642,33 @@
                     project_user={project_user}
                   />
                 </.td>
-                <.td class="text-right">
-                  <.button
-                    id={"remove_project_user_#{project_user.id}_button"}
-                    type="button"
-                    phx-click={show_modal("remove_#{project_user.id}_modal")}
-                    color_class="bg-white text-gray-900 hover:bg-gray-50 disabled:bg-gray-100"
-                    class="gap-x-2 rounded-md  px-3.5 py-2.5 text-sm shadow-sm ring-1 ring-inset ring-gray-300 disabled:cursor-not-allowed"
-                    tooltip={
-                      remove_user_tooltip(
-                        project_user,
-                        @current_user,
-                        @can_remove_project_user
-                      )
-                    }
-                    disabled={
-                      !user_removable?(
-                        project_user,
-                        @current_user,
-                        @can_remove_project_user
-                      )
-                    }
-                  >
-                    <.icon name="hero-minus-circle" class="w-5 h-5" />
-                    Remove Collaborator
-                  </.button>
+                <.td>
+                  <div class="text-right">
+                    <.button
+                      id={"remove_project_user_#{project_user.id}_button"}
+                      type="button"
+                      phx-click={show_modal("remove_#{project_user.id}_modal")}
+                      color_class="bg-white text-gray-900 hover:bg-gray-50 disabled:bg-gray-100"
+                      class="gap-x-2 rounded-md  px-3.5 py-2.5 text-sm shadow-sm ring-1 ring-inset ring-gray-300 disabled:cursor-not-allowed"
+                      tooltip={
+                        remove_user_tooltip(
+                          project_user,
+                          @current_user,
+                          @can_remove_project_user
+                        )
+                      }
+                      disabled={
+                        !user_removable?(
+                          project_user,
+                          @current_user,
+                          @can_remove_project_user
+                        )
+                      }
+                    >
+                      <.icon name="hero-minus-circle" class="w-5 h-5" />
+                      Remove Collaborator
+                    </.button>
+                  </div>
                   <.confirm_user_removal_modal
                     :if={
                       user_removable?(

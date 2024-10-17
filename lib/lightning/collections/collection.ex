@@ -26,6 +26,11 @@ defmodule Lightning.Collections.Collection do
     entry
     |> cast(attrs, [:project_id, :name])
     |> validate_required([:project_id, :name])
-    |> unique_constraint([:name])
+    |> validate_format(:name, ~r/^[a-z0-9]+([\-_.][a-z0-9]+)*$/,
+      message: "Collection name must be URL safe"
+    )
+    |> unique_constraint([:name],
+      message: "A collection with this name already exists"
+    )
   end
 end

@@ -562,15 +562,6 @@ defmodule Lightning.Projects do
     |> Repo.one()
   end
 
-  def url_safe_project_name(nil), do: ""
-
-  def url_safe_project_name(name) when is_binary(name) do
-    name
-    |> String.downcase()
-    |> String.replace(~r/[^a-z-_\.\d]+/, "-")
-    |> String.replace(~r/^\-+|\-+$/, "")
-  end
-
   def member_of?(%Project{id: project_id}, %User{id: user_id}) do
     from(p in Project,
       join: pu in assoc(p, :project_users),
