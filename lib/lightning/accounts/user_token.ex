@@ -56,15 +56,8 @@ defmodule Lightning.Accounts.UserToken do
           {binary(), Ecto.Changeset.t(%__MODULE__{})}
   def build_token(user, "api" = context) do
     token =
-      Joken.generate_and_sign!(
-        default_claims(
-          iss: "Lightning",
-          skip: [:exp, :aud, :nbf]
-        ),
-        %{
-          "sub" => "user:#{user.id}",
-          "iat" => Lightning.current_time() |> DateTime.to_unix()
-        },
+      Lightning.Tokens.PersonalAccessToken.generate_and_sign!(
+        %{"sub" => "user:#{user.id}"},
         Lightning.Config.token_signer()
       )
 

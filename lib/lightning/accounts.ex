@@ -159,16 +159,22 @@ defmodule Lightning.Accounts do
 
   Raises `Ecto.NoResultsError` if the User does not exist.
 
+  See `get_user/1`.
+  """
+  def get_user!(id), do: Repo.get!(User, id)
+
+  @doc """
+  Gets a single user.
+
   ## Examples
 
-      iex> get_user!(123)
+      iex> get_user(123)
       %User{}
 
       iex> get_user!(456)
-      ** (Ecto.NoResultsError)
-
+      nil
   """
-  def get_user!(id), do: Repo.get!(User, id)
+  def get_user(id), do: Repo.get(User, id)
 
   @doc """
   Gets a single token.
