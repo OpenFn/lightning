@@ -284,7 +284,7 @@ defmodule LightningWeb.DashboardLiveTest do
       # Assert that the banner is initially expanded
       assert view
              |> has_element?(
-               "#arcade-banner-content[class='transition-all duration-500 ease-in-out overflow-hidden max-h-[500px]']"
+               "#arcade-banner-content[class~='max-h-[500px]']"
              )
 
       # Click to collapse the banner
@@ -295,12 +295,12 @@ defmodule LightningWeb.DashboardLiveTest do
       # Assert that the banner is now collapsed
       refute view
              |> has_element?(
-               "#arcade-banner-content[class='transition-all duration-500 ease-in-out overflow-hidden max-h-[500px]']"
+               "#arcade-banner-content[class~='max-h-[500px]']"
              )
 
       assert view
              |> has_element?(
-               "#arcade-banner-content[class='transition-all duration-500 ease-in-out overflow-hidden max-h-0']"
+               "#arcade-banner-content[class~='max-h-0']"
              )
 
       # Click again to expand the banner back
@@ -311,7 +311,7 @@ defmodule LightningWeb.DashboardLiveTest do
       # Assert that the banner is expanded again
       assert view
              |> has_element?(
-               "#arcade-banner-content[class='transition-all duration-500 ease-in-out overflow-hidden max-h-[500px]']"
+               "#arcade-banner-content[class~='max-h-[500px]']"
              )
     end
 
