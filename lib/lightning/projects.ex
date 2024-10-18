@@ -11,11 +11,13 @@ defmodule Lightning.Projects do
     repo: Lightning.Repo,
     item: "project",
     events: [
+      "dataclip_retention_period_updated",
       "history_retention_period_updated"
     ]
 
   import Ecto.Query, warn: false
 
+  alias Ecto.Changeset
   alias Ecto.Multi
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserNotifier
@@ -252,16 +254,33 @@ defmodule Lightning.Projects do
   def update_project(%Project{} = project, attrs, user \\ nil) do
     changeset = Project.changeset(project, attrs)
 
-    # changes_of_interest =
-    #   changeset
-    #   |> delete_change(:retention_policy)
+    cond do
+      Changeset.changed?(changeset, :history_retention_period) ->
+        event_changeset =
+          changeset
+          |> Map.merge(%{changes: %{history_retention_period: attrs.history_retention_period}})
 
-    event(
-      "history_retention_period_updated",
-      project.id,
-      user.id,
-      changeset
-    ) |> Lightning.Auditing.Audit.save(Repo)
+        "history_retention_period_updated"
+        |> event(project.id, user.id, event_changeset)
+        |> Lightning.Auditing.Audit.save(Repo)
+
+      true ->
+        nil
+    end
+
+    cond do
+      Changeset.changed?(changeset, :dataclip_retention_period) ->
+        event_changeset =
+          changeset
+          |> Map.merge(%{changes: %{dataclip_retention_period: attrs.dataclip_retention_period}})
+
+        "dataclip_retention_period_updated"
+        |> event(project.id, user.id, event_changeset)
+        |> Lightning.Auditing.Audit.save(Repo)
+
+      true ->
+        nil
+    end
 
     case Repo.update(changeset) do
       {:ok, updated_project} ->

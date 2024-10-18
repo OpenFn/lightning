@@ -1703,7 +1703,7 @@ defmodule Lightning.ProjectsTest do
 
       update_attrs = %{
         history_retention_period: 14,
-        retention_policy: :erase_all
+        retention_policy: :retain_with_errors
       }
 
       Projects.update_project(project, update_attrs, user)
@@ -1724,7 +1724,7 @@ defmodule Lightning.ProjectsTest do
       }
     end
 
-    test "does not create an event if the history_retention_period is updated", %{
+    test "does not create event if history_retention_period is not updated", %{
       user: user
     } do
       project =
@@ -1736,7 +1736,7 @@ defmodule Lightning.ProjectsTest do
 
       update_attrs = %{
         history_retention_period: 7,
-        retention_policy: :erase_all
+        retention_policy: :retain_with_errors
       }
 
       Projects.update_project(project, update_attrs, user)
@@ -1757,7 +1757,7 @@ defmodule Lightning.ProjectsTest do
 
       update_attrs = %{
         dataclip_retention_period: 14,
-        retention_policy: :erase_all
+        retention_policy: :retain_with_errors
       }
 
       Projects.update_project(project, update_attrs, user)
@@ -1791,7 +1791,7 @@ defmodule Lightning.ProjectsTest do
 
       update_attrs = %{
         dataclip_retention_period: 7,
-        retention_policy: :erase_all
+        retention_policy: :retain_with_errors
       }
 
       Projects.update_project(project, update_attrs, user)
