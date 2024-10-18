@@ -3,19 +3,8 @@ defmodule LightningWeb.DashboardLive.Components do
 
   import PetalComponents.Table
 
-  alias Lightning.Accounts.User
-  alias Lightning.Projects.Project
-
-  defp project_role(
-         %User{id: user_id} = _user,
-         %Project{project_users: project_users} = _project
-       ) do
-    project_users
-    |> Enum.find(fn pu -> pu.user_id == user_id end)
-    |> Map.get(:role)
-    |> Atom.to_string()
-    |> String.capitalize()
-  end
+  # alias Lightning.Accounts.User
+  # alias Lightning.Projects.Project
 
   defp table_title(assigns) do
     ~H"""
@@ -95,24 +84,30 @@ defmodule LightningWeb.DashboardLive.Components do
             </.link>
           </.td>
           <.td class="break-words max-w-[25rem]">
-            <%= project_role(@user, project) %>
+            <%= project.role
+            |> Atom.to_string()
+            |> String.capitalize() %>
           </.td>
           <.td class="break-words max-w-[10rem]">
-            <%= length(project.workflows) %>
+            <%= project.workflows_count %>
           </.td>
           <.td class="break-words max-w-[5rem]">
             <.link
               class="link"
               href={~p"/projects/#{project.id}/settings#collaboration"}
             >
-              <%= length(project.project_users) %>
+              <%= project.collaborators_count %>
             </.link>
           </.td>
           <.td>
-            <%= Lightning.Helpers.format_date(
-              project.updated_at,
-              "%d/%b/%Y %H:%M:%S"
-            ) %>
+            <%= if project.last_activity do %>
+              <%= Lightning.Helpers.format_date(
+                project.last_activity,
+                "%d/%m/%Y at %H:%M:%S"
+              ) %>
+            <% else %>
+              No activity
+            <% end %>
           </.td>
           <.td class="text-right">
             <.link
