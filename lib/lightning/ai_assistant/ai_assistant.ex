@@ -137,7 +137,7 @@ defmodule Lightning.AiAssistant do
   @spec enabled?() :: boolean()
   def enabled? do
     endpoint = Lightning.Config.apollo(:endpoint)
-    api_key = Lightning.Config.apollo(:openai_api_key)
+    api_key = Lightning.Config.apollo(:ai_assistant_api_key)
 
     is_binary(endpoint) && is_binary(api_key)
   end

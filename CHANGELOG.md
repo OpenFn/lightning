@@ -29,6 +29,9 @@ and this project adheres to
 
 ### Changed
 
+- Added Claude integration in job chat
+- OPENAI_API_KEY renamed to AI_ASSISTANT_API_KEY
+
 ### Fixed
 
 ## [v2.9.10] - 2024-10-16
