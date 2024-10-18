@@ -34,6 +34,47 @@ defmodule Lightning.Projects do
 
   require Logger
 
+  defmodule ProjectTableRow do
+    defstruct [
+      :id,
+      :name,
+      :role,
+      :workflows_count,
+      :collaborators_count,
+      :last_activity
+    ]
+  end
+
+  def project_table_data_for_user(%User{id: user_id}, opts \\ []) do
+    order_by = Keyword.get(opts, :order_by, {:name, :asc})
+
+    from(p in Project,
+      join: pu in assoc(p, :project_users),
+      where: pu.user_id == ^user_id,
+      left_join: w in assoc(p, :workflows),
+      left_join: wo in assoc(w, :work_orders),
+      group_by: [p.id, pu.role],
+      select: %ProjectTableRow{
+        id: p.id,
+        name: p.name,
+        role: pu.role,
+        workflows_count: count(w.id),
+        collaborators_count: count(pu.id),
+        last_activity: max(wo.last_activity)
+      },
+      order_by: ^dynamic_order_by(order_by)
+    )
+    |> Repo.all()
+  end
+
+  defp dynamic_order_by({direction, :name}) do
+    {direction, dynamic([p], field(p, :name))}
+  end
+
+  defp dynamic_order_by({direction, :last_activity}) do
+    {direction, dynamic([_p, _pu, _w, wo], max(wo.last_activity))}
+  end
+
   @doc """
   Perform, when called with %{"type" => "purge_deleted"}
   will find projects that are ready for permanent deletion and purge them.
