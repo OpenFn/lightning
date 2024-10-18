@@ -219,11 +219,31 @@ defmodule Lightning.VersionControl.GithubToken do
 
   @impl true
   def token_config do
-    default_claims(default_exp: 60 * 10)
+    %{}
     |> add_claim(
       "iat",
-      fn -> Joken.current_time() - 60 end,
-      &(Joken.current_time() > &1)
+      fn ->
+        Lightning.current_time()
+        |> DateTime.add(-60, :second)
+        |> DateTime.to_unix()
+      end,
+      &(Lightning.current_time() |> DateTime.to_unix() > &1)
+    )
+    |> add_claim(
+      "exp",
+      fn ->
+        Lightning.current_time()
+        |> DateTime.add(10, :minute)
+        |> DateTime.to_unix()
+      end,
+      &(&1 > Lightning.current_time() |> DateTime.to_unix())
+    )
+    |> add_claim(
+      "iss",
+      fn _, _, context -> context[:iss] end,
+      fn iss, _, context ->
+        iss == context[:iss]
+      end
     )
   end
 
