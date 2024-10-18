@@ -42,6 +42,16 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
     @impl true
     def token_config do
       default_claims(skip: [:exp, :aud], iss: "Lightning")
+      |> add_claim(
+        "iat",
+        fn -> Lightning.current_time() |> DateTime.to_unix() end,
+        &(Lightning.current_time() |> DateTime.to_unix() >= &1)
+      )
+      |> add_claim(
+        "nbf",
+        fn -> Lightning.current_time() |> DateTime.to_unix() end,
+        &(Lightning.current_time() |> DateTime.to_unix() >= &1)
+      )
     end
   end
 
