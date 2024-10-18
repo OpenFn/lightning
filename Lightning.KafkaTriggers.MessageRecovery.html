@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v2.9.10">
 
-    <title>Lightning.Services.ProjectHook — Lightning v2.9.10</title>
+    <title>Lightning.KafkaTriggers.MessageRecovery — Lightning v2.9.10</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
@@ -125,19 +125,34 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/services/project_hook.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers/message_recovery.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.Services.ProjectHook</span> 
+  <span translate="no">Lightning.KafkaTriggers.MessageRecovery</span> 
   <small class="app-vsn" translate="no">(Lightning v2.9.10)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Allows handling project creation atomically without relying on async events.</p>
+<p>This module contains functionality to recover Kafka messages that have been
+persisted to the file system. It should only be used to process files that
+originate from a trusted source (i.e. Lightning's Kafka pipeline.)</p><p>It expects to be pointed at a directory structure that looks as follows:</p><p>base<em>path
+|</em> &lt;workflow<em>id&gt;
+  |</em> &lt;trigger<em>id&gt;</em>&lt;topic&gt;<em>&lt;partition&gt;</em>&lt;offset&gt;.json
+  |<em> &lt;trigger_id&gt;</em>&lt;topic&gt;<em>&lt;partition&gt;</em>&lt;offset&gt;.json
+|_ &lt;workflow_id&gt;</p><p>This is the structure that the Kafka pipeline will use when writing the
+messages to the file system. After each message is successfully processed,
+the file extension will be changed from <code class="inline">.json</code> to <code class="inline">json.recovered</code>. Recovered
+files will not be processed again. They are retained for the purposes of 
+double-checking the recovery process and can be deleted once this has been
+done.</p><p>If a file has not had the extension changed, this means that it experienced
+an error during reprocessing. These files can be reprocessed if you think the
+error was transient. </p><p>Usage: </p><p>  alias Lightning.KafkaTriggers.MessageRecovery
+  case MessageRecovery.recover_messages(Lightning.Config.kafka_alternate_storage_file_path) do</p><pre><code class="makeup elixir" translate="no"><span class="ss">:ok</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="c1"># Success code</span><span class="w">
+</span><span class="p" data-group-id="2050234312-1">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="n">error_count</span><span class="p" data-group-id="2050234312-1">}</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="c1"># Failure code</span></code></pre><p>  end</p>
   </section>
 
 
@@ -155,21 +170,25 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#handle_create_project/1" translate="no">handle_create_project(attrs)</a>
+        <a href="#build_broadway_message/2" translate="no">build_broadway_message(data, metadata)</a>
 
       </div>
-
-        <div class="summary-synopsis"><p>Callback implementation for <a href="Lightning.Extensions.ProjectHooking.html#c:handle_create_project/1"><code class="inline">Lightning.Extensions.ProjectHooking.handle_create_project/1</code></a>.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#handle_delete_project/1" translate="no">handle_delete_project(project)</a>
+        <a href="#extract_trigger_id/1" translate="no">extract_trigger_id(file_path)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Callback implementation for <a href="Lightning.Extensions.ProjectHooking.html#c:handle_delete_project/1"><code class="inline">Lightning.Extensions.ProjectHooking.handle_delete_project/1</code></a>.</p></div>
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#recover_messages/1" translate="no">recover_messages(base_dir_path)</a>
+
+      </div>
 
     </div>
 
@@ -186,16 +205,16 @@ Pages
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="handle_create_project/1">
+<section class="detail" id="build_broadway_message/2">
 
   <div class="detail-header">
-    <a href="#handle_create_project/1" class="detail-link" title="Link to this function">
+    <a href="#build_broadway_message/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">handle_create_project(attrs)</h1>
+    <h1 class="signature" translate="no">build_broadway_message(data, metadata)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/services/project_hook.ex#L14" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers/message_recovery.ex#L94" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -205,26 +224,19 @@ Pages
 
   <section class="docstring">
 
-      <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> handle_create_project(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) ::
-  {:ok, <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
-
-      </div>
-
-<p>Callback implementation for <a href="Lightning.Extensions.ProjectHooking.html#c:handle_create_project/1"><code class="inline">Lightning.Extensions.ProjectHooking.handle_create_project/1</code></a>.</p>
   </section>
 </section>
-<section class="detail" id="handle_delete_project/1">
+<section class="detail" id="extract_trigger_id/1">
 
   <div class="detail-header">
-    <a href="#handle_delete_project/1" class="detail-link" title="Link to this function">
+    <a href="#extract_trigger_id/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">handle_delete_project(project)</h1>
+    <h1 class="signature" translate="no">extract_trigger_id(file_path)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/services/project_hook.ex#L20" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers/message_recovery.ex#L102" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -234,14 +246,29 @@ Pages
 
   <section class="docstring">
 
-      <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> handle_delete_project(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()) ::
-  {:ok, <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
+  </section>
+</section>
+<section class="detail" id="recover_messages/1">
 
-      </div>
+  <div class="detail-header">
+    <a href="#recover_messages/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">recover_messages(base_dir_path)</h1>
 
-<p>Callback implementation for <a href="Lightning.Extensions.ProjectHooking.html#c:handle_delete_project/1"><code class="inline">Lightning.Extensions.ProjectHooking.handle_delete_project/1</code></a>.</p>
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers/message_recovery.ex#L42" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
   </section>
 </section>
 

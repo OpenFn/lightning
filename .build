@@ -73,6 +73,7 @@ Lightning.Jobs.html
 Lightning.KafkaTriggers.DuplicateTrackingCleanupWorker.html
 Lightning.KafkaTriggers.EventListener.html
 Lightning.KafkaTriggers.MessageHandling.html
+Lightning.KafkaTriggers.MessageRecovery.html
 Lightning.KafkaTriggers.Pipeline.html
 Lightning.KafkaTriggers.PipelineSupervisor.html
 Lightning.KafkaTriggers.Supervisor.html
@@ -338,8 +339,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-B04C7E32.js
-dist/sidebar_items-05C927C6.js
+dist/search_data-F64CA6FB.js
+dist/sidebar_items-FCB68A81.js
 index.html
 provisioning.html
 readme.html
