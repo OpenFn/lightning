@@ -55,7 +55,8 @@ defmodule LightningWeb.DashboardLive.Components do
             <div class="group inline-flex items-center">
               Name
               <span
-                phx-click="sort_by_name"
+                phx-click="sort"
+                phx-value-by="name"
                 class="cursor-pointer align-middle ml-2 flex-none rounded text-gray-400 group-hover:visible group-focus:visible"
               >
                 <.icon name={@name_sort_icon} />
@@ -69,8 +70,9 @@ defmodule LightningWeb.DashboardLive.Components do
             <div class="group inline-flex items-center">
               Last Activity
               <span
-                phx-click="sort_by_activity"
-                class="align-middle ml-2 flex-none rounded text-gray-400 group-hover:visible group-focus:visible"
+                phx-click="sort"
+                phx-value-by="activity"
+                class="cursor-pointer align-middle ml-2 flex-none rounded text-gray-400 group-hover:visible group-focus:visible"
               >
                 <.icon name={@activity_sort_icon} />
               </span>

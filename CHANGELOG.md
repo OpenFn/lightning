@@ -22,6 +22,10 @@ and this project adheres to
 - Add `MessageRecovery` utility code to restore Kafka messages that were
   pesisted to the file system.
   [#2386](https://github.com/OpenFn/lightning/issues/2386)
+- Projects page welcome section: allow users to learn how to use the app thru
+  Arcade videos [#2563](https://github.com/OpenFn/lightning/issues/2563)
+- Store user preferences in database
+  [#2564](https://github.com/OpenFn/lightning/issues/2564)
 
 ### Changed
 

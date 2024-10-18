@@ -399,6 +399,21 @@ defmodule Lightning.Accounts do
     change_user_info(user, attrs) |> Repo.update()
   end
 
+  @doc """
+  Updates the user preferences.
+
+  ## Examples
+
+      iex> update_user_preferences(%User{}, %{"editor.orientaion" => "vertical"})
+  """
+  @spec update_user_preferences(User.t(), map()) ::
+          {:ok, User.t()} | {:error, Ecto.Changeset.t()}
+  def update_user_preferences(%User{} = user, preferences) do
+    user
+    |> User.preferences_changeset(preferences)
+    |> Repo.update()
+  end
+
   ## Settings
 
   @doc """
@@ -995,4 +1010,58 @@ defmodule Lightning.Accounts do
   end
 
   def confirmation_required?(_user), do: false
+
+  @doc """
+  Retrieves a specific preference value for a given user.
+
+  Returns the value of the specified key from the user's preferences.
+  If the value is the string `"true"` or `"false"`, it is converted to a boolean.
+
+  ## Examples
+
+      iex> get_preference(user, "editor.orientation")
+      "vertical"
+
+      iex> get_preference(user, "notifications.enabled")
+      true
+
+  """
+  @spec get_preference(User.t(), String.t()) :: any()
+  def get_preference(%User{id: user_id}, key) do
+    from(u in User,
+      where: u.id == ^user_id,
+      select: fragment("?->>?", u.preferences, ^key)
+    )
+    |> Repo.one()
+    |> case do
+      "true" -> true
+      "false" -> false
+      value -> value
+    end
+  end
+
+  @doc """
+  Updates a specific key in the user's preferences.
+
+  Merges the new key-value pair into the user's existing preferences and updates the database.
+
+  ## Examples
+
+      iex> update_user_preference(user, "editor.orientation", "vertical")
+      {:ok, %User{}}
+
+      iex> update_user_preference(user, "notifications.enabled", true)
+      {:ok, %User{}}
+
+  """
+  @spec update_user_preference(User.t(), String.t(), any()) ::
+          {:ok, User.t()} | {:error, Ecto.Changeset.t()}
+  def update_user_preference(%User{} = user, key, value) do
+    current_preferences = user.preferences || %{}
+    updated_preferences = Map.put(current_preferences, key, value)
+
+    user
+    |> User.preferences_changeset(updated_preferences)
+    |> Repo.update()
+  end
 end
