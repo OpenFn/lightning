@@ -80,16 +80,16 @@ Ensure you set the following URLs:
 These envrionment variables will need to be set in order to configure the github
 app:
 
-| **Variable**               | **Description**              |
-| -------------------------- | ---------------------------- |
-| `GITHUB_APP_ID`            | the github app ID.           |
-| `GITHUB_APP_NAME`          | the github app name          |
-| `GITHUB_APP_CLIENT_ID`     | the github app Client ID     |
-| `GITHUB_APP_CLIENT_SECRET` | the github app Client Secret |
-| `GITHUB_CERT`              | the github app private key   |
+| **Variable**               | **Description**                                                                                                                    |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `GITHUB_APP_ID`            | the github app ID.                                                                                                                 |
+| `GITHUB_APP_NAME`          | the github app name. This is the name used in the public link. It is the downcased name with spaces replaced with hyphens          |
+| `GITHUB_APP_CLIENT_ID`     | the github app Client ID                                                                                                           |
+| `GITHUB_APP_CLIENT_SECRET` | the github app Client Secret                                                                                                       |
+| `GITHUB_CERT`              | the github app private key (Base 64 encoded)                                                                                       |
 
 You can access these from your github app settings menu. Also needed for the
-configurtaion is:
+configuration is:
 
 - `REPO_CONNECTION_SIGNING_SECRET` - secret used to sign access tokens. This
   access token is used to authenticate requests made from the github actions.
@@ -215,7 +215,7 @@ After a Kafka consumer group connects to a Kafka cluster, the cluster will track
 the last committed offset for a given consumer group ,to ensure that the consumer
 group receives the correct messages.
 
-This data is retained for a finite period. If an enabled Kafka trigger is 
+This data is retained for a finite period. If an enabled Kafka trigger is
 disabled for longer than the offset retention period the consumer group offset
 data will be cleared.
 
