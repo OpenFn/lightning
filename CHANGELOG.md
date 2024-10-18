@@ -17,6 +17,11 @@ and this project adheres to
 
 ### Added
 
+- Optionally write Kafka messages that can not be persisted to the file system.
+  [#2386](https://github.com/OpenFn/lightning/issues/2386)
+- Add `MessageRecovery` utility code to restore Kafka messages that were
+  pesisted to the file system.
+  [#2386](https://github.com/OpenFn/lightning/issues/2386)
 - Projects page welcome section: allow users to learn how to use the app thru
   Arcade videos [#2563](https://github.com/OpenFn/lightning/issues/2563)
 - Store user preferences in database

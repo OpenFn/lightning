@@ -6,6 +6,7 @@ defmodule Lightning.KafkaTriggers do
 
   alias Ecto.Changeset
   alias Lightning.Accounts.UserNotifier
+  alias Lightning.KafkaTriggers.MessageHandling
   alias Lightning.Projects
   alias Lightning.Repo
   alias Lightning.Workflows.Trigger
@@ -246,5 +247,78 @@ defmodule Lightning.KafkaTriggers do
       Lightning.Config.kafka_notification_embargo_seconds()
 
     DateTime.diff(sending_at, last_sent_at, :second) > embargo_period
+  end
+
+  def maybe_write_to_alternate_storage(trigger_id, %Broadway.Message{} = msg) do
+    if Lightning.Config.kafka_alternate_storage_enabled?() do
+      with {:ok, workflow_path} <- build_workflow_storage_path(trigger_id),
+           :ok <- create_workflow_storage_directory(workflow_path),
+           path <- build_file_path(workflow_path, trigger_id, msg),
+           {:ok, data} <- encode_message(msg) do
+        write_to_file(path, data)
+      else
+        error ->
+          error
+      end
+    else
+      :ok
+    end
+  end
+
+  defp build_workflow_storage_path(trigger_id) do
+    with base_path <- Lightning.Config.kafka_alternate_storage_file_path(),
+         true <- base_path |> to_string() |> File.exists?(),
+         %{workflow_id: workflow_id} <- Trigger |> Repo.get(trigger_id) do
+      {:ok, Path.join(base_path, workflow_id)}
+    else
+      _anything ->
+        {:error, :path_error}
+    end
+  end
+
+  defp create_workflow_storage_directory(workflow_path) do
+    case File.mkdir(workflow_path) do
+      resp when resp == :ok or resp == {:error, :eexist} ->
+        :ok
+
+      _anything_else ->
+        {:error, :workflow_dir_error}
+    end
+  end
+
+  defp build_file_path(workflow_path, trigger_id, message) do
+    workflow_path |> Path.join(alternate_storage_file_name(trigger_id, message))
+  end
+
+  def alternate_storage_file_name(trigger_id, message) do
+    "#{trigger_id}_#{build_topic_partition_offset(message)}.json"
+  end
+
+  defp encode_message(message) do
+    message
+    |> Map.filter(fn {key, _val} -> key in [:data, :metadata] end)
+    |> then(fn %{metadata: metadata} = message_export ->
+      message_export
+      |> Map.put(
+        :metadata,
+        MessageHandling.convert_headers_for_serialisation(metadata)
+      )
+    end)
+    |> Jason.encode()
+    |> case do
+      {:error, _reason} ->
+        {:error, :serialisation}
+
+      ok_response ->
+        ok_response
+    end
+  end
+
+  defp write_to_file(path, data) do
+    if File.write(path, data) == :ok do
+      :ok
+    else
+      {:error, :writing}
+    end
   end
 end
