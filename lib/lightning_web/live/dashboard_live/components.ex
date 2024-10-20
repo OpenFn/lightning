@@ -25,7 +25,7 @@ defmodule LightningWeb.DashboardLive.Components do
         projects_count: assigns.projects |> Enum.count(),
         empty?: assigns.projects |> Enum.empty?(),
         name_sort_icon: next_sort_icon[assigns.name_direction],
-        activity_sort_icon: next_sort_icon[assigns.activity_direction]
+        last_activity_sort_icon: next_sort_icon[assigns.last_activity_direction]
       )
 
     ~H"""
@@ -60,10 +60,10 @@ defmodule LightningWeb.DashboardLive.Components do
               Last Activity
               <span
                 phx-click="sort"
-                phx-value-by="activity"
+                phx-value-by="last_activity"
                 class="cursor-pointer align-middle ml-2 flex-none rounded text-gray-400 group-hover:visible group-focus:visible"
               >
-                <.icon name={@activity_sort_icon} />
+                <.icon name={@last_activity_sort_icon} />
               </span>
             </div>
           </.th>

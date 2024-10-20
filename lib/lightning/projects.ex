@@ -34,7 +34,10 @@ defmodule Lightning.Projects do
 
   require Logger
 
-  defmodule ProjectTableRow do
+  defmodule ProjectOverviewRow do
+    @moduledoc """
+    Represents a summarized view of a project for a user, used in the project overview table.
+    """
     defstruct [
       :id,
       :name,
@@ -45,7 +48,7 @@ defmodule Lightning.Projects do
     ]
   end
 
-  def project_table_data_for_user(%User{id: user_id}, opts \\ []) do
+  def get_projects_overview(%User{id: user_id}, opts \\ []) do
     order_by = Keyword.get(opts, :order_by, {:name, :asc})
 
     from(p in Project,
@@ -54,7 +57,7 @@ defmodule Lightning.Projects do
       left_join: w in assoc(p, :workflows),
       left_join: wo in assoc(w, :work_orders),
       group_by: [p.id, pu.role],
-      select: %ProjectTableRow{
+      select: %ProjectOverviewRow{
         id: p.id,
         name: p.name,
         role: pu.role,

@@ -40,12 +40,14 @@ defmodule LightningWeb.DashboardLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    projects = projects_for_user(socket.assigns.current_user)
+    %{current_user: current_user} = socket.assigns
+    projects = get_projects_overview(current_user)
 
     welcome_collapsed =
-      Accounts.get_preference(
-        socket.assigns.current_user,
-        "welcome.collapsed"
+      Map.get(
+        current_user.preferences,
+        "welcome.collapsed",
+        false
       )
 
     {:ok,
@@ -55,7 +57,7 @@ defmodule LightningWeb.DashboardLive.Index do
      |> assign(:welcome_collapsed, welcome_collapsed)
      |> assign(:active_menu_item, :projects)
      |> assign(:name_sort_direction, :asc)
-     |> assign(:activity_sort_direction, :asc)}
+     |> assign(:last_activity_sort_direction, :asc)}
   end
 
   @impl true
@@ -66,20 +68,22 @@ defmodule LightningWeb.DashboardLive.Index do
   @impl true
   def handle_event("sort", %{"by" => field}, socket) do
     sort_key = String.to_atom("#{field}_sort_direction")
-    sort_direction = Map.get(socket.assigns, sort_key, :asc)
-    new_sort_direction = switch_sort_direction(sort_direction)
+    order_column = String.to_atom(field)
 
-    order_column = map_sort_field_to_column(field)
+    sort_direction =
+      socket.assigns
+      |> Map.get(sort_key, :asc)
+      |> switch_sort_direction()
 
     projects =
-      projects_for_user(socket.assigns.current_user,
-        order_by: [{new_sort_direction, order_column}]
+      get_projects_overview(socket.assigns.current_user,
+        order_by: {sort_direction, order_column}
       )
 
     socket =
       socket
       |> assign(:projects, projects)
-      |> assign(sort_key, new_sort_direction)
+      |> assign(sort_key, sort_direction)
 
     {:noreply, socket}
   end
@@ -118,13 +122,10 @@ defmodule LightningWeb.DashboardLive.Index do
   defp switch_sort_direction(:asc), do: :desc
   defp switch_sort_direction(:desc), do: :asc
 
-  defp map_sort_field_to_column("name"), do: :name
-  defp map_sort_field_to_column("activity"), do: :updated_at
-
-  defp projects_for_user(%User{} = user, opts \\ []) do
+  defp get_projects_overview(%User{} = user, opts \\ []) do
     order_by = Keyword.get(opts, :order_by, {:asc, :name})
 
-    Projects.project_table_data_for_user(user, order_by: order_by)
+    Projects.get_projects_overview(user, order_by: order_by)
   end
 
   @impl true
@@ -150,7 +151,7 @@ defmodule LightningWeb.DashboardLive.Index do
             projects={@projects}
             user={@current_user}
             name_direction={@name_sort_direction}
-            activity_direction={@activity_sort_direction}
+            last_activity_direction={@last_activity_sort_direction}
           >
             <:empty_state>
               <button
@@ -208,7 +209,7 @@ defmodule LightningWeb.DashboardLive.Index do
       <div
         id="welcome-banner-content"
         class={[
-          "overflow-visible transition-all duration-500 ease-in-out overflow-hidden",
+          "transition-all duration-500 ease-in-out overflow-hidden",
           banner_content_classes(@collapsed)
         ]}
       >
