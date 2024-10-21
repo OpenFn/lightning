@@ -687,7 +687,7 @@ defmodule Lightning.WorkOrders do
     workorder_ids
     |> workorders_with_dataclips_query()
     |> preload([
-        workflow: [edges: ^first_job_query()],
+        workflow: [edges: ^first_edge_query()],
         runs: ^first_run_query()
     ])
     |> Repo.all()
@@ -700,7 +700,7 @@ defmodule Lightning.WorkOrders do
       limit: 1
   end
 
-  defp first_job_query do
+  defp first_edge_query do
     from e in Edge,
       where: not is_nil(e.source_trigger_id),
       preload: :target_job
