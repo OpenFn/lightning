@@ -17,7 +17,6 @@ defmodule Lightning.Projects do
 
   import Ecto.Query, warn: false
 
-  alias Ecto.Changeset
   alias Ecto.Multi
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserNotifier
@@ -25,6 +24,7 @@ defmodule Lightning.Projects do
   alias Lightning.ExportUtils
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
+  alias Lightning.Projects.Audit
   alias Lightning.Projects.Events
   alias Lightning.Projects.File
   alias Lightning.Projects.Project
@@ -254,38 +254,15 @@ defmodule Lightning.Projects do
   def update_project(%Project{} = project, attrs, user \\ nil) do
     changeset = Project.changeset(project, attrs)
 
-    cond do
-      Changeset.changed?(changeset, :history_retention_period) ->
-        event_changeset =
-          changeset
-          |> Map.merge(%{changes: %{history_retention_period: attrs.history_retention_period}})
-
-        "history_retention_period_updated"
-        |> event(project.id, user.id, event_changeset)
-        |> Lightning.Auditing.Audit.save(Repo)
-
-      true ->
-        nil
-    end
-
-    cond do
-      Changeset.changed?(changeset, :dataclip_retention_period) ->
-        event_changeset =
-          changeset
-          |> Map.merge(%{changes: %{dataclip_retention_period: attrs.dataclip_retention_period}})
-
-        "dataclip_retention_period_updated"
-        |> event(project.id, user.id, event_changeset)
-        |> Lightning.Auditing.Audit.save(Repo)
-
-      true ->
-        nil
-    end
-
     case Repo.update(changeset) do
       {:ok, updated_project} ->
         if retention_setting_updated?(changeset) do
           send_data_retention_change_email(updated_project)
+        end
+
+        if user do
+          Audit.audit_history_retention_period_updated(project, changeset, user)
+          Audit.audit_dataclip_retention_period_updated(project, changeset, user)
         end
 
         {:ok, updated_project}
