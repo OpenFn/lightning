@@ -686,10 +686,10 @@ defmodule Lightning.WorkOrders do
   defp workorders_with_first_runs(workorder_ids) do
     workorder_ids
     |> workorders_with_dataclips_query()
-    |> preload([
-        workflow: [edges: ^first_edge_query()],
-        runs: ^first_run_query()
-    ])
+    |> preload(
+      workflow: [edges: ^first_edge_query()],
+      runs: ^first_run_query()
+    )
     |> Repo.all()
   end
 

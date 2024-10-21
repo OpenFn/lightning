@@ -1737,24 +1737,27 @@ defmodule Lightning.WorkOrdersTest do
       refute workorder.state == :rejected
     end
 
-    test "enqueues a workorder that was originally built for manual/job", %{workflow: workflow, jobs: [job | _jobs]} do
+    test "enqueues a workorder that was originally built for manual/job", %{
+      workflow: workflow,
+      jobs: [job | _jobs]
+    } do
       user = insert(:user)
 
       assert {:ok, manual} =
-                Lightning.WorkOrders.Manual.new(
-                  %{
-                    "body" =>
-                      Jason.encode!(%{
-                        "key_left" => "value_left",
-                        "configuration" => %{"password" => "secret"}
-                      })
-                  },
-                  workflow: workflow,
-                  project: workflow.project,
-                  job: job,
-                  created_by: user
-                )
-                |> Ecto.Changeset.apply_action(:validate)
+               Lightning.WorkOrders.Manual.new(
+                 %{
+                   "body" =>
+                     Jason.encode!(%{
+                       "key_left" => "value_left",
+                       "configuration" => %{"password" => "secret"}
+                     })
+                 },
+                 workflow: workflow,
+                 project: workflow.project,
+                 job: job,
+                 created_by: user
+               )
+               |> Ecto.Changeset.apply_action(:validate)
 
       assert {:ok, %{runs: old_runs} = workorder} = WorkOrders.create_for(manual)
 
