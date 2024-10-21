@@ -86,7 +86,7 @@ defmodule Lightning.Projects.AuditTest do
       }
     end
 
-    test "does not create event if history retention period is updated", %{
+    test "does not create event if history retention period is not updated", %{
       project: project,
       user: user
     } do

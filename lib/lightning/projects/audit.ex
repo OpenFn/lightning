@@ -7,40 +7,29 @@ defmodule Lightning.Projects.Audit do
       "history_retention_period_updated"
     ]
 
-  alias Ecto.Changeset
   alias Lightning.Repo
 
   def audit_history_retention_period_updated(project, changeset, user) do
-    if Changeset.changed?(changeset, :history_retention_period) do
-      history_retention_period =
-        Changeset.get_change(changeset, :history_retention_period)
+    event_changeset = filter_changes(changeset, :history_retention_period)
 
-      event_changeset =
-        changeset
-        |> Map.merge(
-          %{changes: %{history_retention_period: history_retention_period}}
-        )
-
-      "history_retention_period_updated"
-      |> event(project.id, user.id, event_changeset)
-      |> Lightning.Auditing.Audit.save(Repo)
-    end
+    "history_retention_period_updated"
+    |> save_event(project, user, event_changeset)
   end
 
   def audit_dataclip_retention_period_updated(project, changeset, user) do
-    if Changeset.changed?(changeset, :dataclip_retention_period) do
-      dataclip_retention_period =
-        Changeset.get_change(changeset, :dataclip_retention_period)
+    event_changeset = filter_changes(changeset, :dataclip_retention_period)
 
-      event_changeset =
-        changeset
-        |> Map.merge(
-          %{changes: %{dataclip_retention_period: dataclip_retention_period}}
-        )
+    "dataclip_retention_period_updated"
+    |> save_event(project, user, event_changeset)
+  end
 
-      "dataclip_retention_period_updated"
-      |> event(project.id, user.id, event_changeset)
-      |> Lightning.Auditing.Audit.save(Repo)
-    end
+  defp filter_changes(%{changes: changes} = changeset, field) do
+    changeset |> Map.merge(%{changes: changes |> Map.take([field])})
+  end
+
+  defp save_event(event_name, project, user, changeset) do
+    event_name
+    |> event(project.id, user.id, changeset)
+    |> Lightning.Auditing.Audit.save(Repo)
   end
 end
