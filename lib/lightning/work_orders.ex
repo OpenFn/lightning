@@ -46,6 +46,7 @@ defmodule Lightning.WorkOrders do
   alias Lightning.Runs
   alias Lightning.RunStep
   alias Lightning.Services.UsageLimiter
+  alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
@@ -263,7 +264,6 @@ defmodule Lightning.WorkOrders do
     |> validate_required_assoc(:snapshot)
     |> validate_required_assoc(:workflow)
     |> validate_required_assoc(:dataclip)
-    |> assoc_constraint(:trigger)
     |> assoc_constraint(:workflow)
     |> assoc_constraint(:snapshot)
   end
@@ -661,39 +661,35 @@ defmodule Lightning.WorkOrders do
     end)
   end
 
-  defp determine_starting_job(%{runs: []} = workorder) do
-    hd(workorder.trigger.edges).target_job
+  defp determine_starting_job(%{runs: [], workflow: %{edges: [edge]}}) do
+    edge.target_job
   end
 
-  defp determine_starting_job(%{runs: [run]} = workorder) do
-    run.starting_job || hd(workorder.trigger.edges).target_job
+  defp determine_starting_job(%{runs: [run]}) do
+    run.starting_job || hd(run.starting_trigger.edges).target_job
   end
 
   defp fetch_retriable_workorders(workorder_ids) do
-    from(w in WorkOrder,
-      join: d in assoc(w, :dataclip),
-      where: w.id in ^workorder_ids and is_nil(d.wiped_at),
-      order_by: [asc: w.inserted_at]
-    )
+    workorder_ids
+    |> workorders_with_dataclips_query()
     |> Repo.all()
   end
 
   defp workorders_with_dataclips_query(workorder_ids) do
     from(w in WorkOrder,
-      left_join: d in assoc(w, :dataclip),
-      where: w.id in ^workorder_ids,
-      preload: [
-        :workflow,
-        :dataclip,
-        trigger: [edges: :target_job]
-      ]
+      join: d in assoc(w, :dataclip),
+      where: w.id in ^workorder_ids and is_nil(d.wiped_at),
+      order_by: [asc: w.inserted_at]
     )
   end
 
   defp workorders_with_first_runs(workorder_ids) do
     workorder_ids
     |> workorders_with_dataclips_query()
-    |> preload(runs: ^first_run_query())
+    |> preload(
+      workflow: [edges: ^first_edge_query()],
+      runs: ^first_run_query()
+    )
     |> Repo.all()
   end
 
@@ -702,5 +698,11 @@ defmodule Lightning.WorkOrders do
       order_by: [asc: coalesce(r.started_at, r.inserted_at)],
       preload: [:starting_job, starting_trigger: [edges: :target_job]],
       limit: 1
+  end
+
+  defp first_edge_query do
+    from e in Edge,
+      where: not is_nil(e.source_trigger_id),
+      preload: :target_job
   end
 end
