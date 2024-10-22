@@ -125,6 +125,9 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
       <div class="col-span-2">
         <.input type={@type} field={@form[@field]} value={@value || ""} />
       </div>
+      <div class="error-space h-6">
+        <LightningWeb.CoreComponents.old_error errors={@errors} />
+      </div>
       """
     end
   end
