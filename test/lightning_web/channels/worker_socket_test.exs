@@ -12,7 +12,7 @@ defmodule LightningWeb.WorkerSocketTest do
 
     test "with a valid token" do
       {:ok, bearer, _} =
-        Workers.Token.generate_and_sign(
+        Workers.WorkerToken.generate_and_sign(
           %{},
           Lightning.Config.worker_token_signer()
         )
