@@ -29,6 +29,9 @@ and this project adheres to
 
 ### Changed
 
+- Allow users to to preview password fields in credential forms
+  [#2584](https://github.com/OpenFn/lightning/issues/2584)
+
 ### Fixed
 
 - Fix retry many workorders when built for job
