@@ -144,6 +144,8 @@ config :lightning, :default_retention_period, nil
 
 config :lightning, Lightning.Runtime.RuntimeManager, start: false
 
+config :lightning, Lightning.Collections, query_all_limit: 1_000
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"
