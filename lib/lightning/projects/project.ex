@@ -37,7 +37,7 @@ defmodule Lightning.Projects.Project do
     has_many :project_oauth_clients, ProjectOauthClient
     has_many :oauth_clients, through: [:project_oauth_clients, :oauth_client]
 
-    has_many :workflows, Workflow
+    has_many :workflows, Workflow, where: [deleted_at: nil]
     has_many :jobs, through: [:workflows, :jobs]
 
     has_many :project_credentials, ProjectCredential

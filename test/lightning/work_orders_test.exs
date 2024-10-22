@@ -1699,6 +1699,7 @@ defmodule Lightning.WorkOrdersTest do
            workflow: workflow
          } do
       input_dataclip = insert(:dataclip)
+      wiped_dataclip = insert(:dataclip, wiped_at: DateTime.utc_now())
 
       workorder =
         insert(:workorder,
@@ -1709,13 +1710,22 @@ defmodule Lightning.WorkOrdersTest do
           state: :rejected
         )
 
+      discarded_workorder =
+        insert(:workorder,
+          dataclip: wiped_dataclip,
+          snapshot: snapshot,
+          trigger: trigger,
+          workflow: workflow,
+          state: :success
+        )
+
       runs = workorder |> Ecto.assoc(:runs) |> Repo.all()
 
       assert Enum.empty?(runs)
       assert workorder.state == :rejected
 
-      {:ok, 1, 0} =
-        WorkOrders.retry_many([workorder],
+      {:ok, 1, 1} =
+        WorkOrders.retry_many([workorder, discarded_workorder],
           created_by: user,
           project_id: workflow.project_id
         )
@@ -1725,6 +1735,41 @@ defmodule Lightning.WorkOrdersTest do
 
       refute Enum.empty?(runs)
       refute workorder.state == :rejected
+    end
+
+    test "enqueues a workorder that was originally built for manual/job", %{
+      workflow: workflow,
+      jobs: [job | _jobs]
+    } do
+      user = insert(:user)
+
+      assert {:ok, manual} =
+               Lightning.WorkOrders.Manual.new(
+                 %{
+                   "body" =>
+                     Jason.encode!(%{
+                       "key_left" => "value_left",
+                       "configuration" => %{"password" => "secret"}
+                     })
+                 },
+                 workflow: workflow,
+                 project: workflow.project,
+                 job: job,
+                 created_by: user
+               )
+               |> Ecto.Changeset.apply_action(:validate)
+
+      assert {:ok, %{runs: old_runs} = workorder} = WorkOrders.create_for(manual)
+
+      {:ok, 1, 0} =
+        WorkOrders.retry_many([workorder],
+          created_by: user,
+          project_id: workflow.project_id
+        )
+
+      %{runs: runs} = Repo.reload(workorder) |> Repo.preload(:runs)
+
+      assert runs -- old_runs != []
     end
 
     test "retrying a WorkOrder with a run having starting_job without steps",

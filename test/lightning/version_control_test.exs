@@ -90,22 +90,28 @@ defmodule Lightning.VersionControlTest do
                  user
                )
 
-      {:ok, verified_token} =
+      now = DateTime.utc_now()
+      Lightning.Stub.freeze_time(now)
+
+      {:ok, claims} =
         ProjectRepoConnection.AccessToken.verify_and_validate(
           repo_connection.access_token,
           Lightning.Config.repo_connection_token_signer()
         )
 
-      assert verified_token["project_id"] == project.id
-      assert verified_token["iss"] == "Lightning"
-      refute Map.has_key?(verified_token, "aud")
+      current_time_in_unix = now |> DateTime.to_unix()
 
-      assert verified_token["iat"] == verified_token["nbf"]
+      project_id = project.id
 
-      assert DateTime.diff(
-               DateTime.from_unix!(verified_token["nbf"]),
-               DateTime.utc_now(:second)
-             ) in -1..1
+      assert %{
+               "project_id" => ^project_id,
+               "iss" => "Lightning",
+               "nbf" => ^current_time_in_unix,
+               "iat" => ^current_time_in_unix,
+               "jti" => jti
+             } = claims
+
+      assert is_binary(jti)
 
       assert Repo.aggregate(ProjectRepoConnection, :count) == 1
 
