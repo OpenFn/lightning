@@ -18,7 +18,6 @@ defmodule Lightning.Accounts.UserToken do
   """
 
   use Lightning.Schema
-  use Joken.Config
 
   import Ecto.Query
 
