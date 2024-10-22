@@ -26,6 +26,8 @@ and this project adheres to
   Arcade videos [#2563](https://github.com/OpenFn/lightning/issues/2563)
 - Store user preferences in database
   [#2564](https://github.com/OpenFn/lightning/issues/2564)
+- Introduces collections, a programatic workflow data sharing resource.
+  [#2551](https://github.com/OpenFn/lightning/issues/2551)
 
 ### Changed
 
