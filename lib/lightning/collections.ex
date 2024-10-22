@@ -79,19 +79,21 @@ defmodule Lightning.Collections do
     |> Item.changeset(%{collection_id: collection_id, key: key, value: value})
     |> Repo.insert(
       conflict_target: [:collection_id, :key],
-      on_conflict: [set: [value: value, updated_at: NaiveDateTime.utc_now()]]
+      on_conflict: [set: [value: value, updated_at: DateTime.utc_now()]]
     )
     |> then(fn result ->
       with {:ok, _no_return} <- result, do: :ok
     end)
   end
 
-  @spec delete(Collection.t(), String.t()) ::
-          {:ok, Item.t()} | {:error, :not_found}
+  @spec delete(Collection.t(), String.t()) :: :ok | {:error, :not_found}
   def delete(%{id: collection_id}, key) do
-    case Repo.get_by(Item, collection_id: collection_id, key: key) do
-      nil -> {:error, :not_found}
-      item -> Repo.delete(item)
+    query =
+      from(i in Item, where: i.collection_id == ^collection_id and i.key == ^key)
+
+    case Repo.delete_all(query) do
+      {0, nil} -> {:error, :not_found}
+      {1, nil} -> :ok
     end
   end
 
