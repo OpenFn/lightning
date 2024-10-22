@@ -57,7 +57,7 @@ defmodule LightningWeb.RunChannelTest do
 
       # A valid token, but nbf hasn't been reached yet
       {:ok, bearer, _} =
-        Workers.Token.generate_and_sign(
+        Workers.WorkerToken.generate_and_sign(
           %{
             "nbf" =>
               DateTime.utc_now()
@@ -82,7 +82,9 @@ defmodule LightningWeb.RunChannelTest do
       other_id = Ecto.UUID.generate()
 
       bearer =
-        Workers.generate_run_token(%{id: id}, run_timeout_ms: 1000)
+        Workers.generate_run_token(%{id: id}, %{
+          run_timeout_ms: 1000
+        })
 
       assert {:error, %{reason: "unauthorized"}} =
                socket
@@ -97,7 +99,7 @@ defmodule LightningWeb.RunChannelTest do
       id = Ecto.UUID.generate()
 
       bearer =
-        Workers.generate_run_token(%{id: id}, run_timeout_ms: 1000)
+        Workers.generate_run_token(%{id: id}, %{run_timeout_ms: 1000})
 
       assert {:error, %{reason: "not_found"}} =
                socket
@@ -521,6 +523,7 @@ defmodule LightningWeb.RunChannelTest do
         Lightning.Extensions.MockUsageLimiter.get_run_options(%Context{
           project_id: project.id
         })
+        |> Enum.into(%{})
 
       {:ok, _, socket} =
         context.socket
@@ -1333,7 +1336,7 @@ defmodule LightningWeb.RunChannelTest do
 
   defp create_socket(context) do
     {:ok, bearer, claims} =
-      Workers.Token.generate_and_sign(
+      Workers.WorkerToken.generate_and_sign(
         %{},
         Lightning.Config.worker_token_signer()
       )
@@ -1357,7 +1360,12 @@ defmodule LightningWeb.RunChannelTest do
       |> subscribe_and_join(
         LightningWeb.RunChannel,
         "run:#{run.id}",
-        %{"token" => Workers.generate_run_token(run, run_timeout_ms: 2)}
+        %{
+          "token" =>
+            Workers.generate_run_token(run, %Lightning.Runs.RunOptions{
+              run_timeout_ms: 2
+            })
+        }
       )
 
     %{socket: socket}

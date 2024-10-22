@@ -49,5 +49,8 @@ defmodule LightningWeb.WorkerChannel do
     |> then(fn %{project_id: project_id} ->
       UsageLimiter.get_run_options(%Context{project_id: project_id})
     end)
+    |> Enum.into(%{})
+    |> Runs.RunOptions.new()
+    |> Ecto.Changeset.apply_changes()
   end
 end
