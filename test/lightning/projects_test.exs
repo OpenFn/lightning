@@ -1,20 +1,22 @@
 defmodule Lightning.ProjectsTest do
-  require Phoenix.VerifiedRoutes
-  alias Swoosh.Email
   use Lightning.DataCase, async: true
 
   alias Lightning.Invocation.Dataclip
+  alias Lightning.Projects.ProjectOverviewRow
   alias Lightning.Projects.ProjectUser
   alias Lightning.Projects
   alias Lightning.Projects.Project
   alias Lightning.Accounts.User
+  alias Swoosh.Email
 
   import Lightning.ProjectsFixtures
   import Lightning.AccountsFixtures
   import Lightning.CredentialsFixtures
   import Lightning.Factories
-  import Swoosh.TestAssertions
   import Mox
+  import Swoosh.TestAssertions
+
+  require Phoenix.VerifiedRoutes
 
   describe "projects" do
     @invalid_attrs %{name: nil}
@@ -1682,6 +1684,115 @@ defmodule Lightning.ProjectsTest do
         |> Enum.sort()
 
       assert actual_emails == expected_emails
+    end
+  end
+
+  describe "get_projects_overview/2" do
+    test "returns an empty list when the user has no projects" do
+      user = insert(:user)
+
+      assert Projects.get_projects_overview(user) == []
+    end
+
+    test "returns projects overview with workflows and collaborators count" do
+      user = insert(:user)
+      other_user = insert(:user)
+
+      project =
+        %{id: project_id} =
+        insert(:project, name: "Project A", project_users: [%{user_id: user.id}])
+
+      insert(:simple_workflow, project: project)
+      insert(:simple_workflow, project: project)
+
+      insert(:project,
+        name: "Project B",
+        project_users: [%{user_id: other_user.id}]
+      )
+
+      result = Projects.get_projects_overview(user)
+
+      assert length(result) == 1
+
+      [
+        %ProjectOverviewRow{
+          id: ^project_id,
+          name: "Project A",
+          workflows_count: 2,
+          collaborators_count: 1
+        }
+      ] = result
+    end
+
+    test "orders projects by name ascending by default" do
+      user = insert(:user)
+
+      %{id: project_a_id} =
+        insert(:project, name: "Project A", project_users: [%{user_id: user.id}])
+
+      %{id: project_b_id} =
+        insert(:project, name: "Project B", project_users: [%{user_id: user.id}])
+
+      result = Projects.get_projects_overview(user)
+
+      assert [
+               %ProjectOverviewRow{id: ^project_a_id, name: "Project A"},
+               %ProjectOverviewRow{id: ^project_b_id, name: "Project B"}
+             ] = result
+    end
+
+    test "orders projects by last_activity descending when specified" do
+      user = insert(:user)
+
+      project_a =
+        %{id: project_a_id} =
+        insert(:project, name: "Project A", project_users: [%{user_id: user.id}])
+
+      project_b =
+        %{id: project_b_id} =
+        insert(:project, name: "Project B", project_users: [%{user_id: user.id}])
+
+      workflow_a = insert(:simple_workflow, project: project_a)
+      workflow_b = insert(:simple_workflow, project: project_b)
+
+      insert(:workorder,
+        workflow: workflow_b,
+        last_activity: ~N[2023-10-10 00:00:00]
+      )
+
+      insert(:workorder,
+        workflow: workflow_a,
+        last_activity: ~N[2023-10-05 00:00:00]
+      )
+
+      result =
+        Projects.get_projects_overview(user, order_by: {:desc, :last_activity})
+
+      assert [
+               %ProjectOverviewRow{id: ^project_b_id, name: "Project B"},
+               %ProjectOverviewRow{id: ^project_a_id, name: "Project A"}
+             ] = result
+    end
+
+    test "returns project with no workflows or last activity" do
+      user = insert(:user)
+
+      %{id: project_id} =
+        insert(:project,
+          name: "Project No Workflow",
+          project_users: [%{user_id: user.id}]
+        )
+
+      result = Projects.get_projects_overview(user)
+
+      assert [
+               %ProjectOverviewRow{
+                 id: ^project_id,
+                 name: "Project No Workflow",
+                 workflows_count: 0,
+                 last_activity: nil
+               }
+             ] = result
     end
   end
 
