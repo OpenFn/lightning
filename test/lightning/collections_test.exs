@@ -212,15 +212,15 @@ defmodule Lightning.CollectionsTest do
           )
         end)
 
-        orig_first = List.first(items)
-        :ok = Collections.put(collection, orig_first.key, "new value for last")
+      orig_first = List.first(items)
+      :ok = Collections.put(collection, orig_first.key, "new value for last")
 
-        new_last =
-          Repo.get_by!(Item,
-            collection_id: collection.id,
-            key: orig_first.key
-          )
-          |> Repo.preload(collection: :project)
+      new_last =
+        Repo.get_by!(Item,
+          collection_id: collection.id,
+          key: orig_first.key
+        )
+        |> Repo.preload(collection: :project)
 
       for _i <- 1..5,
           do:
@@ -231,15 +231,18 @@ defmodule Lightning.CollectionsTest do
 
       Repo.transaction(fn ->
         assert stream = Collections.stream_match(collection, "rkeyA*")
-        assert stream_items = Stream.take(stream, 12)
-        |> Enum.to_list()
-        |> Repo.preload(collection: :project)
+
+        assert stream_items =
+                 Stream.take(stream, 12)
+                 |> Enum.to_list()
+                 |> Repo.preload(collection: :project)
 
         assert List.last(stream_items) == new_last
+
         assert MapSet.new(Enum.reject(items, &(&1.key == orig_first.key))) ==
-          MapSet.new(
-            Enum.reject(stream_items, &(&1.key == orig_first.key))
-          )
+                 MapSet.new(
+                   Enum.reject(stream_items, &(&1.key == orig_first.key))
+                 )
       end)
     end
 
@@ -356,17 +359,23 @@ defmodule Lightning.CollectionsTest do
       collection = insert(:collection)
 
       assert :ok = Collections.put(collection, "some-key", "some-value")
-      assert %{key: "some-key", value: "some-value"} = Repo.get_by!(Item, key: "some-key")
+
+      assert %{key: "some-key", value: "some-value"} =
+               Repo.get_by!(Item, key: "some-key")
     end
 
     test "updates the value of an item when key exists" do
       collection = insert(:collection)
 
       assert :ok = Collections.put(collection, "some-key", "some-value1")
-      assert %{key: "some-key", value: "some-value1"} = Repo.get_by!(Item, key: "some-key")
+
+      assert %{key: "some-key", value: "some-value1"} =
+               Repo.get_by!(Item, key: "some-key")
 
       assert :ok = Collections.put(collection, "some-key", "some-value2")
-      assert %{key: "some-key", value: "some-value2"} = Repo.get_by!(Item, key: "some-key")
+
+      assert %{key: "some-key", value: "some-value2"} =
+               Repo.get_by!(Item, key: "some-key")
     end
 
     test "returns an :error if the collection does not exist" do
@@ -389,9 +398,9 @@ defmodule Lightning.CollectionsTest do
       collection = insert(:collection)
 
       %{key: key} =
-        insert(:collection_item, collection: collection) |> Repo.reload()
+        insert(:collection_item, collection: collection)
 
-      assert {:ok, %{key: ^key}} = Collections.delete(collection, key)
+      assert :ok = Collections.delete(collection, key)
 
       refute Collections.get(collection, key)
     end
