@@ -24,4 +24,10 @@ defmodule Lightning.Credentials.Audit do
       changes
     end
   end
+
+  def user_initiated_event(event, credential, changes \\ %{}) do
+    %{id: id, user: user} = credential |> Lightning.Repo.preload(:user)
+
+    event(event, id, user, changes)
+  end
 end

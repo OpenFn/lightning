@@ -1,6 +1,7 @@
 defmodule Lightning.CredentialsTest do
   use Lightning.DataCase, async: true
 
+  alias Lightning.Auditing
   alias Lightning.Credentials
   alias Lightning.Credentials.{Audit, Credential}
   alias Lightning.CredentialsFixtures
@@ -519,6 +520,75 @@ defmodule Lightning.CredentialsTest do
                 "before" => %{"project_id" => nil},
                 "after" => %{"project_id" => new_project.id}
               }} in audit_events
+    end
+
+    test "correctly handle removing credential from a project" do
+      %{id: user_id} = user = insert(:user)
+
+      %{id: project_id} =
+        insert(:project, name: "some-name", project_users: [%{user_id: user_id}])
+
+      credential =
+        insert(:credential,
+          body: %{},
+          name: "some name",
+          schema: "raw",
+          user: user,
+          project_credentials: [
+            %{project_id: project_id}
+          ]
+        )
+
+      %{
+        id: credential_id,
+        project_credentials: [%{id: project_credential_id}]
+      } = credential
+
+      removal_attrs = %{
+        "body" => %{},
+        "name" => "some name",
+        "project_credentials" => [
+          %{
+            "delete" => "true",
+            "id" => project_credential_id,
+            "project_id" => project_id
+          }
+        ],
+        "user_id" => user_id
+      }
+
+      assert {:ok, %Credential{} = updated_credential} =
+               Credentials.update_credential(credential, removal_attrs)
+
+      assert Enum.empty?(updated_credential.project_credentials)
+
+      updated_event_query = from a in Auditing.Audit, where: a.event == "updated"
+
+      assert %{
+               item_id: ^credential_id,
+               item_type: "credential",
+               actor_id: ^user_id,
+               actor_type: :user,
+               changes: %{
+                 before: %{},
+                 after: nil
+               }
+             } = Repo.one!(updated_event_query)
+
+      removed_event_query =
+        from a in Auditing.Audit,
+          where: a.event == "removed_from_project"
+
+      assert %{
+               item_id: ^credential_id,
+               item_type: "credential",
+               actor_id: ^user_id,
+               actor_type: :user,
+               changes: %{
+                 before: %{"project_id" => ^project_id},
+                 after: %{"project_id" => nil}
+               }
+             } = Repo.one!(removed_event_query)
     end
 
     test "casts body to field types based on schema" do
