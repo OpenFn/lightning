@@ -77,38 +77,34 @@ defmodule Lightning.VersionControl.GithubClientTest do
 
   describe "GithubToken" do
     test "builds a token" do
+      Lightning.Stub.freeze_time(DateTime.utc_now())
+
       {:ok, token, claims} = VersionControl.GithubToken.build(@cert, "111111")
 
       assert %{
                "iss" => "111111",
                "exp" => exp,
-               "iat" => iat,
-               "nbf" => nbf,
-               "aud" => "Joken",
-               "jti" => _
+               "iat" => iat
              } = claims
 
-      current_time = Joken.current_time()
+      assert iat ==
+               Lightning.current_time()
+               |> DateTime.add(-60, :second)
+               |> DateTime.to_unix(),
+             "iat should be 60s behind the current time"
 
-      assert iat in Range.new(current_time - 61, current_time - 59),
-             "IAT is not 1 minute before the current time"
+      assert exp ==
+               Lightning.current_time()
+               |> DateTime.add(10, :minute)
+               |> DateTime.to_unix(),
+             "Expiry is 10 minutes from current time"
 
-      # 10 minutes
-      expected_expiry = current_time + 60 * 10
-
-      assert exp in Range.new(expected_expiry - 1, expected_expiry + 1),
-             "Expiry is not within 1 second of expected expiry"
-
-      assert nbf >= current_time
-
-      assert Joken.verify_and_validate(
-               VersionControl.GithubToken.token_config()
-               |> Map.update("iss", nil, fn claim ->
-                 %{claim | validate: fn val, _, _ -> val == "111111" end}
-               end),
-               token,
-               Joken.Signer.create("RS256", %{"pem" => @cert})
-             )
+      assert {:ok, _claims} =
+               VersionControl.GithubToken.verify_and_validate(
+                 token,
+                 Joken.Signer.create("RS256", %{"pem" => @cert}),
+                 %{iss: "111111"}
+               )
     end
   end
 end

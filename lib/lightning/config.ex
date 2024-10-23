@@ -149,6 +149,16 @@ defmodule Lightning.Config do
     end
 
     @impl true
+    def kafka_alternate_storage_enabled? do
+      kafka_trigger_config() |> Keyword.get(:alternate_storage_enabled)
+    end
+
+    @impl true
+    def kafka_alternate_storage_file_path do
+      kafka_trigger_config() |> Keyword.get(:alternate_storage_file_path)
+    end
+
+    @impl true
     def kafka_duplicate_tracking_retention_seconds do
       kafka_trigger_config()
       |> Keyword.get(:duplicate_tracking_retention_seconds)
@@ -188,6 +198,8 @@ defmodule Lightning.Config do
   @callback google(key :: atom()) :: any()
   @callback grace_period() :: integer()
   @callback instance_admin_email() :: String.t()
+  @callback kafka_alternate_storage_enabled?() :: boolean()
+  @callback kafka_alternate_storage_file_path() :: String.t()
   @callback kafka_duplicate_tracking_retention_seconds() :: integer()
   @callback kafka_notification_embargo_seconds() :: integer()
   @callback kafka_number_of_consumers() :: integer()
@@ -306,6 +318,14 @@ defmodule Lightning.Config do
 
   def kafka_triggers_enabled? do
     impl().kafka_triggers_enabled?()
+  end
+
+  def kafka_alternate_storage_enabled? do
+    impl().kafka_alternate_storage_enabled?()
+  end
+
+  def kafka_alternate_storage_file_path do
+    impl().kafka_alternate_storage_file_path()
   end
 
   def kafka_duplicate_tracking_retention_seconds do

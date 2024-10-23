@@ -35,6 +35,8 @@ defmodule Lightning.Accounts.User do
       values: [:critical, :any],
       default: :critical
 
+    field :preferences, :map, default: %{}
+
     has_one :user_totp, Lightning.Accounts.UserTOTP
     has_many :credentials, Lightning.Credentials.Credential
     has_many :oauth_clients, Lightning.Credentials.OauthClient
@@ -295,6 +297,11 @@ defmodule Lightning.Accounts.User do
     user
     |> cast(attrs, [:github_oauth_token])
     |> validate_required([:github_oauth_token])
+  end
+
+  def preferences_changeset(user, attrs) do
+    user
+    |> change(%{preferences: Map.merge(user.preferences, attrs)})
   end
 
   @doc """
