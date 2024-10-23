@@ -203,16 +203,7 @@
             />
           </div>
           <div class="sm:block" aria-hidden="true">
-            <.button
-              :if={@current_user.role != :superuser}
-              id="new-credential-button"
-              phx-click={show_modal("new-credential-modal")}
-              {if !@can_create_project_credential, do: [disabled: "disabled"], else: []}
-            >
-              New credential
-            </.button>
             <LightningWeb.Components.Credentials.options_menu_button
-              :if={@current_user.role == :superuser}
               id="options-menu-button"
               options={[
                 %{
@@ -235,7 +226,6 @@
         </div>
 
         <LightningWeb.Components.Credentials.oauth_clients_table
-          :if={@current_user.role == :superuser}
           id="oauth-clients"
           title="OAuth Clients"
           clients={@oauth_clients}
