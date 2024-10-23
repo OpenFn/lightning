@@ -78,7 +78,6 @@ defmodule LightningWeb.Components.Modal do
                   "bg-white py-[24px] shadow-lg shadow-zinc-700/10 ring-1 ring-zinc-700/10"
               ]}
             >
-              <!-- Modal Content -->
               <header :if={@title != [] && @with_frame} class="pl-[24px] pr-[24px]">
                 <h1
                   id={"#{@id}-title"}
