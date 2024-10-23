@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.9.11] - 2024-10-23
+
+### Added
+
 - Optionally write Kafka messages that can not be persisted to the file system.
   [#2386](https://github.com/OpenFn/lightning/issues/2386)
 - Add `MessageRecovery` utility code to restore Kafka messages that were
