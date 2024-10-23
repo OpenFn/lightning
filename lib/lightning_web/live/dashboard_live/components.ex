@@ -103,7 +103,7 @@ defmodule LightningWeb.DashboardLive.Components do
             <%= if project.last_activity do %>
               <%= Lightning.Helpers.format_date(
                 project.last_activity,
-                "%d/%m/%Y at %H:%M:%S"
+                "%d/%m/%Y %H:%M:%S"
               ) %>
             <% else %>
               No activity
