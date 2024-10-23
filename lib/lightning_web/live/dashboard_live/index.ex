@@ -14,25 +14,25 @@ defmodule LightningWeb.DashboardLive.Index do
       id: 1,
       title: "Getting Started with OpenFn",
       link:
-        "https://demo.arcade.software/WhOK61AiXdG73Dd5lfSa?embed&embed_mobile=inline&embed_desktop=inline&show_copy_link=true"
+        "https://demo.arcade.software/xmGSUuZ1Ovd9WeHaTLle?embed&embed_mobile=inline&embed_desktop=inline&show_copy_link=true"
     },
     %{
       id: 2,
       title: "Creating your first workflow",
       link:
-        "https://demo.arcade.software/WhOK61AiXdG73Dd5lfSa?embed&embed_mobile=inline&embed_desktop=inline&show_copy_link=true"
+        "https://demo.arcade.software/JzPHX0mUGTkPgAUoctHy?embed&embed_mobile=inline&embed_desktop=inline&show_copy_link=true"
     },
     %{
       id: 3,
       title: "How to use the IDE",
       link:
-        "https://demo.arcade.software/WhOK61AiXdG73Dd5lfSa?embed&embed_mobile=inline&embed_desktop=inline&show_copy_link=true"
+        "https://demo.arcade.software/L3jtNbBEdMJHtY1Z1PFk?embed&embed_mobile=inline&embed_desktop=inline&show_copy_link=true"
     },
     %{
       id: 4,
       title: "Managing project history",
       link:
-        "https://demo.arcade.software/WhOK61AiXdG73Dd5lfSa?embed&embed_mobile=inline&embed_desktop=inline&show_copy_link=true"
+        "https://demo.arcade.software/JLR25gjZdm3NlasAIrZ5?embed&embed_mobile=inline&embed_desktop=inline&show_copy_link=true"
     }
   ]
 
@@ -246,7 +246,12 @@ defmodule LightningWeb.DashboardLive.Index do
       type="button"
       phx-click="select-arcade-resource"
       phx-value-resource={@resource.id}
-      class="relative flex items-end h-[150px] bg-gradient-to-r from-blue-400 to-purple-500 text-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 p-4 text-left"
+      class={[
+        "relative flex items-end h-[150px] p-4 text-left",
+        "bg-gradient-to-r from-blue-400 to-purple-500",
+        "text-white rounded-lg shadow-sm hover:shadow-md",
+        "transition-shadow duration-300"
+      ]}
     >
       <h2 class="text-lg font-semibold absolute bottom-4 left-4">
         <%= @resource.title %>
@@ -264,7 +269,7 @@ defmodule LightningWeb.DashboardLive.Index do
         show={true}
         width="w-5/6"
       >
-        <div class="relative h-0 w-full pb-[60%]">
+        <div style="position: relative; padding-bottom: calc(54.43121693121693% + 41px); height: 0; width: 100%;">
           <iframe
             src={@resource.link}
             title={@resource.title}
