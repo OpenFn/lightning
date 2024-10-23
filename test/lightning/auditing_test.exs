@@ -30,6 +30,39 @@ defmodule Lightning.AuditingTest do
                )
     end
 
+    test "returns a changeset when there are changes" do
+      item_id = Ecto.UUID.generate()
+      actor_id = Ecto.UUID.generate()
+
+      changeset =
+        Ecto.Changeset.change(
+          %Lightning.Credentials.Credential{name: "test"},
+          %{name: "test two"}
+        )
+
+      audit_changeset =
+        Audit.event(
+          "credential",
+          "updated",
+          item_id,
+          actor_id,
+          changeset
+        )
+
+      assert %{
+               changes: %{
+                 item_type: "credential",
+                 event: "updated",
+                 item_id: ^item_id,
+                 actor_id: ^actor_id
+               }
+             } = audit_changeset
+
+      changes = Ecto.Changeset.get_embed(audit_changeset, :changes)
+      assert Ecto.Changeset.get_change(changes, :before) == %{name: "test"}
+      assert Ecto.Changeset.get_change(changes, :after) == %{name: "test two"}
+    end
+
     test "'created' event sets before changes to nil" do
       changeset =
         Ecto.Changeset.change(%Lightning.Credentials.Credential{}, %{
