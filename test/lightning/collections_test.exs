@@ -130,16 +130,14 @@ defmodule Lightning.CollectionsTest do
       collection = insert(:collection)
 
       items =
-        1..30
-        |> Enum.map(fn _i ->
+        Enum.map(1..30, fn _i ->
           insert(:collection_item,
             key: "rkey#{:rand.uniform()}",
             collection: collection
           )
         end)
-        |> Enum.sort_by(& &1.key)
 
-      %{key: cursor} = Enum.at(items, 4)
+      %{updated_at: cursor} = Enum.at(items, 4)
 
       Repo.transaction(fn ->
         assert stream = Collections.stream_all(collection, cursor)
@@ -250,16 +248,14 @@ defmodule Lightning.CollectionsTest do
       collection = insert(:collection)
 
       items =
-        1..30
-        |> Enum.map(fn _i ->
+        Enum.map(1..30, fn _i ->
           insert(:collection_item,
             key: "rkeyA#{:rand.uniform()}",
             collection: collection
           )
         end)
-        |> Enum.sort_by(& &1.key)
 
-      %{key: cursor} = Enum.at(items, 9)
+      %{updated_at: cursor} = Enum.at(items, 9)
 
       for _i <- 1..5,
           do:

@@ -105,7 +105,7 @@ defmodule Lightning.Collections do
     |> then(fn query ->
       case cursor do
         nil -> query
-        cursor_key -> where(query, [i], i.key > ^cursor_key)
+        ts_cursor -> where(query, [i], i.updated_at > ^ts_cursor)
       end
     end)
   end
