@@ -91,6 +91,7 @@ defmodule Lightning.VersionControlTest do
                )
 
       now = DateTime.utc_now()
+      current_time_in_unix = now |> DateTime.to_unix()
       Lightning.Stub.freeze_time(now)
 
       {:ok, claims} =
@@ -98,8 +99,6 @@ defmodule Lightning.VersionControlTest do
           repo_connection.access_token,
           Lightning.Config.repo_connection_token_signer()
         )
-
-      current_time_in_unix = now |> DateTime.to_unix()
 
       project_id = project.id
 
