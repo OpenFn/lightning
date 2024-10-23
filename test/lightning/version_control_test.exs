@@ -13,7 +13,6 @@ defmodule Lightning.VersionControlTest do
   describe "create_github_connection/2" do
     test "user with valid oauth token creates connection successfully" do
       Mox.verify_on_exit!()
-
       project = insert(:project)
       user = user_with_valid_github_oauth()
 
@@ -84,15 +83,16 @@ defmodule Lightning.VersionControlTest do
         "accept" => "true"
       }
 
+      now = DateTime.utc_now()
+      current_time_in_unix = now |> DateTime.to_unix()
+
+      Lightning.Stub.freeze_time(now)
+
       assert {:ok, repo_connection} =
                VersionControl.create_github_connection(
                  params,
                  user
                )
-
-      now = DateTime.utc_now()
-      current_time_in_unix = now |> DateTime.to_unix()
-      Lightning.Stub.freeze_time(now)
 
       {:ok, claims} =
         ProjectRepoConnection.AccessToken.verify_and_validate(
