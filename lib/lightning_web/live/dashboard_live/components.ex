@@ -155,6 +155,7 @@ defmodule LightningWeb.DashboardLive.Components do
               <span
                 phx-click="sort"
                 phx-value-by="name"
+                phx-target={@target}
                 class="cursor-pointer align-middle ml-2 flex-none rounded text-gray-400 group-hover:visible group-focus:visible"
               >
                 <.icon name={@name_sort_icon} />
@@ -170,6 +171,7 @@ defmodule LightningWeb.DashboardLive.Components do
               <span
                 phx-click="sort"
                 phx-value-by="activity"
+                phx-target={@target}
                 class="cursor-pointer align-middle ml-2 flex-none rounded text-gray-400 group-hover:visible group-focus:visible"
               >
                 <.icon name={@activity_sort_icon} />

@@ -64,6 +64,7 @@ defmodule LightningWeb.DashboardLive.UserProjectsSection do
         projects={@projects}
         user={@current_user}
         name_direction={@name_sort_direction}
+        target={@myself}
         activity_direction={@activity_sort_direction}
       >
         <:empty_state>
