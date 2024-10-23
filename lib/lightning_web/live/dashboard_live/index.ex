@@ -212,7 +212,7 @@ defmodule LightningWeb.DashboardLive.Index do
       <div
         id="welcome-banner-content"
         class={[
-          "transition-all duration-500 ease-in-out overflow-hidden",
+          "transition-all duration-500 ease-in-out overflow-hidden hover:overflow-visible",
           banner_content_classes(@collapsed)
         ]}
       >
