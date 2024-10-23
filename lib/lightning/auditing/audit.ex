@@ -43,7 +43,7 @@ defmodule Lightning.Auditing.Audit do
 
     event_signature =
       quote do
-        def event(event, item_id, actor_id, changes \\ %{})
+        def event(event, item_id, actor, changes \\ %{})
       end
 
     event_log_functions =
@@ -51,15 +51,15 @@ defmodule Lightning.Auditing.Audit do
         quote do
           # Output:
           #
-          # def event(item_type, "foo_event", item_id, actor_id, changes) do
-          #   Lightning.Audit.event(item_type, "foo_event", item_id, actor_id, changes)
+          # def event(item_type, "foo_event", item_id, actor, changes) do
+          #   Lightning.Audit.event(item_type, "foo_event", item_id, actor, changes)
           # end
-          def event(unquote(event_name), item_id, actor_id, changes) do
+          def event(unquote(event_name), item_id, actor, changes) do
             unquote(__MODULE__).event(
               unquote(item),
               unquote(event_name),
               item_id,
-              actor_id,
+              actor,
               changes,
               &update_changes/1
             )
@@ -115,6 +115,7 @@ defmodule Lightning.Auditing.Audit do
     field :item_id, Ecto.UUID
     embeds_one :changes, Changes
     field :actor_id, Ecto.UUID
+    field :actor_type, :string
     field :actor, :map, virtual: true
 
     timestamps(updated_at: false)
@@ -127,13 +128,13 @@ defmodule Lightning.Auditing.Audit do
         update_changes_fun \\ fn x -> x end
       ) do
     audit
-    |> cast(attrs, [:event, :item_id, :actor_id, :item_type])
+    |> cast(attrs, [:event, :item_id, :actor_id, :actor_type, :item_type])
     |> cast_embed(:changes,
       with: fn schema, changes ->
         Changes.changeset(schema, changes, update_changes_fun)
       end
     )
-    |> validate_required([:event, :actor_id])
+    |> validate_required([:event, :actor_id, :actor_type])
   end
 
   @doc """
@@ -159,7 +160,7 @@ defmodule Lightning.Auditing.Audit do
 
   @doc """
   Creates a `changeset` for the `event` identified by `item_id` and caused
-  by `actor_id`.
+  by `actor`.
 
   The given `changes` can be either `nil`, `Ecto.Changeset`, struct or map.
 
@@ -170,7 +171,7 @@ defmodule Lightning.Auditing.Audit do
           String.t(),
           String.t(),
           Ecto.UUID.t(),
-          Ecto.UUID.t(),
+          %{id: Ecto.UUID.t()},
           Ecto.Changeset.t() | map() | nil,
           update_changes_fun :: (map() -> map())
         ) ::
@@ -180,7 +181,7 @@ defmodule Lightning.Auditing.Audit do
         item_type,
         event,
         item_id,
-        actor_id,
+        actor,
         changes \\ %{},
         update_fun \\ fn x -> x end
       )
@@ -194,7 +195,7 @@ defmodule Lightning.Auditing.Audit do
         item_type,
         event,
         item_id,
-        actor_id,
+        actor,
         %Ecto.Changeset{data: %subject_schema{} = data, changes: changes},
         update_fun
       ) do
@@ -216,15 +217,22 @@ defmodule Lightning.Auditing.Audit do
         after: if(after_change === %{}, do: nil, else: after_change)
       }
 
-    audit_changeset(item_type, event, item_id, actor_id, changes, update_fun)
+    audit_changeset(item_type, event, item_id, actor, changes, update_fun)
   end
 
-  def event(item_type, event, item_id, actor_id, changes, update_fun)
+  def event(item_type, event, item_id, actor, changes, update_fun)
       when is_map(changes) do
-    audit_changeset(item_type, event, item_id, actor_id, changes, update_fun)
+    audit_changeset(item_type, event, item_id, actor, changes, update_fun)
   end
 
-  defp audit_changeset(item_type, event, item_id, actor_id, changes, update_fun) do
+  defp audit_changeset(
+         item_type,
+         event,
+         item_id,
+         %actor_struct{id: actor_id},
+         changes,
+         update_fun
+       ) do
     changeset(
       %__MODULE__{},
       %{
@@ -232,9 +240,16 @@ defmodule Lightning.Auditing.Audit do
         event: event,
         item_id: item_id,
         actor_id: actor_id,
+        actor_type: actor_struct |> extract_actor_type(),
         changes: changes
       },
       update_fun
     )
+  end
+
+  defp extract_actor_type(struct_name) do
+    struct_name
+    |> Atom.to_string()
+    |> String.replace_prefix("Elixir.", "")
   end
 end
