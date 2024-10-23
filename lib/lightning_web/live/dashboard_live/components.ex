@@ -6,6 +6,104 @@ defmodule LightningWeb.DashboardLive.Components do
   alias Lightning.Accounts.User
   alias Lightning.Projects.Project
 
+  def welcome_banner(assigns) do
+    ~H"""
+    <div class="pb-6">
+      <div class="flex justify-between items-center pt-6">
+        <h1 class="text-2xl font-medium">
+          Good day, <%= @user.first_name %>!
+        </h1>
+        <button
+          phx-click="toggle-welcome-banner"
+          phx-target={@target}
+          class="text-gray-500 focus:outline-none"
+        >
+          <span class="text-lg">
+            <.icon name={"hero-chevron-#{if @collapsed, do: "down", else: "up"}"} />
+          </span>
+        </button>
+      </div>
+
+      <div
+        id="welcome-banner-content"
+        class={[
+          "hover:overflow-visible transition-all duration-500 ease-in-out overflow-hidden",
+          banner_content_classes(@collapsed)
+        ]}
+      >
+        <p class="mb-6 mt-4">
+          Here are some resources to help you get started with OpenFn
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <%= for resource <- @resources do %>
+            <.resource_card resource={resource} target={@target} />
+          <% end %>
+        </div>
+      </div>
+
+      <hr class="border-t border-gray-300 mt-4" />
+      <.arcade_modal
+        :if={@selected_resource}
+        resource={@selected_resource}
+        target={@id}
+      />
+    </div>
+    """
+  end
+
+  defp resource_card(assigns) do
+    ~H"""
+    <button
+      type="button"
+      phx-click="select-arcade-resource"
+      phx-target={@target}
+      phx-value-resource={@resource.id}
+      class="relative flex items-end h-[150px] bg-gradient-to-r from-blue-400 to-purple-500 text-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 p-4 text-left"
+    >
+      <h2 class="text-lg font-semibold absolute bottom-4 left-4">
+        <%= @resource.title %>
+      </h2>
+    </button>
+    """
+  end
+
+  defp arcade_modal(assigns) do
+    ~H"""
+    <div class="text-xs">
+      <.modal
+        id={"arcade-modal-#{@resource.id}"}
+        target={"##{@target}"}
+        with_frame={false}
+        show={true}
+        width="w-5/6"
+      >
+        <div class="relative h-0 w-full pb-[60%]">
+          <iframe
+            src={@resource.link}
+            title={@resource.title}
+            frameborder="0"
+            loading="lazy"
+            webkitallowfullscreen
+            mozallowfullscreen
+            allowfullscreen
+            allow="clipboard-write"
+            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; color-scheme: light;"
+          >
+          </iframe>
+        </div>
+      </.modal>
+    </div>
+    """
+  end
+
+  defp banner_content_classes(collapsed) do
+    case collapsed do
+      true -> "max-h-0"
+      false -> "max-h-[500px]"
+      nil -> "max-h-[500px]"
+    end
+  end
+
   defp project_role(
          %User{id: user_id} = _user,
          %Project{project_users: project_users} = _project

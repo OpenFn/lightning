@@ -309,8 +309,6 @@ export const ModalHook = {
   mounted() {
     this.handleEvent('close_modal', () => {
       this.liveSocket.execJS(this.el, this.el.getAttribute('phx-on-close'));
-
-      this.pushEvent('modal_closed', { id: this.el.id });
     });
   },
 } as PhoenixHook;

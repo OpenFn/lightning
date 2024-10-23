@@ -12,6 +12,7 @@ defmodule LightningWeb.Components.Modal do
   attr :id, :string, required: true
   attr :show, :boolean, default: false
   attr :with_frame, :boolean, default: true
+  attr :target, :any, default: nil
   attr :position, :string, default: "fixed inset-0"
   attr :width, :string, default: "max-w-3xl"
   attr :close_on_click_away, :boolean, default: true
@@ -45,7 +46,8 @@ defmodule LightningWeb.Components.Modal do
         aria-hidden="true"
         phx-click={
           @close_on_click_away &&
-            hide_modal(@on_close, @id) |> JS.push("modal_closed", value: %{id: @id})
+            hide_modal(@on_close, @id)
+            |> push_modal_closed(@id, @target)
         }
       />
       <div
@@ -64,13 +66,13 @@ defmodule LightningWeb.Components.Modal do
               phx-window-keydown={
                 @close_on_keydown &&
                   hide_modal(@on_close, @id)
-                  |> JS.push("modal_closed", value: %{id: @id})
+                  |> push_modal_closed(@id, @target)
               }
               phx-key="escape"
               phx-click-away={
                 @close_on_click_away &&
                   hide_modal(@on_close, @id)
-                  |> JS.push("modal_closed", value: %{id: @id})
+                  |> push_modal_closed(@id, @target)
               }
               class={[
                 "hidden relative rounded-xl transition",
@@ -161,5 +163,15 @@ defmodule LightningWeb.Components.Modal do
     )
     |> JS.hide(to: "##{id}", transition: {"block", "block", "hidden"})
     |> JS.pop_focus()
+  end
+
+  defp push_modal_closed(js, modal_id, nil) do
+    js
+    |> JS.push("modal_closed", value: %{id: modal_id})
+  end
+
+  defp push_modal_closed(js, modal_id, target) do
+    js
+    |> JS.push("modal_closed", value: %{id: modal_id}, target: target)
   end
 end
