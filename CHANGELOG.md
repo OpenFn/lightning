@@ -29,6 +29,8 @@ and this project adheres to
 
 ### Changed
 
+- Allow users to to preview password fields in credential forms
+  [#2584](https://github.com/OpenFn/lightning/issues/2584)
 - Remove superuser flag for oauth clients creation
   [#2417](https://github.com/OpenFn/lightning/issues/2417)
 - Make URL validator more flexible to support URLs with dashes and other cases
