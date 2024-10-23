@@ -1,16 +1,6 @@
 defmodule ValidatorsTest do
   use Lightning.DataCase, async: true
 
-  import Ecto.Changeset
-
-  defmodule TestSchema do
-    use Ecto.Schema
-
-    embedded_schema do
-      field :url, :string
-    end
-  end
-
   alias Lightning.Validators
 
   @valid_http_url "http://example.com"
@@ -29,40 +19,34 @@ defmodule ValidatorsTest do
   @invalid_url "invalid_url"
 
   def changeset(attrs \\ %{}) do
-    %TestSchema{}
-    |> cast(attrs, [:url])
+    {%{}, %{url: :string}}
+    |> Ecto.Changeset.cast(attrs, [:url])
     |> Validators.validate_url(:url)
   end
 
   describe "validate_url/2" do
     test "validates http URLs" do
-      changeset = changeset(%{url: @valid_http_url})
-      assert changeset.valid?
+      assert changeset(%{url: @valid_http_url}).valid?
     end
 
     test "validates https URLs" do
-      changeset = changeset(%{url: @valid_https_url})
-      assert changeset.valid?
+      assert changeset(%{url: @valid_https_url}).valid?
     end
 
     test "validates URLs with subdomains" do
-      changeset = changeset(%{url: @valid_domain_url})
-      assert changeset.valid?
+      assert changeset(%{url: @valid_domain_url}).valid?
     end
 
     test "validates URLs with IPv4 address" do
-      changeset = changeset(%{url: @valid_ip_url})
-      assert changeset.valid?
+      assert changeset(%{url: @valid_ip_url}).valid?
     end
 
     test "validates URLs with IPv6 address" do
-      changeset = changeset(%{url: @valid_ipv6_url})
-      assert changeset.valid?
+      assert changeset(%{url: @valid_ipv6_url}).valid?
     end
 
     test "validates localhost URLs" do
-      changeset = changeset(%{url: @localhost_url})
-      assert changeset.valid?
+      assert changeset(%{url: @localhost_url}).valid?
     end
 
     test "invalidates URLs with an invalid scheme" do
@@ -98,8 +82,7 @@ defmodule ValidatorsTest do
     end
 
     test "validates URLs with valid IPv6 short form" do
-      changeset = changeset(%{url: @valid_ip_v6_url})
-      assert changeset.valid?
+      assert changeset(%{url: @valid_ip_v6_url}).valid?
     end
 
     test "invalidates URLs that are not valid at all" do
