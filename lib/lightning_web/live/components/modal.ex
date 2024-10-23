@@ -34,7 +34,7 @@ defmodule LightningWeb.Components.Modal do
     <div
       id={@id}
       phx-mounted={@show && show_modal(@id)}
-      phx-on-close={hide_modal(@id)}
+      phx-on-close={hide_modal(@on_close, @id)}
       phx-hook="ModalHook"
       class={"#{@position} z-50 hidden"}
       {@rest}
@@ -43,6 +43,10 @@ defmodule LightningWeb.Components.Modal do
         id={"#{@id}-bg"}
         class="fixed inset-0 bg-black bg-opacity-60 transition-opacity"
         aria-hidden="true"
+        phx-click={
+          @close_on_click_away &&
+            hide_modal(@on_close, @id) |> JS.push("modal_closed", value: %{id: @id})
+        }
       />
       <div
         class="fixed inset-0 overflow-y-auto sm:py-2"
@@ -57,15 +61,24 @@ defmodule LightningWeb.Components.Modal do
             <.focus_wrap
               id={"#{@id}-container"}
               phx-mounted={@show && show_modal(@on_open, @id)}
-              phx-window-keydown={@close_on_keydown && hide_modal(@on_close, @id)}
+              phx-window-keydown={
+                @close_on_keydown &&
+                  hide_modal(@on_close, @id)
+                  |> JS.push("modal_closed", value: %{id: @id})
+              }
               phx-key="escape"
-              phx-click-away={@close_on_click_away && hide_modal(@on_close, @id)}
+              phx-click-away={
+                @close_on_click_away &&
+                  hide_modal(@on_close, @id)
+                  |> JS.push("modal_closed", value: %{id: @id})
+              }
               class={[
                 "hidden relative rounded-xl transition",
                 @with_frame &&
                   "bg-white py-[24px] shadow-lg shadow-zinc-700/10 ring-1 ring-zinc-700/10"
               ]}
             >
+              <!-- Modal Content -->
               <header :if={@title != [] && @with_frame} class="pl-[24px] pr-[24px]">
                 <h1
                   id={"#{@id}-title"}
