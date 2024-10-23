@@ -290,6 +290,7 @@ defmodule Lightning.Credentials do
            data: %Lightning.Projects.ProjectCredential{}
          } = changeset
        ) do
+         IO.puts("HHHHHHHHHHHHHHEEEEEEEEEEEEEEERRRRRRRRREEEEEEEEEEEEEEEE!")
     Multi.insert(
       multi,
       {:audit, Ecto.Changeset.get_field(changeset, :project_id)},
@@ -506,6 +507,8 @@ defmodule Lightning.Credentials do
 
   """
   def change_credential(%Credential{} = credential, attrs \\ %{}) do
+    # dbg(credential)
+    # dbg(attrs)
     Credential.changeset(
       credential,
       attrs |> coerce_json_field("body")

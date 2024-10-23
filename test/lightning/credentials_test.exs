@@ -521,6 +521,48 @@ defmodule Lightning.CredentialsTest do
               }} in audit_events
     end
 
+    test "correctly handle removing credential from a project" do
+      user = insert(:user)
+
+      project =
+        insert(:project, name: "some-name", project_users: [%{user_id: user.id}])
+
+      credential =
+        insert(:credential,
+          body: %{},
+          name: "some name",
+          schema: "raw",
+          user: user,
+          project_credentials: [
+            %{project_id: project.id}
+          ]
+        )
+
+      %{project_credentials: [%{id: project_credential_id}]} = credential
+
+      credential = credential |> Repo.preload(:project_credentials)
+
+      removal_attrs = %{
+        body: %{},
+        name: "some name",
+        project_credentials: [
+          %{
+            delete: "true",
+            id: project_credential_id,
+            project_id: project.id
+          }
+        ],
+        user_id: user.id
+      }
+
+      IO.inspect(credential, label: :before)
+
+      assert {:ok, %Credential{} = updated_credential} =
+               Credentials.update_credential(credential, removal_attrs)
+
+      IO.inspect(updated_credential, label: :after)
+    end
+
     test "casts body to field types based on schema" do
       user = insert(:user)
 
