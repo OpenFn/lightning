@@ -10,10 +10,10 @@ defmodule Lightning.Utils.Crypto do
   it generates a key pair in one step, and also doesn't require shelling out to
   `openssl`.
   """
-  def generate_rsa_key_pair() do
+  def generate_rsa_key_pair do
     {:RSAPrivateKey, _, modulus, publicExponent, _, _, _, _exponent1, _, _,
-     _otherPrimeInfos} =
-      rsa_private_key = :public_key.generate_key({:rsa, 2048, 65537})
+     _other_prime_infos} =
+      rsa_private_key = :public_key.generate_key({:rsa, 2048, 65_537})
 
     rsa_public_key = {:RSAPublicKey, modulus, publicExponent}
 
