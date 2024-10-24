@@ -14,7 +14,7 @@ defmodule Lightning.CollectionsTest do
     end
 
     test "returns an error when the collection does not exist" do
-      assert {:error, :collection_not_found} =
+      assert {:error, :not_found} =
                Collections.get_collection("nonexistent")
     end
   end
@@ -59,7 +59,7 @@ defmodule Lightning.CollectionsTest do
     end
 
     test "returns an error when collection does not exist" do
-      assert {:error, :collection_not_found} =
+      assert {:error, :not_found} =
                Collections.delete_collection(Ecto.UUID.generate())
     end
   end
@@ -386,6 +386,33 @@ defmodule Lightning.CollectionsTest do
                      ]}
                 ]
               }} = Collections.put(%{id: Ecto.UUID.generate()}, "key", "value")
+    end
+  end
+
+  describe "put_all/2" do
+    test "inserts multiple entries at once in a given collection" do
+      collection = insert(:collection)
+      items = Enum.map(1..5, fn i -> {"key#{i}", "value#{i}"} end)
+      assert :ok = Collections.put_all(collection, items)
+    end
+
+    test "replaces conflicting values and updates timestamp" do
+      collection = insert(:collection)
+      items = Enum.map(1..5, fn i -> {"key#{i}", "value#{i}"} end)
+      assert :ok = Collections.put_all(collection, items)
+
+      assert %{updated_at: updated_at1} = Repo.get_by(Item, key: "key1")
+      assert %{updated_at: updated_at2} = Repo.get_by(Item, key: "key2")
+      assert %{updated_at: updated_at5} = Repo.get_by(Item, key: "key5")
+
+      update_items = Enum.map(1..2, fn i -> {"key#{i}", "value#{10 + i}"} end)
+      assert :ok = Collections.put_all(collection, update_items)
+
+      assert %{value: "value11", updated_at: updated_at} = Repo.get_by(Item, key: "key1")
+      assert updated_at > updated_at1
+      assert %{value: "value12", updated_at: updated_at} = Repo.get_by(Item, key: "key2")
+      assert updated_at > updated_at2
+      assert %{value: "value5", updated_at: ^updated_at5} = Repo.get_by(Item, key: "key5")
     end
   end
 
