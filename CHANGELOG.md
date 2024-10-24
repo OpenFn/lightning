@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Do not send empty strings in credential body to the worker
+  [#2585](https://github.com/OpenFn/lightning/issues/2585)
+
 ## [v2.9.11] - 2024-10-23
 
 ### Added
