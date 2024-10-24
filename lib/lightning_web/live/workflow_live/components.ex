@@ -778,9 +778,15 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
+  attr :id, :string
+  attr :class, :string, default: ""
+  attr :presences, :list
+  attr :prior_user, :map
+  attr :current_user, :map
+
   def online_users(assigns) do
     ~H"""
-    <div id={@id} class="flex gap-0">
+    <div id={@id} class={["flex gap-0", @class]}>
       <.render_user
         :for={%{user: online_user} <- @presences}
         :if={online_user.id != @current_user.id}

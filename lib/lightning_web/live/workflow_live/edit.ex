@@ -86,25 +86,25 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     "You are viewing a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(@snapshot.inserted_at)}"
               }
             />
-            <div class="mx-2"></div>
             <LightningWeb.WorkflowLive.Components.online_users
               id="canvas-online-users"
               presences={@presences}
               current_user={@current_user}
               prior_user={@prior_user_presence.user}
+              class="mr-2"
             />
             <div :if={@snapshot_version_tag != "latest" && @can_edit_workflow}>
               <span
                 id="edit-disabled-warning"
-                class="cursor-pointer text-xs"
+                class="cursor-pointer text-xs flex items-center"
                 phx-hook="Tooltip"
                 data-placement="bottom"
                 aria-label="You cannot edit or run an old snapshot of a workflow"
               >
                 <.icon
                   name="hero-information-circle-solid"
-                  class="h-5 w-5 text-primary-500"
-                /> read-only
+                  class="h-4 w-4 text-primary-600 opacity-50"
+                /> Read-only
               </span>
             </div>
           </:title>
@@ -282,17 +282,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   <div
                     :if={@snapshot_version_tag == "latest" && @display_banner}
                     id={"inspector-banner-#{@current_user.id}"}
-                    class="flex items-center text-sm font-medium text-gray-700"
+                    class="flex items-center text-sm font-medium text-gray-500"
                   >
                     <span
                       id={"inspector-banner-#{@current_user.id}-tooltip"}
-                      class="cursor-pointer text-xs"
+                      class="cursor-pointer text-xs flex items-center"
                       phx-hook="Tooltip"
                       data-placement="top"
                       aria-label={@banner_message}
                     >
-                      <.icon name="hero-lock-closed-solid" class="h-5 w-5" />
-                      read-only
+                      <.icon name="hero-lock-closed-solid" class="h-4 w-4" />
+                      Read-only
                     </span>
                   </div>
 
