@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.9.11] - 2024-10-23
+
+### Added
+
 - Optionally write Kafka messages that can not be persisted to the file system.
   [#2386](https://github.com/OpenFn/lightning/issues/2386)
 - Add `MessageRecovery` utility code to restore Kafka messages that were
@@ -30,6 +38,13 @@ and this project adheres to
   [#2551](https://github.com/OpenFn/lightning/issues/2551)
 
 ### Changed
+
+- Allow users to to preview password fields in credential forms
+  [#2584](https://github.com/OpenFn/lightning/issues/2584)
+- Remove superuser flag for oauth clients creation
+  [#2417](https://github.com/OpenFn/lightning/issues/2417)
+- Make URL validator more flexible to support URLs with dashes and other cases
+  [#2417](https://github.com/OpenFn/lightning/issues/2417)
 
 ### Fixed
 

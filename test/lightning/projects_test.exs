@@ -1,20 +1,21 @@
 defmodule Lightning.ProjectsTest do
-  require Phoenix.VerifiedRoutes
-  alias Swoosh.Email
   use Lightning.DataCase, async: true
 
-  alias Lightning.Invocation.Dataclip
-  alias Lightning.Projects.ProjectUser
-  alias Lightning.Projects
-  alias Lightning.Projects.Project
-  alias Lightning.Accounts.User
-
-  import Lightning.ProjectsFixtures
   import Lightning.AccountsFixtures
   import Lightning.CredentialsFixtures
   import Lightning.Factories
-  import Swoosh.TestAssertions
+  import Lightning.ProjectsFixtures
   import Mox
+  import Swoosh.TestAssertions
+
+  alias Lightning.Accounts.User
+  alias Lightning.Invocation.Dataclip
+  alias Lightning.Projects
+  alias Lightning.Projects.Project
+  alias Lightning.Projects.ProjectUser
+  alias Swoosh.Email
+
+  require Phoenix.VerifiedRoutes
 
   describe "projects" do
     @invalid_attrs %{name: nil}

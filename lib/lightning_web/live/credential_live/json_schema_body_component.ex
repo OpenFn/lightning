@@ -83,12 +83,12 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
 
     type =
       case properties do
-        %{"format" => "uri"} -> :url_input
-        %{"type" => "string", "writeOnly" => true} -> :password_input
-        %{"type" => "string"} -> :text_input
-        %{"type" => "integer"} -> :text_input
-        %{"type" => "boolean"} -> :checkbox
-        %{"anyOf" => [%{"type" => "string"}, %{"type" => "null"}]} -> :text_input
+        %{"format" => "uri"} -> "url"
+        %{"type" => "string", "writeOnly" => true} -> "password"
+        %{"type" => "string"} -> "text"
+        %{"type" => "integer"} -> "text"
+        %{"type" => "boolean"} -> "checkbox"
+        %{"anyOf" => [%{"type" => "string"}, %{"type" => "null"}]} -> "text"
       end
 
     required = Credentials.Schema.required?(schema, field)
@@ -103,7 +103,7 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
         type: type
       )
 
-    if type == :checkbox do
+    if type == "checkbox" do
       ~H"""
       <LightningWeb.Components.Form.check_box
         form={@form}
@@ -123,15 +123,7 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
         Required
       </span>
       <div class="col-span-2">
-        <%= apply(Phoenix.HTML.Form, @type, [
-          @form,
-          @field,
-          [
-            value: @value || "",
-            class: ~w(mt-1 focus:ring-primary-500 focus:border-primary-500 block
-               w-full shadow-sm sm:text-sm border-secondary-300 rounded-md)
-          ]
-        ]) %>
+        <.input type={@type} field={@form[@field]} value={@value || ""} />
       </div>
       <div class="error-space h-6">
         <LightningWeb.CoreComponents.old_error errors={@errors} />
