@@ -1451,6 +1451,66 @@ defmodule LightningWeb.ProjectLiveTest do
       assert view |> has_element?("##{form_id}_password_action_button", "Copy")
       assert render(view) =~ auth_method.password
     end
+
+    test "MFA not limited: no banner, button is enabled, and MFA can be toggled",
+         %{conn: conn} do
+      project = insert(:project)
+
+      project_user =
+        insert(:project_user, role: :admin, project: project, user: build(:user))
+
+      stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn _, _ ->
+        :ok
+      end)
+
+      conn = log_in_user(conn, project_user.user)
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project}/settings#security")
+
+      refute has_element?(view, "#toggle-mfa-switch[disabled]")
+
+      assert view
+             |> element("#toggle-mfa-switch")
+             |> render_click() =~ "Project MFA requirement updated successfully"
+    end
+
+    test "MFA limited: banner displayed, button is disabled, and MFA cannot be toggled",
+         %{conn: conn} do
+      project = insert(:project)
+
+      project_user =
+        insert(:project_user, role: :admin, project: project, user: build(:user))
+
+      banner_message = "MFA Feature is disabled"
+
+      stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn %{type: type},
+                                                                    _ ->
+        component = %Lightning.Extensions.Message{
+          attrs: %{text: banner_message},
+          function: fn assigns ->
+            ~H"""
+            <%= @text %>
+            """
+          end
+        }
+
+        case type do
+          :require_mfa ->
+            {:error, :disabled, component}
+
+          _ ->
+            :ok
+        end
+      end)
+
+      conn = log_in_user(conn, project_user.user)
+      {:ok, view, html} = live(conn, ~p"/projects/#{project}/settings#security")
+
+      assert html =~ banner_message
+      assert has_element?(view, "#toggle-mfa-switch[disabled]")
+
+      assert view |> render_click("toggle-mfa", %{}) =~
+               "You are not authorized to perform this action"
+    end
   end
 
   test "owners and admins can delete a project webhook auth method",

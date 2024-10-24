@@ -19,7 +19,8 @@ defmodule Lightning.Extensions.UsageLimiting do
               | :ai_query
               | :alert_failure
               | :github_sync
-              | :new_user,
+              | :new_user
+              | :require_mfa,
             amount: pos_integer()
           }
 
