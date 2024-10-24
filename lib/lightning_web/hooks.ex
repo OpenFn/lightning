@@ -98,7 +98,7 @@ defmodule LightningWeb.Hooks do
       :ok ->
         {:cont, assign(socket, can_require_mfa: true)}
 
-      {:error, %{function: func} = component} when is_function(func) ->
+      {:error, _reason, %{function: func} = component} when is_function(func) ->
         {:cont, assign(socket, mfa_banner: component, can_require_mfa: false)}
     end
   end
