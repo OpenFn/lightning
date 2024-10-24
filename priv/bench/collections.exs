@@ -14,7 +14,7 @@ project =
   end
 
 {:ok, collection} =
-  with {:error, :collection_not_found} <- Collections.get_collection("benchee") do
+  with {:error, :not_found} <- Collections.get_collection("benchee") do
     Collections.create_collection(project.id, "benchee")
   end
 
@@ -28,29 +28,65 @@ end
 
 sampleA = Enum.map(1..keys_count, fn i -> record.("keyA", i) end)
 sampleB = Enum.map(1..keys_count, fn i -> record.("keyB", i) end)
-sampleC = Enum.map(1..keys_count * 2, fn i -> record.("keyC", i) end)
+{sampleC1, sampleC2} = Enum.map(1..keys_count * 2, fn i -> record.("keyC", i) end) |> Enum.split(keys_count)
 
-begin = System.monotonic_time(:millisecond)
-
-Enum.shuffle(sampleA ++ sampleB ++ sampleC)
-|> Enum.each(fn {key, value} ->
-  :ok = Collections.put(collection, key, value)
+:timer.tc(fn ->
+  [sampleA, sampleB, sampleC1]
+  |> Enum.map(fn sample ->
+    Task.async(fn ->
+      Enum.with_index(sample, fn {key, value}, idx ->
+        if rem(idx, 50) == 0, do: IO.puts("Inserting " <> key)
+        :ok = Collections.put(collection, key, value)
+      end)
+      :ok
+    end)
+  end)
+  |> Task.await_many(:infinity)
+end)
+|> tap(fn {duration, _res} ->
+  IO.puts("Inserted 3 x #{keys_count} shuffled items (w/ unsorted keys).")
+  IO.puts("elapsed time: #{div(duration, 1_000)}ms\n")
 end)
 
-IO.puts("Inserted 4 x #{keys_count} items (w/ unsorted keys).")
-IO.puts("elapsed time: #{System.monotonic_time(:millisecond)-begin}ms\n")
+IO.puts("Inserting #{length(sampleC2)} items with put_all...")
+:timer.tc(fn ->
+  :ok = Collections.put_all(collection, sampleC2)
+end)
+|> tap(fn {duration, _res} ->
+  IO.puts("elapsed time: #{div(duration, 1_000)}ms\n")
+end)
 
 sampleD = Enum.map(1..keys_count, fn i -> record.("keyD", i) end)
 
-begin = System.monotonic_time(:millisecond)
 IO.puts("Inserting sampleD (w/ sorted keys)...")
-Enum.each(sampleD, fn {k, v} -> Collections.put(collection, k, v) end)
-IO.puts("elapsed time: #{System.monotonic_time(:millisecond)-begin}ms\n")
+:timer.tc(fn ->
+  sampleD
+  |> Enum.chunk_every(1000)
+  |> Enum.map(fn sample ->
+    Task.async(fn ->
+      Enum.each(sample, fn {k, v} -> Collections.put(collection, k, v) end)
+    end)
+  end)
+  |> Task.await_many(:infinity)
+end)
+|> tap(fn {duration, _res} ->
+  IO.puts("elapsed time: #{div(duration, 1000)}ms\n")
+end)
 
-begin = System.monotonic_time(:millisecond)
 IO.puts("Upserting sampleD...")
-Enum.each(sampleD, fn {k, v} -> Collections.put(collection, k, v) end)
-IO.puts("elapsed time: #{System.monotonic_time(:millisecond)-begin}ms\n")
+:timer.tc(fn ->
+  sampleD
+  |> Enum.chunk_every(1000)
+  |> Enum.map(fn sample ->
+    Task.async(fn ->
+      Enum.each(sample, fn {k, v} -> Collections.put(collection, k, v) end)
+    end)
+  end)
+  |> Task.await_many(:infinity)
+end)
+|> tap(fn {duration, _res} ->
+  IO.puts("elapsed time: #{div(duration, 1000)}ms\n")
+end)
 
 stream_all =
   fn ->
@@ -101,11 +137,11 @@ stream_match_trigram =
   end
 
 
-IO.puts("\n### Round record count:")
-stream_all.() |> Enum.count() |> IO.inspect(label: "stream_all")
-stream_match_all.() |> Enum.count() |> IO.inspect(label: "stream_match_all")
-stream_match_prefix.() |> Enum.count() |> IO.inspect(label: "stream_match_prefix")
-stream_match_trigram.() |> Enum.count() |> IO.inspect(label: "stream_match_trigram")
+IO.puts("\n### Round record count ({microsecs, count}):")
+:timer.tc(fn -> stream_all.() |> Enum.count() end) |> IO.inspect(label: "stream_all")
+:timer.tc(fn -> stream_match_all.() |> Enum.count() end) |> IO.inspect(label: "stream_match_all")
+:timer.tc(fn -> stream_match_prefix.() |> Enum.count() end) |> IO.inspect(label: "stream_match_prefix")
+:timer.tc(fn -> stream_match_trigram.() |> Enum.count() end) |> IO.inspect(label: "stream_match_trigram")
 IO.puts("\n")
 
 Benchee.run(
