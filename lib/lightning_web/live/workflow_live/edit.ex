@@ -86,30 +86,29 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     "You are viewing a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(@snapshot.inserted_at)}"
               }
             />
-            <div class="mx-2"></div>
             <LightningWeb.WorkflowLive.Components.online_users
               id="canvas-online-users"
               presences={@presences}
               current_user={@current_user}
               prior_user={@prior_user_presence.user}
+              class="mr-2"
             />
+            <div :if={@snapshot_version_tag != "latest" && @can_edit_workflow}>
+              <span
+                id="edit-disabled-warning"
+                class="cursor-pointer text-xs flex items-center"
+                phx-hook="Tooltip"
+                data-placement="bottom"
+                aria-label="You cannot edit or run an old snapshot of a workflow"
+              >
+                <.icon
+                  name="hero-information-circle-solid"
+                  class="h-4 w-4 text-primary-600 opacity-50"
+                /> Read-only
+              </span>
+            </div>
           </:title>
 
-          <div class="mx-2"></div>
-          <div
-            :if={@snapshot_version_tag != "latest" && @can_edit_workflow}
-            class="flex"
-          >
-            <div class="flex-shrink-0">
-              <Heroicons.information_circle solid class="h-5 w-5 text-indigo-500" />
-            </div>
-            <div class="mx-1 flex-1 md:flex md:justify-between">
-              <p class="text-sm font-semibold text-gray-600">
-                You cannot edit or run an old snapshot of a workflow.
-              </p>
-            </div>
-          </div>
-          <div class="mx-1"></div>
           <.button
             :if={@snapshot_version_tag != "latest"}
             id={"version-switcher-button-#{@workflow.id}"}
@@ -283,10 +282,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   <div
                     :if={@snapshot_version_tag == "latest" && @display_banner}
                     id={"inspector-banner-#{@current_user.id}"}
-                    class="flex items-center text-sm font-medium mr-1 text-gray-700"
+                    class="flex items-center text-sm font-medium text-gray-500"
                   >
-                    <Heroicons.lock_closed solid class="h-4 w-4 mr-1" />
-                    <%= @banner_message %>
+                    <span
+                      id={"inspector-banner-#{@current_user.id}-tooltip"}
+                      class="cursor-pointer text-xs flex items-center"
+                      phx-hook="Tooltip"
+                      data-placement="top"
+                      aria-label={@banner_message}
+                    >
+                      <.icon name="hero-lock-closed-solid" class="h-4 w-4" />
+                      Read-only
+                    </span>
                   </div>
 
                   <.version_switcher_toggle

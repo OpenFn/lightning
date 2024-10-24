@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix editor panel buttons gets out of shape on smaller screens
+  [#2278](https://github.com/OpenFn/lightning/issues/2278)
+
 ## [v2.9.11] - 2024-10-23
 
 ### Added
