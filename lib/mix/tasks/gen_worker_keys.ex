@@ -6,6 +6,8 @@ defmodule Mix.Tasks.Lightning.GenWorkerKeys do
 
   use Mix.Task
 
+  alias Lightning.Utils
+
   @footer """
   To use these keys, use the above output to set the environment variables.
 
@@ -25,70 +27,21 @@ defmodule Mix.Tasks.Lightning.GenWorkerKeys do
     # looks like we may need "try" with this "with"
     # https://hexdocs.pm/credo/Credo.Check.Readability.PreferImplicitTry.html
     # credo:disable-for-next-line
-    try do
-      with {:ok, private_key} <- create_private_key(),
-           {:ok, public_key} <- abstract_public_key(private_key) do
-        IO.puts("""
-        WORKER_RUNS_PRIVATE_KEY="#{private_key |> Base.encode64(padding: false)}"
+    {private_key, public_key} = Utils.Crypto.generate_rsa_key_pair()
 
-        WORKER_SECRET="#{generate_hs256_key()}"
+    IO.puts("""
+    WORKER_RUNS_PRIVATE_KEY="#{private_key |> Base.encode64(padding: false)}"
 
-        WORKER_LIGHTNING_PUBLIC_KEY="#{public_key |> Base.encode64(padding: false)}"
+    WORKER_SECRET="#{Utils.Crypto.generate_hs256_key()}"
+
+    WORKER_LIGHTNING_PUBLIC_KEY="#{public_key |> Base.encode64(padding: false)}"
 
 
-        #{@footer}
-        """)
-      end
-    rescue
-      e ->
-        case e do
-          %{original: :enoent} ->
-            IO.puts("openssl not found in PATH")
-
-          e ->
-            IO.puts("Error: #{inspect(e)}")
-        end
-
-        exit({:shutdown, 1})
-    end
-  end
-
-  defp call_openssl(args) do
-    System.cmd("openssl", args, stderr_to_stdout: true)
-    |> case do
-      {_, 0} ->
-        :ok
-
-      {stdout, status} ->
-        {:error, status, stdout}
-    end
-  end
-
-  defp create_private_key do
-    filename = Path.join(System.tmp_dir!(), "jwtRSA256-private.pem")
-
-    with :ok <- call_openssl(~w[genrsa -out #{filename} 2048]),
-         {:ok, contents} <- File.read(filename),
-         :ok <- File.rm(filename) do
-      {:ok, contents}
-    end
-  end
-
-  defp abstract_public_key(private_key) do
-    filename = Path.join(System.tmp_dir!(), "jwtRSA256.pem")
-
-    with :ok <- File.write(filename, private_key),
-         :ok <-
-           call_openssl(
-             ~w[rsa -in #{filename} -pubout -outform PEM -out #{filename}]
-           ),
-         {:ok, contents} <- File.read(filename),
-         :ok <- File.rm(filename) do
-      {:ok, contents}
-    end
-  end
-
-  defp generate_hs256_key do
-    32 |> :crypto.strong_rand_bytes() |> Base.encode64()
+    #{@footer}
+    """)
+  rescue
+    e ->
+      IO.puts("Error: #{inspect(e)}")
+      exit({:shutdown, 1})
   end
 end

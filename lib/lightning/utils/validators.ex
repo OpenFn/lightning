@@ -81,7 +81,14 @@ defmodule Lightning.Validators do
   end
 
   @doc """
-  Validate that a field is a valid URL.
+  Validates a URL in a changeset field.
+
+  Ensures that the URL:
+  - Has a valid `http` or `https` scheme.
+  - Has a valid host (domain name, IPv4, or IPv6).
+  - The host is not blank and does not exceed 255 characters.
+
+  Returns a changeset error for invalid URLs.
   """
   @spec validate_url(Ecto.Changeset.t(), atom()) :: Ecto.Changeset.t()
   def validate_url(changeset, field) do
@@ -98,7 +105,7 @@ defmodule Lightning.Validators do
           byte_size(uri.host) > 255 ->
             [{field, "host must be less than 255 characters"}]
 
-          not String.match?(uri.host, ~r/^[^-][\da-z\.]+[^-]$/i) ->
+          not valid_host?(uri.host) ->
             [{field, "host has invalid characters"}]
 
           true ->
@@ -108,5 +115,24 @@ defmodule Lightning.Validators do
         _ -> [{field, "must be a valid URL"}]
       end
     end)
+  end
+
+  defp valid_host?(host) do
+    host == "localhost" or valid_ip?(host) or
+      String.match?(host, ~r/^[\da-z]([\da-z\-]*[\da-z])?(\.[\da-z]+)+$/i)
+  end
+
+  defp valid_ip?(host) do
+    case :inet.parse_address(to_charlist(host)) do
+      {:ok, _} -> true
+      _ -> valid_ipv6?(host)
+    end
+  end
+
+  defp valid_ipv6?(host) do
+    case :inet.parse_ipv6_address(to_charlist(host)) do
+      {:ok, _} -> true
+      _ -> false
+    end
   end
 end

@@ -159,16 +159,22 @@ defmodule Lightning.Accounts do
 
   Raises `Ecto.NoResultsError` if the User does not exist.
 
+  See `get_user/1`.
+  """
+  def get_user!(id), do: Repo.get!(User, id)
+
+  @doc """
+  Gets a single user.
+
   ## Examples
 
-      iex> get_user!(123)
+      iex> get_user(123)
       %User{}
 
       iex> get_user!(456)
-      ** (Ecto.NoResultsError)
-
+      nil
   """
-  def get_user!(id), do: Repo.get!(User, id)
+  def get_user(id), do: Repo.get(User, id)
 
   @doc """
   Gets a single token.
@@ -696,8 +702,8 @@ defmodule Lightning.Accounts do
   Gets the user with the given signed token.
   """
   def get_user_by_session_token(token) do
-    {:ok, query} = UserToken.verify_token_query(token, "session")
-    Repo.one(query)
+    UserToken.verify_token_query(token, "session")
+    |> Repo.one()
   end
 
   @doc """
@@ -723,8 +729,7 @@ defmodule Lightning.Accounts do
   Checks if the given sudo token for the user is valid
   """
   def sudo_session_token_valid?(user, token) do
-    {:ok, token_query} =
-      UserToken.verify_token_query(token, "sudo_session")
+    token_query = UserToken.verify_token_query(token, "sudo_session")
 
     query = from t in token_query, where: t.user_id == ^user.id
     Repo.exists?(query)
@@ -770,8 +775,8 @@ defmodule Lightning.Accounts do
   Gets the user with the given signed token.
   """
   def get_user_by_auth_token(token) do
-    {:ok, query} = UserToken.verify_token_query(token, "auth")
-    Repo.one(query)
+    UserToken.verify_token_query(token, "auth")
+    |> Repo.one()
   end
 
   @doc """
@@ -796,9 +801,19 @@ defmodule Lightning.Accounts do
   @doc """
   Gets the user with the given signed token.
   """
+  def get_user_by_api_token(claims) when is_map(claims) do
+    case claims do
+      %{sub: "user:" <> id} ->
+        Repo.get(User, id)
+
+      _ ->
+        nil
+    end
+  end
+
   def get_user_by_api_token(token) do
-    {:ok, query} = UserToken.verify_token_query(token, "api")
-    Repo.one(query)
+    UserToken.verify_token_query(token, "api")
+    |> Repo.one()
   end
 
   @doc """

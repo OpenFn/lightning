@@ -5,7 +5,7 @@ defmodule Lightning.Workers do
   This module deals with the security tokens and the formatting used on
   the communication with the workers.
   """
-  defmodule Token do
+  defmodule WorkerToken do
     @moduledoc """
     JWT token configuration to authenticate workers.
     """
@@ -35,7 +35,14 @@ defmodule Lightning.Workers do
       %{}
       |> add_claim("iss", fn -> "Lightning" end, &(&1 == "Lightning"))
       |> add_claim("id", nil, fn id, _claims, context ->
-        is_binary(id) and id == Map.get(context, :id)
+        Map.get(context, :id)
+        |> case do
+          nil ->
+            is_binary(id)
+
+          expected_id ->
+            is_binary(id) and id == expected_id
+        end
       end)
       |> add_claim(
         "nbf",
@@ -58,12 +65,14 @@ defmodule Lightning.Workers do
           Lightning.Run.t(),
           Lightning.Runs.RunOptions.t()
         ) :: binary()
-  def generate_run_token(run, run_options) do
-    run_timeout_ms = run_options[:run_timeout_ms]
-
+  def generate_run_token(run, run_options \\ %Lightning.Runs.RunOptions{}) do
     {:ok, token, _claims} =
       RunToken.generate_and_sign(
-        %{"id" => run.id, "exp" => calculate_token_expiry(run_timeout_ms)},
+        %{
+          "id" => run.id,
+          "exp" => calculate_token_expiry(run_options.run_timeout_ms),
+          "sub" => "run:#{run.id}"
+        },
         Lightning.Config.run_token_signer()
       )
 
@@ -119,7 +128,7 @@ defmodule Lightning.Workers do
   def verify_worker_token(token, context \\ %{}) when is_binary(token) do
     context = Enum.into(context, %{current_time: Lightning.current_time()})
 
-    Token.verify_and_validate(
+    WorkerToken.verify_and_validate(
       token,
       Lightning.Config.worker_token_signer(),
       context
