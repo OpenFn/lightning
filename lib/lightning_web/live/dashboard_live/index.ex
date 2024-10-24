@@ -4,6 +4,7 @@ defmodule LightningWeb.DashboardLive.Index do
   require Logger
 
   on_mount {LightningWeb.Hooks, :project_scope}
+  on_mount {LightningWeb.Hooks, :assign_projects}
 
   @impl true
   def mount(_params, _session, socket) do

@@ -35,12 +35,10 @@ defmodule LightningWeb.DashboardLive.UserProjectsSection do
         order_by: [{new_sort_direction, order_column}]
       )
 
-    socket =
-      socket
-      |> assign(:projects, projects)
-      |> assign(sort_key, new_sort_direction)
-
-    {:noreply, socket}
+    {:noreply,
+     socket
+     |> assign(:projects, projects)
+     |> assign(sort_key, new_sort_direction)}
   end
 
   defp switch_sort_direction(:asc), do: :desc
