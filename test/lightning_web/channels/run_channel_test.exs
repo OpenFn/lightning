@@ -431,6 +431,40 @@ defmodule LightningWeb.RunChannelTest do
                      "user" => "user1"
                    }
     end
+
+    test "does not send keys with empty strings" do
+      user = insert(:user)
+
+      credential =
+        insert(:credential,
+          name: "Test Commcare",
+          body: %{
+            "apiKey" => "",
+            "appId" => "12345",
+            "domain" => "localhost",
+            "hostUrl" => "http://localhost:2500",
+            "password" => "test",
+            "username" => "test"
+          },
+          schema: "commcare",
+          user: user
+        )
+
+      %{socket: socket} =
+        create_socket_and_run(%{credential: credential, user: user})
+
+      ref = push(socket, "fetch:credential", %{"id" => credential.id})
+
+      assert_reply ref,
+                   :ok,
+                   %{
+                     "appId" => "12345",
+                     "domain" => "localhost",
+                     "hostUrl" => "http://localhost:2500",
+                     "password" => "test",
+                     "username" => "test"
+                   }
+    end
   end
 
   describe "marking steps as started and finished" do
