@@ -13,7 +13,6 @@ defmodule Lightning.VersionControlTest do
   describe "create_github_connection/2" do
     test "user with valid oauth token creates connection successfully" do
       Mox.verify_on_exit!()
-
       project = insert(:project)
       user = user_with_valid_github_oauth()
 
@@ -84,28 +83,34 @@ defmodule Lightning.VersionControlTest do
         "accept" => "true"
       }
 
+      now = DateTime.utc_now()
+      current_time_in_unix = now |> DateTime.to_unix()
+
+      Lightning.Stub.freeze_time(now)
+
       assert {:ok, repo_connection} =
                VersionControl.create_github_connection(
                  params,
                  user
                )
 
-      {:ok, verified_token} =
+      {:ok, claims} =
         ProjectRepoConnection.AccessToken.verify_and_validate(
           repo_connection.access_token,
           Lightning.Config.repo_connection_token_signer()
         )
 
-      assert verified_token["project_id"] == project.id
-      assert verified_token["iss"] == "Lightning"
-      refute Map.has_key?(verified_token, "aud")
+      project_id = project.id
 
-      assert verified_token["iat"] == verified_token["nbf"]
+      assert %{
+               "project_id" => ^project_id,
+               "iss" => "Lightning",
+               "nbf" => ^current_time_in_unix,
+               "iat" => ^current_time_in_unix,
+               "jti" => jti
+             } = claims
 
-      assert DateTime.diff(
-               DateTime.from_unix!(verified_token["nbf"]),
-               DateTime.utc_now(:second)
-             ) in -1..1
+      assert is_binary(jti)
 
       assert Repo.aggregate(ProjectRepoConnection, :count) == 1
 

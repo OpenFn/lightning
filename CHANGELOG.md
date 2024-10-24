@@ -24,6 +24,35 @@ and this project adheres to
 - Fix editor panel buttons gets out of shape on smaller screens
   [#2278](https://github.com/OpenFn/lightning/issues/2278)
 
+## [v2.9.11] - 2024-10-23
+
+### Added
+
+- Optionally write Kafka messages that can not be persisted to the file system.
+  [#2386](https://github.com/OpenFn/lightning/issues/2386)
+- Add `MessageRecovery` utility code to restore Kafka messages that were
+  pesisted to the file system.
+  [#2386](https://github.com/OpenFn/lightning/issues/2386)
+- Projects page welcome section: allow users to learn how to use the app thru
+  Arcade videos [#2563](https://github.com/OpenFn/lightning/issues/2563)
+- Store user preferences in database
+  [#2564](https://github.com/OpenFn/lightning/issues/2564)
+
+### Changed
+
+- Allow users to to preview password fields in credential forms
+  [#2584](https://github.com/OpenFn/lightning/issues/2584)
+- Remove superuser flag for oauth clients creation
+  [#2417](https://github.com/OpenFn/lightning/issues/2417)
+- Make URL validator more flexible to support URLs with dashes and other cases
+  [#2417](https://github.com/OpenFn/lightning/issues/2417)
+
+### Fixed
+
+- Fix retry many workorders when built for job
+  [#2597](https://github.com/OpenFn/lightning/issues/2597)
+- Do not count deleted workflows in the projects table
+  [#2540](https://github.com/OpenFn/lightning/issues/2540)
 
 ## [v2.9.10] - 2024-10-16
 
