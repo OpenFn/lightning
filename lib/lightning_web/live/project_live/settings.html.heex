@@ -688,7 +688,15 @@
         <div class="hidden sm:block" aria-hidden="true">
           <div class="py-2"></div>
         </div>
-
+        <div>
+          <%= if assigns[:mfa_banner] do %>
+            <%= Phoenix.LiveView.TagEngine.component(
+              @mfa_banner.function,
+              @mfa_banner.attrs,
+              {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
+            ) %>
+          <% end %>
+        </div>
         <div class="bg-white p-4 rounded-md">
           <div class="flex items-center justify-between">
             <span class="flex flex-grow flex-col">
@@ -718,6 +726,7 @@
                 type="button"
                 class={"#{if @project.requires_mfa, do: "bg-indigo-600", else: "bg-gray-200"} #{if !can_edit_project(assigns), do: "cursor-not-allowed opacity-50", else: "cursor-pointer"} relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"}
                 role="switch"
+                disabled={!@can_require_mfa}
                 phx-click="toggle-mfa"
                 aria-checked={@project.requires_mfa}
                 aria-labelledby="require-mfa-label"

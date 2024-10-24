@@ -7,8 +7,11 @@ defmodule LightningWeb.Hooks do
   import Phoenix.Component
   import Phoenix.LiveView
 
+  alias Lightning.Extensions.UsageLimiting.Action
+  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
+  alias Lightning.Services.UsageLimiter
   alias Lightning.VersionControl.VersionControlUsageLimiter
 
   @doc """
@@ -82,6 +85,21 @@ defmodule LightningWeb.Hooks do
 
       {:error, %{function: func} = component} when is_function(func) ->
         {:cont, assign(socket, github_banner: component)}
+    end
+  end
+
+  def on_mount(:limit_mfa, _params, _session, socket) do
+    case UsageLimiter.limit_action(
+           %Action{type: :require_mfa},
+           %Context{
+             project_id: socket.assigns.project.id
+           }
+         ) do
+      :ok ->
+        {:cont, assign(socket, can_require_mfa: true)}
+
+      {:error, %{function: func} = component} when is_function(func) ->
+        {:cont, assign(socket, mfa_banner: component, can_require_mfa: false)}
     end
   end
 end
