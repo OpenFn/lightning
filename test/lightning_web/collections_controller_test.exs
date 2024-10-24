@@ -21,6 +21,8 @@ defmodule LightningWeb.API.CollectionsControllerTest do
       workflow = insert(:simple_workflow)
       workorder = insert(:workorder, dataclip: insert(:dataclip))
 
+      collection = insert(:collection, project: workflow.project)
+
       run =
         insert(:run,
           work_order: workorder,
@@ -31,7 +33,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
       token = Lightning.Workers.generate_run_token(run)
 
       conn = conn |> assign_bearer(token)
-      conn = get(conn, ~p"/collections/#{Ecto.UUID.generate()}")
+      conn = get(conn, ~p"/collections/#{collection.name}")
       assert json_response(conn, 401) == %{"error" => "Unauthorized"}
     end
   end
@@ -39,10 +41,16 @@ defmodule LightningWeb.API.CollectionsControllerTest do
   describe "authenticating with a personal access token" do
     test "with a project they don't have access to", %{conn: conn} do
       user = insert(:user)
+
+      project =
+        insert(:project, project_users: [])
+
+      collection = insert(:collection, project: project)
+
       token = Lightning.Accounts.generate_api_token(user)
 
       conn = conn |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
-      conn = get(conn, ~p"/collections/#{Ecto.UUID.generate()}")
+      conn = get(conn, ~p"/collections/#{collection.name}")
       assert json_response(conn, 401) == %{"error" => "Unauthorized"}
     end
   end

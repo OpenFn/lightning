@@ -14,7 +14,7 @@ defmodule Lightning.CollectionsTest do
     end
 
     test "returns an error when the collection does not exist" do
-      assert {:error, :collection_not_found} =
+      assert {:error, :not_found} =
                Collections.get_collection("nonexistent")
     end
   end
@@ -59,7 +59,7 @@ defmodule Lightning.CollectionsTest do
     end
 
     test "returns an error when collection does not exist" do
-      assert {:error, :collection_not_found} =
+      assert {:error, :not_found} =
                Collections.delete_collection(Ecto.UUID.generate())
     end
   end

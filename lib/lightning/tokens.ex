@@ -41,4 +41,12 @@ defmodule Lightning.Tokens do
         {:error, err}
     end
   end
+
+  def get_subject(%{"sub" => "user:" <> user_id}) do
+    Lightning.Accounts.get_user(user_id)
+  end
+
+  def get_subject(%{"sub" => "run:" <> run_id}) do
+    Lightning.Runs.get(run_id)
+  end
 end

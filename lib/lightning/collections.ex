@@ -13,10 +13,10 @@ defmodule Lightning.Collections do
                    ]
 
   @spec get_collection(String.t()) ::
-          {:ok, Collection.t()} | {:error, :collection_not_found}
+          {:ok, Collection.t()} | {:error, :not_found}
   def get_collection(name) do
     case Repo.get_by(Collection, name: name) do
-      nil -> {:error, :collection_not_found}
+      nil -> {:error, :not_found}
       collection -> {:ok, collection}
     end
   end
@@ -32,10 +32,10 @@ defmodule Lightning.Collections do
   @spec delete_collection(Ecto.UUID.t()) ::
           {:ok, Collection.t()}
           | {:error, Ecto.Changeset.t()}
-          | {:error, :collection_not_found}
+          | {:error, :not_found}
   def delete_collection(collection_id) do
     case Repo.get(Collection, collection_id) do
-      nil -> {:error, :collection_not_found}
+      nil -> {:error, :not_found}
       collection -> Repo.delete(collection)
     end
   end

@@ -12,8 +12,8 @@ defmodule Lightning.TokensTest do
     :ok
   end
 
-  describe "verify with UserToken" do
-    test "with a valid token" do
+  describe "UserToken" do
+    test "verify a valid token" do
       user = insert(:user)
 
       Lightning.Stub.freeze_time(~U[2024-01-01 00:00:00Z])
@@ -32,7 +32,7 @@ defmodule Lightning.TokensTest do
              } = claims
     end
 
-    test "with a forged/invalid token" do
+    test "verify a forged/invalid token" do
       user = insert(:user)
 
       token = Lightning.Accounts.generate_api_token(user)
@@ -41,10 +41,21 @@ defmodule Lightning.TokensTest do
 
       assert {:error, :signature_error} = Tokens.verify(token)
     end
+
+    test "retrieving the subject from the token" do
+      Lightning.Stub.freeze_time(DateTime.utc_now())
+      user = insert(:user)
+
+      token = Lightning.Accounts.generate_api_token(user)
+
+      assert {:ok, claims} = Tokens.verify(token)
+
+      assert Tokens.get_subject(claims) == user |> Repo.reload!()
+    end
   end
 
-  describe "verify with RunToken" do
-    test "with a valid token" do
+  describe "RunToken" do
+    test "verify a valid token" do
       Lightning.Stub.freeze_time(~U[2024-01-01 00:00:00Z])
 
       token =
@@ -61,7 +72,7 @@ defmodule Lightning.TokensTest do
              } == claims
     end
 
-    test "with a forged/invalid token" do
+    test "verify a forged/invalid token" do
       token =
         Lightning.Workers.generate_run_token(%{id: Ecto.UUID.generate()})
 
@@ -70,7 +81,7 @@ defmodule Lightning.TokensTest do
       assert {:error, :signature_error} = Tokens.verify(token)
     end
 
-    test "with an expired token" do
+    test "verify an expired token" do
       Lightning.Stub.freeze_time(~U[2024-01-01 00:00:00Z])
 
       token =

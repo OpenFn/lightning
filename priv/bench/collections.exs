@@ -14,7 +14,7 @@ project =
   end
 
 {:ok, collection} =
-  with {:error, :collection_not_found} <- Collections.get_collection("benchee") do
+  with {:error, :not_found} <- Collections.get_collection("benchee") do
     Collections.create_collection(project.id, "benchee")
   end
 
