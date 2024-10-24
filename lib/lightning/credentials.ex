@@ -269,7 +269,7 @@ defmodule Lightning.Credentials do
         |> Multi.insert(
           :audit,
           fn %{credential: credential} ->
-            generate_event(
+            Audit.user_initiated_event(
               if(state == :built, do: "created", else: "updated"),
               credential,
               changeset
@@ -291,7 +291,7 @@ defmodule Lightning.Credentials do
       multi,
       {:audit, Ecto.Changeset.get_field(changeset, :project_id)},
       fn %{credential: credential} ->
-        generate_event(
+        Audit.user_initiated_event(
           "removed_from_project",
           credential,
           %{
@@ -316,7 +316,7 @@ defmodule Lightning.Credentials do
       multi,
       {:audit, Ecto.Changeset.get_field(changeset, :project_id)},
       fn %{credential: credential} ->
-        generate_event("added_to_project", credential, %{
+        Audit.user_initiated_event("added_to_project", credential, %{
           before: %{project_id: nil},
           after: %{
             project_id: Ecto.Changeset.get_field(changeset, :project_id)
@@ -349,7 +349,7 @@ defmodule Lightning.Credentials do
     Multi.new()
     |> Multi.delete(:credential, credential)
     |> Multi.insert(:audit, fn _ ->
-      generate_event("deleted", credential)
+      Audit.user_initiated_event("deleted", credential)
     end)
     |> Repo.transaction()
   end
@@ -630,11 +630,5 @@ defmodule Lightning.Credentials do
       [{^schema, adapter}] -> adapter
       [] -> nil
     end
-  end
-
-  defp generate_event(event, credential, changeset \\ %{}) do
-    %{id: id, user: user} = credential |> Repo.preload(:user)
-
-    Audit.event(event, id, user, changeset)
   end
 end
