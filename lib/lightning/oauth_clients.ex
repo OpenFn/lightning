@@ -195,10 +195,9 @@ defmodule Lightning.OauthClients do
         |> Multi.insert(
           :audit,
           fn %{client: client} ->
-            OauthClientAudit.event(
+            OauthClientAudit.user_initiated_event(
               if(state == :built, do: "created", else: "updated"),
-              client.id,
-              client.user_id,
+              client,
               changeset
             )
           end
@@ -218,10 +217,9 @@ defmodule Lightning.OauthClients do
       multi,
       {:audit, Ecto.Changeset.get_field(changeset, :project_id)},
       fn %{client: client} ->
-        OauthClientAudit.event(
+        OauthClientAudit.user_initiated_event(
           "removed_from_project",
-          client.id,
-          client.user_id,
+          client,
           %{
             before: %{
               project_id: Ecto.Changeset.get_field(changeset, :project_id)
@@ -244,7 +242,7 @@ defmodule Lightning.OauthClients do
       multi,
       {:audit, Ecto.Changeset.get_field(changeset, :project_id)},
       fn %{client: client} ->
-        OauthClientAudit.event("added_to_project", client.id, client.user_id, %{
+        OauthClientAudit.user_initiated_event("added_to_project", client, %{
           before: %{project_id: nil},
           after: %{
             project_id: Ecto.Changeset.get_field(changeset, :project_id)
@@ -288,7 +286,7 @@ defmodule Lightning.OauthClients do
     end)
     |> Multi.delete(:client, client)
     |> Multi.insert(:audit, fn _ ->
-      OauthClientAudit.event("deleted", client.id, client.user_id)
+      OauthClientAudit.user_initiated_event("deleted", client)
     end)
     |> Repo.transaction()
   end
