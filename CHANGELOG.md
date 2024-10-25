@@ -23,6 +23,10 @@ and this project adheres to
 
 - Fix editor panel buttons gets out of shape on smaller screens
   [#2278](https://github.com/OpenFn/lightning/issues/2278)
+- Do not send empty strings in credential body to the worker
+  [#2585](https://github.com/OpenFn/lightning/issues/2585)
+- Refactor projects dashboard page and fix bug on last activity column
+  [#2593](https://github.com/OpenFn/lightning/issues/2593)
 
 ## [v2.9.11] - 2024-10-23
 
