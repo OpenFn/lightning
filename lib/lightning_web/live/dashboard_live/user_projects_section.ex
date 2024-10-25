@@ -15,43 +15,39 @@ defmodule LightningWeb.DashboardLive.UserProjectsSection do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(
-       projects: projects,
-       name_sort_direction: :asc,
-       activity_sort_direction: :asc
-     )}
+     |> assign(:projects, projects)
+     |> assign(:name_sort_direction, :asc)
+     |> assign(:last_activity_sort_direction, :asc)}
   end
 
   @impl true
   def handle_event("sort", %{"by" => field}, socket) do
     sort_key = String.to_atom("#{field}_sort_direction")
-    sort_direction = Map.get(socket.assigns, sort_key, :asc)
-    new_sort_direction = switch_sort_direction(sort_direction)
+    order_column = String.to_atom(field)
 
-    order_column = map_sort_field_to_column(field)
+    sort_direction =
+      socket.assigns
+      |> Map.get(sort_key, :asc)
+      |> switch_sort_direction()
 
     projects =
       projects_for_user(socket.assigns.current_user,
-        order_by: [{new_sort_direction, order_column}]
+        order_by: {sort_direction, order_column}
       )
 
     {:noreply,
      socket
      |> assign(:projects, projects)
-     |> assign(sort_key, new_sort_direction)}
+     |> assign(sort_key, sort_direction)}
   end
 
   defp switch_sort_direction(:asc), do: :desc
   defp switch_sort_direction(:desc), do: :asc
 
-  defp map_sort_field_to_column("name"), do: :name
-  defp map_sort_field_to_column("activity"), do: :updated_at
-
   defp projects_for_user(%User{} = user, opts \\ []) do
-    include = Keyword.get(opts, :include, [:project_users, :workflows])
-    order_by = Keyword.get(opts, :order_by, asc: :name)
+    order_by = Keyword.get(opts, :order_by, {:asc, :name})
 
-    Projects.get_projects_for_user(user, include: include, order_by: order_by)
+    Projects.get_projects_overview(user, order_by: order_by)
   end
 
   @impl true
@@ -61,9 +57,9 @@ defmodule LightningWeb.DashboardLive.UserProjectsSection do
       <.user_projects_table
         projects={@projects}
         user={@current_user}
-        name_direction={@name_sort_direction}
         target={@myself}
-        activity_direction={@activity_sort_direction}
+        name_direction={@name_sort_direction}
+        last_activity_direction={@last_activity_sort_direction}
       >
         <:empty_state>
           <button
