@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Refactor projects dashboard page and fix bug on last activity column
+  [#2593](https://github.com/OpenFn/lightning/issues/2593)
+
 ## [v2.9.11] - 2024-10-23
 
 ### Added
