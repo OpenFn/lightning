@@ -96,6 +96,7 @@ Lightning.Projects.File.html
 Lightning.Projects.Project.html
 Lightning.Projects.ProjectCredential.html
 Lightning.Projects.ProjectOauthClient.html
+Lightning.Projects.ProjectOverviewRow.html
 Lightning.Projects.ProjectUser.DigestEnum.html
 Lightning.Projects.ProjectUser.RolesEnum.html
 Lightning.Projects.ProjectUser.html
@@ -224,6 +225,8 @@ LightningWeb.CredentialLive.RawBodyComponent.html
 LightningWeb.DashboardLive.Components.html
 LightningWeb.DashboardLive.Index.html
 LightningWeb.DashboardLive.ProjectCreationModal.html
+LightningWeb.DashboardLive.UserProjectsSection.html
+LightningWeb.DashboardLive.WelcomeSection.html
 LightningWeb.DataclipController.html
 LightningWeb.DataclipLive.FormComponent.html
 LightningWeb.DataclipLive.Show.html
@@ -339,8 +342,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-E81AF057.js
-dist/sidebar_items-A52D52F7.js
+dist/search_data-A08DD209.js
+dist/sidebar_items-5D4B9912.js
 index.html
 provisioning.html
 readme.html
