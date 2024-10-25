@@ -21,6 +21,8 @@ and this project adheres to
 
 ### Fixed
 
+- Do not send empty strings in credential body to the worker
+  [#2585](https://github.com/OpenFn/lightning/issues/2585)
 - Refactor projects dashboard page and fix bug on last activity column
   [#2593](https://github.com/OpenFn/lightning/issues/2593)
 

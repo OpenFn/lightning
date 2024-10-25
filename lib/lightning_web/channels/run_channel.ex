@@ -92,7 +92,9 @@ defmodule LightningWeb.RunChannel do
          samples <- Credentials.sensitive_values_for(credential),
          basic_auth <- Credentials.basic_auth_for(credential),
          {:ok, scrubber} <- update_scrubber(scrubber, samples, basic_auth) do
-      socket |> assign(scrubber: scrubber) |> reply_with({:ok, credential.body})
+      socket
+      |> assign(scrubber: scrubber)
+      |> reply_with({:ok, remove_empty_values(credential.body)})
     else
       :not_found ->
         reply_with(socket, {:error, %{errors: %{id: ["Credential not found!"]}}})
@@ -212,5 +214,9 @@ defmodule LightningWeb.RunChannel do
   defp update_scrubber(scrubber, samples, basic_auth) do
     :ok = Scrubber.add_samples(scrubber, samples, basic_auth)
     {:ok, scrubber}
+  end
+
+  defp remove_empty_values(credential_body) do
+    Map.reject(credential_body, fn {_key, val} -> val == "" end)
   end
 end
