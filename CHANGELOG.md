@@ -21,6 +21,10 @@ and this project adheres to
 
 ### Fixed
 
+## [v2.9.12] - 2024-10-25
+
+### Fixed
+
 - Fix editor panel buttons gets out of shape on smaller screens
   [#2278](https://github.com/OpenFn/lightning/issues/2278)
 - Do not send empty strings in credential body to the worker
