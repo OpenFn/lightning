@@ -1,9 +1,13 @@
 defmodule LightningWeb.DashboardLiveTest do
-  require Ecto.Query
   use LightningWeb.ConnCase, async: true
 
+  import Ecto.Query
   import Phoenix.LiveViewTest
   import Lightning.Factories
+
+  alias Lightning.Workflows.Workflow
+
+  require Ecto.Query
 
   describe "Index" do
     setup :register_and_log_in_user
@@ -68,70 +72,32 @@ defmodule LightningWeb.DashboardLiveTest do
       project_3 =
         insert(:project, project_users: [%{user: build(:user), role: :owner}])
 
-      insert_list(2, :simple_workflow, project: project_1)
+      insert(:simple_workflow,
+        project: project_1,
+        updated_at: ~N[2023-10-01 12:00:00]
+      )
+
+      insert(:simple_workflow,
+        project: project_1,
+        updated_at: ~N[2023-10-02 12:00:00]
+      )
+
+      insert(:simple_workflow,
+        project: project_2,
+        updated_at: ~N[2023-10-05 12:00:00]
+      )
+
+      insert(:simple_workflow,
+        project: project_2,
+        updated_at: ~N[2023-10-03 12:00:00]
+      )
 
       {:ok, view, _html} = live(conn, ~p"/projects")
 
       refute has_element?(view, "#projects-table-row-#{project_3.id}")
 
-      [project_1, project_2]
-      |> Enum.each(fn project ->
-        assert has_element?(view, "tr#projects-table-row-#{project.id}")
-
-        assert has_element?(
-                 view,
-                 "tr#projects-table-row-#{project.id} > td:nth-child(1) > a[href='/projects/#{project.id}/w']",
-                 project.name
-               )
-
-        role =
-          project
-          |> Repo.preload(:project_users)
-          |> Map.get(:project_users)
-          |> Enum.find(fn pu -> pu.user_id == user.id end)
-          |> Map.get(:role)
-
-        assert has_element?(
-                 view,
-                 "tr#projects-table-row-#{project.id} > td:nth-child(2)",
-                 role
-                 |> Atom.to_string()
-                 |> String.capitalize()
-               )
-
-        workflow_count =
-          project
-          |> Repo.preload(:workflows)
-          |> Map.get(:workflows)
-          |> Enum.count()
-
-        assert has_element?(
-                 view,
-                 "tr#projects-table-row-#{project.id} > td:nth-child(3)",
-                 workflow_count |> to_string()
-               )
-
-        collaborator_count =
-          project
-          |> Repo.preload(:project_users)
-          |> Map.get(:project_users)
-          |> Enum.count()
-
-        assert has_element?(
-                 view,
-                 "tr#projects-table-row-#{project.id} > td:nth-child(4) > a[href='/projects/#{project.id}/settings#collaboration']",
-                 collaborator_count |> to_string()
-               )
-
-        formatted_date =
-          Lightning.Helpers.format_date(project.updated_at, "%d/%b/%Y %H:%M:%S")
-
-        assert has_element?(
-                 view,
-                 "tr#projects-table-row-#{project.id} > td:nth-child(5)",
-                 formatted_date
-               )
-      end)
+      assert_project_listed(view, project_1, user, ~N[2023-10-02 12:00:00])
+      assert_project_listed(view, project_2, user, ~N[2023-10-05 12:00:00])
     end
 
     test "projects list do not count deleted workflows", %{
@@ -141,15 +107,13 @@ defmodule LightningWeb.DashboardLiveTest do
       project = insert(:project, project_users: [%{user: user, role: :owner}])
 
       insert_list(2, :simple_workflow, project: project)
-
       insert(:workflow, deleted_at: Timex.now(), project: project)
 
-      import Ecto.Query
-
       workflows_count =
-        from(w in Ecto.assoc(project, :workflows),
-          or_where: not is_nil(w.deleted_at),
-          select: count(w)
+        from(w in Workflow,
+          where: w.project_id == ^project.id,
+          where: is_nil(w.deleted_at),
+          select: count(w.id)
         )
         |> Repo.one()
 
@@ -160,21 +124,20 @@ defmodule LightningWeb.DashboardLiveTest do
       assert has_element?(
                view,
                "tr#projects-table-row-#{project.id} > td:nth-child(3)",
-               "#{workflows_count - 1}"
+               "#{workflows_count}"
              )
     end
 
     test "User can create a new project", %{conn: conn, user: user} do
       {:ok, view, _html} = live(conn, ~p"/projects")
 
-      projects_before = Lightning.Projects.get_projects_for_user(user)
-      assert projects_before |> Enum.count() == 0
+      assert Enum.empty?(Lightning.Projects.get_projects_for_user(user))
 
       view
       |> form("#project-form",
         project: %{
           raw_name: "My Awesome Project",
-          description: "This is a really awesome project for testing purposes"
+          description: "This is a really awesome project"
         }
       )
       |> render_change()
@@ -185,30 +148,23 @@ defmodule LightningWeb.DashboardLiveTest do
       view |> form("#project-form") |> render_submit()
 
       projects_after = Lightning.Projects.get_projects_for_user(user)
-      assert projects_after |> Enum.count() == 1
+      assert Enum.count(projects_after) == 1
 
       project = List.first(projects_after)
 
       {:ok, view, _html} = live(conn, ~p"/projects")
-
-      assert has_element?(
-               view,
-               "tr#projects-table-row-#{project.id}"
-             )
+      assert has_element?(view, "tr#projects-table-row-#{project.id}")
     end
 
     test "When the user closes the modal without submitting the form, the project won't be created",
          %{conn: conn, user: user} do
       {:ok, view, _html} = live(conn, ~p"/projects")
 
-      projects_before = Lightning.Projects.get_projects_for_user(user)
-      assert projects_before |> Enum.count() == 0
-
       view
       |> form("#project-form",
         project: %{
           raw_name: "My Awesome Project",
-          description: "This is a really awesome project for testing purposes"
+          description: "This is a really awesome project"
         }
       )
       |> render_change()
@@ -216,7 +172,7 @@ defmodule LightningWeb.DashboardLiveTest do
       view |> element("#cancel-project-creation") |> render_click()
 
       projects_after = Lightning.Projects.get_projects_for_user(user)
-      assert projects_after |> Enum.count() == 0
+      assert Enum.count(projects_after) == 0
     end
 
     test "Users can sort the project table by name", %{conn: conn, user: user} do
@@ -227,14 +183,11 @@ defmodule LightningWeb.DashboardLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/projects")
 
-      # By default, projects are sorted by name ascending
       projects_sorted_by_name = get_sorted_projects_by_name(projects)
       html = render(view)
       project_names_from_html = extract_project_names_from_html(html)
-
       assert project_names_from_html == projects_sorted_by_name
 
-      # Click to sort by name descending
       view
       |> element("span[phx-click='sort'][phx-value-by='name']")
       |> render_click()
@@ -242,10 +195,8 @@ defmodule LightningWeb.DashboardLiveTest do
       projects_sorted_by_name_desc = get_sorted_projects_by_name(projects, :desc)
       html = render(view)
       project_names_from_html = extract_project_names_from_html(html)
-
       assert project_names_from_html == projects_sorted_by_name_desc
 
-      # Click again to sort by name ascending
       view
       |> element("span[phx-click='sort'][phx-value-by='name']")
       |> render_click()
@@ -253,7 +204,6 @@ defmodule LightningWeb.DashboardLiveTest do
       projects_sorted_by_name_asc = get_sorted_projects_by_name(projects, :asc)
       html = render(view)
       project_names_from_html = extract_project_names_from_html(html)
-
       assert project_names_from_html == projects_sorted_by_name_asc
     end
 
@@ -268,15 +218,8 @@ defmodule LightningWeb.DashboardLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/projects")
 
-      # By default, projects are sorted by last activity ascending
       projects_sorted_by_last_activity =
         get_sorted_projects_by_last_activity(projects)
-        |> Enum.map(fn date ->
-          Lightning.Helpers.format_date(
-            date,
-            "%d/%b/%Y %H:%M:%S"
-          )
-        end)
 
       html = render(view)
 
@@ -286,19 +229,12 @@ defmodule LightningWeb.DashboardLiveTest do
       assert project_last_activities_from_html ==
                projects_sorted_by_last_activity
 
-      # Click to sort by last activity descending
       view
-      |> element("span[phx-click='sort'][phx-value-by='activity']")
+      |> element("span[phx-click='sort'][phx-value-by='last_activity']")
       |> render_click()
 
       projects_sorted_by_last_activity_desc =
         get_sorted_projects_by_last_activity(projects, :desc)
-        |> Enum.map(fn date ->
-          Lightning.Helpers.format_date(
-            date,
-            "%d/%b/%Y %H:%M:%S"
-          )
-        end)
 
       html = render(view)
 
@@ -312,34 +248,34 @@ defmodule LightningWeb.DashboardLiveTest do
     test "Toggles the welcome banner", %{conn: conn, user: user} do
       {:ok, view, _html} = live(conn, ~p"/projects")
 
-      # Assert that the banner is initially expanded
-      assert view
-             |> has_element?("#welcome-banner-content[class~='max-h-[500px]']")
+      assert has_element?(
+               view,
+               "#welcome-banner-content[class~='max-h-[500px]']"
+             )
 
-      # Click to collapse the banner
       view
       |> element("button[phx-click='toggle-welcome-banner']")
       |> render_click()
 
-      # Assert that the banner is now collapsed
-      refute view
-             |> has_element?("#welcome-banner-content[class~='max-h-[500px]']")
+      refute has_element?(
+               view,
+               "#welcome-banner-content[class~='max-h-[500px]']"
+             )
 
-      assert view
-             |> has_element?("#welcome-banner-content[class~='max-h-0']")
+      assert has_element?(view, "#welcome-banner-content[class~='max-h-0']")
 
       assert Repo.reload(user)
              |> Map.get(:preferences)
              |> Map.get("welcome.collapsed")
 
-      # Click again to expand the banner back
       view
       |> element("button[phx-click='toggle-welcome-banner']")
       |> render_click()
 
-      # Assert that the banner is expanded again
-      assert view
-             |> has_element?("#welcome-banner-content[class~='max-h-[500px]']")
+      assert has_element?(
+               view,
+               "#welcome-banner-content[class~='max-h-[500px]']"
+             )
 
       refute Repo.reload(user)
              |> Map.get(:preferences)
@@ -355,8 +291,107 @@ defmodule LightningWeb.DashboardLiveTest do
       )
       |> render_click()
 
-      assert view |> has_element?("div#arcade-modal-1")
+      assert has_element?(view, "div#arcade-modal-1")
     end
+  end
+
+  defp assert_project_listed(view, project, user, max_updated_at) do
+    assert has_element?(view, "tr#projects-table-row-#{project.id}")
+
+    assert has_element?(
+             view,
+             "tr#projects-table-row-#{project.id} > td:nth-child(1) > a[href='/projects/#{project.id}/w']",
+             project.name
+           )
+
+    role =
+      project
+      |> Repo.preload(:project_users)
+      |> Map.get(:project_users)
+      |> Enum.find(fn pu -> pu.user_id == user.id end)
+      |> Map.get(:role)
+
+    assert has_element?(
+             view,
+             "tr#projects-table-row-#{project.id} > td:nth-child(2)",
+             role
+             |> Atom.to_string()
+             |> String.capitalize()
+           )
+
+    workflow_count =
+      project
+      |> Repo.preload(:workflows)
+      |> Map.get(:workflows)
+      |> Enum.count()
+
+    assert has_element?(
+             view,
+             "tr#projects-table-row-#{project.id} > td:nth-child(3)",
+             workflow_count |> to_string()
+           )
+
+    collaborator_count =
+      project
+      |> Repo.preload(:project_users)
+      |> Map.get(:project_users)
+      |> Enum.count()
+
+    assert has_element?(
+             view,
+             "tr#projects-table-row-#{project.id} > td:nth-child(4) > a[href='/projects/#{project.id}/settings#collaboration']",
+             collaborator_count |> to_string()
+           )
+
+    formatted_date =
+      Lightning.Helpers.format_date(max_updated_at, "%d/%b/%Y %H:%M:%S")
+
+    assert has_element?(
+             view,
+             "tr#projects-table-row-#{project.id} > td:nth-child(5)",
+             formatted_date
+           )
+  end
+
+  defp get_sorted_projects_by_last_activity(projects, order \\ :asc) do
+    projects_with_workflows = Repo.preload(projects, :workflows)
+
+    projects_with_workflows
+    |> Enum.sort_by(
+      fn project ->
+        project
+        |> Map.get(:workflows)
+        |> Enum.map(& &1.updated_at)
+        |> Enum.max(fn -> nil end)
+      end,
+      order
+    )
+    |> Enum.map(fn project ->
+      last_activity =
+        project
+        |> Map.get(:workflows)
+        |> Enum.map(& &1.updated_at)
+        |> Enum.max(fn -> nil end)
+
+      if last_activity do
+        Lightning.Helpers.format_date(last_activity, "%d/%b/%Y %H:%M:%S")
+      else
+        "No activity"
+      end
+    end)
+  end
+
+  defp extract_project_last_activities_from_html(html) do
+    html
+    |> Floki.parse_document!()
+    |> Floki.find("#projects-table tr")
+    |> Enum.map(fn tr ->
+      tr
+      |> Floki.find("td:nth-child(5)")
+      |> Floki.text()
+      |> String.trim()
+    end)
+    |> Enum.reject(&(&1 == ""))
   end
 
   defp get_sorted_projects_by_name(projects, order \\ :asc) do
@@ -365,30 +400,12 @@ defmodule LightningWeb.DashboardLiveTest do
     |> Enum.map(& &1.name)
   end
 
-  defp get_sorted_projects_by_last_activity(projects, order \\ :asc) do
-    projects
-    |> Enum.sort_by(fn project -> project.updated_at end, order)
-    |> Enum.map(& &1.updated_at)
-  end
-
   defp extract_project_names_from_html(html) do
     html
     |> Floki.parse_document!()
     |> Floki.find("#projects-table tr")
     |> Enum.map(fn tr ->
       Floki.find(tr, "td:nth-child(1) a")
-      |> Floki.text()
-      |> String.trim()
-    end)
-    |> Enum.reject(&(&1 == ""))
-  end
-
-  defp extract_project_last_activities_from_html(html) do
-    html
-    |> Floki.parse_document!()
-    |> Floki.find("#projects-table tr")
-    |> Enum.map(fn tr ->
-      Floki.find(tr, "td:nth-child(5)")
       |> Floki.text()
       |> String.trim()
     end)

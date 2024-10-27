@@ -511,12 +511,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert force_event(view, :rerun, nil, nil) =~
                "Cannot rerun in snapshot mode, switch to latest."
 
-      assert view
-             |> element(
-               "p",
-               "You cannot edit or run an old snapshot of a workflow."
-             )
-             |> has_element?()
+      assert view |> element("#edit-disabled-warning") |> render() =~
+               "You cannot edit or run an old snapshot of a workflow"
 
       assert view
              |> element("#version-switcher-button-#{workflow.id}")
@@ -528,12 +524,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       |> element("#version-switcher-button-#{workflow.id}")
       |> render_click()
 
-      refute view
-             |> element(
-               "p",
-               "You cannot edit or run an old snapshot of a workflow."
-             )
-             |> has_element?()
+      refute view |> has_element?("#edit-disabled-warning")
+
+      refute render(view) =~
+               "You cannot edit or run an old snapshot of a workflow"
 
       refute view
              |> element("#version-switcher-button-#{workflow.id}")
@@ -2108,7 +2102,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert high_priority_view
              |> has_element?("#inspector-workflow-version", "latest")
 
-      wait constant_backoff(100) |> expiry(4_000) do
+      retry with: exponential_backoff() |> expiry(4_000),
+            rescue_only: [ExUnit.AssertionError] do
         refute low_priority_view
                |> has_element?("#inspector-workflow-version", "latest")
 
