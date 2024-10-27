@@ -1,4 +1,6 @@
 defmodule LightningWeb.ErrorView do
+  @moduledoc false
+
   # This module needs to be changed to use Layouts
   use LightningWeb, :view
 
@@ -31,7 +33,10 @@ defmodule LightningWeb.ErrorView do
           <h2 class="text-center text-4xl tracking-tight font-bold text-gray-900">
             Authorization Error
           </h2>
-          <div class="mt-4 p-4 text-xs font-mono text-gray-600 border rounded-md bg-gray-200 grid grid-cols-2 gap-2">
+          <div
+            :if={assigns[:error]}
+            class="mt-4 p-4 text-xs font-mono text-gray-600 border rounded-md bg-gray-200 grid grid-cols-2 gap-2"
+          >
             <%= for {k,v} <- @error do %>
               <div class="text-right font-bold"><%= k %></div>
               <div><%= v %></div>
@@ -66,10 +71,14 @@ defmodule LightningWeb.ErrorView do
   # By default, Phoenix returns the status message from
   # the template name. For example, "404.html" becomes
   # "Not Found".
-  def template_not_found(template, _assigns) do
+  def template_not_found(template, assigns) do
     if String.match?(template, ~r/.json$/) do
       %{
-        "error" => Phoenix.Controller.status_message_from_template(template)
+        "error" =>
+          case assigns do
+            %{error: error} -> error
+            _ -> Phoenix.Controller.status_message_from_template(template)
+          end
       }
     else
       Phoenix.Controller.status_message_from_template(template)

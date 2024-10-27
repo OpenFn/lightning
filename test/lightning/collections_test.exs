@@ -408,11 +408,18 @@ defmodule Lightning.CollectionsTest do
       update_items = Enum.map(1..2, fn i -> {"key#{i}", "value#{10 + i}"} end)
       assert :ok = Collections.put_all(collection, update_items)
 
-      assert %{value: "value11", updated_at: updated_at} = Repo.get_by(Item, key: "key1")
+      assert %{value: "value11", updated_at: updated_at} =
+               Repo.get_by(Item, key: "key1")
+
       assert updated_at > updated_at1
-      assert %{value: "value12", updated_at: updated_at} = Repo.get_by(Item, key: "key2")
+
+      assert %{value: "value12", updated_at: updated_at} =
+               Repo.get_by(Item, key: "key2")
+
       assert updated_at > updated_at2
-      assert %{value: "value5", updated_at: ^updated_at5} = Repo.get_by(Item, key: "key5")
+
+      assert %{value: "value5", updated_at: ^updated_at5} =
+               Repo.get_by(Item, key: "key5")
     end
   end
 

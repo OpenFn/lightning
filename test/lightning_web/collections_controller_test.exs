@@ -55,85 +55,51 @@ defmodule LightningWeb.API.CollectionsControllerTest do
     end
   end
 
-  # describe "with invalid token" do
-  #   test "gets a 401", %{conn: conn} do
-  #     token = "Oooops"
-  #     conn = conn |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
-  #     conn = get(conn, ~p"/collections/#{Ecto.UUID.generate()}")
-  #     assert json_response(conn, 401) == %{"error" => "Unauthorized"}
-  #   end
-  # end
+  describe "stream_all" do
+    test "with no results", %{conn: conn} do
+      user = insert(:user)
 
-  # describe "index" do
-  #   setup [:assign_bearer_for_api, :create_project_for_current_user, :create_job]
+      project =
+        insert(:project, project_users: [%{user: user}])
 
-  #   test "lists all jobs for project I belong to", %{conn: conn, job: job} do
-  #     conn = get(conn, ~p"/api/projects/#{job.workflow.project_id}/jobs")
+      collection = insert(:collection, project: project)
 
-  #     response = json_response(conn, 200)
+      token = Lightning.Accounts.generate_api_token(user)
 
-  #     assert response["data"] == [
-  #              %{
-  #                "attributes" => %{"name" => "some name"},
-  #                "id" => job.id,
-  #                "links" => %{
-  #                  "self" => "http://localhost:4002/api/jobs/#{job.id}"
-  #                },
-  #                "relationships" => %{},
-  #                "type" => "jobs"
-  #              }
-  #            ]
-  #   end
+      conn =
+        conn
+        |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
+        |> get(~p"/collections/#{collection.name}")
 
-  #   test "responds with a 401 when I don't have access", %{conn: conn} do
-  #     other_project = project_fixture()
+      assert json_response(conn, 200) == []
+    end
 
-  #     conn = get(conn, ~p"/api/projects/#{other_project.id}/jobs")
+    test "with 10 results", %{conn: conn} do
+      user = insert(:user)
 
-  #     response = json_response(conn, 401)
+      project =
+        insert(:project, project_users: [%{user: user}])
 
-  #     assert response == %{"error" => "Unauthorized"}
-  #   end
+      collection =
+        insert(:collection,
+          project: project,
+          items: insert_list(65, :collection_item)
+        )
 
-  #   test "lists all jobs", %{conn: conn, job: job} do
-  #     conn = get(conn, ~p"/api/jobs")
-  #     response = json_response(conn, 200)
+      token = Lightning.Accounts.generate_api_token(user)
 
-  #     assert response["data"] == [
-  #              %{
-  #                "attributes" => %{"name" => "some name"},
-  #                "id" => job.id,
-  #                "links" => %{
-  #                  "self" => "http://localhost:4002/api/jobs/#{job.id}"
-  #                },
-  #                "relationships" => %{},
-  #                "type" => "jobs"
-  #              }
-  #            ]
-  #   end
-  # end
+      conn =
+        conn
+        |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
+        |> get(~p"/collections/#{collection.name}")
 
-  # describe "show" do
-  #   setup [:assign_bearer_for_api, :create_project_for_current_user, :create_job]
+      assert conn.state == :chunked
 
-  #   test "shows the job", %{conn: conn, job: job} do
-  #     conn = get(conn, ~p"/api/jobs/#{job}")
-  #     response = json_response(conn, 200)
-
-  #     assert response["data"] == %{
-  #              "attributes" => %{"name" => "some name"},
-  #              "id" => job.id,
-  #              "links" => %{
-  #                "self" => "http://localhost:4002/api/jobs/#{job.id}"
-  #              },
-  #              "relationships" => %{},
-  #              "type" => "jobs"
-  #            }
-  #   end
-  # end
-
-  # defp create_job(%{project: project}) do
-  #   %{job: job} = workflow_job_fixture(project_id: project.id)
-  #   %{job: job}
-  # end
+      assert json_response(conn, 200) ==
+               collection.items
+               |> Enum.map(fn item ->
+                 %{"key" => item.key, "value" => item.value}
+               end)
+    end
+  end
 end

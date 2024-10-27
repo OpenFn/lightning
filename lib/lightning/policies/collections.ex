@@ -9,9 +9,9 @@ defmodule Lightning.Policies.Collections do
   """
   @behaviour Bodyguard.Policy
 
-  alias Lightning.Run
   alias Lightning.Accounts.User
   alias Lightning.Collections.Collection
+  alias Lightning.Run
 
   @type actions :: :access_collection
   @spec authorize(actions(), Lightning.Accounts.User.t(), Collection.t()) ::

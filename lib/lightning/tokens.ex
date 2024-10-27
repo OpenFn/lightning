@@ -1,5 +1,10 @@
 defmodule Lightning.Tokens do
+  @moduledoc """
+  Token generation, verification and validation.
+  """
+
   defmodule PersonalAccessToken do
+    @moduledoc false
     use Joken.Config
 
     @impl true
@@ -20,6 +25,12 @@ defmodule Lightning.Tokens do
     end
   end
 
+  @doc """
+  Verify a token and return the claims if successful.
+
+  This serves as a central point to verify and validate different types
+  of tokens.
+  """
   @spec verify(String.t()) :: {:ok, map()} | {:error, any()}
   def verify(token) do
     Joken.peek_claims(token)
@@ -42,6 +53,11 @@ defmodule Lightning.Tokens do
     end
   end
 
+  @doc """
+  Get the subject of a token.
+  Currently support RunTokens and PersonalAccessTokens,
+  which return `Lightning.Run`s and `Lightning.Accounts.User`s respectively.
+  """
   def get_subject(%{"sub" => "user:" <> user_id}) do
     Lightning.Accounts.get_user(user_id)
   end
