@@ -1724,6 +1724,108 @@ defmodule Lightning.ProjectsTest do
       ] = result
     end
 
+    test "returns the correct latest last_activity from all work_orders across workflows" do
+      user = insert(:user)
+
+      project_a =
+        %{id: project_a_id} =
+        insert(:project, name: "Project A", project_users: [%{user_id: user.id}])
+
+      workflow_a1 = insert(:simple_workflow, project: project_a)
+      workflow_a2 = insert(:simple_workflow, project: project_a)
+      workflow_a3 = insert(:simple_workflow, project: project_a)
+
+      insert(:workorder,
+        workflow: workflow_a1,
+        last_activity: ~U[2023-10-01 00:00:00Z]
+      )
+
+      insert(:workorder,
+        workflow: workflow_a2,
+        last_activity: ~U[2023-10-02 00:00:00Z]
+      )
+
+      insert(:workorder,
+        workflow: workflow_a3,
+        last_activity: ~U[2023-10-03 00:00:00Z]
+      )
+
+      project_b =
+        %{id: project_b_id} =
+        insert(:project, name: "Project B", project_users: [%{user_id: user.id}])
+
+      workflow_b1 = insert(:simple_workflow, project: project_b)
+      workflow_b2 = insert(:simple_workflow, project: project_b)
+      workflow_b3 = insert(:simple_workflow, project: project_b)
+
+      insert(:workorder,
+        workflow: workflow_b1,
+        last_activity: ~U[2023-09-29 00:00:00Z]
+      )
+
+      insert(:workorder,
+        workflow: workflow_b2,
+        last_activity: ~U[2023-10-05 00:00:00Z]
+      )
+
+      insert(:workorder,
+        workflow: workflow_b3,
+        last_activity: ~U[2023-10-04 00:00:00Z]
+      )
+
+      project_c =
+        %{id: project_c_id} =
+        insert(:project, name: "Project C", project_users: [%{user_id: user.id}])
+
+      workflow_c1 = insert(:simple_workflow, project: project_c)
+      workflow_c2 = insert(:simple_workflow, project: project_c)
+      workflow_c3 = insert(:simple_workflow, project: project_c)
+
+      insert(:workorder,
+        workflow: workflow_c1,
+        last_activity: ~U[2023-09-28 00:00:00Z]
+      )
+
+      insert(:workorder,
+        workflow: workflow_c2,
+        last_activity: ~U[2023-09-30 00:00:00Z]
+      )
+
+      insert(:workorder,
+        workflow: workflow_c3,
+        last_activity: ~U[2023-10-06 00:00:00Z]
+      )
+
+      result = Projects.get_projects_overview(user)
+
+      assert [
+               %ProjectOverviewRow{
+                 id: ^project_a_id,
+                 name: "Project A",
+                 last_activity: ~U[2023-10-03 00:00:00.000000Z],
+                 collaborators_count: 1,
+                 role: :editor,
+                 workflows_count: 3
+               },
+               %ProjectOverviewRow{
+                 id: ^project_b_id,
+                 name: "Project B",
+                 last_activity: ~U[2023-10-05 00:00:00.000000Z],
+                 collaborators_count: 1,
+                 role: :editor,
+                 workflows_count: 3
+               },
+               %ProjectOverviewRow{
+                 id: ^project_c_id,
+                 name: "Project C",
+                 last_activity: ~U[2023-10-06 00:00:00.000000Z],
+                 collaborators_count: 1,
+                 role: :editor,
+                 workflows_count: 3
+               }
+             ] = Enum.sort_by(result, & &1.name)
+    end
+
     test "orders projects by name ascending by default" do
       user = insert(:user)
 
@@ -1741,7 +1843,7 @@ defmodule Lightning.ProjectsTest do
              ] = result
     end
 
-    test "orders projects by last_activity (updated_at of workflows) descending when specified" do
+    test "orders projects by last_activity (latest workorder last_activity) descending when specified" do
       user = insert(:user)
 
       project_a =
@@ -1752,14 +1854,17 @@ defmodule Lightning.ProjectsTest do
         %{id: project_b_id} =
         insert(:project, name: "Project B", project_users: [%{user_id: user.id}])
 
-      insert(:simple_workflow,
-        project: project_a,
-        updated_at: ~N[2023-10-05 00:00:00]
+      workflow_a = insert(:simple_workflow, project: project_a)
+      workflow_b = insert(:simple_workflow, project: project_b)
+
+      insert(:workorder,
+        workflow: workflow_a,
+        last_activity: ~U[2023-10-05 00:00:00Z]
       )
 
-      insert(:simple_workflow,
-        project: project_b,
-        updated_at: ~N[2023-10-10 00:00:00]
+      insert(:workorder,
+        workflow: workflow_b,
+        last_activity: ~U[2023-10-10 00:00:00Z]
       )
 
       result =
@@ -1782,22 +1887,25 @@ defmodule Lightning.ProjectsTest do
         %{id: project_b_id} =
         insert(:project, name: "Project B", project_users: [%{user_id: user.id}])
 
-      insert(:simple_workflow,
-        project: project_a,
-        updated_at: ~N[2023-10-05 00:00:00]
+      workflow_a = insert(:simple_workflow, project: project_a)
+      workflow_b = insert(:simple_workflow, project: project_b)
+
+      insert(:workorder,
+        workflow: workflow_a,
+        last_activity: ~U[2023-10-05 00:00:00Z]
       )
 
-      insert(:simple_workflow,
-        project: project_b,
-        updated_at: ~N[2023-10-10 00:00:00]
+      insert(:workorder,
+        workflow: workflow_b,
+        last_activity: ~U[2023-10-10 00:00:00Z]
       )
 
       result =
-        Projects.get_projects_overview(user, order_by: {:asc, :last_activity})
+        Projects.get_projects_overview(user, order_by: {:desc, :last_activity})
 
       assert [
-               %ProjectOverviewRow{id: ^project_a_id, name: "Project A"},
-               %ProjectOverviewRow{id: ^project_b_id, name: "Project B"}
+               %ProjectOverviewRow{id: ^project_b_id, name: "Project B"},
+               %ProjectOverviewRow{id: ^project_a_id, name: "Project A"}
              ] = result
     end
 

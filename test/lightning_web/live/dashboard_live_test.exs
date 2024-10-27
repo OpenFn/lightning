@@ -72,32 +72,26 @@ defmodule LightningWeb.DashboardLiveTest do
       project_3 =
         insert(:project, project_users: [%{user: build(:user), role: :owner}])
 
-      insert(:simple_workflow,
-        project: project_1,
-        updated_at: ~N[2023-10-01 12:00:00]
+      workflow_1 = insert(:simple_workflow, project: project_1)
+
+      insert(:simple_workflow, project: project_2)
+
+      insert(:workorder,
+        workflow: workflow_1,
+        last_activity: ~U[2023-10-05 00:00:00Z]
       )
 
-      insert(:simple_workflow,
-        project: project_1,
-        updated_at: ~N[2023-10-02 12:00:00]
-      )
-
-      insert(:simple_workflow,
-        project: project_2,
-        updated_at: ~N[2023-10-05 12:00:00]
-      )
-
-      insert(:simple_workflow,
-        project: project_2,
-        updated_at: ~N[2023-10-03 12:00:00]
+      insert(:workorder,
+        workflow: workflow_1,
+        last_activity: ~U[2023-10-10 00:00:00Z]
       )
 
       {:ok, view, _html} = live(conn, ~p"/projects")
 
       refute has_element?(view, "#projects-table-row-#{project_3.id}")
 
-      assert_project_listed(view, project_1, user, ~N[2023-10-02 12:00:00])
-      assert_project_listed(view, project_2, user, ~N[2023-10-05 12:00:00])
+      assert_project_listed(view, project_1, user, ~N[2023-10-10 00:00:00])
+      assert_project_listed(view, project_2, user, nil)
     end
 
     test "projects list do not count deleted workflows", %{
@@ -295,7 +289,7 @@ defmodule LightningWeb.DashboardLiveTest do
     end
   end
 
-  defp assert_project_listed(view, project, user, max_updated_at) do
+  defp assert_project_listed(view, project, user, last_activity_date) do
     assert has_element?(view, "tr#projects-table-row-#{project.id}")
 
     assert has_element?(
@@ -344,7 +338,11 @@ defmodule LightningWeb.DashboardLiveTest do
            )
 
     formatted_date =
-      Lightning.Helpers.format_date(max_updated_at, "%d/%b/%Y %H:%M:%S")
+      if last_activity_date do
+        Lightning.Helpers.format_date(last_activity_date, "%d/%m/%Y %H:%M:%S")
+      else
+        "No activity"
+      end
 
     assert has_element?(
              view,

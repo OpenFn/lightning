@@ -51,19 +51,28 @@ defmodule Lightning.Projects do
   def get_projects_overview(%User{id: user_id}, opts \\ []) do
     order_by = Keyword.get(opts, :order_by, {:asc, :name})
 
+    latest_activities_subquery =
+      from(wo in WorkOrder,
+        join: w in assoc(wo, :workflow),
+        group_by: w.project_id,
+        select: %{project_id: w.project_id, last_activity: max(wo.last_activity)}
+      )
+
     from(p in Project,
       join: pu in assoc(p, :project_users),
       left_join: w in assoc(p, :workflows),
       left_join: pu_all in assoc(p, :project_users),
+      left_join: la in subquery(latest_activities_subquery),
+      on: la.project_id == p.id,
       where: pu.user_id == ^user_id and is_nil(w.deleted_at),
-      group_by: [p.id, pu.role],
+      group_by: [p.id, pu.role, la.last_activity],
       select: %ProjectOverviewRow{
         id: p.id,
         name: p.name,
         role: pu.role,
         workflows_count: count(w.id, :distinct),
         collaborators_count: count(pu_all.user_id, :distinct),
-        last_activity: max(w.updated_at)
+        last_activity: la.last_activity
       },
       order_by: ^dynamic_order_by(order_by)
     )
@@ -75,7 +84,7 @@ defmodule Lightning.Projects do
   end
 
   defp dynamic_order_by({direction, :last_activity}) do
-    {direction, dynamic([_p, _pu, w, _pu_all], max(w.updated_at))}
+    {direction, dynamic([_p, _pu, _w, _pu_all, la], la.last_activity)}
   end
 
   @doc """

@@ -113,7 +113,7 @@ defmodule LightningWeb.DashboardLive.Components do
   end
 
   def user_projects_table(assigns) do
-    next_sort_icon = %{asc: "hero-chevron-down", desc: "hero-chevron-up"}
+    next_sort_icon = %{asc: "hero-chevron-up", desc: "hero-chevron-down"}
 
     assigns =
       assign(assigns,
@@ -200,7 +200,7 @@ defmodule LightningWeb.DashboardLive.Components do
             <%= if project.last_activity do %>
               <%= Lightning.Helpers.format_date(
                 project.last_activity,
-                "%d/%b/%Y %H:%M:%S"
+                "%d/%m/%Y %H:%M:%S"
               ) %>
             <% else %>
               No activity
