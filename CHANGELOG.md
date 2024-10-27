@@ -17,6 +17,11 @@ and this project adheres to
 
 ### Added
 
+- Adds a UI for managing collections
+  [#2567](https://github.com/OpenFn/lightning/issues/2567)
+- Introduces collections, a programatic workflow data sharing resource.
+  [#2551](https://github.com/OpenFn/lightning/issues/2551)
+
 ### Changed
 
 ### Fixed
@@ -45,8 +50,6 @@ and this project adheres to
   Arcade videos [#2563](https://github.com/OpenFn/lightning/issues/2563)
 - Store user preferences in database
   [#2564](https://github.com/OpenFn/lightning/issues/2564)
-- Introduces collections, a programatic workflow data sharing resource.
-  [#2551](https://github.com/OpenFn/lightning/issues/2551)
 
 ### Changed
 

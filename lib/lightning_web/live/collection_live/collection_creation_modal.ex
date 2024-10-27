@@ -1,20 +1,30 @@
-defmodule LightningWeb.DashboardLive.ProjectCreationModal do
+defmodule LightningWeb.CollectionLive.CollectionCreationModal do
   use LightningWeb, :live_component
 
+  alias Lightning.Collections
+  alias Lightning.Collections.Collection
   alias Lightning.Helpers
   alias Lightning.Projects
-  alias Lightning.Projects.Project
 
   @impl true
   def update(assigns, socket) do
-    project = %Project{}
-    changeset = Project.changeset(project, %{})
+    changeset = Collection.changeset(assigns.collection, %{})
 
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(project: project)
-     |> assign(changeset: changeset)}
+     |> assign(:changeset, changeset)
+     |> assign(:name, get_collection_name(changeset))
+     |> assign(:projects_options, list_project_options())
+     |> assign_new(:mode, fn -> :create end)}
+  end
+
+  defp list_project_options do
+    Projects.list_projects() |> Enum.map(&{&1.name, &1.id})
+  end
+
+  defp get_collection_name(changeset) do
+    Ecto.Changeset.fetch_field!(changeset, :name)
   end
 
   @impl true
@@ -22,42 +32,53 @@ defmodule LightningWeb.DashboardLive.ProjectCreationModal do
     {:noreply, socket |> push_navigate(to: socket.assigns.return_to)}
   end
 
-  def handle_event("validate", %{"project" => project_params}, socket) do
+  def handle_event("validate", %{"collection" => collection_params}, socket) do
     changeset =
-      socket.assigns.project
-      |> Project.changeset(
-        project_params
+      socket.assigns.collection
+      |> Collection.changeset(
+        collection_params
         |> coerce_raw_name_to_safe_name
       )
       |> Map.put(:action, :validate)
 
     {:noreply,
      socket
-     |> assign(:changeset, changeset)
+     |> assign(
+       :changeset,
+       Lightning.Helpers.copy_error(changeset, :name, :raw_name)
+     )
      |> assign(:name, Ecto.Changeset.fetch_field!(changeset, :name))}
   end
 
-  def handle_event("save", %{"project" => project_params}, socket) do
-    %{current_user: current_user, return_to: return_to} = socket.assigns
+  def handle_event("save", %{"collection" => collection_params}, socket) do
+    %{mode: mode, return_to: return_to} = socket.assigns
 
-    project_params
-    |> Map.put_new("project_users", %{
-      0 => %{
-        "user_id" => current_user.id,
-        "role" => "owner"
-      }
-    })
-    |> Projects.create_project(false)
-    |> case do
-      {:ok, project} ->
+    result =
+      case mode do
+        :create ->
+          Collections.create_collection(collection_params)
+
+        :update ->
+          Collections.update_collection(
+            socket.assigns.collection,
+            collection_params
+          )
+      end
+
+    case result do
+      {:ok, _collection} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Project created successfully")
-         |> assign(project: project)
+         |> put_flash(:info, "Collection #{mode}d successfully")
          |> push_navigate(to: return_to)}
 
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, :project_changeset, changeset)}
+      {:error, changeset} ->
+        {:noreply,
+         assign(
+           socket,
+           :changeset,
+           Lightning.Helpers.copy_error(changeset, :name, :raw_name)
+         )}
     end
   end
 
@@ -78,9 +99,13 @@ defmodule LightningWeb.DashboardLive.ProjectCreationModal do
       <.modal id={@id} width="xl:min-w-1/3 min-w-1/2 max-w-full">
         <:title>
           <div class="flex justify-between">
-            <span class="font-bold">Create a new project</span>
+            <span class="font-bold">
+              <%= if @mode == :create,
+                do: "Create Collection",
+                else: "Edit Collection" %>
+            </span>
             <button
-              id="close-credential-modal-type-picker"
+              id={"close-collection-#{@collection.id || "new"}-creation-modal"}
               phx-click="close_modal"
               phx-target={@myself}
               type="button"
@@ -95,46 +120,51 @@ defmodule LightningWeb.DashboardLive.ProjectCreationModal do
         <.form
           :let={f}
           for={@changeset}
-          id="project-form"
+          id={"collection-form-#{@collection.id || "new"}"}
           phx-target={@myself}
           phx-change="validate"
           phx-submit="save"
         >
           <div class="container mx-auto px-6 space-y-6 bg-white">
             <div class="space-y-4">
-              <.input type="text" field={f[:raw_name]} label="Name" required="true" />
+              <.input
+                type="text"
+                field={f[:raw_name]}
+                value={@name}
+                label="Name"
+                required="true"
+              />
               <.input type="hidden" field={f[:name]} />
               <small class="mt-2 block text-xs text-gray-600">
                 <%= if to_string(f[:name].value) != "" do %>
-                  Your project will be named <span class="font-mono border rounded-md p-1 bg-yellow-100 border-slate-300">
+                  Your collection will be named <span class="font-mono border rounded-md p-1 bg-yellow-100 border-slate-300">
       <%= @name %></span>.
                 <% end %>
               </small>
             </div>
             <div class="space-y-4">
               <.input
-                type="textarea"
-                class="bg-white text-slate-900 u"
-                field={f[:description]}
-                label="Description"
+                type="select"
+                field={f[:project_id]}
+                label="Project"
+                options={@projects_options}
+                required="true"
               />
-              <small class="mt-2 block text-xs text-gray-600">
-                A short description of a project [max 240 characters]
-              </small>
             </div>
           </div>
           <.modal_footer class="mt-6 mx-6">
             <div class="sm:flex sm:flex-row-reverse">
               <button
+                id={"save-collection-#{@collection.id || "new"}"}
                 type="submit"
                 disabled={!@changeset.valid?}
                 phx-target={@myself}
                 class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
               >
-                Create project
+                Save
               </button>
               <button
-                id="cancel-project-creation"
+                id={"cancel-collection-creation-#{@collection.id || "new"}"}
                 type="button"
                 phx-click="close_modal"
                 phx-target={@myself}
