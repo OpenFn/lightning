@@ -13,10 +13,10 @@ defmodule Lightning.Collections do
                    ]
 
   @spec get_collection(String.t()) ::
-          {:ok, Collection.t()} | {:error, :collection_not_found}
+          {:ok, Collection.t()} | {:error, :not_found}
   def get_collection(name) do
     case Repo.get_by(Collection, name: name) do
-      nil -> {:error, :collection_not_found}
+      nil -> {:error, :not_found}
       collection -> {:ok, collection}
     end
   end
@@ -32,10 +32,10 @@ defmodule Lightning.Collections do
   @spec delete_collection(Ecto.UUID.t()) ::
           {:ok, Collection.t()}
           | {:error, Ecto.Changeset.t()}
-          | {:error, :collection_not_found}
+          | {:error, :not_found}
   def delete_collection(collection_id) do
     case Repo.get(Collection, collection_id) do
-      nil -> {:error, :collection_not_found}
+      nil -> {:error, :not_found}
       collection -> Repo.delete(collection)
     end
   end
@@ -84,6 +84,30 @@ defmodule Lightning.Collections do
     |> then(fn result ->
       with {:ok, _no_return} <- result, do: :ok
     end)
+  end
+
+  @spec put_all(Collection.t(), [{String.t(), String.t()}]) :: :ok | :error
+  def put_all(%{id: collection_id}, kv_list) do
+    item_list =
+      Enum.map(kv_list, fn {key, value} ->
+        now = DateTime.utc_now()
+
+        %{
+          collection_id: collection_id,
+          key: key,
+          value: value,
+          inserted_at: now,
+          updated_at: now
+        }
+      end)
+
+    case Repo.insert_all(Item, item_list,
+           conflict_target: [:collection_id, :key],
+           on_conflict: {:replace, [:value, :updated_at]}
+         ) do
+      {n, nil} when n > 0 -> :ok
+      _error -> :error
+    end
   end
 
   @spec delete(Collection.t(), String.t()) :: :ok | {:error, :not_found}
