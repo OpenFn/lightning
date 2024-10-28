@@ -21,6 +21,13 @@ and this project adheres to
 
 ### Fixed
 
+## [v2.9.13] - 2024-10-28
+
+### Changed
+
+- Add responsible ai disclaimer to arcade video
+  [#2610](https://github.com/OpenFn/lightning/pull/2610)
+
 ## [v2.9.12] - 2024-10-25
 
 ### Fixed
