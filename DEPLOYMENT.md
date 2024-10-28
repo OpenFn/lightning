@@ -238,6 +238,10 @@ variable.
 
 #### Persisting Failed Messages
 
+**PLEASE NOTE: If alternate file storage is not enabled, messages that fail
+to be persisted will not be retained by Lightning ans this can result in data
+loss, if the Kafka cluster can not make these messages available again.**
+
 If a Kafka message files to be persisted as a WorkOrder, Run and Dataclip, the 
 option exists to write the failed message to a location on the local file system.
 If this option is enabled by setting `KAFKA_ALTERNATE_STORAGE_ENABLED`, then the
