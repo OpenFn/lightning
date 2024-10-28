@@ -1,17 +1,85 @@
 defmodule Lightning.AuditingTest do
   use Lightning.DataCase, async: true
 
+  alias Lightning.Accounts.User
   alias Lightning.Auditing
   alias Lightning.Auditing.Audit
-  import Lightning.CredentialsFixtures
 
   describe "list_all/1" do
-    test "When a credential is created, it should appear in the audit trail" do
-      %{id: credential_id} = credential_fixture()
+    setup do
+      now = DateTime.utc_now()
 
-      %{entries: [entry]} = Auditing.list_all()
+      user = insert(:user)
+      _other_user = insert(:user)
 
-      assert entry.item_id == credential_id
+      [user_event_3, user_event_4] = insert_events_for_struct(user, now)
+
+      %{
+        user: user,
+        user_event_3: user_event_3,
+        user_event_4: user_event_4
+      }
+    end
+
+    test "returns a paginated reverse-chronological list of audit entries", %{
+      user_event_3: user_event_3,
+      user_event_4: user_event_4
+    } do
+      %{entries: [%{id: id_1}, %{id: id_2}]} =
+        Auditing.list_all(page: 2, page_size: 2)
+
+      assert id_1 == user_event_3.id
+      assert id_2 == user_event_4.id
+    end
+
+    test "returns full audit entry with actor map for an user event", %{
+      user: %{id: user_id},
+      user_event_3: user_event_3
+    } do
+      %{
+        id: id,
+        event: event,
+        item_id: item_id,
+        item_type: item_type,
+        actor_id: actor_id,
+        actor_type: actor_type,
+        changes: changes
+      } = user_event_3
+
+      %{entries: [entry, _]} =
+        Auditing.list_all(page: 2, page_size: 2)
+
+      assert %{
+               id: ^id,
+               actor_id: ^actor_id,
+               actor_type: ^actor_type,
+               actor: %User{
+                 id: ^user_id
+               },
+               item_id: ^item_id,
+               item_type: ^item_type,
+               event: ^event,
+               changes: ^changes
+             } = entry
+    end
+
+    defp insert_events_for_struct(%User{id: id}, now) do
+      insert_events(id, :user, now, 0)
+    end
+
+    defp insert_events(actor_id, actor_type, now, struct_offset) do
+      [-10, -20, -30, -40, -50, -60, -70, -80]
+      |> Enum.shuffle()
+      |> Enum.map(fn base_offset ->
+        insert(
+          :audit,
+          actor_id: actor_id,
+          actor_type: actor_type,
+          inserted_at: DateTime.add(now, base_offset + struct_offset, :second)
+        )
+      end)
+      |> Enum.sort_by(& &1.inserted_at, {:desc, DateTime})
+      |> Enum.slice(2, 2)
     end
   end
 
