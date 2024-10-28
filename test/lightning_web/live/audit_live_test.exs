@@ -3,7 +3,9 @@ defmodule LightningWeb.AuditLiveTest do
 
   import Phoenix.LiveViewTest
   import Lightning.CredentialsFixtures
+  import Lightning.Factories
 
+  alias Lightning.Repo
   alias LightningWeb.LiveHelpers
 
   describe "Index as a regular user" do
@@ -26,17 +28,19 @@ defmodule LightningWeb.AuditLiveTest do
       credential =
         credential_fixture(user_id: user.id, body: %{"my-secret" => "value"})
 
-      # Add another audit event, but this time for a user that doesn't exist to
-      # simulate an event from a user that has since been deleted.
-      deleted_user_id = "655993ca-4828-496c-8ff9-e742b175e462"
+      # Add another audit event, but this time for a user that will be deleted
+      # before the listing
+      user_to_be_deleted = insert(:user)
 
       {:ok, _audit} =
         Lightning.Credentials.Audit.event(
           "deleted",
           credential.id,
-          deleted_user_id
+          user_to_be_deleted
         )
         |> Lightning.Credentials.Audit.save()
+
+      Repo.delete!(user_to_be_deleted)
 
       {:ok, _index_live, html} =
         live(conn, Routes.audit_index_path(conn, :index))
@@ -53,7 +57,7 @@ defmodule LightningWeb.AuditLiveTest do
       # Assert that the table works for users that have been deleted.
       assert html =~ "created"
       assert html =~ "(User deleted)"
-      assert html =~ LiveHelpers.display_short_uuid(deleted_user_id)
+      assert html =~ LiveHelpers.display_short_uuid(user_to_be_deleted.id)
     end
   end
 end
