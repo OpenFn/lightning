@@ -2,6 +2,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
   use Lightning.DataCase, async: true
   use LightningWeb, :html
 
+  import Mox
   import Swoosh.TestAssertions
 
   alias Lightning.Accounts.{UserNotifier, User}
@@ -435,7 +436,11 @@ defmodule Lightning.Accounts.UserNotifierTest do
       )
     end
 
-    test "Kafka trigger failure" do
+    test "Kafka trigger failure - alternate storage disabled" do
+      stub(Lightning.MockConfig, :kafka_alternate_storage_enabled?, fn ->
+        false
+      end)
+
       timestamp = DateTime.utc_now()
 
       displayed_timestamp =
@@ -457,6 +462,44 @@ defmodule Lightning.Accounts.UserNotifierTest do
         to: Swoosh.Email.Recipient.format(user),
         text_body: """
         As of #{displayed_timestamp}, the Kafka trigger associated with the workflow `#{workflow.name}` (#{workflow_url}) has failed to persist at least one message.
+
+        THIS LIGHTNING INSTANCE DOES NOT HAVE ALTERNATE STORAGE ENABLED, SO THESE FAILED MESSAGES CANNOT BE RECOVERED WITHOUT MAKING THEM AVAILABLE ON THE KAFKA CLUSTER AGAIN.
+
+        If you have access to the system logs, please look for entries containing 'Kafka Pipeline Error'.
+
+        OpenFn
+        """
+      )
+    end
+
+    test "Kafka trigger failure - alternate storage enabled" do
+      stub(Lightning.MockConfig, :kafka_alternate_storage_enabled?, fn ->
+        true
+      end)
+
+      timestamp = DateTime.utc_now()
+
+      displayed_timestamp =
+        timestamp
+        |> DateTime.truncate(:second)
+        |> DateTime.to_iso8601()
+
+      user = Lightning.AccountsFixtures.user_fixture()
+      workflow = insert(:workflow)
+
+      workflow_url =
+        LightningWeb.Endpoint
+        |> url(~p"/projects/#{workflow.project_id}/w/#{workflow.id}")
+
+      UserNotifier.send_trigger_failure_mail(user, workflow, timestamp)
+
+      assert_email_sent(
+        subject: "Kafka trigger failure on #{workflow.name}",
+        to: Swoosh.Email.Recipient.format(user),
+        text_body: """
+        As of #{displayed_timestamp}, the Kafka trigger associated with the workflow `#{workflow.name}` (#{workflow_url}) has failed to persist at least one message.
+
+        This Lightning instance has alternate storage enabled. This means that any messages that failed to persist will be stored in the location referenced by the KAFKA_ALTERNATE_STORAGE_FILE_PATH environment variable. These messages can be recovered by reprocessing them.
 
         If you have access to the system logs, please look for entries containing 'Kafka Pipeline Error'.
 
