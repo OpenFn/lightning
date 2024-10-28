@@ -195,7 +195,7 @@ defmodule Lightning.Auditing.Audit do
           String.t(),
           String.t(),
           Ecto.UUID.t(),
-          %{id: Ecto.UUID.t()},
+          struct(),
           Ecto.Changeset.t() | map() | nil,
           map(),
           update_changes_fun :: (map() -> map())
