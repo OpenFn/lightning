@@ -95,5 +95,5 @@ defmodule Lightning.Extensions.UsageLimiting do
               ...
             ]
 
-  @callback get_data_retention_message(context :: Context.t()) :: message()
+  @callback get_data_retention_message(context :: Context.t()) :: message() | nil
 end

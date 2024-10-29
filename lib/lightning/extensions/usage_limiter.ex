@@ -27,7 +27,5 @@ defmodule Lightning.Extensions.UsageLimiter do
   end
 
   @impl true
-  def get_data_retention_message(_context) do
-    %Lightning.Extensions.Message{}
-  end
+  def get_data_retention_message(_context), do: nil
 end
