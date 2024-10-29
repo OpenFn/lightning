@@ -287,7 +287,10 @@ defmodule Lightning.Projects do
 
   """
   def update_project(%Project{} = project, attrs) do
-    changeset = Project.changeset(project, attrs)
+    changeset =
+      project
+      |> Project.changeset(attrs)
+      |> ProjectHook.handle_project_validation()
 
     case Repo.update(changeset) do
       {:ok, updated_project} ->

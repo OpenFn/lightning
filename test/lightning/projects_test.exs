@@ -302,6 +302,35 @@ defmodule Lightning.ProjectsTest do
       assert project == Projects.get_project!(project.id)
     end
 
+    test "update_project/2 calls the validate_changeset hook" do
+      verify_on_exit!()
+
+      project =
+        insert(:project,
+          name: "test",
+          project_users: [
+            build(:project_user, user: build(:user), role: :owner)
+          ]
+        )
+
+      error_msg = "Hello world"
+
+      expect(
+        Lightning.Extensions.MockProjectHook,
+        :handle_project_validation,
+        fn changeset ->
+          Ecto.Changeset.add_error(changeset, :name, error_msg)
+        end
+      )
+
+      assert {:error, changeset} =
+               Projects.update_project(project, %{
+                 name: "new-name"
+               })
+
+      assert errors_on(changeset) == %{name: [error_msg]}
+    end
+
     test "update_project_user/2 with valid data updates the project_user" do
       project =
         project_fixture(

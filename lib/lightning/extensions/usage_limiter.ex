@@ -20,4 +20,14 @@ defmodule Lightning.Extensions.UsageLimiter do
       run_timeout_ms: Lightning.Config.default_max_run_duration() * 1000
     ]
   end
+
+  @impl true
+  def get_data_retention_periods(_context) do
+    [7, 14, 30, 90, 180, 365]
+  end
+
+  @impl true
+  def get_data_retention_message(_context) do
+    %Lightning.Extensions.Message{}
+  end
 end

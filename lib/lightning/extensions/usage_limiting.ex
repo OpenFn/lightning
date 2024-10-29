@@ -89,4 +89,11 @@ defmodule Lightning.Extensions.UsageLimiting do
   """
   @callback get_run_options(context :: Context.t()) ::
               Lightning.Runs.RunOptions.keyword_list()
+
+  @callback get_data_retention_periods(context :: Context.t()) :: [
+              pos_integer(),
+              ...
+            ]
+
+  @callback get_data_retention_message(context :: Context.t()) :: message()
 end

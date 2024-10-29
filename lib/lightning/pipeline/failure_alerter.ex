@@ -3,7 +3,7 @@ defmodule Lightning.FailureAlerter do
 
   use LightningWeb, :verified_routes
 
-  alias Lightning.Projects.ProjectAlertsLimiter
+  alias Lightning.Projects.ProjectLimiter
   alias Lightning.Run
 
   def alert_on_failure(nil), do: nil
@@ -14,7 +14,7 @@ defmodule Lightning.FailureAlerter do
   def alert_on_failure(%Run{} = run) do
     workflow = run.work_order.workflow
 
-    if :ok == ProjectAlertsLimiter.limit_failure_alert(workflow.project_id) do
+    if :ok == ProjectLimiter.limit_failure_alert(workflow.project_id) do
       Lightning.Accounts.get_users_to_alert_for_project(%{
         id: workflow.project_id
       })

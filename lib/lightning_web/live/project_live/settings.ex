@@ -13,9 +13,8 @@ defmodule LightningWeb.ProjectLive.Settings do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
-  alias Lightning.Projects.ProjectAlertsLimiter
+  alias Lightning.Projects.ProjectLimiter
   alias Lightning.Projects.ProjectUser
-  alias Lightning.Projects.ProjectUsersLimiter
   alias Lightning.VersionControl
   alias Lightning.WebhookAuthMethods
   alias Lightning.Workflows.WebhookAuthMethod
@@ -28,6 +27,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   on_mount {LightningWeb.Hooks, :project_scope}
   on_mount {LightningWeb.Hooks, :limit_github_sync}
   on_mount {LightningWeb.Hooks, :limit_mfa}
+  on_mount {LightningWeb.Hooks, :limit_retention_periods}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -119,7 +119,7 @@ defmodule LightningWeb.ProjectLive.Settings do
       )
 
     can_receive_failure_alerts =
-      :ok == ProjectAlertsLimiter.limit_failure_alert(project.id)
+      :ok == ProjectLimiter.limit_failure_alert(project.id)
 
     repo_connection = VersionControl.get_repo_connection_for_project(project.id)
 
@@ -685,7 +685,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   defp get_collaborator_limit_error(project) do
-    case ProjectUsersLimiter.request_new(project.id, 1) do
+    case ProjectLimiter.request_new_user(project.id, 1) do
       :ok ->
         nil
 
