@@ -189,6 +189,9 @@ Pages
 
       </div>
 
+        <div class="summary-synopsis"><p>Checks the usage limits for a given project and user context, returning an error
+message if the limits are exceeded.</p></div>
+
     </div>
 
     <div class="summary-row">
@@ -196,6 +199,9 @@ Pages
         <a href="#c:get_run_options/1" translate="no">get_run_options(context)</a>
 
       </div>
+
+        <div class="summary-synopsis"><p>Returns run options based on the given project context. The run options include
+a timeout value and a flag for saving dataclips.</p></div>
 
     </div>
 
@@ -205,6 +211,8 @@ Pages
 
       </div>
 
+        <div class="summary-synopsis"><p>Increments the AI query count for a given chat session.</p></div>
+
     </div>
 
     <div class="summary-row">
@@ -212,6 +220,8 @@ Pages
         <a href="#c:limit_action/2" translate="no">limit_action(action, context)</a>
 
       </div>
+
+        <div class="summary-synopsis"><p>Limits specific actions based on an <code class="inline">Action</code> and <code class="inline">Context</code>.</p></div>
 
     </div>
 
@@ -334,7 +344,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">check_limits(context)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/usage_limiting.ex#L40" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/usage_limiting.ex#L52" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -351,7 +361,14 @@ Pages
 
       </div>
 
-
+<p>Checks the usage limits for a given project and user context, returning an error
+message if the limits are exceeded.</p><p>Requires a <code class="inline">Context</code> struct containing the <code class="inline">project_id</code> and <code class="inline">user_id</code>.</p><h2 id="c:check_limits/1-returns" class="section-heading">
+  <a href="#c:check_limits/1-returns" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Returns</span>
+</h2>
+<ul><li><code class="inline">{:ok}</code> if the limits are within bounds.</li><li><code class="inline">{:error, reason, message}</code> if the limits are exceeded.</li></ul>
   </section>
 </section>
 <section class="detail" id="c:get_run_options/1">
@@ -363,7 +380,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">get_run_options(context)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/usage_limiting.ex#L49" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/usage_limiting.ex#L90" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -380,7 +397,14 @@ Pages
 
       </div>
 
-
+<p>Returns run options based on the given project context. The run options include
+a timeout value and a flag for saving dataclips.</p><p>Requires a <code class="inline">Context</code> struct containing the <code class="inline">project_id</code>.</p><h2 id="c:get_run_options/1-returns" class="section-heading">
+  <a href="#c:get_run_options/1-returns" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Returns</span>
+</h2>
+<ul><li>A keyword list of run options including:<ul><li><code class="inline">:run_timeout_ms</code>: The run timeout in milliseconds.</li><li><code class="inline">:save_dataclips</code>: A boolean indicating whether to save dataclips.</li></ul></li></ul>
   </section>
 </section>
 <section class="detail" id="c:increment_ai_queries/1">
@@ -392,7 +416,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">increment_ai_queries(t)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/usage_limiting.ex#L46" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/usage_limiting.ex#L75" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -408,7 +432,13 @@ Pages
 
       </div>
 
-
+<p>Increments the AI query count for a given chat session.</p><p>Requires a <code class="inline">Lightning.AiAssistant.ChatSession</code> struct.</p><h2 id="c:increment_ai_queries/1-returns" class="section-heading">
+  <a href="#c:increment_ai_queries/1-returns" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Returns</span>
+</h2>
+<ul><li>An Ecto.Multi struct representing the transaction to increment AI queries.</li></ul>
   </section>
 </section>
 <section class="detail" id="c:limit_action/2">
@@ -420,7 +450,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">limit_action(action, context)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/usage_limiting.ex#L43" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/usage_limiting.ex#L63" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -439,7 +469,13 @@ Pages
 
       </div>
 
-
+<p>Limits specific actions based on an <code class="inline">Action</code> and <code class="inline">Context</code>.</p><h2 id="c:limit_action/2-returns" class="section-heading">
+  <a href="#c:limit_action/2-returns" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Returns</span>
+</h2>
+<ul><li><code class="inline">:ok</code> if the action is allowed.</li><li><code class="inline">{:error, reason, message}</code> if the action is not allowed.</li></ul>
   </section>
 </section>
 
