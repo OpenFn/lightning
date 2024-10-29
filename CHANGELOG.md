@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Enforcing MFA for a project can be enforced by the usage limiter
+  [#2607](https://github.com/OpenFn/lightning/pull/2607)
+
 ### Fixed
 
 ## [v2.9.11] - 2024-10-23
