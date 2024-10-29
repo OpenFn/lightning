@@ -27,6 +27,7 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   on_mount {LightningWeb.Hooks, :project_scope}
   on_mount {LightningWeb.Hooks, :limit_github_sync}
+  on_mount {LightningWeb.Hooks, :limit_mfa}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -194,8 +195,6 @@ defmodule LightningWeb.ProjectLive.Settings do
          ProjectUsers
          |> Permissions.can?(:edit_failure_alerts, current_user, project_user)
 
-  defp can_edit_project(assigns), do: assigns.can_edit_project
-
   @impl true
   def handle_params(params, _url, socket) do
     %{project: %{id: project_id}, live_action: live_action} = socket.assigns
@@ -260,7 +259,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   def handle_event("save", %{"project" => project_params}, socket) do
-    if can_edit_project(socket.assigns) do
+    if socket.assigns.can_edit_project do
       save_project(socket, project_params)
     else
       {:noreply,
@@ -284,7 +283,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   def handle_event("toggle-mfa", _params, socket) do
-    if can_edit_project(socket.assigns) do
+    if socket.assigns.can_edit_project && socket.assigns.can_require_mfa do
       project = socket.assigns.project
 
       {:ok, project} =
