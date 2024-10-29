@@ -2,10 +2,21 @@ defmodule LightningWeb.CollectionsController do
   use LightningWeb, :controller
 
   alias Lightning.Collections
+  alias Lightning.Collections.Item
   alias Lightning.Policies.Permissions
   alias Lightning.Repo
 
   action_fallback LightningWeb.FallbackController
+
+  @max_chunk_size 50
+
+  @stream_limit Application.compile_env!(
+                  :lightning,
+                  Lightning.CollectionsController
+                )[
+                  :stream_limit
+                ]
+  @cursor_count @stream_limit + 1
 
   # TODO: move this into a plug or router pipeline
   # the logic _is_ different to what UserAuth does
@@ -66,55 +77,177 @@ defmodule LightningWeb.CollectionsController do
     )
   end
 
-  def all(conn, %{"collection" => collection}) do
-    with {:ok, collection} <- Collections.get_collection(collection),
+  #
+  # Controller starts here
+  #
+  def put(conn, %{"name" => col_name, "key" => key, "value" => value}) do
+    with {:ok, collection} <- Collections.get_collection(col_name),
          :ok <- authorize(conn, collection) do
-      conn =
-        conn
-        |> put_resp_content_type("application/json")
-        |> send_chunked(200)
+      case Collections.put(collection, key, value) do
+        :ok ->
+          json(conn, %{key: key, error: nil})
 
-      collection_items = collection_stream(collection)
-
-      # Take a stream of items (they enter the stream in batches of @query_all_limit)
-      # we then chunk them into groups of 20 and send them to the client
-      # since a chunk for each line seems a bit too many
-      # we can play/adjust this number to see what works best
-      wrap_array(collection_items, &Jason.encode!/1)
-      |> Stream.chunk_every(20)
-      |> Enum.reduce_while(conn, fn chunk, conn ->
-        case Plug.Conn.chunk(conn, chunk) do
-          {:ok, conn} ->
-            {:cont, conn}
-
-          {:error, :closed} ->
-            {:halt, conn}
-        end
-      end)
+        {:error, :not_foud} ->
+          conn
+          |> put_status(:not_found)
+          |> json(%{key: key, error: "Item Not Found"})
+      end
     end
   end
 
-  defp wrap_array(stream, encode_func) do
-    Stream.concat([
-      ["["],
-      stream
-      |> Stream.map(fn item -> encode_func.(item) end)
-      |> Stream.intersperse(","),
-      ["]"]
-    ])
+  def put_all(conn, %{"name" => col_name, "items" => items}) do
+    with {:ok, collection} <- Collections.get_collection(col_name),
+         :ok <- authorize(conn, collection) do
+      case Collections.put_all(collection, items) do
+        {:ok, count} ->
+          json(conn, %{upserts: count, error: nil})
+
+        :error ->
+          conn
+          |> put_status(:internal_server_error)
+          |> json(%{upserts: 0, error: "Database Error"})
+      end
+    end
   end
 
-  defp collection_stream(collection) do
-    Stream.unfold(nil, fn cursor ->
-      Repo.transaction(fn ->
-        Collections.stream_all(collection, cursor)
-        |> Enum.to_list()
-      end)
-      |> case do
-        {:ok, []} -> nil
-        {:ok, items} -> {items, items |> List.last() |> Map.get(:updated_at)}
+  def get(conn, %{"name" => col_name, "key" => key}) do
+    with {:ok, collection} <- Collections.get_collection(col_name),
+         :ok <- authorize(conn, collection) do
+      case Collections.get(collection, key) do
+        %Item{} = item ->
+          json(conn, item)
+
+        nil ->
+          conn
+          |> put_status(:not_found)
+          |> json(%{key: key, error: "Item Not Found"})
+      end
+    end
+  end
+
+  def delete(conn, %{"name" => col_name, "key" => key}) do
+    with {:ok, collection} <- Collections.get_collection(col_name),
+         :ok <- authorize(conn, collection) do
+      case Collections.delete(collection, key) do
+        :ok ->
+          json(conn, %{key: key, error: nil})
+
+        {:error, :not_foud} ->
+          conn
+          |> put_status(:not_found)
+          |> json(%{key: key, error: "Item Not Found"})
+      end
+    end
+  end
+
+  def stream(conn, %{"name" => col_name, "pattern" => pattern} = params) do
+    with {:ok, collection} <- Collections.get_collection(col_name),
+         :ok <- authorize(conn, collection),
+         conn <- begin_chunking(conn) do
+      case Repo.transact(fn ->
+             collection
+             |> Collections.stream_match(pattern, get_opts(params))
+             |> Stream.chunk_every(@max_chunk_size)
+             |> Stream.with_index()
+             |> Enum.reduce_while(start_items_chunking(conn), &send_chunk/2)
+             |> finish_chunking()
+           end) do
+        {:error, conn} -> conn
+        {:ok, conn} -> conn
+      end
+    end
+  end
+
+  def stream(conn, %{"name" => col_name} = params) do
+    with {:ok, collection} <- Collections.get_collection(col_name),
+         :ok <- authorize(conn, collection),
+         conn <- begin_chunking(conn) do
+      case Repo.transact(fn ->
+             collection
+             |> Collections.stream_all(get_opts(params))
+             |> Stream.chunk_every(@max_chunk_size)
+             |> Stream.with_index()
+             |> Enum.reduce_while(start_items_chunking(conn), &send_chunk/2)
+             |> finish_chunking()
+           end) do
+        {:error, conn} -> conn
+        {:ok, conn} -> conn
+      end
+    end
+  end
+
+  defp get_opts(params) do
+    [limit: @stream_limit + 1]
+    |> then(fn opts ->
+      if cursor = params["cursor"] do
+        Keyword.put(opts, :cursor, Base.decode64!(cursor))
+      else
+        opts
       end
     end)
-    |> Stream.flat_map(& &1)
+  end
+
+  defp begin_chunking(conn) do
+    conn
+    |> put_resp_content_type("application/json")
+    |> send_chunked(200)
+  end
+
+  defp start_items_chunking(conn) do
+    with {:ok, conn} <- Plug.Conn.chunk(conn, ~S({"items": [)),
+         do: {conn, {%{updated_at: nil}, 0}}
+  end
+
+  defp finish_chunking({conn, {%{updated_at: last_updated_at}, count}}) do
+    cursor =
+      if count > @stream_limit do
+        last_updated_at |> DateTime.to_iso8601() |> Base.encode64()
+      end
+
+    Plug.Conn.chunk(conn, ~S(], "cursor":) <> Jason.encode!(cursor) <> "}")
+  end
+
+  defp finish_chunking({:error, conn}), do: {:error, conn}
+
+  defp send_chunk(_chunk_items, {:error, conn}) do
+    {:halt, {:error, conn}}
+  end
+
+  defp send_chunk({chunk_items, 0}, {conn, {_last, _count}}) do
+    last = List.last(chunk_items)
+
+    chunk_items
+    |> Enum.map_join(",", &Jason.encode!/1)
+    |> send_chunk_and_iterate(last, length(chunk_items), conn)
+  end
+
+  defp send_chunk({[_item | _chunk_items], _i}, {conn, {last, @stream_limit}}) do
+    {:halt, {conn, {last, @cursor_count}}}
+  end
+
+  defp send_chunk({chunk_items, _i}, {conn, {_last, count}}) do
+    taken_items = Enum.take(chunk_items, @stream_limit - count)
+    last = List.last(taken_items)
+
+    taken_items
+    |> Enum.map_join(",", &Jason.encode!/1)
+    |> then(fn items_chunk ->
+      "," <> items_chunk
+    end)
+    |> send_chunk_and_iterate(last, length(chunk_items) + count, conn)
+  end
+
+  defp send_chunk_and_iterate(chunk, last, count, conn) do
+    case Plug.Conn.chunk(conn, chunk) do
+      {:ok, conn} ->
+        if count > @stream_limit do
+          {:halt, {conn, {last, @cursor_count}}}
+        else
+          {:cont, {conn, {last, count}}}
+        end
+
+      {:error, :closed} ->
+        {:halt, {:error, conn}}
+    end
   end
 end
