@@ -924,9 +924,9 @@
                            __ENV__.line}
                         ) %>
                       <% %{text: text} when is_binary(text) -> %>
-                        <%= text %>
+                        <span><%= text %></span>
                       <% _other -> %>
-                        <span>This is a dummy text</span>
+                        <span></span>
                     <% end %>
                   </div>
                 </div>
