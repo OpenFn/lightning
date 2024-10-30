@@ -43,6 +43,11 @@ defmodule Lightning.Projects.Project do
     timestamps()
   end
 
+  @spec data_retention_options() :: [pos_integer(), ...]
+  def data_retention_options do
+    [7, 14, 30, 90, 180, 365]
+  end
+
   @doc false
   # TODO: schedule_deletion shouldn't be changed by user input
   def changeset(project, attrs) do
@@ -66,6 +71,8 @@ defmodule Lightning.Projects.Project do
     |> validate_required([:name])
     |> validate_format(:name, ~r/^[a-z\-\d]+$/)
     |> validate_dataclip_retention_period()
+    |> validate_inclusion(:history_retention_period, data_retention_options())
+    |> validate_inclusion(:dataclip_retention_period, data_retention_options())
   end
 
   defp validate_dataclip_retention_period(changeset) do

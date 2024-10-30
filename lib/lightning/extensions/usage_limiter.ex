@@ -23,7 +23,7 @@ defmodule Lightning.Extensions.UsageLimiter do
 
   @impl true
   def get_data_retention_periods(_context) do
-    [7, 14, 30, 90, 180, 365]
+    Lightning.Projects.Project.data_retention_options()
   end
 
   @impl true
