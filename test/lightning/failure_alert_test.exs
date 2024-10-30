@@ -258,7 +258,7 @@ defmodule Lightning.FailureAlertTest do
       Lightning.Stub.reset_time()
 
       {:ok, bearer, claims} =
-        Workers.Token.generate_and_sign(
+        Workers.WorkerToken.generate_and_sign(
           %{},
           Lightning.Config.worker_token_signer()
         )
@@ -269,6 +269,7 @@ defmodule Lightning.FailureAlertTest do
         UsageLimiter.get_run_options(%Context{
           project_id: run.work_order.workflow.project_id
         })
+        |> Map.new()
 
       {:ok, %{}, socket} =
         LightningWeb.WorkerSocket

@@ -49,7 +49,7 @@ defmodule LightningWeb.TokensLiveTest do
              |> Floki.parse_fragment!()
              |> Floki.attribute("value")
              |> Floki.text()
-             |> String.length() == 275
+             |> String.length() == 539
     end
 
     test "See a list of tokens", %{conn: conn} do

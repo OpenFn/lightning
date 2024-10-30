@@ -16,8 +16,8 @@ defmodule Lightning.Collections.Item do
 
   @primary_key false
   schema "collections_items" do
-    belongs_to :collection, Lightning.Collections.Collection
-    field :key, :string
+    belongs_to :collection, Lightning.Collections.Collection, primary_key: true
+    field :key, :string, primary_key: true
     field :value, :string
 
     timestamps(type: :utc_datetime_usec)
@@ -30,5 +30,17 @@ defmodule Lightning.Collections.Item do
     |> validate_required([:collection_id, :key, :value])
     |> unique_constraint([:collection_id, :key])
     |> foreign_key_constraint(:collection_id)
+  end
+
+  defimpl Jason.Encoder, for: __MODULE__ do
+    def encode(item, opts) do
+      Jason.Encode.map(
+        %{
+          key: item.key,
+          value: item.value
+        },
+        opts
+      )
+    end
   end
 end

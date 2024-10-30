@@ -188,7 +188,7 @@ defmodule LightningWeb.UserAuth do
     end
   end
 
-  defp get_bearer(conn) do
+  def get_bearer(conn) do
     conn
     |> get_req_header("authorization")
     |> case do
@@ -256,7 +256,6 @@ defmodule LightningWeb.UserAuth do
   @doc """
   Used for API routes that require the resource to be authenticated.
   A resource can be a `User` or a `ProjectRepoConnection`
-
   """
   def require_authenticated_api_resource(conn, _opts) do
     if is_nil(conn.assigns[:current_resource]) do
