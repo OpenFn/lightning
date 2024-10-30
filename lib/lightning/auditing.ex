@@ -12,7 +12,16 @@ defmodule Lightning.Auditing do
     from(a in Audit,
       left_join: u in User,
       on: [id: a.actor_id],
-      select_merge: %{actor: u},
+      select_merge: %{
+        actor_display_identifier: u.email,
+        actor_display_label:
+          fragment(
+            "CASE WHEN ? IS NOT NULL THEN CONCAT(?, ' ', ?) ELSE '(User deleted)' END",
+            u.id,
+            u.first_name,
+            u.last_name
+          )
+      },
       order_by: [desc: a.inserted_at]
     )
     |> Repo.paginate(params)

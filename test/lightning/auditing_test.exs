@@ -32,8 +32,12 @@ defmodule Lightning.AuditingTest do
       assert id_2 == user_event_4.id
     end
 
-    test "returns full audit entry with actor map for an user event", %{
-      user: %{id: user_id},
+    test "returns full audit entry for an user event", %{
+      user: %{
+        first_name: first_name,
+        last_name: last_name,
+        email: email
+      },
       user_event_3: user_event_3
     } do
       %{
@@ -46,16 +50,49 @@ defmodule Lightning.AuditingTest do
         changes: changes
       } = user_event_3
 
+      actor_display_label = "#{first_name} #{last_name}"
+
+      %{entries: [entry, _]} =
+        Auditing.list_all(page: 2, page_size: 2)
+
+      assert %{
+               id: ^id,
+               actor_display_identifier: ^email,
+               actor_display_label: ^actor_display_label,
+               actor_id: ^actor_id,
+               actor_type: ^actor_type,
+               item_id: ^item_id,
+               item_type: ^item_type,
+               event: ^event,
+               changes: ^changes
+             } = entry
+    end
+
+    test "returns full audit entry for a user event if user no longer exists", %{
+      user: user,
+      user_event_3: user_event_3
+    } do
+      %{
+        id: id,
+        event: event,
+        item_id: item_id,
+        item_type: item_type,
+        actor_id: actor_id,
+        actor_type: actor_type,
+        changes: changes
+      } = user_event_3
+
+      user |> Repo.delete()
+
       %{entries: [entry, _]} =
         Auditing.list_all(page: 2, page_size: 2)
 
       assert %{
                id: ^id,
                actor_id: ^actor_id,
+               actor_display_identifier: nil,
+               actor_display_label: "(User deleted)",
                actor_type: ^actor_type,
-               actor: %User{
-                 id: ^user_id
-               },
                item_id: ^item_id,
                item_type: ^item_type,
                event: ^event,
