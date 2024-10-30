@@ -8,10 +8,6 @@ defmodule Lightning.Collections do
   alias Lightning.Collections.Item
   alias Lightning.Repo
 
-  @query_all_limit Application.compile_env!(:lightning, __MODULE__)[
-                     :query_all_limit
-                   ]
-
   @doc """
   Returns the list of collections with optional ordering and preloading.
 
@@ -131,26 +127,30 @@ defmodule Lightning.Collections do
     Repo.get_by(Item, collection_id: collection_id, key: key)
   end
 
-  @spec stream_all(Collection.t(), String.t() | nil, integer()) :: Enum.t()
-  def stream_all(%{id: collection_id}, cursor \\ nil, limit \\ @query_all_limit) do
+  @spec stream_all(Collection.t(), Keyword.t()) :: Enum.t()
+  def stream_all(%{id: collection_id}, opts \\ []) do
+    cursor = Keyword.get(opts, :cursor)
+    limit = Keyword.fetch!(opts, :limit)
+
     collection_id
     |> stream_query(cursor, limit)
     |> Repo.stream()
   end
 
-  @spec stream_match(Collection.t(), String.t(), String.t() | nil, integer()) ::
-          Enum.t()
+  @spec stream_match(Collection.t(), String.t(), Keyword.t()) :: Enum.t()
   def stream_match(
         %{id: collection_id},
         pattern,
-        cursor \\ nil,
-        limit \\ @query_all_limit
+        opts \\ []
       ) do
     pattern =
       pattern
       |> String.replace("\\", "\\\\")
       |> String.replace("%", "\\%")
       |> String.replace("*", "%")
+
+    cursor = Keyword.get(opts, :cursor)
+    limit = Keyword.fetch!(opts, :limit)
 
     collection_id
     |> stream_query(cursor, limit)
@@ -175,8 +175,9 @@ defmodule Lightning.Collections do
   @spec put_all(Collection.t(), [{String.t(), String.t()}]) :: :ok | :error
   def put_all(%{id: collection_id}, kv_list) do
     item_list =
-      Enum.map(kv_list, fn {key, value} ->
-        now = DateTime.utc_now()
+      Enum.with_index(kv_list, fn %{"key" => key, "value" => value},
+                                  unique_index ->
+        now = DateTime.add(DateTime.utc_now(), unique_index, :microsecond)
 
         %{
           collection_id: collection_id,
@@ -191,7 +192,7 @@ defmodule Lightning.Collections do
            conflict_target: [:collection_id, :key],
            on_conflict: {:replace, [:value, :updated_at]}
          ) do
-      {n, nil} when n > 0 -> :ok
+      {n, nil} when n > 0 -> {:ok, n}
       _error -> :error
     end
   end
