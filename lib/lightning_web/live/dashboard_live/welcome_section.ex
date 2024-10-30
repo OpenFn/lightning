@@ -22,7 +22,7 @@ defmodule LightningWeb.DashboardLive.WelcomeSection do
     },
     %{
       id: 3,
-      title: "How to use the IDE",
+      title: "How to use the Inspector",
       link:
         "https://demo.arcade.software/L3jtNbBEdMJHtY1Z1PFk?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true"
     },
