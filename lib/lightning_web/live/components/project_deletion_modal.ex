@@ -60,7 +60,7 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
 
   @impl true
   def handle_event("close_modal", _, socket) do
-    {:noreply, push_redirect(socket, to: socket.assigns.cancel_return_to)}
+    {:noreply, push_navigate(socket, to: socket.assigns.cancel_return_to)}
   end
 
   # TODO: This should be moved into the Projects module

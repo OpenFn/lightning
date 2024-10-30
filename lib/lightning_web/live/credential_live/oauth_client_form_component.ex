@@ -197,7 +197,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
       {:noreply,
        socket
        |> put_flash(:error, "You are not authorized to perform this action.")
-       |> push_redirect(to: socket.assigns.return_to)}
+       |> push_navigate(to: socket.assigns.return_to)}
     end
   end
 
@@ -322,7 +322,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
     {:noreply,
      socket
      |> put_flash(message_type, message_content)
-     |> push_redirect(to: socket.assigns.return_to)}
+     |> push_navigate(to: socket.assigns.return_to)}
   end
 
   defp handle_oauth_client_response(

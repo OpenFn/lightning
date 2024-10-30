@@ -60,7 +60,7 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
 
   @impl true
   def handle_event("close_modal", _, socket) do
-    {:noreply, push_redirect(socket, to: ~p"/credentials")}
+    {:noreply, push_navigate(socket, to: ~p"/credentials")}
   end
 
   @impl true

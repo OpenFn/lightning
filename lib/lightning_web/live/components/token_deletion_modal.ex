@@ -19,7 +19,7 @@ defmodule LightningWeb.Components.TokenDeletionModal do
         {:noreply,
          socket
          |> put_flash(:info, "Token deleted successfully")
-         |> push_redirect(to: socket.assigns.return_to)}
+         |> push_navigate(to: socket.assigns.return_to)}
 
       {:error, _changeset} ->
         {:noreply, socket |> put_flash(:error, "Something went wrong.")}
@@ -28,7 +28,7 @@ defmodule LightningWeb.Components.TokenDeletionModal do
 
   @impl true
   def handle_event("close_modal", _, socket) do
-    {:noreply, push_redirect(socket, to: socket.assigns.return_to)}
+    {:noreply, push_navigate(socket, to: socket.assigns.return_to)}
   end
 
   @impl true

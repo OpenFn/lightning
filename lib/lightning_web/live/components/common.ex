@@ -371,10 +371,15 @@ defmodule LightningWeb.Components.Common do
     end
   end
 
+  attr :kind, :atom, required: true, values: [:error, :info]
+  attr :flash, :map, required: true
+
   def flash(%{kind: :error} = assigns) do
+    assigns = assign(assigns, msg: Phoenix.Flash.get(assigns[:flash], :error))
+
     ~H"""
     <div
-      :if={msg = live_flash(@flash, @kind)}
+      :if={@msg}
       id="flash"
       class="rounded-md bg-red-200 border-red-300 p-4 fixed w-fit mx-auto flex justify-center bottom-3 right-0 left-0 z-[100]"
       phx-click={
@@ -387,7 +392,7 @@ defmodule LightningWeb.Components.Common do
       <div class="flex justify-between items-center space-x-3 text-red-900">
         <Heroicons.exclamation_circle solid class="w-5 h-5" />
         <p class="flex-1 text-sm font-medium" role="alert">
-          <%= msg %>
+          <%= @msg %>
         </p>
         <button
           type="button"
@@ -404,9 +409,11 @@ defmodule LightningWeb.Components.Common do
   end
 
   def flash(%{kind: :info} = assigns) do
+    assigns = assign(assigns, msg: Phoenix.Flash.get(assigns[:flash], :info))
+
     ~H"""
     <div
-      :if={msg = live_flash(@flash, @kind)}
+      :if={@msg}
       id="flash"
       class="rounded-md bg-blue-200 border-blue-300 rounded-md p-4 fixed w-fit mx-auto flex justify-center bottom-3 right-0 left-0 z-[100]"
       phx-click={
@@ -420,7 +427,7 @@ defmodule LightningWeb.Components.Common do
       <div class="flex justify-between items-center space-x-3 text-blue-900">
         <Heroicons.check_circle solid class="w-5 h-5" />
         <p class="flex-1 text-sm font-medium" role="alert">
-          <%= msg %>
+          <%= @msg %>
         </p>
         <button
           type="button"

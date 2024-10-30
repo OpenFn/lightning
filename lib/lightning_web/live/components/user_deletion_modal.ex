@@ -72,14 +72,14 @@ defmodule LightningWeb.Components.UserDeletionModal do
 
   @impl true
   def handle_event("close_modal", _, socket) do
-    {:noreply, push_redirect(socket, to: socket.assigns.return_to)}
+    {:noreply, push_navigate(socket, to: socket.assigns.return_to)}
   end
 
   defp logout_after_deletion(%{assigns: %{logout: true}} = socket),
-    do: push_redirect(socket, to: Routes.user_session_path(socket, :delete))
+    do: push_navigate(socket, to: Routes.user_session_path(socket, :delete))
 
   defp logout_after_deletion(%{assigns: %{logout: false}} = socket),
-    do: push_redirect(socket, to: socket.assigns.return_to)
+    do: push_navigate(socket, to: socket.assigns.return_to)
 
   @impl true
   def render(%{delete_now?: true, has_activity_in_projects?: true} = assigns) do

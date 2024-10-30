@@ -713,8 +713,12 @@ defmodule Lightning.RunsTest do
                state:
                  {"is invalid",
                   [
-                    type: {:parameterized, Ecto.Enum, _allowed},
-                    validation: :cast
+                    type: {:parameterized, {Ecto.Enum, _}},
+                    validation: :inclusion,
+                    enum: ~w(
+                      available cancelled claimed crashed exception
+                      failed killed lost started success
+                    )
                   ]}
              ] = changeset.errors
     end

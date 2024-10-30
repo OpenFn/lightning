@@ -288,7 +288,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       {:noreply,
        socket
        |> put_flash(:error, "You are not authorized to perform this action.")
-       |> push_redirect(to: socket.assigns.return_to)}
+       |> push_navigate(to: socket.assigns.return_to)}
     end
   end
 
@@ -665,7 +665,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       {:noreply,
        socket
        |> put_flash(:info, "Credential updated successfully")
-       |> push_redirect(to: socket.assigns.return_to)}
+       |> push_navigate(to: socket.assigns.return_to)}
     else
       {:same_user, false} ->
         {:noreply,
@@ -674,7 +674,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
            :error,
            "Invalid credentials. Please log in again."
          )
-         |> push_redirect(to: socket.assigns.return_to)}
+         |> push_navigate(to: socket.assigns.return_to)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}

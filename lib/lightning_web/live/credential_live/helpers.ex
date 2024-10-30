@@ -152,7 +152,7 @@ defmodule LightningWeb.CredentialLive.Helpers do
     else
       socket
       |> Phoenix.LiveView.put_flash(:info, "Credential created successfully")
-      |> Phoenix.LiveView.push_redirect(to: socket.assigns.return_to)
+      |> Phoenix.LiveView.push_navigate(to: socket.assigns.return_to)
     end
   end
 end
