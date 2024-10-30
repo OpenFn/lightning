@@ -10,6 +10,7 @@ defmodule Lightning.Workflows do
   alias Lightning.KafkaTriggers
   alias Lightning.Projects.Project
   alias Lightning.Repo
+  alias Lightning.Workflows.Audit
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Events
   alias Lightning.Workflows.Job
@@ -53,10 +54,12 @@ defmodule Lightning.Workflows do
 
   def get_workflow(id), do: Repo.get(Workflow, id)
 
-  @spec save_workflow(Ecto.Changeset.t(Workflow.t()) | map()) ::
+  # TODO Change typespec from any() to struct() when done
+  @spec save_workflow(Ecto.Changeset.t(Workflow.t()) | map(), any()) ::
           {:ok, Workflow.t()} | {:error, Ecto.Changeset.t(Workflow.t())}
-  def save_workflow(%Ecto.Changeset{data: %Workflow{}} = changeset) do
+  def save_workflow(%Ecto.Changeset{data: %Workflow{}} = changeset, actor) do
     Multi.new()
+    |> Multi.put(:actor, actor)
     |> Multi.insert_or_update(:workflow, changeset)
     |> then(fn multi ->
       if changeset.changes == %{} do
@@ -89,9 +92,9 @@ defmodule Lightning.Workflows do
     end
   end
 
-  def save_workflow(%{} = attrs) do
+  def save_workflow(%{} = attrs, actor) do
     Workflow.changeset(%Workflow{}, attrs)
-    |> save_workflow()
+    |> save_workflow(actor)
   end
 
   @spec publish_kafka_trigger_events(Ecto.Changeset.t(Workflow.t())) :: :ok
@@ -148,14 +151,18 @@ defmodule Lightning.Workflows do
   defp find_dependent_change(multi) do
     multi
     |> Multi.to_list()
-    |> Enum.find_value(fn {key, {_action, changeset_or_struct, _}} ->
-      case changeset_or_struct do
-        %{data: %{__struct__: model}} when model in [Job, Edge, Trigger] ->
-          key
+    |> Enum.find_value(fn
+      {key, {_action, changeset_or_struct, _}} ->
+        case changeset_or_struct do
+          %{data: %{__struct__: model}} when model in [Job, Edge, Trigger] ->
+            key
 
-        _other ->
-          false
-      end
+          _other ->
+            false
+        end
+
+      {_key, {:put, _struct}} ->
+        false
     end)
   end
 
@@ -166,6 +173,11 @@ defmodule Lightning.Workflows do
       &(Map.get(&1, :workflow) |> Snapshot.build()),
       returning: false
     )
+    |> Multi.insert(:audit, fn changes ->
+      %{snapshot: %{id: snapshot_id}, workflow: %{id: workflow_id}} = changes
+
+      Audit.snapshot_created(workflow_id, snapshot_id, changes.actor)
+    end)
   end
 
   # Helper to preload associations only if they are present in the attributes
@@ -269,8 +281,9 @@ defmodule Lightning.Workflows do
   @doc """
   Creates an edge
   """
-  def create_edge(attrs) do
+  def create_edge(attrs, actor) do
     Multi.new()
+    |> Multi.put(:actor, actor)
     |> Multi.insert(:edge, Edge.new(attrs))
     |> capture_snapshot()
     |> Repo.transaction()

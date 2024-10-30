@@ -23,13 +23,13 @@ defmodule LightningWeb.WorkflowLive.Helpers do
     Lightning.local_broadcast(socket.id, {:updated_params, params})
   end
 
-  @spec save_workflow(Ecto.Changeset.t()) ::
+  @spec save_workflow(Ecto.Changeset.t(), struct()) ::
           {:ok, Workflows.Workflow.t()}
           | {:error, Ecto.Changeset.t() | UsageLimiting.message()}
-  def save_workflow(changeset) do
+  def save_workflow(changeset, actor) do
     case WorkflowUsageLimiter.limit_workflow_activation(changeset) do
       :ok ->
-        Workflows.save_workflow(changeset)
+        Workflows.save_workflow(changeset, actor)
 
       {:error, _reason, message} ->
         {:error, message}
@@ -73,7 +73,7 @@ defmodule LightningWeb.WorkflowLive.Helpers do
   end
 
   defp maybe_save_workflow(%Ecto.Changeset{} = changeset) do
-    Workflows.save_workflow(changeset)
+    Workflows.save_workflow(changeset, nil)
   end
 
   defp maybe_save_workflow(%Workflow{} = workflow) do

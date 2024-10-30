@@ -196,11 +196,13 @@ defmodule Lightning.SetupUtils do
         false
       )
 
+    user = get_most_privileged_user!(project)
+
     {:ok, workflow} =
       Workflows.save_workflow(%{
         name: "Sample Workflow",
         project_id: project.id
-      })
+      }, nil)
 
     {:ok, source_trigger} =
       Workflows.build_trigger(%{
@@ -231,7 +233,7 @@ defmodule Lightning.SetupUtils do
         source_trigger: source_trigger,
         target_job: job_1,
         enabled: true
-      })
+      }, user)
 
     {:ok, job_2} =
       Jobs.create_job(%{
@@ -253,9 +255,7 @@ defmodule Lightning.SetupUtils do
         condition_type: :on_job_success,
         target_job: job_2,
         enabled: true
-      })
-
-    user = get_most_privileged_user!(project)
+      }, user)
 
     dhis2_credential = create_dhis2_credential(user)
 
@@ -294,7 +294,7 @@ defmodule Lightning.SetupUtils do
         condition_type: :on_job_success,
         target_job: job_3,
         enabled: true
-      })
+      }, user)
 
     %{
       project: project,
@@ -318,7 +318,7 @@ defmodule Lightning.SetupUtils do
       Workflows.save_workflow(%{
         name: "OpenHIE Workflow",
         project_id: openhie_project.id
-      })
+      }, nil)
 
     {:ok, openhie_trigger} =
       Workflows.build_trigger(%{
@@ -340,6 +340,8 @@ defmodule Lightning.SetupUtils do
         workflow_id: openhie_workflow.id
       })
 
+    user = get_most_privileged_user!(openhie_project)
+
     {:ok, _openhie_root_edge} =
       Workflows.create_edge(%{
         workflow_id: openhie_workflow.id,
@@ -347,7 +349,7 @@ defmodule Lightning.SetupUtils do
         source_trigger: openhie_trigger,
         target_job: fhir_standard_data,
         enabled: true
-      })
+      }, user)
 
     {:ok, send_to_openhim} =
       Jobs.create_job(%{
@@ -395,7 +397,7 @@ defmodule Lightning.SetupUtils do
         target_job_id: send_to_openhim.id,
         source_job_id: fhir_standard_data.id,
         enabled: true
-      })
+      }, user)
 
     {:ok, _success_upload} =
       Workflows.create_edge(%{
@@ -404,7 +406,7 @@ defmodule Lightning.SetupUtils do
         target_job_id: notify_upload_successful.id,
         source_job_id: send_to_openhim.id,
         enabled: true
-      })
+      }, user)
 
     {:ok, _failed_upload} =
       Workflows.create_edge(%{
@@ -413,7 +415,7 @@ defmodule Lightning.SetupUtils do
         target_job_id: notify_upload_failed.id,
         source_job_id: send_to_openhim.id,
         enabled: true
-      })
+      }, user)
 
     http_body = %{
       "formId" => "early_enrollment",
@@ -540,7 +542,7 @@ defmodule Lightning.SetupUtils do
       Workflows.save_workflow(%{
         name: "DHIS2 to Sheets",
         project_id: project.id
-      })
+      }, nil)
 
     user = get_most_privileged_user!(project)
 
@@ -578,7 +580,7 @@ defmodule Lightning.SetupUtils do
         source_trigger: dhis_trigger,
         target_job: get_dhis2_data,
         enabled: true
-      })
+      }, user)
 
     {:ok, upload_to_google_sheet} =
       Jobs.create_job(%{
@@ -600,7 +602,7 @@ defmodule Lightning.SetupUtils do
         target_job_id: upload_to_google_sheet.id,
         source_job_id: get_dhis2_data.id,
         enabled: true
-      })
+      }, user)
 
     input_dataclip =
       create_dataclip(%{
