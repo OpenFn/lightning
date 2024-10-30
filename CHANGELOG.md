@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- Additional documentation and notification text relating to the importance of
+  alternate storage for Kafka triggers.
+  [#2614](https://github.com/OpenFn/lightning/issues/2614)
+
 ### Changed
 
 - Enforcing MFA for a project can be enforced by the usage limiter
