@@ -109,7 +109,7 @@ defmodule Lightning.CollectionsTest do
         |> Repo.preload(collection: :project)
 
       Repo.transaction(fn ->
-        assert stream = Collections.stream_all(collection)
+        assert stream = Collections.stream_all(collection, limit: 50)
 
         assert stream_items =
                  stream
@@ -140,12 +140,16 @@ defmodule Lightning.CollectionsTest do
       %{updated_at: cursor} = Enum.at(items, 4)
 
       Repo.transaction(fn ->
-        assert stream = Collections.stream_all(collection, cursor)
+        assert stream =
+                 Collections.stream_all(collection, cursor: cursor, limit: 50)
+
         assert stream |> Enum.to_list() |> Enum.count() == 30 - (4 + 1)
       end)
 
       Repo.transaction(fn ->
-        assert stream = Collections.stream_all(collection, cursor, 10)
+        assert stream =
+                 Collections.stream_all(collection, cursor: cursor, limit: 10)
+
         assert Enum.count(stream) == 10
       end)
     end
@@ -154,7 +158,7 @@ defmodule Lightning.CollectionsTest do
       collection = insert(:collection)
 
       Repo.transaction(fn ->
-        assert stream = Collections.stream_all(collection)
+        assert stream = Collections.stream_all(collection, limit: 50)
         assert Enum.count(stream) == 0
       end)
     end
@@ -163,7 +167,9 @@ defmodule Lightning.CollectionsTest do
       insert(:collection_item, key: "existing_key")
 
       Repo.transaction(fn ->
-        assert stream = Collections.stream_all(%{id: Ecto.UUID.generate()})
+        assert stream =
+                 Collections.stream_all(%{id: Ecto.UUID.generate()}, limit: 50)
+
         assert Enum.count(stream) == 0
       end)
     end
@@ -172,7 +178,7 @@ defmodule Lightning.CollectionsTest do
       collection = insert(:collection)
       _items = insert_list(5, :collection_item, collection: collection)
 
-      assert stream = Collections.stream_all(collection)
+      assert stream = Collections.stream_all(collection, limit: 50)
 
       assert_raise RuntimeError,
                    ~r/cannot reduce stream outside of transaction/,
@@ -189,7 +195,7 @@ defmodule Lightning.CollectionsTest do
       itemB = insert(:collection_item, key: "keyB", collection: collection)
 
       Repo.transaction(fn ->
-        assert stream = Collections.stream_match(collection, "keyB*")
+        assert stream = Collections.stream_match(collection, "keyB*", limit: 50)
 
         assert [itemB] ==
                  stream
@@ -228,7 +234,7 @@ defmodule Lightning.CollectionsTest do
             )
 
       Repo.transaction(fn ->
-        assert stream = Collections.stream_match(collection, "rkeyA*")
+        assert stream = Collections.stream_match(collection, "rkeyA*", limit: 50)
 
         assert stream_items =
                  Stream.take(stream, 12)
@@ -265,13 +271,21 @@ defmodule Lightning.CollectionsTest do
             )
 
       Repo.transaction(fn ->
-        assert stream = Collections.stream_match(collection, "rkeyA*", cursor)
+        assert stream =
+                 Collections.stream_match(collection, "rkeyA*",
+                   cursor: cursor,
+                   limit: 50
+                 )
+
         assert Enum.count(stream) == 30 - (9 + 1)
       end)
 
       Repo.transaction(fn ->
         assert stream =
-                 Collections.stream_match(collection, "rkeyA*", cursor, 16)
+                 Collections.stream_match(collection, "rkeyA*",
+                   cursor: cursor,
+                   limit: 16
+                 )
 
         assert Enum.count(stream) == 16
       end)
@@ -281,7 +295,9 @@ defmodule Lightning.CollectionsTest do
       collection = insert(:collection)
 
       Repo.transaction(fn ->
-        assert stream = Collections.stream_match(collection, "any-key")
+        assert stream =
+                 Collections.stream_match(collection, "any-key", limit: 50)
+
         assert Enum.count(stream) == 0
       end)
     end
@@ -293,7 +309,8 @@ defmodule Lightning.CollectionsTest do
         assert stream =
                  Collections.stream_match(
                    %{id: Ecto.UUID.generate()},
-                   "existing_key"
+                   "existing_key",
+                   limit: 50
                  )
 
         assert Enum.count(stream) == 0
@@ -305,7 +322,7 @@ defmodule Lightning.CollectionsTest do
       item = insert(:collection_item, key: "keyA%", collection: collection)
 
       Repo.transaction(fn ->
-        assert stream = Collections.stream_match(collection, "keyA%*")
+        assert stream = Collections.stream_match(collection, "keyA%*", limit: 50)
 
         assert [item] ==
                  stream
@@ -316,7 +333,7 @@ defmodule Lightning.CollectionsTest do
       insert(:collection_item, key: "keyBC", collection: collection)
 
       Repo.transaction(fn ->
-        assert stream = Collections.stream_match(collection, "keyB%")
+        assert stream = Collections.stream_match(collection, "keyB%", limit: 50)
 
         assert Enum.count(stream) == 0
       end)
@@ -327,7 +344,8 @@ defmodule Lightning.CollectionsTest do
       item = insert(:collection_item, key: "keyA\\", collection: collection)
 
       Repo.transaction(fn ->
-        assert stream = Collections.stream_match(collection, "keyA\\*")
+        assert stream =
+                 Collections.stream_match(collection, "keyA\\*", limit: 50)
 
         assert [item] ==
                  stream
@@ -340,7 +358,7 @@ defmodule Lightning.CollectionsTest do
       collection = insert(:collection)
       _items = insert_list(5, :collection_item, collection: collection)
 
-      assert stream = Collections.stream_match(collection, "key*")
+      assert stream = Collections.stream_match(collection, "key*", limit: 50)
 
       assert_raise RuntimeError,
                    ~r/cannot reduce stream outside of transaction/,
@@ -392,27 +410,44 @@ defmodule Lightning.CollectionsTest do
   describe "put_all/2" do
     test "inserts multiple entries at once in a given collection" do
       collection = insert(:collection)
-      items = Enum.map(1..5, fn i -> {"key#{i}", "value#{i}"} end)
-      assert :ok = Collections.put_all(collection, items)
+
+      items =
+        Enum.map(1..5, fn i -> %{"key" => "key#{i}", "value" => "value#{i}"} end)
+
+      assert {:ok, 5} = Collections.put_all(collection, items)
     end
 
     test "replaces conflicting values and updates timestamp" do
       collection = insert(:collection)
-      items = Enum.map(1..5, fn i -> {"key#{i}", "value#{i}"} end)
-      assert :ok = Collections.put_all(collection, items)
+
+      items =
+        Enum.map(1..5, fn i -> %{"key" => "key#{i}", "value" => "value#{i}"} end)
+
+      assert {:ok, 5} = Collections.put_all(collection, items)
 
       assert %{updated_at: updated_at1} = Repo.get_by(Item, key: "key1")
       assert %{updated_at: updated_at2} = Repo.get_by(Item, key: "key2")
       assert %{updated_at: updated_at5} = Repo.get_by(Item, key: "key5")
 
-      update_items = Enum.map(1..2, fn i -> {"key#{i}", "value#{10 + i}"} end)
-      assert :ok = Collections.put_all(collection, update_items)
+      update_items =
+        Enum.map(1..2, fn i ->
+          %{"key" => "key#{i}", "value" => "value#{10 + i}"}
+        end)
 
-      assert %{value: "value11", updated_at: updated_at} = Repo.get_by(Item, key: "key1")
+      assert {:ok, 2} = Collections.put_all(collection, update_items)
+
+      assert %{value: "value11", updated_at: updated_at} =
+               Repo.get_by(Item, key: "key1")
+
       assert updated_at > updated_at1
-      assert %{value: "value12", updated_at: updated_at} = Repo.get_by(Item, key: "key2")
+
+      assert %{value: "value12", updated_at: updated_at} =
+               Repo.get_by(Item, key: "key2")
+
       assert updated_at > updated_at2
-      assert %{value: "value5", updated_at: ^updated_at5} = Repo.get_by(Item, key: "key5")
+
+      assert %{value: "value5", updated_at: ^updated_at5} =
+               Repo.get_by(Item, key: "key5")
     end
   end
 

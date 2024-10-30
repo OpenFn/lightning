@@ -18,7 +18,7 @@ defmodule LightningWeb.FallbackController do
     conn
     |> put_status(:unauthorized)
     |> put_view(LightningWeb.ErrorView)
-    |> render(:"401", error: %{error: :unauthirized})
+    |> render(:"401")
   end
 
   def call(conn, {:error, :forbidden}) do

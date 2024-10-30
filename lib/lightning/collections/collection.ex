@@ -17,6 +17,7 @@ defmodule Lightning.Collections.Collection do
   schema "collections" do
     field :name, :string
     belongs_to :project, Lightning.Projects.Project
+    has_many :items, Lightning.Collections.Item
 
     timestamps()
   end

@@ -24,6 +24,11 @@ defmodule Lightning.Runs.RunOptions do
     field :run_memory_limit_mb, :integer
   end
 
+  def new(opts \\ %{}) do
+    %__MODULE__{}
+    |> cast(opts, [:save_dataclips, :run_timeout_ms])
+  end
+
   defimpl Jason.Encoder, for: __MODULE__ do
     def encode(value, opts) do
       value

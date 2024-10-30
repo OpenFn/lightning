@@ -1044,7 +1044,10 @@ defmodule Lightning.AccountsTest do
       assert user_token = Repo.get_by(UserToken, token: token)
       assert user_token.context == "api"
 
-      Lightning.Accounts.UserToken.verify_and_validate!(token)
+      Lightning.Tokens.PersonalAccessToken.verify_and_validate!(
+        token,
+        Lightning.Config.token_signer()
+      )
 
       # Creating the same token for another user should fail
       assert_raise Ecto.ConstraintError, fn ->

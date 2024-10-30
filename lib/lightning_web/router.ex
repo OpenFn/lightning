@@ -84,6 +84,17 @@ defmodule LightningWeb.Router do
     # resources "/runs", API.RunController, only: [:index, :show]
   end
 
+  ## Collections
+  scope "/collections", LightningWeb do
+    pipe_through [:api]
+
+    get "/:name", CollectionsController, :stream
+    get "/:name/:key", CollectionsController, :get
+    put "/:name/:key", CollectionsController, :put
+    post "/:name", CollectionsController, :put_all
+    delete "/:name/:key", CollectionsController, :delete
+  end
+
   ## Authentication routes
 
   scope "/", LightningWeb do

@@ -327,6 +327,7 @@ defmodule Lightning.Runs do
 
   defdelegate subscribe(run), to: Events
 
+  @spec get_project_id_for_run(Run.t()) :: Ecto.UUID.t() | nil
   def get_project_id_for_run(run) do
     Ecto.assoc(run, [:work_order, :workflow, :project])
     |> select([p], p.id)
