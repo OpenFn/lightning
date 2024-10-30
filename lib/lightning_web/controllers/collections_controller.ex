@@ -2,7 +2,6 @@ defmodule LightningWeb.CollectionsController do
   use LightningWeb, :controller
 
   alias Lightning.Collections
-  alias Lightning.Collections.Item
   alias Lightning.Policies.Permissions
   alias Lightning.Repo
 
@@ -85,12 +84,10 @@ defmodule LightningWeb.CollectionsController do
          :ok <- authorize(conn, collection) do
       case Collections.put(collection, key, value) do
         :ok ->
-          json(conn, %{key: key, error: nil})
+          json(conn, %{upserts: 1, error: nil})
 
-        {:error, :not_foud} ->
-          conn
-          |> put_status(:not_found)
-          |> json(%{key: key, error: "Item Not Found"})
+        {:error, _reason} ->
+          json(conn, %{upserts: 0, error: "Format error"})
       end
     end
   end
@@ -113,15 +110,11 @@ defmodule LightningWeb.CollectionsController do
   def get(conn, %{"name" => col_name, "key" => key}) do
     with {:ok, collection} <- Collections.get_collection(col_name),
          :ok <- authorize(conn, collection) do
-      case Collections.get(collection, key) do
-        %Item{} = item ->
-          json(conn, item)
-
-        nil ->
-          conn
-          |> put_status(:not_found)
-          |> json(%{key: key, error: "Item Not Found"})
-      end
+      collection
+      |> Collections.get(key)
+      |> then(fn item ->
+        json(conn, item)
+      end)
     end
   end
 
@@ -130,12 +123,10 @@ defmodule LightningWeb.CollectionsController do
          :ok <- authorize(conn, collection) do
       case Collections.delete(collection, key) do
         :ok ->
-          json(conn, %{key: key, error: nil})
+          json(conn, %{keys: [key], deleted: 1, error: nil})
 
         {:error, :not_foud} ->
-          conn
-          |> put_status(:not_found)
-          |> json(%{key: key, error: "Item Not Found"})
+          json(conn, %{keys: [key], deleted: 0, error: "Item Not Found"})
       end
     end
   end
