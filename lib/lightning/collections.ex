@@ -175,8 +175,9 @@ defmodule Lightning.Collections do
   @spec put_all(Collection.t(), [{String.t(), String.t()}]) :: :ok | :error
   def put_all(%{id: collection_id}, kv_list) do
     item_list =
-      Enum.map(kv_list, fn %{"key" => key, "value" => value} ->
-        now = DateTime.utc_now()
+      Enum.with_index(kv_list, fn %{"key" => key, "value" => value},
+                                  unique_index ->
+        now = DateTime.add(DateTime.utc_now(), unique_index, :microsecond)
 
         %{
           collection_id: collection_id,
