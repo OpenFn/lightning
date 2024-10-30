@@ -49,6 +49,7 @@ jobs:
       - image: cimg/postgres:15.3
     environment:
       ERL_FLAGS: +S 4:4
+      ASSERT_RECEIVE_TIMEOUT: 1000
     working_directory: /home/lightning/project
 
     steps:
