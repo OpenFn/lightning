@@ -123,10 +123,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
         |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
         |> get(~p"/collections/#{collection.name}/some-unexisting-key")
 
-      assert json_response(conn, 404) == %{
-               "key" => "some-unexisting-key",
-               "error" => "Item Not Found"
-             }
+      assert json_response(conn, 200) == nil
     end
   end
 
@@ -151,7 +148,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
         |> put(~p"/collections/#{collection.name}/baz", value: "qux")
 
       assert json_response(conn, 200) == %{
-               "key" => "baz",
+               "upserted" => 1,
                "error" => nil
              }
     end
@@ -176,7 +173,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
         |> put(~p"/collections/#{collection.name}/foo", %{value: "qux2"})
 
       assert json_response(conn, 200) == %{
-               "key" => "foo",
+               "upserted" => 1,
                "error" => nil
              }
     end
@@ -223,7 +220,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
         })
 
       assert json_response(conn, 200) == %{
-               "upserts" => 10,
+               "upserted" => 10,
                "error" => nil
              }
     end
@@ -270,7 +267,8 @@ defmodule LightningWeb.API.CollectionsControllerTest do
         |> delete(~p"/collections/#{collection.name}/foo")
 
       assert json_response(conn, 200) == %{
-               "key" => "foo",
+               "keys" => ["foo"],
+               "deleted" => 1,
                "error" => nil
              }
     end
@@ -339,6 +337,40 @@ defmodule LightningWeb.API.CollectionsControllerTest do
                    &%{"key" => &1.key, "value" => &1.value}
                  ),
                "cursor" => nil
+             }
+    end
+
+    @tag :skip
+    test "up to a custom limit", %{conn: conn} do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+
+      collection =
+        insert(:collection,
+          project: project,
+          items: insert_list(11, :collection_item)
+        )
+
+      token = Lightning.Accounts.generate_api_token(user)
+
+      conn =
+        conn
+        |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
+        |> get(~p"/collections/#{collection.name}?limit=10")
+
+      assert conn.state == :chunked
+
+      items = Enum.take(collection.items, 10)
+      last_item = List.last(items)
+
+      assert json_response(conn, 200) == %{
+               "items" =>
+                 Enum.map(
+                   items,
+                   &%{"key" => &1.key, "value" => &1.value}
+                 ),
+               "cursor" =>
+                 Base.encode64(DateTime.to_iso8601(last_item.updated_at))
              }
     end
   end
