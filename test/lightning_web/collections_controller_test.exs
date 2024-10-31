@@ -123,7 +123,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
         |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
         |> get(~p"/collections/#{collection.name}/some-unexisting-key")
 
-      assert json_response(conn, 200) == nil
+      assert json_response(conn, 204) == nil
     end
   end
 
@@ -148,7 +148,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
         |> put(~p"/collections/#{collection.name}/baz", value: "qux")
 
       assert json_response(conn, 200) == %{
-               "upserts" => 1,
+               "upserted" => 1,
                "error" => nil
              }
     end
@@ -173,7 +173,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
         |> put(~p"/collections/#{collection.name}/foo", %{value: "qux2"})
 
       assert json_response(conn, 200) == %{
-               "upserts" => 1,
+               "upserted" => 1,
                "error" => nil
              }
     end
@@ -198,7 +198,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
   end
 
   describe "put_all" do
-    test "upserts multiple items", %{conn: conn} do
+    test "upserted multiple items", %{conn: conn} do
       user = insert(:user)
 
       project =
@@ -220,7 +220,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
         })
 
       assert json_response(conn, 200) == %{
-               "upserts" => 10,
+               "upserted" => 10,
                "error" => nil
              }
     end
