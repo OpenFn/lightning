@@ -171,9 +171,7 @@
           {Credo.Check.Design.DuplicatedCode, []},
           {Credo.Check.Readability.MultiAlias, []},
           {Credo.Check.Readability.SeparateAliasRequire, []},
-          {Credo.Check.Readability.StrictModuleLayout, []},
-          # Checks scheduled for next check update (opt-in for now, will bump exit_status soon)
-          {Credo.Check.Consistency.UnusedVariableNames, [exit_status: 0]}
+          {Credo.Check.Readability.StrictModuleLayout, []}
         ],
         disabled: [
           #
@@ -207,7 +205,8 @@
           {Credo.Check.Warning.LeakyEnvironment, []},
           {Credo.Check.Warning.MapGetUnsafePass, []},
           {Credo.Check.Warning.MixEnv, []},
-          {Credo.Check.Warning.UnsafeToAtom, []}
+          {Credo.Check.Warning.UnsafeToAtom, []},
+          {Credo.Check.Consistency.UnusedVariableNames, [exit_status: 0]}
 
           # Not necessary after Elixir 1.8
           # {Credo.Check.Refactor.MapInto, []},
