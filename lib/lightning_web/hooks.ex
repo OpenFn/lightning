@@ -11,6 +11,7 @@ defmodule LightningWeb.Hooks do
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
+  alias Lightning.Projects.ProjectLimiter
   alias Lightning.Services.UsageLimiter
   alias Lightning.VersionControl.VersionControlUsageLimiter
 
@@ -101,5 +102,17 @@ defmodule LightningWeb.Hooks do
       {:error, _reason, %{function: func} = component} when is_function(func) ->
         {:cont, assign(socket, mfa_banner: component, can_require_mfa: false)}
     end
+  end
+
+  def on_mount(:limit_retention_periods, _params, _session, socket) do
+    %{project: project} = socket.assigns
+    retention_periods = ProjectLimiter.get_data_retention_periods(project.id)
+    retention_message = ProjectLimiter.get_data_retention_message(project.id)
+
+    {:cont,
+     assign(socket,
+       data_retention_periods: retention_periods,
+       data_retention_limit_message: retention_message
+     )}
   end
 end

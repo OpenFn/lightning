@@ -27,6 +27,8 @@ and this project adheres to
 
 - Enforcing MFA for a project can be enforced by the usage limiter
   [#2607](https://github.com/OpenFn/lightning/pull/2607)
+- Add extensions for limiting retention period
+  [#2618](https://github.com/OpenFn/lightning/pull/2618)
 
 ### Fixed
 

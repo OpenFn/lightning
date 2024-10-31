@@ -21,5 +21,11 @@ defmodule Lightning.Services.ProjectHook do
     adapter().handle_delete_project(project)
   end
 
+  @spec handle_project_validation(Changeset.t(Project.t())) ::
+          Changeset.t(Project.t())
+  def handle_project_validation(changeset) do
+    adapter().handle_project_validation(changeset)
+  end
+
   defp adapter, do: adapter(:project_hook)
 end

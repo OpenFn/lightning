@@ -898,19 +898,37 @@
                   </div>
                 </div>
 
-                <div class="">
+                <div class="flex gap-4 items-center">
                   <.input
                     type="select"
                     prompt="Select Period"
                     options={
-                      Enum.map([7, 14, 30, 90, 180, 365], fn days ->
+                      Enum.map(@data_retention_periods, fn days ->
                         {"#{days} Days", days}
                       end)
                     }
-                    disabled={!@can_edit_data_retention}
+                    disabled={
+                      !@can_edit_data_retention ||
+                        Enum.count(@data_retention_periods) == 1
+                    }
                     field={f[:history_retention_period]}
                     class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
                   />
+                  <div class="text-xs">
+                    <%= case assigns[:data_retention_limit_message] do %>
+                      <% %{function: func} when is_function(func) -> %>
+                        <%= Phoenix.LiveView.TagEngine.component(
+                          @data_retention_limit_message.function,
+                          @data_retention_limit_message.attrs,
+                          {__ENV__.module, __ENV__.function, __ENV__.file,
+                           __ENV__.line}
+                        ) %>
+                      <% %{text: text} when is_binary(text) -> %>
+                        <span><%= text %></span>
+                      <% _other -> %>
+                        <span></span>
+                    <% end %>
+                  </div>
                 </div>
               </div>
               <div class="inset-0 flex items-center" aria-hidden="true">
@@ -993,7 +1011,7 @@
                     type="select"
                     prompt="Select Period"
                     options={
-                      Enum.map([7, 14, 30, 90, 180, 365], fn days ->
+                      Enum.map(@data_retention_periods, fn days ->
                         {"#{days} Days", days}
                       end)
                     }

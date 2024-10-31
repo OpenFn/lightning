@@ -3,7 +3,7 @@ defmodule LightningWeb.ProjectLive.InviteCollaboratorComponent do
   use LightningWeb, :live_component
 
   alias Lightning.Projects
-  alias Lightning.Projects.ProjectUsersLimiter
+  alias Lightning.Projects.ProjectLimiter
   alias LightningWeb.ProjectLive.InvitedCollaborators
   alias Phoenix.LiveView.JS
 
@@ -91,7 +91,7 @@ defmodule LightningWeb.ProjectLive.InviteCollaboratorComponent do
 
     project_users = Ecto.Changeset.get_embed(changeset, :invited_collaborators)
 
-    case ProjectUsersLimiter.request_new(
+    case ProjectLimiter.request_new_user(
            socket.assigns.project.id,
            Enum.count(project_users)
          ) do

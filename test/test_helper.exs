@@ -30,6 +30,10 @@ Mox.defmock(Lightning.Extensions.MockAccountHook,
   for: Lightning.Extensions.AccountHooking
 )
 
+Mox.defmock(Lightning.Extensions.MockProjectHook,
+  for: Lightning.Extensions.ProjectHooking
+)
+
 Mox.defmock(Lightning.MockConfig, for: Lightning.Config)
 Application.put_env(:lightning, Lightning.Config, Lightning.MockConfig)
 
@@ -41,7 +45,7 @@ Application.put_env(:lightning, Lightning.Extensions,
   usage_limiter: Lightning.Extensions.MockUsageLimiter,
   run_queue: Lightning.Extensions.FifoRunQueue,
   account_hook: Lightning.Extensions.MockAccountHook,
-  project_hook: Lightning.Extensions.ProjectHook
+  project_hook: Lightning.Extensions.MockProjectHook
 )
 
 ExUnit.start()

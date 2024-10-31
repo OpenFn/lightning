@@ -10,4 +10,7 @@ defmodule Lightning.Extensions.ProjectHooking do
 
   @callback handle_delete_project(Project.t()) ::
               {:ok, Project.t()} | {:error, Changeset.t()}
+
+  @callback handle_project_validation(Ecto.Changeset.t(Project.t())) ::
+              Ecto.Changeset.t(Project.t())
 end
