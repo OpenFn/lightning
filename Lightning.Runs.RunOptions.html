@@ -192,7 +192,7 @@ behaviors during run execution and reporting.</p>
     </a>
     <h1 class="signature" translate="no">keyword_list()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run_options.ex#L13" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run_options.ex#L14" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -204,7 +204,11 @@ behaviors during run execution and reporting.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@type</span> keyword_list() :: [save_dataclips: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>(), run_timeout_ms: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>()]</pre>
+          <pre translate="no"><span class="attribute">@type</span> keyword_list() :: [
+  save_dataclips: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>(),
+  run_timeout_ms: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>(),
+  run_memory_limit_mb: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>() | nil
+]</pre>
 
       </div>
 
@@ -233,6 +237,7 @@ behaviors during run execution and reporting.</p>
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.Runs.RunOptions{
+  run_memory_limit_mb: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>() | nil,
   run_timeout_ms: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>(),
   save_dataclips: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()
 }</pre>
