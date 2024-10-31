@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-FDD68C05.js"></script>
+    <script src="dist/sidebar_items-A13A06F6.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -196,6 +196,22 @@ message if the limits are exceeded.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#c:get_data_retention_message/1" translate="no">get_data_retention_message(context)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#c:get_data_retention_periods/1" translate="no">get_data_retention_periods(context)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#c:get_run_options/1" translate="no">get_run_options(context)</a>
 
       </div>
@@ -369,6 +385,70 @@ message if the limits are exceeded.</p><p>Requires a <code class="inline">Contex
   <span class="text">Returns</span>
 </h2>
 <ul><li><code class="inline">{:ok}</code> if the limits are within bounds.</li><li><code class="inline">{:error, reason, message}</code> if the limits are exceeded.</li></ul>
+  </section>
+</section>
+<section class="detail" id="c:get_data_retention_message/1">
+
+  <div class="detail-header">
+    <a href="#c:get_data_retention_message/1" class="detail-link" title="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this callback</span>
+    </a>
+    <h1 class="signature" translate="no">get_data_retention_message(context)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/usage_limiting.ex#L98" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> get_data_retention_message(
+  context :: Lightning.Extensions.UsageLimiting.Context.t()
+) ::
+  <a href="#t:message/0">message</a>() | nil</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="c:get_data_retention_periods/1">
+
+  <div class="detail-header">
+    <a href="#c:get_data_retention_periods/1" class="detail-link" title="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this callback</span>
+    </a>
+    <h1 class="signature" translate="no">get_data_retention_periods(context)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/usage_limiting.ex#L93" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> get_data_retention_periods(
+  context :: Lightning.Extensions.UsageLimiting.Context.t()
+) :: [
+  <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">pos_integer</a>(),
+  ...
+]</pre>
+
+      </div>
+
+
   </section>
 </section>
 <section class="detail" id="c:get_run_options/1">
