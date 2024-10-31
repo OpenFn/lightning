@@ -13,6 +13,8 @@ defmodule LightningWeb.RunChannelTest do
   import Lightning.BypassHelpers
 
   setup do
+    Mox.verify_on_exit!()
+
     Mox.stub(Lightning.Extensions.MockUsageLimiter, :check_limits, fn _context ->
       :ok
     end)
@@ -233,7 +235,49 @@ defmodule LightningWeb.RunChannelTest do
     test "fetch:plan includes options from usage limiter", context do
       project_id = context.project.id
 
-      extra_options = [run_timeout_ms: 5000, save_dataclips: false]
+      extra_options = [
+        run_timeout_ms: 5000,
+        save_dataclips: false,
+        run_memory_limit_mb: 1024
+      ]
+
+      expected_worker_options = %{
+        run_timeout_ms: 5000,
+        output_dataclips: false,
+        run_memory_limit_mb: 1024
+      }
+
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :get_run_options,
+        fn %{project_id: ^project_id} -> extra_options end
+      )
+
+      %{socket: socket} =
+        merge_setups(context, [
+          :create_run,
+          :create_socket,
+          :join_run_channel
+        ])
+
+      ref = push(socket, "fetch:plan", %{})
+
+      assert_reply ref, :ok, payload
+
+      assert match?(%{"options" => ^expected_worker_options}, payload)
+    end
+
+    @tag project_retention_policy: :erase_all
+    test "fetch:plan does not include options from usage limiter with nil values",
+         context do
+      project_id = context.project.id
+
+      extra_options = [
+        run_timeout_ms: 5000,
+        save_dataclips: false,
+        run_memory_limit_mb: nil
+      ]
+
       expected_worker_options = %{run_timeout_ms: 5000, output_dataclips: false}
 
       Mox.expect(
