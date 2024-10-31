@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.9.14] - 2024-10-31
+
+### Added
+
 - Additional documentation and notification text relating to the importance of
   alternate storage for Kafka triggers.
   [#2614](https://github.com/OpenFn/lightning/issues/2614)
@@ -29,8 +37,6 @@ and this project adheres to
   [#2607](https://github.com/OpenFn/lightning/pull/2607)
 - Add extensions for limiting retention period
   [#2618](https://github.com/OpenFn/lightning/pull/2618)
-
-### Fixed
 
 ## [v2.9.13] - 2024-10-28
 
