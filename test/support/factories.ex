@@ -360,7 +360,7 @@ defmodule Lightning.Factories do
     sequence(:timestamp, fn i ->
       DateTime.utc_now()
       |> DateTime.add(ago, scale)
-      |> DateTime.add(i * gap, :second)
+      |> DateTime.add(i * gap, scale)
     end)
   end
 
