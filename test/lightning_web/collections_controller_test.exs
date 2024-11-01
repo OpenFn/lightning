@@ -411,7 +411,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
                    &%{"key" => &1.key, "value" => &1.value}
                  ),
                "cursor" =>
-                 Base.encode64(DateTime.to_iso8601(last_item.updated_at))
+                 Base.encode64(DateTime.to_iso8601(last_item.inserted_at))
              }
     end
   end
@@ -425,7 +425,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
       items =
         insert_list(@stream_limit + 1, :collection_item,
           collection: collection,
-          updated_at: fn -> build(:timestamp, from: {-300, :microsecond}) end
+          inserted_at: fn -> build(:timestamp, from: {-300, :microsecond}) end
         )
 
       token = Lightning.Accounts.generate_api_token(user)
@@ -444,7 +444,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
                "items" =>
                  Enum.map(items, &%{"key" => &1.key, "value" => &1.value}),
                "cursor" =>
-                 Base.encode64(DateTime.to_iso8601(last_item.updated_at))
+                 Base.encode64(DateTime.to_iso8601(last_item.inserted_at))
              }
     end
 
@@ -456,7 +456,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
       items =
         insert_list(100, :collection_item,
           collection: collection,
-          updated_at: fn -> build(:timestamp, from: {-300, :microsecond}) end
+          inserted_at: fn -> build(:timestamp, from: {-300, :microsecond}) end
         )
 
       token = Lightning.Accounts.generate_api_token(user)
@@ -464,7 +464,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
       cursor =
         items
         |> Enum.at(@stream_limit - 1)
-        |> Map.get(:updated_at)
+        |> Map.get(:inserted_at)
         |> DateTime.to_iso8601()
         |> Base.encode64()
 
@@ -492,7 +492,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
       items =
         insert_list(101, :collection_item,
           collection: collection,
-          updated_at: fn -> build(:timestamp, from: {-300, :microsecond}) end
+          inserted_at: fn -> build(:timestamp, from: {-300, :microsecond}) end
         )
 
       token = Lightning.Accounts.generate_api_token(user)
@@ -500,7 +500,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
       cursor =
         items
         |> Enum.at(@stream_limit - 1)
-        |> Map.get(:updated_at)
+        |> Map.get(:inserted_at)
         |> DateTime.to_iso8601()
         |> Base.encode64()
 
@@ -518,7 +518,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
                "items" =>
                  Enum.map(items, &%{"key" => &1.key, "value" => &1.value}),
                "cursor" =>
-                 Base.encode64(DateTime.to_iso8601(last_item.updated_at))
+                 Base.encode64(DateTime.to_iso8601(last_item.inserted_at))
              }
     end
   end

@@ -181,13 +181,13 @@ defmodule LightningWeb.CollectionsController do
 
   defp start_items_chunking(conn) do
     with {:ok, conn} <- Plug.Conn.chunk(conn, ~S({"items": [)),
-         do: {conn, {%{updated_at: nil}, 0}}
+         do: {conn, {%{inserted_at: nil}, 0}}
   end
 
-  defp finish_chunking({conn, {%{updated_at: last_updated_at}, count}}) do
+  defp finish_chunking({conn, {%{inserted_at: last_inserted_at}, count}}) do
     cursor =
       if count > @stream_limit do
-        last_updated_at |> DateTime.to_iso8601() |> Base.encode64()
+        last_inserted_at |> DateTime.to_iso8601() |> Base.encode64()
       end
 
     Plug.Conn.chunk(conn, ~S(], "cursor":) <> Jason.encode!(cursor) <> "}")
