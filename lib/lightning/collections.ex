@@ -122,7 +122,7 @@ defmodule Lightning.Collections do
     end
   end
 
-  @spec get(Collection.t(), String.t()) :: Item.t()
+  @spec get(Collection.t(), String.t()) :: Item.t() | nil
   def get(%{id: collection_id}, key) do
     Repo.get_by(Item, collection_id: collection_id, key: key)
   end
