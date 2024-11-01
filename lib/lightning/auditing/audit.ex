@@ -132,7 +132,7 @@ defmodule Lightning.Auditing.Audit do
     field :actor_display, :string, virtual: true
     field :metadata, :map, default: %{}
 
-    timestamps(updated_at: false)
+    timestamps(updated_at: false, type: :utc_datetime_usec)
   end
 
   @doc false

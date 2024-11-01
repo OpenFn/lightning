@@ -55,6 +55,7 @@ defmodule LightningWeb.WorkflowLive.Helpers do
   def run_workflow(workflow_or_changeset, params, opts) do
     Lightning.Repo.transact(fn ->
       %{id: project_id} = Keyword.fetch!(opts, :project)
+      actor = Keyword.fetch!(opts, :created_by)
 
       case UsageLimiter.limit_action(%Action{type: :new_run}, %Context{
              project_id: project_id
@@ -63,7 +64,7 @@ defmodule LightningWeb.WorkflowLive.Helpers do
           {:error, message}
 
         :ok ->
-          with {:ok, workflow} <- maybe_save_workflow(workflow_or_changeset),
+          with {:ok, workflow} <- maybe_save_workflow(workflow_or_changeset, actor),
                {:ok, manual} <- build_manual_workorder(params, workflow, opts),
                {:ok, workorder} <- WorkOrders.create_for(manual) do
             {:ok, %{workorder: workorder, workflow: workflow}}
@@ -72,11 +73,11 @@ defmodule LightningWeb.WorkflowLive.Helpers do
     end)
   end
 
-  defp maybe_save_workflow(%Ecto.Changeset{} = changeset) do
-    Workflows.save_workflow(changeset, nil)
+  defp maybe_save_workflow(%Ecto.Changeset{} = changeset, actor) do
+    Workflows.save_workflow(changeset, actor)
   end
 
-  defp maybe_save_workflow(%Workflow{} = workflow) do
+  defp maybe_save_workflow(%Workflow{} = workflow, _actor) do
     {:ok, workflow}
   end
 

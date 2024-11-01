@@ -24,7 +24,7 @@ defmodule Lightning.WorkflowsFixtures do
           )
           |> to_string()
       })
-      |> Lightning.Workflows.save_workflow(nil)
+      |> Lightning.Workflows.save_workflow(insert(:user))
 
     workflow
   end

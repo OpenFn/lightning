@@ -7,6 +7,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
   import Ecto.Query
 
+  alias Lightning.Auditing.Audit
   alias Lightning.Invocation
   alias Lightning.Workflows
   alias Lightning.Workflows.Workflow
@@ -1443,6 +1444,48 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       html = view |> element("#manual-job-#{job_1.id}") |> render()
       assert html =~ "data for this step has not been retained"
+    end
+
+    test "audits snapshot creation", %{
+      conn: conn,
+      project: project,
+      user: %{id: user_id}
+    } do
+      workflow =
+        insert(:workflow, project: project)
+        |> Lightning.Repo.preload([:jobs, :work_orders])
+
+      {:ok, _snapshot} = Workflows.Snapshot.get_or_create_latest_for(workflow)
+
+      new_job_name = "new job"
+
+      %{"value" => %{"id" => job_id}} =
+        job_patch = add_job_patch(new_job_name)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[v: workflow.lock_version]}"
+        )
+
+      # add a job to it but don't save
+      view |> push_patches_to_view([job_patch])
+
+      view |> select_node(%{id: job_id}, workflow.lock_version)
+
+      view |> click_edit(%{id: job_id})
+
+      view |> change_editor_text("some body")
+
+      view
+      |> form("#manual_run_form", %{
+        manual: %{body: Jason.encode!(%{})}
+      })
+      |> render_submit()
+
+      audit = Audit |> Repo.one()
+
+      assert %{event: "snapshot_created", actor_id: ^user_id} = audit
     end
 
     test "followed crashed run without steps renders the page correctly",
