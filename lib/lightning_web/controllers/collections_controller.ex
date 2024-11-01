@@ -21,31 +21,22 @@ defmodule LightningWeb.CollectionsController do
   # the logic _is_ different to what UserAuth does
   # so for now we've made a catch all for the new behavior
   def action(conn, _options) do
+    with {:ok, bearer_token} <- get_bearer_token(conn),
+         {:ok, claims} <- Lightning.Tokens.verify(bearer_token),
+         conn <- conn |> assign(:claims, claims) |> put_subject() do
+      apply(__MODULE__, action_name(conn), [conn, conn.params])
+    else
+      {:error, _} ->
+        deny_access(conn)
+    end
+  end
+
+  defp get_bearer_token(conn) do
     conn
     |> get_req_header("authorization")
     |> case do
-      ["Bearer " <> bearer_token] -> {:ok, bearer_token}
+      ["Bearer " <> bearer] -> {:ok, bearer}
       _ -> {:error, "Bearer Token not found"}
-    end
-    |> case do
-      {:error, _} ->
-        deny_access(conn)
-
-      {:ok, bearer_token} ->
-        bearer_token
-        |> Lightning.Tokens.verify()
-        |> case do
-          {:ok, claims} ->
-            conn =
-              conn
-              |> assign(:claims, claims)
-              |> put_subject()
-
-            apply(__MODULE__, action_name(conn), [conn, conn.params])
-
-          {:error, _} ->
-            deny_access(conn)
-        end
     end
   end
 
