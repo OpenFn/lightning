@@ -122,7 +122,7 @@ defmodule Lightning.Collections do
     end
   end
 
-  @spec get(Collection.t(), String.t()) :: Item.t()
+  @spec get(Collection.t(), String.t()) :: Item.t() | nil
   def get(%{id: collection_id}, key) do
     Repo.get_by(Item, collection_id: collection_id, key: key)
   end
@@ -172,7 +172,8 @@ defmodule Lightning.Collections do
     end)
   end
 
-  @spec put_all(Collection.t(), [{String.t(), String.t()}]) :: :ok | :error
+  @spec put_all(Collection.t(), [{String.t(), String.t()}]) ::
+          {:ok, non_neg_integer()} | :error
   def put_all(%{id: collection_id}, kv_list) do
     item_list =
       Enum.with_index(kv_list, fn %{"key" => key, "value" => value},

@@ -84,10 +84,10 @@ defmodule LightningWeb.CollectionsController do
          :ok <- authorize(conn, collection) do
       case Collections.put(collection, key, value) do
         :ok ->
-          json(conn, %{upserts: 1, error: nil})
+          json(conn, %{upserted: 1, error: nil})
 
         {:error, _reason} ->
-          json(conn, %{upserts: 0, error: "Format error"})
+          json(conn, %{upserted: 0, error: "Format error"})
       end
     end
   end
@@ -97,12 +97,12 @@ defmodule LightningWeb.CollectionsController do
          :ok <- authorize(conn, collection) do
       case Collections.put_all(collection, items) do
         {:ok, count} ->
-          json(conn, %{upserts: count, error: nil})
+          json(conn, %{upserted: count, error: nil})
 
         :error ->
           conn
           |> put_status(:internal_server_error)
-          |> json(%{upserts: 0, error: "Database Error"})
+          |> json(%{upserted: 0, error: "Database Error"})
       end
     end
   end
@@ -110,11 +110,15 @@ defmodule LightningWeb.CollectionsController do
   def get(conn, %{"name" => col_name, "key" => key}) do
     with {:ok, collection} <- Collections.get_collection(col_name),
          :ok <- authorize(conn, collection) do
-      collection
-      |> Collections.get(key)
-      |> then(fn item ->
-        json(conn, item)
-      end)
+      case Collections.get(collection, key) do
+        nil ->
+          conn
+          |> put_status(:no_content)
+          |> json(nil)
+
+        item ->
+          json(conn, item)
+      end
     end
   end
 
@@ -125,19 +129,19 @@ defmodule LightningWeb.CollectionsController do
         :ok ->
           json(conn, %{keys: [key], deleted: 1, error: nil})
 
-        {:error, :not_foud} ->
+        {:error, :not_found} ->
           json(conn, %{keys: [key], deleted: 0, error: "Item Not Found"})
       end
     end
   end
 
-  def stream(conn, %{"name" => col_name, "pattern" => pattern} = params) do
+  def stream(conn, %{"name" => col_name, "key" => key_pattern} = params) do
     with {:ok, collection} <- Collections.get_collection(col_name),
          :ok <- authorize(conn, collection),
          conn <- begin_chunking(conn) do
       case Repo.transact(fn ->
              collection
-             |> Collections.stream_match(pattern, get_opts(params))
+             |> Collections.stream_match(key_pattern, get_opts(params))
              |> Stream.chunk_every(@max_chunk_size)
              |> Stream.with_index()
              |> Enum.reduce_while(start_items_chunking(conn), &send_chunk/2)
