@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed an issue where code-completion prompts don't load properly in the
+  inspector
+
 ## [v2.9.14] - 2024-10-31
 
 ### Added

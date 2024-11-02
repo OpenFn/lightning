@@ -48,7 +48,7 @@ const spinner = (
 
 const loadingIndicator = (
   <div className="inline-block p-2">
-    <span className="mr-2">Loading</span>
+    <span className="mr-2">Loading types</span>
     {spinner}
   </div>
 );
@@ -169,7 +169,7 @@ export default function Editor({
     updateLayout?: any;
   }>({});
 
-  const monacoRef = useRef<any>(null);
+  const [monaco, setMonaco] = useState<Monaco>();
 
   const handleSourceChange = useCallback(
     (newSource: string | undefined) => {
@@ -181,7 +181,7 @@ export default function Editor({
   );
 
   const handleEditorDidMount = useCallback((editor: any, monaco: Monaco) => {
-    monacoRef.current = monaco;
+    setMonaco(monaco);
 
     editor.addCommand(
       monaco.KeyCode.Escape,
@@ -250,10 +250,9 @@ export default function Editor({
       'insert-snippet',
       listeners.current.insertSnippet
     );
-  }, []);
+  }, [lib]);
 
   useEffect(() => {
-    let monaco = monacoRef.current;
     if (monaco && metadata) {
       const p = monaco.languages.registerCompletionItemProvider(
         'javascript',
@@ -267,7 +266,7 @@ export default function Editor({
         p.dispose();
       };
     }
-  }, [monacoRef, metadata]);
+  }, [monaco, metadata]);
 
   useEffect(() => {
     // Create a node to hold overflow widgets
@@ -305,10 +304,10 @@ export default function Editor({
   }, [adaptor]);
 
   useEffect(() => {
-    monacoRef.current?.languages.typescript.javascriptDefaults.setExtraLibs(
-      lib
+    monaco?.languages.typescript.javascriptDefaults.setExtraLibs(
+      lib!
     );
-  }, [monacoRef, lib]);
+  }, [monaco, lib]);
 
   return (
     <>
