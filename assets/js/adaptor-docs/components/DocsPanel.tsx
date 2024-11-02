@@ -43,6 +43,20 @@ const DocsLink = ({ specifier }: { specifier: string }) => {
   );
 };
 
+const EditorHelp = () => <details className="mb-4">
+  <summary className='text-sm cursor-pointer'>
+    <h3 className="inline">Editor tips & shortcuts</h3>
+  </summary>
+  <div className="text-sm border-solid border-grey-300 border-l-4 pl-2 mt-2">
+    <p className="mb-2">Most adaptors provide intelligent code suggestions to the editor. Start typing and press TAB or ENTER to accept a suggestion, or ESC to cancel</p>
+    <ul className="list-disc ml-4">
+      <li>Press CTRL+SPACE to show suggestions</li>
+      <li>Press CTRL+SPACE again to toggle suggestion details (recommended!)</li>
+      <li>Press F1 to show the command menu (not all commands will work!)</li>
+    </ul>
+  </div>
+</details>
+
 const DocsPanel = ({ specifier, onInsert }: DocsPanelProps) => {
   if (!specifier) {
     return <div>Nothing selected</div>;
@@ -86,6 +100,8 @@ const DocsPanel = ({ specifier, onInsert }: DocsPanelProps) => {
         </span>
       </h1>
       <DocsLink specifier={specifier} />
+      <EditorHelp />
+      <h3>Adaptor API</h3>
       <div className="text-sm mb-4">
         These are the operations available for this adaptor:
       </div>
