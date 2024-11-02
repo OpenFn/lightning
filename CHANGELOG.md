@@ -17,7 +17,11 @@ and this project adheres to
 
 ### Added
 
+- Added some basic editor usage tips to the docs panel
+
 ### Changed
+
+- The Docs panel in the inspector will now be closed by default
 
 ### Fixed
 
