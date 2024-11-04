@@ -22,11 +22,14 @@ and this project adheres to
 ### Changed
 
 - The Docs panel in the inspector will now be closed by default
+- JSDoc annotations are removed from code assist descriptions
 
 ### Fixed
 
 - Fixed an issue where code-completion prompts don't load properly in the
   inspector
+- Fixed an issue where namespaces (like http.) don't appear in code assist
+  prompts
 
 ## [v2.9.14] - 2024-10-31
 
