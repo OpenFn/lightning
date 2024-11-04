@@ -77,13 +77,15 @@ const defaultOptions: MonacoProps['options'] = {
   fontLigatures: true,
 
   suggest: {
+    // https://microsoft.github.io/monaco-editor/docs.html#interfaces/editor.ISuggestOptions.html
+    showModules: true,
     showKeywords: false,
-    showModules: false, // hides global this
     showFiles: false, // This hides property names ??
     // showProperties: false, // seems to hide consts but show properties??
     showClasses: false,
     showInterfaces: false,
     showConstructors: false,
+    showDeprecated: false,
   },
 };
 
