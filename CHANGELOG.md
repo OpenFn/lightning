@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix misaligned margins on collapsed panels in the inspector
+  [#2571](https://github.com/OpenFn/lightning/issues/2571)
+
 ## [v2.9.14] - 2024-10-31
 
 ### Added
@@ -28,6 +31,8 @@ and this project adheres to
 - Additional documentation and notification text relating to the importance of
   alternate storage for Kafka triggers.
   [#2614](https://github.com/OpenFn/lightning/issues/2614)
+- Add support for run memory limit option
+  [#2623](https://github.com/OpenFn/lightning/pull/2623)
 - Add support for run memory limit option
   [#2623](https://github.com/OpenFn/lightning/pull/2623)
 
