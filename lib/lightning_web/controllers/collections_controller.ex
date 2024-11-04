@@ -118,10 +118,24 @@ defmodule LightningWeb.CollectionsController do
          :ok <- authorize(conn, collection) do
       case Collections.delete(collection, key) do
         :ok ->
-          json(conn, %{keys: [key], deleted: 1, error: nil})
+          json(conn, %{key: key, deleted: 1, error: nil})
 
         {:error, :not_found} ->
-          json(conn, %{keys: [key], deleted: 0, error: "Item Not Found"})
+          json(conn, %{key: key, deleted: 0, error: "Item Not Found"})
+      end
+    end
+  end
+
+  def delete_all(conn, %{"name" => col_name} = params) do
+    with {:ok, collection} <- Collections.get_collection(col_name),
+         :ok <- authorize(conn, collection) do
+      key_param = params["key"]
+      case Collections.delete_all(collection, key_param) do
+        {:ok, n} ->
+          json(conn, %{key: key_param, deleted: n, error: nil})
+
+        {:error, :not_found} ->
+          json(conn, %{key: key_param, deleted: 0, error: "Items Not Found"})
       end
     end
   end

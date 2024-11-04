@@ -270,8 +270,38 @@ defmodule LightningWeb.API.CollectionsControllerTest do
         |> delete(~p"/collections/#{collection.name}/foo")
 
       assert json_response(conn, 200) == %{
-               "keys" => ["foo"],
+               "key" => "foo",
                "deleted" => 1,
+               "error" => nil
+             }
+    end
+
+    test "deletes matching items", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      collection =
+        insert(:collection,
+          project: project,
+          items: [
+            %{key: "foo:123:bar1", value: "value1"},
+            %{key: "foo:234:boo", value: "value2"},
+            %{key: "foo:345:bar2", value: "value3"}
+          ]
+        )
+
+      token = Lightning.Accounts.generate_api_token(user)
+
+      conn =
+        conn
+        |> assign_bearer(token)
+        |> delete(~p"/collections/#{collection.name}", key: "foo:*:bar*")
+
+      assert json_response(conn, 200) == %{
+               "key" => "foo:*:bar*",
+               "deleted" => 2,
                "error" => nil
              }
     end

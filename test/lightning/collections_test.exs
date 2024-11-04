@@ -476,6 +476,46 @@ defmodule Lightning.CollectionsTest do
     end
   end
 
+  describe "delete_all/2" do
+    test "deletes all items of the given collection" do
+      collection = insert(:collection)
+
+      items = insert_list(3, :collection_item, collection: collection)
+
+      assert {:ok, 3} = Collections.delete_all(collection)
+
+      refute Enum.any?(items, &Collections.get(collection, &1.key))
+    end
+
+    test "deletes matching items of the given collection" do
+      collection = insert(:collection)
+
+      item1 = insert(:collection_item, collection: collection, key: "foo:123:bar1")
+      item2 = insert(:collection_item, collection: collection, key: "foo:234:bar2")
+      item3 = insert(:collection_item, collection: collection, key: "foo:345:bar3")
+      item4 = insert(:collection_item, collection: collection, key: "foo:456:zanzibar")
+
+      assert {:ok, 3} = Collections.delete_all(collection, "foo:*:bar*")
+
+      refute Collections.get(collection, item1.key)
+      refute Collections.get(collection, item2.key)
+      refute Collections.get(collection, item3.key)
+      assert Collections.get(collection, item4.key)
+    end
+
+    test "returns an :error if the collection does not exist" do
+      assert {:error, :not_found} =
+               Collections.delete(%{id: Ecto.UUID.generate()}, "key")
+    end
+
+    test "returns an :error if item does not exist" do
+      collection = insert(:collection)
+
+      assert {:error, :not_found} =
+               Collections.delete(collection, "nonexistent")
+    end
+  end
+
   describe "list_collections/1" do
     test "returns a list of collections with default ordering and preloading" do
       collection1 = insert(:collection, name: "B Collection")

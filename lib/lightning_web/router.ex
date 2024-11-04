@@ -93,6 +93,7 @@ defmodule LightningWeb.Router do
     put "/:name/:key", CollectionsController, :put
     post "/:name", CollectionsController, :put_all
     delete "/:name/:key", CollectionsController, :delete
+    delete "/:name", CollectionsController, :delete_all
   end
 
   ## Authentication routes

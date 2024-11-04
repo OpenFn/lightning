@@ -143,12 +143,7 @@ defmodule Lightning.Collections do
         pattern,
         opts \\ []
       ) do
-    pattern =
-      pattern
-      |> String.replace("\\", "\\\\")
-      |> String.replace("%", "\\%")
-      |> String.replace("*", "%")
-
+    pattern = format_pattern(pattern)
     cursor = Keyword.get(opts, :cursor)
     limit = Keyword.fetch!(opts, :limit)
 
@@ -209,6 +204,24 @@ defmodule Lightning.Collections do
     end
   end
 
+  @spec delete_all(Collection.t(), String.t()) :: {:ok, non_neg_integer()} | {:error, :not_found}
+  def delete_all(%{id: collection_id}, key_pattern \\ nil) do
+    query =
+      from(i in Item, where: i.collection_id == ^collection_id)
+      |> then(fn query ->
+        case key_pattern do
+          nil -> query
+          pattern -> where(query, [i], like(i.key, ^format_pattern(pattern)))
+        end
+      end)
+
+
+    case Repo.delete_all(query) do
+      {0, nil} -> {:error, :not_found}
+      {n, nil} -> {:ok, n}
+    end
+  end
+
   defp stream_query(collection_id, cursor, limit) do
     Item
     |> where([i], i.collection_id == ^collection_id)
@@ -220,5 +233,12 @@ defmodule Lightning.Collections do
         ts_cursor -> where(query, [i], i.updated_at > ^ts_cursor)
       end
     end)
+  end
+
+  defp format_pattern(pattern) do
+    pattern
+    |> String.replace("\\", "\\\\")
+    |> String.replace("%", "\\%")
+    |> String.replace("*", "%")
   end
 end
