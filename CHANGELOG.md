@@ -18,18 +18,21 @@ and this project adheres to
 ### Added
 
 - Added some basic editor usage tips to the docs panel
+  [#2629](https://github.com/OpenFn/lightning/pull/2629)
 
 ### Changed
 
 - The Docs panel in the inspector will now be closed by default
+  [#2629](https://github.com/OpenFn/lightning/pull/2629)
 - JSDoc annotations are removed from code assist descriptions
+  [#2629](https://github.com/OpenFn/lightning/pull/2629)
 
 ### Fixed
 
 - Fixed an issue where code-completion prompts don't load properly in the
-  inspector
+  inspector [#2629](https://github.com/OpenFn/lightning/pull/2629)
 - Fixed an issue where namespaces (like http.) don't appear in code assist
-  prompts
+  prompts [#2629](https://github.com/OpenFn/lightning/pull/2629)
 
 ## [v2.9.14] - 2024-10-31
 
