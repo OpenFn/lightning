@@ -134,6 +134,12 @@ async function loadDTS(
     if (!filePath.startsWith('node_modules')) {
       let content = await fetchFile(`${specifier}${filePath}`);
 
+      // Remove js doc annotations
+      // this regex assumes that all jsdoc annotations are together in a single block
+      // which is probably fair?
+      // this regex means: find a * then an @ (with 1+ space in between), then match everything up to a closing comment */
+      content = content.replace(/\* +@(.+?)\*\//sg, '*/')
+
       // this is a bit cheeky
       // we'll manually build namespaces from the file structure
       // I don't understand why index.d.ts doesn't just do this though.
