@@ -357,12 +357,14 @@ defmodule LightningWeb.API.CollectionsControllerTest do
 
       token = Lightning.Accounts.generate_api_token(user)
 
-      conn =
-        conn
-        |> assign_bearer(token)
-        |> get(~p"/collections/#{collection.name}?#{%{key: "foo:bar:*"}}")
+      conn = assign_bearer(conn, token)
 
-      assert conn.state == :chunked
+      assert %{state: :chunked} =
+               conn =
+               get(
+                 conn,
+                 ~p"/collections/#{collection.name}?#{%{key: "foo:bar:*"}}"
+               )
 
       assert %{
                "items" => [
@@ -372,14 +374,75 @@ defmodule LightningWeb.API.CollectionsControllerTest do
                "cursor" => nil
              } = json_response(conn, 200)
 
-      conn =
-        conn
-        |> get(~p"/collections/#{collection.name}?#{%{key: "foo:*:baz"}}")
+      assert %{state: :chunked} =
+               conn =
+               get(
+                 conn,
+                 ~p"/collections/#{collection.name}?#{%{key: "foo:*:baz"}}"
+               )
 
       assert %{
                "items" => [%{"key" => "foo:bar:baz", "value" => _}],
                "cursor" => nil
              } = json_response(conn, 200)
+    end
+
+    test "using a key pattern and creation filters", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      collection = insert(:collection, project: project)
+
+      before_insert = DateTime.utc_now() |> DateTime.add(-1, :microsecond)
+
+      insert(:collection_item, collection: collection, key: "foo:bar:baz")
+      insert(:collection_item, collection: collection, key: "foo:moon:baz")
+      insert(:collection_item, collection: collection, key: "foo:bar:baz:out")
+
+      after_insert = DateTime.utc_now() |> DateTime.add(1, :microsecond)
+
+      token = Lightning.Accounts.generate_api_token(user)
+
+      conn = assign_bearer(conn, token)
+
+      assert %{
+               "items" => [],
+               "cursor" => nil
+             } =
+               conn
+               |> get(~p"/collections/#{collection.name}",
+                 key: "foo:*:baz",
+                 created_after: after_insert
+               )
+               |> json_response(200)
+
+      assert %{
+               "items" => [],
+               "cursor" => nil
+             } =
+               conn
+               |> get(~p"/collections/#{collection.name}",
+                 key: "foo:*:baz",
+                 created_before: before_insert
+               )
+               |> json_response(200)
+
+      assert %{
+               "items" => [
+                 %{"key" => "foo:bar:baz", "value" => _},
+                 %{"key" => "foo:moon:baz", "value" => _}
+               ],
+               "cursor" => nil
+             } =
+               conn
+               |> get(~p"/collections/#{collection.name}",
+                 key: "foo:*:baz",
+                 created_after: before_insert,
+                 created_before: after_insert
+               )
+               |> json_response(200)
     end
 
     test "up exactly to the limit", %{conn: conn} do
@@ -409,6 +472,59 @@ defmodule LightningWeb.API.CollectionsControllerTest do
                  ),
                "cursor" => nil
              }
+    end
+
+    test "using creation filters", %{conn: conn} do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+
+      before_insert = DateTime.utc_now() |> DateTime.add(-1, :microsecond)
+
+      collection =
+        insert(:collection,
+          project: project,
+          items: insert_list(3, :collection_item)
+        )
+
+      after_insert = DateTime.utc_now() |> DateTime.add(1, :microsecond)
+
+      token = Lightning.Accounts.generate_api_token(user)
+
+      conn = assign_bearer(conn, token)
+
+      assert %{
+               "items" => [],
+               "cursor" => nil
+             } =
+               conn
+               |> get(~p"/collections/#{collection.name}",
+                 created_after: after_insert
+               )
+               |> json_response(200)
+
+      assert %{
+               "items" => [],
+               "cursor" => nil
+             } =
+               conn
+               |> get(~p"/collections/#{collection.name}",
+                 created_before: before_insert
+               )
+               |> json_response(200)
+
+      items =
+        Enum.map(
+          collection.items,
+          &%{"key" => &1.key, "value" => &1.value}
+        )
+
+      assert %{
+               "items" => ^items,
+               "cursor" => nil
+             } =
+               conn
+               |> get(~p"/collections/#{collection.name}")
+               |> json_response(200)
     end
 
     @tag :skip
@@ -503,8 +619,6 @@ defmodule LightningWeb.API.CollectionsControllerTest do
         |> assign_bearer(token)
         |> get(~p"/collections/#{collection.name}", cursor: cursor)
 
-      assert conn.state == :chunked
-
       items = Enum.drop(items, @stream_limit)
 
       assert json_response(conn, 200) == %{
@@ -512,6 +626,8 @@ defmodule LightningWeb.API.CollectionsControllerTest do
                  Enum.map(items, &%{"key" => &1.key, "value" => &1.value}),
                "cursor" => nil
              }
+
+      assert conn.state == :chunked
     end
 
     test "up to the limit from a cursor", %{conn: conn} do
@@ -539,8 +655,6 @@ defmodule LightningWeb.API.CollectionsControllerTest do
         |> assign_bearer(token)
         |> get(~p"/collections/#{collection.name}", cursor: cursor)
 
-      assert conn.state == :chunked
-
       items = items |> Enum.drop(@stream_limit) |> Enum.take(@stream_limit)
       last_item = Enum.at(items, @stream_limit - 1)
 
@@ -550,6 +664,8 @@ defmodule LightningWeb.API.CollectionsControllerTest do
                "cursor" =>
                  Base.encode64(DateTime.to_iso8601(last_item.inserted_at))
              }
+
+      assert conn.state == :chunked
     end
   end
 end

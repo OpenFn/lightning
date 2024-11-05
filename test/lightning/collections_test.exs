@@ -86,7 +86,7 @@ defmodule Lightning.CollectionsTest do
   end
 
   describe "stream_all/3" do
-    test "returns all items for the given collection sorted by upsert timestamp" do
+    test "returns all items for the given collection sorted by inserted_at" do
       collection = insert(:collection)
 
       items =
@@ -98,16 +98,6 @@ defmodule Lightning.CollectionsTest do
           )
         end)
 
-      orig_first = List.first(items)
-      :ok = Collections.put(collection, orig_first.key, "new value for last")
-
-      new_last =
-        Repo.get_by!(Item,
-          collection_id: collection.id,
-          key: orig_first.key
-        )
-        |> Repo.preload(collection: :project)
-
       Repo.transaction(fn ->
         assert stream = Collections.stream_all(collection, limit: 50)
 
@@ -117,12 +107,10 @@ defmodule Lightning.CollectionsTest do
                  |> Enum.to_list()
                  |> Repo.preload(collection: :project)
 
-        assert List.last(stream_items) == new_last
+        assert List.last(stream_items) ==
+                 Enum.sort_by(items, & &1.inserted_at) |> List.last()
 
-        assert MapSet.new(Enum.reject(items, &(&1.key == orig_first.key))) ==
-                 MapSet.new(
-                   Enum.reject(stream_items, &(&1.key == orig_first.key))
-                 )
+        assert MapSet.new(stream_items) == MapSet.new(items)
       end)
     end
 
@@ -137,7 +125,7 @@ defmodule Lightning.CollectionsTest do
           )
         end)
 
-      %{updated_at: cursor} = Enum.at(items, 4)
+      %{inserted_at: cursor} = Enum.at(items, 4)
 
       Repo.transaction(fn ->
         assert stream =
@@ -204,7 +192,7 @@ defmodule Lightning.CollectionsTest do
       end)
     end
 
-    test "returns matching items for the given collection sorted by upsert timestamp" do
+    test "returns matching items for the given collection sorted by inserted_at" do
       collection = insert(:collection)
 
       items =
@@ -216,22 +204,7 @@ defmodule Lightning.CollectionsTest do
           )
         end)
 
-      orig_first = List.first(items)
-      :ok = Collections.put(collection, orig_first.key, "new value for last")
-
-      new_last =
-        Repo.get_by!(Item,
-          collection_id: collection.id,
-          key: orig_first.key
-        )
-        |> Repo.preload(collection: :project)
-
-      for _i <- 1..5,
-          do:
-            insert(:collection_item,
-              key: "rkeyB#{:rand.uniform()}",
-              collection: collection
-            )
+      insert(:collection_item, key: "rkeyB", collection: collection)
 
       Repo.transaction(fn ->
         assert stream = Collections.stream_match(collection, "rkeyA*", limit: 50)
@@ -241,12 +214,10 @@ defmodule Lightning.CollectionsTest do
                  |> Enum.to_list()
                  |> Repo.preload(collection: :project)
 
-        assert List.last(stream_items) == new_last
+        assert List.last(stream_items) ==
+                 Enum.sort_by(items, & &1.inserted_at) |> List.last()
 
-        assert MapSet.new(Enum.reject(items, &(&1.key == orig_first.key))) ==
-                 MapSet.new(
-                   Enum.reject(stream_items, &(&1.key == orig_first.key))
-                 )
+        assert MapSet.new(stream_items) == MapSet.new(items)
       end)
     end
 
@@ -263,12 +234,7 @@ defmodule Lightning.CollectionsTest do
 
       %{updated_at: cursor} = Enum.at(items, 9)
 
-      for _i <- 1..5,
-          do:
-            insert(:collection_item,
-              key: "rkeyB#{:rand.uniform()}",
-              collection: collection
-            )
+      insert(:collection_item, key: "rkeyB", collection: collection)
 
       Repo.transaction(fn ->
         assert stream =
@@ -415,6 +381,9 @@ defmodule Lightning.CollectionsTest do
         Enum.map(1..5, fn i -> %{"key" => "key#{i}", "value" => "value#{i}"} end)
 
       assert {:ok, 5} = Collections.put_all(collection, items)
+
+      assert Item |> Repo.all() |> Enum.map(&Map.take(&1, [:key, :value])) ==
+               Enum.map(items, &%{key: &1["key"], value: &1["value"]})
     end
 
     test "replaces conflicting values and updates timestamp" do
@@ -490,10 +459,17 @@ defmodule Lightning.CollectionsTest do
     test "deletes matching items of the given collection" do
       collection = insert(:collection)
 
-      item1 = insert(:collection_item, collection: collection, key: "foo:123:bar1")
-      item2 = insert(:collection_item, collection: collection, key: "foo:234:bar2")
-      item3 = insert(:collection_item, collection: collection, key: "foo:345:bar3")
-      item4 = insert(:collection_item, collection: collection, key: "foo:456:zanzibar")
+      item1 =
+        insert(:collection_item, collection: collection, key: "foo:123:bar1")
+
+      item2 =
+        insert(:collection_item, collection: collection, key: "foo:234:bar2")
+
+      item3 =
+        insert(:collection_item, collection: collection, key: "foo:345:bar3")
+
+      item4 =
+        insert(:collection_item, collection: collection, key: "foo:456:zanzibar")
 
       assert {:ok, 3} = Collections.delete_all(collection, "foo:*:bar*")
 

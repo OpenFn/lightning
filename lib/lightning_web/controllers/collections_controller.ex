@@ -130,6 +130,7 @@ defmodule LightningWeb.CollectionsController do
     with {:ok, collection} <- Collections.get_collection(col_name),
          :ok <- authorize(conn, collection) do
       key_param = params["key"]
+
       case Collections.delete_all(collection, key_param) do
         {:ok, n} ->
           json(conn, %{key: key_param, deleted: n, error: nil})
@@ -140,13 +141,12 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
-  def stream(conn, %{"name" => col_name, "key" => key_pattern} = params) do
-    with {:ok, collection} <- Collections.get_collection(col_name),
-         :ok <- authorize(conn, collection),
+  def stream(conn, %{"name" => col_name, "key" => key_pattern}) do
+    with {:ok, collection, filters} <- validate_query(conn, col_name),
          conn <- begin_chunking(conn) do
       case Repo.transact(fn ->
              collection
-             |> Collections.stream_match(key_pattern, get_opts(params))
+             |> Collections.stream_match(key_pattern, filters)
              |> Stream.chunk_every(@max_chunk_size)
              |> Stream.with_index()
              |> Enum.reduce_while(start_items_chunking(conn), &send_chunk/2)
@@ -158,13 +158,12 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
-  def stream(conn, %{"name" => col_name} = params) do
-    with {:ok, collection} <- Collections.get_collection(col_name),
-         :ok <- authorize(conn, collection),
+  def stream(conn, %{"name" => col_name}) do
+    with {:ok, collection, filters} <- validate_query(conn, col_name),
          conn <- begin_chunking(conn) do
       case Repo.transact(fn ->
              collection
-             |> Collections.stream_all(get_opts(params))
+             |> Collections.stream_all(filters)
              |> Stream.chunk_every(@max_chunk_size)
              |> Stream.with_index()
              |> Enum.reduce_while(start_items_chunking(conn), &send_chunk/2)
@@ -176,15 +175,55 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
-  defp get_opts(params) do
-    [limit: @stream_limit + 1]
-    |> then(fn opts ->
-      if cursor = params["cursor"] do
-        Keyword.put(opts, :cursor, Base.decode64!(cursor))
-      else
-        opts
-      end
-    end)
+  @valid_params [
+    "key",
+    "cursor",
+    "limit",
+    "created_after",
+    "created_before",
+    "updated_after",
+    "updated_before"
+  ]
+
+  defp validate_query_params(
+         %{"cursor" => cursor, "limit" => limit} = query_params
+       ) do
+    with invalid_params when map_size(invalid_params) == 0 <-
+           Map.drop(query_params, @valid_params),
+         {:ok, cursor} <- validate_cursor(cursor),
+         {limit, ""} <- Integer.parse(limit),
+         valid_params <- Map.take(query_params, @valid_params) do
+      filters =
+        valid_params
+        |> Map.new(fn {key, value} -> {String.to_existing_atom(key), value} end)
+        |> Map.put(:limit, limit)
+        |> Map.put(:cursor, cursor)
+
+      {:ok, filters}
+    else
+      _invalid ->
+        {:error, :bad_request}
+    end
+  end
+
+  defp validate_cursor(%{"cursor" => cursor}) do
+    with {:ok, decoded} <- Base.decode64(cursor),
+         {:ok, datetime, _off} <- DateTime.from_iso8601(decoded) do
+      {:ok, datetime}
+    end
+  end
+
+  defp validate_query(conn, col_name) do
+    with {:ok, collection} <- Collections.get_collection(col_name),
+         :ok <- authorize(conn, collection),
+         query_params <-
+           Enum.into(
+             %{"cursor" => nil, "limit" => "#{@stream_limit + 1}"},
+             conn.query_params
+           ),
+         {:ok, filters} <- validate_query_params(query_params) do
+      {:ok, collection, filters}
+    end
   end
 
   defp begin_chunking(conn) do
