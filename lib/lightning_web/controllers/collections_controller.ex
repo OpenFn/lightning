@@ -21,47 +21,6 @@ defmodule LightningWeb.CollectionsController do
 
   require Logger
 
-  # TODO: move this into a plug or router pipeline
-  # the logic _is_ different to what UserAuth does
-  # so for now we've made a catch all for the new behavior
-  def action(conn, _options) do
-    with {:ok, bearer_token} <- get_bearer_token(conn),
-         {:ok, claims} <- Lightning.Tokens.verify(bearer_token),
-         conn <- conn |> assign(:claims, claims) |> put_subject() do
-      apply(__MODULE__, action_name(conn), [conn, conn.params])
-    else
-      {:error, _} ->
-        deny_access(conn)
-    end
-  end
-
-  defp get_bearer_token(conn) do
-    conn
-    |> get_req_header("authorization")
-    |> case do
-      ["Bearer " <> bearer] -> {:ok, bearer}
-      _ -> {:error, "Bearer Token not found"}
-    end
-  end
-
-  # TODO: move this to somewhere more appropriate
-  defp put_subject(conn) do
-    conn.assigns.claims
-    |> Lightning.Tokens.get_subject()
-    |> then(fn subject ->
-      conn |> assign(:subject, subject)
-    end)
-  end
-
-  # TODO: move this to somewhere more appropriate
-  defp deny_access(conn) do
-    conn
-    |> put_status(:unauthorized)
-    |> put_view(LightningWeb.ErrorView)
-    |> render(:"401")
-    |> halt()
-  end
-
   defp authorize(conn, collection) do
     Permissions.can(
       Lightning.Policies.Collections,
