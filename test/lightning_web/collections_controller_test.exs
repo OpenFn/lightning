@@ -91,7 +91,9 @@ defmodule LightningWeb.API.CollectionsControllerTest do
 
       assert json_response(conn, 200) == %{
                "key" => item.key,
-               "value" => item.value
+               "value" => item.value,
+               "created" => DateTime.to_iso8601(item.inserted_at),
+               "updated" => DateTime.to_iso8601(item.updated_at)
              }
     end
 
@@ -466,12 +468,13 @@ defmodule LightningWeb.API.CollectionsControllerTest do
 
       assert conn.state == :chunked
 
+      expected_items =
+        collection.items
+        |> Enum.map(&Jason.encode!/1)
+        |> Enum.map(&Jason.decode!/1)
+
       assert json_response(conn, 200) == %{
-               "items" =>
-                 Enum.map(
-                   collection.items,
-                   &%{"key" => &1.key, "value" => &1.value}
-                 ),
+               "items" => expected_items,
                "cursor" => nil
              }
     end
@@ -515,10 +518,9 @@ defmodule LightningWeb.API.CollectionsControllerTest do
                |> json_response(200)
 
       items =
-        Enum.map(
-          collection.items,
-          &%{"key" => &1.key, "value" => &1.value}
-        )
+        collection.items
+        |> Enum.map(&Jason.encode!/1)
+        |> Enum.map(&Jason.decode!/1)
 
       assert %{
                "items" => ^items,
@@ -549,15 +551,19 @@ defmodule LightningWeb.API.CollectionsControllerTest do
 
       assert conn.state == :chunked
 
-      items = Enum.take(collection.items, limit)
-      last_item = List.last(items)
+      expected_items =
+        collection.items
+        |> Enum.take(limit)
+        |> Enum.map(&Jason.encode!/1)
+        |> Enum.map(&Jason.decode!/1)
+
+      last_item =
+        collection.items
+        |> Enum.take(limit)
+        |> List.last()
 
       assert json_response(conn, 200) == %{
-               "items" =>
-                 Enum.map(
-                   items,
-                   &%{"key" => &1.key, "value" => &1.value}
-                 ),
+               "items" => expected_items,
                "cursor" =>
                  Base.encode64(DateTime.to_iso8601(last_item.inserted_at))
              }
@@ -582,15 +588,20 @@ defmodule LightningWeb.API.CollectionsControllerTest do
 
       assert conn.state == :chunked
 
-      items = Enum.take(items, @default_limit)
-      last_item = List.last(items)
+      expected_items = Enum.take(items, @default_limit)
+      last_item = List.last(expected_items)
 
-      assert json_response(conn, 200) == %{
-               "items" =>
-                 Enum.map(items, &%{"key" => &1.key, "value" => &1.value}),
-               "cursor" =>
-                 Base.encode64(DateTime.to_iso8601(last_item.inserted_at))
-             }
+      assert %{
+               "items" => items,
+               "cursor" => cursor
+             } = json_response(conn, 200)
+
+      assert items ==
+               expected_items
+               |> Enum.map(&Jason.encode!/1)
+               |> Enum.map(&Jason.decode!/1)
+
+      assert cursor == Base.encode64(DateTime.to_iso8601(last_item.inserted_at))
     end
 
     test "up to the limit from a cursor returning a cursor", %{conn: conn} do
@@ -619,7 +630,8 @@ defmodule LightningWeb.API.CollectionsControllerTest do
       expected_items =
         all_items
         |> Enum.take(limit)
-        |> Enum.map(&%{"key" => &1.key, "value" => &1.value})
+        |> Enum.map(&Jason.encode!/1)
+        |> Enum.map(&Jason.decode!/1)
 
       assert %{
                "items" => ^expected_items,
@@ -637,7 +649,8 @@ defmodule LightningWeb.API.CollectionsControllerTest do
         all_items
         |> Enum.drop(limit)
         |> Enum.take(limit)
-        |> Enum.map(&%{"key" => &1.key, "value" => &1.value})
+        |> Enum.map(&Jason.encode!/1)
+        |> Enum.map(&Jason.decode!/1)
 
       assert %{
                "items" => ^expected_items,
@@ -680,7 +693,8 @@ defmodule LightningWeb.API.CollectionsControllerTest do
       expected_items =
         all_items
         |> Enum.take(limit)
-        |> Enum.map(&%{"key" => &1.key, "value" => &1.value})
+        |> Enum.map(&Jason.encode!/1)
+        |> Enum.map(&Jason.decode!/1)
 
       assert %{
                "items" => response_items,
@@ -699,7 +713,8 @@ defmodule LightningWeb.API.CollectionsControllerTest do
       expected_items =
         all_items
         |> Enum.drop(limit)
-        |> Enum.map(&%{"key" => &1.key, "value" => &1.value})
+        |> Enum.map(&Jason.encode!/1)
+        |> Enum.map(&Jason.decode!/1)
 
       assert %{
                "items" => ^expected_items,

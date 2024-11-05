@@ -37,7 +37,9 @@ defmodule Lightning.Collections.Item do
       Jason.Encode.map(
         %{
           key: item.key,
-          value: item.value
+          value: item.value,
+          created: item.inserted_at,
+          updated: item.updated_at
         },
         opts
       )

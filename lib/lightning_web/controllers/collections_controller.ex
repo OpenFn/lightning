@@ -7,6 +7,8 @@ defmodule LightningWeb.CollectionsController do
 
   action_fallback LightningWeb.FallbackController
 
+  require Logger
+
   @max_chunk_size 50
 
   @default_limit Application.compile_env!(:lightning, __MODULE__)[:stream_limit]
@@ -18,8 +20,6 @@ defmodule LightningWeb.CollectionsController do
     "created_after",
     "created_before"
   ]
-
-  require Logger
 
   defp authorize(conn, collection) do
     Permissions.can(
