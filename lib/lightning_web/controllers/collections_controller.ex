@@ -9,13 +9,17 @@ defmodule LightningWeb.CollectionsController do
 
   @max_chunk_size 50
 
-  @stream_limit Application.compile_env!(
-                  :lightning,
-                  Lightning.CollectionsController
-                )[
-                  :stream_limit
-                ]
-  @cursor_count @stream_limit + 1
+  @default_limit Application.compile_env!(:lightning, __MODULE__)[:stream_limit]
+
+  @valid_params [
+    "key",
+    "cursor",
+    "limit",
+    "created_after",
+    "created_before"
+  ]
+
+  require Logger
 
   # TODO: move this into a plug or router pipeline
   # the logic _is_ different to what UserAuth does
@@ -142,15 +146,13 @@ defmodule LightningWeb.CollectionsController do
   end
 
   def stream(conn, %{"name" => col_name, "key" => key_pattern}) do
-    with {:ok, collection, filters} <- validate_query(conn, col_name),
-         conn <- begin_chunking(conn) do
+    with {:ok, collection, filters, response_limit} <-
+           validate_query(conn, col_name) do
       case Repo.transact(fn ->
-             collection
-             |> Collections.stream_match(key_pattern, filters)
-             |> Stream.chunk_every(@max_chunk_size)
-             |> Stream.with_index()
-             |> Enum.reduce_while(start_items_chunking(conn), &send_chunk/2)
-             |> finish_chunking()
+             items_stream =
+               Collections.stream_match(collection, key_pattern, filters)
+
+             stream_chunked(conn, items_stream, response_limit)
            end) do
         {:error, conn} -> conn
         {:ok, conn} -> conn
@@ -159,15 +161,12 @@ defmodule LightningWeb.CollectionsController do
   end
 
   def stream(conn, %{"name" => col_name}) do
-    with {:ok, collection, filters} <- validate_query(conn, col_name),
-         conn <- begin_chunking(conn) do
+    with {:ok, collection, filters, response_limit} <-
+           validate_query(conn, col_name) do
       case Repo.transact(fn ->
-             collection
-             |> Collections.stream_all(filters)
-             |> Stream.chunk_every(@max_chunk_size)
-             |> Stream.with_index()
-             |> Enum.reduce_while(start_items_chunking(conn), &send_chunk/2)
-             |> finish_chunking()
+             items_stream = Collections.stream_all(collection, filters)
+
+             stream_chunked(conn, items_stream, response_limit)
            end) do
         {:error, conn} -> conn
         {:ok, conn} -> conn
@@ -175,15 +174,43 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
-  @valid_params [
-    "key",
-    "cursor",
-    "limit",
-    "created_after",
-    "created_before",
-    "updated_after",
-    "updated_before"
-  ]
+  defmodule ChunkAcc do
+    defstruct conn: nil,
+              count: 0,
+              limit: 0,
+              last: nil,
+              cursor_data: nil
+  end
+
+  defp stream_chunked(conn, items_stream, response_limit) do
+    with %{halted: false} = conn <- begin_chunking(conn) do
+      items_stream
+      |> Stream.chunk_every(@max_chunk_size)
+      |> Stream.with_index()
+      |> Enum.reduce_while(
+        %ChunkAcc{conn: conn, limit: response_limit},
+        &send_chunk/2
+      )
+      |> finish_chunking()
+    end
+  end
+
+  defp validate_query(conn, col_name) do
+    with {:ok, collection} <- Collections.get_collection(col_name),
+         :ok <- authorize(conn, collection),
+         query_params <-
+           Enum.into(conn.query_params, %{
+             "cursor" => nil,
+             "limit" => "#{@default_limit}"
+           }),
+         {:ok, filters} <- validate_query_params(query_params) do
+      # returns one more from db than the limit to determine if there are more items for the cursor
+      db_query_filters = Map.update(filters, :limit, @default_limit, &(&1 + 1))
+      response_limit = Map.fetch!(filters, :limit)
+
+      {:ok, collection, db_query_filters, response_limit}
+    end
+  end
 
   defp validate_query_params(
          %{"cursor" => cursor, "limit" => limit} = query_params
@@ -206,23 +233,12 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
-  defp validate_cursor(%{"cursor" => cursor}) do
+  defp validate_cursor(nil), do: {:ok, nil}
+
+  defp validate_cursor(cursor) do
     with {:ok, decoded} <- Base.decode64(cursor),
          {:ok, datetime, _off} <- DateTime.from_iso8601(decoded) do
       {:ok, datetime}
-    end
-  end
-
-  defp validate_query(conn, col_name) do
-    with {:ok, collection} <- Collections.get_collection(col_name),
-         :ok <- authorize(conn, collection),
-         query_params <-
-           Enum.into(
-             %{"cursor" => nil, "limit" => "#{@stream_limit + 1}"},
-             conn.query_params
-           ),
-         {:ok, filters} <- validate_query_params(query_params) do
-      {:ok, collection, filters}
     end
   end
 
@@ -230,59 +246,88 @@ defmodule LightningWeb.CollectionsController do
     conn
     |> put_resp_content_type("application/json")
     |> send_chunked(200)
+    |> Plug.Conn.chunk(~S({"items": [))
+    |> case do
+      {:ok, conn} ->
+        conn
+
+      {:error, reason} ->
+        Logger.warning("Error starting chunking: #{inspect(reason)}")
+        halt(conn)
+    end
   end
 
-  defp start_items_chunking(conn) do
-    with {:ok, conn} <- Plug.Conn.chunk(conn, ~S({"items": [)),
-         do: {conn, {%{inserted_at: nil}, 0}}
-  end
-
-  defp finish_chunking({conn, {%{inserted_at: last_inserted_at}, count}}) do
+  defp finish_chunking(%ChunkAcc{conn: conn, cursor_data: cursor_data}) do
     cursor =
-      if count > @stream_limit do
-        last_inserted_at |> DateTime.to_iso8601() |> Base.encode64()
+      if cursor_data do
+        cursor_data |> DateTime.to_iso8601() |> Base.encode64()
       end
 
     Plug.Conn.chunk(conn, ~S(], "cursor":) <> Jason.encode!(cursor) <> "}")
   end
 
-  defp finish_chunking({:error, conn}), do: {:error, conn}
+  defp finish_chunking({:error, conn}), do: conn
 
-  defp send_chunk(_chunk_items, {:error, conn}) do
-    {:halt, {:error, conn}}
-  end
+  defp send_chunk({chunk_items, 0}, acc) do
+    {taken_items, acc} = take_and_accumulate(chunk_items, acc)
 
-  defp send_chunk({chunk_items, 0}, {conn, {_last, _count}}) do
-    last = List.last(chunk_items)
-
-    chunk_items
+    taken_items
     |> Enum.map_join(",", &Jason.encode!/1)
-    |> send_chunk_and_iterate(last, length(chunk_items), conn)
+    |> send_chunk_and_iterate(acc)
   end
 
-  defp send_chunk({[_item | _chunk_items], _i}, {conn, {last, @stream_limit}}) do
-    {:halt, {conn, {last, @cursor_count}}}
+  defp send_chunk(
+         {_chunk_items, _i},
+         %ChunkAcc{count: sent_count, last: last, limit: limit} = acc
+       )
+       when sent_count == limit do
+    {:halt, %ChunkAcc{acc | cursor_data: last.inserted_at}}
   end
 
-  defp send_chunk({chunk_items, _i}, {conn, {_last, count}}) do
-    taken_items = Enum.take(chunk_items, @stream_limit - count)
-    last = List.last(taken_items)
+  defp send_chunk({chunk_items, _i}, acc) do
+    {taken_items, acc} = take_and_accumulate(chunk_items, acc)
 
     taken_items
     |> Enum.map_join(",", &Jason.encode!/1)
     |> then(fn items_chunk ->
       "," <> items_chunk
     end)
-    |> send_chunk_and_iterate(last, length(chunk_items) + count, conn)
+    |> send_chunk_and_iterate(acc)
   end
 
-  defp send_chunk_and_iterate(chunk, last, count, conn) do
+  defp take_and_accumulate(
+         chunk_items,
+         %ChunkAcc{count: sent_count, limit: limit} = acc
+       ) do
+    taken_items = Enum.take(chunk_items, limit - sent_count)
+    last = List.last(taken_items)
+    taken_count = length(taken_items)
+
+    cursor_data =
+      if taken_count > 0 and length(chunk_items) > taken_count do
+        last.inserted_at
+      end
+
+    acc =
+      struct(acc, %{
+        count: sent_count + taken_count,
+        last: last,
+        cursor_data: cursor_data
+      })
+
+    {taken_items, acc}
+  end
+
+  defp send_chunk_and_iterate(
+         chunk,
+         %ChunkAcc{conn: conn, cursor_data: cursor_data} = acc
+       ) do
     case Plug.Conn.chunk(conn, chunk) do
       {:ok, conn} ->
-        if count > @stream_limit do
-          {:halt, {conn, {last, @cursor_count}}}
+        if cursor_data do
+          {:halt, %{acc | conn: conn}}
         else
-          {:cont, {conn, {last, count}}}
+          {:cont, %{acc | conn: conn}}
         end
 
       {:error, :closed} ->

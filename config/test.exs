@@ -162,4 +162,4 @@ config :lightning, :github_app,
   -----END RSA PRIVATE KEY-----
   """
 
-config :lightning, Lightning.CollectionsController, stream_limit: 50
+config :lightning, LightningWeb.CollectionsController, stream_limit: 50
