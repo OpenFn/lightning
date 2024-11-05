@@ -338,6 +338,8 @@ defmodule LightningWeb.RunChannelTest do
     @tag project_retention_policy: :erase_all
     test "fetch:dataclip wipes dataclip body for projects with erase_all retention policy",
          %{socket: socket, dataclip: dataclip} do
+      Lightning.Stub.freeze_time(DateTime.utc_now())
+
       ref = push(socket, "fetch:dataclip", %{})
 
       assert_reply ref, :ok, {:binary, _payload}
@@ -345,7 +347,7 @@ defmodule LightningWeb.RunChannelTest do
       %{wiped_at: wiped_at, body: body} = get_dataclip_with_body(dataclip.id)
 
       # dataclip body is cleared
-      assert DateTime.diff(DateTime.utc_now(), wiped_at, :second) < 1
+      assert wiped_at == Lightning.current_time() |> DateTime.truncate(:second)
 
       refute body
     end
