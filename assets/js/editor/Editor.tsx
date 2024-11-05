@@ -48,7 +48,7 @@ const spinner = (
 
 const loadingIndicator = (
   <div className="inline-block p-2">
-    <span className="mr-2">Loading</span>
+    <span className="mr-2">Loading types</span>
     {spinner}
   </div>
 );
@@ -77,13 +77,15 @@ const defaultOptions: MonacoProps['options'] = {
   fontLigatures: true,
 
   suggest: {
+    // https://microsoft.github.io/monaco-editor/docs.html#interfaces/editor.ISuggestOptions.html
+    showModules: true,
     showKeywords: false,
-    showModules: false, // hides global this
     showFiles: false, // This hides property names ??
     // showProperties: false, // seems to hide consts but show properties??
     showClasses: false,
     showInterfaces: false,
     showConstructors: false,
+    showDeprecated: false,
   },
 };
 
@@ -132,6 +134,12 @@ async function loadDTS(
     if (!filePath.startsWith('node_modules')) {
       let content = await fetchFile(`${specifier}${filePath}`);
 
+      // Remove js doc annotations
+      // this regex assumes that all jsdoc annotations are together in a single block
+      // which is probably fair?
+      // this regex means: find a * then an @ (with 1+ space in between), then match everything up to a closing comment */
+      content = content.replace(/\* +@(.+?)\*\//sg, '*/')
+
       // this is a bit cheeky
       // we'll manually build namespaces from the file structure
       // I don't understand why index.d.ts doesn't just do this though.
@@ -169,7 +177,7 @@ export default function Editor({
     updateLayout?: any;
   }>({});
 
-  const monacoRef = useRef<any>(null);
+  const [monaco, setMonaco] = useState<Monaco>();
 
   const handleSourceChange = useCallback(
     (newSource: string | undefined) => {
@@ -181,7 +189,7 @@ export default function Editor({
   );
 
   const handleEditorDidMount = useCallback((editor: any, monaco: Monaco) => {
-    monacoRef.current = monaco;
+    setMonaco(monaco);
 
     editor.addCommand(
       monaco.KeyCode.Escape,
@@ -250,10 +258,9 @@ export default function Editor({
       'insert-snippet',
       listeners.current.insertSnippet
     );
-  }, []);
+  }, [lib]);
 
   useEffect(() => {
-    let monaco = monacoRef.current;
     if (monaco && metadata) {
       const p = monaco.languages.registerCompletionItemProvider(
         'javascript',
@@ -267,7 +274,7 @@ export default function Editor({
         p.dispose();
       };
     }
-  }, [monacoRef, metadata]);
+  }, [monaco, metadata]);
 
   useEffect(() => {
     // Create a node to hold overflow widgets
@@ -305,10 +312,10 @@ export default function Editor({
   }, [adaptor]);
 
   useEffect(() => {
-    monacoRef.current?.languages.typescript.javascriptDefaults.setExtraLibs(
-      lib
+    monaco?.languages.typescript.javascriptDefaults.setExtraLibs(
+      lib!
     );
-  }, [monacoRef, lib]);
+  }, [monaco, lib]);
 
   return (
     <>

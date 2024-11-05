@@ -63,13 +63,9 @@ export default {
   mounted(this: JobEditorEntrypoint) {
     window.jobEditor = this;
 
-    console.group('JobEditor');
-    console.debug('Mounted');
     this._debouncedPushChange = pDebounce(this.pushChange, EDITOR_DEBOUNCE_MS);
 
     import('./JobEditor').then(module => {
-      console.group('JobEditor');
-      console.debug('loaded module');
       JobEditorComponent = module.default as typeof JobEditor;
       this.componentRoot = createRoot(this.el);
 
@@ -82,10 +78,7 @@ export default {
       this.setupObserver();
       this.render();
       this.requestMetadata().then(() => this.render());
-      console.groupEnd();
     });
-
-    console.groupEnd();
   },
   handleContentChange(content: string) {
     this._debouncedPushChange(content);
