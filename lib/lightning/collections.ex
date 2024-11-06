@@ -208,8 +208,7 @@ defmodule Lightning.Collections do
     end
   end
 
-  @spec delete_all(Collection.t(), String.t()) ::
-          {:ok, non_neg_integer()} | {:error, :not_found}
+  @spec delete_all(Collection.t(), String.t() | nil) :: {:ok, non_neg_integer()}
   def delete_all(%{id: collection_id}, key_pattern \\ nil) do
     query =
       from(i in Item, where: i.collection_id == ^collection_id)
@@ -220,10 +219,7 @@ defmodule Lightning.Collections do
         end
       end)
 
-    case Repo.delete_all(query) do
-      {0, nil} -> {:error, :not_found}
-      {n, nil} -> {:ok, n}
-    end
+    with {count, _nil} <- Repo.delete_all(query), do: {:ok, count}
   end
 
   defp stream_query(collection_id, cursor, limit) do
