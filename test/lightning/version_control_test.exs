@@ -1,5 +1,7 @@
 defmodule Lightning.VersionControlTest do
   use Lightning.DataCase, async: true
+
+  alias Lightning.Auditing.Audit
   alias Lightning.VersionControl
   alias Lightning.VersionControl.ProjectRepoConnection
   alias Lightning.Repo
@@ -424,6 +426,33 @@ defmodule Lightning.VersionControlTest do
 
       assert :ok = VersionControl.initiate_sync(repo_connection, user.email)
       assert Snapshot.get_current_for(workflow)
+    end
+
+    test "creates audit entries for any snapshots created", %{
+      user: user,
+      repo_connection: %{id: repo_connection_id} = repo_connection,
+      workflow: %{id: workflow_id} = workflow
+    } do
+      # refute Snapshot.get_current_for(workflow)
+
+      expect_create_installation_token(repo_connection.github_installation_id)
+      expect_get_repo(repo_connection.repo)
+      expect_create_workflow_dispatch(repo_connection.repo, "openfn-pull.yml")
+
+      assert :ok = VersionControl.initiate_sync(repo_connection, user.email)
+
+      %{id: snapshot_id} = Snapshot.get_current_for(workflow)
+
+      audit = Audit |> Repo.one!()
+
+      assert %{
+               event: "snapshot_created",
+               item_id: ^workflow_id,
+               actor_id: ^repo_connection_id,
+               changes: %{
+                 after: %{"snapshot_id" => ^snapshot_id}
+               }
+             } = audit
     end
   end
 

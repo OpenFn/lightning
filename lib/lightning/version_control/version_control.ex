@@ -135,7 +135,7 @@ defmodule Lightning.VersionControl do
              repo_connection.project_id
            ),
          snapshots <-
-           list_or_create_snapshots_for_project(repo_connection.project_id),
+           list_or_create_snapshots_for_project(repo_connection),
          {:ok, client} <-
            GithubClient.build_installation_client(
              repo_connection.github_installation_id
@@ -165,7 +165,9 @@ defmodule Lightning.VersionControl do
     end
   end
 
-  defp list_or_create_snapshots_for_project(project_id) do
+  defp list_or_create_snapshots_for_project(
+       %{project_id: project_id} = repo_connection
+  ) do
     current_query =
       from w in Workflow,
         left_join: s in assoc(w, :snapshots),
@@ -177,7 +179,8 @@ defmodule Lightning.VersionControl do
 
     Enum.reduce(workflows, [], fn {workflow, snapshot_id}, acc ->
       if is_nil(snapshot_id) do
-        {:ok, snapshot} = Snapshot.get_or_create_latest_for(workflow)
+        {:ok, snapshot} =
+          Snapshot.get_or_create_latest_for(workflow, repo_connection)
         [snapshot.id | acc]
       else
         [snapshot_id | acc]
