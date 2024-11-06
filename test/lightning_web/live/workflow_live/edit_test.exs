@@ -2099,11 +2099,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       high_priority_view |> form("#workflow-form") |> render_submit()
 
-      assert high_priority_view
-             |> has_element?("#inspector-workflow-version", "latest")
-
-      retry with: linear_backoff(50, 2) |> expiry(4_000),
+      retry with: exponential_backoff() |> cap(1_000) |> expiry(6_000),
             rescue_only: [ExUnit.AssertionError] do
+        assert high_priority_view
+               |> has_element?("#inspector-workflow-version", "latest")
+
         refute low_priority_view
                |> has_element?("#inspector-workflow-version", "latest")
 

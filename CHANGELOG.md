@@ -29,6 +29,10 @@ and this project adheres to
 
 ### Fixed
 
+- Fix misaligned margins on collapsed panels in the inspector
+  [#2571](https://github.com/OpenFn/lightning/issues/2571)
+- Fix sorting directions icons in projects table in the project dashboard page
+  [#2631](https://github.com/OpenFn/lightning/pull/2631)
 - Fixed an issue where code-completion prompts don't load properly in the
   inspector [#2629](https://github.com/OpenFn/lightning/pull/2629)
 - Fixed an issue where namespaces (like http.) don't appear in code assist
