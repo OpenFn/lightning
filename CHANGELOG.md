@@ -26,6 +26,8 @@ and this project adheres to
   [#2629](https://github.com/OpenFn/lightning/pull/2629)
 - JSDoc annotations are removed from code assist descriptions
   [#2629](https://github.com/OpenFn/lightning/pull/2629)
+- Show project name during delete confirmation
+  [#2634](https://github.com/OpenFn/lightning/pull/2634)
 
 ### Fixed
 
