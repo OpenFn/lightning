@@ -33,8 +33,6 @@ and this project adheres to
   [#2614](https://github.com/OpenFn/lightning/issues/2614)
 - Add support for run memory limit option
   [#2623](https://github.com/OpenFn/lightning/pull/2623)
-- Add support for run memory limit option
-  [#2623](https://github.com/OpenFn/lightning/pull/2623)
 
 ### Changed
 
