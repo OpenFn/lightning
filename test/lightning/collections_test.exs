@@ -232,7 +232,7 @@ defmodule Lightning.CollectionsTest do
           )
         end)
 
-      %{updated_at: cursor} = Enum.at(items, 9)
+      %{inserted_at: cursor} = Enum.at(items, 9)
 
       insert(:collection_item, key: "rkeyB", collection: collection)
 
