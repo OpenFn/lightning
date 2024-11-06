@@ -234,7 +234,7 @@ defmodule Lightning.RunsTest do
       # creating a new snapshot.
       {:ok, %{jobs: [new_job]}} =
         Workflows.change_workflow(workflow, %{jobs: [params_for(:job)]})
-        |> Workflows.save_workflow()
+        |> Workflows.save_workflow(insert(:user))
 
       {:error, changeset} =
         Runs.start_step(run_1, %{

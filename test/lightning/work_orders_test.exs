@@ -349,7 +349,7 @@ defmodule Lightning.WorkOrdersTest do
 
       # This isn't the best place to test for this specific case.
       Lightning.Workflows.change_workflow(workflow, %{name: "new name"})
-      |> Lightning.Workflows.save_workflow()
+      |> Lightning.Workflows.save_workflow(insert(:user))
 
       snapshot2 = Lightning.Workflows.Snapshot.get_current_for(workflow)
 
