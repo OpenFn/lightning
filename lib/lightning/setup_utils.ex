@@ -202,7 +202,7 @@ defmodule Lightning.SetupUtils do
       Workflows.save_workflow(%{
         name: "Sample Workflow",
         project_id: project.id
-      }, nil)
+      }, user)
 
     {:ok, source_trigger} =
       Workflows.build_trigger(%{
@@ -224,7 +224,7 @@ defmodule Lightning.SetupUtils do
         """,
         adaptor: "@openfn/language-common@latest",
         workflow_id: workflow.id
-      })
+      }, user)
 
     {:ok, _root_edge} =
       Workflows.create_edge(%{
@@ -246,7 +246,7 @@ defmodule Lightning.SetupUtils do
         """,
         adaptor: "@openfn/language-common@latest",
         workflow_id: workflow.id
-      })
+      }, user)
 
     {:ok, _job_2_edge} =
       Workflows.create_edge(%{
@@ -314,11 +314,13 @@ defmodule Lightning.SetupUtils do
         false
       )
 
+    user = get_most_privileged_user!(openhie_project)
+
     {:ok, openhie_workflow} =
       Workflows.save_workflow(%{
         name: "OpenHIE Workflow",
         project_id: openhie_project.id
-      }, nil)
+      }, user)
 
     {:ok, openhie_trigger} =
       Workflows.build_trigger(%{
@@ -338,9 +340,7 @@ defmodule Lightning.SetupUtils do
         """,
         adaptor: "@openfn/language-http@latest",
         workflow_id: openhie_workflow.id
-      })
-
-    user = get_most_privileged_user!(openhie_project)
+      }, user)
 
     {:ok, _openhie_root_edge} =
       Workflows.create_edge(%{
@@ -362,7 +362,7 @@ defmodule Lightning.SetupUtils do
         adaptor: "@openfn/language-http@latest",
         # enabled: true,
         workflow_id: openhie_workflow.id
-      })
+      }, user)
 
     {:ok, notify_upload_successful} =
       Jobs.create_job(%{
@@ -375,7 +375,7 @@ defmodule Lightning.SetupUtils do
         adaptor: "@openfn/language-http@latest",
         # enabled: true,
         workflow_id: openhie_workflow.id
-      })
+      }, user)
 
     {:ok, notify_upload_failed} =
       Jobs.create_job(%{
@@ -388,7 +388,7 @@ defmodule Lightning.SetupUtils do
         adaptor: "@openfn/language-http@latest",
         # enabled: true,
         workflow_id: openhie_workflow.id
-      })
+      }, user)
 
     {:ok, _send_to_openhim_edge} =
       Workflows.create_edge(%{
@@ -538,13 +538,13 @@ defmodule Lightning.SetupUtils do
         false
       )
 
+    user = get_most_privileged_user!(project)
+
     {:ok, dhis2_workflow} =
       Workflows.save_workflow(%{
         name: "DHIS2 to Sheets",
         project_id: project.id
-      }, nil)
-
-    user = get_most_privileged_user!(project)
+      }, user)
 
     dhis2_credential = create_dhis2_credential(user)
 
@@ -593,7 +593,7 @@ defmodule Lightning.SetupUtils do
         adaptor: "@openfn/language-http@latest",
         # enabled: true,
         workflow_id: dhis2_workflow.id
-      })
+      }, user)
 
     {:ok, _success_upload} =
       Workflows.create_edge(%{

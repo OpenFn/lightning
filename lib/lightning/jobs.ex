@@ -135,12 +135,13 @@ defmodule Lightning.Jobs do
       {:error, %Ecto.Changeset{}}
 
   """
-  def create_job(attrs \\ %{}) do
+  def create_job(attrs \\ %{}, actor) do
     changeset =
       Job.changeset(%Job{}, attrs)
 
     Multi.new()
     |> Multi.insert(:job, changeset)
+    |> Multi.put(:actor, actor)
     |> Workflows.capture_snapshot()
     |> Repo.transaction()
     |> case do
