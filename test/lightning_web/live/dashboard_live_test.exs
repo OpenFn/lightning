@@ -344,7 +344,7 @@ defmodule LightningWeb.DashboardLiveTest do
            )
 
     formatted_date =
-      Lightning.Helpers.format_date(max_updated_at, "%d/%b/%Y %H:%M:%S")
+      Lightning.Helpers.format_date(max_updated_at, "%d/%m/%Y %H:%M:%S")
 
     assert has_element?(
              view,
@@ -374,7 +374,7 @@ defmodule LightningWeb.DashboardLiveTest do
         |> Enum.max(fn -> nil end)
 
       if last_activity do
-        Lightning.Helpers.format_date(last_activity, "%d/%b/%Y %H:%M:%S")
+        Lightning.Helpers.format_date(last_activity, "%d/%m/%Y %H:%M:%S")
       else
         "No activity"
       end

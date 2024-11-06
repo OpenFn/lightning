@@ -148,7 +148,7 @@ defmodule LightningWeb.RunChannel do
   def handle_in("fetch:dataclip", _payload, socket) do
     body = Runs.get_input(socket.assigns.run)
 
-    unless socket.assigns.run.options.save_dataclips,
+    if !socket.assigns.run.options.save_dataclips,
       do: Runs.wipe_dataclips(socket.assigns.run)
 
     reply_with(socket, {:ok, {:binary, body || "null"}})
