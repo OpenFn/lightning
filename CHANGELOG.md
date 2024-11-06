@@ -17,11 +17,18 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.9.15] - 2024-11-06
+
+### Added
+
 - Added some basic editor usage tips to the docs panel
   [#2629](https://github.com/OpenFn/lightning/pull/2629)
-- Create audit events when the retention periods for a project's dataclips
-  and history are modified.
-  [#2589](https://github.com/OpenFn/lightning/issues/2589)
+- Create audit events when the retention periods for a project's dataclips and
+  history are modified. [#2589](https://github.com/OpenFn/lightning/issues/2589)
 
 ### Changed
 
