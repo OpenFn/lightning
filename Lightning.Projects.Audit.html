@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v2.9.14">
 
-    <title>LightningWeb.JobLive.KafkaSetupComponent — Lightning v2.9.14</title>
+    <title>Lightning.Projects.Audit — Lightning v2.9.14</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
@@ -125,16 +125,20 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/kafka_setup_component.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/audit.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">LightningWeb.JobLive.KafkaSetupComponent</span> 
+  <span translate="no">Lightning.Projects.Audit</span> 
   <small class="app-vsn" translate="no">(Lightning v2.9.14)</small>
 
 </h1>
 
+
+  <section id="moduledoc">
+<p>Generate Audit changesets for selected changes to project settings.</p>
+  </section>
 
 
   <section id="summary" class="details-list">
@@ -151,11 +155,43 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#render/1" translate="no">render(assigns)</a>
+        <a href="#base_query/0" translate="no">base_query()</a>
 
       </div>
 
-        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">form</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">disabled</code> (<code class="inline">:boolean</code>) (required)</li></ul></div>
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#derive_events/3" translate="no">derive_events(multi, changeset, user)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#event/4" translate="no">event(event, item_id, actor_id, changes \\ %{})</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#save/1" translate="no">save(changes)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#update_changes/1" translate="no">update_changes(changes)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Callback implementation for <a href="Lightning.Auditing.Audit.html#c:update_changes/1"><code class="inline">Lightning.Auditing.Audit.update_changes/1</code></a>.</p></div>
 
     </div>
 
@@ -172,16 +208,16 @@ Pages
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="render/1">
+<section class="detail" id="base_query/0">
 
   <div class="detail-header">
-    <a href="#render/1" class="detail-link" title="Link to this function">
+    <a href="#base_query/0" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">render(assigns)</h1>
+    <h1 class="signature" translate="no">base_query()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/kafka_setup_component.ex#L12" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/audit.ex#L5" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -191,13 +227,97 @@ Pages
 
   <section class="docstring">
 
-<h2 id="render/1-attributes" class="section-heading">
-  <a href="#render/1-attributes" class="hover-link">
-    <i class="ri-link-m" aria-hidden="true"></i>
-  </a>
-  <span class="text">Attributes</span>
-</h2>
-<ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">form</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">disabled</code> (<code class="inline">:boolean</code>) (required)</li></ul>
+
+  </section>
+</section>
+<section class="detail" id="derive_events/3">
+
+  <div class="detail-header">
+    <a href="#derive_events/3" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">derive_events(multi, changeset, user)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/audit.ex#L15" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="event/4">
+
+    <span id="event/3"></span>
+
+  <div class="detail-header">
+    <a href="#event/4" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">event(event, item_id, actor_id, changes \\ %{})</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/audit.ex#L5" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="save/1">
+
+  <div class="detail-header">
+    <a href="#save/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">save(changes)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/audit.ex#L5" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="update_changes/1">
+
+  <div class="detail-header">
+    <a href="#update_changes/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">update_changes(changes)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/audit.ex#L5" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Callback implementation for <a href="Lightning.Auditing.Audit.html#c:update_changes/1"><code class="inline">Lightning.Auditing.Audit.update_changes/1</code></a>.</p>
   </section>
 </section>
 
