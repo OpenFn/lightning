@@ -14,8 +14,10 @@ defmodule LightningWeb.ProjectLiveTest do
   import Lightning.GithubHelpers
   import Swoosh.TestAssertions
 
+  import Mock
   import Mox
 
+  alias Lightning.Auditing.Audit
   alias Lightning.Name
   alias Lightning.Projects
   alias Lightning.Repo
@@ -2060,6 +2062,58 @@ defmodule LightningWeb.ProjectLiveTest do
         |> render_submit()
 
       assert html =~ "Project updated successfully"
+    end
+
+    @tag role: :admin
+    test "creates event linked to user when retention period is updated", %{
+      conn: conn,
+      project: project,
+      user: %{id: user_id}
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#data-storage"
+        )
+
+      view
+      |> form("#retention-settings-form",
+        project: %{
+          history_retention_period: 7
+        }
+      )
+      |> render_submit()
+
+      assert %{actor_id: ^user_id} = Audit |> Repo.one!()
+    end
+
+    @tag role: :admin
+    test "indicates if there was a failure due to audit creation", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#data-storage"
+        )
+
+      with_mock(Lightning.Repo, [:passthrough],
+        transaction: fn _multi ->
+          {:error, :anything_other_than_project, %Ecto.Changeset{}, %{}}
+        end
+      ) do
+        html =
+          view
+          |> form("#retention-settings-form",
+            project: %{
+              history_retention_period: 7
+            }
+          )
+          |> render_submit()
+
+        assert html =~ "Changes couldn&#39;t be saved"
+      end
     end
   end
 

@@ -8,6 +8,7 @@ defmodule Lightning.ProjectsTest do
   import Mox
   import Swoosh.TestAssertions
 
+  alias Lightning.Auditing.Audit
   alias Lightning.Accounts.User
   alias Lightning.Invocation.Dataclip
   alias Lightning.Projects
@@ -176,159 +177,6 @@ defmodule Lightning.ProjectsTest do
 
       assert {:error, %Ecto.Changeset{}} =
                Projects.create_project(%{"name" => "Can't have spaces!"})
-    end
-
-    test "update_project/2 with valid data updates the project" do
-      project = project_fixture()
-      update_attrs = %{name: "some-updated-name"}
-
-      assert {:ok, %Project{} = project} =
-               Projects.update_project(project, update_attrs)
-
-      assert project.name == "some-updated-name"
-    end
-
-    test "update_project/2 updates the MFA requirement" do
-      project = insert(:project)
-
-      refute project.requires_mfa
-      update_attrs = %{requires_mfa: true}
-
-      assert {:ok, %Project{} = project} =
-               Projects.update_project(project, update_attrs)
-
-      assert project.requires_mfa
-    end
-
-    test "update_project/2 updates the data retention periods" do
-      project =
-        insert(:project,
-          project_users:
-            Enum.map(
-              [
-                :viewer,
-                :editor,
-                :admin,
-                :owner
-              ],
-              fn role -> build(:project_user, user: build(:user), role: role) end
-            )
-        )
-
-      update_attrs = %{
-        history_retention_period: 14,
-        dataclip_retention_period: 7
-      }
-
-      assert {:ok, %Project{} = updated_project} =
-               Projects.update_project(project, update_attrs)
-
-      # admins and owners receives an email
-      admins =
-        Enum.filter(project.project_users, fn %{role: role} ->
-          role in [:admin, :owner]
-        end)
-
-      assert Enum.count(admins) == 2
-
-      %{subject: subject, body: body} = data_retention_email(updated_project)
-
-      for %{user: user} <- admins do
-        email = Swoosh.Email.Recipient.format(user)
-
-        assert_receive {:email,
-                        %Swoosh.Email{
-                          subject: ^subject,
-                          to: [^email],
-                          text_body: ^body
-                        }}
-      end
-
-      # editors and viewers do not receive any email
-      non_admins =
-        Enum.filter(project.project_users, fn %{role: role} ->
-          role in [:editor, :viewer]
-        end)
-
-      assert Enum.count(non_admins) == 2
-
-      for %{user: %{email: email}} <- non_admins do
-        refute_receive {:email,
-                        %Swoosh.Email{
-                          subject: ^subject,
-                          to: [{"", ^email}],
-                          text_body: ^body
-                        }}
-
-        # data_retention_email(user, updated_project) |> assert_email_not_sent()
-      end
-
-      # no email is sent when there's no change
-      assert {:ok, updated_project} =
-               Projects.update_project(updated_project, update_attrs)
-
-      for %{user: %{email: email}} <- project.project_users do
-        refute_receive {:email,
-                        %Swoosh.Email{
-                          subject: ^subject,
-                          to: [{"", ^email}],
-                          text_body: ^body
-                        }}
-      end
-
-      # no email is sent when there's an error in the changeset
-      assert {:error, _changeset} =
-               Projects.update_project(updated_project, %{
-                 history_retention_period: "xyz",
-                 dataclip_retention_period: 7
-               })
-
-      for %{user: %{email: email}} <- project.project_users do
-        refute_receive {:email,
-                        %Swoosh.Email{
-                          subject: ^subject,
-                          to: [{"", ^email}],
-                          text_body: ^body
-                        }}
-      end
-    end
-
-    test "update_project/2 with invalid data returns error changeset" do
-      project = project_fixture() |> unload_relation(:project_users)
-
-      assert {:error, %Ecto.Changeset{}} =
-               Projects.update_project(project, @invalid_attrs)
-
-      assert project == Projects.get_project!(project.id)
-    end
-
-    test "update_project/2 calls the validate_changeset hook" do
-      verify_on_exit!()
-
-      project =
-        insert(:project,
-          name: "test",
-          project_users: [
-            build(:project_user, user: build(:user), role: :owner)
-          ]
-        )
-
-      error_msg = "Hello world"
-
-      expect(
-        Lightning.Extensions.MockProjectHook,
-        :handle_project_validation,
-        fn changeset ->
-          Ecto.Changeset.add_error(changeset, :name, error_msg)
-        end
-      )
-
-      assert {:error, changeset} =
-               Projects.update_project(project, %{
-                 name: "new-name"
-               })
-
-      assert errors_on(changeset) == %{name: [error_msg]}
     end
 
     test "update_project_user/2 with valid data updates the project_user" do
@@ -1907,6 +1755,262 @@ defmodule Lightning.ProjectsTest do
                  collaborators_count: 1
                }
              ] = result
+    end
+  end
+
+  describe ".update_project/3" do
+    setup do
+      %{user: insert(:user)}
+    end
+
+    test "update_project/3 with valid data updates the project" do
+      project = project_fixture()
+      update_attrs = %{name: "some-updated-name"}
+
+      assert {:ok, %Project{} = project} =
+               Projects.update_project(project, update_attrs)
+
+      assert project.name == "some-updated-name"
+    end
+
+    test "update_project/3 updates the MFA requirement" do
+      project = insert(:project)
+
+      refute project.requires_mfa
+      update_attrs = %{requires_mfa: true}
+
+      assert {:ok, %Project{} = project} =
+               Projects.update_project(project, update_attrs)
+
+      assert project.requires_mfa
+    end
+
+    test "update_project/3 updates the data retention periods" do
+      project =
+        insert(:project,
+          project_users:
+            Enum.map(
+              [
+                :viewer,
+                :editor,
+                :admin,
+                :owner
+              ],
+              fn role -> build(:project_user, user: build(:user), role: role) end
+            )
+        )
+
+      update_attrs = %{
+        history_retention_period: 14,
+        dataclip_retention_period: 7
+      }
+
+      assert {:ok, %Project{} = updated_project} =
+               Projects.update_project(project, update_attrs)
+
+      # admins and owners receives an email
+      admins =
+        Enum.filter(project.project_users, fn %{role: role} ->
+          role in [:admin, :owner]
+        end)
+
+      assert Enum.count(admins) == 2
+
+      %{subject: subject, body: body} = data_retention_email(updated_project)
+
+      for %{user: user} <- admins do
+        email = Swoosh.Email.Recipient.format(user)
+
+        assert_receive {:email,
+                        %Swoosh.Email{
+                          subject: ^subject,
+                          to: [^email],
+                          text_body: ^body
+                        }}
+      end
+
+      # editors and viewers do not receive any email
+      non_admins =
+        Enum.filter(project.project_users, fn %{role: role} ->
+          role in [:editor, :viewer]
+        end)
+
+      assert Enum.count(non_admins) == 2
+
+      for %{user: %{email: email}} <- non_admins do
+        refute_receive {:email,
+                        %Swoosh.Email{
+                          subject: ^subject,
+                          to: [{"", ^email}],
+                          text_body: ^body
+                        }}
+
+        # data_retention_email(user, updated_project) |> assert_email_not_sent()
+      end
+
+      # no email is sent when there's no change
+      assert {:ok, updated_project} =
+               Projects.update_project(updated_project, update_attrs)
+
+      for %{user: %{email: email}} <- project.project_users do
+        refute_receive {:email,
+                        %Swoosh.Email{
+                          subject: ^subject,
+                          to: [{"", ^email}],
+                          text_body: ^body
+                        }}
+      end
+
+      # no email is sent when there's an error in the changeset
+      assert {:error, _changeset} =
+               Projects.update_project(updated_project, %{
+                 history_retention_period: "xyz",
+                 dataclip_retention_period: 7
+               })
+
+      for %{user: %{email: email}} <- project.project_users do
+        refute_receive {:email,
+                        %Swoosh.Email{
+                          subject: ^subject,
+                          to: [{"", ^email}],
+                          text_body: ^body
+                        }}
+      end
+    end
+
+    test "update_project/3 with invalid data returns error changeset" do
+      project = project_fixture() |> unload_relation(:project_users)
+
+      assert {:error, %Ecto.Changeset{}} =
+               Projects.update_project(project, @invalid_attrs)
+
+      assert project == Projects.get_project!(project.id)
+    end
+
+    test "update_project/2 calls the validate_changeset hook" do
+      verify_on_exit!()
+
+      project =
+        insert(:project,
+          name: "test",
+          project_users: [
+            build(:project_user, user: build(:user), role: :owner)
+          ]
+        )
+
+      error_msg = "Hello world"
+
+      expect(
+        Lightning.Extensions.MockProjectHook,
+        :handle_project_validation,
+        fn changeset ->
+          Ecto.Changeset.add_error(changeset, :name, error_msg)
+        end
+      )
+
+      assert {:error, changeset} =
+               Projects.update_project(project, %{
+                 name: "new-name"
+               })
+
+      assert errors_on(changeset) == %{name: [error_msg]}
+    end
+
+    test "creates audit events if retention periods are updated", %{
+      user: %{id: user_id} = user
+    } do
+      %{id: project_id} =
+        project =
+        insert(
+          :project,
+          dataclip_retention_period: 7,
+          history_retention_period: 30,
+          retention_policy: :retain_all
+        )
+
+      update_attrs = %{
+        dataclip_retention_period: 14,
+        history_retention_period: 90,
+        retention_policy: :retain_with_errors
+      }
+
+      Projects.update_project(project, update_attrs, user)
+
+      query =
+        from a in Audit, where: a.event == "history_retention_period_updated"
+
+      history_audit_event = Repo.one!(query)
+
+      assert %{
+               item_type: "project",
+               item_id: ^project_id,
+               actor_id: ^user_id,
+               changes: changes
+             } = history_audit_event
+
+      assert changes == %Audit.Changes{
+               before: %{"history_retention_period" => 30},
+               after: %{"history_retention_period" => 90}
+             }
+
+      query =
+        from a in Audit, where: a.event == "dataclip_retention_period_updated"
+
+      dataclip_audit_event = Repo.one!(query)
+
+      assert %{
+               item_type: "project",
+               item_id: ^project_id,
+               actor_id: ^user_id,
+               changes: changes
+             } = dataclip_audit_event
+
+      assert changes == %Audit.Changes{
+               before: %{"dataclip_retention_period" => 7},
+               after: %{"dataclip_retention_period" => 14}
+             }
+    end
+
+    test "does not create events if no user was provided" do
+      project =
+        insert(
+          :project,
+          dataclip_retention_period: 7,
+          history_retention_period: 30,
+          retention_policy: :retain_all
+        )
+
+      update_attrs = %{
+        dataclip_retention_period: 14,
+        history_retention_period: 90,
+        retention_policy: :retain_with_errors
+      }
+
+      Projects.update_project(project, update_attrs)
+
+      assert Audit |> Repo.all() |> Enum.empty?()
+    end
+
+    test "does not create events if the project change fails", %{
+      user: user
+    } do
+      project =
+        insert(
+          :project,
+          dataclip_retention_period: 7,
+          history_retention_period: 30,
+          retention_policy: :retain_all
+        )
+
+      update_attrs = %{
+        dataclip_retention_period: 14,
+        history_retention_period: 90,
+        retention_policy: :no_such_value
+      }
+
+      Projects.update_project(project, update_attrs, user)
+
+      assert Audit |> Repo.all() |> Enum.empty?()
     end
   end
 

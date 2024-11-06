@@ -19,6 +19,9 @@ and this project adheres to
 
 - Added some basic editor usage tips to the docs panel
   [#2629](https://github.com/OpenFn/lightning/pull/2629)
+- Create audit events when the retention periods for a project's dataclips
+  and history are modified.
+  [#2589](https://github.com/OpenFn/lightning/issues/2589)
 
 ### Changed
 

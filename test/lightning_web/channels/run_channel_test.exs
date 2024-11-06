@@ -1247,7 +1247,7 @@ defmodule LightningWeb.RunChannelTest do
           "error_message" => nil
         })
 
-      assert_reply ref, :ok, nil
+      assert_reply ref, :ok, nil, 1_000
 
       assert %{state: :crashed} = Lightning.Repo.reload!(run)
       assert %{state: :crashed} = Lightning.Repo.reload!(work_order)
