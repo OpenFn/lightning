@@ -12,50 +12,39 @@ defmodule Lightning.Projects.Audit do
 
   alias Ecto.Multi
 
-  require Logger
+  def derive_events(multi, changeset, user) do
+    [:history_retention_period, :dataclip_retention_period]
+    |> Enum.reduce(multi, fn field, multi ->
+      changeset
+      |> filter_change(field)
+      |> event_changeset(field, user)
+      |> case do
+        :no_changes ->
+          multi
 
-  def history_retention_auditing_operation(
-        %{project: %{history_retention_period: new_value}},
-        %{data: project} = _original_changeset,
-        user
-      ) do
-    build_multi(:history_retention_period, new_value, project, user)
+        audit_changeset ->
+          Multi.insert(multi, operation_name(field), audit_changeset)
+      end
+    end)
   end
 
-  def history_retention_auditing_operation(_changes, _project, _user) do
-    Multi.new()
-  end
+  defp event_changeset(%Ecto.Changeset{} = changeset, field, user) do
+    project_id = Ecto.Changeset.get_field(changeset, :id)
 
-  def dataclip_retention_auditing_operation(
-        %{project: %{dataclip_retention_period: new_value}},
-        %{data: project} = _original_changeset,
-        user
-      ) do
-    build_multi(:dataclip_retention_period, new_value, project, user)
-  end
-
-  def dataclip_retention_auditing_operation(_changes, _project, _user) do
-    Multi.new()
-  end
-
-  defp build_multi(field, new_value, project, user) do
-    base_changeset =
-      project |> Ecto.Changeset.change(%{field => new_value})
-
-    case event_changeset(field, base_changeset, user) do
-      :no_changes ->
-        Multi.new()
-
-      changeset ->
-        Multi.new() |> Multi.insert(operation_name(field), changeset)
-    end
-  end
-
-  defp event_changeset(field, %{data: %{id: project_id}} = changeset, user) do
     "#{field}_updated"
     |> event(project_id, user.id, changeset)
   end
 
   defp operation_name(:dataclip_retention_period), do: :audit_dataclip_retention
   defp operation_name(:history_retention_period), do: :audit_history_retention
+
+  # Strips out all changes except for the specified field
+  # We do this to ensure that we only audit the changes we care about
+  defp filter_change(changeset, field) do
+    Map.put(
+      changeset,
+      :changes,
+      changeset.changes |> Map.filter(fn {f, _} -> f == field end)
+    )
+  end
 end

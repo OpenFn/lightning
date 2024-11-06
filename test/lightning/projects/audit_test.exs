@@ -20,31 +20,21 @@ defmodule Lightning.Projects.AuditTest do
     %{project: project, user: user}
   end
 
-  describe ".history_retention_auditing_operation" do
+  describe "derive_events" do
     test "if history retention period is updated, returns multi for update", %{
       project: %{id: project_id} = project,
       user: %{id: user_id} = user
     } do
-      changes = %{
-        project: %{
-          dataclip_retention_period: 7,
-          history_retention_period: 30,
-          retention_policy: :retain_with_errors
-        }
-      }
-
       attrs = %{
-        dataclip_retention_period: 7,
+        # dataclip_retention_period: 7,
         history_retention_period: 30,
         retention_policy: :retain_with_errors
       }
 
-      original_changeset = project |> Project.changeset(attrs)
-
       [audit_history_retention: {:insert, changeset, []}] =
-        Audit.history_retention_auditing_operation(
-          changes,
-          original_changeset,
+        Audit.derive_events(
+          Multi.new(),
+          project |> Project.changeset(attrs),
           user
         )
         |> Multi.to_list()
@@ -68,93 +58,32 @@ defmodule Lightning.Projects.AuditTest do
              }
     end
 
-    test "if history retention period is unchanged, returns empty multi", %{
+    test "if the fields we are tracking are unchanged, returns empty multi", %{
       project: project,
       user: user
     } do
-      changes = %{
-        project: %{
-          dataclip_retention_period: 7,
-          history_retention_period: 90,
-          retention_policy: :retain_with_errors
-        }
-      }
-
-      attrs = %{
-        dataclip_retention_period: 7,
-        history_retention_period: 90,
-        retention_policy: :retain_with_errors
-      }
-
-      original_changeset = project |> Project.changeset(attrs)
-
-      updated_multi =
-        Audit.history_retention_auditing_operation(
-          changes,
-          original_changeset,
-          user
-        )
-        |> Multi.to_list()
-
-      assert updated_multi == []
+      assert [] =
+               Audit.derive_events(
+                 Multi.new(),
+                 project
+                 |> Project.changeset(%{retention_policy: :retain_with_errors}),
+                 user
+               )
+               |> Multi.to_list()
     end
 
-    test "if history retention period is not present, returns empty multi", %{
-      project: project,
-      user: user
-    } do
-      changes = %{
-        project: %{
-          dataclip_retention_period: 7,
-          retention_policy: :retain_with_errors
-        }
-      }
-
-      attrs = %{
-        dataclip_retention_period: 7,
-        history_retention_period: 90,
-        retention_policy: :retain_with_errors
-      }
-
-      original_changeset = project |> Project.changeset(attrs)
-
-      updated_multi =
-        Audit.history_retention_auditing_operation(
-          changes,
-          original_changeset,
-          user
-        )
-        |> Multi.to_list()
-
-      assert updated_multi == []
-    end
-  end
-
-  describe ".dataclip_retention_auditing_operation" do
     test "if dataclip retention period is updated, returns multi for update", %{
       project: %{id: project_id} = project,
       user: %{id: user_id} = user
     } do
-      changes = %{
-        project: %{
-          dataclip_retention_period: 7,
-          history_retention_period: 30,
-          retention_policy: :retain_with_errors
-        }
-      }
-
       attrs = %{
-        dataclip_retention_period: 7,
-        history_retention_period: 30,
-        retention_policy: :retain_with_errors
+        dataclip_retention_period: 7
       }
-
-      original_changeset = project |> Project.changeset(attrs)
 
       [audit_dataclip_retention: {:insert, changeset, []}] =
-        Audit.dataclip_retention_auditing_operation(
-          changes,
-          original_changeset,
+        Audit.derive_events(
+          Multi.new(),
+          project |> Project.changeset(attrs),
           user
         )
         |> Multi.to_list()
@@ -178,64 +107,28 @@ defmodule Lightning.Projects.AuditTest do
              }
     end
 
-    test "if dataclip retention period is unchanged, returns empty multi", %{
+    test "if more than one field we are tracking is changed", %{
       project: project,
       user: user
     } do
-      changes = %{
-        project: %{
-          dataclip_retention_period: 14,
-          history_retention_period: 30,
-          retention_policy: :retain_with_errors
-        }
-      }
-
       attrs = %{
         dataclip_retention_period: 14,
         history_retention_period: 30,
         retention_policy: :retain_with_errors
       }
 
-      original_changeset = project |> Project.changeset(attrs)
-
-      updated_multi =
-        Audit.dataclip_retention_auditing_operation(
-          changes,
-          original_changeset,
+      events_multi =
+        Audit.derive_events(
+          Multi.new(),
+          project |> Project.changeset(attrs),
           user
         )
         |> Multi.to_list()
 
-      assert updated_multi == []
-    end
-
-    test "if dataclip retention period is absent, returns empty multi", %{
-      project: project,
-      user: user
-    } do
-      changes = %{
-        project: %{
-          history_retention_period: 30,
-          retention_policy: :retain_with_errors
-        }
-      }
-
-      attrs = %{
-        history_retention_period: 30,
-        retention_policy: :retain_with_errors
-      }
-
-      original_changeset = project |> Project.changeset(attrs)
-
-      updated_multi =
-        Audit.dataclip_retention_auditing_operation(
-          changes,
-          original_changeset,
-          user
-        )
-        |> Multi.to_list()
-
-      assert updated_multi == []
+      for {name, change} <- events_multi do
+        assert name in [:audit_dataclip_retention, :audit_history_retention]
+        assert {:insert, _, []} = change
+      end
     end
   end
 end

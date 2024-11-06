@@ -320,16 +320,7 @@ defmodule Lightning.Projects do
 
   defp maybe_audit_changes(multi, changeset, user) do
     multi
-    |> Multi.merge(
-      Audit,
-      :history_retention_auditing_operation,
-      [changeset, user]
-    )
-    |> Multi.merge(
-      Audit,
-      :dataclip_retention_auditing_operation,
-      [changeset, user]
-    )
+    |> Audit.derive_events(changeset, user)
   end
 
   @spec update_project_with_users(Project.t(), map(), boolean()) ::

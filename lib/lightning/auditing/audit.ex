@@ -7,6 +7,9 @@ defmodule Lightning.Auditing.Audit do
   require Ecto.Query
   require Logger
 
+  @doc """
+  Callback to update changes before saving to the database.
+  """
   @callback update_changes(changes :: map()) :: map()
 
   # coveralls-ignore-start
