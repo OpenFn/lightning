@@ -329,7 +329,12 @@ defmodule Lightning.Factories do
     %Lightning.Collections.Item{
       collection: build(:collection),
       key: sequence(:key, &"key-#{&1}"),
-      value: sequence(:value, &"value-#{&1}")
+      value: sequence(:value, &"value-#{&1}"),
+      inserted_at:
+        sequence(
+          :inserted_at,
+          &DateTime.add(DateTime.utc_now(), &1, :microsecond)
+        )
     }
   end
 
