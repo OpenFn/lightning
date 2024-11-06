@@ -127,33 +127,32 @@ defmodule Lightning.Collections do
     Repo.get_by(Item, collection_id: collection_id, key: key)
   end
 
-  @spec stream_all(Collection.t(), Keyword.t()) :: Enum.t()
-  def stream_all(%{id: collection_id}, opts \\ []) do
-    cursor = Keyword.get(opts, :cursor)
-    limit = Keyword.fetch!(opts, :limit)
+  @spec stream_all(Collection.t(), Enum.t()) :: Enum.t()
+  def stream_all(%{id: collection_id}, params \\ %{}) do
+    params = Map.new(params)
+    cursor = Map.get(params, :cursor)
+    limit = Map.fetch!(params, :limit)
 
     collection_id
     |> stream_query(cursor, limit)
+    |> filter_by_inserted_at(params)
     |> Repo.stream()
   end
 
-  @spec stream_match(Collection.t(), String.t(), Keyword.t()) :: Enum.t()
+  @spec stream_match(Collection.t(), String.t(), Enum.t()) :: Enum.t()
   def stream_match(
         %{id: collection_id},
         pattern,
-        opts \\ []
+        params \\ %{}
       ) do
-    pattern =
-      pattern
-      |> String.replace("\\", "\\\\")
-      |> String.replace("%", "\\%")
-      |> String.replace("*", "%")
-
-    cursor = Keyword.get(opts, :cursor)
-    limit = Keyword.fetch!(opts, :limit)
+    pattern = format_pattern(pattern)
+    params = Map.new(params)
+    cursor = Map.get(params, :cursor)
+    limit = Map.fetch!(params, :limit)
 
     collection_id
     |> stream_query(cursor, limit)
+    |> filter_by_inserted_at(params)
     |> where([i], like(i.key, ^pattern))
     |> Repo.stream()
   end
@@ -209,16 +208,53 @@ defmodule Lightning.Collections do
     end
   end
 
+  @spec delete_all(Collection.t(), String.t() | nil) :: {:ok, non_neg_integer()}
+  def delete_all(%{id: collection_id}, key_pattern \\ nil) do
+    query =
+      from(i in Item, where: i.collection_id == ^collection_id)
+      |> then(fn query ->
+        case key_pattern do
+          nil -> query
+          pattern -> where(query, [i], like(i.key, ^format_pattern(pattern)))
+        end
+      end)
+
+    with {count, _nil} <- Repo.delete_all(query), do: {:ok, count}
+  end
+
   defp stream_query(collection_id, cursor, limit) do
     Item
     |> where([i], i.collection_id == ^collection_id)
-    |> order_by([i], asc: i.updated_at)
+    |> order_by([i], asc: i.inserted_at)
     |> limit(^limit)
     |> then(fn query ->
       case cursor do
         nil -> query
-        ts_cursor -> where(query, [i], i.updated_at > ^ts_cursor)
+        ts_cursor -> where(query, [i], i.inserted_at > ^ts_cursor)
       end
     end)
+  end
+
+  defp filter_by_inserted_at(query, params) do
+    query
+    |> filter_by_created_before(params)
+    |> filter_by_created_after(params)
+  end
+
+  defp filter_by_created_after(query, %{created_after: created_after}),
+    do: where(query, [i], i.inserted_at >= ^created_after)
+
+  defp filter_by_created_after(query, _params), do: query
+
+  defp filter_by_created_before(query, %{created_before: created_before}),
+    do: where(query, [i], i.inserted_at < ^created_before)
+
+  defp filter_by_created_before(query, _params), do: query
+
+  defp format_pattern(pattern) do
+    pattern
+    |> String.replace("\\", "\\\\")
+    |> String.replace("%", "\\%")
+    |> String.replace("*", "%")
   end
 end

@@ -42,6 +42,11 @@ defmodule LightningWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :authenticated_api do
+    plug :accepts, ["json"]
+    plug LightningWeb.Plugs.ApiAuth
+  end
+
   scope "/", LightningWeb do
     pipe_through [:browser]
 
@@ -86,13 +91,14 @@ defmodule LightningWeb.Router do
 
   ## Collections
   scope "/collections", LightningWeb do
-    pipe_through [:api]
+    pipe_through [:authenticated_api]
 
     get "/:name", CollectionsController, :stream
     get "/:name/:key", CollectionsController, :get
     put "/:name/:key", CollectionsController, :put
     post "/:name", CollectionsController, :put_all
     delete "/:name/:key", CollectionsController, :delete
+    delete "/:name", CollectionsController, :delete_all
   end
 
   ## Authentication routes
