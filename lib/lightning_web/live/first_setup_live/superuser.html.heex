@@ -19,77 +19,44 @@
     >
       <div class="grid grid-cols-6 gap-6">
         <div class="col-span-3">
-          <%= Phoenix.HTML.Form.label(f, :first_name,
-            class: "block text-sm font-medium text-secondary-700"
-          ) %>
-          <%= Phoenix.HTML.Form.text_input(f, :first_name,
-            autocomplete: "given-name",
-            autofocus: "true",
-            class: "block w-full rounded-md",
-            phx_debounce: "blur"
-          ) %>
-          <.old_error field={f[:first_name]} />
+          <.input type="text" field={f[:first_name]} label="First name" />
         </div>
       </div>
       <div class="grid grid-cols-6 gap-6">
         <div class="col-span-3">
-          <%= Phoenix.HTML.Form.label(f, :last_name,
-            class: "block text-sm font-medium text-secondary-700"
-          ) %>
-          <%= Phoenix.HTML.Form.text_input(f, :last_name,
-            autocomplete: "family-name",
-            class: "block w-full rounded-md",
-            phx_debounce: "blur"
-          ) %>
-          <.old_error field={f[:last_name]} />
+          <.input type="text" field={f[:last_name]} label="Last name" />
         </div>
       </div>
       <div class="grid grid-cols-6 gap-6">
         <div class="col-span-3">
-          <%= Phoenix.HTML.Form.label(f, :email,
-            class: "block text-sm font-medium text-secondary-700"
-          ) %>
-          <%= Phoenix.HTML.Form.email_input(f, :email,
-            autocomplete: "email",
-            class: "block w-full rounded-md",
-            phx_debounce: "blur"
-          ) %>
-          <.old_error field={f[:email]} />
+          <.input type="email" field={f[:email]} label="Email" />
         </div>
       </div>
 
       <div class="grid grid-cols-6 gap-6">
         <div class="col-span-3">
-          <%= Phoenix.HTML.Form.label(f, :password,
-            class: "block text-sm font-medium text-secondary-700"
-          ) %>
-          <%= Phoenix.HTML.Form.password_input(f, :password,
-            value: Phoenix.HTML.Form.input_value(f, :password),
-            autocomplete: "new-password",
-            class: "block w-full rounded-md"
-          ) %>
-          <.old_error field={f[:password]} />
+          <.input type="password" field={f[:password]} label="Password" />
         </div>
       </div>
 
       <div class="grid grid-cols-6 gap-6">
         <div class="col-span-3">
-          <%= Phoenix.HTML.Form.label(f, :password_confirmation,
-            class: "block text-sm font-medium text-secondary-700"
-          ) %>
-          <%= Phoenix.HTML.Form.password_input(f, :password_confirmation,
-            value: Phoenix.HTML.Form.input_value(f, :password_confirmation),
-            autocomplete: "new-password",
-            class: "block w-full rounded-md"
-          ) %>
-          <.old_error field={f[:password_confirmation]} />
+          <.input
+            type="password"
+            field={f[:password_confirmation]}
+            label="Password confirmation"
+          />
         </div>
       </div>
 
       <div class="mt-2">
-        <.submit_button phx-disable-with="Saving" disabled={!@changeset.valid?}>
+        <.button
+          type="submit"
+          phx-disable-with="Saving"
+          disabled={!@changeset.valid?}
+        >
           Save
-        </.submit_button>
+        </.button>
       </div>
     </.form>
   </LayoutComponents.centered>

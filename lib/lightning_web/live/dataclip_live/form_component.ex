@@ -4,8 +4,6 @@ defmodule LightningWeb.DataclipLive.FormComponent do
   """
   use LightningWeb, :live_component
 
-  import LightningWeb.Components.Form
-
   alias Lightning.Invocation
 
   @impl true

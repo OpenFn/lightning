@@ -417,7 +417,11 @@ defmodule LightningWeb.Components.NewInputs do
   attr :value, :any
   attr :errors, :list, default: []
   attr :class, :string, default: ""
-  attr :rest, :global
+
+  attr :rest, :global,
+    include:
+      ~w(accept autocomplete capture cols disabled form list max maxlength min minlength
+              multiple pattern placeholder readonly required rows size step)
 
   def input_element(assigns) do
     ~H"""
@@ -445,6 +449,7 @@ defmodule LightningWeb.Components.NewInputs do
   """
   attr :for, :any, default: nil
   attr :class, :any, default: ""
+  attr :rest, :global
   slot :inner_block, required: true
 
   def label(assigns) do
@@ -452,6 +457,7 @@ defmodule LightningWeb.Components.NewInputs do
     <label
       for={@for}
       class={["block text-sm font-semibold leading-6 text-slate-800", @class]}
+      {@rest}
     >
       <%= render_slot(@inner_block) %>
     </label>

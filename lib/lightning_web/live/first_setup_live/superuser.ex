@@ -7,7 +7,6 @@ defmodule LightningWeb.FirstSetupLive.Superuser do
   It has only one action: `:show`
   """
   use LightningWeb, :live_view
-  import LightningWeb.Components.Form
 
   alias Lightning.Accounts
 

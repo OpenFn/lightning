@@ -85,11 +85,11 @@
             </div>
             <div class="grid grid-cols gap-6">
               <div class="md:col-span-2">
-                <Form.text_field
-                  form={f}
+                <.input
+                  type="text"
+                  field={f[:name]}
                   disabled={!@can_edit_project}
                   label="Project name"
-                  field={:name}
                 />
               </div>
             </div>
@@ -98,12 +98,12 @@
             </div>
             <div class="grid grid-cols gap-6">
               <div class="md:col-span-2">
-                <Form.text_area
-                  class="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
-                  form={f}
+                <.input
+                  type="textarea"
+                  field={f[:description]}
                   disabled={!@can_edit_project}
                   label="Project description"
-                  field={:description}
+                  class="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
                 />
                 <small class="mt-2 block text-xs text-gray-600">
                   A short description of a project [max 240 characters]
@@ -115,12 +115,13 @@
             </div>
             <div class="grid grid-cols gap-6">
               <div class="md:col-span-2">
-                <Form.submit_button
+                <.button
+                  id="project-identity-submit-btn"
+                  type="submit"
                   disabled={!(@project_changeset.valid? and @can_edit_project)}
-                  phx-disable-with="Saving"
                 >
                   Save
-                </Form.submit_button>
+                </.button>
               </div>
             </div>
           </.form>
@@ -1016,7 +1017,9 @@
                 >
                   Cancel
                 </button>
-                <Form.submit_button
+                <.button
+                  id="input-output-retention-period-submit-btn"
+                  type="submit"
                   disabled={
                     not @project_changeset.valid? or
                       not @can_edit_data_retention
@@ -1024,7 +1027,7 @@
                   phx-disable-with="Saving"
                 >
                   Save
-                </Form.submit_button>
+                </.button>
               </div>
             </div>
           </.form>

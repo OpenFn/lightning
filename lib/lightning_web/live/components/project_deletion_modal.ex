@@ -94,70 +94,79 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
   @impl true
   def render(assigns) do
     ~H"""
-    <div id={"project-#{@id}"}>
-      <PetalComponents.Modal.modal
-        max_width="sm"
-        title="Delete project"
-        close_modal_target={@myself}
+    <.modal id={"project-#{@id}"} show={true} width="max-w-md">
+      <:title>
+        <div class="flex justify-between">
+          <span class="font-bold">
+            Delete project
+          </span>
+
+          <button
+            phx-click="close_modal"
+            phx-target={@myself}
+            type="button"
+            class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
+            aria-label={gettext("close")}
+          >
+            <span class="sr-only">Close</span>
+            <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
+          </button>
+        </div>
+      </:title>
+      <.form
+        :let={f}
+        for={@deletion_changeset}
+        phx-change="validate"
+        phx-submit="delete"
+        phx-target={@myself}
+        id="scheduled_deletion_form"
       >
-        <.p>
-          Enter the project name to confirm it's deletion
-        </.p>
-        <div class="hidden sm:block" aria-hidden="true">
-          <div class="py-2"></div>
-        </div>
-        <.p>
-          Deleting this project will disable access
-          for all users, and disable all jobs in the project. The whole project will be deleted
-          along with all workflows and work order history, <%= human_readable_grace_period() %>.
-        </.p>
-        <div class="hidden sm:block" aria-hidden="true">
-          <div class="py-2"></div>
-        </div>
-        <.form
-          :let={f}
-          for={@deletion_changeset}
-          phx-change="validate"
-          phx-submit="delete"
-          phx-target={@myself}
-          id="scheduled_deletion_form"
-        >
+        <div class="px-6">
+          <p>
+            Enter the project name to confirm it's deletion
+          </p>
+
+          <p class="mt-2">
+            Deleting this project will disable access
+            for all users, and disable all jobs in the project. The whole project will be deleted
+            along with all workflows and work order history, <%= human_readable_grace_period() %>.
+          </p>
+
           <div class="grid grid-cols-12 gap-12">
             <div class="col-span-8">
-              <%= Phoenix.HTML.Form.label(f, :name_confirmation, "Project name",
-                class: "block text-sm font-medium text-secondary-700"
-              ) %>
-              <%= Phoenix.HTML.Form.text_input(f, :name_confirmation,
-                class: "block w-full rounded-md",
-                phx_debounce: "blur"
-              ) %>
-              <.old_error field={f[:name_confirmation]} />
+              <.input
+                type="text"
+                field={f[:name_confirmation]}
+                label="Project name"
+                phx-debounce="blur"
+              />
             </div>
           </div>
-
-          <%= Phoenix.HTML.Form.hidden_input(f, :id) %>
-          <%= Phoenix.HTML.Form.hidden_input(f, :name) %>
-
-          <div class="hidden sm:block" aria-hidden="true">
-            <div class="py-5"></div>
-          </div>
-          <div class="flex justify-end">
-            <PetalComponents.Button.button
-              label="Cancel"
-              phx-click={PetalComponents.Modal.hide_modal(@myself)}
-            /> &nbsp;
-            <LightningWeb.Components.Common.button
-              type="submit"
-              color="red"
-              phx-disable-with="Deleting..."
-              disabled={!@deletion_changeset.valid?}
-            >
-              Delete project
-            </LightningWeb.Components.Common.button>
-          </div>
-        </.form>
-      </PetalComponents.Modal.modal>
-    </div>
+          <.input type="hidden" field={f[:id]} />
+          <.input type="hidden" field={f[:name]} />
+        </div>
+        <div class="flex-grow bg-gray-100 h-0.5 my-[16px]"></div>
+        <div class="flex flex-row-reverse gap-4 mx-6">
+          <.button
+            id={"project-#{@id}_confirm_button"}
+            type="submit"
+            color_class="bg-red-600 hover:bg-red-700 text-white"
+            phx-disable-with="Deleting..."
+            disabled={!@deletion_changeset.valid?}
+          >
+            Delete project
+          </.button>
+          <button
+            type="button"
+            phx-click="close_modal"
+            phx-target={@myself}
+            class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+        </div>
+      </.form>
+    </.modal>
     """
   end
 end

@@ -148,14 +148,12 @@
                       <!-- Active: "bg-gray-100 text-gray-900", Not Active: "text-gray-700" -->
                       <%= for status <- @statuses do %>
                         <div class="px-4 py-1 text-gray-700 text-sm">
-                          <%= Phoenix.HTML.Form.checkbox(
-                            f,
-                            status.id,
-                            checked: checked?(@filters_changeset, status.id),
-                            class:
-                              "mb-1 mr-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                          ) %>
-                          <%= Phoenix.HTML.Form.label(f, status.label) %>
+                          <.input
+                            type="checkbox"
+                            field={f[status.id]}
+                            checked={checked?(@filters_changeset, status.id)}
+                            label={status.label}
+                          />
                         </div>
                       <% end %>
                     </div>
@@ -242,21 +240,17 @@
                             </div>
                             <div class="px-4 py-1 text-gray-700 text-sm">
                               <label>Received After</label>
-                              <%= Phoenix.HTML.Form.datetime_local_input(
-                                f,
-                                :wo_date_after,
-                                class:
-                                  "mt-1 block rounded-md border-secondary-300 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50 text-sm"
-                              ) %>
+                              <.input
+                                type="datetime-local"
+                                field={f[:wo_date_after]}
+                              />
                             </div>
                             <div class="px-4 py-1 text-gray-700 text-sm">
                               <label>Received Before</label>
-                              <%= Phoenix.HTML.Form.datetime_local_input(
-                                f,
-                                :wo_date_before,
-                                class:
-                                  "mt-1 block rounded-md border-secondary-300 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50 text-sm"
-                              ) %>
+                              <.input
+                                type="datetime-local"
+                                field={f[:wo_date_before]}
+                              />
                             </div>
                           </div>
                         </div>
@@ -286,21 +280,17 @@
                             </div>
                             <div class="px-4 py-1 text-gray-700 text-sm">
                               <label>Activity After</label>
-                              <%= Phoenix.HTML.Form.datetime_local_input(
-                                f,
-                                :date_after,
-                                class:
-                                  "mt-1 block rounded-md border-secondary-300 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50 text-sm"
-                              ) %>
+                              <.input
+                                type="datetime-local"
+                                field={f[:date_after]}
+                              />
                             </div>
                             <div class="px-4 py-1 text-gray-700 text-sm">
                               <label>Activity Before</label>
-                              <%= Phoenix.HTML.Form.datetime_local_input(
-                                f,
-                                :date_before,
-                                class:
-                                  "mt-1 block rounded-md border-secondary-300 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50 text-sm"
-                              ) %>
+                              <.input
+                                type="datetime-local"
+                                field={f[:date_before]}
+                              />
                             </div>
                           </div>
                         </div>
@@ -324,10 +314,13 @@
                 class="inline"
                 phx-submit="apply_filters"
               >
-                <%= Phoenix.HTML.Form.hidden_input(f, :workflow_id,
-                  id: "workflow_chip_#{workflow_id}",
-                  value: nil
-                ) %>
+                <.input
+                  id={"workflow_chip_#{workflow_id}"}
+                  type="hidden"
+                  field={f[:workflow_id]}
+                  value={nil}
+                />
+
                 <button
                   type="submit"
                   class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"
@@ -355,10 +348,12 @@
                 class="inline"
                 phx-submit="apply_filters"
               >
-                <%= Phoenix.HTML.Form.hidden_input(f, status.id,
-                  id: "workorder_status_chip_#{status.id}",
-                  value: false
-                ) %>
+                <.input
+                  id={"workorder_status_chip_#{status.id}"}
+                  type="hidden"
+                  field={f[status.id]}
+                  value={false}
+                />
                 <button
                   type="submit"
                   class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"
@@ -390,14 +385,19 @@
                 class="inline"
                 phx-submit="apply_filters"
               >
-                <%= Phoenix.HTML.Form.hidden_input(f, :wo_date_after,
-                  id: "workorder_after_date_received_chip",
-                  value: nil
-                ) %>
-                <%= Phoenix.HTML.Form.hidden_input(f, :wo_date_before,
-                  id: "workorder_before_date_received_chip",
-                  value: nil
-                ) %>
+                <.input
+                  id="workorder_after_date_received_chip"
+                  type="hidden"
+                  field={f[:wo_date_after]}
+                  value={nil}
+                />
+
+                <.input
+                  id="workorder_before_date_received_chip"
+                  type="hidden"
+                  field={f[:wo_date_before]}
+                  value={nil}
+                />
                 <button
                   type="submit"
                   class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"
@@ -429,14 +429,20 @@
                 class="inline"
                 phx-submit="apply_filters"
               >
-                <%= Phoenix.HTML.Form.hidden_input(f, :date_after,
-                  id: "workorder_after_last_activity_chip",
-                  value: nil
-                ) %>
-                <%= Phoenix.HTML.Form.hidden_input(f, :date_before,
-                  id: "workorder_before_last_activity_chip",
-                  value: nil
-                ) %>
+                <.input
+                  id="workorder_after_last_activity_chip"
+                  type="hidden"
+                  field={f[:date_after]}
+                  value={nil}
+                />
+
+                <.input
+                  id="workorder_before_last_activity_chip"
+                  type="hidden"
+                  field={f[:date_before]}
+                  value={nil}
+                />
+
                 <button
                   type="submit"
                   class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"
@@ -485,14 +491,16 @@
                       <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                         <Heroicons.magnifying_glass class="h-5 w-5 text-gray-400" />
                       </div>
-                      <%= Phoenix.HTML.Form.text_input(f, :search_term,
-                        class:
-                          "block w-full rounded-md border-0 py-1.5 pl-10 pr-20 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6",
-                        placeholder: "Search",
-                        phx_focus:
+                      <.input
+                        type="text"
+                        field={f[:search_term]}
+                        placeholder="Search"
+                        phx-focus={
                           JS.show(to: "#clear_search_button")
                           |> JS.show(to: "#search_button_group")
-                      ) %>
+                        }
+                      />
+
                       <div class="absolute inset-y-0 right-0 flex items-center pr-3">
                         <a
                           href="#"
@@ -521,14 +529,22 @@
                       id="run-toggle-form"
                     >
                       <%= for {search_field, index} <- Enum.with_index(@search_fields) do %>
-                        <%= Phoenix.HTML.Form.checkbox(f, search_field.id,
-                          class: "absolute invisible",
-                          style: "left: -9999px"
-                        ) %>
-                        <%= Phoenix.HTML.Form.label f, search_field.id, id: "search-button-#{search_field.label}",
-                          role: "button", phx_hook: "Tooltip", data: [placement: "top"],
-                          class: "relative inline-flex items-center",
-                          aria_label: search_field.label do %>
+                        <.input
+                          type="checkbox"
+                          field={f[search_field.id]}
+                          class="absolute invisible"
+                          style="left: -9999px"
+                        />
+
+                        <.label
+                          for={f[search_field.id].id}
+                          id={"search-button-#{search_field.label}"}
+                          class="relative inline-flex items-center"
+                          role="button"
+                          phx-hook="Tooltip"
+                          data-placement="top"
+                          aria-label={search_field.label}
+                        >
                           <div class={"#{if(index == 0, do: "rounded-l-md", else: "-ml-px")} #{if(index == 2, do: "rounded-r-md")}
                            ring-1 ring-inset ring-gray-300 px-3 py-2 text-sm
                            font-semibold text-gray-500 hover:bg-gray-100 focus:z-10
@@ -539,7 +555,7 @@
                               class={"h-4 w-4 inline-block align-middle #{checked?(@filters_changeset, search_field.id) && "text-indigo-800"}"}
                             />
                           </div>
-                        <% end %>
+                        </.label>
                       <% end %>
                     </.form>
                     <button
@@ -592,12 +608,13 @@
                           }
                           phx-change="toggle_all_selections"
                         >
-                          <%= Phoenix.HTML.Form.checkbox(f, :all_selections,
-                            id: "select_all",
-                            phx_hook: "CheckboxIndeterminate",
-                            class:
-                              "left-4 top-1/2  h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 #{if partially_selected?(@selected_work_orders, @page.entries), do: "indeterminate"}"
-                          ) %>
+                          <.input
+                            type="checkbox"
+                            field={f[:all_selections]}
+                            id="select_all"
+                            phx-hook="CheckboxIndeterminate"
+                            class={"left-4 top-1/2  h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 #{if partially_selected?(@selected_work_orders, @page.entries), do: "indeterminate"}"}
+                          />
                         </.form>
                       </div>
 

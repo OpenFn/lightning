@@ -596,7 +596,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       Path.wildcard("#{schemas_path}/*.json")
       |> Enum.map(fn p ->
         name = p |> Path.basename() |> String.replace(".json", "")
-        {name |> Phoenix.HTML.Form.humanize(), name, nil, nil}
+        {Phoenix.Naming.humanize(name), name, nil, nil}
       end)
 
     schemas_options

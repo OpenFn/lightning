@@ -37,10 +37,11 @@ defmodule LightningWeb.CredentialLive.RawBodyComponent do
         </span>
       </div>
       <div>
-        <.old_error field={@form[:body]} />
-        <%= Phoenix.HTML.Form.textarea(@form, :body,
-          class: "rounded-md w-full font-mono bg-slate-800 text-slate-100"
-        ) %>
+        <.input
+          type="textarea"
+          field={@form[:body]}
+          class="rounded-md w-full font-mono bg-slate-800 text-slate-100"
+        />
       </div>
     </fieldset>
     """

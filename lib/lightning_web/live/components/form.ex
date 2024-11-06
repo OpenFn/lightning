@@ -72,16 +72,18 @@ defmodule LightningWeb.Components.Form do
     <div class="flex">
       <div class="shrink">
         <%= if @label do %>
-          <%= Phoenix.HTML.Form.label(@form, @field, @label, class: @label_classes) %>
+          <%= PhoenixHTMLHelpers.Form.label(@form, @field, @label,
+            class: @label_classes
+          ) %>
         <% else %>
-          <%= Phoenix.HTML.Form.label(@form, @field, class: @label_classes) %>
+          <%= PhoenixHTMLHelpers.Form.label(@form, @field, class: @label_classes) %>
         <% end %>
       </div>
       <div class="grow text-right">
         <.old_error field={@form[@field]} />
       </div>
     </div>
-    <%= Phoenix.HTML.Form.textarea(@form, @field, @opts) %>
+    <%= PhoenixHTMLHelpers.Form.textarea(@form, @field, @opts) %>
     """
   end
 
@@ -135,14 +137,14 @@ defmodule LightningWeb.Components.Form do
 
     ~H"""
     <%= if @label do %>
-      <%= Phoenix.HTML.Form.label(@form, @id, @label, class: @label_classes) %>
+      <%= PhoenixHTMLHelpers.Form.label(@form, @id, @label, class: @label_classes) %>
     <% else %>
-      <%= Phoenix.HTML.Form.label(@form, @id, class: @label_classes) %>
+      <%= PhoenixHTMLHelpers.Form.label(@form, @id, class: @label_classes) %>
     <% end %>
     <%= if assigns[:inner_block], do: render_slot(@inner_block) %>
 
     <LightningWeb.CoreComponents.old_error field={@form[@id]} />
-    <%= Phoenix.HTML.Form.password_input(
+    <%= PhoenixHTMLHelpers.Form.password_input(
       @form,
       @id,
       @opts ++ [class: @input_classes, required: @required, value: @value]
@@ -184,9 +186,9 @@ defmodule LightningWeb.Components.Form do
       |> assign_new(:required, fn -> false end)
 
     ~H"""
-    <%= Phoenix.HTML.Form.label(@form, @id, class: @label_classes) %>
+    <%= PhoenixHTMLHelpers.Form.label(@form, @id, class: @label_classes) %>
     <LightningWeb.CoreComponents.old_error field={@form[@id]} />
-    <%= Phoenix.HTML.Form.email_input(@form, @id,
+    <%= PhoenixHTMLHelpers.Form.email_input(@form, @id,
       class: @input_classes,
       required: @required
     ) %>
@@ -272,12 +274,12 @@ defmodule LightningWeb.Components.Form do
 
     ~H"""
     <%= if @label do %>
-      <%= Phoenix.HTML.Form.label(@form, @field, @label, class: @label_classes) %>
+      <%= PhoenixHTMLHelpers.Form.label(@form, @field, @label, class: @label_classes) %>
     <% else %>
-      <%= Phoenix.HTML.Form.label(@form, @field, class: @label_classes) %>
+      <%= PhoenixHTMLHelpers.Form.label(@form, @field, class: @label_classes) %>
     <% end %>
     <%= if assigns[:inner_block], do: render_slot(@inner_block) %>
-    <%= Phoenix.HTML.Form.text_input(
+    <%= PhoenixHTMLHelpers.Form.text_input(
       @form,
       @field,
       @opts ++ [class: @input_classes, required: @required, disabled: @disabled]
@@ -340,11 +342,11 @@ defmodule LightningWeb.Components.Form do
     ~H"""
     <div class="flex items-start">
       <div class="flex items-center h-5">
-        <%= Phoenix.HTML.Form.checkbox(@form, @field, @checkbox_opts) %>
+        <%= PhoenixHTMLHelpers.Form.checkbox(@form, @field, @checkbox_opts) %>
       </div>
       <div class="ml-3 text-sm">
         <LightningWeb.CoreComponents.old_error field={@form[@field]} />
-        <%= Phoenix.HTML.Form.label(@form, @label || @field, @label_opts) %>
+        <%= PhoenixHTMLHelpers.Form.label(@form, @label || @field, @label_opts) %>
         <%= render_slot(@inner_block) %>
       </div>
     </div>
@@ -373,13 +375,13 @@ defmodule LightningWeb.Components.Form do
         |> Keyword.put_new(:class, label_classes)
       end)
       |> assign_new(:title, fn %{field: field} ->
-        Phoenix.HTML.Form.humanize(field)
+        PhoenixHTMLHelpers.Form.humanize(field)
       end)
 
     ~H"""
     <%= if assigns[:tooltip] do %>
       <div class="flex flex-row items-end">
-        <%= Phoenix.HTML.Form.label(@form, @field, @opts) do %>
+        <%= PhoenixHTMLHelpers.Form.label(@form, @field, @opts) do %>
           <div class="flex items-center">
             <%= @title %>
             <img :if={@logo} src={@logo} class="w-3 h-3 ml-1" />
@@ -391,7 +393,7 @@ defmodule LightningWeb.Components.Form do
         />
       </div>
     <% else %>
-      <%= Phoenix.HTML.Form.label(@form, @field, @opts) do %>
+      <%= PhoenixHTMLHelpers.Form.label(@form, @field, @opts) do %>
         <div class="flex items-center">
           <%= @title %>
           <img :if={@logo} src={@logo} class="w-3 h-3 ml-1" />
@@ -431,7 +433,7 @@ defmodule LightningWeb.Components.Form do
     assigns = assign(assigns, opts: opts)
 
     ~H"""
-    <%= Phoenix.HTML.Form.select(@form, @name, @values, @opts) %>
+    <%= PhoenixHTMLHelpers.Form.select(@form, @name, @values, @opts) %>
     """
   end
 
