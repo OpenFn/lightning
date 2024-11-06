@@ -81,16 +81,16 @@ defmodule Lightning.WorkflowsTest do
       %{id: snapshot_id} = Snapshot |> Repo.one!()
 
       assert %{
-        event: "snapshot_created",
-        item_type: "workflow",
-        item_id: ^workflow_id,
-        actor_id: ^user_id,
-        changes: %{
-          after: %{
-            "snapshot_id" => ^snapshot_id
-          }
-        }
-      } = Audit |> Repo.one()
+               event: "snapshot_created",
+               item_type: "workflow",
+               item_id: ^workflow_id,
+               actor_id: ^user_id,
+               changes: %{
+                 after: %{
+                   "snapshot_id" => ^snapshot_id
+                 }
+               }
+             } = Audit |> Repo.one()
     end
 
     test "save_workflow/1 with attrs audits creation of the snapshot" do
@@ -103,16 +103,16 @@ defmodule Lightning.WorkflowsTest do
       %{id: snapshot_id} = Snapshot |> Repo.one!()
 
       assert %{
-        event: "snapshot_created",
-        item_type: "workflow",
-        item_id: ^workflow_id,
-        actor_id: ^user_id,
-        changes: %{
-          after: %{
-            "snapshot_id" => ^snapshot_id
-          }
-        }
-      } = Audit |> Repo.one()
+               event: "snapshot_created",
+               item_type: "workflow",
+               item_id: ^workflow_id,
+               actor_id: ^user_id,
+               changes: %{
+                 after: %{
+                   "snapshot_id" => ^snapshot_id
+                 }
+               }
+             } = Audit |> Repo.one()
     end
 
     test "save_workflow/1 publishes event for updated Kafka triggers" do
@@ -235,7 +235,7 @@ defmodule Lightning.WorkflowsTest do
       user = insert(:user)
 
       assert {:ok, workflow} =
-        Lightning.Workflows.save_workflow(valid_attrs, user)
+               Lightning.Workflows.save_workflow(valid_attrs, user)
 
       assert workflow.name == "some-name"
 
@@ -257,7 +257,7 @@ defmodule Lightning.WorkflowsTest do
       }
 
       assert {:ok, workflow} =
-        Lightning.Workflows.save_workflow(valid_attrs, user)
+               Lightning.Workflows.save_workflow(valid_attrs, user)
 
       edge = workflow.edges |> List.first()
       assert edge.source_trigger_id == trigger_id
@@ -337,7 +337,7 @@ defmodule Lightning.WorkflowsTest do
       valid_attrs = params_with_assocs(:workflow, jobs: [params_for(:job)])
 
       assert {:ok, workflow} =
-        Workflows.save_workflow(valid_attrs, insert(:user))
+               Workflows.save_workflow(valid_attrs, insert(:user))
 
       assert workflow.lock_version == 1
 
@@ -506,10 +506,10 @@ defmodule Lightning.WorkflowsTest do
     } do
       workflow = insert(:workflow)
 
-      assert {:ok, _} = 
-        :edge
-        |> params_for(workflow: workflow)
-        |> Workflows.create_edge(user)
+      assert {:ok, _} =
+               :edge
+               |> params_for(workflow: workflow)
+               |> Workflows.create_edge(user)
 
       assert %{actor_id: ^user_id} = Audit |> Repo.one!()
     end

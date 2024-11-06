@@ -160,11 +160,14 @@ defmodule Lightning.JobsTest do
 
     test "new job without a workflow", %{actor: actor} do
       assert_raise Postgrex.Error, fn ->
-        Jobs.create_job(%{
-          body: "some body",
-          name: "some name",
-          adaptor: "@openfn/language-common"
-        }, actor)
+        Jobs.create_job(
+          %{
+            body: "some body",
+            name: "some name",
+            adaptor: "@openfn/language-common"
+          },
+          actor
+        )
       end
     end
 
@@ -181,14 +184,17 @@ defmodule Lightning.JobsTest do
         )
 
       assert {:ok, %Job{} = job} =
-               Jobs.create_job(%{
-                 body: "some body",
-                 name: "some name",
-                 trigger: %{type: "webhook", comment: "foo"},
-                 adaptor: "@openfn/language-common",
-                 project_credential_id: project_credential.id,
-                 workflow_id: insert(:workflow).id
-               }, actor)
+               Jobs.create_job(
+                 %{
+                   body: "some body",
+                   name: "some name",
+                   trigger: %{type: "webhook", comment: "foo"},
+                   adaptor: "@openfn/language-common",
+                   project_credential_id: project_credential.id,
+                   workflow_id: insert(:workflow).id
+                 },
+                 actor
+               )
 
       job = Repo.preload(job, :credential)
 
@@ -248,28 +254,35 @@ defmodule Lightning.JobsTest do
       assert %{event: "snapshot_created", actor_id: ^actor_id} = audit
     end
 
-    test "with an upstream job returns a job with the upstream job's workflow_id", %{
-      actor: actor
-    } do
+    test "with an upstream job returns a job with the upstream job's workflow_id",
+         %{
+           actor: actor
+         } do
       workflow = insert(:workflow)
 
       {:ok, %Job{} = upstream_job} =
-        Jobs.create_job(%{
-          name: "job 1",
-          body: "some body",
-          adaptor: "@openfn/language-common",
-          trigger: %{type: "webhook"},
-          workflow_id: workflow.id
-        }, actor)
+        Jobs.create_job(
+          %{
+            name: "job 1",
+            body: "some body",
+            adaptor: "@openfn/language-common",
+            trigger: %{type: "webhook"},
+            workflow_id: workflow.id
+          },
+          actor
+        )
 
       {:ok, %Job{} = job} =
-        Jobs.create_job(%{
-          name: "job 2",
-          body: "some body",
-          adaptor: "@openfn/language-common",
-          trigger: %{type: "on_job_success", upstream_job_id: upstream_job.id},
-          workflow_id: workflow.id
-        }, actor)
+        Jobs.create_job(
+          %{
+            name: "job 2",
+            body: "some body",
+            adaptor: "@openfn/language-common",
+            trigger: %{type: "on_job_success", upstream_job_id: upstream_job.id},
+            workflow_id: workflow.id
+          },
+          actor
+        )
 
       assert job.workflow_id == upstream_job.workflow_id
     end
@@ -278,24 +291,30 @@ defmodule Lightning.JobsTest do
       workflow = insert(:workflow)
 
       {:ok, %Job{} = upstream_job} =
-        Jobs.create_job(%{
-          body: "some body",
-          name: "job 1",
-          adaptor: "@openfn/language-common",
-          trigger: %{type: "webhook"},
-          workflow_id: workflow.id
-        }, actor)
+        Jobs.create_job(
+          %{
+            body: "some body",
+            name: "job 1",
+            adaptor: "@openfn/language-common",
+            trigger: %{type: "webhook"},
+            workflow_id: workflow.id
+          },
+          actor
+        )
 
       count_workflows_before = Workflows.list_workflows() |> Enum.count()
 
       {:ok, %Job{} = _job} =
-        Jobs.create_job(%{
-          body: "some body",
-          name: "job 2",
-          adaptor: "@openfn/language-common",
-          trigger: %{type: "on_job_success", upstream_job_id: upstream_job.id},
-          workflow_id: workflow.id
-        }, actor)
+        Jobs.create_job(
+          %{
+            body: "some body",
+            name: "job 2",
+            adaptor: "@openfn/language-common",
+            trigger: %{type: "on_job_success", upstream_job_id: upstream_job.id},
+            workflow_id: workflow.id
+          },
+          actor
+        )
 
       assert count_workflows_before == Workflows.list_workflows() |> Enum.count()
     end

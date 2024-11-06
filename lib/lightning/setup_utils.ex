@@ -199,10 +199,13 @@ defmodule Lightning.SetupUtils do
     user = get_most_privileged_user!(project)
 
     {:ok, workflow} =
-      Workflows.save_workflow(%{
-        name: "Sample Workflow",
-        project_id: project.id
-      }, user)
+      Workflows.save_workflow(
+        %{
+          name: "Sample Workflow",
+          project_id: project.id
+        },
+        user
+      )
 
     {:ok, source_trigger} =
       Workflows.build_trigger(%{
@@ -211,51 +214,63 @@ defmodule Lightning.SetupUtils do
       })
 
     {:ok, job_1} =
-      Jobs.create_job(%{
-        name: "Job 1 - Check if age is over 18 months",
-        body: """
-          fn(state => {
-            if (state.data.age_in_months > 18) {
-              console.log('Eligible for program.');
-              return state;
-            }
-            else { throw 'Error, patient ineligible.' }
-          });
-        """,
-        adaptor: "@openfn/language-common@latest",
-        workflow_id: workflow.id
-      }, user)
+      Jobs.create_job(
+        %{
+          name: "Job 1 - Check if age is over 18 months",
+          body: """
+            fn(state => {
+              if (state.data.age_in_months > 18) {
+                console.log('Eligible for program.');
+                return state;
+              }
+              else { throw 'Error, patient ineligible.' }
+            });
+          """,
+          adaptor: "@openfn/language-common@latest",
+          workflow_id: workflow.id
+        },
+        user
+      )
 
     {:ok, _root_edge} =
-      Workflows.create_edge(%{
-        workflow_id: workflow.id,
-        condition_type: :always,
-        source_trigger: source_trigger,
-        target_job: job_1,
-        enabled: true
-      }, user)
+      Workflows.create_edge(
+        %{
+          workflow_id: workflow.id,
+          condition_type: :always,
+          source_trigger: source_trigger,
+          target_job: job_1,
+          enabled: true
+        },
+        user
+      )
 
     {:ok, job_2} =
-      Jobs.create_job(%{
-        name: "Job 2 - Convert data to DHIS2 format",
-        body: """
-          fn(state => {
-            const names = state.data.name.split(' ');
-            return { ...state, names };
-          });
-        """,
-        adaptor: "@openfn/language-common@latest",
-        workflow_id: workflow.id
-      }, user)
+      Jobs.create_job(
+        %{
+          name: "Job 2 - Convert data to DHIS2 format",
+          body: """
+            fn(state => {
+              const names = state.data.name.split(' ');
+              return { ...state, names };
+            });
+          """,
+          adaptor: "@openfn/language-common@latest",
+          workflow_id: workflow.id
+        },
+        user
+      )
 
     {:ok, _job_2_edge} =
-      Workflows.create_edge(%{
-        workflow_id: workflow.id,
-        source_job: job_1,
-        condition_type: :on_job_success,
-        target_job: job_2,
-        enabled: true
-      }, user)
+      Workflows.create_edge(
+        %{
+          workflow_id: workflow.id,
+          source_job: job_1,
+          condition_type: :on_job_success,
+          target_job: job_2,
+          enabled: true
+        },
+        user
+      )
 
     dhis2_credential = create_dhis2_credential(user)
 
@@ -288,13 +303,16 @@ defmodule Lightning.SetupUtils do
       |> Repo.insert()
 
     {:ok, _job_3_edge} =
-      Workflows.create_edge(%{
-        workflow_id: workflow.id,
-        source_job: job_2,
-        condition_type: :on_job_success,
-        target_job: job_3,
-        enabled: true
-      }, user)
+      Workflows.create_edge(
+        %{
+          workflow_id: workflow.id,
+          source_job: job_2,
+          condition_type: :on_job_success,
+          target_job: job_3,
+          enabled: true
+        },
+        user
+      )
 
     %{
       project: project,
@@ -317,10 +335,13 @@ defmodule Lightning.SetupUtils do
     user = get_most_privileged_user!(openhie_project)
 
     {:ok, openhie_workflow} =
-      Workflows.save_workflow(%{
-        name: "OpenHIE Workflow",
-        project_id: openhie_project.id
-      }, user)
+      Workflows.save_workflow(
+        %{
+          name: "OpenHIE Workflow",
+          project_id: openhie_project.id
+        },
+        user
+      )
 
     {:ok, openhie_trigger} =
       Workflows.build_trigger(%{
@@ -331,91 +352,115 @@ defmodule Lightning.SetupUtils do
       })
 
     {:ok, fhir_standard_data} =
-      Jobs.create_job(%{
-        name: "Transform data to FHIR standard",
-        # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
-        inserted_at: NaiveDateTime.utc_now(),
-        body: """
-        fn(state => state);
-        """,
-        adaptor: "@openfn/language-http@latest",
-        workflow_id: openhie_workflow.id
-      }, user)
+      Jobs.create_job(
+        %{
+          name: "Transform data to FHIR standard",
+          # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
+          inserted_at: NaiveDateTime.utc_now(),
+          body: """
+          fn(state => state);
+          """,
+          adaptor: "@openfn/language-http@latest",
+          workflow_id: openhie_workflow.id
+        },
+        user
+      )
 
     {:ok, _openhie_root_edge} =
-      Workflows.create_edge(%{
-        workflow_id: openhie_workflow.id,
-        condition_type: :always,
-        source_trigger: openhie_trigger,
-        target_job: fhir_standard_data,
-        enabled: true
-      }, user)
+      Workflows.create_edge(
+        %{
+          workflow_id: openhie_workflow.id,
+          condition_type: :always,
+          source_trigger: openhie_trigger,
+          target_job: fhir_standard_data,
+          enabled: true
+        },
+        user
+      )
 
     {:ok, send_to_openhim} =
-      Jobs.create_job(%{
-        name: "Send to OpenHIM to route to SHR",
-        # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
-        inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.add(1, :second),
-        body: """
-        fn(state => state);
-        """,
-        adaptor: "@openfn/language-http@latest",
-        # enabled: true,
-        workflow_id: openhie_workflow.id
-      }, user)
+      Jobs.create_job(
+        %{
+          name: "Send to OpenHIM to route to SHR",
+          # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
+          inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.add(1, :second),
+          body: """
+          fn(state => state);
+          """,
+          adaptor: "@openfn/language-http@latest",
+          # enabled: true,
+          workflow_id: openhie_workflow.id
+        },
+        user
+      )
 
     {:ok, notify_upload_successful} =
-      Jobs.create_job(%{
-        name: "Notify CHW upload successful",
-        # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
-        inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.add(2, :second),
-        body: """
-        fn(state => state);
-        """,
-        adaptor: "@openfn/language-http@latest",
-        # enabled: true,
-        workflow_id: openhie_workflow.id
-      }, user)
+      Jobs.create_job(
+        %{
+          name: "Notify CHW upload successful",
+          # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
+          inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.add(2, :second),
+          body: """
+          fn(state => state);
+          """,
+          adaptor: "@openfn/language-http@latest",
+          # enabled: true,
+          workflow_id: openhie_workflow.id
+        },
+        user
+      )
 
     {:ok, notify_upload_failed} =
-      Jobs.create_job(%{
-        name: "Notify CHW upload failed",
-        # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
-        inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.add(3, :second),
-        body: """
-        fn(state => state);
-        """,
-        adaptor: "@openfn/language-http@latest",
-        # enabled: true,
-        workflow_id: openhie_workflow.id
-      }, user)
+      Jobs.create_job(
+        %{
+          name: "Notify CHW upload failed",
+          # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
+          inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.add(3, :second),
+          body: """
+          fn(state => state);
+          """,
+          adaptor: "@openfn/language-http@latest",
+          # enabled: true,
+          workflow_id: openhie_workflow.id
+        },
+        user
+      )
 
     {:ok, _send_to_openhim_edge} =
-      Workflows.create_edge(%{
-        workflow_id: openhie_workflow.id,
-        condition_type: :on_job_success,
-        target_job_id: send_to_openhim.id,
-        source_job_id: fhir_standard_data.id,
-        enabled: true
-      }, user)
+      Workflows.create_edge(
+        %{
+          workflow_id: openhie_workflow.id,
+          condition_type: :on_job_success,
+          target_job_id: send_to_openhim.id,
+          source_job_id: fhir_standard_data.id,
+          enabled: true
+        },
+        user
+      )
 
     {:ok, _success_upload} =
-      Workflows.create_edge(%{
-        workflow_id: openhie_workflow.id,
-        condition_type: :on_job_success,
-        target_job_id: notify_upload_successful.id,
-        source_job_id: send_to_openhim.id,
-        enabled: true
-      }, user)
+      Workflows.create_edge(
+        %{
+          workflow_id: openhie_workflow.id,
+          condition_type: :on_job_success,
+          target_job_id: notify_upload_successful.id,
+          source_job_id: send_to_openhim.id,
+          enabled: true
+        },
+        user
+      )
 
     {:ok, _failed_upload} =
-      Workflows.create_edge(%{
-        workflow_id: openhie_workflow.id,
-        condition_type: :on_job_failure,
-        target_job_id: notify_upload_failed.id,
-        source_job_id: send_to_openhim.id,
-        enabled: true
-      }, user)
+      Workflows.create_edge(
+        %{
+          workflow_id: openhie_workflow.id,
+          condition_type: :on_job_failure,
+          target_job_id: notify_upload_failed.id,
+          source_job_id: send_to_openhim.id,
+          enabled: true
+        },
+        user
+      )
 
     http_body = %{
       "formId" => "early_enrollment",
@@ -541,10 +586,13 @@ defmodule Lightning.SetupUtils do
     user = get_most_privileged_user!(project)
 
     {:ok, dhis2_workflow} =
-      Workflows.save_workflow(%{
-        name: "DHIS2 to Sheets",
-        project_id: project.id
-      }, user)
+      Workflows.save_workflow(
+        %{
+          name: "DHIS2 to Sheets",
+          project_id: project.id
+        },
+        user
+      )
 
     dhis2_credential = create_dhis2_credential(user)
 
@@ -574,35 +622,44 @@ defmodule Lightning.SetupUtils do
       })
 
     {:ok, _root_edge} =
-      Workflows.create_edge(%{
-        workflow_id: dhis2_workflow.id,
-        condition_type: :always,
-        source_trigger: dhis_trigger,
-        target_job: get_dhis2_data,
-        enabled: true
-      }, user)
+      Workflows.create_edge(
+        %{
+          workflow_id: dhis2_workflow.id,
+          condition_type: :always,
+          source_trigger: dhis_trigger,
+          target_job: get_dhis2_data,
+          enabled: true
+        },
+        user
+      )
 
     {:ok, upload_to_google_sheet} =
-      Jobs.create_job(%{
-        name: "Upload to Google Sheet",
-        # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
-        inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.add(1, :second),
-        body: """
-        fn(state => state);
-        """,
-        adaptor: "@openfn/language-http@latest",
-        # enabled: true,
-        workflow_id: dhis2_workflow.id
-      }, user)
+      Jobs.create_job(
+        %{
+          name: "Upload to Google Sheet",
+          # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
+          inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.add(1, :second),
+          body: """
+          fn(state => state);
+          """,
+          adaptor: "@openfn/language-http@latest",
+          # enabled: true,
+          workflow_id: dhis2_workflow.id
+        },
+        user
+      )
 
     {:ok, _success_upload} =
-      Workflows.create_edge(%{
-        workflow_id: dhis2_workflow.id,
-        condition_type: :on_job_success,
-        target_job_id: upload_to_google_sheet.id,
-        source_job_id: get_dhis2_data.id,
-        enabled: true
-      }, user)
+      Workflows.create_edge(
+        %{
+          workflow_id: dhis2_workflow.id,
+          condition_type: :on_job_success,
+          target_job_id: upload_to_google_sheet.id,
+          source_job_id: get_dhis2_data.id,
+          enabled: true
+        },
+        user
+      )
 
     input_dataclip =
       create_dataclip(%{

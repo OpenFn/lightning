@@ -64,7 +64,8 @@ defmodule LightningWeb.WorkflowLive.Helpers do
           {:error, message}
 
         :ok ->
-          with {:ok, workflow} <- maybe_save_workflow(workflow_or_changeset, actor),
+          with {:ok, workflow} <-
+                 maybe_save_workflow(workflow_or_changeset, actor),
                {:ok, manual} <- build_manual_workorder(params, workflow, opts),
                {:ok, workorder} <- WorkOrders.create_for(manual) do
             {:ok, %{workorder: workorder, workflow: workflow}}

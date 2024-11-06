@@ -1621,7 +1621,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
              selected_job: selected_job,
              created_by: current_user
            ) do
-
       %{runs: [run]} = workorder
 
       Runs.subscribe(run)

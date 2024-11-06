@@ -6,7 +6,7 @@ defmodule Lightning.Workflows.Audit do
     repo: Lightning.Repo,
     item: "workflow",
     events: [
-      "snapshot_created",
+      "snapshot_created"
     ]
 
   def snapshot_created(workflow_id, snapshot_id, actor) do

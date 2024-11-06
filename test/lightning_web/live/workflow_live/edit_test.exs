@@ -235,7 +235,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
     @tag role: :editor
     test "auditing snapshot creation", %{
-      conn: conn, project: project, user: %{id: user_id}
+      conn: conn,
+      project: project,
+      user: %{id: user_id}
     } do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/new?m=settings")
@@ -281,10 +283,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       audit_event = Lightning.Repo.one(audit_query)
 
       assert %{
-        actor_id: ^user_id,
-        item_id: ^workflow_id,
-        item_type: "workflow"
-      } = audit_event
+               actor_id: ^user_id,
+               item_id: ^workflow_id,
+               item_type: "workflow"
+             } = audit_event
     end
 
     @tag role: :viewer
@@ -656,7 +658,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       snapshots_query = from s in Snapshot, order_by: [desc: s.inserted_at]
 
       [%{id: latest_snapshot_id} | [_, _]] =
-          Lightning.Repo.all(snapshots_query)
+        Lightning.Repo.all(snapshots_query)
 
       audit_query =
         from a in Audit,
@@ -667,21 +669,22 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       audit_event = Lightning.Repo.one(audit_query)
 
       assert %{
-        actor_id: ^user_id,
-        item_id: ^workflow_id,
-        item_type: "workflow",
-        changes: %{
-          after: %{"snapshot_id" => ^latest_snapshot_id}
-        }
-      } = audit_event
+               actor_id: ^user_id,
+               item_id: ^workflow_id,
+               item_type: "workflow",
+               changes: %{
+                 after: %{"snapshot_id" => ^latest_snapshot_id}
+               }
+             } = audit_event
     end
 
-    test "Inspector renders run thru their snapshots and allows switching to the latest versions for editing", %{
-      conn: conn,
-      project: project,
-      user: user,
-      workflow: workflow
-    } do
+    test "Inspector renders run thru their snapshots and allows switching to the latest versions for editing",
+         %{
+           conn: conn,
+           project: project,
+           user: user,
+           workflow: workflow
+         } do
       {:ok, earliest_snapshot} = Snapshot.get_or_create_latest_for(workflow)
 
       run_1 =
