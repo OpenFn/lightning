@@ -179,7 +179,7 @@ defmodule LightningWeb.ProjectLiveTest do
       {:ok, delete_project_modal, html} =
         live(conn, ~p"/projects/#{project.id}/settings/delete")
 
-      assert html =~ "Enter the project name to confirm it&#39;s deletion"
+      assert html =~ "Enter the project name to confirm deletion"
 
       {:ok, _delete_project_modal, html} =
         delete_project_modal
@@ -260,7 +260,7 @@ defmodule LightningWeb.ProjectLiveTest do
                project: %{name_confirmation: "invalid name"}
              )
              |> render_change() =~
-               "Enter the project name to confirm it&#39;s deletion"
+               "Enter the project name to confirm deletion"
 
       {:ok, _index_live, html} =
         form_live

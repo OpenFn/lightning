@@ -97,19 +97,19 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
     <div id={"project-#{@id}"}>
       <PetalComponents.Modal.modal
         max_width="sm"
-        title="Delete project"
+        title={"Delete #{@project.name}"}
         close_modal_target={@myself}
       >
         <.p>
-          Enter the project name to confirm it's deletion
+          Deleting this project will disable access
+          for all users, and disable all jobs in the project. The whole project will be deleted
+          along with all workflows and work order history, <%= human_readable_grace_period() %>.
         </.p>
         <div class="hidden sm:block" aria-hidden="true">
           <div class="py-2"></div>
         </div>
         <.p>
-          Deleting this project will disable access
-          for all users, and disable all jobs in the project. The whole project will be deleted
-          along with all workflows and work order history, <%= human_readable_grace_period() %>.
+          Enter the project name to confirm deletion: <b><%= @project.name %></b>
         </.p>
         <div class="hidden sm:block" aria-hidden="true">
           <div class="py-2"></div>
