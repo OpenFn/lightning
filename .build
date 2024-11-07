@@ -32,6 +32,9 @@ Lightning.BuildMacros.html
 Lightning.CLI.Result.html
 Lightning.CLI.html
 Lightning.ChangesetUtils.html
+Lightning.Collections.Collection.html
+Lightning.Collections.Item.html
+Lightning.Collections.html
 Lightning.Config.Bootstrap.html
 Lightning.Config.Utils.html
 Lightning.Config.html
@@ -85,6 +88,7 @@ Lightning.MetadataService.html
 Lightning.Name.html
 Lightning.OauthClients.html
 Lightning.ObanManager.html
+Lightning.Policies.Collections.html
 Lightning.Policies.Dataclips.html
 Lightning.Policies.Exports.html
 Lightning.Policies.Permissions.html
@@ -141,6 +145,7 @@ Lightning.Storage.Local.html
 Lightning.Storage.ProjectFileDefinition.html
 Lightning.Storage.html
 Lightning.TaskWorker.html
+Lightning.Tokens.html
 Lightning.UnixDateTime.html
 Lightning.UsageTracking.Client.html
 Lightning.UsageTracking.DailyReportConfiguration.html
@@ -158,6 +163,7 @@ Lightning.UsageTracking.UserQueries.html
 Lightning.UsageTracking.UserService.html
 Lightning.UsageTracking.WorkflowMetricsService.html
 Lightning.UsageTracking.html
+Lightning.Utils.Crypto.html
 Lightning.Validators.html
 Lightning.Vault.html
 Lightning.VersionControl.Events.html
@@ -175,7 +181,7 @@ Lightning.WorkOrders.RetryManyWorkOrdersJob.html
 Lightning.WorkOrders.SearchParams.html
 Lightning.WorkOrders.html
 Lightning.Workers.RunToken.html
-Lightning.Workers.Token.html
+Lightning.Workers.WorkerToken.html
 Lightning.Workers.html
 Lightning.Workflows.Edge.html
 Lightning.Workflows.Job.html
@@ -209,6 +215,11 @@ LightningWeb.BackupCodesLive.Index.html
 LightningWeb.ChangesetJSON.html
 LightningWeb.ChangesetView.html
 LightningWeb.ChannelHelpers.html
+LightningWeb.CollectionLive.CollectionCreationModal.html
+LightningWeb.CollectionLive.Components.html
+LightningWeb.CollectionLive.Index.html
+LightningWeb.CollectionsController.ChunkAcc.html
+LightningWeb.CollectionsController.html
 LightningWeb.Components.Loaders.html
 LightningWeb.Components.Menu.html
 LightningWeb.Components.Modal.html
@@ -233,7 +244,6 @@ LightningWeb.DataclipLive.FormComponent.html
 LightningWeb.DataclipLive.Show.html
 LightningWeb.DownloadsController.html
 LightningWeb.Endpoint.html
-LightningWeb.ErrorView.html
 LightningWeb.FallbackController.html
 LightningWeb.FirstSetupLive.Superuser.html
 LightningWeb.FormHelpers.html
@@ -254,6 +264,7 @@ LightningWeb.OidcController.html
 LightningWeb.PageView.html
 LightningWeb.Pagination.html
 LightningWeb.PlugConfigs.html
+LightningWeb.Plugs.ApiAuth.html
 LightningWeb.Plugs.BlockRoutes.html
 LightningWeb.Plugs.FirstSetup.html
 LightningWeb.Plugs.Redirect.html
@@ -343,8 +354,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-ECD8D651.js
-dist/sidebar_items-3AB68145.js
+dist/search_data-5F5D7C01.js
+dist/sidebar_items-60D1326D.js
 index.html
 provisioning.html
 readme.html

@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="project" content="Lightning v2.9.15">
+
+    <title>Lightning.Collections — Lightning v2.9.15</title>
+    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
+
+
+    <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
+    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
+    <script src="dist/sidebar_items-60D1326D.js"></script>
+
+      <script src="docs_config.js"></script>
+
+    <script async src="dist/html-J2ASZTQE.js"></script>
+
+
+  </head>
+  <body data-type="modules" class="page-module">
+    <script>
+
+      try {
+        var settings = JSON.parse(localStorage.getItem('ex_doc:settings') || '{}');
+
+        if (settings.theme === 'dark' ||
+           ((settings.theme === 'system' || settings.theme == null) &&
+             window.matchMedia('(prefers-color-scheme: dark)').matches)
+           ) {
+          document.body.classList.add('dark')
+        }
+      } catch (error) { }
+    </script>
+
+<div class="main">
+
+<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+  <form class="sidebar-search" action="search.html">
+    <label class="search-label">
+      <span class="sr-only">Search documentation of Lightning</span>
+      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+    </label>
+    <button type="submit" class="search-button" aria-label="Submit Search">
+      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
+    </button>
+    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+      <i class="ri-close-line ri-lg" title="Cancel search"></i>
+    </button>
+  </form>
+
+  <div class="autocomplete">
+    <div class="autocomplete-results">
+    </div>
+  </div>
+
+  <div class="sidebar-header">
+
+      <a href="https://openfn.github.io/Lightning">
+        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
+      </a>
+
+    <div class="sidebar-projectDetails">
+      <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+Lightning
+      </a>
+      <div class="sidebar-projectVersion" translate="no">
+        v2.9.15
+      </div>
+    </div>
+    <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
+      <li>
+        <button id="extras-list-tab-button" role="tab" data-type="extras" aria-controls="extras-tab-panel" aria-selected="true" tabindex="0">
+Pages
+        </button>
+      </li>
+
+        <li>
+          <button id="modules-list-tab-button" role="tab" data-type="modules" aria-controls="modules-tab-panel" aria-selected="false" tabindex="-1">
+            Modules
+          </button>
+        </li>
+
+
+        <li>
+          <button id="tasks-list-tab-button" role="tab" data-type="tasks" aria-controls="tasks-tab-panel" aria-selected="false" tabindex="-1">
+            <span translate="no">Mix</span> Tasks
+          </button>
+        </li>
+
+    </ul>
+  </div>
+
+  <div id="extras-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="extras-list-tab-button">
+    <ul id="extras-full-list" class="full-list"></ul>
+  </div>
+
+    <div id="modules-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="modules-list-tab-button" hidden>
+      <ul id="modules-full-list" class="full-list"></ul>
+    </div>
+
+
+    <div id="tasks-tab-panel" class="sidebar-tabpanel" role="tabpanel" aria-labelledby="tasks-list-tab-button" hidden>
+      <ul id="tasks-full-list" class="full-list"></ul>
+    </div>
+
+</nav>
+
+<main class="content">
+  <output role="status" id="toast"></output>
+  <div class="content-outer">
+    <div id="content" class="content-inner">
+
+<h1>
+<button class="icon-action display-settings">
+  <i class="ri-settings-3-line"></i>
+  <span class="sr-only">Settings</span>
+</button>
+
+
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L1" title="View Source" class="icon-action" rel="help">
+      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+      <span class="sr-only">View Source</span>
+    </a>
+
+  <span translate="no">Lightning.Collections</span> 
+  <small class="app-vsn" translate="no">(Lightning v2.9.15)</small>
+
+</h1>
+
+
+  <section id="moduledoc">
+<p>Access to collections of unique key-value pairs shared across multiple workflows.</p>
+  </section>
+
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#create_collection/1" translate="no">create_collection(attrs)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Creates a new collection with the given attributes.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#create_collection/2" translate="no">create_collection(project_id, name)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#delete/2" translate="no">delete(map, key)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#delete_all/2" translate="no">delete_all(map, key_pattern \\ nil)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#delete_collection/1" translate="no">delete_collection(collection_id)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get/2" translate="no">get(map, key)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_collection/1" translate="no">get_collection(name)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#list_collections/1" translate="no">list_collections(opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns the list of collections with optional ordering and preloading.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#put/3" translate="no">put(map, key, value)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#put_all/2" translate="no">put_all(map, kv_list)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#stream_all/2" translate="no">stream_all(map, params \\ %{})</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#stream_match/3" translate="no">stream_match(map, pattern, params \\ %{})</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#update_collection/2" translate="no">update_collection(collection, attrs)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Updates an existing collection with the given attributes.</p></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+    <div class="functions-list">
+<section class="detail" id="create_collection/1">
+
+  <div class="detail-header">
+    <a href="#create_collection/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">create_collection(attrs)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L71" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> create_collection(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) ::
+  {:ok, <a href="Lightning.Collections.Collection.html#t:t/0">Lightning.Collections.Collection.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
+
+      </div>
+
+<p>Creates a new collection with the given attributes.</p><h2 id="create_collection/1-parameters" class="section-heading">
+  <a href="#create_collection/1-parameters" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Parameters</span>
+</h2>
+<ul><li><code class="inline">attrs</code>: A map of attributes to create the collection.</li></ul><h2 id="create_collection/1-examples" class="section-heading">
+  <a href="#create_collection/1-examples" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Examples</span>
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_collection</span><span class="p" data-group-id="7934014892-1">(</span><span class="p" data-group-id="7934014892-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;New Collection&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Description here&quot;</span><span class="p" data-group-id="7934014892-2">}</span><span class="p" data-group-id="7934014892-1">)</span><span class="w">
+</span><span class="p" data-group-id="7934014892-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7934014892-4">%</span><span class="nc" data-group-id="7934014892-4">Collection</span><span class="p" data-group-id="7934014892-4">{</span><span class="p" data-group-id="7934014892-4">}</span><span class="p" data-group-id="7934014892-3">}</span><span class="w">
+
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_collection</span><span class="p" data-group-id="7934014892-5">(</span><span class="p" data-group-id="7934014892-6">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="no">nil</span><span class="p" data-group-id="7934014892-6">}</span><span class="p" data-group-id="7934014892-5">)</span><span class="w">
+</span><span class="p" data-group-id="7934014892-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7934014892-8">%</span><span class="nc" data-group-id="7934014892-8">Ecto.Changeset</span><span class="p" data-group-id="7934014892-8">{</span><span class="p" data-group-id="7934014892-8">}</span><span class="p" data-group-id="7934014892-7">}</span></code></pre><h2 id="create_collection/1-returns" class="section-heading">
+  <a href="#create_collection/1-returns" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Returns</span>
+</h2>
+<ul><li><code class="inline">{:ok, %Collection{}}</code> on success.</li><li><code class="inline">{:error, %Ecto.Changeset{}}</code> on failure due to validation errors.</li></ul>
+  </section>
+</section>
+<section class="detail" id="create_collection/2">
+
+  <div class="detail-header">
+    <a href="#create_collection/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">create_collection(project_id, name)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L108" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> create_collection(<a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) ::
+  {:ok, <a href="Lightning.Collections.Collection.html#t:t/0">Lightning.Collections.Collection.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="delete/2">
+
+  <div class="detail-header">
+    <a href="#delete/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">delete(map, key)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L201" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> delete(<a href="Lightning.Collections.Collection.html#t:t/0">Lightning.Collections.Collection.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) ::
+  :ok | {:error, :not_found}</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="delete_all/2">
+
+    <span id="delete_all/1"></span>
+
+  <div class="detail-header">
+    <a href="#delete_all/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">delete_all(map, key_pattern \\ nil)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L212" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> delete_all(<a href="Lightning.Collections.Collection.html#t:t/0">Lightning.Collections.Collection.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil) ::
+  {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()}</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="delete_collection/1">
+
+  <div class="detail-header">
+    <a href="#delete_collection/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">delete_collection(collection_id)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L118" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> delete_collection(<a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) ::
+  {:ok, <a href="Lightning.Collections.Collection.html#t:t/0">Lightning.Collections.Collection.t</a>()}
+  | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}
+  | {:error, :not_found}</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="get/2">
+
+  <div class="detail-header">
+    <a href="#get/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">get(map, key)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L126" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> get(<a href="Lightning.Collections.Collection.html#t:t/0">Lightning.Collections.Collection.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) ::
+  <a href="Lightning.Collections.Item.html#t:t/0">Lightning.Collections.Item.t</a>() | nil</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="get_collection/1">
+
+  <div class="detail-header">
+    <a href="#get_collection/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">get_collection(name)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L42" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> get_collection(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) ::
+  {:ok, <a href="Lightning.Collections.Collection.html#t:t/0">Lightning.Collections.Collection.t</a>()} | {:error, :not_found}</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="list_collections/1">
+
+    <span id="list_collections/0"></span>
+
+  <div class="detail-header">
+    <a href="#list_collections/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">list_collections(opts \\ [])</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L33" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> list_collections(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()) :: [<a href="Lightning.Collections.Collection.html#t:t/0">Lightning.Collections.Collection.t</a>()]</pre>
+
+      </div>
+
+<p>Returns the list of collections with optional ordering and preloading.</p><h2 id="list_collections/1-parameters" class="section-heading">
+  <a href="#list_collections/1-parameters" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Parameters</span>
+</h2>
+<ul><li><code class="inline">opts</code>: A keyword list of options.<ul><li><code class="inline">:order_by</code> (optional): The field by which to order the results. Default is <code class="inline">[asc: :name]</code>.</li><li><code class="inline">:preload</code> (optional): A list of associations to preload. Default is <code class="inline">[:project]</code>.</li></ul></li></ul><h2 id="list_collections/1-examples" class="section-heading">
+  <a href="#list_collections/1-examples" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Examples</span>
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_collections</span><span class="p" data-group-id="1586530693-1">(</span><span class="p" data-group-id="1586530693-1">)</span><span class="w">
+</span><span class="p" data-group-id="1586530693-2">[</span><span class="p" data-group-id="1586530693-3">%</span><span class="nc" data-group-id="1586530693-3">Collection</span><span class="p" data-group-id="1586530693-3">{</span><span class="p" data-group-id="1586530693-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="1586530693-2">]</span><span class="w">
+
+</span><span class="gp unselectable">iex&gt; </span><span class="n">list_collections</span><span class="p" data-group-id="1586530693-4">(</span><span class="ss">order_by</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1586530693-5">[</span><span class="ss">asc</span><span class="p">:</span><span class="w"> </span><span class="ss">:inserted_at</span><span class="p" data-group-id="1586530693-5">]</span><span class="p">,</span><span class="w"> </span><span class="ss">preload</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1586530693-6">[</span><span class="ss">:project</span><span class="p">,</span><span class="w"> </span><span class="ss">:user</span><span class="p" data-group-id="1586530693-6">]</span><span class="p" data-group-id="1586530693-4">)</span><span class="w">
+</span><span class="p" data-group-id="1586530693-7">[</span><span class="p" data-group-id="1586530693-8">%</span><span class="nc" data-group-id="1586530693-8">Collection</span><span class="p" data-group-id="1586530693-8">{</span><span class="p" data-group-id="1586530693-8">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="1586530693-7">]</span></code></pre><h2 id="list_collections/1-returns" class="section-heading">
+  <a href="#list_collections/1-returns" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Returns</span>
+</h2>
+<ul><li>A list of <code class="inline">%Collection{}</code> structs, preloaded and ordered as specified.</li></ul>
+  </section>
+</section>
+<section class="detail" id="put/3">
+
+  <div class="detail-header">
+    <a href="#put/3" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">put(map, key, value)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L162" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> put(<a href="Lightning.Collections.Collection.html#t:t/0">Lightning.Collections.Collection.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) ::
+  :ok | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="put_all/2">
+
+  <div class="detail-header">
+    <a href="#put_all/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">put_all(map, kv_list)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L176" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> put_all(<a href="Lightning.Collections.Collection.html#t:t/0">Lightning.Collections.Collection.t</a>(), [{<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()}]) ::
+  {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()} | :error</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="stream_all/2">
+
+    <span id="stream_all/1"></span>
+
+  <div class="detail-header">
+    <a href="#stream_all/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">stream_all(map, params \\ %{})</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L131" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> stream_all(<a href="Lightning.Collections.Collection.html#t:t/0">Lightning.Collections.Collection.t</a>(), <a href="https://hexdocs.pm/elixir/Enum.html#t:t/0">Enum.t</a>()) :: <a href="https://hexdocs.pm/elixir/Enum.html#t:t/0">Enum.t</a>()</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="stream_match/3">
+
+    <span id="stream_match/2"></span>
+
+  <div class="detail-header">
+    <a href="#stream_match/3" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">stream_match(map, pattern, params \\ %{})</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L143" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> stream_match(<a href="Lightning.Collections.Collection.html#t:t/0">Lightning.Collections.Collection.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/Enum.html#t:t/0">Enum.t</a>()) ::
+  <a href="https://hexdocs.pm/elixir/Enum.html#t:t/0">Enum.t</a>()</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="update_collection/2">
+
+  <div class="detail-header">
+    <a href="#update_collection/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">update_collection(collection, attrs)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L100" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> update_collection(<a href="Lightning.Collections.Collection.html#t:t/0">Lightning.Collections.Collection.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) ::
+  {:ok, <a href="Lightning.Collections.Collection.html#t:t/0">Lightning.Collections.Collection.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
+
+      </div>
+
+<p>Updates an existing collection with the given attributes.</p><h2 id="update_collection/2-parameters" class="section-heading">
+  <a href="#update_collection/2-parameters" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Parameters</span>
+</h2>
+<ul><li><code class="inline">collection</code>: The existing <code class="inline">%Collection{}</code> struct to update.</li><li><code class="inline">attrs</code>: A map of attributes to update the collection.</li></ul><h2 id="update_collection/2-examples" class="section-heading">
+  <a href="#update_collection/2-examples" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Examples</span>
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_collection</span><span class="p" data-group-id="2549585722-1">(</span><span class="n">collection</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2549585722-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Updated Name&quot;</span><span class="p" data-group-id="2549585722-2">}</span><span class="p" data-group-id="2549585722-1">)</span><span class="w">
+</span><span class="p" data-group-id="2549585722-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2549585722-4">%</span><span class="nc" data-group-id="2549585722-4">Collection</span><span class="p" data-group-id="2549585722-4">{</span><span class="p" data-group-id="2549585722-4">}</span><span class="p" data-group-id="2549585722-3">}</span><span class="w">
+
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_collection</span><span class="p" data-group-id="2549585722-5">(</span><span class="n">collection</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2549585722-6">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="no">nil</span><span class="p" data-group-id="2549585722-6">}</span><span class="p" data-group-id="2549585722-5">)</span><span class="w">
+</span><span class="p" data-group-id="2549585722-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2549585722-8">%</span><span class="nc" data-group-id="2549585722-8">Ecto.Changeset</span><span class="p" data-group-id="2549585722-8">{</span><span class="p" data-group-id="2549585722-8">}</span><span class="p" data-group-id="2549585722-7">}</span></code></pre><h2 id="update_collection/2-returns" class="section-heading">
+  <a href="#update_collection/2-returns" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Returns</span>
+</h2>
+<ul><li><code class="inline">{:ok, %Collection{}}</code> on success.</li><li><code class="inline">{:error, %Ecto.Changeset{}}</code> on failure due to validation errors.</li></ul>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+      <footer class="footer">
+        <p>
+
+          <span class="line">
+            <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+              Search HexDocs
+            </button>
+
+              <a href="Lightning.epub" title="ePub version">
+                Download ePub version
+              </a>
+
+          </span>
+        </p>
+
+        <p class="built-using">
+          Built using
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
+
+            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+        </p>
+      </footer>
+    </div>
+  </div>
+</main>
+</div>
+
+
+  </body>
+</html>

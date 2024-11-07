@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-3AB68145.js"></script>
+    <script src="dist/sidebar_items-60D1326D.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -477,7 +477,7 @@ Pages
 
       </div>
 
-<p>Get a run by id.</p><p>Optionally preload associations by passing a list of atoms to <code class="inline">:include</code>.</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Runs</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="6363977191-1">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6363977191-2">[</span><span class="ss">:workflow</span><span class="p" data-group-id="6363977191-2">]</span><span class="p" data-group-id="6363977191-1">)</span></code></pre>
+<p>Get a run by id.</p><p>Optionally preload associations by passing a list of atoms to <code class="inline">:include</code>.</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Runs</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="6299322922-1">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6299322922-2">[</span><span class="ss">:workflow</span><span class="p" data-group-id="6299322922-2">]</span><span class="p" data-group-id="6299322922-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_credential/2">
@@ -616,7 +616,7 @@ for more details.</p>
     </a>
     <h1 class="signature" translate="no">get_log_lines(run, order \\ :asc)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L336" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L337" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -638,7 +638,7 @@ for more details.</p>
     </a>
     <h1 class="signature" translate="no">get_project_id_for_run(run)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L330" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L331" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -647,6 +647,12 @@ for more details.</p>
   </div>
 
   <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> get_project_id_for_run(<a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil</pre>
+
+      </div>
 
 
   </section>

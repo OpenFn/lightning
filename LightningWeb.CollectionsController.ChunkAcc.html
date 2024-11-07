@@ -7,13 +7,13 @@
     <meta name="generator" content="ExDoc v0.30.9">
     <meta name="project" content="Lightning v2.9.15">
 
-    <title>LightningWeb.ErrorView — Lightning v2.9.15</title>
+    <title>LightningWeb.CollectionsController.ChunkAcc — Lightning v2.9.15</title>
     <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-3AB68145.js"></script>
+    <script src="dist/sidebar_items-60D1326D.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -125,154 +125,18 @@ Pages
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/views/error_view.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/collections_controller.ex#L132" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">LightningWeb.ErrorView</span> 
+  <span translate="no">LightningWeb.CollectionsController.ChunkAcc</span> 
   <small class="app-vsn" translate="no">(Lightning v2.9.15)</small>
 
 </h1>
 
 
 
-  <section id="summary" class="details-list">
-    <h1 class="section-heading">
-      <a class="hover-link" href="#summary">
-        <i class="ri-link-m" aria-hidden="true"></i>
-      </a>
-      <span class="text">Summary</span>
-    </h1>
-<div class="summary-functions summary">
-  <h2>
-    <a href="#functions">Functions</a>
-  </h2>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#__resource__/0" translate="no">__resource__()</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>The resource name, as an atom, for this view</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#render/2" translate="no">render(template, assigns \\ %{})</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Renders the given template locally.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#template_not_found/2" translate="no">template_not_found(template, assigns)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Callback invoked when no template is found.
-By default it raises but can be customized
-to render a particular template.</p></div>
-
-    </div>
-
-</div>
-
-  </section>
-
-
-  <section id="functions" class="details-list">
-    <h1 class="section-heading">
-      <a class="hover-link" href="#functions">
-        <i class="ri-link-m" aria-hidden="true"></i>
-      </a>
-      <span class="text">Functions</span>
-    </h1>
-    <div class="functions-list">
-<section class="detail" id="__resource__/0">
-
-  <div class="detail-header">
-    <a href="#__resource__/0" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">__resource__()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/views/error_view.ex#L3" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-<p>The resource name, as an atom, for this view</p>
-  </section>
-</section>
-<section class="detail" id="render/2">
-
-    <span id="render/1"></span>
-
-  <div class="detail-header">
-    <a href="#render/2" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">render(template, assigns \\ %{})</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/views/error_view.ex#L3" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-<p>Renders the given template locally.</p>
-  </section>
-</section>
-<section class="detail" id="template_not_found/2">
-
-  <div class="detail-header">
-    <a href="#template_not_found/2" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">template_not_found(template, assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/views/error_view.ex#L73" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> template_not_found(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">no_return</a>()</pre>
-
-      </div>
-
-<p>Callback invoked when no template is found.
-By default it raises but can be customized
-to render a particular template.</p>
-  </section>
-</section>
-
-    </div>
-  </section>
 
       <footer class="footer">
         <p>
