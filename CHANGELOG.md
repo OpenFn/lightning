@@ -17,14 +17,18 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.10.0-rc.0] - 2024-11-07
+
+### Added
+
 - Adds a UI for managing collections
   [#2567](https://github.com/OpenFn/lightning/issues/2567)
 - Introduces collections, a programatic workflow data sharing resource.
   [#2551](https://github.com/OpenFn/lightning/issues/2551)
-
-### Changed
-
-### Fixed
 
 ## [v2.9.15] - 2024-11-06
 
