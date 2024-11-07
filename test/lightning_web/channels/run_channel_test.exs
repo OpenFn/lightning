@@ -13,6 +13,8 @@ defmodule LightningWeb.RunChannelTest do
   import Lightning.BypassHelpers
 
   setup do
+    Mox.verify_on_exit!()
+
     Mox.stub(Lightning.Extensions.MockUsageLimiter, :check_limits, fn _context ->
       :ok
     end)
@@ -57,7 +59,7 @@ defmodule LightningWeb.RunChannelTest do
 
       # A valid token, but nbf hasn't been reached yet
       {:ok, bearer, _} =
-        Workers.Token.generate_and_sign(
+        Workers.WorkerToken.generate_and_sign(
           %{
             "nbf" =>
               DateTime.utc_now()
@@ -82,7 +84,9 @@ defmodule LightningWeb.RunChannelTest do
       other_id = Ecto.UUID.generate()
 
       bearer =
-        Workers.generate_run_token(%{id: id}, run_timeout_ms: 1000)
+        Workers.generate_run_token(%{id: id}, %{
+          run_timeout_ms: 1000
+        })
 
       assert {:error, %{reason: "unauthorized"}} =
                socket
@@ -97,7 +101,7 @@ defmodule LightningWeb.RunChannelTest do
       id = Ecto.UUID.generate()
 
       bearer =
-        Workers.generate_run_token(%{id: id}, run_timeout_ms: 1000)
+        Workers.generate_run_token(%{id: id}, %{run_timeout_ms: 1000})
 
       assert {:error, %{reason: "not_found"}} =
                socket
@@ -233,7 +237,49 @@ defmodule LightningWeb.RunChannelTest do
     test "fetch:plan includes options from usage limiter", context do
       project_id = context.project.id
 
-      extra_options = [run_timeout_ms: 5000, save_dataclips: false]
+      extra_options = [
+        run_timeout_ms: 5000,
+        save_dataclips: false,
+        run_memory_limit_mb: 1024
+      ]
+
+      expected_worker_options = %{
+        run_timeout_ms: 5000,
+        output_dataclips: false,
+        run_memory_limit_mb: 1024
+      }
+
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :get_run_options,
+        fn %{project_id: ^project_id} -> extra_options end
+      )
+
+      %{socket: socket} =
+        merge_setups(context, [
+          :create_run,
+          :create_socket,
+          :join_run_channel
+        ])
+
+      ref = push(socket, "fetch:plan", %{})
+
+      assert_reply ref, :ok, payload
+
+      assert match?(%{"options" => ^expected_worker_options}, payload)
+    end
+
+    @tag project_retention_policy: :erase_all
+    test "fetch:plan does not include options from usage limiter with nil values",
+         context do
+      project_id = context.project.id
+
+      extra_options = [
+        run_timeout_ms: 5000,
+        save_dataclips: false,
+        run_memory_limit_mb: nil
+      ]
+
       expected_worker_options = %{run_timeout_ms: 5000, output_dataclips: false}
 
       Mox.expect(
@@ -294,6 +340,8 @@ defmodule LightningWeb.RunChannelTest do
     @tag project_retention_policy: :erase_all
     test "fetch:dataclip wipes dataclip body for projects with erase_all retention policy",
          %{socket: socket, dataclip: dataclip} do
+      Lightning.Stub.freeze_time(DateTime.utc_now())
+
       ref = push(socket, "fetch:dataclip", %{})
 
       assert_reply ref, :ok, {:binary, _payload}
@@ -301,7 +349,7 @@ defmodule LightningWeb.RunChannelTest do
       %{wiped_at: wiped_at, body: body} = get_dataclip_with_body(dataclip.id)
 
       # dataclip body is cleared
-      assert DateTime.diff(DateTime.utc_now(), wiped_at, :second) < 1
+      assert wiped_at == Lightning.current_time() |> DateTime.truncate(:second)
 
       refute body
     end
@@ -521,6 +569,7 @@ defmodule LightningWeb.RunChannelTest do
         Lightning.Extensions.MockUsageLimiter.get_run_options(%Context{
           project_id: project.id
         })
+        |> Enum.into(%{})
 
       {:ok, _, socket} =
         context.socket
@@ -1201,7 +1250,7 @@ defmodule LightningWeb.RunChannelTest do
           "error_message" => nil
         })
 
-      assert_reply ref, :ok, nil
+      assert_reply ref, :ok, nil, 1_000
 
       assert %{state: :crashed} = Lightning.Repo.reload!(run)
       assert %{state: :crashed} = Lightning.Repo.reload!(work_order)
@@ -1333,7 +1382,7 @@ defmodule LightningWeb.RunChannelTest do
 
   defp create_socket(context) do
     {:ok, bearer, claims} =
-      Workers.Token.generate_and_sign(
+      Workers.WorkerToken.generate_and_sign(
         %{},
         Lightning.Config.worker_token_signer()
       )
@@ -1357,7 +1406,12 @@ defmodule LightningWeb.RunChannelTest do
       |> subscribe_and_join(
         LightningWeb.RunChannel,
         "run:#{run.id}",
-        %{"token" => Workers.generate_run_token(run, run_timeout_ms: 2)}
+        %{
+          "token" =>
+            Workers.generate_run_token(run, %Lightning.Runs.RunOptions{
+              run_timeout_ms: 2
+            })
+        }
       )
 
     %{socket: socket}

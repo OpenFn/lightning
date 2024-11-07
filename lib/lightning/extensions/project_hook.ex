@@ -42,4 +42,8 @@ defmodule Lightning.Extensions.ProjectHook do
 
     Repo.delete(project)
   end
+
+  @spec handle_project_validation(Changeset.t(Project.t())) ::
+          Changeset.t(Project.t())
+  def handle_project_validation(changeset), do: changeset
 end

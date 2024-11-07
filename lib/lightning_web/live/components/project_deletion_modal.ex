@@ -124,7 +124,7 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
         >
           <div class="">
             <p>
-              Enter the project name to confirm it's deletion
+              Enter the project name to confirm deletion: <b><%= @project.name %></b>
             </p>
 
             <p class="my-2">

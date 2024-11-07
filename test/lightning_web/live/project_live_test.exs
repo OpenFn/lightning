@@ -14,8 +14,10 @@ defmodule LightningWeb.ProjectLiveTest do
   import Lightning.GithubHelpers
   import Swoosh.TestAssertions
 
+  import Mock
   import Mox
 
+  alias Lightning.Auditing.Audit
   alias Lightning.Name
   alias Lightning.Projects
   alias Lightning.Repo
@@ -177,7 +179,7 @@ defmodule LightningWeb.ProjectLiveTest do
       {:ok, delete_project_modal, html} =
         live(conn, ~p"/projects/#{project.id}/settings/delete")
 
-      assert html =~ "Enter the project name to confirm it&#39;s deletion"
+      assert html =~ "Enter the project name to confirm deletion"
 
       {:ok, _delete_project_modal, html} =
         delete_project_modal
@@ -258,7 +260,7 @@ defmodule LightningWeb.ProjectLiveTest do
                project: %{name_confirmation: "invalid name"}
              )
              |> render_change() =~
-               "Enter the project name to confirm it&#39;s deletion"
+               "Enter the project name to confirm deletion"
 
       {:ok, _index_live, html} =
         form_live
@@ -1852,6 +1854,71 @@ defmodule LightningWeb.ProjectLiveTest do
     end
 
     @tag role: :admin
+    test "history retention period only shows provided options by the extension",
+         %{
+           conn: conn,
+           project: %{id: project_id} = project
+         } do
+      expected_options = [7, 14]
+      other_options = [30, 90, 180, 365]
+
+      expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :get_data_retention_periods,
+        2,
+        fn %{project_id: ^project_id} ->
+          expected_options
+        end
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#data-storage"
+        )
+
+      html =
+        view
+        |> element("select#retention-settings-form_history_retention_period")
+        |> render()
+
+      for option <- expected_options do
+        assert html =~ "#{option} Days</option>"
+      end
+
+      for option <- other_options do
+        refute html =~ "#{option} Days</option>"
+      end
+    end
+
+    @tag role: :admin
+    test "history retention period is disabled when only one option is provided",
+         %{
+           conn: conn,
+           project: %{id: project_id} = project
+         } do
+      expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :get_data_retention_periods,
+        2,
+        fn %{project_id: ^project_id} ->
+          [7]
+        end
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#data-storage"
+        )
+
+      assert has_element?(
+               view,
+               "#retention-settings-form_history_retention_period:disabled"
+             )
+    end
+
+    @tag role: :admin
     test "dataclip retention period is disabled if the history period has not been set",
          %{
            conn: conn,
@@ -1995,6 +2062,58 @@ defmodule LightningWeb.ProjectLiveTest do
         |> render_submit()
 
       assert html =~ "Project updated successfully"
+    end
+
+    @tag role: :admin
+    test "creates event linked to user when retention period is updated", %{
+      conn: conn,
+      project: project,
+      user: %{id: user_id}
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#data-storage"
+        )
+
+      view
+      |> form("#retention-settings-form",
+        project: %{
+          history_retention_period: 7
+        }
+      )
+      |> render_submit()
+
+      assert %{actor_id: ^user_id} = Audit |> Repo.one!()
+    end
+
+    @tag role: :admin
+    test "indicates if there was a failure due to audit creation", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#data-storage"
+        )
+
+      with_mock(Lightning.Repo, [:passthrough],
+        transaction: fn _multi ->
+          {:error, :anything_other_than_project, %Ecto.Changeset{}, %{}}
+        end
+      ) do
+        html =
+          view
+          |> form("#retention-settings-form",
+            project: %{
+              history_retention_period: 7
+            }
+          )
+          |> render_submit()
+
+        assert html =~ "Changes couldn&#39;t be saved"
+      end
     end
   end
 

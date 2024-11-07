@@ -17,16 +17,64 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.10.0-rc.0] - 2024-11-07
+
+### Added
+
+- Adds a UI for managing collections
+  [#2567](https://github.com/OpenFn/lightning/issues/2567)
+- Introduces collections, a programatic workflow data sharing resource.
+  [#2551](https://github.com/OpenFn/lightning/issues/2551)
+
+## [v2.9.15] - 2024-11-06
+
+### Added
+
+- Added some basic editor usage tips to the docs panel
+  [#2629](https://github.com/OpenFn/lightning/pull/2629)
+- Create audit events when the retention periods for a project's dataclips and
+  history are modified. [#2589](https://github.com/OpenFn/lightning/issues/2589)
+
+### Changed
+
+- The Docs panel in the inspector will now be closed by default
+  [#2629](https://github.com/OpenFn/lightning/pull/2629)
+- JSDoc annotations are removed from code assist descriptions
+  [#2629](https://github.com/OpenFn/lightning/pull/2629)
+- Show project name during delete confirmation
+  [#2634](https://github.com/OpenFn/lightning/pull/2634)
+
+### Fixed
+
+- Fix misaligned margins on collapsed panels in the inspector
+  [#2571](https://github.com/OpenFn/lightning/issues/2571)
+- Fix sorting directions icons in projects table in the project dashboard page
+  [#2631](https://github.com/OpenFn/lightning/pull/2631)
+- Fixed an issue where code-completion prompts don't load properly in the
+  inspector [#2629](https://github.com/OpenFn/lightning/pull/2629)
+- Fixed an issue where namespaces (like http.) don't appear in code assist
+  prompts [#2629](https://github.com/OpenFn/lightning/pull/2629)
+
+## [v2.9.14] - 2024-10-31
+
+### Added
+
 - Additional documentation and notification text relating to the importance of
   alternate storage for Kafka triggers.
   [#2614](https://github.com/OpenFn/lightning/issues/2614)
+- Add support for run memory limit option
+  [#2623](https://github.com/OpenFn/lightning/pull/2623)
 
 ### Changed
 
 - Enforcing MFA for a project can be enforced by the usage limiter
   [#2607](https://github.com/OpenFn/lightning/pull/2607)
-
-### Fixed
+- Add extensions for limiting retention period
+  [#2618](https://github.com/OpenFn/lightning/pull/2618)
 
 ## [v2.9.13] - 2024-10-28
 

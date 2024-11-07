@@ -17,8 +17,6 @@ defmodule Lightning.Projects.Project do
 
   @type retention_policy_type :: :retain_all | :retain_with_errors | :erase_all
 
-  @retention_periods [7, 14, 30, 90, 180, 365]
-
   schema "projects" do
     field :name, :string
     field :description, :string
@@ -45,6 +43,11 @@ defmodule Lightning.Projects.Project do
     timestamps()
   end
 
+  @spec data_retention_options() :: [pos_integer(), ...]
+  def data_retention_options do
+    [7, 14, 30, 90, 180, 365]
+  end
+
   @doc false
   # TODO: schedule_deletion shouldn't be changed by user input
   def changeset(project, attrs) do
@@ -67,9 +70,9 @@ defmodule Lightning.Projects.Project do
     |> validate_length(:description, max: 240)
     |> validate_required([:name])
     |> validate_format(:name, ~r/^[a-z\-\d]+$/)
-    |> validate_inclusion(:history_retention_period, @retention_periods)
-    |> validate_inclusion(:dataclip_retention_period, @retention_periods)
     |> validate_dataclip_retention_period()
+    |> validate_inclusion(:history_retention_period, data_retention_options())
+    |> validate_inclusion(:dataclip_retention_period, data_retention_options())
   end
 
   defp validate_dataclip_retention_period(changeset) do

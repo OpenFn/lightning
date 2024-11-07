@@ -1,6 +1,7 @@
 defmodule LightningWeb.DashboardLive.ProjectCreationModal do
   use LightningWeb, :live_component
 
+  alias Lightning.Helpers
   alias Lightning.Projects
   alias Lightning.Projects.Project
 
@@ -61,7 +62,7 @@ defmodule LightningWeb.DashboardLive.ProjectCreationModal do
   end
 
   defp coerce_raw_name_to_safe_name(%{"raw_name" => raw_name} = params) do
-    new_name = Projects.url_safe_project_name(raw_name)
+    new_name = Helpers.url_safe_name(raw_name)
 
     params |> Map.put("name", new_name)
   end

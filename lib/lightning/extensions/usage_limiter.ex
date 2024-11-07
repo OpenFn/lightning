@@ -20,4 +20,12 @@ defmodule Lightning.Extensions.UsageLimiter do
       run_timeout_ms: Lightning.Config.default_max_run_duration() * 1000
     ]
   end
+
+  @impl true
+  def get_data_retention_periods(_context) do
+    Lightning.Projects.Project.data_retention_options()
+  end
+
+  @impl true
+  def get_data_retention_message(_context), do: nil
 end

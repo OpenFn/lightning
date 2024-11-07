@@ -86,7 +86,9 @@ defmodule LightningWeb.RunWithOptions do
   def options_for_worker(%Lightning.Runs.RunOptions{} = options) do
     %{
       output_dataclips: options.save_dataclips,
-      run_timeout_ms: options.run_timeout_ms
+      run_timeout_ms: options.run_timeout_ms,
+      run_memory_limit_mb: options.run_memory_limit_mb
     }
+    |> Map.reject(fn {_key, val} -> is_nil(val) end)
   end
 end

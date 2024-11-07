@@ -51,6 +51,11 @@ defmodule Lightning.DataCase do
       Lightning.Extensions.AccountHook
     )
 
+    Mox.stub_with(
+      Lightning.Extensions.MockProjectHook,
+      Lightning.Extensions.ProjectHook
+    )
+
     pid =
       Ecto.Adapters.SQL.Sandbox.start_owner!(Lightning.Repo,
         shared: not tags[:async]

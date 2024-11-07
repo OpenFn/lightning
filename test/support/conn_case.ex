@@ -27,6 +27,7 @@ defmodule LightningWeb.ConnCase do
       import Plug.Conn
       import Phoenix.ConnTest
       import LightningWeb.ConnCase
+      import LightningWeb.ConnHelpers
 
       alias LightningWeb.Router.Helpers, as: Routes
       alias Lightning.Repo
@@ -55,6 +56,11 @@ defmodule LightningWeb.ConnCase do
     Mox.stub_with(
       Lightning.Extensions.MockAccountHook,
       Lightning.Extensions.AccountHook
+    )
+
+    Mox.stub_with(
+      Lightning.Extensions.MockProjectHook,
+      Lightning.Extensions.ProjectHook
     )
 
     pid =

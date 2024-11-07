@@ -25,7 +25,7 @@ const settings = persistedSettings
   ? JSON.parse(persistedSettings)
   : {
       [SettingsKeys.ORIENTATION]: 'h',
-      [SettingsKeys.SHOW_PANEL]: true,
+      [SettingsKeys.SHOW_PANEL]: false,
     };
 
 const persistSettings = () =>
