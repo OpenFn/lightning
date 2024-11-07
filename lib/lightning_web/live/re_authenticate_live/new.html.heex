@@ -57,18 +57,16 @@
         >
           <div>
             <%= if @active_option == :password do %>
-              <.input_element
+              <.input
                 type="password"
-                name={f[:password].name}
-                id={f[:password].id}
+                field={f[:password]}
                 required="true"
                 class="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
               />
             <% else %>
-              <.input_element
+              <.input
                 type="text"
-                name={f[:code].name}
-                id={f[:code].id}
+                field={f[:code]}
                 required="true"
                 autocomplete="off"
                 inputmode="numeric"

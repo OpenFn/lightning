@@ -84,104 +84,34 @@ defmodule LightningWeb.Components.UserDeletionModal do
   @impl true
   def render(%{delete_now?: true, has_activity_in_projects?: true} = assigns) do
     ~H"""
-    <.modal id={"user-#{@id}"} width="max-w-md" show={true}>
-      <:title>
-        <div class="flex justify-between">
-          <span class="font-bold">
-            Delete user
-          </span>
+    <div>
+      <.modal id={"user-#{@id}"} width="max-w-md" show={true}>
+        <:title>
+          <div class="flex justify-between">
+            <span class="font-bold">
+              Delete user
+            </span>
 
-          <button
-            phx-click="close_modal"
-            phx-target={@myself}
-            type="button"
-            class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
-            aria-label={gettext("close")}
-          >
-            <span class="sr-only">Close</span>
-            <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
-          </button>
-        </div>
-      </:title>
-      <div class="px-6">
-        <p class="text-sm text-gray-500">
-          This user cannot be deleted until their auditable activities have also been purged.
-          <br /><br />Audit trails are removed on a project-basis and may be controlled by the project owner or a superuser.
-        </p>
-      </div>
-      <div class="flex-grow bg-gray-100 h-0.5 my-[16px]"></div>
-      <div class="flex flex-row-reverse gap-4 mx-6">
-        <button
-          type="button"
-          phx-click="close_modal"
-          phx-target={@myself}
-          class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-        >
-          Cancel
-        </button>
-      </div>
-    </.modal>
-    """
-  end
-
-  def render(assigns) do
-    ~H"""
-    <.modal id={"user-#{@id}"} show={true} width="max-w-md">
-      <:title>
-        <div class="flex justify-between">
-          <span class="font-bold">
-            Delete user
-          </span>
-
-          <button
-            phx-click="close_modal"
-            phx-target={@myself}
-            type="button"
-            class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
-            aria-label={gettext("close")}
-          >
-            <span class="sr-only">Close</span>
-            <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
-          </button>
-        </div>
-      </:title>
-      <.form
-        :let={f}
-        for={@scheduled_deletion_changeset}
-        phx-change="validate"
-        phx-submit="delete"
-        phx-target={@myself}
-        id="scheduled_deletion_form"
-      >
-        <div class="px-6">
-          <p class="">
-            This user's account and credential data will be deleted. Please make sure none of these credentials are used in production workflows.
-          </p>
-          <p :if={@has_activity_in_projects?} class="mt-2">
-            *Note that this user still has activity related to active projects. We may not be able to delete them entirely from the app until those projects are deleted.
-          </p>
-
-          <div class="grid grid-cols-12 gap-12">
-            <div class="col-span-8">
-              <.input
-                type="text"
-                field={f[:scheduled_deletion_email]}
-                label="User email"
-              />
-            </div>
+            <button
+              phx-click="close_modal"
+              phx-target={@myself}
+              type="button"
+              class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
+              aria-label={gettext("close")}
+            >
+              <span class="sr-only">Close</span>
+              <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
+            </button>
           </div>
-          <.input type="hidden" field={f[:id]} />
+        </:title>
+        <div class="">
+          <p class="text-sm text-gray-500">
+            This user cannot be deleted until their auditable activities have also been purged.
+            <br /><br />Audit trails are removed on a project-basis and may be controlled by the project owner or a superuser.
+          </p>
         </div>
         <div class="flex-grow bg-gray-100 h-0.5 my-[16px]"></div>
-        <div class="flex flex-row-reverse gap-4 mx-6">
-          <.button
-            id={"user-#{@id}_confirm_button"}
-            type="submit"
-            color_class="bg-red-600 hover:bg-red-700 text-white"
-            phx-disable-with="Deleting..."
-          >
-            Delete account
-          </.button>
+        <div class="flex flex-row-reverse gap-4">
           <button
             type="button"
             phx-click="close_modal"
@@ -191,8 +121,79 @@ defmodule LightningWeb.Components.UserDeletionModal do
             Cancel
           </button>
         </div>
-      </.form>
-    </.modal>
+      </.modal>
+    </div>
+    """
+  end
+
+  def render(assigns) do
+    ~H"""
+    <div>
+      <.modal id={"user-#{@id}"} show={true} width="max-w-md">
+        <:title>
+          <div class="flex justify-between">
+            <span class="font-bold">
+              Delete user
+            </span>
+
+            <button
+              phx-click="close_modal"
+              phx-target={@myself}
+              type="button"
+              class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
+              aria-label={gettext("close")}
+            >
+              <span class="sr-only">Close</span>
+              <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
+            </button>
+          </div>
+        </:title>
+        <.form
+          :let={f}
+          for={@scheduled_deletion_changeset}
+          phx-change="validate"
+          phx-submit="delete"
+          phx-target={@myself}
+          id="scheduled_deletion_form"
+        >
+          <div class="">
+            <p class="">
+              This user's account and credential data will be deleted. Please make sure none of these credentials are used in production workflows.
+            </p>
+            <p :if={@has_activity_in_projects?} class="mt-2">
+              *Note that this user still has activity related to active projects. We may not be able to delete them entirely from the app until those projects are deleted.
+            </p>
+            <br />
+            <.input
+              type="text"
+              field={f[:scheduled_deletion_email]}
+              label="User email"
+            />
+
+            <.input type="hidden" field={f[:id]} />
+          </div>
+          <div class="flex-grow bg-gray-100 h-0.5 my-[16px]"></div>
+          <div class="flex flex-row-reverse gap-4">
+            <.button
+              id={"user-#{@id}_confirm_button"}
+              type="submit"
+              color_class="bg-red-600 hover:bg-red-700 text-white"
+              phx-disable-with="Deleting..."
+            >
+              Delete account
+            </.button>
+            <button
+              type="button"
+              phx-click="close_modal"
+              phx-target={@myself}
+              class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </.form>
+      </.modal>
+    </div>
     """
   end
 end

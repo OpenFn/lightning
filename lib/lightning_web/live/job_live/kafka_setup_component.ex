@@ -61,6 +61,7 @@ defmodule LightningWeb.JobLive.KafkaSetupComponent do
             type="select"
             field={kafka_config[:sasl]}
             label="SASL Authentication"
+            class=""
             options={[{"none", nil}] ++ @sasl_types}
             disabled={@disabled}
           />
@@ -70,6 +71,7 @@ defmodule LightningWeb.JobLive.KafkaSetupComponent do
           <.input
             type="text"
             field={kafka_config[:username]}
+            label="Username"
             autocomplete="off"
             disabled={@disabled}
           />
@@ -79,6 +81,7 @@ defmodule LightningWeb.JobLive.KafkaSetupComponent do
           <.input
             type="password"
             field={kafka_config[:password]}
+            label="Password"
             disabled={@disabled}
             value={password}
           />
@@ -88,6 +91,7 @@ defmodule LightningWeb.JobLive.KafkaSetupComponent do
           <.input
             type="text"
             field={kafka_config[:initial_offset_reset_policy]}
+            label="Initial offset reset policy"
             disabled={@disabled}
           />
         </div>
@@ -96,6 +100,7 @@ defmodule LightningWeb.JobLive.KafkaSetupComponent do
           <.input
             type="text"
             field={kafka_config[:connect_timeout]}
+            label="Connect Timeout"
             disabled={@disabled}
           />
         </div>

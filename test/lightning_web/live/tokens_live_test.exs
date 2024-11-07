@@ -60,7 +60,7 @@ defmodule LightningWeb.TokensLiveTest do
              |> render_click() =~ "Token created successfully"
 
       assert token_live
-             |> element("table#tokens")
+             |> element("#tokens")
              |> render()
              |> Floki.parse_fragment!()
              |> Floki.find("code span")

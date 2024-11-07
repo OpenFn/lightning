@@ -169,7 +169,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   def job_form(assigns) do
     ~H"""
     <div class="-mt-6 md:grid md:grid-cols-6 md:gap-4 p-2 @container">
-      <.inputs_for field={@form} skip_hidden={false}></.inputs_for>
+      <.form_hidden_inputs form={@form} />
       <div class="col-span-6"></div>
       <div class="col-span-6 @md:col-span-4">
         <.input
@@ -234,7 +234,7 @@ defmodule LightningWeb.WorkflowLive.Components do
       )
 
     ~H"""
-    <.inputs_for field={@form} skip_hidden={false}></.inputs_for>
+    <.form_hidden_inputs form={@form} />
     <div class="">
       <.input
         type="select"
@@ -465,7 +465,7 @@ defmodule LightningWeb.WorkflowLive.Components do
       )
 
     ~H"""
-    <.inputs_for field={@form} skip_hidden={false}></.inputs_for>
+    <.form_hidden_inputs form={@form} />
     <.old_error field={@form[:condition_type]} />
     <div class="grid grid-flow-row gap-4 auto-rows-max">
       <div>
@@ -493,7 +493,7 @@ defmodule LightningWeb.WorkflowLive.Components do
           <.input
             type="textarea"
             field={@form[:condition_expression]}
-            class="h-24 font-mono proportional-nums"
+            class="h-24 font-mono proportional-nums text-slate-200 bg-slate-700"
             phx-debounce="300"
             maxlength="255"
             placeholder="eg: !state.error"
@@ -719,7 +719,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             aria-label={gettext("close")}
           >
             <span class="sr-only">Close</span>
-            <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
+            <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
           </button>
         </div>
       </:title>

@@ -136,7 +136,7 @@ defmodule LightningWeb.Components.NewInputs do
       "a form field struct retrieved from the form, for example: @form[:email]"
 
   attr :errors, :list, default: []
-  attr :checked, :boolean, doc: "the checked flag for checkbox inputs"
+  attr :checked, :boolean, doc: "the checked flag for checkbox/radio inputs"
 
   attr :checked_value, :any,
     default: "true",
@@ -178,6 +178,7 @@ defmodule LightningWeb.Components.NewInputs do
 
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
     assigns
+    |> maybe_assign_radio_checked()
     |> assign(field: nil, id: assigns.id || field.id)
     |> assign(
       :errors,
@@ -190,33 +191,11 @@ defmodule LightningWeb.Components.NewInputs do
     |> input()
   end
 
-  def input(%{type: "checkbox", value: value} = assigns) do
-    assigns =
-      assign_new(assigns, :checked, fn ->
-        Phoenix.HTML.Form.normalize_value("checkbox", value)
-      end)
-
+  def input(%{type: "checkbox"} = assigns) do
     ~H"""
     <div phx-feedback-for={@name}>
       <label class="flex items-center gap-2 text-sm leading-6 text-slate-600">
-        <input
-          :if={@hidden_input}
-          type="hidden"
-          name={@name}
-          value={@unchecked_value}
-        />
-        <input
-          type="checkbox"
-          id={@id}
-          name={@name}
-          value={@checked_value}
-          checked={@checked}
-          class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-600
-            checked:disabled:bg-indigo-300 checked:disabled:border-indigo-300
-            checked:bg-indigo-600 checked:border-indigo-600 focus:outline-none
-            transition duration-200 cursor-pointer"
-          {@rest}
-        />
+        <.checkbox_element {assigns} />
         <%= @label %><span
           :if={Map.get(@rest, :required, false)}
           class="text-red-500"
@@ -238,7 +217,7 @@ defmodule LightningWeb.Components.NewInputs do
         <.tooltip_for_label :if={@tooltip} id={"#{@id}-tooltip"} tooltip={@tooltip} />
       </.label>
       <div class="flex w-full">
-        <div class="relative items-center">
+        <div class="relative items-center w-full">
           <select
             id={@id}
             name={@name}
@@ -247,7 +226,8 @@ defmodule LightningWeb.Components.NewInputs do
               "sm:text-sm shadow-sm",
               "focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50",
               "disabled:cursor-not-allowed #{@button_placement == "right" && "rounded-r-none"}",
-              "#{@button_placement == "left" && "rounded-l-none"}"
+              "#{@button_placement == "left" && "rounded-l-none"}",
+              @class
             ]}
             multiple={@multiple}
             {@rest}
@@ -267,8 +247,8 @@ defmodule LightningWeb.Components.NewInputs do
 
   def input(%{type: "textarea"} = assigns) do
     ~H"""
-    <div phx-feedback-for={@name} class={@class}>
-      <.label for={@id}>
+    <div phx-feedback-for={@name}>
+      <.label :if={@label} for={@id}>
         <%= @label %><span
           :if={Map.get(@rest, :required, false)}
           class="text-red-500"
@@ -280,7 +260,7 @@ defmodule LightningWeb.Components.NewInputs do
         class={[
           "focus:outline focus:outline-2 focus:outline-offset-1 rounded-md shadow-sm text-sm",
           "mt-2 block w-full focus:ring-0",
-          "text-slate-200 bg-slate-700 sm:text-sm sm:leading-6",
+          "sm:text-sm sm:leading-6",
           "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 overflow-y-auto",
           @errors == [] &&
             "border-slate-300 focus:border-slate-400 focus:outline-indigo-600",
@@ -298,7 +278,7 @@ defmodule LightningWeb.Components.NewInputs do
   def input(%{type: "password"} = assigns) do
     ~H"""
     <div phx-feedback-for={@name}>
-      <.label for={@id}>
+      <.label :if={@label} for={@id}>
         <%= @label %><span
           :if={Map.get(@rest, :required, false)}
           class="text-red-500"
@@ -361,7 +341,10 @@ defmodule LightningWeb.Components.NewInputs do
       name={@name}
       checked={@checked}
       value={@value}
-      class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+      class={[
+        "h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600",
+        @class
+      ]}
       {@rest}
     />
     """
@@ -441,6 +424,93 @@ defmodule LightningWeb.Components.NewInputs do
       ]}
       {@rest}
     />
+    """
+  end
+
+  @doc """
+  Renders a checkbox input element.
+
+  This function is used internally by `input/1` and generally should not
+  be used directly.
+
+  Look at `input type="checkbox"` to see how these values `attr` get populated
+  """
+
+  attr :id, :string, default: nil
+  attr :name, :string, required: true
+  attr :value, :any, required: true
+  attr :class, :string
+  attr :checked, :boolean, doc: "the checked flag for checkbox inputs"
+  attr :checked_value, :any, default: "true"
+  attr :unchecked_value, :any, default: "false"
+  attr :hidden_input, :boolean, default: true
+  attr :rest, :global, include: ~w(disabled form readonly required)
+
+  def checkbox_element(%{value: value, checked_value: checked_value} = assigns) do
+    assigns =
+      assign_new(assigns, :checked, fn ->
+        Phoenix.HTML.html_escape(checked_value) ==
+          Phoenix.HTML.html_escape(value)
+      end)
+
+    ~H"""
+    <input
+      :if={@hidden_input}
+      type="hidden"
+      name={@name}
+      value={to_string(@unchecked_value)}
+    />
+    <input
+      type="checkbox"
+      id={@id}
+      name={@name}
+      value={to_string(@checked_value)}
+      checked={@checked}
+      class={["rounded border-gray-300 text-indigo-600 focus:ring-indigo-600
+        checked:disabled:bg-indigo-300 checked:disabled:border-indigo-300
+        checked:bg-indigo-600 checked:border-indigo-600 focus:outline-none
+        transition duration-200 cursor-pointer", @class]}
+      {@rest}
+    />
+    """
+  end
+
+  defp maybe_assign_radio_checked(
+         %{field: %Phoenix.HTML.FormField{} = field, type: "radio"} = assigns
+       ) do
+    if Map.has_key?(assigns, :value) do
+      assign_new(assigns, :checked, fn ->
+        Phoenix.HTML.html_escape(field.value) ==
+          Phoenix.HTML.html_escape(assigns.value)
+      end)
+    else
+      assigns
+    end
+  end
+
+  defp maybe_assign_radio_checked(assigns), do: assigns
+
+  @doc """
+  Generates hidden inputs for a form.
+  Adapted from [PhoenixHTMLHelpers.Form.html#hidden_inputs_for/1](https://github.com/phoenixframework/phoenix_html_helpers/blob/v1.0.1/lib/phoenix_html_helpers/form.ex#L406)
+  """
+  attr :form, Phoenix.HTML.Form, required: true
+
+  def form_hidden_inputs(assigns) do
+    ~H"""
+    <%= for {key, value} <- @form.hidden do %>
+      <%= if is_list(value) do %>
+        <.input
+          :for={{v, index} <- Enum.with_index(value)}
+          type="hidden"
+          id={@form[key].id <> "_#{index}"}
+          name={@form[key].name <> "[]"}
+          value={v}
+        />
+      <% else %>
+        <.input type="hidden" field={@form[key]} value={value} />
+      <% end %>
+    <% end %>
     """
   end
 

@@ -16,6 +16,7 @@
           label="Name"
           value={f[:name].value}
         />
+        <.old_error field={f[:name]} />
       </div>
       <div class="">
         <%= if to_string(f[:name].value) != "" do %>

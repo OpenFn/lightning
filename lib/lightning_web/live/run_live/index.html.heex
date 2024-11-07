@@ -495,6 +495,7 @@
                         type="text"
                         field={f[:search_term]}
                         placeholder="Search"
+                        class="block w-full rounded-md border-0 py-1.5 pl-10 pr-20 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400  focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                         phx-focus={
                           JS.show(to: "#clear_search_button")
                           |> JS.show(to: "#search_button_group")
@@ -529,9 +530,10 @@
                       id="run-toggle-form"
                     >
                       <%= for {search_field, index} <- Enum.with_index(@search_fields) do %>
-                        <.input
-                          type="checkbox"
-                          field={f[search_field.id]}
+                        <.checkbox_element
+                          id={f[search_field.id].id}
+                          name={f[search_field.id].name}
+                          value={f[search_field.id].value}
                           class="absolute invisible"
                           style="left: -9999px"
                         />

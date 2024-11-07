@@ -350,7 +350,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
               aria-label={gettext("close")}
             >
               <span class="sr-only">Close</span>
-              <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
+              <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
             </button>
           </div>
         </:title>

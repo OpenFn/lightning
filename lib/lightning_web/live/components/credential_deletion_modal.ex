@@ -66,113 +66,117 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
   @impl true
   def render(%{delete_now?: true, has_activity_in_projects?: true} = assigns) do
     ~H"""
-    <.modal id={"credential-#{@id}"} width="max-w-md" show={true}>
-      <:title>
-        <div class="flex justify-between">
-          <span class="font-bold">
-            Credential marked for deletion
-          </span>
+    <div>
+      <.modal id={"credential-#{@id}"} width="max-w-md" show={true}>
+        <:title>
+          <div class="flex justify-between">
+            <span class="font-bold">
+              Credential marked for deletion
+            </span>
 
+            <button
+              phx-click="close_modal"
+              phx-target={@myself}
+              type="button"
+              class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
+              aria-label={gettext("close")}
+            >
+              <span class="sr-only">Close</span>
+              <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
+            </button>
+          </div>
+        </:title>
+        <div class="">
+          <p class="">
+            This credential has been used in workflow runs that
+            are still monitored in at least one project's audit trail. The
+            credential will be made unavailable for future use immediately and
+            after a cooling-off period all secrets will be permanently scrubbed,
+            but the record itself will not be removed until related workflow
+            runs have been purged.
+          </p>
+          <p class="py-2">
+            Contact your instance administrator for more details.
+          </p>
+        </div>
+        <div class="flex-grow bg-gray-100 h-0.5 my-[16px]"></div>
+        <div class="flex flex-row-reverse gap-4">
           <button
+            type="button"
             phx-click="close_modal"
             phx-target={@myself}
-            type="button"
-            class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
-            aria-label={gettext("close")}
+            class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
           >
-            <span class="sr-only">Close</span>
-            <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
+            Ok, understood
           </button>
         </div>
-      </:title>
-      <div class="px-6">
-        <p class="">
-          This credential has been used in workflow runs that
-          are still monitored in at least one project's audit trail. The
-          credential will be made unavailable for future use immediately and
-          after a cooling-off period all secrets will be permanently scrubbed,
-          but the record itself will not be removed until related workflow
-          runs have been purged.
-        </p>
-        <p class="py-2">
-          Contact your instance administrator for more details.
-        </p>
-      </div>
-      <div class="flex-grow bg-gray-100 h-0.5 my-[16px]"></div>
-      <div class="flex flex-row-reverse gap-4 mx-6">
-        <button
-          type="button"
-          phx-click="close_modal"
-          phx-target={@myself}
-          class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-        >
-          Ok, understood
-        </button>
-      </div>
-    </.modal>
+      </.modal>
+    </div>
     """
   end
 
   def render(assigns) do
     ~H"""
-    <.modal id={"credential-#{@id}"} width="max-w-md" show={true}>
-      <:title>
-        <div class="flex justify-between">
-          <span class="font-bold">
-            Delete credential
-          </span>
+    <div>
+      <.modal id={"credential-#{@id}"} width="max-w-md" show={true}>
+        <:title>
+          <div class="flex justify-between">
+            <span class="font-bold">
+              Delete credential
+            </span>
 
+            <button
+              phx-click="close_modal"
+              phx-target={@myself}
+              type="button"
+              class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
+              aria-label={gettext("close")}
+            >
+              <span class="sr-only">Close</span>
+              <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
+            </button>
+          </div>
+        </:title>
+        <div class="">
+          <p class="">
+            Deleting this credential will immediately remove it from all jobs and
+            projects. If you later restore it, you will need to re-share it with
+            projects and re-associate it with jobs. Are you sure you'd like to
+            delete the credential?
+          </p>
+          <p :if={@has_activity_in_projects?} class="mt-2 italic text-slate-500">
+            *This credential has been used in workflow runs that
+            are still monitored in at least one project's audit trail. The
+            credential will be made unavailable for future use immediately and
+            after a cooling-off period all secrets will be permanently scrubbed,
+            but the record itself will not be removed until related workflow
+            runs have been purged.
+          </p>
+        </div>
+        <div class="flex-grow bg-gray-100 h-0.5 my-[16px]"></div>
+        <div class="flex flex-row-reverse gap-4">
+          <.button
+            id={"user-#{@id}_confirm_button"}
+            type="button"
+            phx-click="delete"
+            phx-value-id={@credential.id}
+            phx-target={@myself}
+            color_class="bg-red-600 hover:bg-red-700 text-white"
+            phx-disable-with="Deleting..."
+          >
+            Delete credential
+          </.button>
           <button
+            type="button"
             phx-click="close_modal"
             phx-target={@myself}
-            type="button"
-            class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
-            aria-label={gettext("close")}
+            class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
           >
-            <span class="sr-only">Close</span>
-            <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
+            Cancel
           </button>
         </div>
-      </:title>
-      <div class="px-6">
-        <p class="">
-          Deleting this credential will immediately remove it from all jobs and
-          projects. If you later restore it, you will need to re-share it with
-          projects and re-associate it with jobs. Are you sure you'd like to
-          delete the credential?
-        </p>
-        <p :if={@has_activity_in_projects?} class="mt-2 italic text-slate-500">
-          *This credential has been used in workflow runs that
-          are still monitored in at least one project's audit trail. The
-          credential will be made unavailable for future use immediately and
-          after a cooling-off period all secrets will be permanently scrubbed,
-          but the record itself will not be removed until related workflow
-          runs have been purged.
-        </p>
-      </div>
-      <div class="flex-grow bg-gray-100 h-0.5 my-[16px]"></div>
-      <div class="flex flex-row-reverse gap-4 mx-6">
-        <.button
-          id={"user-#{@id}_confirm_button"}
-          type="button"
-          phx-click="delete"
-          phx-value-id={@credential.id}
-          phx-target={@myself}
-          color_class="bg-red-600 hover:bg-red-700 text-white"
-          phx-disable-with="Deleting..."
-        >
-          Delete credential
-        </.button>
-        <button
-          type="button"
-          phx-click="close_modal"
-          phx-target={@myself}
-          class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-        >
-          Cancel
-        </button>
-      </div>
-    </.modal>
+      </.modal>
+    </div>
     """
   end
 end
