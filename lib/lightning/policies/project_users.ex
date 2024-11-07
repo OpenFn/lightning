@@ -41,7 +41,7 @@ defmodule Lightning.Policies.ProjectUsers do
   @spec authorize(
           actions(),
           Lightning.Accounts.User.t(),
-          Lightning.Projects.Project.t() | nil
+          Lightning.Projects.Project.t() | %{project_id: Ecto.UUID.t()} | nil
         ) :: boolean
   def authorize(:access_project, %User{}, nil), do: false
 
@@ -87,4 +87,7 @@ defmodule Lightning.Policies.ProjectUsers do
              :initiate_github_sync
            ],
       do: project_user.role in [:owner, :admin, :editor]
+
+  def authorize(action, user, %{project_id: project_id}),
+    do: authorize(action, user, Projects.get_project(project_id))
 end

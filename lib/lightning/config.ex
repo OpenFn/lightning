@@ -8,6 +8,26 @@ defmodule Lightning.Config do
     alias Lightning.Services.AdapterHelper
 
     @impl true
+    def token_signer do
+      :persistent_term.get({__MODULE__, "token_signer"}, nil)
+      |> case do
+        nil ->
+          pem =
+            Application.get_env(:lightning, :workers, [])
+            |> Keyword.get(:private_key)
+
+          signer = Joken.Signer.create("RS256", %{"pem" => pem})
+
+          :persistent_term.put({__MODULE__, "token_signer"}, signer)
+
+          signer
+
+        signer ->
+          signer
+      end
+    end
+
+    @impl true
     def run_token_signer do
       pem =
         Application.get_env(:lightning, :workers, [])
@@ -213,6 +233,7 @@ defmodule Lightning.Config do
   @callback run_token_signer() :: Joken.Signer.t()
   @callback storage() :: term()
   @callback storage(key :: atom()) :: term()
+  @callback token_signer() :: Joken.Signer.t()
   @callback usage_tracking() :: Keyword.t()
   @callback usage_tracking_cron_opts() :: [Oban.Plugins.Cron.cron_input()]
   @callback worker_secret() :: binary() | nil
@@ -230,6 +251,10 @@ defmodule Lightning.Config do
   """
   def run_token_signer do
     impl().run_token_signer()
+  end
+
+  def token_signer do
+    impl().token_signer()
   end
 
   @doc """

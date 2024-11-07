@@ -168,18 +168,17 @@
           {Credo.Check.Warning.WrongTestFileExtension, []},
           # Controversial but included
           {Credo.Check.Consistency.MultiAliasImportRequireUse, []},
-          {Credo.Check.Design.DuplicatedCode, []},
           {Credo.Check.Readability.MultiAlias, []},
           {Credo.Check.Readability.SeparateAliasRequire, []},
-          {Credo.Check.Readability.StrictModuleLayout, []},
-          # Checks scheduled for next check update (opt-in for now, will bump exit_status soon)
-          {Credo.Check.Consistency.UnusedVariableNames, [exit_status: 0]}
+          {Credo.Check.Readability.StrictModuleLayout, []}
         ],
         disabled: [
           #
           # Controversial and experimental checks (opt-in, just move the check to `:enabled`
           #   and be sure to use `mix credo --strict` to see low priority checks)
           #
+          {Credo.Check.Consistency.UnusedVariableNames, [exit_status: 0]},
+          {Credo.Check.Design.DuplicatedCode, []},
           {Credo.Check.Design.SkipTestWithoutComment, []},
           {Credo.Check.Readability.AliasAs, []},
           {Credo.Check.Readability.BlockPipe, []},
