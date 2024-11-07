@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Make Lightning resilient to long collection fetch
+  [#2645](https://github.com/OpenFn/lightning/issues/2645)
+
 ### Fixed
 
 ## [v2.10.0-rc.0] - 2024-11-07

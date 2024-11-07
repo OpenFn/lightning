@@ -3,7 +3,6 @@ defmodule LightningWeb.CollectionsController do
 
   alias Lightning.Collections
   alias Lightning.Policies.Permissions
-  alias Lightning.Repo
 
   action_fallback LightningWeb.FallbackController
 
@@ -12,6 +11,7 @@ defmodule LightningWeb.CollectionsController do
   @max_chunk_size 50
 
   @default_limit Application.compile_env!(:lightning, __MODULE__)[:stream_limit]
+  @max_database_limit 5_000
 
   @valid_params [
     "key",
@@ -103,12 +103,10 @@ defmodule LightningWeb.CollectionsController do
   def stream(conn, %{"name" => col_name, "key" => key_pattern}) do
     with {:ok, collection, filters, response_limit} <-
            validate_query(conn, col_name) do
-      case Repo.transact(fn ->
-             items_stream =
-               Collections.stream_match(collection, key_pattern, filters)
+      items_stream =
+        safe_stream_from_db(collection, filters, key_pattern)
 
-             stream_chunked(conn, items_stream, response_limit)
-           end) do
+      case stream_chunked(conn, items_stream, response_limit) do
         {:error, conn} -> conn
         {:ok, conn} -> conn
       end
@@ -118,15 +116,31 @@ defmodule LightningWeb.CollectionsController do
   def stream(conn, %{"name" => col_name}) do
     with {:ok, collection, filters, response_limit} <-
            validate_query(conn, col_name) do
-      case Repo.transact(fn ->
-             items_stream = Collections.stream_all(collection, filters)
+      items_stream = safe_stream_from_db(collection, filters)
 
-             stream_chunked(conn, items_stream, response_limit)
-           end) do
+      case stream_chunked(conn, items_stream, response_limit) do
         {:error, conn} -> conn
         {:ok, conn} -> conn
       end
     end
+  end
+
+  defp safe_stream_from_db(
+         collection,
+         %{cursor: initial_cursor, limit: limit} = filters,
+         key_pattern \\ nil
+       ) do
+    filters = Map.put(filters, :limit, Enum.max([limit, @max_database_limit]))
+
+    Stream.unfold(initial_cursor, fn cursor ->
+      filters = Map.put(filters, :cursor, cursor)
+
+      case Collections.get_all(collection, filters, key_pattern) do
+        [] -> nil
+        list -> {list, List.last(list).inserted_at}
+      end
+    end)
+    |> Stream.flat_map(& &1)
   end
 
   defmodule ChunkAcc do

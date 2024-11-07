@@ -85,7 +85,7 @@ defmodule Lightning.CollectionsTest do
     end
   end
 
-  describe "stream_all/3" do
+  describe "get_all/3" do
     test "returns all items for the given collection sorted by inserted_at" do
       collection = insert(:collection)
 
@@ -99,18 +99,18 @@ defmodule Lightning.CollectionsTest do
         end)
 
       Repo.transaction(fn ->
-        assert stream = Collections.stream_all(collection, limit: 50)
+        assert stream = Collections.get_all(collection, limit: 50)
 
-        assert stream_items =
+        assert get_items =
                  stream
                  |> Stream.take(15)
                  |> Enum.to_list()
                  |> Repo.preload(collection: :project)
 
-        assert List.last(stream_items) ==
+        assert List.last(get_items) ==
                  Enum.sort_by(items, & &1.inserted_at) |> List.last()
 
-        assert MapSet.new(stream_items) == MapSet.new(items)
+        assert MapSet.new(get_items) == MapSet.new(items)
       end)
     end
 
@@ -129,14 +129,14 @@ defmodule Lightning.CollectionsTest do
 
       Repo.transaction(fn ->
         assert stream =
-                 Collections.stream_all(collection, cursor: cursor, limit: 50)
+                 Collections.get_all(collection, cursor: cursor, limit: 50)
 
         assert stream |> Enum.to_list() |> Enum.count() == 30 - (4 + 1)
       end)
 
       Repo.transaction(fn ->
         assert stream =
-                 Collections.stream_all(collection, cursor: cursor, limit: 10)
+                 Collections.get_all(collection, cursor: cursor, limit: 10)
 
         assert Enum.count(stream) == 10
       end)
@@ -146,7 +146,7 @@ defmodule Lightning.CollectionsTest do
       collection = insert(:collection)
 
       Repo.transaction(fn ->
-        assert stream = Collections.stream_all(collection, limit: 50)
+        assert stream = Collections.get_all(collection, limit: 50)
         assert Enum.count(stream) == 0
       end)
     end
@@ -156,40 +156,22 @@ defmodule Lightning.CollectionsTest do
 
       Repo.transaction(fn ->
         assert stream =
-                 Collections.stream_all(%{id: Ecto.UUID.generate()}, limit: 50)
+                 Collections.get_all(%{id: Ecto.UUID.generate()}, limit: 50)
 
         assert Enum.count(stream) == 0
       end)
     end
-
-    test "fails when outside of an explicit transaction" do
-      collection = insert(:collection)
-      _items = insert_list(5, :collection_item, collection: collection)
-
-      assert stream = Collections.stream_all(collection, limit: 50)
-
-      assert_raise RuntimeError,
-                   ~r/cannot reduce stream outside of transaction/,
-                   fn ->
-                     Enum.take(stream, 5) |> Enum.each(&inspect/1)
-                   end
-    end
   end
 
-  describe "stream_match/3" do
+  describe "get_all/3 with key pattern" do
     test "returns item with exact match" do
       collection = insert(:collection)
       _itemA = insert(:collection_item, key: "keyA", collection: collection)
       itemB = insert(:collection_item, key: "keyB", collection: collection)
 
-      Repo.transaction(fn ->
-        assert stream = Collections.stream_match(collection, "keyB*", limit: 50)
-
-        assert [itemB] ==
-                 stream
-                 |> Enum.to_list()
-                 |> Repo.preload(collection: :project)
-      end)
+      assert [itemB] ==
+               Collections.get_all(collection, %{limit: 50}, "keyB*")
+               |> Repo.preload(collection: :project)
     end
 
     test "returns matching items for the given collection sorted by inserted_at" do
@@ -206,19 +188,14 @@ defmodule Lightning.CollectionsTest do
 
       insert(:collection_item, key: "rkeyB", collection: collection)
 
-      Repo.transaction(fn ->
-        assert stream = Collections.stream_match(collection, "rkeyA*", limit: 50)
+      get_items =
+        Collections.get_all(collection, %{limit: 50}, "rkeyA*")
+        |> Repo.preload(collection: :project)
 
-        assert stream_items =
-                 Stream.take(stream, 12)
-                 |> Enum.to_list()
-                 |> Repo.preload(collection: :project)
+      assert List.last(get_items) ==
+               Enum.sort_by(items, & &1.inserted_at) |> List.last()
 
-        assert List.last(stream_items) ==
-                 Enum.sort_by(items, & &1.inserted_at) |> List.last()
-
-        assert MapSet.new(stream_items) == MapSet.new(items)
-      end)
+      assert MapSet.new(get_items) == MapSet.new(items)
     end
 
     test "returns matching items after a cursor up to a limited amount" do
@@ -236,101 +213,62 @@ defmodule Lightning.CollectionsTest do
 
       insert(:collection_item, key: "rkeyB", collection: collection)
 
-      Repo.transaction(fn ->
-        assert stream =
-                 Collections.stream_match(collection, "rkeyA*",
-                   cursor: cursor,
-                   limit: 50
-                 )
+      assert get_items =
+               Collections.get_all(
+                 collection,
+                 %{cursor: cursor, limit: 50},
+                 "rkeyA*"
+               )
 
-        assert Enum.count(stream) == 30 - (9 + 1)
-      end)
+      assert Enum.count(get_items) == 30 - (9 + 1)
 
-      Repo.transaction(fn ->
-        assert stream =
-                 Collections.stream_match(collection, "rkeyA*",
-                   cursor: cursor,
-                   limit: 16
-                 )
+      assert get_items =
+               Collections.get_all(
+                 collection,
+                 %{cursor: cursor, limit: 16},
+                 "rkeyA*"
+               )
 
-        assert Enum.count(stream) == 16
-      end)
+      assert Enum.count(get_items) == 16
     end
 
     test "returns empty list when collection is empty" do
       collection = insert(:collection)
 
-      Repo.transaction(fn ->
-        assert stream =
-                 Collections.stream_match(collection, "any-key", limit: 50)
-
-        assert Enum.count(stream) == 0
-      end)
+      assert [] = Collections.get_all(collection, %{limit: 50}, "any-key")
     end
 
     test "returns empty list when the collection doesn't exist" do
       insert(:collection_item, key: "existing_key")
 
-      Repo.transaction(fn ->
-        assert stream =
-                 Collections.stream_match(
-                   %{id: Ecto.UUID.generate()},
-                   "existing_key",
-                   limit: 50
-                 )
-
-        assert Enum.count(stream) == 0
-      end)
+      assert [] =
+               Collections.get_all(
+                 %{id: Ecto.UUID.generate()},
+                 %{limit: 50},
+                 "existing_key"
+               )
     end
 
     test "returns item escaping the %" do
       collection = insert(:collection)
       item = insert(:collection_item, key: "keyA%", collection: collection)
 
-      Repo.transaction(fn ->
-        assert stream = Collections.stream_match(collection, "keyA%*", limit: 50)
-
-        assert [item] ==
-                 stream
-                 |> Enum.to_list()
-                 |> Repo.preload(collection: :project)
-      end)
+      assert [item] ==
+               Collections.get_all(collection, %{limit: 50}, "keyA%*")
+               |> Repo.preload(collection: :project)
 
       insert(:collection_item, key: "keyBC", collection: collection)
 
-      Repo.transaction(fn ->
-        assert stream = Collections.stream_match(collection, "keyB%", limit: 50)
-
-        assert Enum.count(stream) == 0
-      end)
+      assert [] = Collections.get_all(collection, %{limit: 50}, "keyB%")
     end
 
     test "returns item escaping the \\" do
       collection = insert(:collection)
       item = insert(:collection_item, key: "keyA\\", collection: collection)
 
-      Repo.transaction(fn ->
-        assert stream =
-                 Collections.stream_match(collection, "keyA\\*", limit: 50)
-
-        assert [item] ==
-                 stream
-                 |> Enum.to_list()
-                 |> Repo.preload(collection: :project)
-      end)
-    end
-
-    test "fails when outside of an explicit transaction" do
-      collection = insert(:collection)
-      _items = insert_list(5, :collection_item, collection: collection)
-
-      assert stream = Collections.stream_match(collection, "key*", limit: 50)
-
-      assert_raise RuntimeError,
-                   ~r/cannot reduce stream outside of transaction/,
-                   fn ->
-                     Enum.take(stream, 5) |> Enum.each(&inspect/1)
-                   end
+      assert [item] ==
+               Collections.get_all(collection, %{limit: 50}, "keyA\\*")
+               |> Repo.preload(collection: :project)
     end
   end
 
