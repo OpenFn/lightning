@@ -83,7 +83,7 @@ defmodule Lightning.Runs do
           Multi.new()
           |> Multi.one(:workflow, Ecto.assoc(run, :workflow))
           |> Multi.run(:snapshot, fn _repo, %{workflow: workflow} ->
-            Workflows.Snapshot.get_or_create_latest_for(workflow)
+            Workflows.Snapshot.get_or_create_latest_for(workflow, nil)
           end)
           |> Multi.update(:run_with_snapshot, fn %{snapshot: snapshot} ->
             Ecto.Changeset.change(run, snapshot_id: snapshot.id)

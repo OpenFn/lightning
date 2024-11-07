@@ -2,7 +2,9 @@ defmodule Lightning.Workflows.SchedulerTest do
   @moduledoc false
   use Lightning.DataCase, async: true
 
+  alias Lightning.Auditing.Audit
   alias Lightning.Invocation
+  alias Lightning.Repo
   alias Lightning.Run
   alias Lightning.Workflows.Scheduler
 
@@ -109,6 +111,89 @@ defmodule Lightning.Workflows.SchedulerTest do
       refute new_run.id == run.id
       assert new_run.dataclip.type == :step_result
       assert new_run.dataclip.body == old_step.output_dataclip.body
+    end
+
+    test "uses the trigger as the actor for audit event if job has never run" do
+      job = insert(:job)
+
+      %{id: trigger_id} =
+        trigger =
+        insert(:trigger, %{
+          type: :cron,
+          cron_expression: "* * * * *",
+          workflow: job.workflow
+        })
+
+      insert(:edge, %{
+        workflow: job.workflow,
+        source_trigger: trigger,
+        target_job: job
+      })
+
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      Scheduler.enqueue_cronjobs()
+
+      assert %{actor_id: ^trigger_id} = Repo.one!(Audit)
+    end
+
+    test "uses the trigger as the actor for audit event if job has run before" do
+      job =
+        insert(:job,
+          body: "fn(state => { console.log(state); return { changed: true }; })"
+        )
+
+      %{id: trigger_id} =
+        trigger =
+          insert(:trigger, %{
+            type: :cron,
+            cron_expression: "* * * * *",
+            workflow: job.workflow
+          })
+
+      insert(:edge, %{
+        workflow: job.workflow,
+        source_trigger: trigger,
+        target_job: job
+      })
+
+      dataclip = insert(:dataclip)
+
+      insert(:run,
+        work_order:
+        build(:workorder,
+          workflow: job.workflow,
+          dataclip: dataclip,
+          trigger: trigger,
+          state: :success
+        ),
+        starting_trigger: trigger,
+        state: :success,
+        dataclip: dataclip,
+        steps: [
+          build(:step,
+            exit_reason: "success",
+            job: job,
+            input_dataclip: dataclip,
+            output_dataclip:
+            build(:dataclip, type: :step_result, body: %{"changed" => true})
+          )
+        ]
+      )
+
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      Scheduler.enqueue_cronjobs()
+
+      assert %{actor_id: ^trigger_id} = Repo.one!(Audit)
     end
   end
 end
