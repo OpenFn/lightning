@@ -10,8 +10,13 @@ defmodule LightningWeb.CollectionsController do
 
   @max_chunk_size 50
 
-  @default_limit Application.compile_env!(:lightning, __MODULE__)[:stream_limit]
-  @max_database_limit 5_000
+  @limits Application.compile_env!(
+            :lightning,
+            LightningWeb.CollectionsController
+          )
+
+  @default_limit @limits[:default_stream_limit]
+  @max_database_limit @limits[:max_database_limit]
 
   @valid_params [
     "key",

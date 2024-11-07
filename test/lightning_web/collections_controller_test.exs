@@ -5,12 +5,13 @@ defmodule LightningWeb.API.CollectionsControllerTest do
 
   alias Lightning.Collections
 
-  @default_limit Application.compile_env!(
-                   :lightning,
-                   LightningWeb.CollectionsController
-                 )[
-                   :stream_limit
-                 ]
+  @limits Application.compile_env!(
+            :lightning,
+            LightningWeb.CollectionsController
+          )
+
+  @default_limit @limits[:default_stream_limit]
+  @max_database_limit @limits[:max_database_limit]
 
   setup %{conn: conn} do
     {:ok, conn: put_req_header(conn, "accept", "application/json")}
@@ -399,13 +400,13 @@ defmodule LightningWeb.API.CollectionsControllerTest do
 
       collection = insert(:collection, project: project)
 
-      before_insert = DateTime.utc_now() |> DateTime.add(-1, :microsecond)
+      before_insert = DateTime.utc_now()
 
       insert(:collection_item, collection: collection, key: "foo:bar:baz")
       insert(:collection_item, collection: collection, key: "foo:moon:baz")
       insert(:collection_item, collection: collection, key: "foo:bar:baz:out")
 
-      after_insert = DateTime.utc_now() |> DateTime.add(1, :microsecond)
+      after_insert = DateTime.utc_now() |> DateTime.add(10, :millisecond)
 
       token = Lightning.Accounts.generate_api_token(user)
 
@@ -483,7 +484,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
       user = insert(:user)
       project = insert(:project, project_users: [%{user: user}])
 
-      before_insert = DateTime.utc_now() |> DateTime.add(-1, :microsecond)
+      before_insert = DateTime.utc_now()
 
       collection =
         insert(:collection,
@@ -491,7 +492,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
           items: insert_list(3, :collection_item)
         )
 
-      after_insert = DateTime.utc_now() |> DateTime.add(1, :microsecond)
+      after_insert = DateTime.utc_now() |> DateTime.add(10, :millisecond)
 
       token = Lightning.Accounts.generate_api_token(user)
 
@@ -531,10 +532,12 @@ defmodule LightningWeb.API.CollectionsControllerTest do
                |> json_response(200)
     end
 
-    test "returns items up to a custom limit", %{conn: conn} do
+    test "returns items up to a custom limit (for database fetches)", %{
+      conn: conn
+    } do
       user = insert(:user)
       project = insert(:project, project_users: [%{user: user}])
-      limit = 10
+      limit = @max_database_limit + 10
 
       collection =
         insert(:collection,
