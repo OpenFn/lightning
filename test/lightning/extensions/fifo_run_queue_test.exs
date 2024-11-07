@@ -15,26 +15,32 @@ defmodule Lightning.Extensions.FifoRunQueueTest do
       %{triggers: [trigger2]} =
         workflow2 = insert(:simple_workflow, project: project2)
 
+      actor = insert(:user)
+
       {:ok, %{runs: [%{id: run1_id}]}} =
         WorkOrders.create_for(trigger1,
+          actor: actor,
           workflow: workflow1,
           dataclip: params_with_assocs(:dataclip)
         )
 
       {:ok, %{runs: [%{id: run2_id}]}} =
         WorkOrders.create_for(trigger1,
+          actor: actor,
           workflow: workflow1,
           dataclip: params_with_assocs(:dataclip)
         )
 
       {:ok, %{runs: [%{id: run3_id}]}} =
         WorkOrders.create_for(trigger2,
+          actor: actor,
           workflow: workflow2,
           dataclip: params_with_assocs(:dataclip)
         )
 
       {:ok, %{runs: [%{id: run4_id}]}} =
         WorkOrders.create_for(trigger2,
+          actor: actor,
           workflow: workflow2,
           dataclip: params_with_assocs(:dataclip)
         )

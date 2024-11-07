@@ -1482,6 +1482,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       view |> change_editor_text("some body")
 
+      # Clear any audit entries that may have been created by fixtures
+
+      Repo.delete_all(Audit)
+
       view
       |> form("#manual_run_form", %{
         manual: %{body: Jason.encode!(%{})}
