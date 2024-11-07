@@ -44,7 +44,9 @@ defmodule Lightning.Runtime.RuntimeManager do
               port: 2222,
               repo_dir: nil,
               worker_secret: nil,
-              ws_url: "ws://localhost:4000/worker"
+              endpoint: nil,
+              ws_url: "ws://localhost:4000/worker",
+              col_url: "http://localhost:4000/collections"
 
     @doc """
     Parses the keyword list of start arguments and returns a tuple,
@@ -58,6 +60,7 @@ defmodule Lightning.Runtime.RuntimeManager do
           Application.get_env(:lightning, __MODULE__, [])
           |> Keyword.merge(args)
         )
+        |> maybe_put_urls()
 
       {_, args} = args |> Keyword.split(config |> Map.keys())
 
@@ -102,8 +105,31 @@ defmodule Lightning.Runtime.RuntimeManager do
         {:ws_url, v} ->
           ~w(--lightning #{v})
 
+        {:col_url, v} ->
+          ~w(--collections-url  #{v})
+
         _ ->
           [nil]
+      end
+    end
+
+    defp maybe_put_urls(config) do
+      if config.endpoint do
+        config
+        |> Map.merge(%{
+          ws_url:
+            Phoenix.VerifiedRoutes.unverified_url(config.endpoint, "/worker")
+            |> URI.parse()
+            |> Map.put(:scheme, "ws")
+            |> URI.to_string(),
+          col_url:
+            Phoenix.VerifiedRoutes.unverified_url(
+              config.endpoint,
+              "/collections"
+            )
+        })
+      else
+        config
       end
     end
   end
