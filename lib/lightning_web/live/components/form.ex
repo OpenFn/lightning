@@ -375,7 +375,7 @@ defmodule LightningWeb.Components.Form do
         |> Keyword.put_new(:class, label_classes)
       end)
       |> assign_new(:title, fn %{field: field} ->
-        PhoenixHTMLHelpers.Form.humanize(field)
+        Phoenix.Naming.humanize(field)
       end)
 
     ~H"""
