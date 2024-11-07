@@ -428,7 +428,7 @@ defmodule Lightning.WorkflowLive.Helpers do
       |> with_edge({job_1, job_2}, %{condition_type: :on_job_success})
       |> insert()
 
-    {:ok, snapshot} = Workflows.Snapshot.get_or_create_latest_for(workflow)
+    {:ok, snapshot} = Workflows.Snapshot.get_or_create_latest_for(workflow, nil)
 
     %{
       workflow: workflow |> Lightning.Repo.preload([:jobs, :triggers, :edges]),

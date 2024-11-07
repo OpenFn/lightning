@@ -13,10 +13,12 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
   setup :create_project_for_current_user
 
   setup %{project: project} do
+    actor = insert(:user)
     workflow = insert(:workflow, project: project)
     trigger = insert(:trigger, type: :webhook, workflow: workflow)
 
-    {:ok, snapshot} = Workflows.Snapshot.get_or_create_latest_for(workflow)
+    {:ok, snapshot} =
+      Workflows.Snapshot.get_or_create_latest_for(workflow, actor)
 
     [
       workflow: workflow,

@@ -22,9 +22,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
   describe "New credential from project context " do
     setup %{project: project} do
+      actor = insert(:user)
       %{job: job} = workflow_job_fixture(project_id: project.id)
       workflow = Repo.get(Workflow, job.workflow_id)
-      {:ok, snapshot} = Workflows.Snapshot.get_or_create_latest_for(workflow)
+      {:ok, snapshot} =
+        Workflows.Snapshot.get_or_create_latest_for(workflow, actor)
       %{job: job, workflow: workflow, snapshot: snapshot}
     end
 
@@ -346,7 +348,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
         )
 
-      {:ok, snapshot} = Snapshot.get_or_create_latest_for(workflow)
+       {:ok, snapshot} =
+         Snapshot.get_or_create_latest_for(workflow, insert(:user))
 
       assert snapshot.lock_version == workflow.lock_version
 
@@ -597,7 +600,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     test "Creating an audit event on rerun", %{
       conn: conn,
       project: project,
-      user: %{id: user_id},
+      user: %{id: user_id} = user,
       workflow: %{id: workflow_id} = workflow
     } do
       {:ok, view, _html} =
@@ -606,7 +609,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
         )
 
-      {:ok, snapshot} = Snapshot.get_or_create_latest_for(workflow)
+      {:ok, snapshot} = Snapshot.get_or_create_latest_for(workflow, user)
 
       view |> fill_workflow_name("#{workflow.name} v2")
 
@@ -685,7 +688,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
            user: user,
            workflow: workflow
          } do
-      {:ok, earliest_snapshot} = Snapshot.get_or_create_latest_for(workflow)
+         {:ok, earliest_snapshot} =
+           Snapshot.get_or_create_latest_for(workflow, user)
 
       run_1 =
         insert(:run,
@@ -713,7 +717,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         Workflows.change_workflow(workflow, %{jobs: jobs_attrs})
         |> Workflows.save_workflow(user)
 
-      {:ok, latest_snapshot} = Snapshot.get_or_create_latest_for(workflow)
+      {:ok, latest_snapshot} = Snapshot.get_or_create_latest_for(workflow, user)
 
       run_2 =
         insert(:run,
@@ -788,7 +792,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       user: user,
       workflow: workflow
     } do
-      {:ok, snapshot} = Snapshot.get_or_create_latest_for(workflow)
+      {:ok, snapshot} = Snapshot.get_or_create_latest_for(workflow, user)
 
       run =
         insert(:run,
@@ -816,7 +820,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         Workflows.change_workflow(workflow, %{jobs: jobs_attrs})
         |> Workflows.save_workflow(user)
 
-      {:ok, latest_snapshot} = Snapshot.get_or_create_latest_for(workflow)
+      {:ok, latest_snapshot} = Snapshot.get_or_create_latest_for(workflow, user)
 
       insert(:run,
         work_order: build(:workorder, workflow: workflow),
@@ -1253,7 +1257,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         |> with_edge({trigger, job})
         |> insert()
 
-      {:ok, _snapshot} = Workflows.Snapshot.get_or_create_latest_for(workflow)
+      {:ok, _snapshot} =
+        Workflows.Snapshot.get_or_create_latest_for(workflow, insert(:user))
 
       {:ok, view, _html} =
         live(
@@ -1289,7 +1294,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       insert(:step, job: job_b)
 
-      {:ok, _snapshot} = Workflows.Snapshot.get_or_create_latest_for(workflow)
+      {:ok, _snapshot} =
+        Workflows.Snapshot.get_or_create_latest_for(workflow, insert(:user))
 
       {:ok, view, _html} =
         live(
@@ -1340,7 +1346,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         |> with_edge({job_b, job_c})
         |> insert()
 
-      {:ok, _snapshot} = Workflows.Snapshot.get_or_create_latest_for(workflow)
+       {:ok, _snapshot} =
+         Workflows.Snapshot.get_or_create_latest_for(workflow, insert(:user))
 
       {:ok, view, html} =
         live(
@@ -2162,7 +2169,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       workflow = insert(:simple_workflow, project: project)
 
-      {:ok, snapshot} = Snapshot.get_or_create_latest_for(workflow)
+      {:ok, snapshot} =
+        Snapshot.get_or_create_latest_for(workflow, insert(:user))
 
       %{jobs: [job], triggers: [trigger]} = workflow
 
