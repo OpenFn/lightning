@@ -196,7 +196,9 @@ defmodule Lightning.Auditing.Audit do
           String.t(),
           String.t(),
           Ecto.UUID.t(),
-          struct(),
+          Lightning.Accounts.User.t()
+          | Lightning.VersionControl.ProjectRepoConnection.t()
+          | Lightning.Workflows.Trigger.t(),
           Ecto.Changeset.t() | map() | nil,
           map(),
           update_changes_fun :: (map() -> map())
@@ -293,7 +295,7 @@ defmodule Lightning.Auditing.Audit do
         event: event,
         item_id: item_id,
         actor_id: actor_id,
-        actor_type: actor_struct |> extract_actor_type(),
+        actor_type: extract_actor_type(actor_struct),
         changes: changes,
         metadata: metadata
       },
@@ -302,8 +304,7 @@ defmodule Lightning.Auditing.Audit do
   end
 
   defp extract_actor_type(struct_name) do
-    struct_name
-    |> case do
+    case struct_name do
       Lightning.VersionControl.ProjectRepoConnection -> :project_repo_connection
       Lightning.Workflows.Trigger -> :trigger
       Lightning.Accounts.User -> :user
