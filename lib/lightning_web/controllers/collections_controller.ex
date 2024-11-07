@@ -130,7 +130,7 @@ defmodule LightningWeb.CollectionsController do
          %{cursor: initial_cursor, limit: limit} = filters,
          key_pattern \\ nil
        ) do
-    filters = Map.put(filters, :limit, Enum.max([limit, @max_database_limit]))
+    filters = Map.put(filters, :limit, min(limit, @max_database_limit))
 
     Stream.unfold(initial_cursor, fn cursor ->
       filters = Map.put(filters, :cursor, cursor)

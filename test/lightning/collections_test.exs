@@ -98,20 +98,14 @@ defmodule Lightning.CollectionsTest do
           )
         end)
 
-      Repo.transaction(fn ->
-        assert stream = Collections.get_all(collection, limit: 50)
+      get_items =
+        Collections.get_all(collection, limit: 50)
+        |> Repo.preload(collection: :project)
 
-        assert get_items =
-                 stream
-                 |> Stream.take(15)
-                 |> Enum.to_list()
-                 |> Repo.preload(collection: :project)
+      assert List.last(get_items) ==
+               Enum.sort_by(items, & &1.inserted_at) |> List.last()
 
-        assert List.last(get_items) ==
-                 Enum.sort_by(items, & &1.inserted_at) |> List.last()
-
-        assert MapSet.new(get_items) == MapSet.new(items)
-      end)
+      assert MapSet.new(get_items) == MapSet.new(items)
     end
 
     test "returns the items after a cursor up to a limited amount" do
@@ -127,39 +121,23 @@ defmodule Lightning.CollectionsTest do
 
       %{inserted_at: cursor} = Enum.at(items, 4)
 
-      Repo.transaction(fn ->
-        assert stream =
-                 Collections.get_all(collection, cursor: cursor, limit: 50)
+      assert Collections.get_all(collections, cursor: cursor, limit: 50)
+             |> Enum.count() == 30 - (4 + 1)
 
-        assert stream |> Enum.to_list() |> Enum.count() == 30 - (4 + 1)
-      end)
-
-      Repo.transaction(fn ->
-        assert stream =
-                 Collections.get_all(collection, cursor: cursor, limit: 10)
-
-        assert Enum.count(stream) == 10
-      end)
+      assert Collections.get_all(collection, cursor: cursor, limit: 10)
+             |> Enum.count() == 10
     end
 
     test "returns empty list when collection is empty" do
       collection = insert(:collection)
 
-      Repo.transaction(fn ->
-        assert stream = Collections.get_all(collection, limit: 50)
-        assert Enum.count(stream) == 0
-      end)
+      assert [] = Collections.get_all(collection, limit: 50)
     end
 
     test "returns empty list when the collection doesn't exist" do
       insert(:collection_item, key: "existing_key")
 
-      Repo.transaction(fn ->
-        assert stream =
-                 Collections.get_all(%{id: Ecto.UUID.generate()}, limit: 50)
-
-        assert Enum.count(stream) == 0
-      end)
+      assert [] = Collections.get_all(%{id: Ecto.UUID.generate()}, limit: 50)
     end
   end
 
@@ -213,23 +191,19 @@ defmodule Lightning.CollectionsTest do
 
       insert(:collection_item, key: "rkeyB", collection: collection)
 
-      assert get_items =
-               Collections.get_all(
-                 collection,
-                 %{cursor: cursor, limit: 50},
-                 "rkeyA*"
-               )
+      assert Collections.get_all(
+               collection,
+               %{cursor: cursor, limit: 50},
+               "rkeyA*"
+             )
+             |> Enum.count() == 30 - (9 + 1)
 
-      assert Enum.count(get_items) == 30 - (9 + 1)
-
-      assert get_items =
-               Collections.get_all(
-                 collection,
-                 %{cursor: cursor, limit: 16},
-                 "rkeyA*"
-               )
-
-      assert Enum.count(get_items) == 16
+      assert Collections.get_all(
+               collection,
+               %{cursor: cursor, limit: 16},
+               "rkeyA*"
+             )
+             |> Enum.count(get_items) == 16
     end
 
     test "returns empty list when collection is empty" do
