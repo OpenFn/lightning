@@ -48,60 +48,115 @@ defmodule Lightning.WorkOrders.ExportWorker do
         args: %{
           "project_id" => project_id,
           "project_file" => project_file_id,
-          "search_params" => params
+          "search_params" => params,
+          "audit_log_id" => audit_log_id
         }
       }) do
     search_params = SearchParams.from_map(params)
 
-    result =
-      with {:ok, project_file} <- get_project_file(project_file_id),
-           {:ok, project_file} <-
-             update_project_file(project_file, %{status: :in_progress}),
-           {:ok, project} <- get_project(project_id),
-           {:ok, zip_file} <-
-             process_export(project, search_params, project_file),
-           {:ok, storage_path} <- store_project_file(zip_file, project_file) do
-        update_project_file(project_file, %{
-          status: :completed,
-          path: storage_path
-        })
-      end
+    multi =
+      Ecto.Multi.new()
+      |> Ecto.Multi.run(:update_audit_log_in_progress, fn _repo, _changes ->
+        update_audit_log(audit_log_id, "started")
+      end)
+      |> Ecto.Multi.run(:update_project_file_in_progress, fn _repo, _changes ->
+        case get_project_file(project_file_id) do
+          {:ok, project_file} ->
+            update_project_file(project_file, %{status: :in_progress})
 
-    case result do
-      {:ok, project_file} ->
+          error ->
+            error
+        end
+      end)
+      |> Ecto.Multi.run(:process_export, fn _repo, changes ->
+        case get_project(project_id) do
+          {:ok, project} ->
+            process_export(
+              project,
+              search_params,
+              changes.update_project_file_in_progress
+            )
+
+          error ->
+            error
+        end
+      end)
+      |> Ecto.Multi.run(:store_project_file, fn _repo, changes ->
+        case changes.process_export do
+          zip_file when is_binary(zip_file) ->
+            store_project_file(zip_file, changes.update_project_file_in_progress)
+
+          _unexpected_value ->
+            {:error, :unexpected_process_export_result}
+        end
+      end)
+      |> Ecto.Multi.run(:complete_export, fn _repo, changes ->
+        project_file = changes.update_project_file_in_progress
+
+        {:ok, project_file} =
+          update_project_file(project_file, %{
+            status: :completed,
+            path: changes.store_project_file
+          })
+
+        update_audit_log(audit_log_id, "completed")
+
         UserNotifier.notify_history_export_completion(
           project_file.created_by,
           project_file
         )
 
+        {:ok, project_file}
+      end)
+
+    case Repo.transaction(multi) do
+      {:ok, _result} ->
         Logger.info("Export completed successfully.")
         :ok
 
-      {:error, reason} ->
+      {:error, _failed_operation, reason, _changes} ->
         Logger.error("Export failed with reason: #{inspect(reason)}")
+
+        update_audit_log(audit_log_id, "failed")
+
         {:error, reason}
     end
   end
 
   def enqueue_export(project, project_file, search_params) do
-    job =
-      new(%{
-        "project_id" => project.id,
-        "project_file" => project_file.id,
-        "search_params" => search_params
-      })
+    multi =
+      Ecto.Multi.new()
+      |> Ecto.Multi.insert(
+        :audit_log,
+        Lightning.Workorders.ExportAudit.event(
+          "enqueued",
+          project.id,
+          project_file.created_by.id,
+          %{filters: search_params}
+        )
+      )
+      |> Ecto.Multi.run(:enqueue_job, fn _repo, %{audit_log: audit_log} ->
+        job =
+          new(%{
+            "project_id" => project.id,
+            "project_file" => project_file.id,
+            "search_params" => search_params,
+            "audit_log_id" => audit_log.id
+          })
 
-    Oban.insert(Lightning.Oban, job)
-    |> case do
-      {:ok, _job} ->
+        case Oban.insert(Lightning.Oban, job) do
+          {:ok, _job} -> {:ok, :ok}
+          {:error, changeset} -> {:error, changeset}
+        end
+      end)
+
+    case Repo.transaction(multi) do
+      {:ok, _result} ->
         :ok
 
-      {:error, changeset} ->
-        Logger.error(
-          "Failed to enqueue export job. Changeset errors: #{inspect(changeset.errors)}"
-        )
-
-        {:error, changeset}
+      {:error, _failed_operation, reason, _changes} ->
+        Logger.error("Failed to enqueue export job. Reason: #{inspect(reason)}")
+        {:error, reason}
     end
   end
 
@@ -495,5 +550,22 @@ defmodule Lightning.WorkOrders.ExportWorker do
     |> Enum.map(fn log_line ->
       %{id: log_line.id, message: log_line.message, run_id: log_line.run_id}
     end)
+  end
+
+  defp update_audit_log(audit_log_id, status, updates \\ %{}) do
+    audit_log = Repo.get!(Lightning.Auditing.Audit, audit_log_id)
+
+    merged_metadata = Map.merge(audit_log.metadata || %{}, updates)
+
+    changeset =
+      Ecto.Changeset.change(audit_log, %{
+        event: status,
+        metadata: merged_metadata
+      })
+
+    case Repo.update(changeset) do
+      {:ok, updated_audit_log} -> {:ok, updated_audit_log}
+      {:error, changeset} -> {:error, changeset}
+    end
   end
 end

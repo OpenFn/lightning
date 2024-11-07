@@ -119,6 +119,7 @@ defmodule Lightning.Auditing.Audit do
     embeds_one :changes, Changes
     field :actor_id, Ecto.UUID
     field :actor, :map, virtual: true
+    field :metadata, :map
 
     timestamps(updated_at: false)
   end
@@ -175,9 +176,9 @@ defmodule Lightning.Auditing.Audit do
           Ecto.UUID.t(),
           Ecto.UUID.t(),
           Ecto.Changeset.t() | map() | nil,
-          update_changes_fun :: (map() -> map())
-        ) ::
-          :no_changes | Ecto.Changeset.t()
+          update_changes_fun :: (map() -> map()),
+          metadata :: map()
+        ) :: :no_changes | Ecto.Changeset.t()
 
   def event(
         item_type,
@@ -185,10 +186,11 @@ defmodule Lightning.Auditing.Audit do
         item_id,
         actor_id,
         changes \\ %{},
-        update_fun \\ fn x -> x end
+        update_fun \\ fn x -> x end,
+        metadata \\ %{}
       )
 
-  def event(_, _, _, _, %Ecto.Changeset{changes: changes}, _update_fun)
+  def event(_, _, _, _, %Ecto.Changeset{changes: changes}, _update_fun, _)
       when map_size(changes) == 0 do
     :no_changes
   end
@@ -199,7 +201,8 @@ defmodule Lightning.Auditing.Audit do
         item_id,
         actor_id,
         %Ecto.Changeset{data: %subject_schema{} = data, changes: changes},
-        update_fun
+        update_fun,
+        metadata
       ) do
     change_keys = changes |> Map.keys() |> MapSet.new()
 
@@ -219,15 +222,39 @@ defmodule Lightning.Auditing.Audit do
         after: if(after_change === %{}, do: nil, else: after_change)
       }
 
-    audit_changeset(item_type, event, item_id, actor_id, changes, update_fun)
+    audit_changeset(
+      item_type,
+      event,
+      item_id,
+      actor_id,
+      changes,
+      update_fun,
+      metadata
+    )
   end
 
-  def event(item_type, event, item_id, actor_id, changes, update_fun)
+  def event(item_type, event, item_id, actor_id, changes, update_fun, metadata)
       when is_map(changes) do
-    audit_changeset(item_type, event, item_id, actor_id, changes, update_fun)
+    audit_changeset(
+      item_type,
+      event,
+      item_id,
+      actor_id,
+      changes,
+      update_fun,
+      metadata
+    )
   end
 
-  defp audit_changeset(item_type, event, item_id, actor_id, changes, update_fun) do
+  defp audit_changeset(
+         item_type,
+         event,
+         item_id,
+         actor_id,
+         changes,
+         update_fun,
+         metadata
+       ) do
     changeset(
       %__MODULE__{},
       %{
@@ -235,7 +262,8 @@ defmodule Lightning.Auditing.Audit do
         event: event,
         item_id: item_id,
         actor_id: actor_id,
-        changes: changes
+        changes: changes,
+        metadata: metadata
       },
       update_fun
     )
