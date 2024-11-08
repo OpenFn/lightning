@@ -19,7 +19,7 @@ and this project adheres to
 
 ### Changed
 
-- Make Lightning resilient to long collection fetch
+- Reduce transaction time when fetching collection items by fetching upfront
   [#2645](https://github.com/OpenFn/lightning/issues/2645)
 
 ### Fixed
