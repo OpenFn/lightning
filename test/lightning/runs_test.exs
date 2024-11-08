@@ -308,6 +308,8 @@ defmodule Lightning.RunsTest do
       step =
         insert(:step, runs: [run], job: job, input_dataclip: dataclip)
 
+      Lightning.Stub.freeze_time(~U[2024-05-05 12:34:56Z])
+
       {:ok, step} =
         Runs.complete_step(
           %{
@@ -328,8 +330,7 @@ defmodule Lightning.RunsTest do
       assert step.exit_reason == "success"
       assert step.output_dataclip.body == nil
 
-      assert step.output_dataclip.wiped_at ==
-               DateTime.utc_now() |> DateTime.truncate(:second)
+      assert step.output_dataclip.wiped_at == Lightning.current_time()
     end
 
     test "with invalid data returns error changeset" do
@@ -548,10 +549,13 @@ defmodule Lightning.RunsTest do
 
     test "marks a run as started",
          %{run: run, workorder_id: workorder_id} do
+      current_time = ~U[2024-05-05 12:34:56.000000Z]
+      Lightning.Stub.freeze_time(current_time)
+
       assert {:ok, %Run{started_at: started_at}} =
                Runs.start_run(run)
 
-      assert DateTime.compare(started_at, DateTime.utc_now()) == :lt
+      assert started_at == Lightning.current_time()
 
       assert_received %Lightning.WorkOrders.Events.WorkOrderUpdated{
         work_order: %{id: ^workorder_id}
@@ -611,6 +615,8 @@ defmodule Lightning.RunsTest do
         Repo.update(run |> Ecto.Changeset.change(state: :claimed))
 
       # TODO: test that the workorder has it's state updated
+      current_time = ~U[2024-05-05 12:34:56.000000Z]
+      Lightning.Stub.freeze_time(current_time)
 
       {:ok, run} = Runs.start_run(run)
 
@@ -621,7 +627,7 @@ defmodule Lightning.RunsTest do
       {:ok, run} = Runs.complete_run(run, %{state: "success"})
 
       assert run.state == :success
-      assert DateTime.after?(DateTime.utc_now(), run.finished_at)
+      assert run.finished_at == Lightning.current_time()
 
       workorder_id = workorder.id
 
@@ -811,19 +817,21 @@ defmodule Lightning.RunsTest do
           dataclip: dataclip
         )
 
+      current_time = ~U[2024-05-05 12:34:56Z]
+
       run =
         insert(:run,
           work_order: work_order,
           starting_trigger: trigger,
           dataclip: dataclip,
           state: :started,
-          claimed_at: DateTime.utc_now() |> DateTime.add(-3600)
+          claimed_at: current_time |> DateTime.add(-3600)
         )
 
       finished_step =
         insert(:step,
           runs: [run],
-          finished_at: DateTime.utc_now(),
+          finished_at: current_time,
           exit_reason: "success"
         )
 
@@ -857,17 +865,17 @@ defmodule Lightning.RunsTest do
       assert dataclip.request
       refute dataclip.wiped_at
 
+      current_time = ~U[2024-05-05 12:34:56Z]
+      Lightning.Stub.freeze_time(current_time)
+
       :ok = Runs.wipe_dataclips(run)
-      wiped_at = DateTime.utc_now() |> DateTime.truncate(:second)
 
       # dataclip body is cleared
       query = from(Invocation.Dataclip, select: [:wiped_at, :body, :request])
 
       updated_dataclip = Lightning.Repo.get(query, dataclip.id)
 
-      assert updated_dataclip.wiped_at == wiped_at or
-               1 ==
-                 abs(DateTime.diff(updated_dataclip.wiped_at, wiped_at, :second))
+      assert updated_dataclip.wiped_at == current_time
 
       refute updated_dataclip.body
       refute updated_dataclip.request
