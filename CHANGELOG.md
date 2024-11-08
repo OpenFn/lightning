@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Audit history exports events
+  [#2367](https://github.com/OpenFn/lightning/issues/2367)
+
 ### Changed
 
 ### Fixed
