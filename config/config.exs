@@ -144,7 +144,9 @@ config :lightning, :default_retention_period, nil
 
 config :lightning, Lightning.Runtime.RuntimeManager, start: false
 
-config :lightning, LightningWeb.CollectionsController, stream_limit: 1_000
+config :lightning, LightningWeb.CollectionsController,
+  default_stream_limit: 1_000,
+  max_database_limit: 5_000
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
