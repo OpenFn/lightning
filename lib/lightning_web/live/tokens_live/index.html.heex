@@ -19,7 +19,7 @@
         return_to={~p"/profile/tokens"}
       />
     <% end %>
-    <div :if={@new_token} class="bg-blue-100">
+    <div :if={@new_token} data-entity="new_token" class="bg-blue-100">
       <div class="my-auto whitespace-nowrap font-medium text-gray-900 p-4">
         <div class="flex">
           <span class="my-auto whitespace-nowrap">
@@ -42,10 +42,13 @@
             id="copy"
             type="button"
             phx-hook="Copy"
+            phx-click="copy"
+            phx-then={%JS{}}
             data-to="#new_token"
             class="rounded-full bg-blue-100 p-2 text-indigo-700 shadow-sm hover:opacity-75"
           >
             <.icon name="hero-clipboard" class="h-5 w-5" />
+            <span class="sr-only">Copy</span>
           </button>
         </div>
       </div>
@@ -77,6 +80,7 @@
           </span>
 
           <.link
+            id={"delete-token-#{token.id}"}
             patch={~p"/profile/tokens/#{token.id}/delete"}
             class="text-red-600"
           >

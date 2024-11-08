@@ -35,7 +35,7 @@ defmodule LightningWeb.TokensLiveTest do
              |> render_click() =~ "Token created successfully"
 
       assert token_live
-             |> element("tr[data-entity='new_token']")
+             |> element("div[data-entity='new_token']")
              |> has_element?()
 
       assert token_live |> element("button#copy") |> has_element?()
@@ -77,7 +77,7 @@ defmodule LightningWeb.TokensLiveTest do
 
       # find a <tr> that has id of `token-<id>`
       assert token_live
-             |> has_element?("tr#token-#{api_token.id}")
+             |> has_element?("tr#tokens-#{api_token.id}")
 
       # and then click the thing that is a#delete-token-#token_id
       assert token_live

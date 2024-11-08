@@ -218,11 +218,11 @@ defmodule LightningWeb.Components.Common do
       <span class="opacity-20" title={@message}>
         <%= case @type do %>
           <% :release -> %>
-            <Heroicons.check_badge class={@icon_classes} />
+            <.icon name="hero-check-badge" class={@icon_classes} />
           <% :edge -> %>
-            <Heroicons.cube class={@icon_classes} />
+            <.icon name="hero-cube" class={@icon_classes} />
           <% :warn -> %>
-            <Heroicons.exclamation_triangle class={@icon_classes} />
+            <.icon name="hero-exclamation-triangle" class={@icon_classes} />
           <% :no_docker -> %>
         <% end %>
       </span>
