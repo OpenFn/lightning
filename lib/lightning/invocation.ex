@@ -2,6 +2,7 @@ defmodule Lightning.Invocation do
   @moduledoc """
   The Invocation context.
   """
+  @behaviour Lightning.Invocation
 
   import Ecto.Query, warn: false
   import Lightning.Helpers, only: [coerce_json_field: 2]
@@ -14,8 +15,6 @@ defmodule Lightning.Invocation do
   alias Lightning.Repo
   alias Lightning.WorkOrder
   alias Lightning.WorkOrders.SearchParams
-
-  @behaviour Lightning.Invocation
 
   @callback export_workorders(
               project :: Project.t(),
