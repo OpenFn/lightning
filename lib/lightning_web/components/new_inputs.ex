@@ -566,7 +566,7 @@ defmodule LightningWeb.Components.NewInputs do
     ~H"""
     <p
       data-tag="error_message"
-      class="mt-1 inline-flex items-center gap-x-1.5 text-xs text-danger-600"
+      class="phx-no-feedback:hidden mt-1 inline-flex items-center gap-x-1.5 text-xs text-danger-600"
     >
       <.icon name="hero-exclamation-circle" class="h-4 w-4" />
       <%= render_slot(@inner_block) %>
