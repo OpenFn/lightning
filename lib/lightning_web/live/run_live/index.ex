@@ -18,7 +18,6 @@ defmodule LightningWeb.RunLive.Index do
   alias Lightning.Services.UsageLimiter
   alias Lightning.WorkOrders
   alias Lightning.WorkOrders.Events
-  alias Lightning.WorkOrders.ExportWorker
   alias Lightning.WorkOrders.SearchParams
   alias LightningWeb.LiveHelpers
   alias LightningWeb.RunLive.Components
@@ -480,51 +479,30 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   def handle_event("confirm-export", _params, socket) do
-    search_params = SearchParams.new(socket.assigns.filters)
+    %{filters: filters, project: project, current_user: current_user} =
+      socket.assigns
 
-    Lightning.WorkOrders.ExportAudit.event(
-      "started",
-      socket.assigns.project.id,
-      socket.assigns.current_user.id,
-      %{},
-      %{filters: socket.assigns.filters}
-    )
-    |> IO.inspect()
-    |> Lightning.WorkOrders.ExportAudit.save()
-    |> IO.inspect()
+    search_params = SearchParams.new(filters)
 
-    case Projects.File.new(%{
-           type: :export,
-           status: :enqueued,
-           created_by: socket.assigns.current_user,
-           project: socket.assigns.project
-         })
-         |> Repo.insert() do
-      {:ok, project_file} ->
-        case ExportWorker.enqueue_export(
-               socket.assigns.project,
-               project_file,
-               search_params
-             ) do
-          :ok ->
-            {:noreply,
-             socket
-             |> assign(:show_export_modal, false)
-             |> put_flash(
-               :info,
-               "History export started successfully. You will be notified by email after completion."
-             )}
+    case Invocation.export_workorders(project, current_user, search_params) do
+      {:ok, %{project_file: _project_file}} ->
+        {:noreply,
+         socket
+         |> assign(:show_export_modal, false)
+         |> put_flash(
+           :info,
+           "History export started successfully. You will be notified by email after completion."
+         )}
 
-          {:error, _reason} ->
-            Projects.File.mark_failed(project_file)
-            |> Repo.update!()
+      {:error, :export_job, _reason, %{project_file: project_file}} ->
+        Projects.File.mark_failed(project_file)
+        |> Repo.update!()
 
-            {:noreply,
-             socket
-             |> put_flash(:error, "Failed to start export. Please try again.")}
-        end
+        {:noreply,
+         socket
+         |> put_flash(:error, "Failed to start export. Please try again.")}
 
-      {:error, _changeset} ->
+      {:error, _failed_operation, _reason, _changes} ->
         {:noreply,
          socket
          |> put_flash(:error, "Failed to start export. Please try again.")}

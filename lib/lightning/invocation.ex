@@ -6,6 +6,7 @@ defmodule Lightning.Invocation do
   import Ecto.Query, warn: false
   import Lightning.Helpers, only: [coerce_json_field: 2]
 
+  alias Lightning.Accounts.User
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Query
   alias Lightning.Invocation.Step
@@ -13,6 +14,15 @@ defmodule Lightning.Invocation do
   alias Lightning.Repo
   alias Lightning.WorkOrder
   alias Lightning.WorkOrders.SearchParams
+
+  @callback export_workorders(
+              project :: Project.t(),
+              user :: User.t(),
+              search_params :: SearchParams.t()
+            ) ::
+              {:ok, map()} | {:error, atom(), term(), map()}
+
+  @behaviour Lightning.Invocation
 
   @workorders_search_timeout 30_000
   @workorders_count_limit 50
@@ -650,4 +660,63 @@ defmodule Lightning.Invocation do
     do:
       logs_for_step(step)
       |> Enum.map_join("\n", fn log -> log.message end)
+
+  @doc """
+  Exports work orders by performing a series of database operations wrapped in a transaction.
+
+  This function creates an audit log, a project file record, and enqueues an export job using a transaction.
+  Each step is executed as part of an `Ecto.Multi` operation, ensuring atomicity.
+
+  ## Parameters
+
+    - `project` - The project for which work orders are being exported. Expected to be a map or struct with an `id` field.
+    - `user` - The user initiating the export operation. Expected to be a map or struct with an `id` field.
+    - `search_params` - A map of search parameters used to filter work orders to export.
+
+  ## Returns
+
+    - `{:ok, %{audit: audit, project_file: project_file, export_job: job}}` on success:
+      - `audit`: The audit log entry created for the export operation.
+      - `project_file`: The project file record created for the export operation.
+      - `export_job`: The result of the export job enqueuing step.
+
+    - `{:error, step, reason, changes}` if any step in the transaction fails:
+      - `step`: The step where the error occurred, e.g., `:audit`, `:project_file`, or `:export_job`.
+      - `reason`: The reason for the failure, typically an error atom.
+      - `changes`: A map of changes up to the point of failure.
+  """
+  @impl true
+  def export_workorders(project, user, search_params) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.run(:audit, fn _repo, _changes ->
+      Lightning.WorkOrders.ExportAudit.event(
+        "started",
+        project.id,
+        user.id,
+        %{},
+        %{search_params: search_params}
+      )
+      |> Lightning.WorkOrders.ExportAudit.save()
+    end)
+    |> Ecto.Multi.insert(
+      :project_file,
+      Lightning.Projects.File.new(%{
+        type: :export,
+        status: :enqueued,
+        created_by: user,
+        project: project
+      })
+    )
+    |> Ecto.Multi.run(:export_job, fn _repo, %{project_file: project_file} ->
+      case Lightning.WorkOrders.ExportWorker.enqueue_export(
+             project,
+             project_file,
+             search_params
+           ) do
+        :ok -> {:ok, project_file}
+        {:error, reason} -> {:error, reason}
+      end
+    end)
+    |> Repo.transaction()
+  end
 end

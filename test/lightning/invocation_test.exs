@@ -2,6 +2,7 @@ defmodule Lightning.InvocationTest do
   use Lightning.DataCase, async: true
 
   import Lightning.Factories
+  import Mox
 
   alias Lightning.Runs
   alias Lightning.WorkOrders.SearchParams
@@ -9,6 +10,8 @@ defmodule Lightning.InvocationTest do
   alias Lightning.Repo
 
   require SearchParams
+
+  setup :verify_on_exit!
 
   defp build_workflow(opts) do
     job = build(:job)
@@ -1123,6 +1126,87 @@ defmodule Lightning.InvocationTest do
 
     defp build_log_map(message) do
       %{id: Ecto.UUID.generate(), message: message, timestamp: build(:timestamp)}
+    end
+  end
+
+  describe "export_workorders/3" do
+    setup do
+      project = insert(:project)
+      user = insert(:user)
+
+      search_params = SearchParams.new(%{})
+
+      {:ok, project: project, user: user, search_params: search_params}
+    end
+
+    test "exports workorders successfully", %{
+      project: project,
+      user: user,
+      search_params: search_params
+    } do
+      expect(Lightning.InvocationMock, :export_workorders, fn _, _, _ ->
+        {:ok,
+         %{
+           audit: %{event: "started"},
+           project_file: %{status: :enqueued},
+           export_job: %{type: :export}
+         }}
+      end)
+
+      result =
+        Lightning.InvocationMock.export_workorders(project, user, search_params)
+
+      assert {:ok, %{audit: audit, project_file: project_file, export_job: job}} =
+               result
+
+      assert audit.event == "started"
+      assert project_file.status == :enqueued
+      assert job.type == :export
+    end
+
+    test "fails when audit creation fails", %{
+      project: project,
+      user: user,
+      search_params: search_params
+    } do
+      expect(Lightning.InvocationMock, :export_workorders, fn _, _, _ ->
+        {:error, :audit, :audit_failed, %{}}
+      end)
+
+      result =
+        Lightning.InvocationMock.export_workorders(project, user, search_params)
+
+      assert {:error, :audit, :audit_failed, _changes} = result
+    end
+
+    test "fails when project file creation fails", %{
+      project: project,
+      user: user,
+      search_params: search_params
+    } do
+      expect(Lightning.InvocationMock, :export_workorders, fn _, _, _ ->
+        {:error, :project_file, :project_file_failed, %{}}
+      end)
+
+      result =
+        Lightning.InvocationMock.export_workorders(project, user, search_params)
+
+      assert {:error, :project_file, :project_file_failed, _changes} = result
+    end
+
+    test "fails when export job enqueuing fails", %{
+      project: project,
+      user: user,
+      search_params: search_params
+    } do
+      expect(Lightning.InvocationMock, :export_workorders, fn _, _, _ ->
+        {:error, :export_job, :enqueue_failed, %{}}
+      end)
+
+      result =
+        Lightning.InvocationMock.export_workorders(project, user, search_params)
+
+      assert {:error, :export_job, :enqueue_failed, _changes} = result
     end
   end
 end

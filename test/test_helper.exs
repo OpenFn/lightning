@@ -18,6 +18,8 @@ Mimic.copy(Mix.Tasks.Lightning.InstallSchemas)
 # `ASSERT_RECEIVE_TIMEOUT` environment variable.
 ExUnit.configure(formatters: [JUnitFormatter, ExUnit.CLIFormatter])
 
+Mox.defmock(Lightning.InvocationMock, for: Lightning.Invocation)
+
 Mox.defmock(Lightning.Extensions.MockRateLimiter,
   for: Lightning.Extensions.RateLimiting
 )

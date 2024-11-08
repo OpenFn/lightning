@@ -70,8 +70,8 @@ defmodule Lightning.Auditing.Audit do
               item_id,
               actor_id,
               changes,
-              &update_changes/1,
-              metadata
+              metadata,
+              &update_changes/1
             )
           end
         end
@@ -183,8 +183,8 @@ defmodule Lightning.Auditing.Audit do
           Ecto.UUID.t(),
           Ecto.UUID.t(),
           Ecto.Changeset.t() | map() | nil,
-          update_changes_fun :: (map() -> map()),
-          map()
+          map(),
+          update_changes_fun :: (map() -> map())
         ) ::
           :no_changes | Ecto.Changeset.t()
 
@@ -194,8 +194,8 @@ defmodule Lightning.Auditing.Audit do
         item_id,
         actor_id,
         changes \\ %{},
-        update_fun \\ fn x -> x end,
-        metadata \\ %{}
+        metadata \\ %{},
+        update_fun \\ fn x -> x end
       )
 
   def event(
@@ -204,8 +204,8 @@ defmodule Lightning.Auditing.Audit do
         _,
         _,
         %Ecto.Changeset{changes: changes},
-        _update_fun,
-        _metadata
+        _metadata,
+        _update_fun
       )
       when map_size(changes) == 0 do
     :no_changes
@@ -217,8 +217,8 @@ defmodule Lightning.Auditing.Audit do
         item_id,
         actor_id,
         %Ecto.Changeset{data: %subject_schema{} = data, changes: changes},
-        update_fun,
-        metadata
+        metadata,
+        update_fun
       ) do
     change_keys = changes |> Map.keys() |> MapSet.new()
 
@@ -244,12 +244,12 @@ defmodule Lightning.Auditing.Audit do
       item_id,
       actor_id,
       changes,
-      update_fun,
-      metadata
+      metadata,
+      update_fun
     )
   end
 
-  def event(item_type, event, item_id, actor_id, changes, update_fun, metadata)
+  def event(item_type, event, item_id, actor_id, changes, metadata, update_fun)
       when is_map(changes) do
     audit_changeset(
       item_type,
@@ -257,8 +257,8 @@ defmodule Lightning.Auditing.Audit do
       item_id,
       actor_id,
       changes,
-      update_fun,
-      metadata
+      metadata,
+      update_fun
     )
   end
 
@@ -268,8 +268,8 @@ defmodule Lightning.Auditing.Audit do
          item_id,
          actor_id,
          changes,
-         update_fun,
-         metadata
+         metadata,
+         update_fun
        ) do
     changeset(
       %__MODULE__{},
