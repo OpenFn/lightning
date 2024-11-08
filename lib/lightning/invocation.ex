@@ -15,14 +15,14 @@ defmodule Lightning.Invocation do
   alias Lightning.WorkOrder
   alias Lightning.WorkOrders.SearchParams
 
+  @behaviour Lightning.Invocation
+
   @callback export_workorders(
               project :: Project.t(),
               user :: User.t(),
               search_params :: SearchParams.t()
             ) ::
               {:ok, map()} | {:error, atom(), term(), map()}
-
-  @behaviour Lightning.Invocation
 
   @workorders_search_timeout 30_000
   @workorders_count_limit 50
