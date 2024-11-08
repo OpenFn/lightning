@@ -10,12 +10,9 @@ defmodule LightningWeb.CollectionsController do
 
   @max_chunk_size 50
 
-  @limits Application.compile_env!(
-            :lightning,
-            LightningWeb.CollectionsController
-          )
+  @limits Application.compile_env!(:lightning, __MODULE__)
 
-  @default_limit @limits[:default_stream_limit]
+  @default_stream_limit @limits[:default_stream_limit]
   @max_database_limit @limits[:max_database_limit]
 
   @valid_params [
@@ -35,9 +32,6 @@ defmodule LightningWeb.CollectionsController do
     )
   end
 
-  #
-  # Controller starts here
-  #
   def put(conn, %{"name" => col_name, "key" => key, "value" => value}) do
     with {:ok, collection} <- Collections.get_collection(col_name),
          :ok <- authorize(conn, collection) do
@@ -108,8 +102,7 @@ defmodule LightningWeb.CollectionsController do
   def stream(conn, %{"name" => col_name, "key" => key_pattern}) do
     with {:ok, collection, filters, response_limit} <-
            validate_query(conn, col_name) do
-      items_stream =
-        safe_stream_from_db(collection, filters, key_pattern)
+      items_stream = stream_all_in_chunks(collection, filters, key_pattern)
 
       case stream_chunked(conn, items_stream, response_limit) do
         {:error, conn} -> conn
@@ -121,7 +114,7 @@ defmodule LightningWeb.CollectionsController do
   def stream(conn, %{"name" => col_name}) do
     with {:ok, collection, filters, response_limit} <-
            validate_query(conn, col_name) do
-      items_stream = safe_stream_from_db(collection, filters)
+      items_stream = stream_all_in_chunks(collection, filters)
 
       case stream_chunked(conn, items_stream, response_limit) do
         {:error, conn} -> conn
@@ -130,7 +123,7 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
-  defp safe_stream_from_db(
+  defp stream_all_in_chunks(
          collection,
          %{cursor: initial_cursor, limit: limit} = filters,
          key_pattern \\ nil
@@ -175,11 +168,13 @@ defmodule LightningWeb.CollectionsController do
          query_params <-
            Enum.into(conn.query_params, %{
              "cursor" => nil,
-             "limit" => "#{@default_limit}"
+             "limit" => "#{@default_stream_limit}"
            }),
          {:ok, filters} <- validate_query_params(query_params) do
       # returns one more from db than the limit to determine if there are more items for the cursor
-      db_query_filters = Map.update(filters, :limit, @default_limit, &(&1 + 1))
+      db_query_filters =
+        Map.update(filters, :limit, @default_stream_limit, &(&1 + 1))
+
       response_limit = Map.fetch!(filters, :limit)
 
       {:ok, collection, db_query_filters, response_limit}

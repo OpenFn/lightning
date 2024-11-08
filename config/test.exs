@@ -163,5 +163,5 @@ config :lightning, :github_app,
   """
 
 config :lightning, LightningWeb.CollectionsController,
-  default_stream_limit: 50,
-  max_database_limit: 500
+  default_stream_limit: 25,
+  max_database_limit: 75

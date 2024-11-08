@@ -450,36 +450,6 @@ defmodule LightningWeb.API.CollectionsControllerTest do
                |> json_response(200)
     end
 
-    test "up exactly to the limit", %{conn: conn} do
-      user = insert(:user)
-      project = insert(:project, project_users: [%{user: user}])
-
-      collection =
-        insert(:collection,
-          project: project,
-          items: insert_list(3, :collection_item)
-        )
-
-      token = Lightning.Accounts.generate_api_token(user)
-
-      conn =
-        conn
-        |> assign_bearer(token)
-        |> get(~p"/collections/#{collection.name}")
-
-      assert conn.state == :chunked
-
-      expected_items =
-        collection.items
-        |> Enum.map(&Jason.encode!/1)
-        |> Enum.map(&Jason.decode!/1)
-
-      assert json_response(conn, 200) == %{
-               "items" => expected_items,
-               "cursor" => nil
-             }
-    end
-
     test "using creation filters", %{conn: conn} do
       user = insert(:user)
       project = insert(:project, project_users: [%{user: user}])
@@ -520,8 +490,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
 
       items =
         collection.items
-        |> Enum.map(&Jason.encode!/1)
-        |> Enum.map(&Jason.decode!/1)
+        |> Enum.map(&encode_decode/1)
 
       assert %{
                "items" => ^items,
@@ -532,7 +501,52 @@ defmodule LightningWeb.API.CollectionsControllerTest do
                |> json_response(200)
     end
 
-    test "returns items up to a custom limit (for database fetches)", %{
+    test "up to the default limit", %{conn: conn} do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+
+      collection =
+        insert(:collection,
+          project: project,
+          items: insert_list(3, :collection_item)
+        )
+
+      token = Lightning.Accounts.generate_api_token(user)
+
+      conn =
+        conn
+        |> assign_bearer(token)
+        |> get(~p"/collections/#{collection.name}")
+
+      assert conn.state == :chunked
+
+      items =
+        collection.items
+        |> Enum.map(&encode_decode/1)
+
+      assert json_response(conn, 200) == %{
+               "items" => items,
+               "cursor" => nil
+             }
+
+      # Insert more to bring the total to the stream limit
+      items =
+        Enum.concat(
+          items,
+          insert_list(
+            @default_limit - length(collection.items),
+            :collection_item,
+            collection: collection
+          )
+          |> Enum.map(&encode_decode/1)
+        )
+
+      conn = conn |> get(~p"/collections/#{collection.name}")
+
+      assert json_response(conn, 200) == %{"items" => items, "cursor" => nil}
+    end
+
+    test "up to a limit from params", %{
       conn: conn
     } do
       user = insert(:user)
@@ -545,6 +559,18 @@ defmodule LightningWeb.API.CollectionsControllerTest do
           items: insert_list(limit + 1, :collection_item)
         )
 
+      all_items =
+        collection.items
+        |> Enum.map(&encode_decode/1)
+
+      expected_items =
+        all_items |> Enum.take(limit)
+
+      last_item =
+        collection.items
+        |> Enum.take(limit)
+        |> List.last()
+
       token = Lightning.Accounts.generate_api_token(user)
 
       conn =
@@ -554,33 +580,33 @@ defmodule LightningWeb.API.CollectionsControllerTest do
 
       assert conn.state == :chunked
 
-      expected_items =
-        collection.items
-        |> Enum.take(limit)
-        |> Enum.map(&Jason.encode!/1)
-        |> Enum.map(&Jason.decode!/1)
-
-      last_item =
-        collection.items
-        |> Enum.take(limit)
-        |> List.last()
-
       assert json_response(conn, 200) == %{
                "items" => expected_items,
                "cursor" =>
                  Base.encode64(DateTime.to_iso8601(last_item.inserted_at))
              }
+
+      # Request everything, shouldn't be getting a cursor
+      conn =
+        conn |> get(~p"/collections/#{collection.name}", limit: limit + 1)
+
+      assert json_response(conn, 200) == %{
+               "items" => all_items,
+               "cursor" => nil
+             }
     end
   end
 
   describe "GET /collections/:name with cursors" do
-    test "up to the limit and returning a cursor", %{conn: conn} do
+    test "up to the default limit and returning a cursor", %{conn: conn} do
       user = insert(:user)
       project = insert(:project, project_users: [%{user: user}])
       collection = insert(:collection, project: project)
 
       items =
-        insert_list(@default_limit + 1, :collection_item, collection: collection)
+        insert_list(@max_database_limit + 1, :collection_item,
+          collection: collection
+        )
 
       token = Lightning.Accounts.generate_api_token(user)
 
@@ -601,8 +627,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
 
       assert items ==
                expected_items
-               |> Enum.map(&Jason.encode!/1)
-               |> Enum.map(&Jason.decode!/1)
+               |> Enum.map(&encode_decode/1)
 
       assert cursor == Base.encode64(DateTime.to_iso8601(last_item.inserted_at))
     end
@@ -614,46 +639,34 @@ defmodule LightningWeb.API.CollectionsControllerTest do
       limit = 100
 
       all_items =
-        Enum.map(1..(2 * limit + 1), fn i ->
-          insert(:collection_item,
-            collection: collection,
-            key: "key#{i}",
-            value: "value#{i}"
-          )
-        end)
+        insert_list(2 * limit + 1, :collection_item, collection: collection)
+        |> Enum.map(&encode_decode/1)
 
       token = Lightning.Accounts.generate_api_token(user)
 
       conn = assign_bearer(conn, token)
 
-      assert %{state: :chunked} =
-               conn =
-               get(conn, ~p"/collections/#{collection.name}", limit: limit)
+      conn =
+        conn
+        |> assign_bearer(token)
+        |> get(~p"/collections/#{collection.name}", limit: limit)
 
-      expected_items =
-        all_items
-        |> Enum.take(limit)
-        |> Enum.map(&Jason.encode!/1)
-        |> Enum.map(&Jason.decode!/1)
+      assert conn.state == :chunked
+
+      expected_items = all_items |> Enum.take(limit)
 
       assert %{
                "items" => ^expected_items,
                "cursor" => cursor
              } = json_response(conn, 200)
 
-      assert %{state: :chunked} =
-               conn =
-               get(conn, ~p"/collections/#{collection.name}",
-                 cursor: cursor,
-                 limit: limit
-               )
+      conn =
+        conn
+        |> get(~p"/collections/#{collection.name}", cursor: cursor, limit: limit)
 
-      expected_items =
-        all_items
-        |> Enum.drop(limit)
-        |> Enum.take(limit)
-        |> Enum.map(&Jason.encode!/1)
-        |> Enum.map(&Jason.decode!/1)
+      assert conn.state == :chunked
+
+      expected_items = all_items |> Enum.drop(limit) |> Enum.take(limit)
 
       assert %{
                "items" => ^expected_items,
@@ -674,16 +687,10 @@ defmodule LightningWeb.API.CollectionsControllerTest do
       user = insert(:user)
       project = insert(:project, project_users: [%{user: user}])
       collection = insert(:collection, project: project)
-      limit = 100
+      limit = 5
 
       all_items =
-        Enum.map(1..(2 * limit), fn i ->
-          insert(:collection_item,
-            collection: collection,
-            key: "key#{i}",
-            value: "value#{i}"
-          )
-        end)
+        insert_list(2 * limit, :collection_item, collection: collection)
 
       token = Lightning.Accounts.generate_api_token(user)
 
@@ -696,8 +703,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
       expected_items =
         all_items
         |> Enum.take(limit)
-        |> Enum.map(&Jason.encode!/1)
-        |> Enum.map(&Jason.decode!/1)
+        |> Enum.map(&encode_decode/1)
 
       assert %{
                "items" => response_items,
@@ -716,13 +722,18 @@ defmodule LightningWeb.API.CollectionsControllerTest do
       expected_items =
         all_items
         |> Enum.drop(limit)
-        |> Enum.map(&Jason.encode!/1)
-        |> Enum.map(&Jason.decode!/1)
+        |> Enum.map(&encode_decode/1)
 
       assert %{
                "items" => ^expected_items,
                "cursor" => nil
              } = json_response(conn, 200)
     end
+  end
+
+  defp encode_decode(item) do
+    item
+    |> Jason.encode!()
+    |> Jason.decode!()
   end
 end
