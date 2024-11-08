@@ -4,40 +4,81 @@ defmodule Lightning.AuditingTest do
   alias Lightning.Accounts.User
   alias Lightning.Auditing
   alias Lightning.Auditing.Audit
+  alias Lightning.Workflows.Trigger
+  alias Lightning.VersionControl.ProjectRepoConnection
 
   describe "list_all/1" do
     setup do
       now = DateTime.utc_now()
 
-      user = insert(:user)
+      # Use the same id for actors to enure the query factors in the actor type
+      uuid = Ecto.UUID.generate()
+
+      user = insert(:user, id: uuid)
       _other_user = insert(:user)
 
-      [user_event_3, user_event_4] = insert_events_for_struct(user, now)
+      repo_connection = insert(:project_repo_connection, id: uuid)
+      _other_repo_connection = insert(:project_repo_connection)
+
+      trigger = insert(:trigger, id: uuid, type: :webhook)
+      _other_trigger = insert(:trigger)
+
+      [user_event_3, user_event_4] =
+        insert_events_for_struct(user, now)
+
+      [repo_event_3, repo_event_4] =
+        insert_events_for_struct(repo_connection, now)
+
+      [trigger_event_3, trigger_event_4] =
+        insert_events_for_struct(trigger, now)
 
       %{
+        repo_connection: repo_connection,
+        repo_event_3: repo_event_3,
+        repo_event_4: repo_event_4,
+        trigger: trigger,
+        trigger_event_3: trigger_event_3,
+        trigger_event_4: trigger_event_4,
         user: user,
         user_event_3: user_event_3,
         user_event_4: user_event_4
       }
     end
 
-    test "returns a paginated reverse-chronological list of audit entries", %{
+    test "a paginated reverse-chronological list of audit entries", %{
+      repo_event_3: repo_event_3,
+      repo_event_4: repo_event_4,
+      trigger_event_3: trigger_event_3,
+      trigger_event_4: trigger_event_4,
       user_event_3: user_event_3,
       user_event_4: user_event_4
     } do
-      %{entries: [%{id: id_1}, %{id: id_2}]} =
-        Auditing.list_all(page: 2, page_size: 2)
+      %{
+        entries: [
+          %{id: id_1},
+          %{id: id_2},
+          %{id: id_3},
+          %{id: id_4},
+          %{id: id_5},
+          %{id: id_6}
+        ]
+      } = Auditing.list_all(page: 2, page_size: 6)
 
       assert id_1 == user_event_3.id
-      assert id_2 == user_event_4.id
+      assert id_2 == repo_event_3.id
+      assert id_3 == trigger_event_3.id
+      assert id_4 == user_event_4.id
+      assert id_5 == repo_event_4.id
+      assert id_6 == trigger_event_4.id
     end
 
-    test "returns full audit entry for an user event", %{
-      user: %{
-        first_name: first_name,
-        last_name: last_name,
-        email: email
-      },
+    test "full audit entry for an user event", %{
+      user:
+        %{
+          first_name: first_name,
+          last_name: last_name,
+          email: email
+        } = user,
       user_event_3: user_event_3
     } do
       %{
@@ -50,15 +91,22 @@ defmodule Lightning.AuditingTest do
         changes: changes
       } = user_event_3
 
+      user = Repo.reload!(user)
+
       actor_display_label = "#{first_name} #{last_name}"
 
-      %{entries: [entry, _]} =
-        Auditing.list_all(page: 2, page_size: 2)
+      %{entries: [entry | _other_entries]} =
+        Auditing.list_all(page: 2, page_size: 6)
 
       assert %{
                id: ^id,
-               actor_display_identifier: ^email,
-               actor_display_label: ^actor_display_label,
+               project_repo_connection: nil,
+               trigger: nil,
+               user: ^user,
+               actor_display: %{
+                 identifier: ^email,
+                 label: ^actor_display_label
+               },
                actor_id: ^actor_id,
                actor_type: ^actor_type,
                item_id: ^item_id,
@@ -68,7 +116,7 @@ defmodule Lightning.AuditingTest do
              } = entry
     end
 
-    test "returns full audit entry for a user event if user no longer exists", %{
+    test "full audit entry for a user event if user no longer exists", %{
       user: user,
       user_event_3: user_event_3
     } do
@@ -84,14 +132,167 @@ defmodule Lightning.AuditingTest do
 
       user |> Repo.delete()
 
-      %{entries: [entry, _]} =
-        Auditing.list_all(page: 2, page_size: 2)
+      %{entries: [entry | _other_entries]} =
+        Auditing.list_all(page: 2, page_size: 6)
 
       assert %{
                id: ^id,
+               project_repo_connection: nil,
+               trigger: nil,
+               user: nil,
+               actor_display: %{
+                 identifier: nil,
+                 label: "(User deleted)"
+               },
                actor_id: ^actor_id,
-               actor_display_identifier: nil,
-               actor_display_label: "(User deleted)",
+               actor_type: ^actor_type,
+               item_id: ^item_id,
+               item_type: ^item_type,
+               event: ^event,
+               changes: ^changes
+             } = entry
+    end
+
+    test "full audit entry for an event linked to a repo connection", %{
+      repo_connection: repo_connection,
+      repo_event_3: repo_event_3
+    } do
+      %{
+        id: id,
+        event: event,
+        item_id: item_id,
+        item_type: item_type,
+        actor_id: actor_id,
+        actor_type: actor_type,
+        changes: changes
+      } = repo_event_3
+
+      repo_connection = Repo.reload!(repo_connection)
+
+      %{entries: [_user_entry | [entry | _other_entries]]} =
+        Auditing.list_all(page: 2, page_size: 6)
+
+      assert %{
+               id: ^id,
+               project_repo_connection: ^repo_connection,
+               trigger: nil,
+               user: nil,
+               actor_display: %{
+                 identifier: nil,
+                 label: "GitHub"
+               },
+               actor_id: ^actor_id,
+               actor_type: ^actor_type,
+               item_id: ^item_id,
+               item_type: ^item_type,
+               event: ^event,
+               changes: ^changes
+             } = entry
+    end
+
+    test "full audit entry if project repo connection no longer exists", %{
+      repo_connection: repo_connection,
+      repo_event_3: repo_event_3
+    } do
+      %{
+        id: id,
+        event: event,
+        item_id: item_id,
+        item_type: item_type,
+        actor_id: actor_id,
+        actor_type: actor_type,
+        changes: changes
+      } = repo_event_3
+
+      repo_connection |> Repo.delete()
+
+      %{entries: [_user_entry | [entry | _other_entries]]} =
+        Auditing.list_all(page: 2, page_size: 6)
+
+      assert %{
+               id: ^id,
+               project_repo_connection: nil,
+               trigger: nil,
+               user: nil,
+               actor_display: %{
+                 identifier: nil,
+                 label: "(Project Repo Connection Deleted)"
+               },
+               actor_id: ^actor_id,
+               actor_type: ^actor_type,
+               item_id: ^item_id,
+               item_type: ^item_type,
+               event: ^event,
+               changes: ^changes
+             } = entry
+    end
+
+    test "full audit entry for an event linked to a trigger", %{
+      trigger: trigger,
+      trigger_event_3: trigger_event_3
+    } do
+      %{
+        id: id,
+        event: event,
+        item_id: item_id,
+        item_type: item_type,
+        actor_id: actor_id,
+        actor_type: actor_type,
+        changes: changes
+      } = trigger_event_3
+
+      trigger = Repo.reload!(trigger)
+
+      %{entries: [_user_entry | [_repo_entry | [entry | _other_entries]]]} =
+        Auditing.list_all(page: 2, page_size: 6)
+
+      assert %{
+               id: ^id,
+               project_repo_connection: nil,
+               trigger: ^trigger,
+               user: nil,
+               actor_display: %{
+                 identifier: nil,
+                 label: "Webhook"
+               },
+               actor_id: ^actor_id,
+               actor_type: ^actor_type,
+               item_id: ^item_id,
+               item_type: ^item_type,
+               event: ^event,
+               changes: ^changes
+             } = entry
+    end
+
+    test "full audit entry if trigger no longer exists", %{
+      trigger: trigger,
+      trigger_event_3: trigger_event_3
+    } do
+      %{
+        id: id,
+        event: event,
+        item_id: item_id,
+        item_type: item_type,
+        actor_id: actor_id,
+        actor_type: actor_type,
+        changes: changes
+      } = trigger_event_3
+
+      trigger |> Repo.delete()
+
+      %{entries: [_user_entry | [_repo_entry | [entry | _other_entries]]]} =
+        Auditing.list_all(page: 2, page_size: 6)
+
+      assert %{
+               id: ^id,
+               project_repo_connection: nil,
+               trigger: nil,
+               user: nil,
+               actor_display: %{
+                 identifier: nil,
+                 label: "(Trigger Deleted)"
+               },
+               actor_id: ^actor_id,
                actor_type: ^actor_type,
                item_id: ^item_id,
                item_type: ^item_type,
@@ -102,6 +303,14 @@ defmodule Lightning.AuditingTest do
 
     defp insert_events_for_struct(%User{id: id}, now) do
       insert_events(id, :user, now, 0)
+    end
+
+    defp insert_events_for_struct(%ProjectRepoConnection{id: id}, now) do
+      insert_events(id, :project_repo_connection, now, -1)
+    end
+
+    defp insert_events_for_struct(%Trigger{id: id}, now) do
+      insert_events(id, :trigger, now, -2)
     end
 
     defp insert_events(actor_id, actor_type, now, struct_offset) do

@@ -129,8 +129,11 @@ defmodule Lightning.Auditing.Audit do
     field :actor_type, Ecto.Enum,
       values: [:project_repo_connection, :trigger, :user]
 
-    field :actor_display_identifier, :string, virtual: true
-    field :actor_display_label, :string, virtual: true
+    field :project_repo_connection, :map, virtual: true
+    field :trigger, :map, virtual: true
+    field :user, :map, virtual: true
+
+    field :actor_display, :string, virtual: true
     field :metadata, :map, default: %{}
 
     timestamps(updated_at: false)
