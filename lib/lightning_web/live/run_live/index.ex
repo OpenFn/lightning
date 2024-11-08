@@ -482,6 +482,17 @@ defmodule LightningWeb.RunLive.Index do
   def handle_event("confirm-export", _params, socket) do
     search_params = SearchParams.new(socket.assigns.filters)
 
+    Lightning.WorkOrders.ExportAudit.event(
+      "started",
+      socket.assigns.project.id,
+      socket.assigns.current_user.id,
+      %{},
+      %{filters: socket.assigns.filters}
+    )
+    |> IO.inspect()
+    |> Lightning.WorkOrders.ExportAudit.save()
+    |> IO.inspect()
+
     case Projects.File.new(%{
            type: :export,
            status: :enqueued,
