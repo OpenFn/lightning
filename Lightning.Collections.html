@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-F8C71EA5.js"></script>
+    <script src="dist/sidebar_items-678AAFC8.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -205,6 +205,14 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#get_all/3" translate="no">get_all(map, params, key_pattern \\ nil)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#get_collection/1" translate="no">get_collection(name)</a>
 
       </div>
@@ -232,22 +240,6 @@ Pages
     <div class="summary-row">
       <div class="summary-signature">
         <a href="#put_all/2" translate="no">put_all(map, kv_list)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#stream_all/2" translate="no">stream_all(map, params \\ %{})</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#stream_match/3" translate="no">stream_match(map, pattern, params \\ %{})</a>
 
       </div>
 
@@ -314,11 +306,11 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_collection</span><span class="p" data-group-id="3408678053-1">(</span><span class="p" data-group-id="3408678053-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;New Collection&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Description here&quot;</span><span class="p" data-group-id="3408678053-2">}</span><span class="p" data-group-id="3408678053-1">)</span><span class="w">
-</span><span class="p" data-group-id="3408678053-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3408678053-4">%</span><span class="nc" data-group-id="3408678053-4">Collection</span><span class="p" data-group-id="3408678053-4">{</span><span class="p" data-group-id="3408678053-4">}</span><span class="p" data-group-id="3408678053-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_collection</span><span class="p" data-group-id="2948511324-1">(</span><span class="p" data-group-id="2948511324-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;New Collection&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Description here&quot;</span><span class="p" data-group-id="2948511324-2">}</span><span class="p" data-group-id="2948511324-1">)</span><span class="w">
+</span><span class="p" data-group-id="2948511324-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2948511324-4">%</span><span class="nc" data-group-id="2948511324-4">Collection</span><span class="p" data-group-id="2948511324-4">{</span><span class="p" data-group-id="2948511324-4">}</span><span class="p" data-group-id="2948511324-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_collection</span><span class="p" data-group-id="3408678053-5">(</span><span class="p" data-group-id="3408678053-6">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="no">nil</span><span class="p" data-group-id="3408678053-6">}</span><span class="p" data-group-id="3408678053-5">)</span><span class="w">
-</span><span class="p" data-group-id="3408678053-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3408678053-8">%</span><span class="nc" data-group-id="3408678053-8">Ecto.Changeset</span><span class="p" data-group-id="3408678053-8">{</span><span class="p" data-group-id="3408678053-8">}</span><span class="p" data-group-id="3408678053-7">}</span></code></pre><h2 id="create_collection/1-returns" class="section-heading">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_collection</span><span class="p" data-group-id="2948511324-5">(</span><span class="p" data-group-id="2948511324-6">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="no">nil</span><span class="p" data-group-id="2948511324-6">}</span><span class="p" data-group-id="2948511324-5">)</span><span class="w">
+</span><span class="p" data-group-id="2948511324-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2948511324-8">%</span><span class="nc" data-group-id="2948511324-8">Ecto.Changeset</span><span class="p" data-group-id="2948511324-8">{</span><span class="p" data-group-id="2948511324-8">}</span><span class="p" data-group-id="2948511324-7">}</span></code></pre><h2 id="create_collection/1-returns" class="section-heading">
   <a href="#create_collection/1-returns" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -365,7 +357,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">delete(map, key)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L201" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L190" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -396,7 +388,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">delete_all(map, key_pattern \\ nil)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L212" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L201" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -476,6 +468,37 @@ Pages
 
   </section>
 </section>
+<section class="detail" id="get_all/3">
+
+    <span id="get_all/2"></span>
+
+  <div class="detail-header">
+    <a href="#get_all/3" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">get_all(map, params, key_pattern \\ nil)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L131" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> get_all(<a href="Lightning.Collections.Collection.html#t:t/0">Lightning.Collections.Collection.t</a>(), <a href="https://hexdocs.pm/elixir/Enum.html#t:t/0">Enum.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil) ::
+  <a href="https://hexdocs.pm/elixir/Enum.html#t:t/0">Enum.t</a>()</pre>
+
+      </div>
+
+
+  </section>
+</section>
 <section class="detail" id="get_collection/1">
 
   <div class="detail-header">
@@ -544,11 +567,11 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_collections</span><span class="p" data-group-id="4210623052-1">(</span><span class="p" data-group-id="4210623052-1">)</span><span class="w">
-</span><span class="p" data-group-id="4210623052-2">[</span><span class="p" data-group-id="4210623052-3">%</span><span class="nc" data-group-id="4210623052-3">Collection</span><span class="p" data-group-id="4210623052-3">{</span><span class="p" data-group-id="4210623052-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="4210623052-2">]</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_collections</span><span class="p" data-group-id="1341605832-1">(</span><span class="p" data-group-id="1341605832-1">)</span><span class="w">
+</span><span class="p" data-group-id="1341605832-2">[</span><span class="p" data-group-id="1341605832-3">%</span><span class="nc" data-group-id="1341605832-3">Collection</span><span class="p" data-group-id="1341605832-3">{</span><span class="p" data-group-id="1341605832-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="1341605832-2">]</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">list_collections</span><span class="p" data-group-id="4210623052-4">(</span><span class="ss">order_by</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4210623052-5">[</span><span class="ss">asc</span><span class="p">:</span><span class="w"> </span><span class="ss">:inserted_at</span><span class="p" data-group-id="4210623052-5">]</span><span class="p">,</span><span class="w"> </span><span class="ss">preload</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4210623052-6">[</span><span class="ss">:project</span><span class="p">,</span><span class="w"> </span><span class="ss">:user</span><span class="p" data-group-id="4210623052-6">]</span><span class="p" data-group-id="4210623052-4">)</span><span class="w">
-</span><span class="p" data-group-id="4210623052-7">[</span><span class="p" data-group-id="4210623052-8">%</span><span class="nc" data-group-id="4210623052-8">Collection</span><span class="p" data-group-id="4210623052-8">{</span><span class="p" data-group-id="4210623052-8">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="4210623052-7">]</span></code></pre><h2 id="list_collections/1-returns" class="section-heading">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">list_collections</span><span class="p" data-group-id="1341605832-4">(</span><span class="ss">order_by</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1341605832-5">[</span><span class="ss">asc</span><span class="p">:</span><span class="w"> </span><span class="ss">:inserted_at</span><span class="p" data-group-id="1341605832-5">]</span><span class="p">,</span><span class="w"> </span><span class="ss">preload</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1341605832-6">[</span><span class="ss">:project</span><span class="p">,</span><span class="w"> </span><span class="ss">:user</span><span class="p" data-group-id="1341605832-6">]</span><span class="p" data-group-id="1341605832-4">)</span><span class="w">
+</span><span class="p" data-group-id="1341605832-7">[</span><span class="p" data-group-id="1341605832-8">%</span><span class="nc" data-group-id="1341605832-8">Collection</span><span class="p" data-group-id="1341605832-8">{</span><span class="p" data-group-id="1341605832-8">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="1341605832-7">]</span></code></pre><h2 id="list_collections/1-returns" class="section-heading">
   <a href="#list_collections/1-returns" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -566,7 +589,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">put(map, key, value)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L162" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L151" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -595,7 +618,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">put_all(map, kv_list)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L176" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L165" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -609,67 +632,6 @@ Pages
 
           <pre translate="no"><span class="attribute">@spec</span> put_all(<a href="Lightning.Collections.Collection.html#t:t/0">Lightning.Collections.Collection.t</a>(), [{<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()}]) ::
   {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()} | :error</pre>
-
-      </div>
-
-
-  </section>
-</section>
-<section class="detail" id="stream_all/2">
-
-    <span id="stream_all/1"></span>
-
-  <div class="detail-header">
-    <a href="#stream_all/2" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">stream_all(map, params \\ %{})</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L131" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> stream_all(<a href="Lightning.Collections.Collection.html#t:t/0">Lightning.Collections.Collection.t</a>(), <a href="https://hexdocs.pm/elixir/Enum.html#t:t/0">Enum.t</a>()) :: <a href="https://hexdocs.pm/elixir/Enum.html#t:t/0">Enum.t</a>()</pre>
-
-      </div>
-
-
-  </section>
-</section>
-<section class="detail" id="stream_match/3">
-
-    <span id="stream_match/2"></span>
-
-  <div class="detail-header">
-    <a href="#stream_match/3" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">stream_match(map, pattern, params \\ %{})</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L143" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> stream_match(<a href="Lightning.Collections.Collection.html#t:t/0">Lightning.Collections.Collection.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/Enum.html#t:t/0">Enum.t</a>()) ::
-  <a href="https://hexdocs.pm/elixir/Enum.html#t:t/0">Enum.t</a>()</pre>
 
       </div>
 
@@ -714,11 +676,11 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_collection</span><span class="p" data-group-id="5152556419-1">(</span><span class="n">collection</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5152556419-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Updated Name&quot;</span><span class="p" data-group-id="5152556419-2">}</span><span class="p" data-group-id="5152556419-1">)</span><span class="w">
-</span><span class="p" data-group-id="5152556419-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5152556419-4">%</span><span class="nc" data-group-id="5152556419-4">Collection</span><span class="p" data-group-id="5152556419-4">{</span><span class="p" data-group-id="5152556419-4">}</span><span class="p" data-group-id="5152556419-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_collection</span><span class="p" data-group-id="4292481277-1">(</span><span class="n">collection</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4292481277-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Updated Name&quot;</span><span class="p" data-group-id="4292481277-2">}</span><span class="p" data-group-id="4292481277-1">)</span><span class="w">
+</span><span class="p" data-group-id="4292481277-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4292481277-4">%</span><span class="nc" data-group-id="4292481277-4">Collection</span><span class="p" data-group-id="4292481277-4">{</span><span class="p" data-group-id="4292481277-4">}</span><span class="p" data-group-id="4292481277-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_collection</span><span class="p" data-group-id="5152556419-5">(</span><span class="n">collection</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5152556419-6">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="no">nil</span><span class="p" data-group-id="5152556419-6">}</span><span class="p" data-group-id="5152556419-5">)</span><span class="w">
-</span><span class="p" data-group-id="5152556419-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5152556419-8">%</span><span class="nc" data-group-id="5152556419-8">Ecto.Changeset</span><span class="p" data-group-id="5152556419-8">{</span><span class="p" data-group-id="5152556419-8">}</span><span class="p" data-group-id="5152556419-7">}</span></code></pre><h2 id="update_collection/2-returns" class="section-heading">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_collection</span><span class="p" data-group-id="4292481277-5">(</span><span class="n">collection</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4292481277-6">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="no">nil</span><span class="p" data-group-id="4292481277-6">}</span><span class="p" data-group-id="4292481277-5">)</span><span class="w">
+</span><span class="p" data-group-id="4292481277-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4292481277-8">%</span><span class="nc" data-group-id="4292481277-8">Ecto.Changeset</span><span class="p" data-group-id="4292481277-8">{</span><span class="p" data-group-id="4292481277-8">}</span><span class="p" data-group-id="4292481277-7">}</span></code></pre><h2 id="update_collection/2-returns" class="section-heading">
   <a href="#update_collection/2-returns" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
