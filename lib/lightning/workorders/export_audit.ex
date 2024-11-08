@@ -1,13 +1,9 @@
-defmodule Lightning.Workorders.ExportAudit do
+defmodule Lightning.WorkOrders.ExportAudit do
   @moduledoc """
   Module to log history export actions as audit events.
   """
   use Lightning.Auditing.Audit,
     repo: Lightning.Repo,
     item: "history_export",
-    events: ["enqueued", "started", "completed", "failed"]
-
-  def update_changes(changes) do
-    changes
-  end
+    events: ["started"]
 end
