@@ -121,7 +121,7 @@ defmodule Lightning.CollectionsTest do
 
       %{inserted_at: cursor} = Enum.at(items, 4)
 
-      assert Collections.get_all(collections, cursor: cursor, limit: 50)
+      assert Collections.get_all(collection, cursor: cursor, limit: 50)
              |> Enum.count() == 30 - (4 + 1)
 
       assert Collections.get_all(collection, cursor: cursor, limit: 10)
@@ -203,7 +203,7 @@ defmodule Lightning.CollectionsTest do
                %{cursor: cursor, limit: 16},
                "rkeyA*"
              )
-             |> Enum.count(get_items) == 16
+             |> Enum.count() == 16
     end
 
     test "returns empty list when collection is empty" do
