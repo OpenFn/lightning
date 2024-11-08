@@ -11,9 +11,12 @@ defmodule Lightning.Invocation do
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Query
   alias Lightning.Invocation.Step
+  alias Lightning.Projects.File, as: ProjectFile
   alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.WorkOrder
+  alias Lightning.WorkOrders.ExportAudit
+  alias Lightning.WorkOrders.ExportWorker
   alias Lightning.WorkOrders.SearchParams
 
   @callback export_workorders(
@@ -688,18 +691,18 @@ defmodule Lightning.Invocation do
   def export_workorders(project, user, search_params) do
     Ecto.Multi.new()
     |> Ecto.Multi.run(:audit, fn _repo, _changes ->
-      Lightning.WorkOrders.ExportAudit.event(
+      ExportAudit.event(
         "started",
         project.id,
         user.id,
         %{},
         %{search_params: search_params}
       )
-      |> Lightning.WorkOrders.ExportAudit.save()
+      |> ExportAudit.save()
     end)
     |> Ecto.Multi.insert(
       :project_file,
-      Lightning.Projects.File.new(%{
+      ProjectFile.new(%{
         type: :export,
         status: :enqueued,
         created_by: user,
@@ -707,7 +710,7 @@ defmodule Lightning.Invocation do
       })
     )
     |> Ecto.Multi.run(:export_job, fn _repo, %{project_file: project_file} ->
-      case Lightning.WorkOrders.ExportWorker.enqueue_export(
+      case ExportWorker.enqueue_export(
              project,
              project_file,
              search_params
