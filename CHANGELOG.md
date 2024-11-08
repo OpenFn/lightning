@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Upgrade dependencies
+  [PR#2624](https://github.com/OpenFn/lightning/pull/2624)
+
 ### Fixed
 
 ## [v2.10.0-rc.0] - 2024-11-07
