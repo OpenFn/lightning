@@ -55,7 +55,7 @@ defmodule LightningWeb.DashboardLive.Components do
       phx-click="select-arcade-resource"
       phx-target={@target}
       phx-value-resource={@resource.id}
-      class="relative flex items-end h-[150px] bg-gradient-to-r from-blue-400 to-purple-500 text-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 p-4 text-left"
+      class="relative flex items-end h-[150px] bg-gradient-to-r from-primary-800 to-primary-500 text-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 p-4 text-left"
     >
       <h2 class="text-lg font-semibold absolute bottom-4 left-4">
         <%= @resource.title %>
