@@ -1266,7 +1266,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("modal_closed", _params, socket) do
-    {:noreply, assign(socket, selected_arcade_resource: nil)}
+    {:noreply, socket}
   end
 
   def handle_event("delete_node", %{"id" => id}, socket) do
