@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Hide the collections and fhir-jembi adaptors from the available adaptors list
+  [#2648](https://github.com/OpenFn/lightning/issues/2648)
+
 ### Fixed
 
 - Fix LiveView crash when pressing "esc" on inspector
