@@ -1265,10 +1265,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, updated_socket}
   end
 
-  def handle_event("modal_closed", _params, socket) do
-    {:noreply, socket}
-  end
-
   def handle_event("delete_node", %{"id" => id}, socket) do
     %{
       changeset: changeset,
@@ -1663,6 +1659,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
       {:error, %{text: message}} ->
         {:noreply, put_flash(socket, :error, message)}
     end
+  end
+
+  def handle_event(_unhandled_event, _params, socket) do
+    # TODO: add a warning and/or log for unhandled events
+    {:noreply, socket}
   end
 
   @impl true
