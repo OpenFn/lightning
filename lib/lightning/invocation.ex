@@ -2,8 +2,6 @@ defmodule Lightning.Invocation do
   @moduledoc """
   The Invocation context.
   """
-  @behaviour Lightning.Invocation
-
   import Ecto.Query, warn: false
   import Lightning.Helpers, only: [coerce_json_field: 2]
 
@@ -18,13 +16,6 @@ defmodule Lightning.Invocation do
   alias Lightning.WorkOrders.ExportAudit
   alias Lightning.WorkOrders.ExportWorker
   alias Lightning.WorkOrders.SearchParams
-
-  @callback export_workorders(
-              project :: Project.t(),
-              user :: User.t(),
-              search_params :: SearchParams.t()
-            ) ::
-              {:ok, map()} | {:error, atom(), term(), map()}
 
   @workorders_search_timeout 30_000
   @workorders_count_limit 50
@@ -687,7 +678,6 @@ defmodule Lightning.Invocation do
       - `reason`: The reason for the failure, typically an error atom.
       - `changes`: A map of changes up to the point of failure.
   """
-  @impl true
   def export_workorders(project, user, search_params) do
     Ecto.Multi.new()
     |> Ecto.Multi.run(:audit, fn _repo, _changes ->
