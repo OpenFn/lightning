@@ -13,8 +13,6 @@ defmodule LightningWeb.RunLive.Index do
   alias Lightning.Invocation.Step
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
-  alias Lightning.Projects
-  alias Lightning.Repo
   alias Lightning.Services.UsageLimiter
   alias Lightning.WorkOrders
   alias Lightning.WorkOrders.Events
@@ -493,14 +491,6 @@ defmodule LightningWeb.RunLive.Index do
            :info,
            "History export started successfully. You will be notified by email after completion."
          )}
-
-      {:error, :export_job, _reason, %{project_file: project_file}} ->
-        Projects.File.mark_failed(project_file)
-        |> Repo.update!()
-
-        {:noreply,
-         socket
-         |> put_flash(:error, "Failed to start export. Please try again.")}
 
       {:error, _failed_operation, _reason, _changes} ->
         {:noreply,

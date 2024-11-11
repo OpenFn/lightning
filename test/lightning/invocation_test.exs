@@ -2,7 +2,6 @@ defmodule Lightning.InvocationTest do
   use Lightning.DataCase, async: true
 
   import Lightning.Factories
-  import Mox
 
   alias Lightning.Runs
   alias Lightning.WorkOrders.SearchParams
@@ -10,8 +9,6 @@ defmodule Lightning.InvocationTest do
   alias Lightning.Repo
 
   require SearchParams
-
-  setup :verify_on_exit!
 
   defp build_workflow(opts) do
     job = build(:job)

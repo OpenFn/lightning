@@ -91,8 +91,7 @@ defmodule Lightning.WorkOrders.ExportWorker do
         "search_params" => search_params
       })
 
-    Oban.insert(Lightning.Oban, job)
-    |> case do
+    case Oban.insert(Lightning.Oban, job) do
       {:ok, job} ->
         {:ok, job}
 
@@ -100,6 +99,10 @@ defmodule Lightning.WorkOrders.ExportWorker do
         Logger.error(
           "Failed to enqueue export job. Changeset errors: #{inspect(changeset.errors)}"
         )
+
+        project_file
+        |> Projects.File.mark_failed()
+        |> Repo.update!()
 
         {:error, changeset}
     end

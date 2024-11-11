@@ -679,7 +679,8 @@ defmodule Lightning.Invocation do
   """
   def export_workorders(project, user, search_params) do
     Ecto.Multi.new()
-    |> Ecto.Multi.run(:audit, fn _repo, _changes ->
+    |> Ecto.Multi.insert(
+      :audit,
       ExportAudit.event(
         "started",
         project.id,
@@ -687,8 +688,7 @@ defmodule Lightning.Invocation do
         %{},
         %{search_params: search_params}
       )
-      |> ExportAudit.save()
-    end)
+    )
     |> Ecto.Multi.insert(
       :project_file,
       ProjectFile.new(%{
