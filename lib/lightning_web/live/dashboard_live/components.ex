@@ -163,7 +163,7 @@ defmodule LightningWeb.DashboardLive.Components do
           <.th>Collaborators</.th>
           <.th>
             <div class="group inline-flex items-center">
-              Last Activity
+              Last Modified
               <span
                 phx-click="sort"
                 phx-value-by="last_activity"
@@ -207,13 +207,15 @@ defmodule LightningWeb.DashboardLive.Components do
             </.link>
           </.td>
           <.td>
+            <%!-- TODO: either provide last_activity (history) or rename this to last_modified  --%>
+            <%!-- TODO: https://github.com/OpenFn/lightning/issues/2593 --%>
             <%= if project.last_activity do %>
               <%= Lightning.Helpers.format_date(
                 project.last_activity,
                 "%d/%m/%Y %H:%M:%S"
               ) %>
             <% else %>
-              No activity
+              n/a
             <% end %>
           </.td>
           <.td class="text-right">
