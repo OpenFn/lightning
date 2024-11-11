@@ -16,8 +16,8 @@ defmodule LightningWeb.DashboardLive.UserProjectsSection do
      socket
      |> assign(assigns)
      |> assign(:projects, projects)
-     |> assign(:name_sort_direction, :asc)
-     |> assign(:last_activity_sort_direction, :asc)}
+     |> assign(:name_sort_direction, :asc_nulls_last)
+     |> assign(:last_updated_at_sort_direction, :asc_nulls_last)}
   end
 
   @impl true
@@ -27,7 +27,7 @@ defmodule LightningWeb.DashboardLive.UserProjectsSection do
 
     sort_direction =
       socket.assigns
-      |> Map.get(sort_key, :asc)
+      |> Map.get(sort_key, :asc_nulls_last)
       |> switch_sort_direction()
 
     projects =
@@ -41,11 +41,11 @@ defmodule LightningWeb.DashboardLive.UserProjectsSection do
      |> assign(sort_key, sort_direction)}
   end
 
-  defp switch_sort_direction(:asc), do: :desc
-  defp switch_sort_direction(:desc), do: :asc
+  defp switch_sort_direction(:asc_nulls_last), do: :desc_nulls_last
+  defp switch_sort_direction(:desc_nulls_last), do: :asc_nulls_last
 
   defp projects_for_user(%User{} = user, opts \\ []) do
-    order_by = Keyword.get(opts, :order_by, {:asc, :name})
+    order_by = Keyword.get(opts, :order_by, {:asc_nulls_last, :name})
 
     Projects.get_projects_overview(user, order_by: order_by)
   end
@@ -59,7 +59,7 @@ defmodule LightningWeb.DashboardLive.UserProjectsSection do
         user={@current_user}
         target={@myself}
         name_direction={@name_sort_direction}
-        last_activity_direction={@last_activity_sort_direction}
+        last_updated_at_direction={@last_updated_at_sort_direction}
       >
         <:empty_state>
           <button
