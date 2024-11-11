@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Bootstrap script to help install and configure the Lightning app for development
+  [#2654](https://github.com/OpenFn/lightning/issues/2654) 
+
 ### Changed
 
 - Hide the collections and fhir-jembi adaptors from the available adaptors list
