@@ -5,7 +5,6 @@ defmodule Lightning.Invocation do
   import Ecto.Query, warn: false
   import Lightning.Helpers, only: [coerce_json_field: 2]
 
-  alias Lightning.Accounts.User
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Query
   alias Lightning.Invocation.Step
