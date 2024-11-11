@@ -485,7 +485,7 @@ defmodule LightningWeb.RunLive.Index do
     search_params = SearchParams.new(filters)
 
     case Invocation.export_workorders(project, current_user, search_params) do
-      {:ok, %{project_file: _project_file}} ->
+      {:ok, _} ->
         {:noreply,
          socket
          |> assign(:show_export_modal, false)

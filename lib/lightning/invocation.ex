@@ -699,14 +699,11 @@ defmodule Lightning.Invocation do
       })
     )
     |> Ecto.Multi.run(:export_job, fn _repo, %{project_file: project_file} ->
-      case ExportWorker.enqueue_export(
-             project,
-             project_file,
-             search_params
-           ) do
-        :ok -> {:ok, project_file}
-        {:error, reason} -> {:error, reason}
-      end
+      ExportWorker.enqueue_export(
+        project,
+        project_file,
+        search_params
+      )
     end)
     |> Repo.transaction()
   end

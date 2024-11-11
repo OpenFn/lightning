@@ -93,8 +93,8 @@ defmodule Lightning.WorkOrders.ExportWorker do
 
     Oban.insert(Lightning.Oban, job)
     |> case do
-      {:ok, _job} ->
-        :ok
+      {:ok, job} ->
+        {:ok, job}
 
       {:error, changeset} ->
         Logger.error(
