@@ -45,12 +45,12 @@ defmodule Lightning.Projects do
       :role,
       :workflows_count,
       :collaborators_count,
-      :last_activity
+      :last_updated_at
     ]
   end
 
   def get_projects_overview(%User{id: user_id}, opts \\ []) do
-    order_by = Keyword.get(opts, :order_by, {:asc, :name})
+    order_by = Keyword.get(opts, :order_by, {:asc_nulls_last, :name})
 
     from(p in Project,
       join: pu in assoc(p, :project_users),
@@ -64,7 +64,7 @@ defmodule Lightning.Projects do
         role: pu.role,
         workflows_count: count(w.id, :distinct),
         collaborators_count: count(pu_all.user_id, :distinct),
-        last_activity: max(w.updated_at)
+        last_updated_at: max(w.updated_at)
       },
       order_by: ^dynamic_order_by(order_by)
     )
@@ -75,7 +75,7 @@ defmodule Lightning.Projects do
     {direction, dynamic([p, _pu, _w, _pu_all], field(p, :name))}
   end
 
-  defp dynamic_order_by({direction, :last_activity}) do
+  defp dynamic_order_by({direction, :last_updated_at}) do
     {direction, dynamic([_p, _pu, w, _pu_all], max(w.updated_at))}
   end
 
