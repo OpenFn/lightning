@@ -21,6 +21,13 @@ and this project adheres to
 
 ### Fixed
 
+## [v2.9.17] - 2024-11-11
+
+### Changed
+
+- Change column name for "Last Activity" to "Last Modified" on Projects list
+  [#2593](https://github.com/OpenFn/lightning/issues/2593)
+
 ## [v2.9.16] - 2024-11-10
 
 ### Fixed
