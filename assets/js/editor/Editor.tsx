@@ -109,6 +109,9 @@ async function loadDTS(
       content: dts_es5,
     },
   ];
+
+  // Load common into its own module
+  // TODO maybe we need other dependencies too? collections?
   if (name !== '@openfn/language-common') {
     const pkg = await fetchFile(`${specifier}/package.json`);
     const commonVersion = JSON.parse(pkg || '{}').dependencies?.[
@@ -123,11 +126,17 @@ async function loadDTS(
       );
     }
 
-    const common = await loadDTS(
-      `@openfn/language-common@${commonVersion.replace('^', '')}`,
-      'module'
-    );
-    results.push(...common);
+    const commonSpecifier = `@openfn/language-common@${commonVersion.replace('^', '')}`;
+    for await (const filePath of fetchDTSListing(commonSpecifier)) {
+      if (!filePath.startsWith('node_modules')) {
+        // Load every common typedef into the common module
+        let content = await fetchFile(`${commonSpecifier}${filePath}`);
+        content = content.replace(/\* +@(.+?)\*\//sg, '*/')
+        results.push({
+          content: `declare module '@openfn/language-common' { ${content} }`,
+        });
+      }
+    }
   }
 
   for await (const filePath of fetchDTSListing(specifier)) {
@@ -140,23 +149,47 @@ async function loadDTS(
       // this regex means: find a * then an @ (with 1+ space in between), then match everything up to a closing comment */
       content = content.replace(/\* +@(.+?)\*\//sg, '*/')
 
-      // this is a bit cheeky
-      // we'll manually build namespaces from the file structure
-      // I don't understand why index.d.ts doesn't just do this though.
       const fileName = filePath.split('/').at(-1).replace('.d.ts', '');
 
+      // Import the index as the global namespace - but take care to convert all paths to absolute
       if (fileName === 'index' || fileName === 'Adaptor') {
+        content = content.replace(/from '\.\//g, `from '${name}/`)
+        content = content.replace(/import '\.\//g, `import '${name}/`)
+
+        // It turns out that "export * as " seems to straight up not work in Monaco
+        // (even in later JS versions??)
+        // So this little hack will refactor import statements in a way that works
+        content = content.replace(/export \* as (\w+) from '(.+)';/g, `
+
+          import * as $1 from '$2';
+          export { $1 };`)
+
         results.push({
-          content: `declare ${type} { ${content} }`,
+            content: `declare namespace {
+${content}
+}`
         });
+
+        // TODO dammit, export * doesn't seem to work either
       } else {
+        if (fileName === 'types') {
+          // total hack
+          results.push({
+            content: `declare namespace {
+  ${content}
+  }`});
+        } else {
+        // Declare every other module as file
         results.push({
-          content: `declare ${type} ${fileName} { ${content} }`,
-          // Note that file path seems to break everything?
-        });
+          content: `declare module '${name}/${fileName}' {
+${content}
+}`});
+        }
       }
     }
   }
+
+  results.forEach((r) => console.log(r.content))
 
   return results;
 }
