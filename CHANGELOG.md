@@ -21,6 +21,8 @@ and this project adheres to
 
 - Hide the collections and fhir-jembi adaptors from the available adaptors list
   [#2648](https://github.com/OpenFn/lightning/issues/2648)
+- Change column name for "Last Activity" to "Last Modified" on Projects list
+  [#2593](https://github.com/OpenFn/lightning/issues/2593)
 
 ### Fixed
 
