@@ -21,6 +21,8 @@ and this project adheres to
 
 ### Fixed
 
+- Temp fix for "Last Modified" column naming issue
+  [#2593](https://github.com/OpenFn/lightning/issues/2593)
 - Fix LiveView crash when pressing "esc" on inspector
   [#2622](https://github.com/OpenFn/lightning/issues/2622)
 
