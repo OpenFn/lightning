@@ -149,7 +149,20 @@ async function loadDTS(
       // this regex means: find a * then an @ (with 1+ space in between), then match everything up to a closing comment */
       content = content.replace(/\* +@(.+?)\*\//sg, '*/')
 
-      const fileName = filePath.split('/').at(-1).replace('.d.ts', '');
+      let fileName = filePath.split('/').at(-1).replace('.d.ts', '');
+
+      
+      // tmp
+      // This works great in the monaco playground, so whats up?
+      // if (fileName === 'Adaptor') {
+      //   content = `import { Dhis2Data, Dhis2Attribute} from './types'; ${content}`;
+      // }
+
+      // force the types module to be loaded into the adaptor module
+      // this fixes dhis2
+      // if (fileName === 'types') {
+      //   fileName = 'Adaptor'
+      // }
 
       // Import the index as the global namespace - but take care to convert all paths to absolute
       if (fileName === 'index' || fileName === 'Adaptor') {
@@ -164,30 +177,91 @@ async function loadDTS(
           import * as $1 from '$2';
           export { $1 };`)
 
-        results.push({
-            content: `declare namespace {
+//         results.push({
+//             content: `declare module '@default' {
+// ${content}
+// }`
+//         });
+results.push({
+  content: `declare namespace {
 ${content}
 }`
+});
+      }  
+      else if (fileName === 'types') {
+        // Declare every other module as file
+        // results.push({
+        //   content: `declare module '@default' { ${content} }`,
+        //   // filePath: "file:///node_modules/@types/my-lib/index.d.ts"
+        // });
+        results.push({
+          content: `declare namespace { ${content} }`,
+          // filePath: "file:///node_modules/@types/my-lib/index.d.ts"
         });
-
-        // TODO dammit, export * doesn't seem to work either
-      } else {
-        if (fileName === 'types') {
-          // total hack
-          results.push({
-            content: `declare namespace {
-  ${content}
-  }`});
-        } else {
+    }
+    else {
         // Declare every other module as file
         results.push({
           content: `declare module '${name}/${fileName}' {
 ${content}
 }`});
         }
-      }
     }
   }
+
+  // So this sort of works
+  // the only problem is that everything is written to "x"
+  // How can I "spread" the contents of default into the global namespace?
+//   results.push({
+//     content: `declare namespace {
+//     import * as window from '@default'
+// }`
+//   })
+// results.push({
+//   content: `declare namespace {
+//     import * as x from '@default';
+
+//     export = x;
+//   }
+//   `
+// })
+
+// results.push({
+//   content: `
+//    import * as x from '@default'
+
+//   declare global {
+//   const { ...x }: typeof import('@default');
+// }
+//   `
+// })
+
+// results.push({
+//   content: `
+//   declare namespace {
+//     const x = 10;
+//   }
+//   `
+// })
+
+
+// results.push({
+//   content: `
+//   declare namespace {
+//   export * from '@default';
+// }
+  
+//   `
+// })
+
+// does not work (declare namespace does)
+// results.push({
+//   content: `
+//   declare global {
+//     declare function hello(name: string): string;
+//   }
+//   `
+// })
 
   results.forEach((r) => console.log(r.content))
 
@@ -253,11 +327,17 @@ export default function Editor({
     );
 
     monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
+      target: monaco.languages.typescript.ScriptTarget.ES2020,
+      moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+
       // This seems to be needed to track the modules in d.ts files
       allowNonTsExtensions: true,
 
       // Disables core js libs in code completion
       noLib: true,
+
+      // typeRoots: ["node_modules/@types"],
+      // types: ["my-lib"] // <=== NOTE THIS
     });
 
     listeners.current.insertSnippet = (e: Event) => {
