@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.10.0-rc.2] - 2024-11-12
+
+### Added
+
 - Bootstrap script to help install and configure the Lightning app for
   development [#2654](https://github.com/OpenFn/lightning/pull/2654)
 
