@@ -85,67 +85,69 @@ defmodule LightningWeb.CollectionLive.Components do
           <%= render_slot(@create_collection_button) %>
         </div>
       </div>
-      <.table id="collections-table">
-        <.tr>
-          <.th>
-            <div class="group inline-flex items-center">
-              Name
-              <span
-                phx-click="sort"
-                phx-value-by="name"
-                class="cursor-pointer align-middle ml-2 flex-none rounded text-gray-400 group-hover:visible group-focus:visible"
-              >
-                <.icon name={@name_sort_icon} />
-              </span>
-            </div>
-          </.th>
-          <.th>Project</.th>
-          <.th></.th>
-        </.tr>
+      <div id="collections-table">
+        <.table>
+          <.tr>
+            <.th>
+              <div class="group inline-flex items-center">
+                Name
+                <span
+                  phx-click="sort"
+                  phx-value-by="name"
+                  class="cursor-pointer align-middle ml-2 flex-none rounded text-gray-400 group-hover:visible group-focus:visible"
+                >
+                  <.icon name={@name_sort_icon} />
+                </span>
+              </div>
+            </.th>
+            <.th>Project</.th>
+            <.th></.th>
+          </.tr>
 
-        <.tr
-          :for={collection <- @collections}
-          id={"collections-table-row-#{collection.id}"}
-          class="hover:bg-gray-100 transition-colors duration-200"
-        >
-          <.td class="break-words max-w-[15rem] text-gray-800">
-            <%= collection.name %>
-          </.td>
-          <.td class="break-words max-w-[25rem]">
-            <%= collection.project.name %>
-          </.td>
+          <.tr
+            :for={collection <- @collections}
+            id={"collections-table-row-#{collection.id}"}
+            class="hover:bg-gray-100 transition-colors duration-200"
+          >
+            <.td class="break-words max-w-[15rem] text-gray-800">
+              <%= collection.name %>
+            </.td>
+            <.td class="break-words max-w-[25rem]">
+              <%= collection.project.name %>
+            </.td>
 
-          <.td>
-            <div class="text-right">
-              <button
-                id={"edit-collection-#{collection.id}-button"}
-                phx-click={show_modal("update-collection-#{collection.id}-modal")}
-                class="table-action"
-              >
-                Edit
-              </button>
-              <button
-                id={"delete-collection-#{collection.id}-button"}
-                phx-click={show_modal("delete-collection-#{collection.id}-modal")}
-                class="table-action"
-              >
-                Delete
-              </button>
-            </div>
-            <.live_component
-              id={"update-collection-#{collection.id}-modal"}
-              module={LightningWeb.CollectionLive.CollectionCreationModal}
-              collection={collection}
-              mode={:update}
-              return_to={~p"/settings/collections"}
-            />
-            <.confirm_collection_deletion_modal
-              id={"delete-collection-#{collection.id}-modal"}
-              collection={collection}
-            />
-          </.td>
-        </.tr>
-      </.table>
+            <.td>
+              <div class="text-right">
+                <button
+                  id={"edit-collection-#{collection.id}-button"}
+                  phx-click={show_modal("update-collection-#{collection.id}-modal")}
+                  class="table-action"
+                >
+                  Edit
+                </button>
+                <button
+                  id={"delete-collection-#{collection.id}-button"}
+                  phx-click={show_modal("delete-collection-#{collection.id}-modal")}
+                  class="table-action"
+                >
+                  Delete
+                </button>
+              </div>
+              <.live_component
+                id={"update-collection-#{collection.id}-modal"}
+                module={LightningWeb.CollectionLive.CollectionCreationModal}
+                collection={collection}
+                mode={:update}
+                return_to={~p"/settings/collections"}
+              />
+              <.confirm_collection_deletion_modal
+                id={"delete-collection-#{collection.id}-modal"}
+                collection={collection}
+              />
+            </.td>
+          </.tr>
+        </.table>
+      </div>
     <% end %>
     """
   end

@@ -24,7 +24,7 @@ defmodule LightningWeb.Components.Credentials do
             aria-label={gettext("close")}
           >
             <span class="sr-only">Close</span>
-            <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
+            <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
           </button>
         </div>
       </:title>
@@ -74,7 +74,7 @@ defmodule LightningWeb.Components.Credentials do
             aria-label={gettext("close")}
           >
             <span class="sr-only">Close</span>
-            <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
+            <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
           </button>
         </div>
       </:title>
@@ -294,15 +294,7 @@ defmodule LightningWeb.Components.Credentials do
         Assign ownership of this credential to someone else.
       </p>
       <div class="mt-4">
-        <%= Phoenix.HTML.Form.label(@form, :owner,
-          class: "block text-sm font-medium text-secondary-700"
-        ) %>
-        <LightningWeb.Components.Form.select_field
-          form={@form}
-          name={:user_id}
-          values={@users}
-        />
-        <.old_error field={@form[:user_id]} />
+        <.input type="select" field={@form[:user_id]} options={@users} label="Owner" />
       </div>
     </fieldset>
     """

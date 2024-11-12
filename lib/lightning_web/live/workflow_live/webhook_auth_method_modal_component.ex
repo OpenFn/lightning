@@ -289,7 +289,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
               aria-label={gettext("close")}
             >
               <span class="sr-only">Close</span>
-              <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
+              <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
             </button>
           </div>
         </:title>
@@ -501,7 +501,13 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
     >
       <div class="space-y-4 ml-[24px] mr-[24px]">
         <label class="relative block cursor-pointer rounded-lg border bg-white px-[8px] py-2 text-sm shadow-sm">
-          <%= Phoenix.HTML.Form.radio_button(f, :auth_type, :basic, class: "sr-only") %>
+          <.input
+            type="radio"
+            id={f[:auth_type].id <> "_basic"}
+            field={f[:auth_type]}
+            class="sr-only"
+            value={:basic}
+          />
           <span class="flex items-center gap-x-2.5">
             <Heroicons.globe_alt class="h-10 w-10" />
             Basic HTTP Authentication (username & password)
@@ -509,7 +515,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
           <span
             class={[
               "pointer-events-none absolute -inset-px rounded-lg",
-              if(Phoenix.HTML.Form.input_value(f, :auth_type) == :basic,
+              if(f[:auth_type].value == :basic,
                 do: "outline outline-indigo-600 outline-2 outline-offset-2",
                 else: "border-transparent"
               )
@@ -520,7 +526,13 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
         </label>
 
         <label class="relative block cursor-pointer rounded-lg border bg-white px-[8px] py-2 text-sm shadow-sm focus:outline-none">
-          <%= Phoenix.HTML.Form.radio_button(f, :auth_type, :api, class: "sr-only") %>
+          <.input
+            type="radio"
+            id={f[:auth_type].id <> "_api"}
+            field={f[:auth_type]}
+            class="sr-only"
+            value={:api}
+          />
           <span class="flex items-center gap-2">
             <Heroicons.code_bracket_square class="h-10 w-10" />
             API Key Authentication (‘x-api-key’ header)
@@ -528,7 +540,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
           <span
             class={[
               "pointer-events-none absolute -inset-px rounded-lg",
-              if(Phoenix.HTML.Form.input_value(f, :auth_type) == :api,
+              if(f[:auth_type].value == :api,
                 do: "outline outline-indigo-600 outline-2 outline-offset-2",
                 else: "border-transparent"
               )
@@ -541,10 +553,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
       <.modal_footer class="mx-6 mt-6">
         <button
           type="submit"
-          disabled={
-            Phoenix.HTML.Form.input_value(f, :auth_type) != :api and
-              Phoenix.HTML.Form.input_value(f, :auth_type) != :basic
-          }
+          disabled={f[:auth_type].value != :api and f[:auth_type].value != :basic}
           class="inline-flex w-full justify-center rounded-md bg-primary-600 disabled:bg-primary-300 py-4 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:outline-0 focus:outline-2 focus:outline-indigo-600 focus:outline-offset-2 active:outlin-2 active:outline-indigo-600 active:outline-offset-2"
         >
           Next

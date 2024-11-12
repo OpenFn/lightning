@@ -163,10 +163,12 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
         {:noreply, updated_socket |> assign(:oauth_progress, :missing_required)}
 
       socket.assigns.selected_client.userinfo_endpoint ->
+        selected_client = socket.assigns.selected_client
+
         {:noreply,
          updated_socket
          |> start_async(:userinfo, fn ->
-           OauthHTTPClient.fetch_userinfo(socket.assigns.selected_client, token)
+           OauthHTTPClient.fetch_userinfo(selected_client, token)
          end)}
 
       true ->
@@ -292,15 +294,13 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
   def handle_event("try_userinfo_again", _, socket) do
     body = Ecto.Changeset.fetch_field!(socket.assigns.changeset, :body)
+    selected_client = socket.assigns.selected_client
 
     {:noreply,
      socket
      |> assign(:oauth_progress, :fetching_userinfo)
      |> start_async(:userinfo, fn ->
-       OauthHTTPClient.fetch_userinfo(
-         socket.assigns.selected_client,
-         body
-       )
+       OauthHTTPClient.fetch_userinfo(selected_client, body)
      end)}
   end
 
@@ -513,7 +513,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
           {:noreply,
            socket
            |> put_flash(:info, "Credential updated successfully")
-           |> push_redirect(to: socket.assigns.return_to)}
+           |> push_navigate(to: socket.assigns.return_to)}
 
         {:error, %Ecto.Changeset{} = changeset} ->
           {:noreply, assign(socket, :changeset, changeset)}

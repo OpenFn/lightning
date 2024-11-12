@@ -274,7 +274,7 @@ defmodule Lightning.WorkflowLive.Helpers do
 
     view
     |> element(
-      ~s{#workflow_jobs_#{idx}_#{field} + [data-tag="error_message"]},
+      ~s{#workflow_jobs_#{idx}_#{field} ~ .error-space [data-tag="error_message"]},
       error
     )
     |> has_element?()

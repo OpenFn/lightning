@@ -22,7 +22,7 @@ defmodule LightningWeb.AuthProvidersLive.Index do
     else
       {:ok,
        put_flash(socket, :nav, :no_access)
-       |> push_redirect(to: "/projects")}
+       |> push_navigate(to: "/projects")}
     end
   end
 
@@ -42,7 +42,7 @@ defmodule LightningWeb.AuthProvidersLive.Index do
       |> assign(auth_provider: auth_provider, redirect_host: redirect_host)
     else
       socket
-      |> push_redirect(
+      |> push_navigate(
         to: Routes.auth_providers_index_path(socket, :new),
         replace: true
       )

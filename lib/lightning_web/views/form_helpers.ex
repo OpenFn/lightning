@@ -3,8 +3,6 @@ defmodule LightningWeb.FormHelpers do
   Conveniences for building forms.
   """
 
-  use Phoenix.HTML
-
   defimpl Phoenix.HTML.Safe, for: Map do
     @doc """
     Extension to Phoenix's protocols to allow editing of a JSONB/map field.

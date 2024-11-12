@@ -19,7 +19,7 @@ defmodule LightningWeb.Components.TokenDeletionModal do
         {:noreply,
          socket
          |> put_flash(:info, "Token deleted successfully")
-         |> push_redirect(to: socket.assigns.return_to)}
+         |> push_navigate(to: socket.assigns.return_to)}
 
       {:error, _changeset} ->
         {:noreply, socket |> put_flash(:error, "Something went wrong.")}
@@ -28,41 +28,62 @@ defmodule LightningWeb.Components.TokenDeletionModal do
 
   @impl true
   def handle_event("close_modal", _, socket) do
-    {:noreply, push_redirect(socket, to: socket.assigns.return_to)}
+    {:noreply, push_navigate(socket, to: socket.assigns.return_to)}
   end
 
   @impl true
   def render(assigns) do
     ~H"""
     <div>
-      <PetalComponents.Modal.modal
-        max_width="sm"
-        title="Delete API Access Token"
-        close_modal_target={@myself}
-      >
-        <span>
-          Any applications or scripts using this token will no longer be able to access the API. You cannot undo this action. Are you sure you want to delete this token?
-        </span>
+      <.modal id={"delete-token-#{@id}"} width="max-w-md" show={true}>
+        <:title>
+          <div class="flex justify-between">
+            <span class="font-bold">
+              Delete API Access Token
+            </span>
 
-        <div class="hidden sm:block" aria-hidden="true">
-          <div class="py-5"></div>
+            <button
+              phx-click="close_modal"
+              phx-target={@myself}
+              type="button"
+              class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
+              aria-label={gettext("close")}
+            >
+              <span class="sr-only">Close</span>
+              <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
+            </button>
+          </div>
+        </:title>
+        <div class="">
+          <p class="text-sm text-gray-500">
+            Any applications or scripts using this token will no longer be able to access the API.
+            You cannot undo this action. <br />
+            Are you sure you want to delete this token?
+          </p>
         </div>
-        <div class="flex justify-end">
-          <PetalComponents.Button.button
-            label="Cancel"
-            phx-click={PetalComponents.Modal.hide_modal(@myself)}
-          />
-
-          <PetalComponents.Button.button
-            label="Yes"
-            color="danger"
+        <div class="flex-grow bg-gray-100 h-0.5 my-[16px]"></div>
+        <div class="flex flex-row-reverse gap-4">
+          <.button
+            id={"delete-token-#{@id}_confirm_button"}
+            type="button"
             phx-target={@myself}
             phx-click="delete_token"
             phx-value-id={@id}
-            class="mx-2"
-          />
+            color_class="bg-red-600 hover:bg-red-700 text-white"
+            phx-disable-with="Deleting..."
+          >
+            Yes
+          </.button>
+          <button
+            type="button"
+            phx-click="close_modal"
+            phx-target={@myself}
+            class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
         </div>
-      </PetalComponents.Modal.modal>
+      </.modal>
     </div>
     """
   end

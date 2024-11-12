@@ -7,7 +7,8 @@ defmodule Lightning.Repo.Migrations.CreateCollections do
       add :name, :string
 
       add :project_id,
-          references(:projects, on_delete: :delete_all, type: :binary_id, null: false)
+          references(:projects, on_delete: :delete_all, type: :binary_id),
+          null: false
 
       timestamps()
     end
@@ -16,7 +17,8 @@ defmodule Lightning.Repo.Migrations.CreateCollections do
 
     create table(:collections_items, primary_key: false) do
       add :collection_id,
-          references(:collections, type: :binary_id, on_delete: :delete_all, null: false)
+          references(:collections, type: :binary_id, on_delete: :delete_all),
+          null: false
 
       add :key, :string
       add :value, :string
