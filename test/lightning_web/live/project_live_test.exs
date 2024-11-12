@@ -191,7 +191,7 @@ defmodule LightningWeb.ProjectLiveTest do
         |> render_submit()
         |> follow_redirect(conn, ~p"/projects")
 
-      assert html =~ "Project scheduled for deletion later"
+      assert html =~ "Project scheduled for deletion"
     end
 
     test "project members can export a project", %{conn: conn, project: project} do
@@ -349,7 +349,7 @@ defmodule LightningWeb.ProjectLiveTest do
         |> follow_redirect(conn, Routes.project_index_path(conn, :index))
 
       assert html =~
-               "Project deletion initiated. This could take upto 10 minutes, depending on the size of your data"
+               "Project deletion started. This may take a while to complete."
 
       refute index_live |> element("project-#{project.id}") |> has_element?()
     end

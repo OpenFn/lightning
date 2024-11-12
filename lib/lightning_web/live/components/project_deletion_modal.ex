@@ -42,14 +42,14 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
            socket
            |> put_flash(
              :info,
-             "Project deletion initiated. This could take upto 10 minutes, depending on the size of your data"
+             "Project deletion started. This may take a while to complete."
            )
            |> push_navigate(to: socket.assigns.save_return_to)}
 
         {:ok, %Projects.Project{}} ->
           {:noreply,
            socket
-           |> put_flash(:info, "Project scheduled for deletion later")
+           |> put_flash(:info, "Project scheduled for deletion")
            |> push_navigate(to: socket.assigns.save_return_to)}
 
         {:error, %Ecto.Changeset{} = changeset} ->
