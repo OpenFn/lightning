@@ -26,6 +26,8 @@ and this project adheres to
 
 - Fix LiveView crash when pressing "esc" on inspector
   [#2622](https://github.com/OpenFn/lightning/issues/2622)
+- Fix issues loading suggestions for code-assist
+  [#2662](https://github.com/OpenFn/lightning/pull/2662)
 
 ## [v2.10.0-rc.1] - 2024-11-08
 
