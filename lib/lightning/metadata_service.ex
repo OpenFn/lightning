@@ -100,7 +100,7 @@ defmodule Lightning.MetadataService do
 
       other ->
         Sentry.capture_message("AdaptorService.install failed",
-          level: "warning",
+          level: :warning,
           message: inspect(other),
           extra: %{adaptor: adaptor}
         )
