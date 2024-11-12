@@ -28,6 +28,7 @@ defmodule Lightning.Collections.Item do
     entry
     |> cast(attrs, [:collection_id, :key, :value])
     |> validate_required([:collection_id, :key, :value])
+    |> validate_length(:value, max: 1_000_000)
     |> unique_constraint([:collection_id, :key])
     |> foreign_key_constraint(:collection_id)
   end
