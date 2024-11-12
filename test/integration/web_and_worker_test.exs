@@ -57,15 +57,13 @@ defmodule Lightning.WebAndWorkerTest do
       webhook_body = %{"x" => 1}
       conn = post(conn, "/i/#{webhook_trigger_id}", webhook_body)
 
-      assert %{"work_order_id" => wo_id} = json_response(conn, 200)
-
-      assert %{runs: [%{id: run_id}]} =
-               WorkOrders.get(wo_id, include: [:runs])
-
-      assert %{steps: []} = Runs.get(run_id, include: [:steps])
+      assert %{"work_order_id" => wo_id} =
+               json_response(conn, 200) |> IO.inspect()
 
       assert %{runs: [run]} =
                WorkOrders.get(wo_id, include: [:runs])
+
+      assert %{steps: []} = Runs.get(run.id, include: [:steps])
 
       # wait to complete
       Events.subscribe(run)

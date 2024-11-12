@@ -29,7 +29,7 @@ defmodule LightningWeb.CollectionLive.Index do
       {:ok,
        socket
        |> put_flash(:nav, :no_access)
-       |> push_redirect(to: "/projects")}
+       |> push_navigate(to: "/projects")}
     end
   end
 

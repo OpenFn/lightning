@@ -6,7 +6,8 @@ defmodule Lightning.Repo.Migrations.CreateWorkflowSnapshots do
       add :id, :binary_id, primary_key: true
 
       add :workflow_id,
-          references(:workflows, on_delete: :delete_all, type: :binary_id, null: false)
+          references(:workflows, on_delete: :delete_all, type: :binary_id),
+          null: false
 
       add :name, :string
       add :jobs, :map

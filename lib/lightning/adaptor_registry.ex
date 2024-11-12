@@ -36,7 +36,12 @@ defmodule Lightning.AdaptorRegistry do
   use GenServer
   require Logger
 
-  @excluded_adaptors ["@openfn/language-devtools", "@openfn/language-template"]
+  @excluded_adaptors [
+    "@openfn/language-devtools",
+    "@openfn/language-template",
+    "@openfn/language-fhir-jembi",
+    "@openfn/language-collections"
+  ]
   @timeout 30_000
 
   defmodule Npm do

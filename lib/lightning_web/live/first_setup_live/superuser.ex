@@ -7,7 +7,6 @@ defmodule LightningWeb.FirstSetupLive.Superuser do
   It has only one action: `:show`
   """
   use LightningWeb, :live_view
-  import LightningWeb.Components.Form
 
   alias Lightning.Accounts
 
@@ -65,7 +64,7 @@ defmodule LightningWeb.FirstSetupLive.Superuser do
     if Lightning.Accounts.has_one_superuser?() do
       socket
       |> put_flash(:warn, "Superuser account already exists.")
-      |> push_redirect(to: Routes.dashboard_index_path(socket, :index))
+      |> push_navigate(to: Routes.dashboard_index_path(socket, :index))
     else
       registration = %Accounts.User{}
 

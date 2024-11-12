@@ -77,7 +77,7 @@ defmodule LightningWeb.AuthProvidersLive.FormComponent do
              socket
              |> assign(auth_provider: model)
              |> put_flash(:info, "Authentication Provider created.")
-             |> push_redirect(
+             |> push_navigate(
                to: Routes.auth_providers_index_path(socket, :edit)
              )}
 
@@ -128,7 +128,7 @@ defmodule LightningWeb.AuthProvidersLive.FormComponent do
     {:noreply,
      socket
      |> put_flash(:info, "Authentication Provider removed")
-     |> push_redirect(to: Routes.auth_providers_index_path(socket, :new))}
+     |> push_navigate(to: Routes.auth_providers_index_path(socket, :new))}
   end
 
   @impl true

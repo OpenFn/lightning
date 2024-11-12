@@ -119,11 +119,11 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
       <div :for={
         body_form <- Phoenix.HTML.FormData.to_form(:credential, @form, :body, [])
       }>
-        <%= Phoenix.HTML.Form.hidden_input(body_form, :scope) %>
-        <%= Phoenix.HTML.Form.hidden_input(body_form, :expires_at) %>
-        <%= Phoenix.HTML.Form.hidden_input(body_form, :access_token) %>
-        <%= Phoenix.HTML.Form.hidden_input(body_form, :instance_url) %>
-        <%= Phoenix.HTML.Form.hidden_input(body_form, :refresh_token) %>
+        <.input type="hidden" field={body_form[:scope]} />
+        <.input type="hidden" field={body_form[:expires_at]} />
+        <.input type="hidden" field={body_form[:access_token]} />
+        <.input type="hidden" field={body_form[:instance_url]} />
+        <.input type="hidden" field={body_form[:refresh_token]} />
       </div>
       <.reauthorize_banner
         :if={@display_reauthorize_banner}

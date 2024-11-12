@@ -19,10 +19,22 @@ and this project adheres to
 
 - Audit history exports events
   [#2367](https://github.com/OpenFn/lightning/issues/2367)
+- Bootstrap script to help install and configure the Lightning app for development
+  [#2654](https://github.com/OpenFn/lightning/pull/2654) 
 
 ### Changed
 
+- Upgrade dependencies
+  [#2624](https://github.com/OpenFn/lightning/pull/2624)
+- Hide the collections and fhir-jembi adaptors from the available adaptors list
+  [#2648](https://github.com/OpenFn/lightning/issues/2648)
+- Change column name for "Last Activity" to "Last Modified" on Projects list
+  [#2593](https://github.com/OpenFn/lightning/issues/2593)
+
 ### Fixed
+
+- Fix LiveView crash when pressing "esc" on inspector
+  [#2622](https://github.com/OpenFn/lightning/issues/2622)
 
 ## [v2.10.0-rc.1] - 2024-11-08
 
