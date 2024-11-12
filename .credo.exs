@@ -206,8 +206,7 @@
           {Credo.Check.Warning.LeakyEnvironment, []},
           {Credo.Check.Warning.MapGetUnsafePass, []},
           {Credo.Check.Warning.MixEnv, []},
-          {Credo.Check.Warning.UnsafeToAtom, []},
-          {Credo.Check.Consistency.UnusedVariableNames, [exit_status: 0]}
+          {Credo.Check.Warning.UnsafeToAtom, []}
 
           # Not necessary after Elixir 1.8
           # {Credo.Check.Refactor.MapInto, []},
