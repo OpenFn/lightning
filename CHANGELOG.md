@@ -32,6 +32,8 @@ and this project adheres to
 
 - Fix LiveView crash when pressing "esc" on inspector
   [#2622](https://github.com/OpenFn/lightning/issues/2622)
+- Delete project data in batches to avoid timeouts in the db connection
+  [#2632](https://github.com/OpenFn/lightning/issues/2632)
 - Fix MetadataService crashing when errors are encountered
   [#2659](https://github.com/OpenFn/lightning/issues/2659)
 

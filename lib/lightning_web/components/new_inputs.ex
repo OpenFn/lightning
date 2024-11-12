@@ -225,8 +225,9 @@ defmodule LightningWeb.Components.NewInputs do
               "block w-full rounded-lg border border-secondary-300 bg-white",
               "sm:text-sm shadow-sm",
               "focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50",
-              "disabled:cursor-not-allowed #{@button_placement == "right" && "rounded-r-none"}",
-              "#{@button_placement == "left" && "rounded-l-none"}",
+              "disabled:cursor-not-allowed",
+              @button_placement == "right" && "rounded-r-none",
+              @button_placement == "left" && "rounded-l-none",
               @class
             ]}
             multiple={@multiple}

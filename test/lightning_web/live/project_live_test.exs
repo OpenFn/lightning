@@ -348,7 +348,8 @@ defmodule LightningWeb.ProjectLiveTest do
         |> render_submit()
         |> follow_redirect(conn, Routes.project_index_path(conn, :index))
 
-      assert html =~ "Project deleted"
+      assert html =~
+               "Project deletion started. This may take a while to complete."
 
       refute index_live |> element("project-#{project.id}") |> has_element?()
     end

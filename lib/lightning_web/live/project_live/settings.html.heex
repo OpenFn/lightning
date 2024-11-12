@@ -915,7 +915,7 @@
                         Enum.count(@data_retention_periods) == 1
                     }
                     field={f[:history_retention_period]}
-                    class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                    class="border-gray-300 focus:ring-indigo-600"
                   />
                   <div class="text-xs">
                     <%= case assigns[:data_retention_limit_message] do %>
@@ -1009,7 +1009,7 @@
                   </div>
                 </div>
 
-                <div class="space-y-2">
+                <div class="flex space-y-2">
                   <.input
                     type="select"
                     prompt="Select Period"
@@ -1024,7 +1024,7 @@
                         checked?(@project_changeset, :erase_all)
                     }
                     field={f[:dataclip_retention_period]}
-                    class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                    class="border-gray-300 ocus:ring-indigo-600"
                   />
                 </div>
               </div>
