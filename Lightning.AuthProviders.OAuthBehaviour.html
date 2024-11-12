@@ -4,21 +4,19 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="generator" content="ExDoc v0.34.2">
     <meta name="project" content="Lightning v2.10.0-rc.1">
 
+
     <title>Lightning.AuthProviders.OAuthBehaviour — Lightning v2.10.0-rc.1</title>
-    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
+    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-0D035C9E.js"></script>
-
-      <script src="docs_config.js"></script>
-
-    <script async src="dist/html-J2ASZTQE.js"></script>
-
+    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
+    <script src="dist/sidebar_items-10E0B7BA.js"></script>
+    <script src="docs_config.js"></script>
+    <script async src="dist/html-YIPIRHGU.js"></script>
 
   </head>
   <body data-type="modules" class="page-behaviour">
@@ -36,43 +34,28 @@
       } catch (error) { }
     </script>
 
-<div class="main">
+<div class="body-wrapper">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
 <nav id="sidebar" class="sidebar">
-  <form class="sidebar-search" action="search.html">
-    <label class="search-label">
-      <span class="sr-only">Search documentation of Lightning</span>
-      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
-    <button type="submit" class="search-button" aria-label="Submit Search">
-      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
-    </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
-      <i class="ri-close-line ri-lg" title="Cancel search"></i>
-    </button>
-  </form>
-
-  <div class="autocomplete">
-    <div class="autocomplete-results">
-    </div>
-  </div>
 
   <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
 
-      <a href="https://openfn.github.io/Lightning">
-        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
-      </a>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
 
-    <div class="sidebar-projectDetails">
-      <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+      <div>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
-      </a>
-      <div class="sidebar-projectVersion" translate="no">
-        v2.10.0-rc.1
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.10.0-rc.1
+        </div>
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -115,35 +98,54 @@ Pages
 
 <main class="content">
   <output role="status" id="toast"></output>
-  <div class="content-outer">
-    <div id="content" class="content-inner">
 
-<h1>
-<button class="icon-action display-settings">
-  <i class="ri-settings-3-line"></i>
-  <span class="sr-only">Settings</span>
-</button>
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_behaviour.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+    <span translate="no">Lightning.AuthProviders.OAuthBehaviour</span> <small>behaviour</small>
+    <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
+
+  </h1>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_behaviour.ex#L1" title="View Source" class="icon-action" rel="help">
-      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-      <span class="sr-only">View Source</span>
-    </a>
-
-  <span translate="no">Lightning.AuthProviders.OAuthBehaviour</span> <small>behaviour</small>
-  <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
-
-</h1>
-
-
-  <section id="moduledoc">
+    <section id="moduledoc">
 <p>Defines a behaviour for OAuth providers within the Lightning application,
 specifying a common interface for OAuth operations.
 This interface ensures consistency and interoperability among different
 authentication providers (e.g., Google, Salesforce)
 by defining a set of required functions that each provider must implement.</p>
-  </section>
+    </section>
 
+</div>
 
   <section id="summary" class="details-list">
     <h1 class="section-heading">
@@ -159,7 +161,7 @@ by defining a set of required functions that each provider must implement.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:authorize_url/4" translate="no">authorize_url(client, state, scopes, opts)</a>
+        <a href="#c:authorize_url/4" data-no-tooltip translate="no">authorize_url(client, state, scopes, opts)</a>
 
       </div>
 
@@ -167,7 +169,7 @@ by defining a set of required functions that each provider must implement.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:build_client/1" translate="no">build_client(opts)</a>
+        <a href="#c:build_client/1" data-no-tooltip translate="no">build_client(opts)</a>
 
       </div>
 
@@ -175,7 +177,7 @@ by defining a set of required functions that each provider must implement.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:get_token/3" translate="no">get_token(client, wellknown_url, params)</a>
+        <a href="#c:get_token/3" data-no-tooltip translate="no">get_token(client, wellknown_url, params)</a>
 
       </div>
 
@@ -183,7 +185,7 @@ by defining a set of required functions that each provider must implement.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:get_userinfo/3" translate="no">get_userinfo(client, token, wellknown_url)</a>
+        <a href="#c:get_userinfo/3" data-no-tooltip translate="no">get_userinfo(client, token, wellknown_url)</a>
 
       </div>
 
@@ -191,7 +193,7 @@ by defining a set of required functions that each provider must implement.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:refresh_token/2" translate="no">refresh_token(token, wellknown_url)</a>
+        <a href="#c:refresh_token/2" data-no-tooltip translate="no">refresh_token(token, wellknown_url)</a>
 
       </div>
 
@@ -199,7 +201,7 @@ by defining a set of required functions that each provider must implement.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:refresh_token/3" translate="no">refresh_token(client, token, wellknown_url)</a>
+        <a href="#c:refresh_token/3" data-no-tooltip translate="no">refresh_token(client, token, wellknown_url)</a>
 
       </div>
 
@@ -221,13 +223,13 @@ by defining a set of required functions that each provider must implement.</p>
 <section class="detail" id="c:authorize_url/4">
 
   <div class="detail-header">
-    <a href="#c:authorize_url/4" class="detail-link" title="Link to this callback">
+    <a href="#c:authorize_url/4" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
     <h1 class="signature" translate="no">authorize_url(client, state, scopes, opts)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_behaviour.ex#L39" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_behaviour.ex#L34" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -254,7 +256,7 @@ by defining a set of required functions that each provider must implement.</p>
 <section class="detail" id="c:build_client/1">
 
   <div class="detail-header">
-    <a href="#c:build_client/1" class="detail-link" title="Link to this callback">
+    <a href="#c:build_client/1" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -282,13 +284,13 @@ by defining a set of required functions that each provider must implement.</p>
 <section class="detail" id="c:get_token/3">
 
   <div class="detail-header">
-    <a href="#c:get_token/3" class="detail-link" title="Link to this callback">
+    <a href="#c:get_token/3" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
     <h1 class="signature" translate="no">get_token(client, wellknown_url, params)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_behaviour.ex#L13" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_behaviour.ex#L9" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -314,13 +316,13 @@ by defining a set of required functions that each provider must implement.</p>
 <section class="detail" id="c:get_userinfo/3">
 
   <div class="detail-header">
-    <a href="#c:get_userinfo/3" class="detail-link" title="Link to this callback">
+    <a href="#c:get_userinfo/3" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
     <h1 class="signature" translate="no">get_userinfo(client, token, wellknown_url)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_behaviour.ex#L30" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_behaviour.ex#L26" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -346,13 +348,13 @@ by defining a set of required functions that each provider must implement.</p>
 <section class="detail" id="c:refresh_token/2">
 
   <div class="detail-header">
-    <a href="#c:refresh_token/2" class="detail-link" title="Link to this callback">
+    <a href="#c:refresh_token/2" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
     <h1 class="signature" translate="no">refresh_token(token, wellknown_url)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_behaviour.ex#L24" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_behaviour.ex#L21" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -377,13 +379,13 @@ by defining a set of required functions that each provider must implement.</p>
 <section class="detail" id="c:refresh_token/3">
 
   <div class="detail-header">
-    <a href="#c:refresh_token/3" class="detail-link" title="Link to this callback">
+    <a href="#c:refresh_token/3" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
     <h1 class="signature" translate="no">refresh_token(client, token, wellknown_url)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_behaviour.ex#L19" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_behaviour.ex#L15" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -410,34 +412,33 @@ by defining a set of required functions that each provider must implement.</p>
     </div>
   </section>
 
-      <footer class="footer">
-        <p>
+    <footer class="footer">
+      <p>
 
-          <span class="line">
-            <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
-              Search HexDocs
-            </button>
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
 
-              <a href="Lightning.epub" title="ePub version">
-                Download ePub version
-              </a>
+            <a href="Lightning.epub" title="ePub version">
+              Download ePub version
+            </a>
 
-          </span>
-        </p>
+        </span>
+      </p>
 
-        <p class="built-using">
-          Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
 
-            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
-        </p>
-      </footer>
-    </div>
+      </p>
+
+    </footer>
   </div>
 </main>
 </div>
-
 
   </body>
 </html>

@@ -4,21 +4,19 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="generator" content="ExDoc v0.34.2">
     <meta name="project" content="Lightning v2.10.0-rc.1">
 
+
     <title>Lightning.Extensions.UsageLimiting — Lightning v2.10.0-rc.1</title>
-    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
+    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-0D035C9E.js"></script>
-
-      <script src="docs_config.js"></script>
-
-    <script async src="dist/html-J2ASZTQE.js"></script>
-
+    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
+    <script src="dist/sidebar_items-10E0B7BA.js"></script>
+    <script src="docs_config.js"></script>
+    <script async src="dist/html-YIPIRHGU.js"></script>
 
   </head>
   <body data-type="modules" class="page-behaviour">
@@ -36,43 +34,28 @@
       } catch (error) { }
     </script>
 
-<div class="main">
+<div class="body-wrapper">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
 <nav id="sidebar" class="sidebar">
-  <form class="sidebar-search" action="search.html">
-    <label class="search-label">
-      <span class="sr-only">Search documentation of Lightning</span>
-      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
-    <button type="submit" class="search-button" aria-label="Submit Search">
-      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
-    </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
-      <i class="ri-close-line ri-lg" title="Cancel search"></i>
-    </button>
-  </form>
-
-  <div class="autocomplete">
-    <div class="autocomplete-results">
-    </div>
-  </div>
 
   <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
 
-      <a href="https://openfn.github.io/Lightning">
-        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
-      </a>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
 
-    <div class="sidebar-projectDetails">
-      <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+      <div>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
-      </a>
-      <div class="sidebar-projectVersion" translate="no">
-        v2.10.0-rc.1
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.10.0-rc.1
+        </div>
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -115,31 +98,50 @@ Pages
 
 <main class="content">
   <output role="status" id="toast"></output>
-  <div class="content-outer">
-    <div id="content" class="content-inner">
 
-<h1>
-<button class="icon-action display-settings">
-  <i class="ri-settings-3-line"></i>
-  <span class="sr-only">Settings</span>
-</button>
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/usage_limiting.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+    <span translate="no">Lightning.Extensions.UsageLimiting</span> <small>behaviour</small>
+    <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
+
+  </h1>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/usage_limiting.ex#L1" title="View Source" class="icon-action" rel="help">
-      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-      <span class="sr-only">View Source</span>
-    </a>
-
-  <span translate="no">Lightning.Extensions.UsageLimiting</span> <small>behaviour</small>
-  <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
-
-</h1>
-
-
-  <section id="moduledoc">
+    <section id="moduledoc">
 <p>Rate limiting for Lightning workloads that depends on Runtime.</p>
-  </section>
+    </section>
 
+</div>
 
   <section id="summary" class="details-list">
     <h1 class="section-heading">
@@ -155,7 +157,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#t:error/0" translate="no">error()</a>
+        <a href="#t:error/0" data-no-tooltip translate="no">error()</a>
 
       </div>
 
@@ -163,7 +165,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#t:error_reason/0" translate="no">error_reason()</a>
+        <a href="#t:error_reason/0" data-no-tooltip translate="no">error_reason()</a>
 
       </div>
 
@@ -171,7 +173,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#t:message/0" translate="no">message()</a>
+        <a href="#t:message/0" data-no-tooltip translate="no">message()</a>
 
       </div>
 
@@ -185,7 +187,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:check_limits/1" translate="no">check_limits(context)</a>
+        <a href="#c:check_limits/1" data-no-tooltip translate="no">check_limits(context)</a>
 
       </div>
 
@@ -196,7 +198,7 @@ message if the limits are exceeded.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:get_data_retention_message/1" translate="no">get_data_retention_message(context)</a>
+        <a href="#c:get_data_retention_message/1" data-no-tooltip translate="no">get_data_retention_message(context)</a>
 
       </div>
 
@@ -204,7 +206,7 @@ message if the limits are exceeded.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:get_data_retention_periods/1" translate="no">get_data_retention_periods(context)</a>
+        <a href="#c:get_data_retention_periods/1" data-no-tooltip translate="no">get_data_retention_periods(context)</a>
 
       </div>
 
@@ -212,7 +214,7 @@ message if the limits are exceeded.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:get_run_options/1" translate="no">get_run_options(context)</a>
+        <a href="#c:get_run_options/1" data-no-tooltip translate="no">get_run_options(context)</a>
 
       </div>
 
@@ -223,7 +225,7 @@ a timeout value and a flag for saving dataclips.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:increment_ai_queries/1" translate="no">increment_ai_queries(t)</a>
+        <a href="#c:increment_ai_queries/1" data-no-tooltip translate="no">increment_ai_queries(t)</a>
 
       </div>
 
@@ -233,7 +235,7 @@ a timeout value and a flag for saving dataclips.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:limit_action/2" translate="no">limit_action(action, context)</a>
+        <a href="#c:limit_action/2" data-no-tooltip translate="no">limit_action(action, context)</a>
 
       </div>
 
@@ -257,7 +259,7 @@ a timeout value and a flag for saving dataclips.</p></div>
 <section class="detail" id="t:error/0">
 
   <div class="detail-header">
-    <a href="#t:error/0" class="detail-link" title="Link to this type">
+    <a href="#t:error/0" class="detail-link" data-no-tooltip title="Link to this type">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this type</span>
     </a>
@@ -285,7 +287,7 @@ a timeout value and a flag for saving dataclips.</p></div>
 <section class="detail" id="t:error_reason/0">
 
   <div class="detail-header">
-    <a href="#t:error_reason/0" class="detail-link" title="Link to this type">
+    <a href="#t:error_reason/0" class="detail-link" data-no-tooltip title="Link to this type">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this type</span>
     </a>
@@ -314,7 +316,7 @@ a timeout value and a flag for saving dataclips.</p></div>
 <section class="detail" id="t:message/0">
 
   <div class="detail-header">
-    <a href="#t:message/0" class="detail-link" title="Link to this type">
+    <a href="#t:message/0" class="detail-link" data-no-tooltip title="Link to this type">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this type</span>
     </a>
@@ -354,7 +356,7 @@ a timeout value and a flag for saving dataclips.</p></div>
 <section class="detail" id="c:check_limits/1">
 
   <div class="detail-header">
-    <a href="#c:check_limits/1" class="detail-link" title="Link to this callback">
+    <a href="#c:check_limits/1" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -390,7 +392,7 @@ message if the limits are exceeded.</p><p>Requires a <code class="inline">Contex
 <section class="detail" id="c:get_data_retention_message/1">
 
   <div class="detail-header">
-    <a href="#c:get_data_retention_message/1" class="detail-link" title="Link to this callback">
+    <a href="#c:get_data_retention_message/1" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -421,7 +423,7 @@ message if the limits are exceeded.</p><p>Requires a <code class="inline">Contex
 <section class="detail" id="c:get_data_retention_periods/1">
 
   <div class="detail-header">
-    <a href="#c:get_data_retention_periods/1" class="detail-link" title="Link to this callback">
+    <a href="#c:get_data_retention_periods/1" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -454,7 +456,7 @@ message if the limits are exceeded.</p><p>Requires a <code class="inline">Contex
 <section class="detail" id="c:get_run_options/1">
 
   <div class="detail-header">
-    <a href="#c:get_run_options/1" class="detail-link" title="Link to this callback">
+    <a href="#c:get_run_options/1" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -490,7 +492,7 @@ a timeout value and a flag for saving dataclips.</p><p>Requires a <code class="i
 <section class="detail" id="c:increment_ai_queries/1">
 
   <div class="detail-header">
-    <a href="#c:increment_ai_queries/1" class="detail-link" title="Link to this callback">
+    <a href="#c:increment_ai_queries/1" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -508,7 +510,7 @@ a timeout value and a flag for saving dataclips.</p><p>Requires a <code class="i
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@callback</span> increment_ai_queries(Lightning.AiAssistant.ChatSession.t()) :: <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Multi.html#t:t/0">Ecto.Multi.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@callback</span> increment_ai_queries(Lightning.AiAssistant.ChatSession.t()) :: <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Multi.html#t:t/0">Ecto.Multi.t</a>()</pre>
 
       </div>
 
@@ -524,7 +526,7 @@ a timeout value and a flag for saving dataclips.</p><p>Requires a <code class="i
 <section class="detail" id="c:limit_action/2">
 
   <div class="detail-header">
-    <a href="#c:limit_action/2" class="detail-link" title="Link to this callback">
+    <a href="#c:limit_action/2" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -562,34 +564,33 @@ a timeout value and a flag for saving dataclips.</p><p>Requires a <code class="i
     </div>
   </section>
 
-      <footer class="footer">
-        <p>
+    <footer class="footer">
+      <p>
 
-          <span class="line">
-            <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
-              Search HexDocs
-            </button>
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
 
-              <a href="Lightning.epub" title="ePub version">
-                Download ePub version
-              </a>
+            <a href="Lightning.epub" title="ePub version">
+              Download ePub version
+            </a>
 
-          </span>
-        </p>
+        </span>
+      </p>
 
-        <p class="built-using">
-          Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
 
-            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
-        </p>
-      </footer>
-    </div>
+      </p>
+
+    </footer>
   </div>
 </main>
 </div>
-
 
   </body>
 </html>

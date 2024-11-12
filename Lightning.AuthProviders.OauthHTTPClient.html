@@ -4,21 +4,19 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="generator" content="ExDoc v0.34.2">
     <meta name="project" content="Lightning v2.10.0-rc.1">
 
+
     <title>Lightning.AuthProviders.OauthHTTPClient — Lightning v2.10.0-rc.1</title>
-    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
+    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-0D035C9E.js"></script>
-
-      <script src="docs_config.js"></script>
-
-    <script async src="dist/html-J2ASZTQE.js"></script>
-
+    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
+    <script src="dist/sidebar_items-10E0B7BA.js"></script>
+    <script src="docs_config.js"></script>
+    <script async src="dist/html-YIPIRHGU.js"></script>
 
   </head>
   <body data-type="modules" class="page-module">
@@ -36,43 +34,28 @@
       } catch (error) { }
     </script>
 
-<div class="main">
+<div class="body-wrapper">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
 <nav id="sidebar" class="sidebar">
-  <form class="sidebar-search" action="search.html">
-    <label class="search-label">
-      <span class="sr-only">Search documentation of Lightning</span>
-      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
-    <button type="submit" class="search-button" aria-label="Submit Search">
-      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
-    </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
-      <i class="ri-close-line ri-lg" title="Cancel search"></i>
-    </button>
-  </form>
-
-  <div class="autocomplete">
-    <div class="autocomplete-results">
-    </div>
-  </div>
 
   <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
 
-      <a href="https://openfn.github.io/Lightning">
-        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
-      </a>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
 
-    <div class="sidebar-projectDetails">
-      <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+      <div>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
-      </a>
-      <div class="sidebar-projectVersion" translate="no">
-        v2.10.0-rc.1
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.10.0-rc.1
+        </div>
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -115,33 +98,52 @@ Pages
 
 <main class="content">
   <output role="status" id="toast"></output>
-  <div class="content-outer">
-    <div id="content" class="content-inner">
 
-<h1>
-<button class="icon-action display-settings">
-  <i class="ri-settings-3-line"></i>
-  <span class="sr-only">Settings</span>
-</button>
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+    <span translate="no">Lightning.AuthProviders.OauthHTTPClient</span> 
+    <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
+
+  </h1>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/oauth_http_client.ex#L1" title="View Source" class="icon-action" rel="help">
-      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-      <span class="sr-only">View Source</span>
-    </a>
-
-  <span translate="no">Lightning.AuthProviders.OauthHTTPClient</span> 
-  <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
-
-</h1>
-
-
-  <section id="moduledoc">
+    <section id="moduledoc">
 <p>Handles OAuth interactions for generic providers, including token fetching,
 refreshing, and user information retrieval. This module uses Tesla to make HTTP
 requests configured with middleware appropriate for OAuth specific tasks.</p>
-  </section>
+    </section>
 
+</div>
 
   <section id="summary" class="details-list">
     <h1 class="section-heading">
@@ -157,7 +159,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#t:option/0" translate="no">option()</a>
+        <a href="#t:option/0" data-no-tooltip translate="no">option()</a>
 
       </div>
 
@@ -173,7 +175,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#delete/3" translate="no">delete(client, url, opts)</a>
+        <a href="#delete/3" data-no-tooltip translate="no">delete(client, url, opts)</a>
 
       </div>
 
@@ -183,7 +185,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#delete!/3" translate="no">delete!(client, url, opts)</a>
+        <a href="#delete!/3" data-no-tooltip translate="no">delete!(client, url, opts)</a>
 
       </div>
 
@@ -193,7 +195,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#fetch_token/2" translate="no">fetch_token(client, code)</a>
+        <a href="#fetch_token/2" data-no-tooltip translate="no">fetch_token(client, code)</a>
 
       </div>
 
@@ -203,7 +205,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#fetch_userinfo/2" translate="no">fetch_userinfo(client, token)</a>
+        <a href="#fetch_userinfo/2" data-no-tooltip translate="no">fetch_userinfo(client, token)</a>
 
       </div>
 
@@ -213,7 +215,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#generate_authorize_url/2" translate="no">generate_authorize_url(client, params)</a>
+        <a href="#generate_authorize_url/2" data-no-tooltip translate="no">generate_authorize_url(client, params)</a>
 
       </div>
 
@@ -223,7 +225,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get/3" translate="no">get(client, url, opts)</a>
+        <a href="#get/3" data-no-tooltip translate="no">get(client, url, opts)</a>
 
       </div>
 
@@ -233,7 +235,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get!/3" translate="no">get!(client, url, opts)</a>
+        <a href="#get!/3" data-no-tooltip translate="no">get!(client, url, opts)</a>
 
       </div>
 
@@ -243,7 +245,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#head/3" translate="no">head(client, url, opts)</a>
+        <a href="#head/3" data-no-tooltip translate="no">head(client, url, opts)</a>
 
       </div>
 
@@ -253,7 +255,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#head!/3" translate="no">head!(client, url, opts)</a>
+        <a href="#head!/3" data-no-tooltip translate="no">head!(client, url, opts)</a>
 
       </div>
 
@@ -263,7 +265,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#options/3" translate="no">options(client, url, opts)</a>
+        <a href="#options/3" data-no-tooltip translate="no">options(client, url, opts)</a>
 
       </div>
 
@@ -273,7 +275,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#options!/3" translate="no">options!(client, url, opts)</a>
+        <a href="#options!/3" data-no-tooltip translate="no">options!(client, url, opts)</a>
 
       </div>
 
@@ -283,7 +285,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#patch/4" translate="no">patch(client, url, body, opts)</a>
+        <a href="#patch/4" data-no-tooltip translate="no">patch(client, url, body, opts)</a>
 
       </div>
 
@@ -293,7 +295,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#patch!/4" translate="no">patch!(client, url, body, opts)</a>
+        <a href="#patch!/4" data-no-tooltip translate="no">patch!(client, url, body, opts)</a>
 
       </div>
 
@@ -303,7 +305,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#post/4" translate="no">post(client, url, body, opts)</a>
+        <a href="#post/4" data-no-tooltip translate="no">post(client, url, body, opts)</a>
 
       </div>
 
@@ -313,7 +315,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#post!/4" translate="no">post!(client, url, body, opts)</a>
+        <a href="#post!/4" data-no-tooltip translate="no">post!(client, url, body, opts)</a>
 
       </div>
 
@@ -323,7 +325,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#put/4" translate="no">put(client, url, body, opts)</a>
+        <a href="#put/4" data-no-tooltip translate="no">put(client, url, body, opts)</a>
 
       </div>
 
@@ -333,7 +335,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#put!/4" translate="no">put!(client, url, body, opts)</a>
+        <a href="#put!/4" data-no-tooltip translate="no">put!(client, url, body, opts)</a>
 
       </div>
 
@@ -343,7 +345,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#refresh_token/2" translate="no">refresh_token(client, token)</a>
+        <a href="#refresh_token/2" data-no-tooltip translate="no">refresh_token(client, token)</a>
 
       </div>
 
@@ -353,7 +355,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#request/2" translate="no">request(client \\ %Tesla.Client{}, options)</a>
+        <a href="#request/2" data-no-tooltip translate="no">request(client \\ %Tesla.Client{}, options)</a>
 
       </div>
 
@@ -363,7 +365,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#request!/2" translate="no">request!(client \\ %Tesla.Client{}, options)</a>
+        <a href="#request!/2" data-no-tooltip translate="no">request!(client \\ %Tesla.Client{}, options)</a>
 
       </div>
 
@@ -373,7 +375,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#revoke_token/2" translate="no">revoke_token(client, token)</a>
+        <a href="#revoke_token/2" data-no-tooltip translate="no">revoke_token(client, token)</a>
 
       </div>
 
@@ -383,7 +385,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#still_fresh/3" translate="no">still_fresh(token, threshold \\ 5, time_unit \\ :minute)</a>
+        <a href="#still_fresh/3" data-no-tooltip translate="no">still_fresh(token, threshold \\ 5, time_unit \\ :minute)</a>
 
       </div>
 
@@ -393,7 +395,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#trace/3" translate="no">trace(client, url, opts)</a>
+        <a href="#trace/3" data-no-tooltip translate="no">trace(client, url, opts)</a>
 
       </div>
 
@@ -403,7 +405,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#trace!/3" translate="no">trace!(client, url, opts)</a>
+        <a href="#trace!/3" data-no-tooltip translate="no">trace!(client, url, opts)</a>
 
       </div>
 
@@ -427,7 +429,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 <section class="detail" id="t:option/0">
 
   <div class="detail-header">
-    <a href="#t:option/0" class="detail-link" title="Link to this type">
+    <a href="#t:option/0" class="detail-link" data-no-tooltip title="Link to this type">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this type</span>
     </a>
@@ -446,12 +448,12 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@type</span> option() ::
-  {:method, <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:method/0">Tesla.Env.method</a>()}
-  | {:url, <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>()}
-  | {:query, <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:query/0">Tesla.Env.query</a>()}
-  | {:headers, <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:headers/0">Tesla.Env.headers</a>()}
-  | {:body, <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:body/0">Tesla.Env.body</a>()}
-  | {:opts, <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:opts/0">Tesla.Env.opts</a>()}</pre>
+  {:method, <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:method/0">Tesla.Env.method</a>()}
+  | {:url, <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>()}
+  | {:query, <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:query/0">Tesla.Env.query</a>()}
+  | {:headers, <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:headers/0">Tesla.Env.headers</a>()}
+  | {:body, <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:body/0">Tesla.Env.body</a>()}
+  | {:opts, <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:opts/0">Tesla.Env.opts</a>()}</pre>
 
       </div>
 
@@ -473,7 +475,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 <section class="detail" id="delete/3">
 
   <div class="detail-header">
-    <a href="#delete/3" class="detail-link" title="Link to this function">
+    <a href="#delete/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -491,21 +493,21 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> delete(<a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), [<a href="#t:option/0">option</a>()]) :: <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:result/0">Tesla.Env.result</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> delete(<a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), [<a href="#t:option/0">option</a>()]) :: <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:result/0">Tesla.Env.result</a>()</pre>
 
       </div>
 
-<p>Perform a DELETE request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">delete</span><span class="p" data-group-id="5860647933-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="5860647933-1">)</span><span class="w">
-</span><span class="n">delete</span><span class="p" data-group-id="5860647933-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5860647933-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="5860647933-3">]</span><span class="p" data-group-id="5860647933-2">)</span><span class="w">
-</span><span class="n">delete</span><span class="p" data-group-id="5860647933-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="5860647933-4">)</span><span class="w">
-</span><span class="n">delete</span><span class="p" data-group-id="5860647933-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5860647933-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="5860647933-6">]</span><span class="p" data-group-id="5860647933-5">)</span><span class="w">
-</span><span class="n">delete</span><span class="p" data-group-id="5860647933-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5860647933-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="5860647933-8">}</span><span class="p" data-group-id="5860647933-7">)</span></code></pre>
+<p>Perform a DELETE request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">delete</span><span class="p" data-group-id="5374387687-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="5374387687-1">)</span><span class="w">
+</span><span class="n">delete</span><span class="p" data-group-id="5374387687-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5374387687-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="5374387687-3">]</span><span class="p" data-group-id="5374387687-2">)</span><span class="w">
+</span><span class="n">delete</span><span class="p" data-group-id="5374387687-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="5374387687-4">)</span><span class="w">
+</span><span class="n">delete</span><span class="p" data-group-id="5374387687-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5374387687-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="5374387687-6">]</span><span class="p" data-group-id="5374387687-5">)</span><span class="w">
+</span><span class="n">delete</span><span class="p" data-group-id="5374387687-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5374387687-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="5374387687-8">}</span><span class="p" data-group-id="5374387687-7">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="delete!/3">
 
   <div class="detail-header">
-    <a href="#delete!/3" class="detail-link" title="Link to this function">
+    <a href="#delete!/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -523,22 +525,22 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> delete!(<a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), [<a href="#t:option/0">option</a>()]) ::
-  <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:t/0">Tesla.Env.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">no_return</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> delete!(<a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), [<a href="#t:option/0">option</a>()]) ::
+  <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:t/0">Tesla.Env.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">no_return</a>()</pre>
 
       </div>
 
-<p>Perform a DELETE request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">delete!</span><span class="p" data-group-id="4807789716-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="4807789716-1">)</span><span class="w">
-</span><span class="n">delete!</span><span class="p" data-group-id="4807789716-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4807789716-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="4807789716-3">]</span><span class="p" data-group-id="4807789716-2">)</span><span class="w">
-</span><span class="n">delete!</span><span class="p" data-group-id="4807789716-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="4807789716-4">)</span><span class="w">
-</span><span class="n">delete!</span><span class="p" data-group-id="4807789716-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4807789716-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="4807789716-6">]</span><span class="p" data-group-id="4807789716-5">)</span><span class="w">
-</span><span class="n">delete!</span><span class="p" data-group-id="4807789716-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4807789716-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="4807789716-8">}</span><span class="p" data-group-id="4807789716-7">)</span></code></pre>
+<p>Perform a DELETE request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">delete!</span><span class="p" data-group-id="7822689754-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="7822689754-1">)</span><span class="w">
+</span><span class="n">delete!</span><span class="p" data-group-id="7822689754-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7822689754-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="7822689754-3">]</span><span class="p" data-group-id="7822689754-2">)</span><span class="w">
+</span><span class="n">delete!</span><span class="p" data-group-id="7822689754-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="7822689754-4">)</span><span class="w">
+</span><span class="n">delete!</span><span class="p" data-group-id="7822689754-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7822689754-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="7822689754-6">]</span><span class="p" data-group-id="7822689754-5">)</span><span class="w">
+</span><span class="n">delete!</span><span class="p" data-group-id="7822689754-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7822689754-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="7822689754-8">}</span><span class="p" data-group-id="7822689754-7">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="fetch_token/2">
 
   <div class="detail-header">
-    <a href="#fetch_token/2" class="detail-link" title="Link to this function">
+    <a href="#fetch_token/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -572,7 +574,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 <section class="detail" id="fetch_userinfo/2">
 
   <div class="detail-header">
-    <a href="#fetch_userinfo/2" class="detail-link" title="Link to this function">
+    <a href="#fetch_userinfo/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -606,7 +608,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 <section class="detail" id="generate_authorize_url/2">
 
   <div class="detail-header">
-    <a href="#generate_authorize_url/2" class="detail-link" title="Link to this function">
+    <a href="#generate_authorize_url/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -640,7 +642,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 <section class="detail" id="get/3">
 
   <div class="detail-header">
-    <a href="#get/3" class="detail-link" title="Link to this function">
+    <a href="#get/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -658,21 +660,21 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> get(<a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), [<a href="#t:option/0">option</a>()]) :: <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:result/0">Tesla.Env.result</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> get(<a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), [<a href="#t:option/0">option</a>()]) :: <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:result/0">Tesla.Env.result</a>()</pre>
 
       </div>
 
-<p>Perform a GET request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">get</span><span class="p" data-group-id="8271831324-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="8271831324-1">)</span><span class="w">
-</span><span class="n">get</span><span class="p" data-group-id="8271831324-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8271831324-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="8271831324-3">]</span><span class="p" data-group-id="8271831324-2">)</span><span class="w">
-</span><span class="n">get</span><span class="p" data-group-id="8271831324-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="8271831324-4">)</span><span class="w">
-</span><span class="n">get</span><span class="p" data-group-id="8271831324-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8271831324-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="8271831324-6">]</span><span class="p" data-group-id="8271831324-5">)</span><span class="w">
-</span><span class="n">get</span><span class="p" data-group-id="8271831324-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8271831324-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="8271831324-8">}</span><span class="p" data-group-id="8271831324-7">)</span></code></pre>
+<p>Perform a GET request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">get</span><span class="p" data-group-id="3457919101-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="3457919101-1">)</span><span class="w">
+</span><span class="n">get</span><span class="p" data-group-id="3457919101-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3457919101-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="3457919101-3">]</span><span class="p" data-group-id="3457919101-2">)</span><span class="w">
+</span><span class="n">get</span><span class="p" data-group-id="3457919101-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="3457919101-4">)</span><span class="w">
+</span><span class="n">get</span><span class="p" data-group-id="3457919101-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3457919101-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="3457919101-6">]</span><span class="p" data-group-id="3457919101-5">)</span><span class="w">
+</span><span class="n">get</span><span class="p" data-group-id="3457919101-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3457919101-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="3457919101-8">}</span><span class="p" data-group-id="3457919101-7">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get!/3">
 
   <div class="detail-header">
-    <a href="#get!/3" class="detail-link" title="Link to this function">
+    <a href="#get!/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -690,22 +692,22 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> get!(<a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), [<a href="#t:option/0">option</a>()]) ::
-  <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:t/0">Tesla.Env.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">no_return</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> get!(<a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), [<a href="#t:option/0">option</a>()]) ::
+  <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:t/0">Tesla.Env.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">no_return</a>()</pre>
 
       </div>
 
-<p>Perform a GET request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">get!</span><span class="p" data-group-id="0254870965-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="0254870965-1">)</span><span class="w">
-</span><span class="n">get!</span><span class="p" data-group-id="0254870965-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0254870965-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="0254870965-3">]</span><span class="p" data-group-id="0254870965-2">)</span><span class="w">
-</span><span class="n">get!</span><span class="p" data-group-id="0254870965-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="0254870965-4">)</span><span class="w">
-</span><span class="n">get!</span><span class="p" data-group-id="0254870965-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0254870965-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="0254870965-6">]</span><span class="p" data-group-id="0254870965-5">)</span><span class="w">
-</span><span class="n">get!</span><span class="p" data-group-id="0254870965-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0254870965-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="0254870965-8">}</span><span class="p" data-group-id="0254870965-7">)</span></code></pre>
+<p>Perform a GET request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">get!</span><span class="p" data-group-id="0361038360-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="0361038360-1">)</span><span class="w">
+</span><span class="n">get!</span><span class="p" data-group-id="0361038360-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0361038360-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="0361038360-3">]</span><span class="p" data-group-id="0361038360-2">)</span><span class="w">
+</span><span class="n">get!</span><span class="p" data-group-id="0361038360-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="0361038360-4">)</span><span class="w">
+</span><span class="n">get!</span><span class="p" data-group-id="0361038360-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0361038360-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="0361038360-6">]</span><span class="p" data-group-id="0361038360-5">)</span><span class="w">
+</span><span class="n">get!</span><span class="p" data-group-id="0361038360-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0361038360-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="0361038360-8">}</span><span class="p" data-group-id="0361038360-7">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="head/3">
 
   <div class="detail-header">
-    <a href="#head/3" class="detail-link" title="Link to this function">
+    <a href="#head/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -723,21 +725,21 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> head(<a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), [<a href="#t:option/0">option</a>()]) :: <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:result/0">Tesla.Env.result</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> head(<a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), [<a href="#t:option/0">option</a>()]) :: <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:result/0">Tesla.Env.result</a>()</pre>
 
       </div>
 
-<p>Perform a HEAD request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">head</span><span class="p" data-group-id="0262047199-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="0262047199-1">)</span><span class="w">
-</span><span class="n">head</span><span class="p" data-group-id="0262047199-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0262047199-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="0262047199-3">]</span><span class="p" data-group-id="0262047199-2">)</span><span class="w">
-</span><span class="n">head</span><span class="p" data-group-id="0262047199-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="0262047199-4">)</span><span class="w">
-</span><span class="n">head</span><span class="p" data-group-id="0262047199-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0262047199-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="0262047199-6">]</span><span class="p" data-group-id="0262047199-5">)</span><span class="w">
-</span><span class="n">head</span><span class="p" data-group-id="0262047199-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0262047199-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="0262047199-8">}</span><span class="p" data-group-id="0262047199-7">)</span></code></pre>
+<p>Perform a HEAD request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">head</span><span class="p" data-group-id="9334900117-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="9334900117-1">)</span><span class="w">
+</span><span class="n">head</span><span class="p" data-group-id="9334900117-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9334900117-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="9334900117-3">]</span><span class="p" data-group-id="9334900117-2">)</span><span class="w">
+</span><span class="n">head</span><span class="p" data-group-id="9334900117-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="9334900117-4">)</span><span class="w">
+</span><span class="n">head</span><span class="p" data-group-id="9334900117-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9334900117-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="9334900117-6">]</span><span class="p" data-group-id="9334900117-5">)</span><span class="w">
+</span><span class="n">head</span><span class="p" data-group-id="9334900117-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9334900117-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="9334900117-8">}</span><span class="p" data-group-id="9334900117-7">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="head!/3">
 
   <div class="detail-header">
-    <a href="#head!/3" class="detail-link" title="Link to this function">
+    <a href="#head!/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -755,22 +757,22 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> head!(<a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), [<a href="#t:option/0">option</a>()]) ::
-  <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:t/0">Tesla.Env.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">no_return</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> head!(<a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), [<a href="#t:option/0">option</a>()]) ::
+  <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:t/0">Tesla.Env.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">no_return</a>()</pre>
 
       </div>
 
-<p>Perform a HEAD request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">head!</span><span class="p" data-group-id="5956887081-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="5956887081-1">)</span><span class="w">
-</span><span class="n">head!</span><span class="p" data-group-id="5956887081-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5956887081-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="5956887081-3">]</span><span class="p" data-group-id="5956887081-2">)</span><span class="w">
-</span><span class="n">head!</span><span class="p" data-group-id="5956887081-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="5956887081-4">)</span><span class="w">
-</span><span class="n">head!</span><span class="p" data-group-id="5956887081-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5956887081-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="5956887081-6">]</span><span class="p" data-group-id="5956887081-5">)</span><span class="w">
-</span><span class="n">head!</span><span class="p" data-group-id="5956887081-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5956887081-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="5956887081-8">}</span><span class="p" data-group-id="5956887081-7">)</span></code></pre>
+<p>Perform a HEAD request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">head!</span><span class="p" data-group-id="1693105022-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="1693105022-1">)</span><span class="w">
+</span><span class="n">head!</span><span class="p" data-group-id="1693105022-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1693105022-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="1693105022-3">]</span><span class="p" data-group-id="1693105022-2">)</span><span class="w">
+</span><span class="n">head!</span><span class="p" data-group-id="1693105022-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="1693105022-4">)</span><span class="w">
+</span><span class="n">head!</span><span class="p" data-group-id="1693105022-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1693105022-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="1693105022-6">]</span><span class="p" data-group-id="1693105022-5">)</span><span class="w">
+</span><span class="n">head!</span><span class="p" data-group-id="1693105022-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1693105022-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="1693105022-8">}</span><span class="p" data-group-id="1693105022-7">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="options/3">
 
   <div class="detail-header">
-    <a href="#options/3" class="detail-link" title="Link to this function">
+    <a href="#options/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -788,21 +790,21 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> options(<a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), [<a href="#t:option/0">option</a>()]) :: <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:result/0">Tesla.Env.result</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> options(<a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), [<a href="#t:option/0">option</a>()]) :: <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:result/0">Tesla.Env.result</a>()</pre>
 
       </div>
 
-<p>Perform a OPTIONS request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">options</span><span class="p" data-group-id="1595868986-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="1595868986-1">)</span><span class="w">
-</span><span class="n">options</span><span class="p" data-group-id="1595868986-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1595868986-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="1595868986-3">]</span><span class="p" data-group-id="1595868986-2">)</span><span class="w">
-</span><span class="n">options</span><span class="p" data-group-id="1595868986-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="1595868986-4">)</span><span class="w">
-</span><span class="n">options</span><span class="p" data-group-id="1595868986-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1595868986-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="1595868986-6">]</span><span class="p" data-group-id="1595868986-5">)</span><span class="w">
-</span><span class="n">options</span><span class="p" data-group-id="1595868986-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1595868986-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="1595868986-8">}</span><span class="p" data-group-id="1595868986-7">)</span></code></pre>
+<p>Perform a OPTIONS request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">options</span><span class="p" data-group-id="5788929288-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="5788929288-1">)</span><span class="w">
+</span><span class="n">options</span><span class="p" data-group-id="5788929288-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5788929288-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="5788929288-3">]</span><span class="p" data-group-id="5788929288-2">)</span><span class="w">
+</span><span class="n">options</span><span class="p" data-group-id="5788929288-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="5788929288-4">)</span><span class="w">
+</span><span class="n">options</span><span class="p" data-group-id="5788929288-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5788929288-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="5788929288-6">]</span><span class="p" data-group-id="5788929288-5">)</span><span class="w">
+</span><span class="n">options</span><span class="p" data-group-id="5788929288-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5788929288-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="5788929288-8">}</span><span class="p" data-group-id="5788929288-7">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="options!/3">
 
   <div class="detail-header">
-    <a href="#options!/3" class="detail-link" title="Link to this function">
+    <a href="#options!/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -820,22 +822,22 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> options!(<a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), [<a href="#t:option/0">option</a>()]) ::
-  <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:t/0">Tesla.Env.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">no_return</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> options!(<a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), [<a href="#t:option/0">option</a>()]) ::
+  <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:t/0">Tesla.Env.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">no_return</a>()</pre>
 
       </div>
 
-<p>Perform a OPTIONS request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">options!</span><span class="p" data-group-id="4360195081-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="4360195081-1">)</span><span class="w">
-</span><span class="n">options!</span><span class="p" data-group-id="4360195081-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4360195081-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="4360195081-3">]</span><span class="p" data-group-id="4360195081-2">)</span><span class="w">
-</span><span class="n">options!</span><span class="p" data-group-id="4360195081-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="4360195081-4">)</span><span class="w">
-</span><span class="n">options!</span><span class="p" data-group-id="4360195081-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4360195081-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="4360195081-6">]</span><span class="p" data-group-id="4360195081-5">)</span><span class="w">
-</span><span class="n">options!</span><span class="p" data-group-id="4360195081-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4360195081-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="4360195081-8">}</span><span class="p" data-group-id="4360195081-7">)</span></code></pre>
+<p>Perform a OPTIONS request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">options!</span><span class="p" data-group-id="3164759804-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="3164759804-1">)</span><span class="w">
+</span><span class="n">options!</span><span class="p" data-group-id="3164759804-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3164759804-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="3164759804-3">]</span><span class="p" data-group-id="3164759804-2">)</span><span class="w">
+</span><span class="n">options!</span><span class="p" data-group-id="3164759804-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="3164759804-4">)</span><span class="w">
+</span><span class="n">options!</span><span class="p" data-group-id="3164759804-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3164759804-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="3164759804-6">]</span><span class="p" data-group-id="3164759804-5">)</span><span class="w">
+</span><span class="n">options!</span><span class="p" data-group-id="3164759804-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3164759804-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="3164759804-8">}</span><span class="p" data-group-id="3164759804-7">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="patch/4">
 
   <div class="detail-header">
-    <a href="#patch/4" class="detail-link" title="Link to this function">
+    <a href="#patch/4" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -853,21 +855,21 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> patch(<a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:body/0">Tesla.Env.body</a>(), [<a href="#t:option/0">option</a>()]) ::
-  <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:result/0">Tesla.Env.result</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> patch(<a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:body/0">Tesla.Env.body</a>(), [<a href="#t:option/0">option</a>()]) ::
+  <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:result/0">Tesla.Env.result</a>()</pre>
 
       </div>
 
-<p>Perform a PATCH request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">patch</span><span class="p" data-group-id="4255158420-1">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4255158420-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="4255158420-2">}</span><span class="p" data-group-id="4255158420-1">)</span><span class="w">
-</span><span class="n">patch</span><span class="p" data-group-id="4255158420-3">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4255158420-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="4255158420-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4255158420-5">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="4255158420-5">]</span><span class="p" data-group-id="4255158420-3">)</span><span class="w">
-</span><span class="n">patch</span><span class="p" data-group-id="4255158420-6">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4255158420-7">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="4255158420-7">}</span><span class="p" data-group-id="4255158420-6">)</span><span class="w">
-</span><span class="n">patch</span><span class="p" data-group-id="4255158420-8">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4255158420-9">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="4255158420-9">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4255158420-10">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="4255158420-10">]</span><span class="p" data-group-id="4255158420-8">)</span></code></pre>
+<p>Perform a PATCH request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">patch</span><span class="p" data-group-id="1969376006-1">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1969376006-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="1969376006-2">}</span><span class="p" data-group-id="1969376006-1">)</span><span class="w">
+</span><span class="n">patch</span><span class="p" data-group-id="1969376006-3">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1969376006-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="1969376006-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1969376006-5">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="1969376006-5">]</span><span class="p" data-group-id="1969376006-3">)</span><span class="w">
+</span><span class="n">patch</span><span class="p" data-group-id="1969376006-6">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1969376006-7">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="1969376006-7">}</span><span class="p" data-group-id="1969376006-6">)</span><span class="w">
+</span><span class="n">patch</span><span class="p" data-group-id="1969376006-8">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1969376006-9">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="1969376006-9">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1969376006-10">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="1969376006-10">]</span><span class="p" data-group-id="1969376006-8">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="patch!/4">
 
   <div class="detail-header">
-    <a href="#patch!/4" class="detail-link" title="Link to this function">
+    <a href="#patch!/4" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -885,21 +887,21 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> patch!(<a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:body/0">Tesla.Env.body</a>(), [<a href="#t:option/0">option</a>()]) ::
-  <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:t/0">Tesla.Env.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">no_return</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> patch!(<a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:body/0">Tesla.Env.body</a>(), [<a href="#t:option/0">option</a>()]) ::
+  <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:t/0">Tesla.Env.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">no_return</a>()</pre>
 
       </div>
 
-<p>Perform a PATCH request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">patch!</span><span class="p" data-group-id="1896133821-1">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1896133821-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="1896133821-2">}</span><span class="p" data-group-id="1896133821-1">)</span><span class="w">
-</span><span class="n">patch!</span><span class="p" data-group-id="1896133821-3">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1896133821-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="1896133821-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1896133821-5">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="1896133821-5">]</span><span class="p" data-group-id="1896133821-3">)</span><span class="w">
-</span><span class="n">patch!</span><span class="p" data-group-id="1896133821-6">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1896133821-7">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="1896133821-7">}</span><span class="p" data-group-id="1896133821-6">)</span><span class="w">
-</span><span class="n">patch!</span><span class="p" data-group-id="1896133821-8">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1896133821-9">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="1896133821-9">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1896133821-10">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="1896133821-10">]</span><span class="p" data-group-id="1896133821-8">)</span></code></pre>
+<p>Perform a PATCH request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">patch!</span><span class="p" data-group-id="0048964436-1">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0048964436-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="0048964436-2">}</span><span class="p" data-group-id="0048964436-1">)</span><span class="w">
+</span><span class="n">patch!</span><span class="p" data-group-id="0048964436-3">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0048964436-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="0048964436-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0048964436-5">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="0048964436-5">]</span><span class="p" data-group-id="0048964436-3">)</span><span class="w">
+</span><span class="n">patch!</span><span class="p" data-group-id="0048964436-6">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0048964436-7">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="0048964436-7">}</span><span class="p" data-group-id="0048964436-6">)</span><span class="w">
+</span><span class="n">patch!</span><span class="p" data-group-id="0048964436-8">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0048964436-9">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="0048964436-9">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0048964436-10">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="0048964436-10">]</span><span class="p" data-group-id="0048964436-8">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="post/4">
 
   <div class="detail-header">
-    <a href="#post/4" class="detail-link" title="Link to this function">
+    <a href="#post/4" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -917,21 +919,21 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> post(<a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:body/0">Tesla.Env.body</a>(), [<a href="#t:option/0">option</a>()]) ::
-  <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:result/0">Tesla.Env.result</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> post(<a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:body/0">Tesla.Env.body</a>(), [<a href="#t:option/0">option</a>()]) ::
+  <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:result/0">Tesla.Env.result</a>()</pre>
 
       </div>
 
-<p>Perform a POST request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">post</span><span class="p" data-group-id="5174888449-1">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5174888449-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="5174888449-2">}</span><span class="p" data-group-id="5174888449-1">)</span><span class="w">
-</span><span class="n">post</span><span class="p" data-group-id="5174888449-3">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5174888449-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="5174888449-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5174888449-5">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="5174888449-5">]</span><span class="p" data-group-id="5174888449-3">)</span><span class="w">
-</span><span class="n">post</span><span class="p" data-group-id="5174888449-6">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5174888449-7">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="5174888449-7">}</span><span class="p" data-group-id="5174888449-6">)</span><span class="w">
-</span><span class="n">post</span><span class="p" data-group-id="5174888449-8">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5174888449-9">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="5174888449-9">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5174888449-10">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="5174888449-10">]</span><span class="p" data-group-id="5174888449-8">)</span></code></pre>
+<p>Perform a POST request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">post</span><span class="p" data-group-id="4403468526-1">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4403468526-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="4403468526-2">}</span><span class="p" data-group-id="4403468526-1">)</span><span class="w">
+</span><span class="n">post</span><span class="p" data-group-id="4403468526-3">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4403468526-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="4403468526-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4403468526-5">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="4403468526-5">]</span><span class="p" data-group-id="4403468526-3">)</span><span class="w">
+</span><span class="n">post</span><span class="p" data-group-id="4403468526-6">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4403468526-7">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="4403468526-7">}</span><span class="p" data-group-id="4403468526-6">)</span><span class="w">
+</span><span class="n">post</span><span class="p" data-group-id="4403468526-8">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4403468526-9">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="4403468526-9">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4403468526-10">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="4403468526-10">]</span><span class="p" data-group-id="4403468526-8">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="post!/4">
 
   <div class="detail-header">
-    <a href="#post!/4" class="detail-link" title="Link to this function">
+    <a href="#post!/4" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -949,21 +951,21 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> post!(<a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:body/0">Tesla.Env.body</a>(), [<a href="#t:option/0">option</a>()]) ::
-  <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:t/0">Tesla.Env.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">no_return</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> post!(<a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:body/0">Tesla.Env.body</a>(), [<a href="#t:option/0">option</a>()]) ::
+  <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:t/0">Tesla.Env.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">no_return</a>()</pre>
 
       </div>
 
-<p>Perform a POST request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">post!</span><span class="p" data-group-id="9774091866-1">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9774091866-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="9774091866-2">}</span><span class="p" data-group-id="9774091866-1">)</span><span class="w">
-</span><span class="n">post!</span><span class="p" data-group-id="9774091866-3">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9774091866-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="9774091866-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9774091866-5">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="9774091866-5">]</span><span class="p" data-group-id="9774091866-3">)</span><span class="w">
-</span><span class="n">post!</span><span class="p" data-group-id="9774091866-6">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9774091866-7">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="9774091866-7">}</span><span class="p" data-group-id="9774091866-6">)</span><span class="w">
-</span><span class="n">post!</span><span class="p" data-group-id="9774091866-8">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9774091866-9">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="9774091866-9">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9774091866-10">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="9774091866-10">]</span><span class="p" data-group-id="9774091866-8">)</span></code></pre>
+<p>Perform a POST request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">post!</span><span class="p" data-group-id="3388883372-1">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3388883372-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="3388883372-2">}</span><span class="p" data-group-id="3388883372-1">)</span><span class="w">
+</span><span class="n">post!</span><span class="p" data-group-id="3388883372-3">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3388883372-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="3388883372-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3388883372-5">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="3388883372-5">]</span><span class="p" data-group-id="3388883372-3">)</span><span class="w">
+</span><span class="n">post!</span><span class="p" data-group-id="3388883372-6">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3388883372-7">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="3388883372-7">}</span><span class="p" data-group-id="3388883372-6">)</span><span class="w">
+</span><span class="n">post!</span><span class="p" data-group-id="3388883372-8">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3388883372-9">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="3388883372-9">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3388883372-10">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="3388883372-10">]</span><span class="p" data-group-id="3388883372-8">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="put/4">
 
   <div class="detail-header">
-    <a href="#put/4" class="detail-link" title="Link to this function">
+    <a href="#put/4" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -981,21 +983,21 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> put(<a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:body/0">Tesla.Env.body</a>(), [<a href="#t:option/0">option</a>()]) ::
-  <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:result/0">Tesla.Env.result</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> put(<a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:body/0">Tesla.Env.body</a>(), [<a href="#t:option/0">option</a>()]) ::
+  <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:result/0">Tesla.Env.result</a>()</pre>
 
       </div>
 
-<p>Perform a PUT request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">put</span><span class="p" data-group-id="8488781841-1">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8488781841-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="8488781841-2">}</span><span class="p" data-group-id="8488781841-1">)</span><span class="w">
-</span><span class="n">put</span><span class="p" data-group-id="8488781841-3">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8488781841-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="8488781841-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8488781841-5">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="8488781841-5">]</span><span class="p" data-group-id="8488781841-3">)</span><span class="w">
-</span><span class="n">put</span><span class="p" data-group-id="8488781841-6">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8488781841-7">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="8488781841-7">}</span><span class="p" data-group-id="8488781841-6">)</span><span class="w">
-</span><span class="n">put</span><span class="p" data-group-id="8488781841-8">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8488781841-9">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="8488781841-9">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8488781841-10">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="8488781841-10">]</span><span class="p" data-group-id="8488781841-8">)</span></code></pre>
+<p>Perform a PUT request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">put</span><span class="p" data-group-id="7574053691-1">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7574053691-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="7574053691-2">}</span><span class="p" data-group-id="7574053691-1">)</span><span class="w">
+</span><span class="n">put</span><span class="p" data-group-id="7574053691-3">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7574053691-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="7574053691-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7574053691-5">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="7574053691-5">]</span><span class="p" data-group-id="7574053691-3">)</span><span class="w">
+</span><span class="n">put</span><span class="p" data-group-id="7574053691-6">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7574053691-7">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="7574053691-7">}</span><span class="p" data-group-id="7574053691-6">)</span><span class="w">
+</span><span class="n">put</span><span class="p" data-group-id="7574053691-8">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7574053691-9">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="7574053691-9">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7574053691-10">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="7574053691-10">]</span><span class="p" data-group-id="7574053691-8">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="put!/4">
 
   <div class="detail-header">
-    <a href="#put!/4" class="detail-link" title="Link to this function">
+    <a href="#put!/4" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1013,21 +1015,21 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> put!(<a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:body/0">Tesla.Env.body</a>(), [<a href="#t:option/0">option</a>()]) ::
-  <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:t/0">Tesla.Env.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">no_return</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> put!(<a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:body/0">Tesla.Env.body</a>(), [<a href="#t:option/0">option</a>()]) ::
+  <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:t/0">Tesla.Env.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">no_return</a>()</pre>
 
       </div>
 
-<p>Perform a PUT request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">put!</span><span class="p" data-group-id="7051366227-1">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7051366227-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="7051366227-2">}</span><span class="p" data-group-id="7051366227-1">)</span><span class="w">
-</span><span class="n">put!</span><span class="p" data-group-id="7051366227-3">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7051366227-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="7051366227-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7051366227-5">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="7051366227-5">]</span><span class="p" data-group-id="7051366227-3">)</span><span class="w">
-</span><span class="n">put!</span><span class="p" data-group-id="7051366227-6">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7051366227-7">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="7051366227-7">}</span><span class="p" data-group-id="7051366227-6">)</span><span class="w">
-</span><span class="n">put!</span><span class="p" data-group-id="7051366227-8">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7051366227-9">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="7051366227-9">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7051366227-10">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="7051366227-10">]</span><span class="p" data-group-id="7051366227-8">)</span></code></pre>
+<p>Perform a PUT request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">put!</span><span class="p" data-group-id="7333387222-1">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7333387222-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="7333387222-2">}</span><span class="p" data-group-id="7333387222-1">)</span><span class="w">
+</span><span class="n">put!</span><span class="p" data-group-id="7333387222-3">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7333387222-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="7333387222-4">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7333387222-5">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="7333387222-5">]</span><span class="p" data-group-id="7333387222-3">)</span><span class="w">
+</span><span class="n">put!</span><span class="p" data-group-id="7333387222-6">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7333387222-7">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="7333387222-7">}</span><span class="p" data-group-id="7333387222-6">)</span><span class="w">
+</span><span class="n">put!</span><span class="p" data-group-id="7333387222-8">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7333387222-9">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="7333387222-9">}</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7333387222-10">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="7333387222-10">]</span><span class="p" data-group-id="7333387222-8">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="refresh_token/2">
 
   <div class="detail-header">
-    <a href="#refresh_token/2" class="detail-link" title="Link to this function">
+    <a href="#refresh_token/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1063,7 +1065,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
     <span id="request/1"></span>
 
   <div class="detail-header">
-    <a href="#request/2" class="detail-link" title="Link to this function">
+    <a href="#request/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1081,7 +1083,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> request(<a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), [<a href="#t:option/0">option</a>()]) :: <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:result/0">Tesla.Env.result</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> request(<a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), [<a href="#t:option/0">option</a>()]) :: <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:result/0">Tesla.Env.result</a>()</pre>
 
       </div>
 
@@ -1091,17 +1093,17 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
   </a>
   <span class="text">Options</span>
 </h2>
-<ul><li><code class="inline">:method</code> - the request method, one of [<code class="inline">:head</code>, <code class="inline">:get</code>, <code class="inline">:delete</code>, <code class="inline">:trace</code>, <code class="inline">:options</code>, <code class="inline">:post</code>, <code class="inline">:put</code>, <code class="inline">:patch</code>]</li><li><code class="inline">:url</code> - either full url e.g. &quot;<a href="http://example.com/some/path%22">http://example.com/some/path&quot;</a> or just &quot;/some/path&quot; if using <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Middleware.BaseUrl.html"><code class="inline">Tesla.Middleware.BaseUrl</code></a></li><li><code class="inline">:query</code> - a keyword list of query params, e.g. <code class="inline">[page: 1, per_page: 100]</code></li><li><code class="inline">:headers</code> - a keyworld list of headers, e.g. <code class="inline">[{&quot;content-type&quot;, &quot;text/plain&quot;}]</code></li><li><code class="inline">:body</code> - depends on used middleware:<ul><li>by default it can be a binary</li><li>if using e.g. JSON encoding middleware it can be a nested map</li><li>if adapter supports it it can be a Stream with any of the above</li></ul></li><li><code class="inline">:opts</code> - custom, per-request middleware or adapter options</li></ul><h2 id="request/2-examples" class="section-heading">
+<ul><li><code class="inline">:method</code> - the request method, one of [<code class="inline">:head</code>, <code class="inline">:get</code>, <code class="inline">:delete</code>, <code class="inline">:trace</code>, <code class="inline">:options</code>, <code class="inline">:post</code>, <code class="inline">:put</code>, <code class="inline">:patch</code>]</li><li><code class="inline">:url</code> - either full url e.g. &quot;<a href="http://example.com/some/path%22">http://example.com/some/path&quot;</a> or just &quot;/some/path&quot; if using <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Middleware.BaseUrl.html"><code class="inline">Tesla.Middleware.BaseUrl</code></a></li><li><code class="inline">:query</code> - a keyword list of query params, e.g. <code class="inline">[page: 1, per_page: 100]</code></li><li><code class="inline">:headers</code> - a keyword list of headers, e.g. <code class="inline">[{&quot;content-type&quot;, &quot;text/plain&quot;}]</code></li><li><code class="inline">:body</code> - depends on used middleware:<ul><li>by default it can be a binary</li><li>if using e.g. JSON encoding middleware it can be a nested map</li><li>if adapter supports it it can be a Stream with any of the above</li></ul></li><li><code class="inline">:opts</code> - custom, per-request middleware or adapter options</li></ul><h2 id="request/2-examples" class="section-heading">
   <a href="#request/2-examples" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="nc">ExampleApi</span><span class="o">.</span><span class="n">request</span><span class="p" data-group-id="9282734934-1">(</span><span class="ss">method</span><span class="p">:</span><span class="w"> </span><span class="ss">:get</span><span class="p">,</span><span class="w"> </span><span class="ss">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/users/path&quot;</span><span class="p" data-group-id="9282734934-1">)</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="nc">ExampleApi</span><span class="o">.</span><span class="n">request</span><span class="p" data-group-id="6251701658-1">(</span><span class="ss">method</span><span class="p">:</span><span class="w"> </span><span class="ss">:get</span><span class="p">,</span><span class="w"> </span><span class="ss">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/users/path&quot;</span><span class="p" data-group-id="6251701658-1">)</span><span class="w">
 
 </span><span class="c1"># use shortcut methods</span><span class="w">
-</span><span class="nc">ExampleApi</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="9282734934-2">(</span><span class="s">&quot;/users/1&quot;</span><span class="p" data-group-id="9282734934-2">)</span><span class="w">
-</span><span class="nc">ExampleApi</span><span class="o">.</span><span class="n">post</span><span class="p" data-group-id="9282734934-3">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9282734934-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="9282734934-4">}</span><span class="p" data-group-id="9282734934-3">)</span></code></pre>
+</span><span class="nc">ExampleApi</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="6251701658-2">(</span><span class="s">&quot;/users/1&quot;</span><span class="p" data-group-id="6251701658-2">)</span><span class="w">
+</span><span class="nc">ExampleApi</span><span class="o">.</span><span class="n">post</span><span class="p" data-group-id="6251701658-3">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6251701658-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="6251701658-4">}</span><span class="p" data-group-id="6251701658-3">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="request!/2">
@@ -1109,7 +1111,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
     <span id="request!/1"></span>
 
   <div class="detail-header">
-    <a href="#request!/2" class="detail-link" title="Link to this function">
+    <a href="#request!/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1127,7 +1129,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> request!(<a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), [<a href="#t:option/0">option</a>()]) :: <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:t/0">Tesla.Env.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">no_return</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> request!(<a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), [<a href="#t:option/0">option</a>()]) :: <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:t/0">Tesla.Env.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">no_return</a>()</pre>
 
       </div>
 
@@ -1137,7 +1139,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 <section class="detail" id="revoke_token/2">
 
   <div class="detail-header">
-    <a href="#revoke_token/2" class="detail-link" title="Link to this function">
+    <a href="#revoke_token/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1175,7 +1177,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
     <span id="still_fresh/2"></span>
 
   <div class="detail-header">
-    <a href="#still_fresh/3" class="detail-link" title="Link to this function">
+    <a href="#still_fresh/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1215,7 +1217,7 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 <section class="detail" id="trace/3">
 
   <div class="detail-header">
-    <a href="#trace/3" class="detail-link" title="Link to this function">
+    <a href="#trace/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1233,21 +1235,21 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> trace(<a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), [<a href="#t:option/0">option</a>()]) :: <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:result/0">Tesla.Env.result</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> trace(<a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), [<a href="#t:option/0">option</a>()]) :: <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:result/0">Tesla.Env.result</a>()</pre>
 
       </div>
 
-<p>Perform a TRACE request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">trace</span><span class="p" data-group-id="1708044931-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="1708044931-1">)</span><span class="w">
-</span><span class="n">trace</span><span class="p" data-group-id="1708044931-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1708044931-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="1708044931-3">]</span><span class="p" data-group-id="1708044931-2">)</span><span class="w">
-</span><span class="n">trace</span><span class="p" data-group-id="1708044931-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="1708044931-4">)</span><span class="w">
-</span><span class="n">trace</span><span class="p" data-group-id="1708044931-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1708044931-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="1708044931-6">]</span><span class="p" data-group-id="1708044931-5">)</span><span class="w">
-</span><span class="n">trace</span><span class="p" data-group-id="1708044931-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1708044931-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="1708044931-8">}</span><span class="p" data-group-id="1708044931-7">)</span></code></pre>
+<p>Perform a TRACE request.</p><p>See <a href="#request/1"><code class="inline">request/1</code></a> or <a href="#request/2"><code class="inline">request/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">trace</span><span class="p" data-group-id="2753123095-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="2753123095-1">)</span><span class="w">
+</span><span class="n">trace</span><span class="p" data-group-id="2753123095-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2753123095-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="2753123095-3">]</span><span class="p" data-group-id="2753123095-2">)</span><span class="w">
+</span><span class="n">trace</span><span class="p" data-group-id="2753123095-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="2753123095-4">)</span><span class="w">
+</span><span class="n">trace</span><span class="p" data-group-id="2753123095-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2753123095-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="2753123095-6">]</span><span class="p" data-group-id="2753123095-5">)</span><span class="w">
+</span><span class="n">trace</span><span class="p" data-group-id="2753123095-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2753123095-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="2753123095-8">}</span><span class="p" data-group-id="2753123095-7">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="trace!/3">
 
   <div class="detail-header">
-    <a href="#trace!/3" class="detail-link" title="Link to this function">
+    <a href="#trace!/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1265,50 +1267,49 @@ requests configured with middleware appropriate for OAuth specific tasks.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> trace!(<a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), [<a href="#t:option/0">option</a>()]) ::
-  <a href="https://hexdocs.pm/tesla/1.7.0/Tesla.Env.html#t:t/0">Tesla.Env.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">no_return</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> trace!(<a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:client/0">Tesla.Env.client</a>(), <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:url/0">Tesla.Env.url</a>(), [<a href="#t:option/0">option</a>()]) ::
+  <a href="https://hexdocs.pm/tesla/1.13.0/Tesla.Env.html#t:t/0">Tesla.Env.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">no_return</a>()</pre>
 
       </div>
 
-<p>Perform a TRACE request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">trace!</span><span class="p" data-group-id="4128325596-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="4128325596-1">)</span><span class="w">
-</span><span class="n">trace!</span><span class="p" data-group-id="4128325596-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4128325596-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="4128325596-3">]</span><span class="p" data-group-id="4128325596-2">)</span><span class="w">
-</span><span class="n">trace!</span><span class="p" data-group-id="4128325596-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="4128325596-4">)</span><span class="w">
-</span><span class="n">trace!</span><span class="p" data-group-id="4128325596-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4128325596-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="4128325596-6">]</span><span class="p" data-group-id="4128325596-5">)</span><span class="w">
-</span><span class="n">trace!</span><span class="p" data-group-id="4128325596-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4128325596-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="4128325596-8">}</span><span class="p" data-group-id="4128325596-7">)</span></code></pre>
+<p>Perform a TRACE request.</p><p>See <a href="#request!/1"><code class="inline">request!/1</code></a> or <a href="#request!/2"><code class="inline">request!/2</code></a> for options definition.</p><pre><code class="makeup elixir" translate="no"><span class="n">trace!</span><span class="p" data-group-id="1077816199-1">(</span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="1077816199-1">)</span><span class="w">
+</span><span class="n">trace!</span><span class="p" data-group-id="1077816199-2">(</span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1077816199-3">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="1077816199-3">]</span><span class="p" data-group-id="1077816199-2">)</span><span class="w">
+</span><span class="n">trace!</span><span class="p" data-group-id="1077816199-4">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p" data-group-id="1077816199-4">)</span><span class="w">
+</span><span class="n">trace!</span><span class="p" data-group-id="1077816199-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">query</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1077816199-6">[</span><span class="ss">scope</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin&quot;</span><span class="p" data-group-id="1077816199-6">]</span><span class="p" data-group-id="1077816199-5">)</span><span class="w">
+</span><span class="n">trace!</span><span class="p" data-group-id="1077816199-7">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1077816199-8">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jon&quot;</span><span class="p" data-group-id="1077816199-8">}</span><span class="p" data-group-id="1077816199-7">)</span></code></pre>
   </section>
 </section>
 
     </div>
   </section>
 
-      <footer class="footer">
-        <p>
+    <footer class="footer">
+      <p>
 
-          <span class="line">
-            <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
-              Search HexDocs
-            </button>
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
 
-              <a href="Lightning.epub" title="ePub version">
-                Download ePub version
-              </a>
+            <a href="Lightning.epub" title="ePub version">
+              Download ePub version
+            </a>
 
-          </span>
-        </p>
+        </span>
+      </p>
 
-        <p class="built-using">
-          Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
 
-            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
-        </p>
-      </footer>
-    </div>
+      </p>
+
+    </footer>
   </div>
 </main>
 </div>
-
 
   </body>
 </html>

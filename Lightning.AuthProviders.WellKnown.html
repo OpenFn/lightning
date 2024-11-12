@@ -4,21 +4,19 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="generator" content="ExDoc v0.34.2">
     <meta name="project" content="Lightning v2.10.0-rc.1">
 
+
     <title>Lightning.AuthProviders.WellKnown — Lightning v2.10.0-rc.1</title>
-    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
+    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-0D035C9E.js"></script>
-
-      <script src="docs_config.js"></script>
-
-    <script async src="dist/html-J2ASZTQE.js"></script>
-
+    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
+    <script src="dist/sidebar_items-10E0B7BA.js"></script>
+    <script src="docs_config.js"></script>
+    <script async src="dist/html-YIPIRHGU.js"></script>
 
   </head>
   <body data-type="modules" class="page-module">
@@ -36,43 +34,28 @@
       } catch (error) { }
     </script>
 
-<div class="main">
+<div class="body-wrapper">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
 <nav id="sidebar" class="sidebar">
-  <form class="sidebar-search" action="search.html">
-    <label class="search-label">
-      <span class="sr-only">Search documentation of Lightning</span>
-      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
-    <button type="submit" class="search-button" aria-label="Submit Search">
-      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
-    </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
-      <i class="ri-close-line ri-lg" title="Cancel search"></i>
-    </button>
-  </form>
-
-  <div class="autocomplete">
-    <div class="autocomplete-results">
-    </div>
-  </div>
 
   <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
 
-      <a href="https://openfn.github.io/Lightning">
-        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
-      </a>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
 
-    <div class="sidebar-projectDetails">
-      <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+      <div>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
-      </a>
-      <div class="sidebar-projectVersion" translate="no">
-        v2.10.0-rc.1
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.10.0-rc.1
+        </div>
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -115,31 +98,50 @@ Pages
 
 <main class="content">
   <output role="status" id="toast"></output>
-  <div class="content-outer">
-    <div id="content" class="content-inner">
 
-<h1>
-<button class="icon-action display-settings">
-  <i class="ri-settings-3-line"></i>
-  <span class="sr-only">Settings</span>
-</button>
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+    <span translate="no">Lightning.AuthProviders.WellKnown</span> 
+    <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
+
+  </h1>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L1" title="View Source" class="icon-action" rel="help">
-      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-      <span class="sr-only">View Source</span>
-    </a>
-
-  <span translate="no">Lightning.AuthProviders.WellKnown</span> 
-  <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
-
-</h1>
-
-
-  <section id="moduledoc">
+    <section id="moduledoc">
 <p>A datastructure to fetch and hold information about a given OIDC/OAuth provider</p>
-  </section>
+    </section>
 
+</div>
 
   <section id="summary" class="details-list">
     <h1 class="section-heading">
@@ -155,7 +157,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#t:body/0" translate="no">body()</a>
+        <a href="#t:body/0" data-no-tooltip translate="no">body()</a>
 
       </div>
 
@@ -163,7 +165,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#t:headers/0" translate="no">headers()</a>
+        <a href="#t:headers/0" data-no-tooltip translate="no">headers()</a>
 
       </div>
 
@@ -171,7 +173,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#t:method/0" translate="no">method()</a>
+        <a href="#t:method/0" data-no-tooltip translate="no">method()</a>
 
       </div>
 
@@ -179,7 +181,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#t:options/0" translate="no">options()</a>
+        <a href="#t:options/0" data-no-tooltip translate="no">options()</a>
 
       </div>
 
@@ -187,7 +189,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#t:params/0" translate="no">params()</a>
+        <a href="#t:params/0" data-no-tooltip translate="no">params()</a>
 
       </div>
 
@@ -195,7 +197,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#t:request/0" translate="no">request()</a>
+        <a href="#t:request/0" data-no-tooltip translate="no">request()</a>
 
       </div>
 
@@ -203,7 +205,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#t:t/0" translate="no">t()</a>
+        <a href="#t:t/0" data-no-tooltip translate="no">t()</a>
 
       </div>
 
@@ -211,7 +213,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#t:url/0" translate="no">url()</a>
+        <a href="#t:url/0" data-no-tooltip translate="no">url()</a>
 
       </div>
 
@@ -225,7 +227,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#delete/3" translate="no">delete(url, headers \\ [], options \\ [])</a>
+        <a href="#delete/3" data-no-tooltip translate="no">delete(url, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -235,7 +237,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#delete!/3" translate="no">delete!(url, headers \\ [], options \\ [])</a>
+        <a href="#delete!/3" data-no-tooltip translate="no">delete!(url, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -246,7 +248,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#fetch/1" translate="no">fetch(discovery_url)</a>
+        <a href="#fetch/1" data-no-tooltip translate="no">fetch(discovery_url)</a>
 
       </div>
 
@@ -254,7 +256,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#fetch!/1" translate="no">fetch!(discovery_url)</a>
+        <a href="#fetch!/1" data-no-tooltip translate="no">fetch!(discovery_url)</a>
 
       </div>
 
@@ -262,7 +264,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get/3" translate="no">get(url, headers \\ [], options \\ [])</a>
+        <a href="#get/3" data-no-tooltip translate="no">get(url, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -272,7 +274,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get!/3" translate="no">get!(url, headers \\ [], options \\ [])</a>
+        <a href="#get!/3" data-no-tooltip translate="no">get!(url, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -283,7 +285,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#head/3" translate="no">head(url, headers \\ [], options \\ [])</a>
+        <a href="#head/3" data-no-tooltip translate="no">head(url, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -293,7 +295,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#head!/3" translate="no">head!(url, headers \\ [], options \\ [])</a>
+        <a href="#head!/3" data-no-tooltip translate="no">head!(url, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -304,7 +306,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#new/1" translate="no">new(json_body)</a>
+        <a href="#new/1" data-no-tooltip translate="no">new(json_body)</a>
 
       </div>
 
@@ -312,7 +314,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#options/3" translate="no">options(url, headers \\ [], options \\ [])</a>
+        <a href="#options/3" data-no-tooltip translate="no">options(url, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -322,7 +324,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#options!/3" translate="no">options!(url, headers \\ [], options \\ [])</a>
+        <a href="#options!/3" data-no-tooltip translate="no">options!(url, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -333,7 +335,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#patch/4" translate="no">patch(url, body, headers \\ [], options \\ [])</a>
+        <a href="#patch/4" data-no-tooltip translate="no">patch(url, body, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -343,7 +345,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#patch!/4" translate="no">patch!(url, body, headers \\ [], options \\ [])</a>
+        <a href="#patch!/4" data-no-tooltip translate="no">patch!(url, body, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -354,7 +356,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#post/4" translate="no">post(url, body, headers \\ [], options \\ [])</a>
+        <a href="#post/4" data-no-tooltip translate="no">post(url, body, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -364,7 +366,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#post!/4" translate="no">post!(url, body, headers \\ [], options \\ [])</a>
+        <a href="#post!/4" data-no-tooltip translate="no">post!(url, body, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -375,7 +377,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#process_headers/1" translate="no">process_headers(headers)</a>
+        <a href="#process_headers/1" data-no-tooltip translate="no">process_headers(headers)</a>
 
           <span class="deprecated" title="Use process_response_headers/1 instead">deprecated</span>
 
@@ -387,7 +389,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#process_request_body/1" translate="no">process_request_body(body)</a>
+        <a href="#process_request_body/1" data-no-tooltip translate="no">process_request_body(body)</a>
 
       </div>
 
@@ -397,7 +399,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#process_request_headers/1" translate="no">process_request_headers(headers)</a>
+        <a href="#process_request_headers/1" data-no-tooltip translate="no">process_request_headers(headers)</a>
 
       </div>
 
@@ -407,7 +409,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#process_request_options/1" translate="no">process_request_options(options)</a>
+        <a href="#process_request_options/1" data-no-tooltip translate="no">process_request_options(options)</a>
 
       </div>
 
@@ -417,7 +419,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#process_request_params/1" translate="no">process_request_params(params)</a>
+        <a href="#process_request_params/1" data-no-tooltip translate="no">process_request_params(params)</a>
 
       </div>
 
@@ -427,7 +429,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#process_request_url/1" translate="no">process_request_url(url)</a>
+        <a href="#process_request_url/1" data-no-tooltip translate="no">process_request_url(url)</a>
 
       </div>
 
@@ -437,7 +439,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#process_response/1" translate="no">process_response(response)</a>
+        <a href="#process_response/1" data-no-tooltip translate="no">process_response(response)</a>
 
       </div>
 
@@ -447,7 +449,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#process_response_body/1" translate="no">process_response_body(body)</a>
+        <a href="#process_response_body/1" data-no-tooltip translate="no">process_response_body(body)</a>
 
       </div>
 
@@ -457,7 +459,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#process_response_chunk/1" translate="no">process_response_chunk(chunk)</a>
+        <a href="#process_response_chunk/1" data-no-tooltip translate="no">process_response_chunk(chunk)</a>
 
       </div>
 
@@ -467,7 +469,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#process_response_headers/1" translate="no">process_response_headers(headers)</a>
+        <a href="#process_response_headers/1" data-no-tooltip translate="no">process_response_headers(headers)</a>
 
       </div>
 
@@ -477,7 +479,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#process_response_status_code/1" translate="no">process_response_status_code(status_code)</a>
+        <a href="#process_response_status_code/1" data-no-tooltip translate="no">process_response_status_code(status_code)</a>
 
       </div>
 
@@ -487,7 +489,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#process_status_code/1" translate="no">process_status_code(status_code)</a>
+        <a href="#process_status_code/1" data-no-tooltip translate="no">process_status_code(status_code)</a>
 
           <span class="deprecated" title="Use process_response_status_code/1 instead">deprecated</span>
 
@@ -499,7 +501,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#process_url/1" translate="no">process_url(url)</a>
+        <a href="#process_url/1" data-no-tooltip translate="no">process_url(url)</a>
 
           <span class="deprecated" title="Use process_request_url/1 instead">deprecated</span>
 
@@ -511,7 +513,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#put/4" translate="no">put(url, body \\ &quot;&quot;, headers \\ [], options \\ [])</a>
+        <a href="#put/4" data-no-tooltip translate="no">put(url, body \\ &quot;&quot;, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -521,7 +523,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#put!/4" translate="no">put!(url, body \\ &quot;&quot;, headers \\ [], options \\ [])</a>
+        <a href="#put!/4" data-no-tooltip translate="no">put!(url, body \\ &quot;&quot;, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -532,7 +534,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#request/1" translate="no">request(request)</a>
+        <a href="#request/1" data-no-tooltip translate="no">request(request)</a>
 
       </div>
 
@@ -542,7 +544,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#request/5" translate="no">request(method, url, body \\ &quot;&quot;, headers \\ [], options \\ [])</a>
+        <a href="#request/5" data-no-tooltip translate="no">request(method, url, body \\ &quot;&quot;, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -552,7 +554,7 @@ failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#request!/1" translate="no">request!(request)</a>
+        <a href="#request!/1" data-no-tooltip translate="no">request!(request)</a>
 
       </div>
 
@@ -563,7 +565,7 @@ exception in case of failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#request!/5" translate="no">request!(method, url, body \\ &quot;&quot;, headers \\ [], options \\ [])</a>
+        <a href="#request!/5" data-no-tooltip translate="no">request!(method, url, body \\ &quot;&quot;, headers \\ [], options \\ [])</a>
 
       </div>
 
@@ -574,7 +576,7 @@ exception in case of failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#start/0" translate="no">start()</a>
+        <a href="#start/0" data-no-tooltip translate="no">start()</a>
 
       </div>
 
@@ -584,7 +586,7 @@ exception in case of failure.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#stream_next/1" translate="no">stream_next(resp)</a>
+        <a href="#stream_next/1" data-no-tooltip translate="no">stream_next(resp)</a>
 
       </div>
 
@@ -608,7 +610,7 @@ exception in case of failure.</p></div>
 <section class="detail" id="t:body/0">
 
   <div class="detail-header">
-    <a href="#t:body/0" class="detail-link" title="Link to this type">
+    <a href="#t:body/0" class="detail-link" data-no-tooltip title="Link to this type">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this type</span>
     </a>
@@ -636,7 +638,7 @@ exception in case of failure.</p></div>
 <section class="detail" id="t:headers/0">
 
   <div class="detail-header">
-    <a href="#t:headers/0" class="detail-link" title="Link to this type">
+    <a href="#t:headers/0" class="detail-link" data-no-tooltip title="Link to this type">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this type</span>
     </a>
@@ -664,7 +666,7 @@ exception in case of failure.</p></div>
 <section class="detail" id="t:method/0">
 
   <div class="detail-header">
-    <a href="#t:method/0" class="detail-link" title="Link to this type">
+    <a href="#t:method/0" class="detail-link" data-no-tooltip title="Link to this type">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this type</span>
     </a>
@@ -692,7 +694,7 @@ exception in case of failure.</p></div>
 <section class="detail" id="t:options/0">
 
   <div class="detail-header">
-    <a href="#t:options/0" class="detail-link" title="Link to this type">
+    <a href="#t:options/0" class="detail-link" data-no-tooltip title="Link to this type">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this type</span>
     </a>
@@ -720,7 +722,7 @@ exception in case of failure.</p></div>
 <section class="detail" id="t:params/0">
 
   <div class="detail-header">
-    <a href="#t:params/0" class="detail-link" title="Link to this type">
+    <a href="#t:params/0" class="detail-link" data-no-tooltip title="Link to this type">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this type</span>
     </a>
@@ -748,7 +750,7 @@ exception in case of failure.</p></div>
 <section class="detail" id="t:request/0">
 
   <div class="detail-header">
-    <a href="#t:request/0" class="detail-link" title="Link to this type">
+    <a href="#t:request/0" class="detail-link" data-no-tooltip title="Link to this type">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this type</span>
     </a>
@@ -776,7 +778,7 @@ exception in case of failure.</p></div>
 <section class="detail" id="t:t/0">
 
   <div class="detail-header">
-    <a href="#t:t/0" class="detail-link" title="Link to this type">
+    <a href="#t:t/0" class="detail-link" data-no-tooltip title="Link to this type">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this type</span>
     </a>
@@ -809,7 +811,7 @@ exception in case of failure.</p></div>
 <section class="detail" id="t:url/0">
 
   <div class="detail-header">
-    <a href="#t:url/0" class="detail-link" title="Link to this type">
+    <a href="#t:url/0" class="detail-link" data-no-tooltip title="Link to this type">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this type</span>
     </a>
@@ -853,7 +855,7 @@ exception in case of failure.</p></div>
     <span id="delete/2"></span>
 
   <div class="detail-header">
-    <a href="#delete/3" class="detail-link" title="Link to this function">
+    <a href="#delete/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -891,7 +893,7 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
     <span id="delete!/2"></span>
 
   <div class="detail-header">
-    <a href="#delete!/3" class="detail-link" title="Link to this function">
+    <a href="#delete!/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -923,7 +925,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="fetch/1">
 
   <div class="detail-header">
-    <a href="#fetch/1" class="detail-link" title="Link to this function">
+    <a href="#fetch/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -951,7 +953,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="fetch!/1">
 
   <div class="detail-header">
-    <a href="#fetch!/1" class="detail-link" title="Link to this function">
+    <a href="#fetch!/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -983,7 +985,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     <span id="get/2"></span>
 
   <div class="detail-header">
-    <a href="#get/3" class="detail-link" title="Link to this function">
+    <a href="#get/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1018,7 +1020,7 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
     <span id="get!/2"></span>
 
   <div class="detail-header">
-    <a href="#get!/3" class="detail-link" title="Link to this function">
+    <a href="#get!/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1052,7 +1054,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     <span id="head/2"></span>
 
   <div class="detail-header">
-    <a href="#head/3" class="detail-link" title="Link to this function">
+    <a href="#head/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1087,7 +1089,7 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
     <span id="head!/2"></span>
 
   <div class="detail-header">
-    <a href="#head!/3" class="detail-link" title="Link to this function">
+    <a href="#head!/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1117,7 +1119,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="new/1">
 
   <div class="detail-header">
-    <a href="#new/1" class="detail-link" title="Link to this function">
+    <a href="#new/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1149,7 +1151,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     <span id="options/2"></span>
 
   <div class="detail-header">
-    <a href="#options/3" class="detail-link" title="Link to this function">
+    <a href="#options/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1187,7 +1189,7 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
     <span id="options!/2"></span>
 
   <div class="detail-header">
-    <a href="#options!/3" class="detail-link" title="Link to this function">
+    <a href="#options!/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1223,7 +1225,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     <span id="patch/3"></span>
 
   <div class="detail-header">
-    <a href="#patch/4" class="detail-link" title="Link to this function">
+    <a href="#patch/4" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1261,7 +1263,7 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
     <span id="patch!/3"></span>
 
   <div class="detail-header">
-    <a href="#patch!/4" class="detail-link" title="Link to this function">
+    <a href="#patch!/4" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1297,7 +1299,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     <span id="post/3"></span>
 
   <div class="detail-header">
-    <a href="#post/4" class="detail-link" title="Link to this function">
+    <a href="#post/4" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1335,7 +1337,7 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
     <span id="post!/3"></span>
 
   <div class="detail-header">
-    <a href="#post!/4" class="detail-link" title="Link to this function">
+    <a href="#post!/4" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1367,7 +1369,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="process_headers/1">
 
   <div class="detail-header">
-    <a href="#process_headers/1" class="detail-link" title="Link to this function">
+    <a href="#process_headers/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1399,7 +1401,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="process_request_body/1">
 
   <div class="detail-header">
-    <a href="#process_request_body/1" class="detail-link" title="Link to this function">
+    <a href="#process_request_body/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1427,7 +1429,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="process_request_headers/1">
 
   <div class="detail-header">
-    <a href="#process_request_headers/1" class="detail-link" title="Link to this function">
+    <a href="#process_request_headers/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1455,7 +1457,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="process_request_options/1">
 
   <div class="detail-header">
-    <a href="#process_request_options/1" class="detail-link" title="Link to this function">
+    <a href="#process_request_options/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1483,7 +1485,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="process_request_params/1">
 
   <div class="detail-header">
-    <a href="#process_request_params/1" class="detail-link" title="Link to this function">
+    <a href="#process_request_params/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1511,7 +1513,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="process_request_url/1">
 
   <div class="detail-header">
-    <a href="#process_request_url/1" class="detail-link" title="Link to this function">
+    <a href="#process_request_url/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1539,7 +1541,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="process_response/1">
 
   <div class="detail-header">
-    <a href="#process_response/1" class="detail-link" title="Link to this function">
+    <a href="#process_response/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1567,7 +1569,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="process_response_body/1">
 
   <div class="detail-header">
-    <a href="#process_response_body/1" class="detail-link" title="Link to this function">
+    <a href="#process_response_body/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1595,7 +1597,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="process_response_chunk/1">
 
   <div class="detail-header">
-    <a href="#process_response_chunk/1" class="detail-link" title="Link to this function">
+    <a href="#process_response_chunk/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1623,7 +1625,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="process_response_headers/1">
 
   <div class="detail-header">
-    <a href="#process_response_headers/1" class="detail-link" title="Link to this function">
+    <a href="#process_response_headers/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1651,7 +1653,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="process_response_status_code/1">
 
   <div class="detail-header">
-    <a href="#process_response_status_code/1" class="detail-link" title="Link to this function">
+    <a href="#process_response_status_code/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1679,7 +1681,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="process_status_code/1">
 
   <div class="detail-header">
-    <a href="#process_status_code/1" class="detail-link" title="Link to this function">
+    <a href="#process_status_code/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1711,7 +1713,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="process_url/1">
 
   <div class="detail-header">
-    <a href="#process_url/1" class="detail-link" title="Link to this function">
+    <a href="#process_url/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1749,7 +1751,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     <span id="put/3"></span>
 
   <div class="detail-header">
-    <a href="#put/4" class="detail-link" title="Link to this function">
+    <a href="#put/4" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1789,7 +1791,7 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
     <span id="put!/3"></span>
 
   <div class="detail-header">
-    <a href="#put!/4" class="detail-link" title="Link to this function">
+    <a href="#put!/4" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1821,7 +1823,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 <section class="detail" id="request/1">
 
   <div class="detail-header">
-    <a href="#request/1" class="detail-link" title="Link to this function">
+    <a href="#request/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1866,14 +1868,14 @@ re-request with the method set to <code class="inline">:get</code>.</p><h2 id="r
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="7202416581-1">%</span><span class="nc" data-group-id="7202416581-1">HTTPoison.Request</span><span class="p" data-group-id="7202416581-1">{</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="2906261355-1">%</span><span class="nc" data-group-id="2906261355-1">HTTPoison.Request</span><span class="p" data-group-id="2906261355-1">{</span><span class="w">
   </span><span class="ss">method</span><span class="p">:</span><span class="w"> </span><span class="ss">:post</span><span class="p">,</span><span class="w">
   </span><span class="ss">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://my.website.com&quot;</span><span class="p">,</span><span class="w">
   </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{</span><span class="se">\&quot;</span><span class="s">foo</span><span class="se">\&quot;</span><span class="s">: 3}&quot;</span><span class="p">,</span><span class="w">
-  </span><span class="ss">headers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7202416581-2">[</span><span class="p" data-group-id="7202416581-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="7202416581-3">}</span><span class="p" data-group-id="7202416581-2">]</span><span class="w">
-</span><span class="p" data-group-id="7202416581-1">}</span><span class="w">
+  </span><span class="ss">headers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2906261355-2">[</span><span class="p" data-group-id="2906261355-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="2906261355-3">}</span><span class="p" data-group-id="2906261355-2">]</span><span class="w">
+</span><span class="p" data-group-id="2906261355-1">}</span><span class="w">
 
-</span><span class="n">request</span><span class="p" data-group-id="7202416581-4">(</span><span class="n">request</span><span class="p" data-group-id="7202416581-4">)</span></code></pre>
+</span><span class="n">request</span><span class="p" data-group-id="2906261355-4">(</span><span class="n">request</span><span class="p" data-group-id="2906261355-4">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="request/5">
@@ -1885,7 +1887,7 @@ re-request with the method set to <code class="inline">:get</code>.</p><h2 id="r
     <span id="request/4"></span>
 
   <div class="detail-header">
-    <a href="#request/5" class="detail-link" title="Link to this function">
+    <a href="#request/5" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1931,13 +1933,13 @@ re-request with the method set to <code class="inline">:get</code>.</p><h2 id="r
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="p" data-group-id="1050457004-1">(</span><span class="ss">:post</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;https://my.website.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;{</span><span class="se">\&quot;</span><span class="s">foo</span><span class="se">\&quot;</span><span class="s">: 3}&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1050457004-2">[</span><span class="p" data-group-id="1050457004-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="1050457004-3">}</span><span class="p" data-group-id="1050457004-2">]</span><span class="p" data-group-id="1050457004-1">)</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="p" data-group-id="5102948272-1">(</span><span class="ss">:post</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;https://my.website.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;{</span><span class="se">\&quot;</span><span class="s">foo</span><span class="se">\&quot;</span><span class="s">: 3}&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5102948272-2">[</span><span class="p" data-group-id="5102948272-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="5102948272-3">}</span><span class="p" data-group-id="5102948272-2">]</span><span class="p" data-group-id="5102948272-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="request!/1">
 
   <div class="detail-header">
-    <a href="#request!/1" class="detail-link" title="Link to this function">
+    <a href="#request!/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1977,7 +1979,7 @@ request fails.</p>
     <span id="request!/4"></span>
 
   <div class="detail-header">
-    <a href="#request!/5" class="detail-link" title="Link to this function">
+    <a href="#request!/5" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -2011,7 +2013,7 @@ request fails.</p>
 <section class="detail" id="start/0">
 
   <div class="detail-header">
-    <a href="#start/0" class="detail-link" title="Link to this function">
+    <a href="#start/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -2033,7 +2035,7 @@ request fails.</p>
 <section class="detail" id="stream_next/1">
 
   <div class="detail-header">
-    <a href="#stream_next/1" class="detail-link" title="Link to this function">
+    <a href="#stream_next/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -2063,34 +2065,33 @@ request fails.</p>
     </div>
   </section>
 
-      <footer class="footer">
-        <p>
+    <footer class="footer">
+      <p>
 
-          <span class="line">
-            <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
-              Search HexDocs
-            </button>
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
 
-              <a href="Lightning.epub" title="ePub version">
-                Download ePub version
-              </a>
+            <a href="Lightning.epub" title="ePub version">
+              Download ePub version
+            </a>
 
-          </span>
-        </p>
+        </span>
+      </p>
 
-        <p class="built-using">
-          Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
 
-            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
-        </p>
-      </footer>
-    </div>
+      </p>
+
+    </footer>
   </div>
 </main>
 </div>
-
 
   </body>
 </html>

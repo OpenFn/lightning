@@ -4,21 +4,19 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="generator" content="ExDoc v0.34.2">
     <meta name="project" content="Lightning v2.10.0-rc.1">
 
+
     <title>Lightning.Workflows.Snapshot — Lightning v2.10.0-rc.1</title>
-    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
+    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-0D035C9E.js"></script>
-
-      <script src="docs_config.js"></script>
-
-    <script async src="dist/html-J2ASZTQE.js"></script>
-
+    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
+    <script src="dist/sidebar_items-10E0B7BA.js"></script>
+    <script src="docs_config.js"></script>
+    <script async src="dist/html-YIPIRHGU.js"></script>
 
   </head>
   <body data-type="modules" class="page-module">
@@ -36,43 +34,28 @@
       } catch (error) { }
     </script>
 
-<div class="main">
+<div class="body-wrapper">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
 <nav id="sidebar" class="sidebar">
-  <form class="sidebar-search" action="search.html">
-    <label class="search-label">
-      <span class="sr-only">Search documentation of Lightning</span>
-      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
-    <button type="submit" class="search-button" aria-label="Submit Search">
-      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
-    </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
-      <i class="ri-close-line ri-lg" title="Cancel search"></i>
-    </button>
-  </form>
-
-  <div class="autocomplete">
-    <div class="autocomplete-results">
-    </div>
-  </div>
 
   <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
 
-      <a href="https://openfn.github.io/Lightning">
-        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
-      </a>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
 
-    <div class="sidebar-projectDetails">
-      <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+      <div>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
-      </a>
-      <div class="sidebar-projectVersion" translate="no">
-        v2.10.0-rc.1
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.10.0-rc.1
+        </div>
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -115,31 +98,50 @@ Pages
 
 <main class="content">
   <output role="status" id="toast"></output>
-  <div class="content-outer">
-    <div id="content" class="content-inner">
 
-<h1>
-<button class="icon-action display-settings">
-  <i class="ri-settings-3-line"></i>
-  <span class="sr-only">Settings</span>
-</button>
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+    <span translate="no">Lightning.Workflows.Snapshot</span> 
+    <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
+
+  </h1>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L1" title="View Source" class="icon-action" rel="help">
-      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-      <span class="sr-only">View Source</span>
-    </a>
-
-  <span translate="no">Lightning.Workflows.Snapshot</span> 
-  <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
-
-</h1>
-
-
-  <section id="moduledoc">
+    <section id="moduledoc">
 <p>Ecto model for Workflow Snapshots.</p><p>Snapshots are a way to store the state of a workflow at a given point in time.</p>
-  </section>
+    </section>
 
+</div>
 
   <section id="summary" class="details-list">
     <h1 class="section-heading">
@@ -155,7 +157,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#t:t/0" translate="no">t()</a>
+        <a href="#t:t/0" data-no-tooltip translate="no">t()</a>
 
       </div>
 
@@ -169,7 +171,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#build/1" translate="no">build(workflow)</a>
+        <a href="#build/1" data-no-tooltip translate="no">build(workflow)</a>
 
       </div>
 
@@ -177,7 +179,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#create/1" translate="no">create(workflow)</a>
+        <a href="#create/1" data-no-tooltip translate="no">create(workflow)</a>
 
       </div>
 
@@ -185,7 +187,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_all_by_ids/1" translate="no">get_all_by_ids(ids)</a>
+        <a href="#get_all_by_ids/1" data-no-tooltip translate="no">get_all_by_ids(ids)</a>
 
       </div>
 
@@ -193,7 +195,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_all_for/1" translate="no">get_all_for(workflow)</a>
+        <a href="#get_all_for/1" data-no-tooltip translate="no">get_all_for(workflow)</a>
 
       </div>
 
@@ -201,7 +203,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_by_version/2" translate="no">get_by_version(workflow_id, version)</a>
+        <a href="#get_by_version/2" data-no-tooltip translate="no">get_by_version(workflow_id, version)</a>
 
       </div>
 
@@ -209,7 +211,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_current_for/1" translate="no">get_current_for(workflow)</a>
+        <a href="#get_current_for/1" data-no-tooltip translate="no">get_current_for(workflow)</a>
 
       </div>
 
@@ -219,7 +221,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_or_create_latest_for/1" translate="no">get_or_create_latest_for(workflow)</a>
+        <a href="#get_or_create_latest_for/1" data-no-tooltip translate="no">get_or_create_latest_for(workflow)</a>
 
       </div>
 
@@ -229,7 +231,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_or_create_latest_for/3" translate="no">get_or_create_latest_for(multi, name \\ :snapshot, workflow)</a>
+        <a href="#get_or_create_latest_for/3" data-no-tooltip translate="no">get_or_create_latest_for(multi, name \\ :snapshot, workflow)</a>
 
       </div>
 
@@ -237,7 +239,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#new/1" translate="no">new(workflow)</a>
+        <a href="#new/1" data-no-tooltip translate="no">new(workflow)</a>
 
       </div>
 
@@ -259,7 +261,7 @@ Pages
 <section class="detail" id="t:t/0">
 
   <div class="detail-header">
-    <a href="#t:t/0" class="detail-link" title="Link to this type">
+    <a href="#t:t/0" class="detail-link" data-no-tooltip title="Link to this type">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this type</span>
     </a>
@@ -278,7 +280,7 @@ Pages
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.Workflows.Snapshot{
-  __meta__: <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Schema.Metadata.html#t:t/0">Ecto.Schema.Metadata.t</a>(),
+  __meta__: <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Schema.Metadata.html#t:t/0">Ecto.Schema.Metadata.t</a>(),
   edges: [
     %Lightning.Workflows.Snapshot.Edge{
       condition_expression: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
@@ -293,7 +295,7 @@ Pages
       updated_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()
     }
   ],
-  id: <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
+  id: <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
   inserted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   jobs: [
     %Lightning.Workflows.Snapshot.Job{
@@ -326,7 +328,7 @@ Pages
     }
   ],
   workflow:
-    nil | <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>() | <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>(),
+    nil | <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>() | <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>(),
   workflow_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()
 }</pre>
 
@@ -350,7 +352,7 @@ Pages
 <section class="detail" id="build/1">
 
   <div class="detail-header">
-    <a href="#build/1" class="detail-link" title="Link to this function">
+    <a href="#build/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -368,7 +370,7 @@ Pages
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> build(<a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> build(<a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()</pre>
 
       </div>
 
@@ -378,7 +380,7 @@ Pages
 <section class="detail" id="create/1">
 
   <div class="detail-header">
-    <a href="#create/1" class="detail-link" title="Link to this function">
+    <a href="#create/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -397,7 +399,7 @@ Pages
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@spec</span> create(<a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>()) ::
-  {:ok, <a href="#t:t/0">t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
+  {:ok, <a href="#t:t/0">t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
 
       </div>
 
@@ -407,7 +409,7 @@ Pages
 <section class="detail" id="get_all_by_ids/1">
 
   <div class="detail-header">
-    <a href="#get_all_by_ids/1" class="detail-link" title="Link to this function">
+    <a href="#get_all_by_ids/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -429,7 +431,7 @@ Pages
 <section class="detail" id="get_all_for/1">
 
   <div class="detail-header">
-    <a href="#get_all_for/1" class="detail-link" title="Link to this function">
+    <a href="#get_all_for/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -457,7 +459,7 @@ Pages
 <section class="detail" id="get_by_version/2">
 
   <div class="detail-header">
-    <a href="#get_by_version/2" class="detail-link" title="Link to this function">
+    <a href="#get_by_version/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -479,7 +481,7 @@ Pages
 <section class="detail" id="get_current_for/1">
 
   <div class="detail-header">
-    <a href="#get_current_for/1" class="detail-link" title="Link to this function">
+    <a href="#get_current_for/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -510,7 +512,7 @@ workflow has been updated elsewhere.</p>
 <section class="detail" id="get_or_create_latest_for/1">
 
   <div class="detail-header">
-    <a href="#get_or_create_latest_for/1" class="detail-link" title="Link to this function">
+    <a href="#get_or_create_latest_for/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -529,7 +531,7 @@ workflow has been updated elsewhere.</p>
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@spec</span> get_or_create_latest_for(<a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>()) ::
-  {:ok, <a href="#t:t/0">t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
+  {:ok, <a href="#t:t/0">t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
 
       </div>
 
@@ -541,7 +543,7 @@ workflow has been updated elsewhere.</p>
     <span id="get_or_create_latest_for/2"></span>
 
   <div class="detail-header">
-    <a href="#get_or_create_latest_for/3" class="detail-link" title="Link to this function">
+    <a href="#get_or_create_latest_for/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -560,11 +562,11 @@ workflow has been updated elsewhere.</p>
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@spec</span> get_or_create_latest_for(
-  <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Multi.html#t:t/0">Ecto.Multi.t</a>(),
+  <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Multi.html#t:t/0">Ecto.Multi.t</a>(),
   <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>() | :snapshot,
   <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>()
 ) ::
-  <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Multi.html#t:t/0">Ecto.Multi.t</a>()</pre>
+  <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Multi.html#t:t/0">Ecto.Multi.t</a>()</pre>
 
       </div>
 
@@ -574,7 +576,7 @@ workflow has been updated elsewhere.</p>
 <section class="detail" id="new/1">
 
   <div class="detail-header">
-    <a href="#new/1" class="detail-link" title="Link to this function">
+    <a href="#new/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -597,34 +599,33 @@ workflow has been updated elsewhere.</p>
     </div>
   </section>
 
-      <footer class="footer">
-        <p>
+    <footer class="footer">
+      <p>
 
-          <span class="line">
-            <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
-              Search HexDocs
-            </button>
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
 
-              <a href="Lightning.epub" title="ePub version">
-                Download ePub version
-              </a>
+            <a href="Lightning.epub" title="ePub version">
+              Download ePub version
+            </a>
 
-          </span>
-        </p>
+        </span>
+      </p>
 
-        <p class="built-using">
-          Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
 
-            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
-        </p>
-      </footer>
-    </div>
+      </p>
+
+    </footer>
   </div>
 </main>
 </div>
-
 
   </body>
 </html>

@@ -4,21 +4,19 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="generator" content="ExDoc v0.34.2">
     <meta name="project" content="Lightning v2.10.0-rc.1">
 
+
     <title>Lightning.OauthClients — Lightning v2.10.0-rc.1</title>
-    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
+    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-0D035C9E.js"></script>
-
-      <script src="docs_config.js"></script>
-
-    <script async src="dist/html-J2ASZTQE.js"></script>
-
+    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
+    <script src="dist/sidebar_items-10E0B7BA.js"></script>
+    <script src="docs_config.js"></script>
+    <script async src="dist/html-YIPIRHGU.js"></script>
 
   </head>
   <body data-type="modules" class="page-module">
@@ -36,43 +34,28 @@
       } catch (error) { }
     </script>
 
-<div class="main">
+<div class="body-wrapper">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
 <nav id="sidebar" class="sidebar">
-  <form class="sidebar-search" action="search.html">
-    <label class="search-label">
-      <span class="sr-only">Search documentation of Lightning</span>
-      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
-    <button type="submit" class="search-button" aria-label="Submit Search">
-      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
-    </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
-      <i class="ri-close-line ri-lg" title="Cancel search"></i>
-    </button>
-  </form>
-
-  <div class="autocomplete">
-    <div class="autocomplete-results">
-    </div>
-  </div>
 
   <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
 
-      <a href="https://openfn.github.io/Lightning">
-        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
-      </a>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
 
-    <div class="sidebar-projectDetails">
-      <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+      <div>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
-      </a>
-      <div class="sidebar-projectVersion" translate="no">
-        v2.10.0-rc.1
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.10.0-rc.1
+        </div>
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -115,33 +98,52 @@ Pages
 
 <main class="content">
   <output role="status" id="toast"></output>
-  <div class="content-outer">
-    <div id="content" class="content-inner">
 
-<h1>
-<button class="icon-action display-settings">
-  <i class="ri-settings-3-line"></i>
-  <span class="sr-only">Settings</span>
-</button>
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/oauth_clients.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+    <span translate="no">Lightning.OauthClients</span> 
+    <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
+
+  </h1>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/oauth_clients.ex#L1" title="View Source" class="icon-action" rel="help">
-      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-      <span class="sr-only">View Source</span>
-    </a>
-
-  <span translate="no">Lightning.OauthClients</span> 
-  <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
-
-</h1>
-
-
-  <section id="moduledoc">
+    <section id="moduledoc">
 <p>Manages operations for OAuth clients within the Lightning application, providing
 functions to create, retrieve, update, and delete OAuth clients, as well as managing
 their associations with projects and handling audit trails for changes.</p>
-  </section>
+    </section>
 
+</div>
 
   <section id="summary" class="details-list">
     <h1 class="section-heading">
@@ -157,7 +159,7 @@ their associations with projects and handling audit trails for changes.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#change_client/2" translate="no">change_client(client, attrs \\ %{})</a>
+        <a href="#change_client/2" data-no-tooltip translate="no">change_client(client, attrs \\ %{})</a>
 
       </div>
 
@@ -167,7 +169,7 @@ their associations with projects and handling audit trails for changes.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#create_client/1" translate="no">create_client(attrs \\ %{})</a>
+        <a href="#create_client/1" data-no-tooltip translate="no">create_client(attrs \\ %{})</a>
 
       </div>
 
@@ -177,7 +179,7 @@ their associations with projects and handling audit trails for changes.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#delete_client/1" translate="no">delete_client(client)</a>
+        <a href="#delete_client/1" data-no-tooltip translate="no">delete_client(client)</a>
 
       </div>
 
@@ -187,7 +189,7 @@ their associations with projects and handling audit trails for changes.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_client!/1" translate="no">get_client!(id)</a>
+        <a href="#get_client!/1" data-no-tooltip translate="no">get_client!(id)</a>
 
       </div>
 
@@ -197,7 +199,7 @@ their associations with projects and handling audit trails for changes.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#list_clients/1" translate="no">list_clients(project)</a>
+        <a href="#list_clients/1" data-no-tooltip translate="no">list_clients(project)</a>
 
       </div>
 
@@ -207,7 +209,7 @@ their associations with projects and handling audit trails for changes.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#update_client/2" translate="no">update_client(client, attrs)</a>
+        <a href="#update_client/2" data-no-tooltip translate="no">update_client(client, attrs)</a>
 
       </div>
 
@@ -233,7 +235,7 @@ their associations with projects and handling audit trails for changes.</p>
     <span id="change_client/1"></span>
 
   <div class="detail-header">
-    <a href="#change_client/2" class="detail-link" title="Link to this function">
+    <a href="#change_client/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -267,8 +269,8 @@ their associations with projects and handling audit trails for changes.</p>
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_client</span><span class="p" data-group-id="6065425276-1">(</span><span class="p" data-group-id="6065425276-2">%</span><span class="nc" data-group-id="6065425276-2">OauthClient</span><span class="p" data-group-id="6065425276-2">{</span><span class="p" data-group-id="6065425276-2">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6065425276-3">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;New Client&quot;</span><span class="p" data-group-id="6065425276-3">}</span><span class="p" data-group-id="6065425276-1">)</span><span class="w">
-</span><span class="p" data-group-id="6065425276-4">%</span><span class="nc" data-group-id="6065425276-4">Ecto.Changeset</span><span class="p" data-group-id="6065425276-4">{</span><span class="n">...</span><span class="p" data-group-id="6065425276-4">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_client</span><span class="p" data-group-id="3545915120-1">(</span><span class="p" data-group-id="3545915120-2">%</span><span class="nc" data-group-id="3545915120-2">OauthClient</span><span class="p" data-group-id="3545915120-2">{</span><span class="p" data-group-id="3545915120-2">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3545915120-3">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;New Client&quot;</span><span class="p" data-group-id="3545915120-3">}</span><span class="p" data-group-id="3545915120-1">)</span><span class="w">
+</span><span class="p" data-group-id="3545915120-4">%</span><span class="nc" data-group-id="3545915120-4">Ecto.Changeset</span><span class="p" data-group-id="3545915120-4">{</span><span class="n">...</span><span class="p" data-group-id="3545915120-4">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="create_client/1">
@@ -276,7 +278,7 @@ their associations with projects and handling audit trails for changes.</p>
     <span id="create_client/0"></span>
 
   <div class="detail-header">
-    <a href="#create_client/1" class="detail-link" title="Link to this function">
+    <a href="#create_client/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -319,7 +321,7 @@ Required fields: <code class="inline">name</code>, <code class="inline">authoriz
 <section class="detail" id="delete_client/1">
 
   <div class="detail-header">
-    <a href="#delete_client/1" class="detail-link" title="Link to this function">
+    <a href="#delete_client/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -353,17 +355,17 @@ Required fields: <code class="inline">name</code>, <code class="inline">authoriz
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_client</span><span class="p" data-group-id="2893716892-1">(</span><span class="n">client</span><span class="p" data-group-id="2893716892-1">)</span><span class="w">
-</span><span class="p" data-group-id="2893716892-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2893716892-3">%</span><span class="nc" data-group-id="2893716892-3">OauthClient</span><span class="p" data-group-id="2893716892-3">{</span><span class="p" data-group-id="2893716892-3">}</span><span class="p" data-group-id="2893716892-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_client</span><span class="p" data-group-id="3290381565-1">(</span><span class="n">client</span><span class="p" data-group-id="3290381565-1">)</span><span class="w">
+</span><span class="p" data-group-id="3290381565-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3290381565-3">%</span><span class="nc" data-group-id="3290381565-3">OauthClient</span><span class="p" data-group-id="3290381565-3">{</span><span class="p" data-group-id="3290381565-3">}</span><span class="p" data-group-id="3290381565-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_client</span><span class="p" data-group-id="2893716892-4">(</span><span class="n">client</span><span class="p" data-group-id="2893716892-4">)</span><span class="w">
-</span><span class="p" data-group-id="2893716892-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2893716892-6">%</span><span class="nc" data-group-id="2893716892-6">Ecto.Changeset</span><span class="p" data-group-id="2893716892-6">{</span><span class="p" data-group-id="2893716892-6">}</span><span class="p" data-group-id="2893716892-5">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_client</span><span class="p" data-group-id="3290381565-4">(</span><span class="n">client</span><span class="p" data-group-id="3290381565-4">)</span><span class="w">
+</span><span class="p" data-group-id="3290381565-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3290381565-6">%</span><span class="nc" data-group-id="3290381565-6">Ecto.Changeset</span><span class="p" data-group-id="3290381565-6">{</span><span class="p" data-group-id="3290381565-6">}</span><span class="p" data-group-id="3290381565-5">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_client!/1">
 
   <div class="detail-header">
-    <a href="#get_client!/1" class="detail-link" title="Link to this function">
+    <a href="#get_client!/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -403,17 +405,17 @@ Required fields: <code class="inline">name</code>, <code class="inline">authoriz
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_client!</span><span class="p" data-group-id="1127054780-1">(</span><span class="mi">123</span><span class="p" data-group-id="1127054780-1">)</span><span class="w">
-</span><span class="p" data-group-id="1127054780-2">%</span><span class="nc" data-group-id="1127054780-2">OauthClient</span><span class="p" data-group-id="1127054780-2">{</span><span class="p" data-group-id="1127054780-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_client!</span><span class="p" data-group-id="8919998452-1">(</span><span class="mi">123</span><span class="p" data-group-id="8919998452-1">)</span><span class="w">
+</span><span class="p" data-group-id="8919998452-2">%</span><span class="nc" data-group-id="8919998452-2">OauthClient</span><span class="p" data-group-id="8919998452-2">{</span><span class="p" data-group-id="8919998452-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_client!</span><span class="p" data-group-id="1127054780-3">(</span><span class="mi">456</span><span class="p" data-group-id="1127054780-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_client!</span><span class="p" data-group-id="8919998452-3">(</span><span class="mi">456</span><span class="p" data-group-id="8919998452-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="list_clients/1">
 
   <div class="detail-header">
-    <a href="#list_clients/1" class="detail-link" title="Link to this function">
+    <a href="#list_clients/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -447,15 +449,15 @@ Required fields: <code class="inline">name</code>, <code class="inline">authoriz
   </a>
   <span class="text">Examples</span>
 </h2>
-<p>  When given a Project:</p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_clients</span><span class="p" data-group-id="6941754932-1">(</span><span class="p" data-group-id="6941754932-2">%</span><span class="nc" data-group-id="6941754932-2">Project</span><span class="p" data-group-id="6941754932-2">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="6941754932-2">}</span><span class="p" data-group-id="6941754932-1">)</span><span class="w">
-</span><span class="p" data-group-id="6941754932-3">[</span><span class="p" data-group-id="6941754932-4">%</span><span class="nc" data-group-id="6941754932-4">OauthClient</span><span class="p" data-group-id="6941754932-4">{</span><span class="ss">project_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="6941754932-4">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6941754932-5">%</span><span class="nc" data-group-id="6941754932-5">OauthClient</span><span class="p" data-group-id="6941754932-5">{</span><span class="ss">project_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="6941754932-5">}</span><span class="p" data-group-id="6941754932-3">]</span></code></pre><p>  When given a User:</p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_clients</span><span class="p" data-group-id="6367715595-1">(</span><span class="p" data-group-id="6367715595-2">%</span><span class="nc" data-group-id="6367715595-2">User</span><span class="p" data-group-id="6367715595-2">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">123</span><span class="p" data-group-id="6367715595-2">}</span><span class="p" data-group-id="6367715595-1">)</span><span class="w">
-</span><span class="p" data-group-id="6367715595-3">[</span><span class="p" data-group-id="6367715595-4">%</span><span class="nc" data-group-id="6367715595-4">OauthClient</span><span class="p" data-group-id="6367715595-4">{</span><span class="ss">user_id</span><span class="p">:</span><span class="w"> </span><span class="mi">123</span><span class="p" data-group-id="6367715595-4">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6367715595-5">%</span><span class="nc" data-group-id="6367715595-5">OauthClient</span><span class="p" data-group-id="6367715595-5">{</span><span class="ss">user_id</span><span class="p">:</span><span class="w"> </span><span class="mi">123</span><span class="p" data-group-id="6367715595-5">}</span><span class="p" data-group-id="6367715595-3">]</span></code></pre>
+<p>  When given a Project:</p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_clients</span><span class="p" data-group-id="1388787029-1">(</span><span class="p" data-group-id="1388787029-2">%</span><span class="nc" data-group-id="1388787029-2">Project</span><span class="p" data-group-id="1388787029-2">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="1388787029-2">}</span><span class="p" data-group-id="1388787029-1">)</span><span class="w">
+</span><span class="p" data-group-id="1388787029-3">[</span><span class="p" data-group-id="1388787029-4">%</span><span class="nc" data-group-id="1388787029-4">OauthClient</span><span class="p" data-group-id="1388787029-4">{</span><span class="ss">project_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="1388787029-4">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1388787029-5">%</span><span class="nc" data-group-id="1388787029-5">OauthClient</span><span class="p" data-group-id="1388787029-5">{</span><span class="ss">project_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="1388787029-5">}</span><span class="p" data-group-id="1388787029-3">]</span></code></pre><p>  When given a User:</p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_clients</span><span class="p" data-group-id="6010548497-1">(</span><span class="p" data-group-id="6010548497-2">%</span><span class="nc" data-group-id="6010548497-2">User</span><span class="p" data-group-id="6010548497-2">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">123</span><span class="p" data-group-id="6010548497-2">}</span><span class="p" data-group-id="6010548497-1">)</span><span class="w">
+</span><span class="p" data-group-id="6010548497-3">[</span><span class="p" data-group-id="6010548497-4">%</span><span class="nc" data-group-id="6010548497-4">OauthClient</span><span class="p" data-group-id="6010548497-4">{</span><span class="ss">user_id</span><span class="p">:</span><span class="w"> </span><span class="mi">123</span><span class="p" data-group-id="6010548497-4">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6010548497-5">%</span><span class="nc" data-group-id="6010548497-5">OauthClient</span><span class="p" data-group-id="6010548497-5">{</span><span class="ss">user_id</span><span class="p">:</span><span class="w"> </span><span class="mi">123</span><span class="p" data-group-id="6010548497-5">}</span><span class="p" data-group-id="6010548497-3">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="update_client/2">
 
   <div class="detail-header">
-    <a href="#update_client/2" class="detail-link" title="Link to this function">
+    <a href="#update_client/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -489,45 +491,44 @@ Required fields: <code class="inline">name</code>, <code class="inline">authoriz
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_client</span><span class="p" data-group-id="7681700902-1">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7681700902-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="7681700902-2">}</span><span class="p" data-group-id="7681700902-1">)</span><span class="w">
-</span><span class="p" data-group-id="7681700902-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7681700902-4">%</span><span class="nc" data-group-id="7681700902-4">OauthClient</span><span class="p" data-group-id="7681700902-4">{</span><span class="p" data-group-id="7681700902-4">}</span><span class="p" data-group-id="7681700902-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_client</span><span class="p" data-group-id="1913574709-1">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1913574709-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="1913574709-2">}</span><span class="p" data-group-id="1913574709-1">)</span><span class="w">
+</span><span class="p" data-group-id="1913574709-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1913574709-4">%</span><span class="nc" data-group-id="1913574709-4">OauthClient</span><span class="p" data-group-id="1913574709-4">{</span><span class="p" data-group-id="1913574709-4">}</span><span class="p" data-group-id="1913574709-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_client</span><span class="p" data-group-id="7681700902-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7681700902-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="7681700902-6">}</span><span class="p" data-group-id="7681700902-5">)</span><span class="w">
-</span><span class="p" data-group-id="7681700902-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7681700902-8">%</span><span class="nc" data-group-id="7681700902-8">Ecto.Changeset</span><span class="p" data-group-id="7681700902-8">{</span><span class="p" data-group-id="7681700902-8">}</span><span class="p" data-group-id="7681700902-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_client</span><span class="p" data-group-id="1913574709-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1913574709-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="1913574709-6">}</span><span class="p" data-group-id="1913574709-5">)</span><span class="w">
+</span><span class="p" data-group-id="1913574709-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1913574709-8">%</span><span class="nc" data-group-id="1913574709-8">Ecto.Changeset</span><span class="p" data-group-id="1913574709-8">{</span><span class="p" data-group-id="1913574709-8">}</span><span class="p" data-group-id="1913574709-7">}</span></code></pre>
   </section>
 </section>
 
     </div>
   </section>
 
-      <footer class="footer">
-        <p>
+    <footer class="footer">
+      <p>
 
-          <span class="line">
-            <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
-              Search HexDocs
-            </button>
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
 
-              <a href="Lightning.epub" title="ePub version">
-                Download ePub version
-              </a>
+            <a href="Lightning.epub" title="ePub version">
+              Download ePub version
+            </a>
 
-          </span>
-        </p>
+        </span>
+      </p>
 
-        <p class="built-using">
-          Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
 
-            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
-        </p>
-      </footer>
-    </div>
+      </p>
+
+    </footer>
   </div>
 </main>
 </div>
-
 
   </body>
 </html>

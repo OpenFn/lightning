@@ -4,21 +4,19 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="generator" content="ExDoc v0.34.2">
     <meta name="project" content="Lightning v2.10.0-rc.1">
 
+
     <title>Lightning.Invocation — Lightning v2.10.0-rc.1</title>
-    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
+    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-0D035C9E.js"></script>
-
-      <script src="docs_config.js"></script>
-
-    <script async src="dist/html-J2ASZTQE.js"></script>
-
+    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
+    <script src="dist/sidebar_items-10E0B7BA.js"></script>
+    <script src="docs_config.js"></script>
+    <script async src="dist/html-YIPIRHGU.js"></script>
 
   </head>
   <body data-type="modules" class="page-module">
@@ -36,43 +34,28 @@
       } catch (error) { }
     </script>
 
-<div class="main">
+<div class="body-wrapper">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
 <nav id="sidebar" class="sidebar">
-  <form class="sidebar-search" action="search.html">
-    <label class="search-label">
-      <span class="sr-only">Search documentation of Lightning</span>
-      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
-    <button type="submit" class="search-button" aria-label="Submit Search">
-      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
-    </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
-      <i class="ri-close-line ri-lg" title="Cancel search"></i>
-    </button>
-  </form>
-
-  <div class="autocomplete">
-    <div class="autocomplete-results">
-    </div>
-  </div>
 
   <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
 
-      <a href="https://openfn.github.io/Lightning">
-        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
-      </a>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
 
-    <div class="sidebar-projectDetails">
-      <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+      <div>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
-      </a>
-      <div class="sidebar-projectVersion" translate="no">
-        v2.10.0-rc.1
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.10.0-rc.1
+        </div>
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -115,31 +98,50 @@ Pages
 
 <main class="content">
   <output role="status" id="toast"></output>
-  <div class="content-outer">
-    <div id="content" class="content-inner">
 
-<h1>
-<button class="icon-action display-settings">
-  <i class="ri-settings-3-line"></i>
-  <span class="sr-only">Settings</span>
-</button>
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+    <span translate="no">Lightning.Invocation</span> 
+    <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
+
+  </h1>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L1" title="View Source" class="icon-action" rel="help">
-      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-      <span class="sr-only">View Source</span>
-    </a>
-
-  <span translate="no">Lightning.Invocation</span> 
-  <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
-
-</h1>
-
-
-  <section id="moduledoc">
+    <section id="moduledoc">
 <p>The Invocation context.</p>
-  </section>
+    </section>
 
+</div>
 
   <section id="summary" class="details-list">
     <h1 class="section-heading">
@@ -155,7 +157,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#assemble_logs_for_step/1" translate="no">assemble_logs_for_step(step)</a>
+        <a href="#assemble_logs_for_step/1" data-no-tooltip translate="no">assemble_logs_for_step(step)</a>
 
       </div>
 
@@ -166,7 +168,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#change_dataclip/2" translate="no">change_dataclip(dataclip, attrs \\ %{})</a>
+        <a href="#change_dataclip/2" data-no-tooltip translate="no">change_dataclip(dataclip, attrs \\ %{})</a>
 
       </div>
 
@@ -176,7 +178,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#change_step/2" translate="no">change_step(step, attrs \\ %{})</a>
+        <a href="#change_step/2" data-no-tooltip translate="no">change_step(step, attrs \\ %{})</a>
 
       </div>
 
@@ -186,7 +188,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#count_workorders/2" translate="no">count_workorders(project, search_params)</a>
+        <a href="#count_workorders/2" data-no-tooltip translate="no">count_workorders(project, search_params)</a>
 
       </div>
 
@@ -194,7 +196,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#create_dataclip/1" translate="no">create_dataclip(attrs \\ %{})</a>
+        <a href="#create_dataclip/1" data-no-tooltip translate="no">create_dataclip(attrs \\ %{})</a>
 
       </div>
 
@@ -204,7 +206,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#delete_dataclip/1" translate="no">delete_dataclip(dataclip)</a>
+        <a href="#delete_dataclip/1" data-no-tooltip translate="no">delete_dataclip(dataclip)</a>
 
       </div>
 
@@ -214,7 +216,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_dataclip/1" translate="no">get_dataclip(step)</a>
+        <a href="#get_dataclip/1" data-no-tooltip translate="no">get_dataclip(step)</a>
 
       </div>
 
@@ -224,7 +226,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_dataclip!/1" translate="no">get_dataclip!(id)</a>
+        <a href="#get_dataclip!/1" data-no-tooltip translate="no">get_dataclip!(id)</a>
 
       </div>
 
@@ -234,7 +236,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_dataclip_details!/1" translate="no">get_dataclip_details!(id)</a>
+        <a href="#get_dataclip_details!/1" data-no-tooltip translate="no">get_dataclip_details!(id)</a>
 
       </div>
 
@@ -242,7 +244,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_dataclip_for_run/1" translate="no">get_dataclip_for_run(run_id)</a>
+        <a href="#get_dataclip_for_run/1" data-no-tooltip translate="no">get_dataclip_for_run(run_id)</a>
 
       </div>
 
@@ -250,7 +252,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_dataclip_query/1" translate="no">get_dataclip_query(step)</a>
+        <a href="#get_dataclip_query/1" data-no-tooltip translate="no">get_dataclip_query(step)</a>
 
       </div>
 
@@ -260,7 +262,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_first_dataclip_for_run_and_job/2" translate="no">get_first_dataclip_for_run_and_job(run_id, job_id)</a>
+        <a href="#get_first_dataclip_for_run_and_job/2" data-no-tooltip translate="no">get_first_dataclip_for_run_and_job(run_id, job_id)</a>
 
       </div>
 
@@ -268,7 +270,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_first_step_for_run_and_job/2" translate="no">get_first_step_for_run_and_job(run_id, job_id)</a>
+        <a href="#get_first_step_for_run_and_job/2" data-no-tooltip translate="no">get_first_step_for_run_and_job(run_id, job_id)</a>
 
       </div>
 
@@ -276,7 +278,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_output_dataclip_query/1" translate="no">get_output_dataclip_query(step)</a>
+        <a href="#get_output_dataclip_query/1" data-no-tooltip translate="no">get_output_dataclip_query(step)</a>
 
       </div>
 
@@ -286,7 +288,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_step!/1" translate="no">get_step!(id)</a>
+        <a href="#get_step!/1" data-no-tooltip translate="no">get_step!(id)</a>
 
       </div>
 
@@ -296,7 +298,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_step_count_for_run/1" translate="no">get_step_count_for_run(run_id)</a>
+        <a href="#get_step_count_for_run/1" data-no-tooltip translate="no">get_step_count_for_run(run_id)</a>
 
       </div>
 
@@ -304,7 +306,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_step_with_job!/1" translate="no">get_step_with_job!(id)</a>
+        <a href="#get_step_with_job!/1" data-no-tooltip translate="no">get_step_with_job!(id)</a>
 
       </div>
 
@@ -314,7 +316,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_workorders_by_ids/1" translate="no">get_workorders_by_ids(ids)</a>
+        <a href="#get_workorders_by_ids/1" data-no-tooltip translate="no">get_workorders_by_ids(ids)</a>
 
       </div>
 
@@ -322,7 +324,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_workorders_count_limit/0" translate="no">get_workorders_count_limit()</a>
+        <a href="#get_workorders_count_limit/0" data-no-tooltip translate="no">get_workorders_count_limit()</a>
 
       </div>
 
@@ -330,7 +332,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#list_dataclips/0" translate="no">list_dataclips()</a>
+        <a href="#list_dataclips/0" data-no-tooltip translate="no">list_dataclips()</a>
 
       </div>
 
@@ -340,7 +342,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#list_dataclips/1" translate="no">list_dataclips(project)</a>
+        <a href="#list_dataclips/1" data-no-tooltip translate="no">list_dataclips(project)</a>
 
       </div>
 
@@ -348,7 +350,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#list_dataclips_for_job/1" translate="no">list_dataclips_for_job(job)</a>
+        <a href="#list_dataclips_for_job/1" data-no-tooltip translate="no">list_dataclips_for_job(job)</a>
 
       </div>
 
@@ -356,7 +358,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#list_dataclips_query/1" translate="no">list_dataclips_query(project)</a>
+        <a href="#list_dataclips_query/1" data-no-tooltip translate="no">list_dataclips_query(project)</a>
 
       </div>
 
@@ -364,7 +366,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#list_steps/0" translate="no">list_steps()</a>
+        <a href="#list_steps/0" data-no-tooltip translate="no">list_steps()</a>
 
       </div>
 
@@ -374,7 +376,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#list_steps_for_project/2" translate="no">list_steps_for_project(project, params \\ %{})</a>
+        <a href="#list_steps_for_project/2" data-no-tooltip translate="no">list_steps_for_project(project, params \\ %{})</a>
 
       </div>
 
@@ -382,7 +384,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#list_steps_for_project_query/1" translate="no">list_steps_for_project_query(project)</a>
+        <a href="#list_steps_for_project_query/1" data-no-tooltip translate="no">list_steps_for_project_query(project)</a>
 
       </div>
 
@@ -390,7 +392,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#logs_for_step/1" translate="no">logs_for_step(step)</a>
+        <a href="#logs_for_step/1" data-no-tooltip translate="no">logs_for_step(step)</a>
 
       </div>
 
@@ -400,7 +402,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#search_workorders/1" translate="no">search_workorders(project)</a>
+        <a href="#search_workorders/1" data-no-tooltip translate="no">search_workorders(project)</a>
 
       </div>
 
@@ -410,7 +412,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#search_workorders/3" translate="no">search_workorders(project, search_params, params \\ %{})</a>
+        <a href="#search_workorders/3" data-no-tooltip translate="no">search_workorders(project, search_params, params \\ %{})</a>
 
       </div>
 
@@ -418,7 +420,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#search_workorders_for_export_query/2" translate="no">search_workorders_for_export_query(project, search_params)</a>
+        <a href="#search_workorders_for_export_query/2" data-no-tooltip translate="no">search_workorders_for_export_query(project, search_params)</a>
 
       </div>
 
@@ -426,7 +428,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#search_workorders_for_retry/2" translate="no">search_workorders_for_retry(project, search_params)</a>
+        <a href="#search_workorders_for_retry/2" data-no-tooltip translate="no">search_workorders_for_retry(project, search_params)</a>
 
       </div>
 
@@ -434,7 +436,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#update_dataclip/2" translate="no">update_dataclip(dataclip, attrs)</a>
+        <a href="#update_dataclip/2" data-no-tooltip translate="no">update_dataclip(dataclip, attrs)</a>
 
       </div>
 
@@ -444,7 +446,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#with_runs/1" translate="no">with_runs(query)</a>
+        <a href="#with_runs/1" data-no-tooltip translate="no">with_runs(query)</a>
 
       </div>
 
@@ -466,7 +468,7 @@ Pages
 <section class="detail" id="assemble_logs_for_step/1">
 
   <div class="detail-header">
-    <a href="#assemble_logs_for_step/1" class="detail-link" title="Link to this function">
+    <a href="#assemble_logs_for_step/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -497,7 +499,7 @@ Pages
     <span id="change_dataclip/1"></span>
 
   <div class="detail-header">
-    <a href="#change_dataclip/2" class="detail-link" title="Link to this function">
+    <a href="#change_dataclip/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -519,8 +521,8 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_dataclip</span><span class="p" data-group-id="8007585331-1">(</span><span class="n">dataclip</span><span class="p" data-group-id="8007585331-1">)</span><span class="w">
-</span><span class="p" data-group-id="8007585331-2">%</span><span class="nc" data-group-id="8007585331-2">Ecto.Changeset</span><span class="p" data-group-id="8007585331-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8007585331-3">%</span><span class="nc" data-group-id="8007585331-3">Dataclip</span><span class="p" data-group-id="8007585331-3">{</span><span class="p" data-group-id="8007585331-3">}</span><span class="p" data-group-id="8007585331-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_dataclip</span><span class="p" data-group-id="6232598609-1">(</span><span class="n">dataclip</span><span class="p" data-group-id="6232598609-1">)</span><span class="w">
+</span><span class="p" data-group-id="6232598609-2">%</span><span class="nc" data-group-id="6232598609-2">Ecto.Changeset</span><span class="p" data-group-id="6232598609-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6232598609-3">%</span><span class="nc" data-group-id="6232598609-3">Dataclip</span><span class="p" data-group-id="6232598609-3">{</span><span class="p" data-group-id="6232598609-3">}</span><span class="p" data-group-id="6232598609-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="change_step/2">
@@ -528,7 +530,7 @@ Pages
     <span id="change_step/1"></span>
 
   <div class="detail-header">
-    <a href="#change_step/2" class="detail-link" title="Link to this function">
+    <a href="#change_step/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -550,14 +552,14 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_step</span><span class="p" data-group-id="8735487737-1">(</span><span class="n">step</span><span class="p" data-group-id="8735487737-1">)</span><span class="w">
-</span><span class="p" data-group-id="8735487737-2">%</span><span class="nc" data-group-id="8735487737-2">Ecto.Changeset</span><span class="p" data-group-id="8735487737-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8735487737-3">%</span><span class="nc" data-group-id="8735487737-3">Step</span><span class="p" data-group-id="8735487737-3">{</span><span class="p" data-group-id="8735487737-3">}</span><span class="p" data-group-id="8735487737-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_step</span><span class="p" data-group-id="9167366788-1">(</span><span class="n">step</span><span class="p" data-group-id="9167366788-1">)</span><span class="w">
+</span><span class="p" data-group-id="9167366788-2">%</span><span class="nc" data-group-id="9167366788-2">Ecto.Changeset</span><span class="p" data-group-id="9167366788-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9167366788-3">%</span><span class="nc" data-group-id="9167366788-3">Step</span><span class="p" data-group-id="9167366788-3">{</span><span class="p" data-group-id="9167366788-3">}</span><span class="p" data-group-id="9167366788-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="count_workorders/2">
 
   <div class="detail-header">
-    <a href="#count_workorders/2" class="detail-link" title="Link to this function">
+    <a href="#count_workorders/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -581,7 +583,7 @@ Pages
     <span id="create_dataclip/0"></span>
 
   <div class="detail-header">
-    <a href="#create_dataclip/1" class="detail-link" title="Link to this function">
+    <a href="#create_dataclip/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -601,7 +603,7 @@ Pages
 
           <pre translate="no"><span class="attribute">@spec</span> create_dataclip(attrs :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) ::
   {:ok, <a href="Lightning.Invocation.Dataclip.html#t:t/0">Lightning.Invocation.Dataclip.t</a>()}
-  | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(Lightning.Invocation.Dataclip)}</pre>
+  | {:error, <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(Lightning.Invocation.Dataclip)}</pre>
 
       </div>
 
@@ -611,17 +613,17 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_dataclip</span><span class="p" data-group-id="8595517706-1">(</span><span class="p" data-group-id="8595517706-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="8595517706-2">}</span><span class="p" data-group-id="8595517706-1">)</span><span class="w">
-</span><span class="p" data-group-id="8595517706-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8595517706-4">%</span><span class="nc" data-group-id="8595517706-4">Dataclip</span><span class="p" data-group-id="8595517706-4">{</span><span class="p" data-group-id="8595517706-4">}</span><span class="p" data-group-id="8595517706-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_dataclip</span><span class="p" data-group-id="1595763796-1">(</span><span class="p" data-group-id="1595763796-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="1595763796-2">}</span><span class="p" data-group-id="1595763796-1">)</span><span class="w">
+</span><span class="p" data-group-id="1595763796-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1595763796-4">%</span><span class="nc" data-group-id="1595763796-4">Dataclip</span><span class="p" data-group-id="1595763796-4">{</span><span class="p" data-group-id="1595763796-4">}</span><span class="p" data-group-id="1595763796-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_dataclip</span><span class="p" data-group-id="8595517706-5">(</span><span class="p" data-group-id="8595517706-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="8595517706-6">}</span><span class="p" data-group-id="8595517706-5">)</span><span class="w">
-</span><span class="p" data-group-id="8595517706-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8595517706-8">%</span><span class="nc" data-group-id="8595517706-8">Ecto.Changeset</span><span class="p" data-group-id="8595517706-8">{</span><span class="p" data-group-id="8595517706-8">}</span><span class="p" data-group-id="8595517706-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_dataclip</span><span class="p" data-group-id="1595763796-5">(</span><span class="p" data-group-id="1595763796-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="1595763796-6">}</span><span class="p" data-group-id="1595763796-5">)</span><span class="w">
+</span><span class="p" data-group-id="1595763796-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1595763796-8">%</span><span class="nc" data-group-id="1595763796-8">Ecto.Changeset</span><span class="p" data-group-id="1595763796-8">{</span><span class="p" data-group-id="1595763796-8">}</span><span class="p" data-group-id="1595763796-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="delete_dataclip/1">
 
   <div class="detail-header">
-    <a href="#delete_dataclip/1" class="detail-link" title="Link to this function">
+    <a href="#delete_dataclip/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -643,17 +645,17 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_dataclip</span><span class="p" data-group-id="0051180721-1">(</span><span class="n">dataclip</span><span class="p" data-group-id="0051180721-1">)</span><span class="w">
-</span><span class="p" data-group-id="0051180721-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0051180721-3">%</span><span class="nc" data-group-id="0051180721-3">Dataclip</span><span class="p" data-group-id="0051180721-3">{</span><span class="p" data-group-id="0051180721-3">}</span><span class="p" data-group-id="0051180721-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_dataclip</span><span class="p" data-group-id="3032090297-1">(</span><span class="n">dataclip</span><span class="p" data-group-id="3032090297-1">)</span><span class="w">
+</span><span class="p" data-group-id="3032090297-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3032090297-3">%</span><span class="nc" data-group-id="3032090297-3">Dataclip</span><span class="p" data-group-id="3032090297-3">{</span><span class="p" data-group-id="3032090297-3">}</span><span class="p" data-group-id="3032090297-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_dataclip</span><span class="p" data-group-id="0051180721-4">(</span><span class="n">dataclip</span><span class="p" data-group-id="0051180721-4">)</span><span class="w">
-</span><span class="p" data-group-id="0051180721-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0051180721-6">%</span><span class="nc" data-group-id="0051180721-6">Ecto.Changeset</span><span class="p" data-group-id="0051180721-6">{</span><span class="p" data-group-id="0051180721-6">}</span><span class="p" data-group-id="0051180721-5">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_dataclip</span><span class="p" data-group-id="3032090297-4">(</span><span class="n">dataclip</span><span class="p" data-group-id="3032090297-4">)</span><span class="w">
+</span><span class="p" data-group-id="3032090297-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3032090297-6">%</span><span class="nc" data-group-id="3032090297-6">Ecto.Changeset</span><span class="p" data-group-id="3032090297-6">{</span><span class="p" data-group-id="3032090297-6">}</span><span class="p" data-group-id="3032090297-5">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_dataclip/1">
 
   <div class="detail-header">
-    <a href="#get_dataclip/1" class="detail-link" title="Link to this function">
+    <a href="#get_dataclip/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -671,7 +673,7 @@ Pages
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> get_dataclip(step_or_uuid :: <a href="Lightning.Invocation.Step.html#t:t/0">Lightning.Invocation.Step.t</a>() | <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) ::
+          <pre translate="no"><span class="attribute">@spec</span> get_dataclip(step_or_uuid :: <a href="Lightning.Invocation.Step.html#t:t/0">Lightning.Invocation.Step.t</a>() | <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) ::
   <a href="Lightning.Invocation.Dataclip.html#t:t/0">Lightning.Invocation.Dataclip.t</a>() | nil</pre>
 
       </div>
@@ -682,20 +684,20 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="9853245328-1">(</span><span class="s">&quot;27b73932-16c7-4a72-86a3-85d805ccff98&quot;</span><span class="p" data-group-id="9853245328-1">)</span><span class="w">
-</span><span class="p" data-group-id="9853245328-2">%</span><span class="nc" data-group-id="9853245328-2">Dataclip</span><span class="p" data-group-id="9853245328-2">{</span><span class="p" data-group-id="9853245328-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="5969082086-1">(</span><span class="s">&quot;27b73932-16c7-4a72-86a3-85d805ccff98&quot;</span><span class="p" data-group-id="5969082086-1">)</span><span class="w">
+</span><span class="p" data-group-id="5969082086-2">%</span><span class="nc" data-group-id="5969082086-2">Dataclip</span><span class="p" data-group-id="5969082086-2">{</span><span class="p" data-group-id="5969082086-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="9853245328-3">(</span><span class="s">&quot;27b73932-16c7-4a72-86a3-85d805ccff98&quot;</span><span class="p" data-group-id="9853245328-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="5969082086-3">(</span><span class="s">&quot;27b73932-16c7-4a72-86a3-85d805ccff98&quot;</span><span class="p" data-group-id="5969082086-3">)</span><span class="w">
 </span><span class="no">nil</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="9853245328-4">(</span><span class="p" data-group-id="9853245328-5">%</span><span class="nc" data-group-id="9853245328-5">Step</span><span class="p" data-group-id="9853245328-5">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;a uuid&quot;</span><span class="p" data-group-id="9853245328-5">}</span><span class="p" data-group-id="9853245328-4">)</span><span class="w">
-</span><span class="p" data-group-id="9853245328-6">%</span><span class="nc" data-group-id="9853245328-6">Dataclip</span><span class="p" data-group-id="9853245328-6">{</span><span class="p" data-group-id="9853245328-6">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="5969082086-4">(</span><span class="p" data-group-id="5969082086-5">%</span><span class="nc" data-group-id="5969082086-5">Step</span><span class="p" data-group-id="5969082086-5">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;a uuid&quot;</span><span class="p" data-group-id="5969082086-5">}</span><span class="p" data-group-id="5969082086-4">)</span><span class="w">
+</span><span class="p" data-group-id="5969082086-6">%</span><span class="nc" data-group-id="5969082086-6">Dataclip</span><span class="p" data-group-id="5969082086-6">{</span><span class="p" data-group-id="5969082086-6">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_dataclip!/1">
 
   <div class="detail-header">
-    <a href="#get_dataclip!/1" class="detail-link" title="Link to this function">
+    <a href="#get_dataclip!/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -713,27 +715,27 @@ Pages
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> get_dataclip!(id :: <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) :: <a href="Lightning.Invocation.Dataclip.html#t:t/0">Lightning.Invocation.Dataclip.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> get_dataclip!(id :: <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) :: <a href="Lightning.Invocation.Dataclip.html#t:t/0">Lightning.Invocation.Dataclip.t</a>()</pre>
 
       </div>
 
-<p>Gets a single dataclip.</p><p>Raises <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.NoResultsError.html"><code class="inline">Ecto.NoResultsError</code></a> if the Dataclip does not exist.</p><h2 id="get_dataclip!/1-examples" class="section-heading">
+<p>Gets a single dataclip.</p><p>Raises <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.NoResultsError.html"><code class="inline">Ecto.NoResultsError</code></a> if the Dataclip does not exist.</p><h2 id="get_dataclip!/1-examples" class="section-heading">
   <a href="#get_dataclip!/1-examples" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip!</span><span class="p" data-group-id="0682975724-1">(</span><span class="mi">123</span><span class="p" data-group-id="0682975724-1">)</span><span class="w">
-</span><span class="p" data-group-id="0682975724-2">%</span><span class="nc" data-group-id="0682975724-2">Dataclip</span><span class="p" data-group-id="0682975724-2">{</span><span class="p" data-group-id="0682975724-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip!</span><span class="p" data-group-id="8361757937-1">(</span><span class="mi">123</span><span class="p" data-group-id="8361757937-1">)</span><span class="w">
+</span><span class="p" data-group-id="8361757937-2">%</span><span class="nc" data-group-id="8361757937-2">Dataclip</span><span class="p" data-group-id="8361757937-2">{</span><span class="p" data-group-id="8361757937-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip!</span><span class="p" data-group-id="0682975724-3">(</span><span class="mi">456</span><span class="p" data-group-id="0682975724-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip!</span><span class="p" data-group-id="8361757937-3">(</span><span class="mi">456</span><span class="p" data-group-id="8361757937-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_dataclip_details!/1">
 
   <div class="detail-header">
-    <a href="#get_dataclip_details!/1" class="detail-link" title="Link to this function">
+    <a href="#get_dataclip_details!/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -751,7 +753,7 @@ Pages
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> get_dataclip_details!(id :: <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) :: <a href="Lightning.Invocation.Dataclip.html#t:t/0">Lightning.Invocation.Dataclip.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> get_dataclip_details!(id :: <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) :: <a href="Lightning.Invocation.Dataclip.html#t:t/0">Lightning.Invocation.Dataclip.t</a>()</pre>
 
       </div>
 
@@ -761,7 +763,7 @@ Pages
 <section class="detail" id="get_dataclip_for_run/1">
 
   <div class="detail-header">
-    <a href="#get_dataclip_for_run/1" class="detail-link" title="Link to this function">
+    <a href="#get_dataclip_for_run/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -779,7 +781,7 @@ Pages
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> get_dataclip_for_run(run_id :: <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) ::
+          <pre translate="no"><span class="attribute">@spec</span> get_dataclip_for_run(run_id :: <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) ::
   <a href="Lightning.Invocation.Dataclip.html#t:t/0">Lightning.Invocation.Dataclip.t</a>() | nil</pre>
 
       </div>
@@ -790,7 +792,7 @@ Pages
 <section class="detail" id="get_dataclip_query/1">
 
   <div class="detail-header">
-    <a href="#get_dataclip_query/1" class="detail-link" title="Link to this function">
+    <a href="#get_dataclip_query/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -812,7 +814,7 @@ Pages
 <section class="detail" id="get_first_dataclip_for_run_and_job/2">
 
   <div class="detail-header">
-    <a href="#get_first_dataclip_for_run_and_job/2" class="detail-link" title="Link to this function">
+    <a href="#get_first_dataclip_for_run_and_job/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -831,8 +833,8 @@ Pages
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@spec</span> get_first_dataclip_for_run_and_job(
-  run_id :: <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
-  job_id :: <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()
+  run_id :: <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
+  job_id :: <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()
 ) :: <a href="Lightning.Invocation.Dataclip.html#t:t/0">Lightning.Invocation.Dataclip.t</a>() | nil</pre>
 
       </div>
@@ -843,7 +845,7 @@ Pages
 <section class="detail" id="get_first_step_for_run_and_job/2">
 
   <div class="detail-header">
-    <a href="#get_first_step_for_run_and_job/2" class="detail-link" title="Link to this function">
+    <a href="#get_first_step_for_run_and_job/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -862,8 +864,8 @@ Pages
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@spec</span> get_first_step_for_run_and_job(
-  run_id :: <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
-  job_id :: <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()
+  run_id :: <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
+  job_id :: <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()
 ) :: <a href="Lightning.Invocation.Step.html#t:t/0">Lightning.Invocation.Step.t</a>() | nil</pre>
 
       </div>
@@ -874,7 +876,7 @@ Pages
 <section class="detail" id="get_output_dataclip_query/1">
 
   <div class="detail-header">
-    <a href="#get_output_dataclip_query/1" class="detail-link" title="Link to this function">
+    <a href="#get_output_dataclip_query/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -896,7 +898,7 @@ Pages
 <section class="detail" id="get_step!/1">
 
   <div class="detail-header">
-    <a href="#get_step!/1" class="detail-link" title="Link to this function">
+    <a href="#get_step!/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -914,27 +916,27 @@ Pages
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> get_step!(<a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) :: <a href="Lightning.Invocation.Step.html#t:t/0">Lightning.Invocation.Step.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> get_step!(<a href="https://hexdocs.pm/ecto/3.12.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) :: <a href="Lightning.Invocation.Step.html#t:t/0">Lightning.Invocation.Step.t</a>()</pre>
 
       </div>
 
-<p>Gets a single step.</p><p>Raises <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.NoResultsError.html"><code class="inline">Ecto.NoResultsError</code></a> if the Step does not exist.</p><h2 id="get_step!/1-examples" class="section-heading">
+<p>Gets a single step.</p><p>Raises <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.NoResultsError.html"><code class="inline">Ecto.NoResultsError</code></a> if the Step does not exist.</p><h2 id="get_step!/1-examples" class="section-heading">
   <a href="#get_step!/1-examples" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_step!</span><span class="p" data-group-id="3901621993-1">(</span><span class="mi">123</span><span class="p" data-group-id="3901621993-1">)</span><span class="w">
-</span><span class="p" data-group-id="3901621993-2">%</span><span class="nc" data-group-id="3901621993-2">Step</span><span class="p" data-group-id="3901621993-2">{</span><span class="p" data-group-id="3901621993-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_step!</span><span class="p" data-group-id="4611052249-1">(</span><span class="mi">123</span><span class="p" data-group-id="4611052249-1">)</span><span class="w">
+</span><span class="p" data-group-id="4611052249-2">%</span><span class="nc" data-group-id="4611052249-2">Step</span><span class="p" data-group-id="4611052249-2">{</span><span class="p" data-group-id="4611052249-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_step!</span><span class="p" data-group-id="3901621993-3">(</span><span class="mi">456</span><span class="p" data-group-id="3901621993-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_step!</span><span class="p" data-group-id="4611052249-3">(</span><span class="mi">456</span><span class="p" data-group-id="4611052249-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_step_count_for_run/1">
 
   <div class="detail-header">
-    <a href="#get_step_count_for_run/1" class="detail-link" title="Link to this function">
+    <a href="#get_step_count_for_run/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -952,7 +954,7 @@ Pages
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> get_step_count_for_run(run_id :: <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> get_step_count_for_run(run_id :: <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()</pre>
 
       </div>
 
@@ -962,7 +964,7 @@ Pages
 <section class="detail" id="get_step_with_job!/1">
 
   <div class="detail-header">
-    <a href="#get_step_with_job!/1" class="detail-link" title="Link to this function">
+    <a href="#get_step_with_job!/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -984,7 +986,7 @@ Pages
 <section class="detail" id="get_workorders_by_ids/1">
 
   <div class="detail-header">
-    <a href="#get_workorders_by_ids/1" class="detail-link" title="Link to this function">
+    <a href="#get_workorders_by_ids/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1006,7 +1008,7 @@ Pages
 <section class="detail" id="get_workorders_count_limit/0">
 
   <div class="detail-header">
-    <a href="#get_workorders_count_limit/0" class="detail-link" title="Link to this function">
+    <a href="#get_workorders_count_limit/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1028,7 +1030,7 @@ Pages
 <section class="detail" id="list_dataclips/0">
 
   <div class="detail-header">
-    <a href="#list_dataclips/0" class="detail-link" title="Link to this function">
+    <a href="#list_dataclips/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1056,14 +1058,14 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_dataclips</span><span class="p" data-group-id="9094095179-1">(</span><span class="p" data-group-id="9094095179-1">)</span><span class="w">
-</span><span class="p" data-group-id="9094095179-2">[</span><span class="p" data-group-id="9094095179-3">%</span><span class="nc" data-group-id="9094095179-3">Dataclip</span><span class="p" data-group-id="9094095179-3">{</span><span class="p" data-group-id="9094095179-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="9094095179-2">]</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_dataclips</span><span class="p" data-group-id="2288003226-1">(</span><span class="p" data-group-id="2288003226-1">)</span><span class="w">
+</span><span class="p" data-group-id="2288003226-2">[</span><span class="p" data-group-id="2288003226-3">%</span><span class="nc" data-group-id="2288003226-3">Dataclip</span><span class="p" data-group-id="2288003226-3">{</span><span class="p" data-group-id="2288003226-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="2288003226-2">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="list_dataclips/1">
 
   <div class="detail-header">
-    <a href="#list_dataclips/1" class="detail-link" title="Link to this function">
+    <a href="#list_dataclips/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1093,7 +1095,7 @@ Pages
 <section class="detail" id="list_dataclips_for_job/1">
 
   <div class="detail-header">
-    <a href="#list_dataclips_for_job/1" class="detail-link" title="Link to this function">
+    <a href="#list_dataclips_for_job/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1115,7 +1117,7 @@ Pages
 <section class="detail" id="list_dataclips_query/1">
 
   <div class="detail-header">
-    <a href="#list_dataclips_query/1" class="detail-link" title="Link to this function">
+    <a href="#list_dataclips_query/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1134,7 +1136,7 @@ Pages
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@spec</span> list_dataclips_query(project :: <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()) ::
-  <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+  <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
 
       </div>
 
@@ -1144,7 +1146,7 @@ Pages
 <section class="detail" id="list_steps/0">
 
   <div class="detail-header">
-    <a href="#list_steps/0" class="detail-link" title="Link to this function">
+    <a href="#list_steps/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1166,8 +1168,8 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_steps</span><span class="p" data-group-id="1594775801-1">(</span><span class="p" data-group-id="1594775801-1">)</span><span class="w">
-</span><span class="p" data-group-id="1594775801-2">[</span><span class="p" data-group-id="1594775801-3">%</span><span class="nc" data-group-id="1594775801-3">Step</span><span class="p" data-group-id="1594775801-3">{</span><span class="p" data-group-id="1594775801-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="1594775801-2">]</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_steps</span><span class="p" data-group-id="5552396774-1">(</span><span class="p" data-group-id="5552396774-1">)</span><span class="w">
+</span><span class="p" data-group-id="5552396774-2">[</span><span class="p" data-group-id="5552396774-3">%</span><span class="nc" data-group-id="5552396774-3">Step</span><span class="p" data-group-id="5552396774-3">{</span><span class="p" data-group-id="5552396774-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="5552396774-2">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="list_steps_for_project/2">
@@ -1175,7 +1177,7 @@ Pages
     <span id="list_steps_for_project/1"></span>
 
   <div class="detail-header">
-    <a href="#list_steps_for_project/2" class="detail-link" title="Link to this function">
+    <a href="#list_steps_for_project/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1204,7 +1206,7 @@ Pages
 <section class="detail" id="list_steps_for_project_query/1">
 
   <div class="detail-header">
-    <a href="#list_steps_for_project_query/1" class="detail-link" title="Link to this function">
+    <a href="#list_steps_for_project_query/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1222,7 +1224,7 @@ Pages
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> list_steps_for_project_query(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Query.html#t:t/0">Ecto.Query.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> list_steps_for_project_query(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Query.html#t:t/0">Ecto.Query.t</a>()</pre>
 
       </div>
 
@@ -1232,7 +1234,7 @@ Pages
 <section class="detail" id="logs_for_step/1">
 
   <div class="detail-header">
-    <a href="#logs_for_step/1" class="detail-link" title="Link to this function">
+    <a href="#logs_for_step/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1260,7 +1262,7 @@ Pages
 <section class="detail" id="search_workorders/1">
 
   <div class="detail-header">
-    <a href="#search_workorders/1" class="detail-link" title="Link to this function">
+    <a href="#search_workorders/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1294,7 +1296,7 @@ Pages
   </a>
   <span class="text">Example:</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="n">search_workorders</span><span class="p" data-group-id="0340465180-1">(</span><span class="p" data-group-id="0340465180-2">%</span><span class="nc" data-group-id="0340465180-2">Project</span><span class="p" data-group-id="0340465180-2">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="0340465180-2">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0340465180-3">%</span><span class="nc" data-group-id="0340465180-3">SearchParams</span><span class="p" data-group-id="0340465180-3">{</span><span class="ss">status</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0340465180-4">[</span><span class="s">&quot;completed&quot;</span><span class="p" data-group-id="0340465180-4">]</span><span class="p" data-group-id="0340465180-3">}</span><span class="p" data-group-id="0340465180-1">)</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="n">search_workorders</span><span class="p" data-group-id="7561280659-1">(</span><span class="p" data-group-id="7561280659-2">%</span><span class="nc" data-group-id="7561280659-2">Project</span><span class="p" data-group-id="7561280659-2">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="7561280659-2">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7561280659-3">%</span><span class="nc" data-group-id="7561280659-3">SearchParams</span><span class="p" data-group-id="7561280659-3">{</span><span class="ss">status</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7561280659-4">[</span><span class="s">&quot;completed&quot;</span><span class="p" data-group-id="7561280659-4">]</span><span class="p" data-group-id="7561280659-3">}</span><span class="p" data-group-id="7561280659-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="search_workorders/3">
@@ -1302,7 +1304,7 @@ Pages
     <span id="search_workorders/2"></span>
 
   <div class="detail-header">
-    <a href="#search_workorders/3" class="detail-link" title="Link to this function">
+    <a href="#search_workorders/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1334,7 +1336,7 @@ Pages
 <section class="detail" id="search_workorders_for_export_query/2">
 
   <div class="detail-header">
-    <a href="#search_workorders_for_export_query/2" class="detail-link" title="Link to this function">
+    <a href="#search_workorders_for_export_query/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1356,7 +1358,7 @@ Pages
 <section class="detail" id="search_workorders_for_retry/2">
 
   <div class="detail-header">
-    <a href="#search_workorders_for_retry/2" class="detail-link" title="Link to this function">
+    <a href="#search_workorders_for_retry/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1378,7 +1380,7 @@ Pages
 <section class="detail" id="update_dataclip/2">
 
   <div class="detail-header">
-    <a href="#update_dataclip/2" class="detail-link" title="Link to this function">
+    <a href="#update_dataclip/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1400,17 +1402,17 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_dataclip</span><span class="p" data-group-id="3925281687-1">(</span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3925281687-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="3925281687-2">}</span><span class="p" data-group-id="3925281687-1">)</span><span class="w">
-</span><span class="p" data-group-id="3925281687-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3925281687-4">%</span><span class="nc" data-group-id="3925281687-4">Dataclip</span><span class="p" data-group-id="3925281687-4">{</span><span class="p" data-group-id="3925281687-4">}</span><span class="p" data-group-id="3925281687-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_dataclip</span><span class="p" data-group-id="3027554860-1">(</span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3027554860-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="3027554860-2">}</span><span class="p" data-group-id="3027554860-1">)</span><span class="w">
+</span><span class="p" data-group-id="3027554860-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3027554860-4">%</span><span class="nc" data-group-id="3027554860-4">Dataclip</span><span class="p" data-group-id="3027554860-4">{</span><span class="p" data-group-id="3027554860-4">}</span><span class="p" data-group-id="3027554860-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_dataclip</span><span class="p" data-group-id="3925281687-5">(</span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3925281687-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="3925281687-6">}</span><span class="p" data-group-id="3925281687-5">)</span><span class="w">
-</span><span class="p" data-group-id="3925281687-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3925281687-8">%</span><span class="nc" data-group-id="3925281687-8">Ecto.Changeset</span><span class="p" data-group-id="3925281687-8">{</span><span class="p" data-group-id="3925281687-8">}</span><span class="p" data-group-id="3925281687-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_dataclip</span><span class="p" data-group-id="3027554860-5">(</span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3027554860-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="3027554860-6">}</span><span class="p" data-group-id="3027554860-5">)</span><span class="w">
+</span><span class="p" data-group-id="3027554860-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3027554860-8">%</span><span class="nc" data-group-id="3027554860-8">Ecto.Changeset</span><span class="p" data-group-id="3027554860-8">{</span><span class="p" data-group-id="3027554860-8">}</span><span class="p" data-group-id="3027554860-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="with_runs/1">
 
   <div class="detail-header">
-    <a href="#with_runs/1" class="detail-link" title="Link to this function">
+    <a href="#with_runs/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1433,34 +1435,33 @@ Pages
     </div>
   </section>
 
-      <footer class="footer">
-        <p>
+    <footer class="footer">
+      <p>
 
-          <span class="line">
-            <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
-              Search HexDocs
-            </button>
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
 
-              <a href="Lightning.epub" title="ePub version">
-                Download ePub version
-              </a>
+            <a href="Lightning.epub" title="ePub version">
+              Download ePub version
+            </a>
 
-          </span>
-        </p>
+        </span>
+      </p>
 
-        <p class="built-using">
-          Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
 
-            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
-        </p>
-      </footer>
-    </div>
+      </p>
+
+    </footer>
   </div>
 </main>
 </div>
-
 
   </body>
 </html>

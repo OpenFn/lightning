@@ -4,21 +4,19 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="generator" content="ExDoc v0.34.2">
     <meta name="project" content="Lightning v2.10.0-rc.1">
 
+
     <title>Lightning.Collections — Lightning v2.10.0-rc.1</title>
-    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
+    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-0D035C9E.js"></script>
-
-      <script src="docs_config.js"></script>
-
-    <script async src="dist/html-J2ASZTQE.js"></script>
-
+    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
+    <script src="dist/sidebar_items-10E0B7BA.js"></script>
+    <script src="docs_config.js"></script>
+    <script async src="dist/html-YIPIRHGU.js"></script>
 
   </head>
   <body data-type="modules" class="page-module">
@@ -36,43 +34,28 @@
       } catch (error) { }
     </script>
 
-<div class="main">
+<div class="body-wrapper">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
 <nav id="sidebar" class="sidebar">
-  <form class="sidebar-search" action="search.html">
-    <label class="search-label">
-      <span class="sr-only">Search documentation of Lightning</span>
-      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
-    <button type="submit" class="search-button" aria-label="Submit Search">
-      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
-    </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
-      <i class="ri-close-line ri-lg" title="Cancel search"></i>
-    </button>
-  </form>
-
-  <div class="autocomplete">
-    <div class="autocomplete-results">
-    </div>
-  </div>
 
   <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
 
-      <a href="https://openfn.github.io/Lightning">
-        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
-      </a>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
 
-    <div class="sidebar-projectDetails">
-      <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+      <div>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
-      </a>
-      <div class="sidebar-projectVersion" translate="no">
-        v2.10.0-rc.1
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.10.0-rc.1
+        </div>
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -115,31 +98,50 @@ Pages
 
 <main class="content">
   <output role="status" id="toast"></output>
-  <div class="content-outer">
-    <div id="content" class="content-inner">
 
-<h1>
-<button class="icon-action display-settings">
-  <i class="ri-settings-3-line"></i>
-  <span class="sr-only">Settings</span>
-</button>
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+    <span translate="no">Lightning.Collections</span> 
+    <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
+
+  </h1>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L1" title="View Source" class="icon-action" rel="help">
-      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-      <span class="sr-only">View Source</span>
-    </a>
-
-  <span translate="no">Lightning.Collections</span> 
-  <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
-
-</h1>
-
-
-  <section id="moduledoc">
+    <section id="moduledoc">
 <p>Access to collections of unique key-value pairs shared across multiple workflows.</p>
-  </section>
+    </section>
 
+</div>
 
   <section id="summary" class="details-list">
     <h1 class="section-heading">
@@ -155,7 +157,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#create_collection/1" translate="no">create_collection(attrs)</a>
+        <a href="#create_collection/1" data-no-tooltip translate="no">create_collection(attrs)</a>
 
       </div>
 
@@ -165,7 +167,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#create_collection/2" translate="no">create_collection(project_id, name)</a>
+        <a href="#create_collection/2" data-no-tooltip translate="no">create_collection(project_id, name)</a>
 
       </div>
 
@@ -173,7 +175,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#delete/2" translate="no">delete(map, key)</a>
+        <a href="#delete/2" data-no-tooltip translate="no">delete(map, key)</a>
 
       </div>
 
@@ -181,7 +183,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#delete_all/2" translate="no">delete_all(map, key_pattern \\ nil)</a>
+        <a href="#delete_all/2" data-no-tooltip translate="no">delete_all(map, key_pattern \\ nil)</a>
 
       </div>
 
@@ -189,7 +191,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#delete_collection/1" translate="no">delete_collection(collection_id)</a>
+        <a href="#delete_collection/1" data-no-tooltip translate="no">delete_collection(collection_id)</a>
 
       </div>
 
@@ -197,7 +199,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get/2" translate="no">get(map, key)</a>
+        <a href="#get/2" data-no-tooltip translate="no">get(map, key)</a>
 
       </div>
 
@@ -205,7 +207,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_all/3" translate="no">get_all(map, params, key_pattern \\ nil)</a>
+        <a href="#get_all/3" data-no-tooltip translate="no">get_all(map, params, key_pattern \\ nil)</a>
 
       </div>
 
@@ -213,7 +215,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_collection/1" translate="no">get_collection(name)</a>
+        <a href="#get_collection/1" data-no-tooltip translate="no">get_collection(name)</a>
 
       </div>
 
@@ -221,7 +223,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#list_collections/1" translate="no">list_collections(opts \\ [])</a>
+        <a href="#list_collections/1" data-no-tooltip translate="no">list_collections(opts \\ [])</a>
 
       </div>
 
@@ -231,7 +233,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#put/3" translate="no">put(map, key, value)</a>
+        <a href="#put/3" data-no-tooltip translate="no">put(map, key, value)</a>
 
       </div>
 
@@ -239,7 +241,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#put_all/2" translate="no">put_all(map, kv_list)</a>
+        <a href="#put_all/2" data-no-tooltip translate="no">put_all(map, kv_list)</a>
 
       </div>
 
@@ -247,7 +249,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#update_collection/2" translate="no">update_collection(collection, attrs)</a>
+        <a href="#update_collection/2" data-no-tooltip translate="no">update_collection(collection, attrs)</a>
 
       </div>
 
@@ -271,7 +273,7 @@ Pages
 <section class="detail" id="create_collection/1">
 
   <div class="detail-header">
-    <a href="#create_collection/1" class="detail-link" title="Link to this function">
+    <a href="#create_collection/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -290,7 +292,7 @@ Pages
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@spec</span> create_collection(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) ::
-  {:ok, <a href="Lightning.Collections.Collection.html#t:t/0">Lightning.Collections.Collection.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
+  {:ok, <a href="Lightning.Collections.Collection.html#t:t/0">Lightning.Collections.Collection.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
 
       </div>
 
@@ -306,11 +308,11 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_collection</span><span class="p" data-group-id="3142827122-1">(</span><span class="p" data-group-id="3142827122-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;New Collection&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Description here&quot;</span><span class="p" data-group-id="3142827122-2">}</span><span class="p" data-group-id="3142827122-1">)</span><span class="w">
-</span><span class="p" data-group-id="3142827122-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3142827122-4">%</span><span class="nc" data-group-id="3142827122-4">Collection</span><span class="p" data-group-id="3142827122-4">{</span><span class="p" data-group-id="3142827122-4">}</span><span class="p" data-group-id="3142827122-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_collection</span><span class="p" data-group-id="4407155371-1">(</span><span class="p" data-group-id="4407155371-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;New Collection&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Description here&quot;</span><span class="p" data-group-id="4407155371-2">}</span><span class="p" data-group-id="4407155371-1">)</span><span class="w">
+</span><span class="p" data-group-id="4407155371-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4407155371-4">%</span><span class="nc" data-group-id="4407155371-4">Collection</span><span class="p" data-group-id="4407155371-4">{</span><span class="p" data-group-id="4407155371-4">}</span><span class="p" data-group-id="4407155371-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_collection</span><span class="p" data-group-id="3142827122-5">(</span><span class="p" data-group-id="3142827122-6">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="no">nil</span><span class="p" data-group-id="3142827122-6">}</span><span class="p" data-group-id="3142827122-5">)</span><span class="w">
-</span><span class="p" data-group-id="3142827122-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3142827122-8">%</span><span class="nc" data-group-id="3142827122-8">Ecto.Changeset</span><span class="p" data-group-id="3142827122-8">{</span><span class="p" data-group-id="3142827122-8">}</span><span class="p" data-group-id="3142827122-7">}</span></code></pre><h2 id="create_collection/1-returns" class="section-heading">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_collection</span><span class="p" data-group-id="4407155371-5">(</span><span class="p" data-group-id="4407155371-6">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="no">nil</span><span class="p" data-group-id="4407155371-6">}</span><span class="p" data-group-id="4407155371-5">)</span><span class="w">
+</span><span class="p" data-group-id="4407155371-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4407155371-8">%</span><span class="nc" data-group-id="4407155371-8">Ecto.Changeset</span><span class="p" data-group-id="4407155371-8">{</span><span class="p" data-group-id="4407155371-8">}</span><span class="p" data-group-id="4407155371-7">}</span></code></pre><h2 id="create_collection/1-returns" class="section-heading">
   <a href="#create_collection/1-returns" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -322,7 +324,7 @@ Pages
 <section class="detail" id="create_collection/2">
 
   <div class="detail-header">
-    <a href="#create_collection/2" class="detail-link" title="Link to this function">
+    <a href="#create_collection/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -340,8 +342,8 @@ Pages
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> create_collection(<a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) ::
-  {:ok, <a href="Lightning.Collections.Collection.html#t:t/0">Lightning.Collections.Collection.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
+          <pre translate="no"><span class="attribute">@spec</span> create_collection(<a href="https://hexdocs.pm/ecto/3.12.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) ::
+  {:ok, <a href="Lightning.Collections.Collection.html#t:t/0">Lightning.Collections.Collection.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
 
       </div>
 
@@ -351,7 +353,7 @@ Pages
 <section class="detail" id="delete/2">
 
   <div class="detail-header">
-    <a href="#delete/2" class="detail-link" title="Link to this function">
+    <a href="#delete/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -382,7 +384,7 @@ Pages
     <span id="delete_all/1"></span>
 
   <div class="detail-header">
-    <a href="#delete_all/2" class="detail-link" title="Link to this function">
+    <a href="#delete_all/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -411,7 +413,7 @@ Pages
 <section class="detail" id="delete_collection/1">
 
   <div class="detail-header">
-    <a href="#delete_collection/1" class="detail-link" title="Link to this function">
+    <a href="#delete_collection/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -429,9 +431,9 @@ Pages
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> delete_collection(<a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) ::
+          <pre translate="no"><span class="attribute">@spec</span> delete_collection(<a href="https://hexdocs.pm/ecto/3.12.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) ::
   {:ok, <a href="Lightning.Collections.Collection.html#t:t/0">Lightning.Collections.Collection.t</a>()}
-  | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}
+  | {:error, <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}
   | {:error, :not_found}</pre>
 
       </div>
@@ -442,7 +444,7 @@ Pages
 <section class="detail" id="get/2">
 
   <div class="detail-header">
-    <a href="#get/2" class="detail-link" title="Link to this function">
+    <a href="#get/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -473,7 +475,7 @@ Pages
     <span id="get_all/2"></span>
 
   <div class="detail-header">
-    <a href="#get_all/3" class="detail-link" title="Link to this function">
+    <a href="#get_all/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -502,7 +504,7 @@ Pages
 <section class="detail" id="get_collection/1">
 
   <div class="detail-header">
-    <a href="#get_collection/1" class="detail-link" title="Link to this function">
+    <a href="#get_collection/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -533,7 +535,7 @@ Pages
     <span id="list_collections/0"></span>
 
   <div class="detail-header">
-    <a href="#list_collections/1" class="detail-link" title="Link to this function">
+    <a href="#list_collections/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -567,11 +569,11 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_collections</span><span class="p" data-group-id="3101662849-1">(</span><span class="p" data-group-id="3101662849-1">)</span><span class="w">
-</span><span class="p" data-group-id="3101662849-2">[</span><span class="p" data-group-id="3101662849-3">%</span><span class="nc" data-group-id="3101662849-3">Collection</span><span class="p" data-group-id="3101662849-3">{</span><span class="p" data-group-id="3101662849-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="3101662849-2">]</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_collections</span><span class="p" data-group-id="4100389865-1">(</span><span class="p" data-group-id="4100389865-1">)</span><span class="w">
+</span><span class="p" data-group-id="4100389865-2">[</span><span class="p" data-group-id="4100389865-3">%</span><span class="nc" data-group-id="4100389865-3">Collection</span><span class="p" data-group-id="4100389865-3">{</span><span class="p" data-group-id="4100389865-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="4100389865-2">]</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">list_collections</span><span class="p" data-group-id="3101662849-4">(</span><span class="ss">order_by</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3101662849-5">[</span><span class="ss">asc</span><span class="p">:</span><span class="w"> </span><span class="ss">:inserted_at</span><span class="p" data-group-id="3101662849-5">]</span><span class="p">,</span><span class="w"> </span><span class="ss">preload</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3101662849-6">[</span><span class="ss">:project</span><span class="p">,</span><span class="w"> </span><span class="ss">:user</span><span class="p" data-group-id="3101662849-6">]</span><span class="p" data-group-id="3101662849-4">)</span><span class="w">
-</span><span class="p" data-group-id="3101662849-7">[</span><span class="p" data-group-id="3101662849-8">%</span><span class="nc" data-group-id="3101662849-8">Collection</span><span class="p" data-group-id="3101662849-8">{</span><span class="p" data-group-id="3101662849-8">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="3101662849-7">]</span></code></pre><h2 id="list_collections/1-returns" class="section-heading">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">list_collections</span><span class="p" data-group-id="4100389865-4">(</span><span class="ss">order_by</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4100389865-5">[</span><span class="ss">asc</span><span class="p">:</span><span class="w"> </span><span class="ss">:inserted_at</span><span class="p" data-group-id="4100389865-5">]</span><span class="p">,</span><span class="w"> </span><span class="ss">preload</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4100389865-6">[</span><span class="ss">:project</span><span class="p">,</span><span class="w"> </span><span class="ss">:user</span><span class="p" data-group-id="4100389865-6">]</span><span class="p" data-group-id="4100389865-4">)</span><span class="w">
+</span><span class="p" data-group-id="4100389865-7">[</span><span class="p" data-group-id="4100389865-8">%</span><span class="nc" data-group-id="4100389865-8">Collection</span><span class="p" data-group-id="4100389865-8">{</span><span class="p" data-group-id="4100389865-8">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="4100389865-7">]</span></code></pre><h2 id="list_collections/1-returns" class="section-heading">
   <a href="#list_collections/1-returns" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -583,7 +585,7 @@ Pages
 <section class="detail" id="put/3">
 
   <div class="detail-header">
-    <a href="#put/3" class="detail-link" title="Link to this function">
+    <a href="#put/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -602,7 +604,7 @@ Pages
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@spec</span> put(<a href="Lightning.Collections.Collection.html#t:t/0">Lightning.Collections.Collection.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) ::
-  :ok | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
+  :ok | {:error, <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
 
       </div>
 
@@ -612,7 +614,7 @@ Pages
 <section class="detail" id="put_all/2">
 
   <div class="detail-header">
-    <a href="#put_all/2" class="detail-link" title="Link to this function">
+    <a href="#put_all/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -641,7 +643,7 @@ Pages
 <section class="detail" id="update_collection/2">
 
   <div class="detail-header">
-    <a href="#update_collection/2" class="detail-link" title="Link to this function">
+    <a href="#update_collection/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -660,7 +662,7 @@ Pages
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@spec</span> update_collection(<a href="Lightning.Collections.Collection.html#t:t/0">Lightning.Collections.Collection.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) ::
-  {:ok, <a href="Lightning.Collections.Collection.html#t:t/0">Lightning.Collections.Collection.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
+  {:ok, <a href="Lightning.Collections.Collection.html#t:t/0">Lightning.Collections.Collection.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
 
       </div>
 
@@ -676,11 +678,11 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_collection</span><span class="p" data-group-id="1031148927-1">(</span><span class="n">collection</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1031148927-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Updated Name&quot;</span><span class="p" data-group-id="1031148927-2">}</span><span class="p" data-group-id="1031148927-1">)</span><span class="w">
-</span><span class="p" data-group-id="1031148927-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1031148927-4">%</span><span class="nc" data-group-id="1031148927-4">Collection</span><span class="p" data-group-id="1031148927-4">{</span><span class="p" data-group-id="1031148927-4">}</span><span class="p" data-group-id="1031148927-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_collection</span><span class="p" data-group-id="5615772982-1">(</span><span class="n">collection</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5615772982-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Updated Name&quot;</span><span class="p" data-group-id="5615772982-2">}</span><span class="p" data-group-id="5615772982-1">)</span><span class="w">
+</span><span class="p" data-group-id="5615772982-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5615772982-4">%</span><span class="nc" data-group-id="5615772982-4">Collection</span><span class="p" data-group-id="5615772982-4">{</span><span class="p" data-group-id="5615772982-4">}</span><span class="p" data-group-id="5615772982-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_collection</span><span class="p" data-group-id="1031148927-5">(</span><span class="n">collection</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1031148927-6">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="no">nil</span><span class="p" data-group-id="1031148927-6">}</span><span class="p" data-group-id="1031148927-5">)</span><span class="w">
-</span><span class="p" data-group-id="1031148927-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1031148927-8">%</span><span class="nc" data-group-id="1031148927-8">Ecto.Changeset</span><span class="p" data-group-id="1031148927-8">{</span><span class="p" data-group-id="1031148927-8">}</span><span class="p" data-group-id="1031148927-7">}</span></code></pre><h2 id="update_collection/2-returns" class="section-heading">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_collection</span><span class="p" data-group-id="5615772982-5">(</span><span class="n">collection</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5615772982-6">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="no">nil</span><span class="p" data-group-id="5615772982-6">}</span><span class="p" data-group-id="5615772982-5">)</span><span class="w">
+</span><span class="p" data-group-id="5615772982-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5615772982-8">%</span><span class="nc" data-group-id="5615772982-8">Ecto.Changeset</span><span class="p" data-group-id="5615772982-8">{</span><span class="p" data-group-id="5615772982-8">}</span><span class="p" data-group-id="5615772982-7">}</span></code></pre><h2 id="update_collection/2-returns" class="section-heading">
   <a href="#update_collection/2-returns" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -693,34 +695,33 @@ Pages
     </div>
   </section>
 
-      <footer class="footer">
-        <p>
+    <footer class="footer">
+      <p>
 
-          <span class="line">
-            <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
-              Search HexDocs
-            </button>
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
 
-              <a href="Lightning.epub" title="ePub version">
-                Download ePub version
-              </a>
+            <a href="Lightning.epub" title="ePub version">
+              Download ePub version
+            </a>
 
-          </span>
-        </p>
+        </span>
+      </p>
 
-        <p class="built-using">
-          Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
 
-            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
-        </p>
-      </footer>
-    </div>
+      </p>
+
+    </footer>
   </div>
 </main>
 </div>
-
 
   </body>
 </html>

@@ -4,21 +4,19 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="generator" content="ExDoc v0.34.2">
     <meta name="project" content="Lightning v2.10.0-rc.1">
 
+
     <title>Changelog — Lightning v2.10.0-rc.1</title>
-    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
+    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-0D035C9E.js"></script>
-
-      <script src="docs_config.js"></script>
-
-    <script async src="dist/html-J2ASZTQE.js"></script>
-
+    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
+    <script src="dist/sidebar_items-10E0B7BA.js"></script>
+    <script src="docs_config.js"></script>
+    <script async src="dist/html-YIPIRHGU.js"></script>
 
   </head>
   <body data-type="extras" class="page-extra">
@@ -36,43 +34,28 @@
       } catch (error) { }
     </script>
 
-<div class="main">
+<div class="body-wrapper">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
 <nav id="sidebar" class="sidebar">
-  <form class="sidebar-search" action="search.html">
-    <label class="search-label">
-      <span class="sr-only">Search documentation of Lightning</span>
-      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
-    <button type="submit" class="search-button" aria-label="Submit Search">
-      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
-    </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
-      <i class="ri-close-line ri-lg" title="Cancel search"></i>
-    </button>
-  </form>
-
-  <div class="autocomplete">
-    <div class="autocomplete-results">
-    </div>
-  </div>
 
   <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
 
-      <a href="https://openfn.github.io/Lightning">
-        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
-      </a>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
 
-    <div class="sidebar-projectDetails">
-      <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+      <div>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
-      </a>
-      <div class="sidebar-projectVersion" translate="no">
-        v2.10.0-rc.1
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.10.0-rc.1
+        </div>
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -115,24 +98,42 @@ Pages
 
 <main class="content">
   <output role="status" id="toast"></output>
-  <div class="content-outer">
-    <div id="content" class="content-inner">
 
-<h1>
-<button class="icon-action display-settings">
-  <i class="ri-settings-3-line"></i>
-  <span class="sr-only">Settings</span>
-</button>
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/CHANGELOG.md#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/CHANGELOG.md#L1" title="View Source" class="icon-action" rel="help">
-      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-      <span class="sr-only">View Source</span>
-    </a>
-
-
-  <span>Changelog</span>
-</h1>
+    <span>Changelog</span>
+  </h1>
 
 <p>All notable changes to this project will be documented in this file.</p><ul><li><code class="inline">Added</code> for new features.</li><li><code class="inline">Changed</code> for changes in existing functionality.</li><li><code class="inline">Deprecated</code> for soon-to-be removed features.</li><li><code class="inline">Removed</code> for now removed features.</li><li><code class="inline">Fixed</code> for any bug fixes.</li><li><code class="inline">Security</code> in case of vulnerabilities.</li></ul><p>The format is based on <a href="https://keepachangelog.com/en/1.0.0/">Keep a Changelog</a>,
 and this project adheres to
@@ -155,7 +156,8 @@ and this project adheres to
   </a>
   <span class="text">Changed</span>
 </h3>
-<ul><li>Hide the collections and fhir-jembi adaptors from the available adaptors list
+<ul><li>Upgrade dependencies
+<a href="https://github.com/OpenFn/lightning/pull/2624">#2624</a></li><li>Hide the collections and fhir-jembi adaptors from the available adaptors list
 <a href="https://github.com/OpenFn/lightning/issues/2648">#2648</a></li><li>Change column name for &quot;Last Activity&quot; to &quot;Last Modified&quot; on Projects list
 <a href="https://github.com/OpenFn/lightning/issues/2593">#2593</a></li></ul><h3 id="fixed" class="section-heading">
   <a href="#fixed" class="hover-link">
@@ -549,20 +551,20 @@ existing snapshots could be incorrect (e.g. missing steps, missing edges).
 In order to fix this, you will need to manually create new snapshots for
 each of your workflows. This can be done either by modifying the workflow in
 the UI and saving it. Or running a command on the running instance:</p><pre><code class="makeup elixir" translate="no"><span class="kn">alias</span><span class="w"> </span><span class="nc">Lightning.Repo</span><span class="w">
-</span><span class="kn">alias</span><span class="w"> </span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="p" data-group-id="7789678339-1">{</span><span class="nc">Workflow</span><span class="p">,</span><span class="w"> </span><span class="nc">Snapshot</span><span class="p" data-group-id="7789678339-1">}</span><span class="w">
+</span><span class="kn">alias</span><span class="w"> </span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="p" data-group-id="2188209010-1">{</span><span class="nc">Workflow</span><span class="p">,</span><span class="w"> </span><span class="nc">Snapshot</span><span class="p" data-group-id="2188209010-1">}</span><span class="w">
 
-</span><span class="nc">Repo</span><span class="o">.</span><span class="n">transaction</span><span class="p" data-group-id="7789678339-2">(</span><span class="k" data-group-id="7789678339-3">fn</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+</span><span class="nc">Repo</span><span class="o">.</span><span class="n">transaction</span><span class="p" data-group-id="2188209010-2">(</span><span class="k" data-group-id="2188209010-3">fn</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
   </span><span class="n">snapshots</span><span class="w"> </span><span class="o">=</span><span class="w">
-    </span><span class="nc">Repo</span><span class="o">.</span><span class="n">all</span><span class="p" data-group-id="7789678339-4">(</span><span class="nc">Workflow</span><span class="p" data-group-id="7789678339-4">)</span><span class="w">
-    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="7789678339-5">(</span><span class="o">&amp;</span><span class="nc">Workflow</span><span class="o">.</span><span class="n">touch</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="7789678339-5">)</span><span class="w">
-    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="7789678339-6">(</span><span class="o">&amp;</span><span class="nc">Repo</span><span class="o">.</span><span class="n">update!</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="7789678339-6">)</span><span class="w">
-    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="7789678339-7">(</span><span class="k" data-group-id="7789678339-8">fn</span><span class="w"> </span><span class="n">workflow</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
-      </span><span class="p" data-group-id="7789678339-9">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshot</span><span class="p" data-group-id="7789678339-9">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Snapshot</span><span class="o">.</span><span class="n">create</span><span class="p" data-group-id="7789678339-10">(</span><span class="n">workflow</span><span class="p" data-group-id="7789678339-10">)</span><span class="w">
+    </span><span class="nc">Repo</span><span class="o">.</span><span class="n">all</span><span class="p" data-group-id="2188209010-4">(</span><span class="nc">Workflow</span><span class="p" data-group-id="2188209010-4">)</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="2188209010-5">(</span><span class="o">&amp;</span><span class="nc">Workflow</span><span class="o">.</span><span class="n">touch</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="2188209010-5">)</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="2188209010-6">(</span><span class="o">&amp;</span><span class="nc">Repo</span><span class="o">.</span><span class="n">update!</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="2188209010-6">)</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="2188209010-7">(</span><span class="k" data-group-id="2188209010-8">fn</span><span class="w"> </span><span class="n">workflow</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+      </span><span class="p" data-group-id="2188209010-9">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshot</span><span class="p" data-group-id="2188209010-9">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Snapshot</span><span class="o">.</span><span class="n">create</span><span class="p" data-group-id="2188209010-10">(</span><span class="n">workflow</span><span class="p" data-group-id="2188209010-10">)</span><span class="w">
       </span><span class="n">snapshot</span><span class="w">
-    </span><span class="k" data-group-id="7789678339-8">end</span><span class="p" data-group-id="7789678339-7">)</span><span class="w">
+    </span><span class="k" data-group-id="2188209010-8">end</span><span class="p" data-group-id="2188209010-7">)</span><span class="w">
 
- </span><span class="p" data-group-id="7789678339-11">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshots</span><span class="p" data-group-id="7789678339-11">}</span><span class="w">
-</span><span class="k" data-group-id="7789678339-3">end</span><span class="p" data-group-id="7789678339-2">)</span></code></pre></blockquote></li></ul><h2 id="v2-9-0-2024-09-06" class="section-heading">
+ </span><span class="p" data-group-id="2188209010-11">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshots</span><span class="p" data-group-id="2188209010-11">}</span><span class="w">
+</span><span class="k" data-group-id="2188209010-3">end</span><span class="p" data-group-id="2188209010-2">)</span></code></pre></blockquote></li></ul><h2 id="v2-9-0-2024-09-06" class="section-heading">
   <a href="#v2-9-0-2024-09-06" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -1105,7 +1107,7 @@ Trigger<a href="https://github.com/OpenFn/lightning/issues/2188">#2188</a></li><
   <span class="text">Fixed</span>
 </h3>
 <ul><li>Fix some adaptor docs not displaying
-<a href="https://github.com/OpenFn/lightning/issues/2019">#2019</a></li><li>Fix broken <code class="inline">mix lightning.install_adaptor_icons</code> task due to addition of Finch
+<a href="https://github.com/OpenFn/lightning/issues/2019">#2019</a></li><li>Fix broken <a href="Mix.Tasks.Lightning.InstallAdaptorIcons.html"><code class="inline">mix lightning.install_adaptor_icons</code></a> task due to addition of Finch
 http client change.</li></ul><h2 id="v2-6-3-2024-06-19" class="section-heading">
   <a href="#v2-6-3-2024-06-19" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
@@ -2595,7 +2597,7 @@ work orders up to <code class="inline">v0.10.0</code>, though the granularity of
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="6426275203-1">(</span><span class="p" data-group-id="6426275203-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="4656123719-1">(</span><span class="p" data-group-id="4656123719-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added-48" class="section-heading">
@@ -3397,7 +3399,7 @@ communicate with each other.</li><li>Users can set up realtime alerts for a proj
 </h3>
 <ul><li>Better code-assist and intelliense in the Job Editor</li><li>Updated @openfn/workflow-diagram to 0.4.0</li><li>Make plus button part of job nodes in Workflow Diagram</li><li>Updated @openfn/adaptor-docs to 0.0.5</li><li>Updated @openfn/describe-package to 0.0.10</li><li>Create an follow a manual Run from the Job Inspector</li><li>View all workflows in a project on the workflows index page</li><li>Move @openfn/workflow-diagram into the application, the NPM module is now
 deprecated.</li><li>Remove workflow name from first node</li><li>Move the used parts of <code class="inline">@openfn/engine</code> into the application.</li><li>[BREAKING CHANGE] Ported <code class="inline">mix openfn.install.runtime</code> into application, use
-<code class="inline">mix lightning.install_runtime</code>.</li><li>[BREAKING CHANGE] Introduced <code class="inline">@openfn/cli</code> as the new runtime for Jobs</li><li>Rename a workflow through the page heading</li><li>Hide the dataclips tab for beta</li><li>Make adaptor default to common@latest</li><li>Remove jobs list page</li><li>Better error handling in the docs panel</li><li>Disable credential ownership transfer in dev and prod environments</li><li>Add project settings page</li><li>Change Work Order filters to apply to the aggregate state of the work order
+<a href="Mix.Tasks.Lightning.InstallRuntime.html"><code class="inline">mix lightning.install_runtime</code></a>.</li><li>[BREAKING CHANGE] Introduced <code class="inline">@openfn/cli</code> as the new runtime for Jobs</li><li>Rename a workflow through the page heading</li><li>Hide the dataclips tab for beta</li><li>Make adaptor default to common@latest</li><li>Remove jobs list page</li><li>Better error handling in the docs panel</li><li>Disable credential ownership transfer in dev and prod environments</li><li>Add project settings page</li><li>Change Work Order filters to apply to the aggregate state of the work order
 and not the run directly</li><li>Enable jobs by default</li><li>Set log level to info</li><li>Add Beta checkbox to register page</li><li>User roles and permissions</li></ul><h3 id="fixed-109" class="section-heading">
   <a href="#fixed-109" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
@@ -3593,7 +3595,9 @@ dropdown</li><li>Create and edit dataclips</li><li>Add a production tag to crede
 <ul><li><p>Register, log in and log out of an account</p></li><li><p>Allow superusers and admin users to create projects</p></li><li><p>Allow admin users to create or disable a user’s account</p></li><li><p>Allow superusers for local deployments to create users and give them access to
 project spaces</p></li><li><p>Create and edit a job with a webhook, flow/fail or cron trigger</p></li><li><p>Create and edit credentials for a job</p></li><li><p>Copy a job's webhook URL</p></li><li><p>View all workflows in a project visually</p></li><li><p>Deploy lightning locally with Docker</p></li><li><p>Enable a job to automatically process incoming requests</p></li><li><p>Run a job with a webhook or flow/fail trigger</p></li><li><p>View job runs along with their logs, exit code, start and end time</p></li><li><p>View data clips that have initiated job runs (http requests for webhooks, run
 results)</p></li></ul>
-<div class="bottom-actions">
+</div>
+
+<div class="bottom-actions" id="bottom-actions">
   <div class="bottom-actions-item">
 
       <a href="provisioning.html" class="bottom-actions-button" rel="prev">
@@ -3610,34 +3614,33 @@ Provisioning
 
   </div>
 </div>
-      <footer class="footer">
-        <p>
+    <footer class="footer">
+      <p>
 
-          <span class="line">
-            <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
-              Search HexDocs
-            </button>
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
 
-              <a href="Lightning.epub" title="ePub version">
-                Download ePub version
-              </a>
+            <a href="Lightning.epub" title="ePub version">
+              Download ePub version
+            </a>
 
-          </span>
-        </p>
+        </span>
+      </p>
 
-        <p class="built-using">
-          Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
 
-            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
-        </p>
-      </footer>
-    </div>
+      </p>
+
+    </footer>
   </div>
 </main>
 </div>
-
 
   </body>
 </html>

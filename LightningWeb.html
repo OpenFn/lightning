@@ -4,21 +4,19 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="generator" content="ExDoc v0.34.2">
     <meta name="project" content="Lightning v2.10.0-rc.1">
 
+
     <title>LightningWeb — Lightning v2.10.0-rc.1</title>
-    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
+    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-0D035C9E.js"></script>
-
-      <script src="docs_config.js"></script>
-
-    <script async src="dist/html-J2ASZTQE.js"></script>
-
+    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
+    <script src="dist/sidebar_items-10E0B7BA.js"></script>
+    <script src="docs_config.js"></script>
+    <script async src="dist/html-YIPIRHGU.js"></script>
 
   </head>
   <body data-type="modules" class="page-module">
@@ -36,43 +34,28 @@
       } catch (error) { }
     </script>
 
-<div class="main">
+<div class="body-wrapper">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
 <nav id="sidebar" class="sidebar">
-  <form class="sidebar-search" action="search.html">
-    <label class="search-label">
-      <span class="sr-only">Search documentation of Lightning</span>
-      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
-    <button type="submit" class="search-button" aria-label="Submit Search">
-      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
-    </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
-      <i class="ri-close-line ri-lg" title="Cancel search"></i>
-    </button>
-  </form>
-
-  <div class="autocomplete">
-    <div class="autocomplete-results">
-    </div>
-  </div>
 
   <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
 
-      <a href="https://openfn.github.io/Lightning">
-        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
-      </a>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
 
-    <div class="sidebar-projectDetails">
-      <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+      <div>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
-      </a>
-      <div class="sidebar-projectVersion" translate="no">
-        v2.10.0-rc.1
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.10.0-rc.1
+        </div>
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -115,28 +98,46 @@ Pages
 
 <main class="content">
   <output role="status" id="toast"></output>
-  <div class="content-outer">
-    <div id="content" class="content-inner">
 
-<h1>
-<button class="icon-action display-settings">
-  <i class="ri-settings-3-line"></i>
-  <span class="sr-only">Settings</span>
-</button>
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+    <span translate="no">LightningWeb</span> 
+    <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
+
+  </h1>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web.ex#L1" title="View Source" class="icon-action" rel="help">
-      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-      <span class="sr-only">View Source</span>
-    </a>
-
-  <span translate="no">LightningWeb</span> 
-  <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
-
-</h1>
-
-
-  <section id="moduledoc">
+    <section id="moduledoc">
 <p>The entrypoint for defining your web interface, such
 as controllers, views, channels and so on.</p><p>This can be used in your application as:</p><pre><code class="makeup elixir" translate="no"><span class="kn">use</span><span class="w"> </span><span class="nc">LightningWeb</span><span class="p">,</span><span class="w"> </span><span class="ss">:controller</span><span class="w">
 </span><span class="kn">use</span><span class="w"> </span><span class="nc">LightningWeb</span><span class="p">,</span><span class="w"> </span><span class="ss">:view</span></code></pre><p>The definitions below will be executed for every view,
@@ -144,8 +145,9 @@ controller, etc, so keep them short and clean, focused
 on imports, uses and aliases.</p><p>Do NOT define functions inside the quoted expressions
 below. Instead, define any helper function in modules
 and import those modules here.</p>
-  </section>
+    </section>
 
+</div>
 
   <section id="summary" class="details-list">
     <h1 class="section-heading">
@@ -161,7 +163,7 @@ and import those modules here.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#__using__/1" translate="no">__using__(which)</a>
+        <a href="#__using__/1" data-no-tooltip translate="no">__using__(which)</a>
 
       </div>
 
@@ -171,7 +173,7 @@ and import those modules here.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#channel/0" translate="no">channel()</a>
+        <a href="#channel/0" data-no-tooltip translate="no">channel()</a>
 
       </div>
 
@@ -179,7 +181,7 @@ and import those modules here.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#component/0" translate="no">component()</a>
+        <a href="#component/0" data-no-tooltip translate="no">component()</a>
 
       </div>
 
@@ -187,7 +189,7 @@ and import those modules here.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#controller/0" translate="no">controller()</a>
+        <a href="#controller/0" data-no-tooltip translate="no">controller()</a>
 
       </div>
 
@@ -195,7 +197,7 @@ and import those modules here.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#html/0" translate="no">html()</a>
+        <a href="#html/0" data-no-tooltip translate="no">html()</a>
 
       </div>
 
@@ -203,7 +205,7 @@ and import those modules here.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#live_component/0" translate="no">live_component()</a>
+        <a href="#live_component/0" data-no-tooltip translate="no">live_component()</a>
 
       </div>
 
@@ -211,7 +213,7 @@ and import those modules here.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#live_view/1" translate="no">live_view(opts \\ [])</a>
+        <a href="#live_view/1" data-no-tooltip translate="no">live_view(opts \\ [])</a>
 
       </div>
 
@@ -219,7 +221,7 @@ and import those modules here.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#router/0" translate="no">router()</a>
+        <a href="#router/0" data-no-tooltip translate="no">router()</a>
 
       </div>
 
@@ -227,7 +229,7 @@ and import those modules here.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#static_paths/0" translate="no">static_paths()</a>
+        <a href="#static_paths/0" data-no-tooltip translate="no">static_paths()</a>
 
       </div>
 
@@ -235,7 +237,7 @@ and import those modules here.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#verified_routes/0" translate="no">verified_routes()</a>
+        <a href="#verified_routes/0" data-no-tooltip translate="no">verified_routes()</a>
 
       </div>
 
@@ -243,7 +245,7 @@ and import those modules here.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#view/0" translate="no">view()</a>
+        <a href="#view/0" data-no-tooltip translate="no">view()</a>
 
       </div>
 
@@ -265,13 +267,13 @@ and import those modules here.</p>
 <section class="detail" id="__using__/1">
 
   <div class="detail-header">
-    <a href="#__using__/1" class="detail-link" title="Link to this macro">
+    <a href="#__using__/1" class="detail-link" data-no-tooltip title="Link to this macro">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this macro</span>
     </a>
     <h1 class="signature" translate="no">__using__(which)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web.ex#L168" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web.ex#L169" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -289,13 +291,13 @@ and import those modules here.</p>
 <section class="detail" id="channel/0">
 
   <div class="detail-header">
-    <a href="#channel/0" class="detail-link" title="Link to this function">
+    <a href="#channel/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
     <h1 class="signature" translate="no">channel()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web.ex#L96" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web.ex#L97" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -311,13 +313,13 @@ and import those modules here.</p>
 <section class="detail" id="component/0">
 
   <div class="detail-header">
-    <a href="#component/0" class="detail-link" title="Link to this function">
+    <a href="#component/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
     <h1 class="signature" translate="no">component()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web.ex#L87" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web.ex#L88" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -333,7 +335,7 @@ and import those modules here.</p>
 <section class="detail" id="controller/0">
 
   <div class="detail-header">
-    <a href="#controller/0" class="detail-link" title="Link to this function">
+    <a href="#controller/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -355,13 +357,13 @@ and import those modules here.</p>
 <section class="detail" id="html/0">
 
   <div class="detail-header">
-    <a href="#html/0" class="detail-link" title="Link to this function">
+    <a href="#html/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
     <h1 class="signature" translate="no">html()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web.ex#L141" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web.ex#L142" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -377,13 +379,13 @@ and import those modules here.</p>
 <section class="detail" id="live_component/0">
 
   <div class="detail-header">
-    <a href="#live_component/0" class="detail-link" title="Link to this function">
+    <a href="#live_component/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
     <h1 class="signature" translate="no">live_component()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web.ex#L78" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web.ex#L79" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -401,7 +403,7 @@ and import those modules here.</p>
     <span id="live_view/0"></span>
 
   <div class="detail-header">
-    <a href="#live_view/1" class="detail-link" title="Link to this function">
+    <a href="#live_view/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -423,7 +425,7 @@ and import those modules here.</p>
 <section class="detail" id="router/0">
 
   <div class="detail-header">
-    <a href="#router/0" class="detail-link" title="Link to this function">
+    <a href="#router/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -445,7 +447,7 @@ and import those modules here.</p>
 <section class="detail" id="static_paths/0">
 
   <div class="detail-header">
-    <a href="#static_paths/0" class="detail-link" title="Link to this function">
+    <a href="#static_paths/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -467,13 +469,13 @@ and import those modules here.</p>
 <section class="detail" id="verified_routes/0">
 
   <div class="detail-header">
-    <a href="#verified_routes/0" class="detail-link" title="Link to this function">
+    <a href="#verified_routes/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
     <h1 class="signature" translate="no">verified_routes()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web.ex#L156" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web.ex#L157" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -489,7 +491,7 @@ and import those modules here.</p>
 <section class="detail" id="view/0">
 
   <div class="detail-header">
-    <a href="#view/0" class="detail-link" title="Link to this function">
+    <a href="#view/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -512,34 +514,33 @@ and import those modules here.</p>
     </div>
   </section>
 
-      <footer class="footer">
-        <p>
+    <footer class="footer">
+      <p>
 
-          <span class="line">
-            <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
-              Search HexDocs
-            </button>
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
 
-              <a href="Lightning.epub" title="ePub version">
-                Download ePub version
-              </a>
+            <a href="Lightning.epub" title="ePub version">
+              Download ePub version
+            </a>
 
-          </span>
-        </p>
+        </span>
+      </p>
 
-        <p class="built-using">
-          Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
 
-            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
-        </p>
-      </footer>
-    </div>
+      </p>
+
+    </footer>
   </div>
 </main>
 </div>
-
 
   </body>
 </html>

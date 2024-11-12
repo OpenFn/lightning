@@ -4,21 +4,19 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="generator" content="ExDoc v0.34.2">
     <meta name="project" content="Lightning v2.10.0-rc.1">
 
+
     <title>Lightning.KafkaTriggers — Lightning v2.10.0-rc.1</title>
-    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
+    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-0D035C9E.js"></script>
-
-      <script src="docs_config.js"></script>
-
-    <script async src="dist/html-J2ASZTQE.js"></script>
-
+    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
+    <script src="dist/sidebar_items-10E0B7BA.js"></script>
+    <script src="docs_config.js"></script>
+    <script async src="dist/html-YIPIRHGU.js"></script>
 
   </head>
   <body data-type="modules" class="page-module">
@@ -36,43 +34,28 @@
       } catch (error) { }
     </script>
 
-<div class="main">
+<div class="body-wrapper">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
 <nav id="sidebar" class="sidebar">
-  <form class="sidebar-search" action="search.html">
-    <label class="search-label">
-      <span class="sr-only">Search documentation of Lightning</span>
-      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
-    <button type="submit" class="search-button" aria-label="Submit Search">
-      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
-    </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
-      <i class="ri-close-line ri-lg" title="Cancel search"></i>
-    </button>
-  </form>
-
-  <div class="autocomplete">
-    <div class="autocomplete-results">
-    </div>
-  </div>
 
   <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
 
-      <a href="https://openfn.github.io/Lightning">
-        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
-      </a>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
 
-    <div class="sidebar-projectDetails">
-      <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+      <div>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
-      </a>
-      <div class="sidebar-projectVersion" translate="no">
-        v2.10.0-rc.1
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.10.0-rc.1
+        </div>
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -115,31 +98,50 @@ Pages
 
 <main class="content">
   <output role="status" id="toast"></output>
-  <div class="content-outer">
-    <div id="content" class="content-inner">
 
-<h1>
-<button class="icon-action display-settings">
-  <i class="ri-settings-3-line"></i>
-  <span class="sr-only">Settings</span>
-</button>
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+    <span translate="no">Lightning.KafkaTriggers</span> 
+    <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
+
+  </h1>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers.ex#L1" title="View Source" class="icon-action" rel="help">
-      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-      <span class="sr-only">View Source</span>
-    </a>
-
-  <span translate="no">Lightning.KafkaTriggers</span> 
-  <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
-
-</h1>
-
-
-  <section id="moduledoc">
+    <section id="moduledoc">
 <p>Contains the logic to manage kafka trigger and their associated pipelines.</p>
-  </section>
+    </section>
 
+</div>
 
   <section id="summary" class="details-list">
     <h1 class="section-heading">
@@ -155,7 +157,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#alternate_storage_file_name/2" translate="no">alternate_storage_file_name(trigger_id, message)</a>
+        <a href="#alternate_storage_file_name/2" data-no-tooltip translate="no">alternate_storage_file_name(trigger_id, message)</a>
 
       </div>
 
@@ -163,7 +165,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#build_topic_partition_offset/1" translate="no">build_topic_partition_offset(message)</a>
+        <a href="#build_topic_partition_offset/1" data-no-tooltip translate="no">build_topic_partition_offset(message)</a>
 
       </div>
 
@@ -174,7 +176,7 @@ association with the trigger id.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#convert_rate_limit/0" translate="no">convert_rate_limit()</a>
+        <a href="#convert_rate_limit/0" data-no-tooltip translate="no">convert_rate_limit()</a>
 
       </div>
 
@@ -182,7 +184,7 @@ association with the trigger id.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#enable_disable_triggers/1" translate="no">enable_disable_triggers(triggers)</a>
+        <a href="#enable_disable_triggers/1" data-no-tooltip translate="no">enable_disable_triggers(triggers)</a>
 
       </div>
 
@@ -190,7 +192,7 @@ association with the trigger id.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#failure_notification_tracking_key/1" translate="no">failure_notification_tracking_key(trigger_id)</a>
+        <a href="#failure_notification_tracking_key/1" data-no-tooltip translate="no">failure_notification_tracking_key(trigger_id)</a>
 
       </div>
 
@@ -198,7 +200,7 @@ association with the trigger id.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#find_enabled_triggers/0" translate="no">find_enabled_triggers()</a>
+        <a href="#find_enabled_triggers/0" data-no-tooltip translate="no">find_enabled_triggers()</a>
 
       </div>
 
@@ -206,7 +208,7 @@ association with the trigger id.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#generate_pipeline_child_spec/1" translate="no">generate_pipeline_child_spec(trigger)</a>
+        <a href="#generate_pipeline_child_spec/1" data-no-tooltip translate="no">generate_pipeline_child_spec(trigger)</a>
 
       </div>
 
@@ -216,7 +218,7 @@ association with the trigger id.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_kafka_triggers_being_updated/1" translate="no">get_kafka_triggers_being_updated(changeset)</a>
+        <a href="#get_kafka_triggers_being_updated/1" data-no-tooltip translate="no">get_kafka_triggers_being_updated(changeset)</a>
 
       </div>
 
@@ -224,7 +226,7 @@ association with the trigger id.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#initial_policy/1" translate="no">initial_policy(map)</a>
+        <a href="#initial_policy/1" data-no-tooltip translate="no">initial_policy(map)</a>
 
       </div>
 
@@ -232,7 +234,7 @@ association with the trigger id.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#maybe_write_to_alternate_storage/2" translate="no">maybe_write_to_alternate_storage(trigger_id, msg)</a>
+        <a href="#maybe_write_to_alternate_storage/2" data-no-tooltip translate="no">maybe_write_to_alternate_storage(trigger_id, msg)</a>
 
       </div>
 
@@ -240,7 +242,7 @@ association with the trigger id.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#notify_users_of_trigger_failure/1" translate="no">notify_users_of_trigger_failure(trigger_id)</a>
+        <a href="#notify_users_of_trigger_failure/1" data-no-tooltip translate="no">notify_users_of_trigger_failure(trigger_id)</a>
 
       </div>
 
@@ -248,7 +250,7 @@ association with the trigger id.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#send_notification?/2" translate="no">send_notification?(sending_at, last_sent_at)</a>
+        <a href="#send_notification?/2" data-no-tooltip translate="no">send_notification?(sending_at, last_sent_at)</a>
 
       </div>
 
@@ -256,7 +258,7 @@ association with the trigger id.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#start_triggers/0" translate="no">start_triggers()</a>
+        <a href="#start_triggers/0" data-no-tooltip translate="no">start_triggers()</a>
 
       </div>
 
@@ -264,7 +266,7 @@ association with the trigger id.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#update_pipeline/2" translate="no">update_pipeline(supervisor, trigger_id)</a>
+        <a href="#update_pipeline/2" data-no-tooltip translate="no">update_pipeline(supervisor, trigger_id)</a>
 
       </div>
 
@@ -286,7 +288,7 @@ association with the trigger id.</p></div>
 <section class="detail" id="alternate_storage_file_name/2">
 
   <div class="detail-header">
-    <a href="#alternate_storage_file_name/2" class="detail-link" title="Link to this function">
+    <a href="#alternate_storage_file_name/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -308,7 +310,7 @@ association with the trigger id.</p></div>
 <section class="detail" id="build_topic_partition_offset/1">
 
   <div class="detail-header">
-    <a href="#build_topic_partition_offset/1" class="detail-link" title="Link to this function">
+    <a href="#build_topic_partition_offset/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -331,7 +333,7 @@ association with the trigger id.</p>
 <section class="detail" id="convert_rate_limit/0">
 
   <div class="detail-header">
-    <a href="#convert_rate_limit/0" class="detail-link" title="Link to this function">
+    <a href="#convert_rate_limit/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -353,7 +355,7 @@ association with the trigger id.</p>
 <section class="detail" id="enable_disable_triggers/1">
 
   <div class="detail-header">
-    <a href="#enable_disable_triggers/1" class="detail-link" title="Link to this function">
+    <a href="#enable_disable_triggers/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -375,7 +377,7 @@ association with the trigger id.</p>
 <section class="detail" id="failure_notification_tracking_key/1">
 
   <div class="detail-header">
-    <a href="#failure_notification_tracking_key/1" class="detail-link" title="Link to this function">
+    <a href="#failure_notification_tracking_key/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -397,7 +399,7 @@ association with the trigger id.</p>
 <section class="detail" id="find_enabled_triggers/0">
 
   <div class="detail-header">
-    <a href="#find_enabled_triggers/0" class="detail-link" title="Link to this function">
+    <a href="#find_enabled_triggers/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -419,7 +421,7 @@ association with the trigger id.</p>
 <section class="detail" id="generate_pipeline_child_spec/1">
 
   <div class="detail-header">
-    <a href="#generate_pipeline_child_spec/1" class="detail-link" title="Link to this function">
+    <a href="#generate_pipeline_child_spec/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -441,7 +443,7 @@ association with the trigger id.</p>
 <section class="detail" id="get_kafka_triggers_being_updated/1">
 
   <div class="detail-header">
-    <a href="#get_kafka_triggers_being_updated/1" class="detail-link" title="Link to this function">
+    <a href="#get_kafka_triggers_being_updated/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -463,7 +465,7 @@ association with the trigger id.</p>
 <section class="detail" id="initial_policy/1">
 
   <div class="detail-header">
-    <a href="#initial_policy/1" class="detail-link" title="Link to this function">
+    <a href="#initial_policy/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -485,7 +487,7 @@ association with the trigger id.</p>
 <section class="detail" id="maybe_write_to_alternate_storage/2">
 
   <div class="detail-header">
-    <a href="#maybe_write_to_alternate_storage/2" class="detail-link" title="Link to this function">
+    <a href="#maybe_write_to_alternate_storage/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -507,7 +509,7 @@ association with the trigger id.</p>
 <section class="detail" id="notify_users_of_trigger_failure/1">
 
   <div class="detail-header">
-    <a href="#notify_users_of_trigger_failure/1" class="detail-link" title="Link to this function">
+    <a href="#notify_users_of_trigger_failure/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -529,7 +531,7 @@ association with the trigger id.</p>
 <section class="detail" id="send_notification?/2">
 
   <div class="detail-header">
-    <a href="#send_notification?/2" class="detail-link" title="Link to this function">
+    <a href="#send_notification?/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -551,7 +553,7 @@ association with the trigger id.</p>
 <section class="detail" id="start_triggers/0">
 
   <div class="detail-header">
-    <a href="#start_triggers/0" class="detail-link" title="Link to this function">
+    <a href="#start_triggers/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -573,7 +575,7 @@ association with the trigger id.</p>
 <section class="detail" id="update_pipeline/2">
 
   <div class="detail-header">
-    <a href="#update_pipeline/2" class="detail-link" title="Link to this function">
+    <a href="#update_pipeline/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -596,34 +598,33 @@ association with the trigger id.</p>
     </div>
   </section>
 
-      <footer class="footer">
-        <p>
+    <footer class="footer">
+      <p>
 
-          <span class="line">
-            <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
-              Search HexDocs
-            </button>
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
 
-              <a href="Lightning.epub" title="ePub version">
-                Download ePub version
-              </a>
+            <a href="Lightning.epub" title="ePub version">
+              Download ePub version
+            </a>
 
-          </span>
-        </p>
+        </span>
+      </p>
 
-        <p class="built-using">
-          Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
 
-            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
-        </p>
-      </footer>
-    </div>
+      </p>
+
+    </footer>
   </div>
 </main>
 </div>
-
 
   </body>
 </html>

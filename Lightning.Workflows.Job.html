@@ -4,21 +4,19 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="generator" content="ExDoc v0.34.2">
     <meta name="project" content="Lightning v2.10.0-rc.1">
 
+
     <title>Lightning.Workflows.Job — Lightning v2.10.0-rc.1</title>
-    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
+    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-0D035C9E.js"></script>
-
-      <script src="docs_config.js"></script>
-
-    <script async src="dist/html-J2ASZTQE.js"></script>
-
+    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
+    <script src="dist/sidebar_items-10E0B7BA.js"></script>
+    <script src="docs_config.js"></script>
+    <script async src="dist/html-YIPIRHGU.js"></script>
 
   </head>
   <body data-type="modules" class="page-module">
@@ -36,43 +34,28 @@
       } catch (error) { }
     </script>
 
-<div class="main">
+<div class="body-wrapper">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
 <nav id="sidebar" class="sidebar">
-  <form class="sidebar-search" action="search.html">
-    <label class="search-label">
-      <span class="sr-only">Search documentation of Lightning</span>
-      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
-    <button type="submit" class="search-button" aria-label="Submit Search">
-      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
-    </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
-      <i class="ri-close-line ri-lg" title="Cancel search"></i>
-    </button>
-  </form>
-
-  <div class="autocomplete">
-    <div class="autocomplete-results">
-    </div>
-  </div>
 
   <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
 
-      <a href="https://openfn.github.io/Lightning">
-        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
-      </a>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
 
-    <div class="sidebar-projectDetails">
-      <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+      <div>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
-      </a>
-      <div class="sidebar-projectVersion" translate="no">
-        v2.10.0-rc.1
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.10.0-rc.1
+        </div>
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -115,28 +98,46 @@ Pages
 
 <main class="content">
   <output role="status" id="toast"></output>
-  <div class="content-outer">
-    <div id="content" class="content-inner">
 
-<h1>
-<button class="icon-action display-settings">
-  <i class="ri-settings-3-line"></i>
-  <span class="sr-only">Settings</span>
-</button>
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/job.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+    <span translate="no">Lightning.Workflows.Job</span> 
+    <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
+
+  </h1>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/job.ex#L1" title="View Source" class="icon-action" rel="help">
-      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-      <span class="sr-only">View Source</span>
-    </a>
-
-  <span translate="no">Lightning.Workflows.Job</span> 
-  <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
-
-</h1>
-
-
-  <section id="moduledoc">
+    <section id="moduledoc">
 <p>Ecto model for Jobs.</p><p>A Job contains the fields for defining a job.</p><ul><li><code class="inline">body</code>
 The expression/javascript code</li><li><code class="inline">name</code>
 A plain text identifier</li><li><code class="inline">adaptor</code>
@@ -145,8 +146,9 @@ E.g. <code class="inline">@openfn/language-http@v1.2.3</code> or <code class="in
 While the version suffix isn't enforced here as it's not strictly necessary
 in this context, the front end will ensure a version is stated (<code class="inline">@latest</code>
 being the default).</li></ul>
-  </section>
+    </section>
 
+</div>
 
   <section id="summary" class="details-list">
     <h1 class="section-heading">
@@ -162,7 +164,7 @@ being the default).</li></ul>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#t:t/0" translate="no">t()</a>
+        <a href="#t:t/0" data-no-tooltip translate="no">t()</a>
 
       </div>
 
@@ -176,7 +178,7 @@ being the default).</li></ul>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#new/1" translate="no">new(attrs \\ %{})</a>
+        <a href="#new/1" data-no-tooltip translate="no">new(attrs \\ %{})</a>
 
       </div>
 
@@ -184,7 +186,7 @@ being the default).</li></ul>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#put_project_credential/2" translate="no">put_project_credential(job, project_credential)</a>
+        <a href="#put_project_credential/2" data-no-tooltip translate="no">put_project_credential(job, project_credential)</a>
 
       </div>
 
@@ -192,7 +194,7 @@ being the default).</li></ul>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#put_workflow/2" translate="no">put_workflow(changeset, workflow)</a>
+        <a href="#put_workflow/2" data-no-tooltip translate="no">put_workflow(changeset, workflow)</a>
 
       </div>
 
@@ -203,7 +205,7 @@ Workflow changeset - and want it to be created at the same time as a Job.</p></d
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#validate/1" translate="no">validate(changeset)</a>
+        <a href="#validate/1" data-no-tooltip translate="no">validate(changeset)</a>
 
       </div>
 
@@ -225,7 +227,7 @@ Workflow changeset - and want it to be created at the same time as a Job.</p></d
 <section class="detail" id="t:t/0">
 
   <div class="detail-header">
-    <a href="#t:t/0" class="detail-link" title="Link to this type">
+    <a href="#t:t/0" class="detail-link" data-no-tooltip title="Link to this type">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this type</span>
     </a>
@@ -244,13 +246,13 @@ Workflow changeset - and want it to be created at the same time as a Job.</p></d
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.Workflows.Job{
-  __meta__: <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Schema.Metadata.html#t:t/0">Ecto.Schema.Metadata.t</a>(),
+  __meta__: <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Schema.Metadata.html#t:t/0">Ecto.Schema.Metadata.t</a>(),
   adaptor: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
   body: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
   credential:
-    nil | <a href="Lightning.Credentials.Credential.html#t:t/0">Lightning.Credentials.Credential.t</a>() | <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>(),
+    nil | <a href="Lightning.Credentials.Credential.html#t:t/0">Lightning.Credentials.Credential.t</a>() | <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>(),
   delete: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-  id: <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
+  id: <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
   inserted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   name: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
   project: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
@@ -259,7 +261,7 @@ Workflow changeset - and want it to be created at the same time as a Job.</p></d
   steps: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   updated_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   workflow:
-    nil | <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>() | <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>(),
+    nil | <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>() | <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>(),
   workflow_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()
 }</pre>
 
@@ -285,7 +287,7 @@ Workflow changeset - and want it to be created at the same time as a Job.</p></d
     <span id="new/0"></span>
 
   <div class="detail-header">
-    <a href="#new/1" class="detail-link" title="Link to this function">
+    <a href="#new/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -307,7 +309,7 @@ Workflow changeset - and want it to be created at the same time as a Job.</p></d
 <section class="detail" id="put_project_credential/2">
 
   <div class="detail-header">
-    <a href="#put_project_credential/2" class="detail-link" title="Link to this function">
+    <a href="#put_project_credential/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -329,7 +331,7 @@ Workflow changeset - and want it to be created at the same time as a Job.</p></d
 <section class="detail" id="put_workflow/2">
 
   <div class="detail-header">
-    <a href="#put_workflow/2" class="detail-link" title="Link to this function">
+    <a href="#put_workflow/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -348,31 +350,31 @@ Workflow changeset - and want it to be created at the same time as a Job.</p></d
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@spec</span> put_workflow(
-  <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="#t:t/0">t</a>()),
-  <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>())
-) :: <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="#t:t/0">t</a>())</pre>
+  <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="#t:t/0">t</a>()),
+  <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>())
+) :: <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="#t:t/0">t</a>())</pre>
 
       </div>
 
 <p>Attaches a workflow to a job, this is useful when you have an unpersisted
 Workflow changeset - and want it to be created at the same time as a Job.</p><p>Example:</p><pre><code class="makeup elixir" translate="no"><span class="n">workflow</span><span class="w"> </span><span class="o">=</span><span class="w">
-  </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">cast</span><span class="p" data-group-id="7142253521-1">(</span><span class="w">
-    </span><span class="p" data-group-id="7142253521-2">%</span><span class="nc" data-group-id="7142253521-2">Lightning.Workflows.Workflow</span><span class="p" data-group-id="7142253521-2">{</span><span class="p" data-group-id="7142253521-2">}</span><span class="p">,</span><span class="w">
-    </span><span class="p" data-group-id="7142253521-3">%{</span><span class="w"> </span><span class="s">&quot;project_id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="n">attrs</span><span class="p" data-group-id="7142253521-4">[</span><span class="ss">:project_id</span><span class="p" data-group-id="7142253521-4">]</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nc">Ecto.UUID</span><span class="o">.</span><span class="n">generate</span><span class="p" data-group-id="7142253521-5">(</span><span class="p" data-group-id="7142253521-5">)</span><span class="w"> </span><span class="p" data-group-id="7142253521-3">}</span><span class="p">,</span><span class="w">
-    </span><span class="p" data-group-id="7142253521-6">[</span><span class="ss">:project_id</span><span class="p">,</span><span class="w"> </span><span class="ss">:id</span><span class="p" data-group-id="7142253521-6">]</span><span class="w">
-  </span><span class="p" data-group-id="7142253521-1">)</span><span class="w">
+  </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">cast</span><span class="p" data-group-id="5968913268-1">(</span><span class="w">
+    </span><span class="p" data-group-id="5968913268-2">%</span><span class="nc" data-group-id="5968913268-2">Lightning.Workflows.Workflow</span><span class="p" data-group-id="5968913268-2">{</span><span class="p" data-group-id="5968913268-2">}</span><span class="p">,</span><span class="w">
+    </span><span class="p" data-group-id="5968913268-3">%{</span><span class="w"> </span><span class="s">&quot;project_id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="n">attrs</span><span class="p" data-group-id="5968913268-4">[</span><span class="ss">:project_id</span><span class="p" data-group-id="5968913268-4">]</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nc">Ecto.UUID</span><span class="o">.</span><span class="n">generate</span><span class="p" data-group-id="5968913268-5">(</span><span class="p" data-group-id="5968913268-5">)</span><span class="w"> </span><span class="p" data-group-id="5968913268-3">}</span><span class="p">,</span><span class="w">
+    </span><span class="p" data-group-id="5968913268-6">[</span><span class="ss">:project_id</span><span class="p">,</span><span class="w"> </span><span class="ss">:id</span><span class="p" data-group-id="5968913268-6">]</span><span class="w">
+  </span><span class="p" data-group-id="5968913268-1">)</span><span class="w">
 
 </span><span class="n">job</span><span class="w"> </span><span class="o">=</span><span class="w">
-  </span><span class="p" data-group-id="7142253521-7">%</span><span class="nc" data-group-id="7142253521-7">Job</span><span class="p" data-group-id="7142253521-7">{</span><span class="p" data-group-id="7142253521-7">}</span><span class="w">
-  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">change</span><span class="p" data-group-id="7142253521-8">(</span><span class="p" data-group-id="7142253521-8">)</span><span class="w">
-  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Job</span><span class="o">.</span><span class="n">put_workflow</span><span class="p" data-group-id="7142253521-9">(</span><span class="n">workflow</span><span class="p" data-group-id="7142253521-9">)</span><span class="w">
-  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Job</span><span class="o">.</span><span class="n">changeset</span><span class="p" data-group-id="7142253521-10">(</span><span class="n">attrs</span><span class="p" data-group-id="7142253521-10">)</span></code></pre>
+  </span><span class="p" data-group-id="5968913268-7">%</span><span class="nc" data-group-id="5968913268-7">Job</span><span class="p" data-group-id="5968913268-7">{</span><span class="p" data-group-id="5968913268-7">}</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">change</span><span class="p" data-group-id="5968913268-8">(</span><span class="p" data-group-id="5968913268-8">)</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Job</span><span class="o">.</span><span class="n">put_workflow</span><span class="p" data-group-id="5968913268-9">(</span><span class="n">workflow</span><span class="p" data-group-id="5968913268-9">)</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Job</span><span class="o">.</span><span class="n">changeset</span><span class="p" data-group-id="5968913268-10">(</span><span class="n">attrs</span><span class="p" data-group-id="5968913268-10">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="validate/1">
 
   <div class="detail-header">
-    <a href="#validate/1" class="detail-link" title="Link to this function">
+    <a href="#validate/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -395,34 +397,33 @@ Workflow changeset - and want it to be created at the same time as a Job.</p><p>
     </div>
   </section>
 
-      <footer class="footer">
-        <p>
+    <footer class="footer">
+      <p>
 
-          <span class="line">
-            <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
-              Search HexDocs
-            </button>
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
 
-              <a href="Lightning.epub" title="ePub version">
-                Download ePub version
-              </a>
+            <a href="Lightning.epub" title="ePub version">
+              Download ePub version
+            </a>
 
-          </span>
-        </p>
+        </span>
+      </p>
 
-        <p class="built-using">
-          Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
 
-            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
-        </p>
-      </footer>
-    </div>
+      </p>
+
+    </footer>
   </div>
 </main>
 </div>
-
 
   </body>
 </html>

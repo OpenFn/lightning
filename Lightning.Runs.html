@@ -4,21 +4,19 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="generator" content="ExDoc v0.34.2">
     <meta name="project" content="Lightning v2.10.0-rc.1">
 
+
     <title>Lightning.Runs — Lightning v2.10.0-rc.1</title>
-    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
+    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-0D035C9E.js"></script>
-
-      <script src="docs_config.js"></script>
-
-    <script async src="dist/html-J2ASZTQE.js"></script>
-
+    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
+    <script src="dist/sidebar_items-10E0B7BA.js"></script>
+    <script src="docs_config.js"></script>
+    <script async src="dist/html-YIPIRHGU.js"></script>
 
   </head>
   <body data-type="modules" class="page-module">
@@ -36,43 +34,28 @@
       } catch (error) { }
     </script>
 
-<div class="main">
+<div class="body-wrapper">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
 <nav id="sidebar" class="sidebar">
-  <form class="sidebar-search" action="search.html">
-    <label class="search-label">
-      <span class="sr-only">Search documentation of Lightning</span>
-      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
-    <button type="submit" class="search-button" aria-label="Submit Search">
-      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
-    </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
-      <i class="ri-close-line ri-lg" title="Cancel search"></i>
-    </button>
-  </form>
-
-  <div class="autocomplete">
-    <div class="autocomplete-results">
-    </div>
-  </div>
 
   <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
 
-      <a href="https://openfn.github.io/Lightning">
-        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
-      </a>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
 
-    <div class="sidebar-projectDetails">
-      <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+      <div>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
-      </a>
-      <div class="sidebar-projectVersion" translate="no">
-        v2.10.0-rc.1
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.10.0-rc.1
+        </div>
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -115,31 +98,50 @@ Pages
 
 <main class="content">
   <output role="status" id="toast"></output>
-  <div class="content-outer">
-    <div id="content" class="content-inner">
 
-<h1>
-<button class="icon-action display-settings">
-  <i class="ri-settings-3-line"></i>
-  <span class="sr-only">Settings</span>
-</button>
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+    <span translate="no">Lightning.Runs</span> 
+    <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
+
+  </h1>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L1" title="View Source" class="icon-action" rel="help">
-      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-      <span class="sr-only">View Source</span>
-    </a>
-
-  <span translate="no">Lightning.Runs</span> 
-  <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
-
-</h1>
-
-
-  <section id="moduledoc">
+    <section id="moduledoc">
 <p>Gathers operations to create, update and delete Runs.</p>
-  </section>
+    </section>
 
+</div>
 
   <section id="summary" class="details-list">
     <h1 class="section-heading">
@@ -155,7 +157,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#append_run_log/3" translate="no">append_run_log(run, params, scrubber \\ nil)</a>
+        <a href="#append_run_log/3" data-no-tooltip translate="no">append_run_log(run, params, scrubber \\ nil)</a>
 
       </div>
 
@@ -163,7 +165,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#complete_run/2" translate="no">complete_run(run, params)</a>
+        <a href="#complete_run/2" data-no-tooltip translate="no">complete_run(run, params)</a>
 
       </div>
 
@@ -171,7 +173,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#complete_step/2" translate="no">complete_step(params, options \\ Lightning.Runs.RunOptions)</a>
+        <a href="#complete_step/2" data-no-tooltip translate="no">complete_step(params, options \\ Lightning.Runs.RunOptions)</a>
 
       </div>
 
@@ -179,7 +181,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#enqueue/1" translate="no">enqueue(run)</a>
+        <a href="#enqueue/1" data-no-tooltip translate="no">enqueue(run)</a>
 
       </div>
 
@@ -189,7 +191,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get/2" translate="no">get(id, opts \\ [])</a>
+        <a href="#get/2" data-no-tooltip translate="no">get(id, opts \\ [])</a>
 
       </div>
 
@@ -199,7 +201,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_credential/2" translate="no">get_credential(run, id)</a>
+        <a href="#get_credential/2" data-no-tooltip translate="no">get_credential(run, id)</a>
 
       </div>
 
@@ -207,7 +209,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_dataclip_body/1" translate="no">get_dataclip_body(run)</a>
+        <a href="#get_dataclip_body/1" data-no-tooltip translate="no">get_dataclip_body(run)</a>
 
       </div>
 
@@ -217,7 +219,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_dataclip_request/1" translate="no">get_dataclip_request(run)</a>
+        <a href="#get_dataclip_request/1" data-no-tooltip translate="no">get_dataclip_request(run)</a>
 
       </div>
 
@@ -227,7 +229,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_for_worker/1" translate="no">get_for_worker(id)</a>
+        <a href="#get_for_worker/1" data-no-tooltip translate="no">get_for_worker(id)</a>
 
       </div>
 
@@ -237,7 +239,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_input/1" translate="no">get_input(run)</a>
+        <a href="#get_input/1" data-no-tooltip translate="no">get_input(run)</a>
 
       </div>
 
@@ -247,7 +249,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_log_lines/2" translate="no">get_log_lines(run, order \\ :asc)</a>
+        <a href="#get_log_lines/2" data-no-tooltip translate="no">get_log_lines(run, order \\ :asc)</a>
 
       </div>
 
@@ -255,7 +257,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_project_id_for_run/1" translate="no">get_project_id_for_run(run)</a>
+        <a href="#get_project_id_for_run/1" data-no-tooltip translate="no">get_project_id_for_run(run)</a>
 
       </div>
 
@@ -263,7 +265,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#mark_run_lost/1" translate="no">mark_run_lost(run)</a>
+        <a href="#mark_run_lost/1" data-no-tooltip translate="no">mark_run_lost(run)</a>
 
       </div>
 
@@ -271,7 +273,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#mark_steps_lost/1" translate="no">mark_steps_lost(steps_query)</a>
+        <a href="#mark_steps_lost/1" data-no-tooltip translate="no">mark_steps_lost(steps_query)</a>
 
       </div>
 
@@ -279,7 +281,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#start_run/2" translate="no">start_run(run, params \\ %{})</a>
+        <a href="#start_run/2" data-no-tooltip translate="no">start_run(run, params \\ %{})</a>
 
       </div>
 
@@ -287,7 +289,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#start_step/2" translate="no">start_step(run, params)</a>
+        <a href="#start_step/2" data-no-tooltip translate="no">start_step(run, params)</a>
 
       </div>
 
@@ -297,7 +299,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#subscribe/1" translate="no">subscribe(run)</a>
+        <a href="#subscribe/1" data-no-tooltip translate="no">subscribe(run)</a>
 
       </div>
 
@@ -307,7 +309,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#update_run/1" translate="no">update_run(changeset)</a>
+        <a href="#update_run/1" data-no-tooltip translate="no">update_run(changeset)</a>
 
       </div>
 
@@ -315,7 +317,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#update_runs/2" translate="no">update_runs(update_query, updates)</a>
+        <a href="#update_runs/2" data-no-tooltip translate="no">update_runs(update_query, updates)</a>
 
       </div>
 
@@ -323,7 +325,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#wipe_dataclips/1" translate="no">wipe_dataclips(run)</a>
+        <a href="#wipe_dataclips/1" data-no-tooltip translate="no">wipe_dataclips(run)</a>
 
       </div>
 
@@ -349,7 +351,7 @@ Pages
     <span id="append_run_log/2"></span>
 
   <div class="detail-header">
-    <a href="#append_run_log/3" class="detail-link" title="Link to this function">
+    <a href="#append_run_log/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -371,7 +373,7 @@ Pages
 <section class="detail" id="complete_run/2">
 
   <div class="detail-header">
-    <a href="#complete_run/2" class="detail-link" title="Link to this function">
+    <a href="#complete_run/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -390,7 +392,7 @@ Pages
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@spec</span> complete_run(<a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>(), %{optional(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}) ::
-  {:ok, <a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>())}</pre>
+  {:ok, <a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>())}</pre>
 
       </div>
 
@@ -402,7 +404,7 @@ Pages
     <span id="complete_step/1"></span>
 
   <div class="detail-header">
-    <a href="#complete_step/2" class="detail-link" title="Link to this function">
+    <a href="#complete_step/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -421,7 +423,7 @@ Pages
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@spec</span> complete_step(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), Lightning.Runs.RunOptions) ::
-  {:ok, <a href="Lightning.Invocation.Step.html#t:t/0">Lightning.Invocation.Step.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
+  {:ok, <a href="Lightning.Invocation.Step.html#t:t/0">Lightning.Invocation.Step.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
 
       </div>
 
@@ -431,7 +433,7 @@ Pages
 <section class="detail" id="enqueue/1">
 
   <div class="detail-header">
-    <a href="#enqueue/1" class="detail-link" title="Link to this function">
+    <a href="#enqueue/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -455,7 +457,7 @@ Pages
     <span id="get/1"></span>
 
   <div class="detail-header">
-    <a href="#get/2" class="detail-link" title="Link to this function">
+    <a href="#get/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -473,17 +475,17 @@ Pages
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> get(<a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(), [{:include, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}]) :: <a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>() | nil</pre>
+          <pre translate="no"><span class="attribute">@spec</span> get(<a href="https://hexdocs.pm/ecto/3.12.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(), [{:include, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}]) :: <a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>() | nil</pre>
 
       </div>
 
-<p>Get a run by id.</p><p>Optionally preload associations by passing a list of atoms to <code class="inline">:include</code>.</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Runs</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="3036890030-1">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3036890030-2">[</span><span class="ss">:workflow</span><span class="p" data-group-id="3036890030-2">]</span><span class="p" data-group-id="3036890030-1">)</span></code></pre>
+<p>Get a run by id.</p><p>Optionally preload associations by passing a list of atoms to <code class="inline">:include</code>.</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Runs</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="6021505666-1">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6021505666-2">[</span><span class="ss">:workflow</span><span class="p" data-group-id="6021505666-2">]</span><span class="p" data-group-id="6021505666-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_credential/2">
 
   <div class="detail-header">
-    <a href="#get_credential/2" class="detail-link" title="Link to this function">
+    <a href="#get_credential/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -505,7 +507,7 @@ Pages
 <section class="detail" id="get_dataclip_body/1">
 
   <div class="detail-header">
-    <a href="#get_dataclip_body/1" class="detail-link" title="Link to this function">
+    <a href="#get_dataclip_body/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -527,7 +529,7 @@ Pages
 <section class="detail" id="get_dataclip_request/1">
 
   <div class="detail-header">
-    <a href="#get_dataclip_request/1" class="detail-link" title="Link to this function">
+    <a href="#get_dataclip_request/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -549,7 +551,7 @@ Pages
 <section class="detail" id="get_for_worker/1">
 
   <div class="detail-header">
-    <a href="#get_for_worker/1" class="detail-link" title="Link to this function">
+    <a href="#get_for_worker/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -567,7 +569,7 @@ Pages
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> get_for_worker(<a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) :: <a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>() | nil</pre>
+          <pre translate="no"><span class="attribute">@spec</span> get_for_worker(<a href="https://hexdocs.pm/ecto/3.12.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) :: <a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>() | nil</pre>
 
       </div>
 
@@ -577,7 +579,7 @@ Pages
 <section class="detail" id="get_input/1">
 
   <div class="detail-header">
-    <a href="#get_input/1" class="detail-link" title="Link to this function">
+    <a href="#get_input/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -610,7 +612,7 @@ for more details.</p>
     <span id="get_log_lines/1"></span>
 
   <div class="detail-header">
-    <a href="#get_log_lines/2" class="detail-link" title="Link to this function">
+    <a href="#get_log_lines/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -632,7 +634,7 @@ for more details.</p>
 <section class="detail" id="get_project_id_for_run/1">
 
   <div class="detail-header">
-    <a href="#get_project_id_for_run/1" class="detail-link" title="Link to this function">
+    <a href="#get_project_id_for_run/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -650,7 +652,7 @@ for more details.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> get_project_id_for_run(<a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil</pre>
+          <pre translate="no"><span class="attribute">@spec</span> get_project_id_for_run(<a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil</pre>
 
       </div>
 
@@ -660,7 +662,7 @@ for more details.</p>
 <section class="detail" id="mark_run_lost/1">
 
   <div class="detail-header">
-    <a href="#mark_run_lost/1" class="detail-link" title="Link to this function">
+    <a href="#mark_run_lost/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -688,7 +690,7 @@ for more details.</p>
 <section class="detail" id="mark_steps_lost/1">
 
   <div class="detail-header">
-    <a href="#mark_steps_lost/1" class="detail-link" title="Link to this function">
+    <a href="#mark_steps_lost/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -706,7 +708,7 @@ for more details.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> mark_steps_lost(<a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()) :: {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()}</pre>
+          <pre translate="no"><span class="attribute">@spec</span> mark_steps_lost(<a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()) :: {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()}</pre>
 
       </div>
 
@@ -718,7 +720,7 @@ for more details.</p>
     <span id="start_run/1"></span>
 
   <div class="detail-header">
-    <a href="#start_run/2" class="detail-link" title="Link to this function">
+    <a href="#start_run/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -740,7 +742,7 @@ for more details.</p>
 <section class="detail" id="start_step/2">
 
   <div class="detail-header">
-    <a href="#start_step/2" class="detail-link" title="Link to this function">
+    <a href="#start_step/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -759,7 +761,7 @@ for more details.</p>
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@spec</span> start_step(<a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) ::
-  {:ok, <a href="Lightning.Invocation.Step.html#t:t/0">Lightning.Invocation.Step.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
+  {:ok, <a href="Lightning.Invocation.Step.html#t:t/0">Lightning.Invocation.Step.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
 
       </div>
 
@@ -769,7 +771,7 @@ for more details.</p>
 <section class="detail" id="subscribe/1">
 
   <div class="detail-header">
-    <a href="#subscribe/1" class="detail-link" title="Link to this function">
+    <a href="#subscribe/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -791,7 +793,7 @@ for more details.</p>
 <section class="detail" id="update_run/1">
 
   <div class="detail-header">
-    <a href="#update_run/1" class="detail-link" title="Link to this function">
+    <a href="#update_run/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -809,8 +811,8 @@ for more details.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> update_run(<a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>())) ::
-  {:ok, <a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>())}</pre>
+          <pre translate="no"><span class="attribute">@spec</span> update_run(<a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>())) ::
+  {:ok, <a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>())}</pre>
 
       </div>
 
@@ -820,7 +822,7 @@ for more details.</p>
 <section class="detail" id="update_runs/2">
 
   <div class="detail-header">
-    <a href="#update_runs/2" class="detail-link" title="Link to this function">
+    <a href="#update_runs/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -842,7 +844,7 @@ for more details.</p>
 <section class="detail" id="wipe_dataclips/1">
 
   <div class="detail-header">
-    <a href="#wipe_dataclips/1" class="detail-link" title="Link to this function">
+    <a href="#wipe_dataclips/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -871,34 +873,33 @@ for more details.</p>
     </div>
   </section>
 
-      <footer class="footer">
-        <p>
+    <footer class="footer">
+      <p>
 
-          <span class="line">
-            <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
-              Search HexDocs
-            </button>
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
 
-              <a href="Lightning.epub" title="ePub version">
-                Download ePub version
-              </a>
+            <a href="Lightning.epub" title="ePub version">
+              Download ePub version
+            </a>
 
-          </span>
-        </p>
+        </span>
+      </p>
 
-        <p class="built-using">
-          Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
 
-            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
-        </p>
-      </footer>
-    </div>
+      </p>
+
+    </footer>
   </div>
 </main>
 </div>
-
 
   </body>
 </html>

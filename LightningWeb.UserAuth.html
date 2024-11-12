@@ -4,21 +4,19 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="generator" content="ExDoc v0.34.2">
     <meta name="project" content="Lightning v2.10.0-rc.1">
 
+
     <title>LightningWeb.UserAuth — Lightning v2.10.0-rc.1</title>
-    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
+    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-0D035C9E.js"></script>
-
-      <script src="docs_config.js"></script>
-
-    <script async src="dist/html-J2ASZTQE.js"></script>
-
+    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
+    <script src="dist/sidebar_items-10E0B7BA.js"></script>
+    <script src="docs_config.js"></script>
+    <script async src="dist/html-YIPIRHGU.js"></script>
 
   </head>
   <body data-type="modules" class="page-module">
@@ -36,43 +34,28 @@
       } catch (error) { }
     </script>
 
-<div class="main">
+<div class="body-wrapper">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
 <nav id="sidebar" class="sidebar">
-  <form class="sidebar-search" action="search.html">
-    <label class="search-label">
-      <span class="sr-only">Search documentation of Lightning</span>
-      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
-    <button type="submit" class="search-button" aria-label="Submit Search">
-      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
-    </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
-      <i class="ri-close-line ri-lg" title="Cancel search"></i>
-    </button>
-  </form>
-
-  <div class="autocomplete">
-    <div class="autocomplete-results">
-    </div>
-  </div>
 
   <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
 
-      <a href="https://openfn.github.io/Lightning">
-        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
-      </a>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
 
-    <div class="sidebar-projectDetails">
-      <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+      <div>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
-      </a>
-      <div class="sidebar-projectVersion" translate="no">
-        v2.10.0-rc.1
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.10.0-rc.1
+        </div>
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -115,31 +98,50 @@ Pages
 
 <main class="content">
   <output role="status" id="toast"></output>
-  <div class="content-outer">
-    <div id="content" class="content-inner">
 
-<h1>
-<button class="icon-action display-settings">
-  <i class="ri-settings-3-line"></i>
-  <span class="sr-only">Settings</span>
-</button>
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+    <span translate="no">LightningWeb.UserAuth</span> 
+    <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
+
+  </h1>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L1" title="View Source" class="icon-action" rel="help">
-      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-      <span class="sr-only">View Source</span>
-    </a>
-
-  <span translate="no">LightningWeb.UserAuth</span> 
-  <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
-
-</h1>
-
-
-  <section id="moduledoc">
+    <section id="moduledoc">
 <p>The UserAuth controller.</p>
-  </section>
+    </section>
 
+</div>
 
   <section id="summary" class="details-list">
     <h1 class="section-heading">
@@ -155,7 +157,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#authenticate_bearer/2" translate="no">authenticate_bearer(conn, opts)</a>
+        <a href="#authenticate_bearer/2" data-no-tooltip translate="no">authenticate_bearer(conn, opts)</a>
 
       </div>
 
@@ -163,7 +165,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#fetch_current_user/2" translate="no">fetch_current_user(conn, opts)</a>
+        <a href="#fetch_current_user/2" data-no-tooltip translate="no">fetch_current_user(conn, opts)</a>
 
       </div>
 
@@ -174,7 +176,7 @@ and remember me token.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_bearer/1" translate="no">get_bearer(conn)</a>
+        <a href="#get_bearer/1" data-no-tooltip translate="no">get_bearer(conn)</a>
 
       </div>
 
@@ -182,7 +184,7 @@ and remember me token.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#log_in_user/2" translate="no">log_in_user(conn, user)</a>
+        <a href="#log_in_user/2" data-no-tooltip translate="no">log_in_user(conn, user)</a>
 
       </div>
 
@@ -192,7 +194,7 @@ and remember me token.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#log_out_user/1" translate="no">log_out_user(conn)</a>
+        <a href="#log_out_user/1" data-no-tooltip translate="no">log_out_user(conn)</a>
 
       </div>
 
@@ -202,7 +204,7 @@ and remember me token.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#mark_totp_pending/1" translate="no">mark_totp_pending(conn)</a>
+        <a href="#mark_totp_pending/1" data-no-tooltip translate="no">mark_totp_pending(conn)</a>
 
       </div>
 
@@ -210,7 +212,7 @@ and remember me token.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#new_session/2" translate="no">new_session(conn, token)</a>
+        <a href="#new_session/2" data-no-tooltip translate="no">new_session(conn, token)</a>
 
       </div>
 
@@ -220,7 +222,7 @@ and remember me token.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#on_mount/4" translate="no">on_mount(atom, params, session, socket)</a>
+        <a href="#on_mount/4" data-no-tooltip translate="no">on_mount(atom, params, session, socket)</a>
 
       </div>
 
@@ -230,7 +232,7 @@ and remember me token.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#reauth_sudo_mode/2" translate="no">reauth_sudo_mode(conn, opts)</a>
+        <a href="#reauth_sudo_mode/2" data-no-tooltip translate="no">reauth_sudo_mode(conn, opts)</a>
 
       </div>
 
@@ -240,7 +242,7 @@ and remember me token.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#redirect_if_user_is_authenticated/2" translate="no">redirect_if_user_is_authenticated(conn, opts)</a>
+        <a href="#redirect_if_user_is_authenticated/2" data-no-tooltip translate="no">redirect_if_user_is_authenticated(conn, opts)</a>
 
       </div>
 
@@ -250,7 +252,7 @@ and remember me token.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#redirect_with_return_to/2" translate="no">redirect_with_return_to(conn, params \\ %{})</a>
+        <a href="#redirect_with_return_to/2" data-no-tooltip translate="no">redirect_with_return_to(conn, params \\ %{})</a>
 
       </div>
 
@@ -260,7 +262,7 @@ and remember me token.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#require_authenticated_api_resource/2" translate="no">require_authenticated_api_resource(conn, opts)</a>
+        <a href="#require_authenticated_api_resource/2" data-no-tooltip translate="no">require_authenticated_api_resource(conn, opts)</a>
 
       </div>
 
@@ -271,7 +273,7 @@ A resource can be a <code class="inline">User</code> or a <code class="inline">P
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#require_authenticated_user/2" translate="no">require_authenticated_user(conn, opts)</a>
+        <a href="#require_authenticated_user/2" data-no-tooltip translate="no">require_authenticated_user(conn, opts)</a>
 
       </div>
 
@@ -281,7 +283,7 @@ A resource can be a <code class="inline">User</code> or a <code class="inline">P
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#require_sudo_user/2" translate="no">require_sudo_user(conn, opts)</a>
+        <a href="#require_sudo_user/2" data-no-tooltip translate="no">require_sudo_user(conn, opts)</a>
 
       </div>
 
@@ -291,7 +293,7 @@ A resource can be a <code class="inline">User</code> or a <code class="inline">P
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#require_superuser/2" translate="no">require_superuser(conn, opts)</a>
+        <a href="#require_superuser/2" data-no-tooltip translate="no">require_superuser(conn, opts)</a>
 
       </div>
 
@@ -301,7 +303,7 @@ A resource can be a <code class="inline">User</code> or a <code class="inline">P
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#totp_pending?/1" translate="no">totp_pending?(conn)</a>
+        <a href="#totp_pending?/1" data-no-tooltip translate="no">totp_pending?(conn)</a>
 
       </div>
 
@@ -309,7 +311,7 @@ A resource can be a <code class="inline">User</code> or a <code class="inline">P
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#totp_validated/1" translate="no">totp_validated(conn)</a>
+        <a href="#totp_validated/1" data-no-tooltip translate="no">totp_validated(conn)</a>
 
       </div>
 
@@ -331,7 +333,7 @@ A resource can be a <code class="inline">User</code> or a <code class="inline">P
 <section class="detail" id="authenticate_bearer/2">
 
   <div class="detail-header">
-    <a href="#authenticate_bearer/2" class="detail-link" title="Link to this function">
+    <a href="#authenticate_bearer/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -353,7 +355,7 @@ A resource can be a <code class="inline">User</code> or a <code class="inline">P
 <section class="detail" id="fetch_current_user/2">
 
   <div class="detail-header">
-    <a href="#fetch_current_user/2" class="detail-link" title="Link to this function">
+    <a href="#fetch_current_user/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -376,7 +378,7 @@ and remember me token.</p>
 <section class="detail" id="get_bearer/1">
 
   <div class="detail-header">
-    <a href="#get_bearer/1" class="detail-link" title="Link to this function">
+    <a href="#get_bearer/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -398,7 +400,7 @@ and remember me token.</p>
 <section class="detail" id="log_in_user/2">
 
   <div class="detail-header">
-    <a href="#log_in_user/2" class="detail-link" title="Link to this function">
+    <a href="#log_in_user/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -420,7 +422,7 @@ and remember me token.</p>
 <section class="detail" id="log_out_user/1">
 
   <div class="detail-header">
-    <a href="#log_out_user/1" class="detail-link" title="Link to this function">
+    <a href="#log_out_user/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -442,7 +444,7 @@ and remember me token.</p>
 <section class="detail" id="mark_totp_pending/1">
 
   <div class="detail-header">
-    <a href="#mark_totp_pending/1" class="detail-link" title="Link to this function">
+    <a href="#mark_totp_pending/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -464,7 +466,7 @@ and remember me token.</p>
 <section class="detail" id="new_session/2">
 
   <div class="detail-header">
-    <a href="#new_session/2" class="detail-link" title="Link to this function">
+    <a href="#new_session/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -491,7 +493,7 @@ if you are not using LiveView.</p>
 <section class="detail" id="on_mount/4">
 
   <div class="detail-header">
-    <a href="#on_mount/4" class="detail-link" title="Link to this function">
+    <a href="#on_mount/4" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -513,7 +515,7 @@ if you are not using LiveView.</p>
 <section class="detail" id="reauth_sudo_mode/2">
 
   <div class="detail-header">
-    <a href="#reauth_sudo_mode/2" class="detail-link" title="Link to this function">
+    <a href="#reauth_sudo_mode/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -535,7 +537,7 @@ if you are not using LiveView.</p>
 <section class="detail" id="redirect_if_user_is_authenticated/2">
 
   <div class="detail-header">
-    <a href="#redirect_if_user_is_authenticated/2" class="detail-link" title="Link to this function">
+    <a href="#redirect_if_user_is_authenticated/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -559,7 +561,7 @@ if you are not using LiveView.</p>
     <span id="redirect_with_return_to/1"></span>
 
   <div class="detail-header">
-    <a href="#redirect_with_return_to/2" class="detail-link" title="Link to this function">
+    <a href="#redirect_with_return_to/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -581,7 +583,7 @@ if you are not using LiveView.</p>
 <section class="detail" id="require_authenticated_api_resource/2">
 
   <div class="detail-header">
-    <a href="#require_authenticated_api_resource/2" class="detail-link" title="Link to this function">
+    <a href="#require_authenticated_api_resource/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -604,7 +606,7 @@ A resource can be a <code class="inline">User</code> or a <code class="inline">P
 <section class="detail" id="require_authenticated_user/2">
 
   <div class="detail-header">
-    <a href="#require_authenticated_user/2" class="detail-link" title="Link to this function">
+    <a href="#require_authenticated_user/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -627,7 +629,7 @@ they use the application at all, here would be a good place.</p>
 <section class="detail" id="require_sudo_user/2">
 
   <div class="detail-header">
-    <a href="#require_sudo_user/2" class="detail-link" title="Link to this function">
+    <a href="#require_sudo_user/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -649,7 +651,7 @@ they use the application at all, here would be a good place.</p>
 <section class="detail" id="require_superuser/2">
 
   <div class="detail-header">
-    <a href="#require_superuser/2" class="detail-link" title="Link to this function">
+    <a href="#require_superuser/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -671,7 +673,7 @@ they use the application at all, here would be a good place.</p>
 <section class="detail" id="totp_pending?/1">
 
   <div class="detail-header">
-    <a href="#totp_pending?/1" class="detail-link" title="Link to this function">
+    <a href="#totp_pending?/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -693,7 +695,7 @@ they use the application at all, here would be a good place.</p>
 <section class="detail" id="totp_validated/1">
 
   <div class="detail-header">
-    <a href="#totp_validated/1" class="detail-link" title="Link to this function">
+    <a href="#totp_validated/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -716,34 +718,33 @@ they use the application at all, here would be a good place.</p>
     </div>
   </section>
 
-      <footer class="footer">
-        <p>
+    <footer class="footer">
+      <p>
 
-          <span class="line">
-            <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
-              Search HexDocs
-            </button>
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
 
-              <a href="Lightning.epub" title="ePub version">
-                Download ePub version
-              </a>
+            <a href="Lightning.epub" title="ePub version">
+              Download ePub version
+            </a>
 
-          </span>
-        </p>
+        </span>
+      </p>
 
-        <p class="built-using">
-          Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
 
-            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
-        </p>
-      </footer>
-    </div>
+      </p>
+
+    </footer>
   </div>
 </main>
 </div>
-
 
   </body>
 </html>

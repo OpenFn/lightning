@@ -4,21 +4,19 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="generator" content="ExDoc v0.34.2">
     <meta name="project" content="Lightning v2.10.0-rc.1">
 
+
     <title>Lightning.Config — Lightning v2.10.0-rc.1</title>
-    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
+    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-0D035C9E.js"></script>
-
-      <script src="docs_config.js"></script>
-
-    <script async src="dist/html-J2ASZTQE.js"></script>
-
+    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
+    <script src="dist/sidebar_items-10E0B7BA.js"></script>
+    <script src="docs_config.js"></script>
+    <script async src="dist/html-YIPIRHGU.js"></script>
 
   </head>
   <body data-type="modules" class="page-behaviour">
@@ -36,43 +34,28 @@
       } catch (error) { }
     </script>
 
-<div class="main">
+<div class="body-wrapper">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
 <nav id="sidebar" class="sidebar">
-  <form class="sidebar-search" action="search.html">
-    <label class="search-label">
-      <span class="sr-only">Search documentation of Lightning</span>
-      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
-    <button type="submit" class="search-button" aria-label="Submit Search">
-      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
-    </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
-      <i class="ri-close-line ri-lg" title="Cancel search"></i>
-    </button>
-  </form>
-
-  <div class="autocomplete">
-    <div class="autocomplete-results">
-    </div>
-  </div>
 
   <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
 
-      <a href="https://openfn.github.io/Lightning">
-        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
-      </a>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
 
-    <div class="sidebar-projectDetails">
-      <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+      <div>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
-      </a>
-      <div class="sidebar-projectVersion" translate="no">
-        v2.10.0-rc.1
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.10.0-rc.1
+        </div>
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -115,31 +98,50 @@ Pages
 
 <main class="content">
   <output role="status" id="toast"></output>
-  <div class="content-outer">
-    <div id="content" class="content-inner">
 
-<h1>
-<button class="icon-action display-settings">
-  <i class="ri-settings-3-line"></i>
-  <span class="sr-only">Settings</span>
-</button>
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+    <span translate="no">Lightning.Config</span> <small>behaviour</small>
+    <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
+
+  </h1>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L1" title="View Source" class="icon-action" rel="help">
-      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-      <span class="sr-only">View Source</span>
-    </a>
-
-  <span translate="no">Lightning.Config</span> <small>behaviour</small>
-  <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
-
-</h1>
-
-
-  <section id="moduledoc">
+    <section id="moduledoc">
 <p>Centralised runtime configuration for Lightning.</p>
-  </section>
+    </section>
 
+</div>
 
   <section id="summary" class="details-list">
     <h1 class="section-heading">
@@ -155,7 +157,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:apollo/1" translate="no">apollo(key)</a>
+        <a href="#c:apollo/1" data-no-tooltip translate="no">apollo(key)</a>
 
       </div>
 
@@ -163,7 +165,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:check_flag?/1" translate="no">check_flag?(atom)</a>
+        <a href="#c:check_flag?/1" data-no-tooltip translate="no">check_flag?(atom)</a>
 
       </div>
 
@@ -171,7 +173,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:cors_origin/0" translate="no">cors_origin()</a>
+        <a href="#c:cors_origin/0" data-no-tooltip translate="no">cors_origin()</a>
 
       </div>
 
@@ -179,7 +181,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:default_max_run_duration/0" translate="no">default_max_run_duration()</a>
+        <a href="#c:default_max_run_duration/0" data-no-tooltip translate="no">default_max_run_duration()</a>
 
       </div>
 
@@ -187,7 +189,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:email_sender_name/0" translate="no">email_sender_name()</a>
+        <a href="#c:email_sender_name/0" data-no-tooltip translate="no">email_sender_name()</a>
 
       </div>
 
@@ -195,7 +197,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:get_extension_mod/1" translate="no">get_extension_mod(key)</a>
+        <a href="#c:get_extension_mod/1" data-no-tooltip translate="no">get_extension_mod(key)</a>
 
       </div>
 
@@ -203,7 +205,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:google/1" translate="no">google(key)</a>
+        <a href="#c:google/1" data-no-tooltip translate="no">google(key)</a>
 
       </div>
 
@@ -211,7 +213,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:grace_period/0" translate="no">grace_period()</a>
+        <a href="#c:grace_period/0" data-no-tooltip translate="no">grace_period()</a>
 
       </div>
 
@@ -219,7 +221,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:instance_admin_email/0" translate="no">instance_admin_email()</a>
+        <a href="#c:instance_admin_email/0" data-no-tooltip translate="no">instance_admin_email()</a>
 
       </div>
 
@@ -227,7 +229,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:kafka_alternate_storage_enabled?/0" translate="no">kafka_alternate_storage_enabled?()</a>
+        <a href="#c:kafka_alternate_storage_enabled?/0" data-no-tooltip translate="no">kafka_alternate_storage_enabled?()</a>
 
       </div>
 
@@ -235,7 +237,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:kafka_alternate_storage_file_path/0" translate="no">kafka_alternate_storage_file_path()</a>
+        <a href="#c:kafka_alternate_storage_file_path/0" data-no-tooltip translate="no">kafka_alternate_storage_file_path()</a>
 
       </div>
 
@@ -243,7 +245,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:kafka_duplicate_tracking_retention_seconds/0" translate="no">kafka_duplicate_tracking_retention_seconds()</a>
+        <a href="#c:kafka_duplicate_tracking_retention_seconds/0" data-no-tooltip translate="no">kafka_duplicate_tracking_retention_seconds()</a>
 
       </div>
 
@@ -251,7 +253,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:kafka_notification_embargo_seconds/0" translate="no">kafka_notification_embargo_seconds()</a>
+        <a href="#c:kafka_notification_embargo_seconds/0" data-no-tooltip translate="no">kafka_notification_embargo_seconds()</a>
 
       </div>
 
@@ -259,7 +261,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:kafka_number_of_consumers/0" translate="no">kafka_number_of_consumers()</a>
+        <a href="#c:kafka_number_of_consumers/0" data-no-tooltip translate="no">kafka_number_of_consumers()</a>
 
       </div>
 
@@ -267,7 +269,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:kafka_number_of_messages_per_second/0" translate="no">kafka_number_of_messages_per_second()</a>
+        <a href="#c:kafka_number_of_messages_per_second/0" data-no-tooltip translate="no">kafka_number_of_messages_per_second()</a>
 
       </div>
 
@@ -275,7 +277,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:kafka_number_of_processors/0" translate="no">kafka_number_of_processors()</a>
+        <a href="#c:kafka_number_of_processors/0" data-no-tooltip translate="no">kafka_number_of_processors()</a>
 
       </div>
 
@@ -283,7 +285,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:kafka_triggers_enabled?/0" translate="no">kafka_triggers_enabled?()</a>
+        <a href="#c:kafka_triggers_enabled?/0" data-no-tooltip translate="no">kafka_triggers_enabled?()</a>
 
       </div>
 
@@ -291,7 +293,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:oauth_provider/1" translate="no">oauth_provider(key)</a>
+        <a href="#c:oauth_provider/1" data-no-tooltip translate="no">oauth_provider(key)</a>
 
       </div>
 
@@ -299,7 +301,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:purge_deleted_after_days/0" translate="no">purge_deleted_after_days()</a>
+        <a href="#c:purge_deleted_after_days/0" data-no-tooltip translate="no">purge_deleted_after_days()</a>
 
       </div>
 
@@ -307,7 +309,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:repo_connection_token_signer/0" translate="no">repo_connection_token_signer()</a>
+        <a href="#c:repo_connection_token_signer/0" data-no-tooltip translate="no">repo_connection_token_signer()</a>
 
       </div>
 
@@ -315,7 +317,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:reset_password_token_validity_in_days/0" translate="no">reset_password_token_validity_in_days()</a>
+        <a href="#c:reset_password_token_validity_in_days/0" data-no-tooltip translate="no">reset_password_token_validity_in_days()</a>
 
       </div>
 
@@ -323,7 +325,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:run_token_signer/0" translate="no">run_token_signer()</a>
+        <a href="#c:run_token_signer/0" data-no-tooltip translate="no">run_token_signer()</a>
 
       </div>
 
@@ -331,7 +333,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:storage/0" translate="no">storage()</a>
+        <a href="#c:storage/0" data-no-tooltip translate="no">storage()</a>
 
       </div>
 
@@ -339,7 +341,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:storage/1" translate="no">storage(key)</a>
+        <a href="#c:storage/1" data-no-tooltip translate="no">storage(key)</a>
 
       </div>
 
@@ -347,7 +349,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:token_signer/0" translate="no">token_signer()</a>
+        <a href="#c:token_signer/0" data-no-tooltip translate="no">token_signer()</a>
 
       </div>
 
@@ -355,7 +357,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:usage_tracking/0" translate="no">usage_tracking()</a>
+        <a href="#c:usage_tracking/0" data-no-tooltip translate="no">usage_tracking()</a>
 
       </div>
 
@@ -363,7 +365,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:usage_tracking_cron_opts/0" translate="no">usage_tracking_cron_opts()</a>
+        <a href="#c:usage_tracking_cron_opts/0" data-no-tooltip translate="no">usage_tracking_cron_opts()</a>
 
       </div>
 
@@ -371,7 +373,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:worker_secret/0" translate="no">worker_secret()</a>
+        <a href="#c:worker_secret/0" data-no-tooltip translate="no">worker_secret()</a>
 
       </div>
 
@@ -379,7 +381,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:worker_token_signer/0" translate="no">worker_token_signer()</a>
+        <a href="#c:worker_token_signer/0" data-no-tooltip translate="no">worker_token_signer()</a>
 
       </div>
 
@@ -393,7 +395,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#apollo/1" translate="no">apollo(key \\ nil)</a>
+        <a href="#apollo/1" data-no-tooltip translate="no">apollo(key \\ nil)</a>
 
       </div>
 
@@ -403,7 +405,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#check_flag?/1" translate="no">check_flag?(flag)</a>
+        <a href="#check_flag?/1" data-no-tooltip translate="no">check_flag?(flag)</a>
 
       </div>
 
@@ -411,7 +413,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#cors_origin/0" translate="no">cors_origin()</a>
+        <a href="#cors_origin/0" data-no-tooltip translate="no">cors_origin()</a>
 
       </div>
 
@@ -419,7 +421,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#default_max_run_duration/0" translate="no">default_max_run_duration()</a>
+        <a href="#default_max_run_duration/0" data-no-tooltip translate="no">default_max_run_duration()</a>
 
       </div>
 
@@ -429,7 +431,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#email_sender_name/0" translate="no">email_sender_name()</a>
+        <a href="#email_sender_name/0" data-no-tooltip translate="no">email_sender_name()</a>
 
       </div>
 
@@ -437,7 +439,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_extension_mod/1" translate="no">get_extension_mod(key)</a>
+        <a href="#get_extension_mod/1" data-no-tooltip translate="no">get_extension_mod(key)</a>
 
       </div>
 
@@ -445,7 +447,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#google/1" translate="no">google(key)</a>
+        <a href="#google/1" data-no-tooltip translate="no">google(key)</a>
 
       </div>
 
@@ -453,7 +455,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#grace_period/0" translate="no">grace_period()</a>
+        <a href="#grace_period/0" data-no-tooltip translate="no">grace_period()</a>
 
       </div>
 
@@ -464,7 +466,7 @@ amount of time after a given run was meant to be finished.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#instance_admin_email/0" translate="no">instance_admin_email()</a>
+        <a href="#instance_admin_email/0" data-no-tooltip translate="no">instance_admin_email()</a>
 
       </div>
 
@@ -472,7 +474,7 @@ amount of time after a given run was meant to be finished.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#kafka_alternate_storage_enabled?/0" translate="no">kafka_alternate_storage_enabled?()</a>
+        <a href="#kafka_alternate_storage_enabled?/0" data-no-tooltip translate="no">kafka_alternate_storage_enabled?()</a>
 
       </div>
 
@@ -480,7 +482,7 @@ amount of time after a given run was meant to be finished.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#kafka_alternate_storage_file_path/0" translate="no">kafka_alternate_storage_file_path()</a>
+        <a href="#kafka_alternate_storage_file_path/0" data-no-tooltip translate="no">kafka_alternate_storage_file_path()</a>
 
       </div>
 
@@ -488,7 +490,7 @@ amount of time after a given run was meant to be finished.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#kafka_duplicate_tracking_retention_seconds/0" translate="no">kafka_duplicate_tracking_retention_seconds()</a>
+        <a href="#kafka_duplicate_tracking_retention_seconds/0" data-no-tooltip translate="no">kafka_duplicate_tracking_retention_seconds()</a>
 
       </div>
 
@@ -496,7 +498,7 @@ amount of time after a given run was meant to be finished.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#kafka_notification_embargo_seconds/0" translate="no">kafka_notification_embargo_seconds()</a>
+        <a href="#kafka_notification_embargo_seconds/0" data-no-tooltip translate="no">kafka_notification_embargo_seconds()</a>
 
       </div>
 
@@ -504,7 +506,7 @@ amount of time after a given run was meant to be finished.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#kafka_number_of_consumers/0" translate="no">kafka_number_of_consumers()</a>
+        <a href="#kafka_number_of_consumers/0" data-no-tooltip translate="no">kafka_number_of_consumers()</a>
 
       </div>
 
@@ -512,7 +514,7 @@ amount of time after a given run was meant to be finished.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#kafka_number_of_messages_per_second/0" translate="no">kafka_number_of_messages_per_second()</a>
+        <a href="#kafka_number_of_messages_per_second/0" data-no-tooltip translate="no">kafka_number_of_messages_per_second()</a>
 
       </div>
 
@@ -520,7 +522,7 @@ amount of time after a given run was meant to be finished.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#kafka_number_of_processors/0" translate="no">kafka_number_of_processors()</a>
+        <a href="#kafka_number_of_processors/0" data-no-tooltip translate="no">kafka_number_of_processors()</a>
 
       </div>
 
@@ -528,7 +530,7 @@ amount of time after a given run was meant to be finished.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#kafka_triggers_enabled?/0" translate="no">kafka_triggers_enabled?()</a>
+        <a href="#kafka_triggers_enabled?/0" data-no-tooltip translate="no">kafka_triggers_enabled?()</a>
 
       </div>
 
@@ -536,7 +538,7 @@ amount of time after a given run was meant to be finished.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#oauth_provider/1" translate="no">oauth_provider(key)</a>
+        <a href="#oauth_provider/1" data-no-tooltip translate="no">oauth_provider(key)</a>
 
       </div>
 
@@ -544,7 +546,7 @@ amount of time after a given run was meant to be finished.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#purge_deleted_after_days/0" translate="no">purge_deleted_after_days()</a>
+        <a href="#purge_deleted_after_days/0" data-no-tooltip translate="no">purge_deleted_after_days()</a>
 
       </div>
 
@@ -552,7 +554,7 @@ amount of time after a given run was meant to be finished.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#repo_connection_token_signer/0" translate="no">repo_connection_token_signer()</a>
+        <a href="#repo_connection_token_signer/0" data-no-tooltip translate="no">repo_connection_token_signer()</a>
 
       </div>
 
@@ -560,7 +562,7 @@ amount of time after a given run was meant to be finished.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#reset_password_token_validity_in_days/0" translate="no">reset_password_token_validity_in_days()</a>
+        <a href="#reset_password_token_validity_in_days/0" data-no-tooltip translate="no">reset_password_token_validity_in_days()</a>
 
       </div>
 
@@ -568,7 +570,7 @@ amount of time after a given run was meant to be finished.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#run_token_signer/0" translate="no">run_token_signer()</a>
+        <a href="#run_token_signer/0" data-no-tooltip translate="no">run_token_signer()</a>
 
       </div>
 
@@ -578,7 +580,7 @@ amount of time after a given run was meant to be finished.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#storage/0" translate="no">storage()</a>
+        <a href="#storage/0" data-no-tooltip translate="no">storage()</a>
 
       </div>
 
@@ -586,7 +588,7 @@ amount of time after a given run was meant to be finished.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#storage/1" translate="no">storage(key)</a>
+        <a href="#storage/1" data-no-tooltip translate="no">storage(key)</a>
 
       </div>
 
@@ -594,7 +596,7 @@ amount of time after a given run was meant to be finished.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#token_signer/0" translate="no">token_signer()</a>
+        <a href="#token_signer/0" data-no-tooltip translate="no">token_signer()</a>
 
       </div>
 
@@ -602,7 +604,7 @@ amount of time after a given run was meant to be finished.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#usage_tracking/0" translate="no">usage_tracking()</a>
+        <a href="#usage_tracking/0" data-no-tooltip translate="no">usage_tracking()</a>
 
       </div>
 
@@ -610,7 +612,7 @@ amount of time after a given run was meant to be finished.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#usage_tracking_cron_opts/0" translate="no">usage_tracking_cron_opts()</a>
+        <a href="#usage_tracking_cron_opts/0" data-no-tooltip translate="no">usage_tracking_cron_opts()</a>
 
       </div>
 
@@ -618,7 +620,7 @@ amount of time after a given run was meant to be finished.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#worker_secret/0" translate="no">worker_secret()</a>
+        <a href="#worker_secret/0" data-no-tooltip translate="no">worker_secret()</a>
 
       </div>
 
@@ -626,7 +628,7 @@ amount of time after a given run was meant to be finished.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#worker_token_signer/0" translate="no">worker_token_signer()</a>
+        <a href="#worker_token_signer/0" data-no-tooltip translate="no">worker_token_signer()</a>
 
       </div>
 
@@ -650,7 +652,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="c:apollo/1">
 
   <div class="detail-header">
-    <a href="#c:apollo/1" class="detail-link" title="Link to this callback">
+    <a href="#c:apollo/1" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -678,7 +680,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="c:check_flag?/1">
 
   <div class="detail-header">
-    <a href="#c:check_flag?/1" class="detail-link" title="Link to this callback">
+    <a href="#c:check_flag?/1" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -706,7 +708,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="c:cors_origin/0">
 
   <div class="detail-header">
-    <a href="#c:cors_origin/0" class="detail-link" title="Link to this callback">
+    <a href="#c:cors_origin/0" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -734,7 +736,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="c:default_max_run_duration/0">
 
   <div class="detail-header">
-    <a href="#c:default_max_run_duration/0" class="detail-link" title="Link to this callback">
+    <a href="#c:default_max_run_duration/0" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -762,7 +764,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="c:email_sender_name/0">
 
   <div class="detail-header">
-    <a href="#c:email_sender_name/0" class="detail-link" title="Link to this callback">
+    <a href="#c:email_sender_name/0" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -790,7 +792,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="c:get_extension_mod/1">
 
   <div class="detail-header">
-    <a href="#c:get_extension_mod/1" class="detail-link" title="Link to this callback">
+    <a href="#c:get_extension_mod/1" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -818,7 +820,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="c:google/1">
 
   <div class="detail-header">
-    <a href="#c:google/1" class="detail-link" title="Link to this callback">
+    <a href="#c:google/1" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -846,7 +848,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="c:grace_period/0">
 
   <div class="detail-header">
-    <a href="#c:grace_period/0" class="detail-link" title="Link to this callback">
+    <a href="#c:grace_period/0" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -874,7 +876,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="c:instance_admin_email/0">
 
   <div class="detail-header">
-    <a href="#c:instance_admin_email/0" class="detail-link" title="Link to this callback">
+    <a href="#c:instance_admin_email/0" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -902,7 +904,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="c:kafka_alternate_storage_enabled?/0">
 
   <div class="detail-header">
-    <a href="#c:kafka_alternate_storage_enabled?/0" class="detail-link" title="Link to this callback">
+    <a href="#c:kafka_alternate_storage_enabled?/0" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -930,7 +932,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="c:kafka_alternate_storage_file_path/0">
 
   <div class="detail-header">
-    <a href="#c:kafka_alternate_storage_file_path/0" class="detail-link" title="Link to this callback">
+    <a href="#c:kafka_alternate_storage_file_path/0" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -958,7 +960,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="c:kafka_duplicate_tracking_retention_seconds/0">
 
   <div class="detail-header">
-    <a href="#c:kafka_duplicate_tracking_retention_seconds/0" class="detail-link" title="Link to this callback">
+    <a href="#c:kafka_duplicate_tracking_retention_seconds/0" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -986,7 +988,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="c:kafka_notification_embargo_seconds/0">
 
   <div class="detail-header">
-    <a href="#c:kafka_notification_embargo_seconds/0" class="detail-link" title="Link to this callback">
+    <a href="#c:kafka_notification_embargo_seconds/0" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -1014,7 +1016,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="c:kafka_number_of_consumers/0">
 
   <div class="detail-header">
-    <a href="#c:kafka_number_of_consumers/0" class="detail-link" title="Link to this callback">
+    <a href="#c:kafka_number_of_consumers/0" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -1042,7 +1044,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="c:kafka_number_of_messages_per_second/0">
 
   <div class="detail-header">
-    <a href="#c:kafka_number_of_messages_per_second/0" class="detail-link" title="Link to this callback">
+    <a href="#c:kafka_number_of_messages_per_second/0" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -1070,7 +1072,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="c:kafka_number_of_processors/0">
 
   <div class="detail-header">
-    <a href="#c:kafka_number_of_processors/0" class="detail-link" title="Link to this callback">
+    <a href="#c:kafka_number_of_processors/0" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -1098,7 +1100,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="c:kafka_triggers_enabled?/0">
 
   <div class="detail-header">
-    <a href="#c:kafka_triggers_enabled?/0" class="detail-link" title="Link to this callback">
+    <a href="#c:kafka_triggers_enabled?/0" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -1126,7 +1128,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="c:oauth_provider/1">
 
   <div class="detail-header">
-    <a href="#c:oauth_provider/1" class="detail-link" title="Link to this callback">
+    <a href="#c:oauth_provider/1" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -1154,7 +1156,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="c:purge_deleted_after_days/0">
 
   <div class="detail-header">
-    <a href="#c:purge_deleted_after_days/0" class="detail-link" title="Link to this callback">
+    <a href="#c:purge_deleted_after_days/0" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -1182,7 +1184,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="c:repo_connection_token_signer/0">
 
   <div class="detail-header">
-    <a href="#c:repo_connection_token_signer/0" class="detail-link" title="Link to this callback">
+    <a href="#c:repo_connection_token_signer/0" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -1200,7 +1202,7 @@ amount of time after a given run was meant to be finished.</p></div>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@callback</span> repo_connection_token_signer() :: <a href="https://hexdocs.pm/joken/2.6.0/Joken.Signer.html#t:t/0">Joken.Signer.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@callback</span> repo_connection_token_signer() :: <a href="https://hexdocs.pm/joken/2.6.2/Joken.Signer.html#t:t/0">Joken.Signer.t</a>()</pre>
 
       </div>
 
@@ -1210,7 +1212,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="c:reset_password_token_validity_in_days/0">
 
   <div class="detail-header">
-    <a href="#c:reset_password_token_validity_in_days/0" class="detail-link" title="Link to this callback">
+    <a href="#c:reset_password_token_validity_in_days/0" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -1238,7 +1240,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="c:run_token_signer/0">
 
   <div class="detail-header">
-    <a href="#c:run_token_signer/0" class="detail-link" title="Link to this callback">
+    <a href="#c:run_token_signer/0" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -1256,7 +1258,7 @@ amount of time after a given run was meant to be finished.</p></div>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@callback</span> run_token_signer() :: <a href="https://hexdocs.pm/joken/2.6.0/Joken.Signer.html#t:t/0">Joken.Signer.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@callback</span> run_token_signer() :: <a href="https://hexdocs.pm/joken/2.6.2/Joken.Signer.html#t:t/0">Joken.Signer.t</a>()</pre>
 
       </div>
 
@@ -1266,7 +1268,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="c:storage/0">
 
   <div class="detail-header">
-    <a href="#c:storage/0" class="detail-link" title="Link to this callback">
+    <a href="#c:storage/0" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -1294,7 +1296,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="c:storage/1">
 
   <div class="detail-header">
-    <a href="#c:storage/1" class="detail-link" title="Link to this callback">
+    <a href="#c:storage/1" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -1322,7 +1324,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="c:token_signer/0">
 
   <div class="detail-header">
-    <a href="#c:token_signer/0" class="detail-link" title="Link to this callback">
+    <a href="#c:token_signer/0" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -1340,7 +1342,7 @@ amount of time after a given run was meant to be finished.</p></div>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@callback</span> token_signer() :: <a href="https://hexdocs.pm/joken/2.6.0/Joken.Signer.html#t:t/0">Joken.Signer.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@callback</span> token_signer() :: <a href="https://hexdocs.pm/joken/2.6.2/Joken.Signer.html#t:t/0">Joken.Signer.t</a>()</pre>
 
       </div>
 
@@ -1350,7 +1352,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="c:usage_tracking/0">
 
   <div class="detail-header">
-    <a href="#c:usage_tracking/0" class="detail-link" title="Link to this callback">
+    <a href="#c:usage_tracking/0" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -1378,7 +1380,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="c:usage_tracking_cron_opts/0">
 
   <div class="detail-header">
-    <a href="#c:usage_tracking_cron_opts/0" class="detail-link" title="Link to this callback">
+    <a href="#c:usage_tracking_cron_opts/0" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -1396,7 +1398,7 @@ amount of time after a given run was meant to be finished.</p></div>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@callback</span> usage_tracking_cron_opts() :: [<a href="https://hexdocs.pm/oban/2.16.2/Oban.Plugins.Cron.html#t:cron_input/0">Oban.Plugins.Cron.cron_input</a>()]</pre>
+          <pre translate="no"><span class="attribute">@callback</span> usage_tracking_cron_opts() :: [<a href="https://hexdocs.pm/oban/2.18.3/Oban.Plugins.Cron.html#t:cron_input/0">Oban.Plugins.Cron.cron_input</a>()]</pre>
 
       </div>
 
@@ -1406,7 +1408,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="c:worker_secret/0">
 
   <div class="detail-header">
-    <a href="#c:worker_secret/0" class="detail-link" title="Link to this callback">
+    <a href="#c:worker_secret/0" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -1434,7 +1436,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="c:worker_token_signer/0">
 
   <div class="detail-header">
-    <a href="#c:worker_token_signer/0" class="detail-link" title="Link to this callback">
+    <a href="#c:worker_token_signer/0" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
@@ -1452,7 +1454,7 @@ amount of time after a given run was meant to be finished.</p></div>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@callback</span> worker_token_signer() :: <a href="https://hexdocs.pm/joken/2.6.0/Joken.Signer.html#t:t/0">Joken.Signer.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@callback</span> worker_token_signer() :: <a href="https://hexdocs.pm/joken/2.6.2/Joken.Signer.html#t:t/0">Joken.Signer.t</a>()</pre>
 
       </div>
 
@@ -1476,7 +1478,7 @@ amount of time after a given run was meant to be finished.</p></div>
     <span id="apollo/0"></span>
 
   <div class="detail-header">
-    <a href="#apollo/1" class="detail-link" title="Link to this function">
+    <a href="#apollo/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1498,7 +1500,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="check_flag?/1">
 
   <div class="detail-header">
-    <a href="#check_flag?/1" class="detail-link" title="Link to this function">
+    <a href="#check_flag?/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1520,7 +1522,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="cors_origin/0">
 
   <div class="detail-header">
-    <a href="#cors_origin/0" class="detail-link" title="Link to this function">
+    <a href="#cors_origin/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1542,7 +1544,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="default_max_run_duration/0">
 
   <div class="detail-header">
-    <a href="#default_max_run_duration/0" class="detail-link" title="Link to this function">
+    <a href="#default_max_run_duration/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1564,7 +1566,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="email_sender_name/0">
 
   <div class="detail-header">
-    <a href="#email_sender_name/0" class="detail-link" title="Link to this function">
+    <a href="#email_sender_name/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1586,7 +1588,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="get_extension_mod/1">
 
   <div class="detail-header">
-    <a href="#get_extension_mod/1" class="detail-link" title="Link to this function">
+    <a href="#get_extension_mod/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1608,7 +1610,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="google/1">
 
   <div class="detail-header">
-    <a href="#google/1" class="detail-link" title="Link to this function">
+    <a href="#google/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1630,7 +1632,7 @@ amount of time after a given run was meant to be finished.</p></div>
 <section class="detail" id="grace_period/0">
 
   <div class="detail-header">
-    <a href="#grace_period/0" class="detail-link" title="Link to this function">
+    <a href="#grace_period/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1653,7 +1655,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
 <section class="detail" id="instance_admin_email/0">
 
   <div class="detail-header">
-    <a href="#instance_admin_email/0" class="detail-link" title="Link to this function">
+    <a href="#instance_admin_email/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1675,7 +1677,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
 <section class="detail" id="kafka_alternate_storage_enabled?/0">
 
   <div class="detail-header">
-    <a href="#kafka_alternate_storage_enabled?/0" class="detail-link" title="Link to this function">
+    <a href="#kafka_alternate_storage_enabled?/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1697,7 +1699,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
 <section class="detail" id="kafka_alternate_storage_file_path/0">
 
   <div class="detail-header">
-    <a href="#kafka_alternate_storage_file_path/0" class="detail-link" title="Link to this function">
+    <a href="#kafka_alternate_storage_file_path/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1719,7 +1721,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
 <section class="detail" id="kafka_duplicate_tracking_retention_seconds/0">
 
   <div class="detail-header">
-    <a href="#kafka_duplicate_tracking_retention_seconds/0" class="detail-link" title="Link to this function">
+    <a href="#kafka_duplicate_tracking_retention_seconds/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1741,7 +1743,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
 <section class="detail" id="kafka_notification_embargo_seconds/0">
 
   <div class="detail-header">
-    <a href="#kafka_notification_embargo_seconds/0" class="detail-link" title="Link to this function">
+    <a href="#kafka_notification_embargo_seconds/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1763,7 +1765,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
 <section class="detail" id="kafka_number_of_consumers/0">
 
   <div class="detail-header">
-    <a href="#kafka_number_of_consumers/0" class="detail-link" title="Link to this function">
+    <a href="#kafka_number_of_consumers/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1785,7 +1787,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
 <section class="detail" id="kafka_number_of_messages_per_second/0">
 
   <div class="detail-header">
-    <a href="#kafka_number_of_messages_per_second/0" class="detail-link" title="Link to this function">
+    <a href="#kafka_number_of_messages_per_second/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1807,7 +1809,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
 <section class="detail" id="kafka_number_of_processors/0">
 
   <div class="detail-header">
-    <a href="#kafka_number_of_processors/0" class="detail-link" title="Link to this function">
+    <a href="#kafka_number_of_processors/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1829,7 +1831,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
 <section class="detail" id="kafka_triggers_enabled?/0">
 
   <div class="detail-header">
-    <a href="#kafka_triggers_enabled?/0" class="detail-link" title="Link to this function">
+    <a href="#kafka_triggers_enabled?/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1851,7 +1853,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
 <section class="detail" id="oauth_provider/1">
 
   <div class="detail-header">
-    <a href="#oauth_provider/1" class="detail-link" title="Link to this function">
+    <a href="#oauth_provider/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1873,7 +1875,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
 <section class="detail" id="purge_deleted_after_days/0">
 
   <div class="detail-header">
-    <a href="#purge_deleted_after_days/0" class="detail-link" title="Link to this function">
+    <a href="#purge_deleted_after_days/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1895,7 +1897,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
 <section class="detail" id="repo_connection_token_signer/0">
 
   <div class="detail-header">
-    <a href="#repo_connection_token_signer/0" class="detail-link" title="Link to this function">
+    <a href="#repo_connection_token_signer/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1917,7 +1919,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
 <section class="detail" id="reset_password_token_validity_in_days/0">
 
   <div class="detail-header">
-    <a href="#reset_password_token_validity_in_days/0" class="detail-link" title="Link to this function">
+    <a href="#reset_password_token_validity_in_days/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1939,7 +1941,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
 <section class="detail" id="run_token_signer/0">
 
   <div class="detail-header">
-    <a href="#run_token_signer/0" class="detail-link" title="Link to this function">
+    <a href="#run_token_signer/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1961,7 +1963,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
 <section class="detail" id="storage/0">
 
   <div class="detail-header">
-    <a href="#storage/0" class="detail-link" title="Link to this function">
+    <a href="#storage/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1983,7 +1985,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
 <section class="detail" id="storage/1">
 
   <div class="detail-header">
-    <a href="#storage/1" class="detail-link" title="Link to this function">
+    <a href="#storage/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -2005,7 +2007,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
 <section class="detail" id="token_signer/0">
 
   <div class="detail-header">
-    <a href="#token_signer/0" class="detail-link" title="Link to this function">
+    <a href="#token_signer/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -2027,7 +2029,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
 <section class="detail" id="usage_tracking/0">
 
   <div class="detail-header">
-    <a href="#usage_tracking/0" class="detail-link" title="Link to this function">
+    <a href="#usage_tracking/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -2049,7 +2051,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
 <section class="detail" id="usage_tracking_cron_opts/0">
 
   <div class="detail-header">
-    <a href="#usage_tracking_cron_opts/0" class="detail-link" title="Link to this function">
+    <a href="#usage_tracking_cron_opts/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -2071,7 +2073,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
 <section class="detail" id="worker_secret/0">
 
   <div class="detail-header">
-    <a href="#worker_secret/0" class="detail-link" title="Link to this function">
+    <a href="#worker_secret/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -2093,7 +2095,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
 <section class="detail" id="worker_token_signer/0">
 
   <div class="detail-header">
-    <a href="#worker_token_signer/0" class="detail-link" title="Link to this function">
+    <a href="#worker_token_signer/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -2116,34 +2118,33 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
     </div>
   </section>
 
-      <footer class="footer">
-        <p>
+    <footer class="footer">
+      <p>
 
-          <span class="line">
-            <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
-              Search HexDocs
-            </button>
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
 
-              <a href="Lightning.epub" title="ePub version">
-                Download ePub version
-              </a>
+            <a href="Lightning.epub" title="ePub version">
+              Download ePub version
+            </a>
 
-          </span>
-        </p>
+        </span>
+      </p>
 
-        <p class="built-using">
-          Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
 
-            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
-        </p>
-      </footer>
-    </div>
+      </p>
+
+    </footer>
   </div>
 </main>
 </div>
-
 
   </body>
 </html>

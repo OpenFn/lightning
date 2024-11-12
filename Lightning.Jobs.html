@@ -4,21 +4,19 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="generator" content="ExDoc v0.34.2">
     <meta name="project" content="Lightning v2.10.0-rc.1">
 
+
     <title>Lightning.Jobs — Lightning v2.10.0-rc.1</title>
-    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
+    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-0D035C9E.js"></script>
-
-      <script src="docs_config.js"></script>
-
-    <script async src="dist/html-J2ASZTQE.js"></script>
-
+    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
+    <script src="dist/sidebar_items-10E0B7BA.js"></script>
+    <script src="docs_config.js"></script>
+    <script async src="dist/html-YIPIRHGU.js"></script>
 
   </head>
   <body data-type="modules" class="page-module">
@@ -36,43 +34,28 @@
       } catch (error) { }
     </script>
 
-<div class="main">
+<div class="body-wrapper">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
 <nav id="sidebar" class="sidebar">
-  <form class="sidebar-search" action="search.html">
-    <label class="search-label">
-      <span class="sr-only">Search documentation of Lightning</span>
-      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
-    <button type="submit" class="search-button" aria-label="Submit Search">
-      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
-    </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
-      <i class="ri-close-line ri-lg" title="Cancel search"></i>
-    </button>
-  </form>
-
-  <div class="autocomplete">
-    <div class="autocomplete-results">
-    </div>
-  </div>
 
   <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
 
-      <a href="https://openfn.github.io/Lightning">
-        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
-      </a>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
 
-    <div class="sidebar-projectDetails">
-      <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+      <div>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
-      </a>
-      <div class="sidebar-projectVersion" translate="no">
-        v2.10.0-rc.1
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.10.0-rc.1
+        </div>
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -115,31 +98,50 @@ Pages
 
 <main class="content">
   <output role="status" id="toast"></output>
-  <div class="content-outer">
-    <div id="content" class="content-inner">
 
-<h1>
-<button class="icon-action display-settings">
-  <i class="ri-settings-3-line"></i>
-  <span class="sr-only">Settings</span>
-</button>
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+    <span translate="no">Lightning.Jobs</span> 
+    <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
+
+  </h1>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs.ex#L1" title="View Source" class="icon-action" rel="help">
-      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-      <span class="sr-only">View Source</span>
-    </a>
-
-  <span translate="no">Lightning.Jobs</span> 
-  <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
-
-</h1>
-
-
-  <section id="moduledoc">
+    <section id="moduledoc">
 <p>The Jobs context.</p>
-  </section>
+    </section>
 
+</div>
 
   <section id="summary" class="details-list">
     <h1 class="section-heading">
@@ -155,7 +157,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#change_job/2" translate="no">change_job(job, attrs \\ %{})</a>
+        <a href="#change_job/2" data-no-tooltip translate="no">change_job(job, attrs \\ %{})</a>
 
       </div>
 
@@ -165,7 +167,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#create_job/1" translate="no">create_job(attrs \\ %{})</a>
+        <a href="#create_job/1" data-no-tooltip translate="no">create_job(attrs \\ %{})</a>
 
       </div>
 
@@ -175,7 +177,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_downstream_jobs_for/2" translate="no">get_downstream_jobs_for(job, edge_condition \\ nil)</a>
+        <a href="#get_downstream_jobs_for/2" data-no-tooltip translate="no">get_downstream_jobs_for(job, edge_condition \\ nil)</a>
 
       </div>
 
@@ -188,7 +190,7 @@ when it called with a trigger that means we are starting from outside the pipeli
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_job!/1" translate="no">get_job!(id)</a>
+        <a href="#get_job!/1" data-no-tooltip translate="no">get_job!(id)</a>
 
       </div>
 
@@ -198,7 +200,7 @@ when it called with a trigger that means we are starting from outside the pipeli
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_job_with_credential/1" translate="no">get_job_with_credential(id)</a>
+        <a href="#get_job_with_credential/1" data-no-tooltip translate="no">get_job_with_credential(id)</a>
 
       </div>
 
@@ -206,7 +208,7 @@ when it called with a trigger that means we are starting from outside the pipeli
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_upstream_jobs_for/1" translate="no">get_upstream_jobs_for(map)</a>
+        <a href="#get_upstream_jobs_for/1" data-no-tooltip translate="no">get_upstream_jobs_for(map)</a>
 
       </div>
 
@@ -216,7 +218,7 @@ when it called with a trigger that means we are starting from outside the pipeli
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#jobs_for_project/1" translate="no">jobs_for_project(project)</a>
+        <a href="#jobs_for_project/1" data-no-tooltip translate="no">jobs_for_project(project)</a>
 
       </div>
 
@@ -224,7 +226,7 @@ when it called with a trigger that means we are starting from outside the pipeli
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#jobs_for_project_query/1" translate="no">jobs_for_project_query(project)</a>
+        <a href="#jobs_for_project_query/1" data-no-tooltip translate="no">jobs_for_project_query(project)</a>
 
       </div>
 
@@ -232,7 +234,7 @@ when it called with a trigger that means we are starting from outside the pipeli
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#list_active_cron_jobs/0" translate="no">list_active_cron_jobs()</a>
+        <a href="#list_active_cron_jobs/0" data-no-tooltip translate="no">list_active_cron_jobs()</a>
 
       </div>
 
@@ -240,7 +242,7 @@ when it called with a trigger that means we are starting from outside the pipeli
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#list_jobs/0" translate="no">list_jobs()</a>
+        <a href="#list_jobs/0" data-no-tooltip translate="no">list_jobs()</a>
 
       </div>
 
@@ -250,7 +252,7 @@ when it called with a trigger that means we are starting from outside the pipeli
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#list_jobs_for_workflow/1" translate="no">list_jobs_for_workflow(workflow)</a>
+        <a href="#list_jobs_for_workflow/1" data-no-tooltip translate="no">list_jobs_for_workflow(workflow)</a>
 
       </div>
 
@@ -258,7 +260,7 @@ when it called with a trigger that means we are starting from outside the pipeli
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#update_job/2" translate="no">update_job(job, attrs)</a>
+        <a href="#update_job/2" data-no-tooltip translate="no">update_job(job, attrs)</a>
 
       </div>
 
@@ -284,7 +286,7 @@ when it called with a trigger that means we are starting from outside the pipeli
     <span id="change_job/1"></span>
 
   <div class="detail-header">
-    <a href="#change_job/2" class="detail-link" title="Link to this function">
+    <a href="#change_job/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -306,8 +308,8 @@ when it called with a trigger that means we are starting from outside the pipeli
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_job</span><span class="p" data-group-id="7319433494-1">(</span><span class="n">job</span><span class="p" data-group-id="7319433494-1">)</span><span class="w">
-</span><span class="p" data-group-id="7319433494-2">%</span><span class="nc" data-group-id="7319433494-2">Ecto.Changeset</span><span class="p" data-group-id="7319433494-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7319433494-3">%</span><span class="nc" data-group-id="7319433494-3">Job</span><span class="p" data-group-id="7319433494-3">{</span><span class="p" data-group-id="7319433494-3">}</span><span class="p" data-group-id="7319433494-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_job</span><span class="p" data-group-id="2603400475-1">(</span><span class="n">job</span><span class="p" data-group-id="2603400475-1">)</span><span class="w">
+</span><span class="p" data-group-id="2603400475-2">%</span><span class="nc" data-group-id="2603400475-2">Ecto.Changeset</span><span class="p" data-group-id="2603400475-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2603400475-3">%</span><span class="nc" data-group-id="2603400475-3">Job</span><span class="p" data-group-id="2603400475-3">{</span><span class="p" data-group-id="2603400475-3">}</span><span class="p" data-group-id="2603400475-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="create_job/1">
@@ -315,7 +317,7 @@ when it called with a trigger that means we are starting from outside the pipeli
     <span id="create_job/0"></span>
 
   <div class="detail-header">
-    <a href="#create_job/1" class="detail-link" title="Link to this function">
+    <a href="#create_job/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -337,11 +339,11 @@ when it called with a trigger that means we are starting from outside the pipeli
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_job</span><span class="p" data-group-id="6530800650-1">(</span><span class="p" data-group-id="6530800650-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="6530800650-2">}</span><span class="p" data-group-id="6530800650-1">)</span><span class="w">
-</span><span class="p" data-group-id="6530800650-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6530800650-4">%</span><span class="nc" data-group-id="6530800650-4">Job</span><span class="p" data-group-id="6530800650-4">{</span><span class="p" data-group-id="6530800650-4">}</span><span class="p" data-group-id="6530800650-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_job</span><span class="p" data-group-id="7620226424-1">(</span><span class="p" data-group-id="7620226424-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="7620226424-2">}</span><span class="p" data-group-id="7620226424-1">)</span><span class="w">
+</span><span class="p" data-group-id="7620226424-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7620226424-4">%</span><span class="nc" data-group-id="7620226424-4">Job</span><span class="p" data-group-id="7620226424-4">{</span><span class="p" data-group-id="7620226424-4">}</span><span class="p" data-group-id="7620226424-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_job</span><span class="p" data-group-id="6530800650-5">(</span><span class="p" data-group-id="6530800650-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="6530800650-6">}</span><span class="p" data-group-id="6530800650-5">)</span><span class="w">
-</span><span class="p" data-group-id="6530800650-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6530800650-8">%</span><span class="nc" data-group-id="6530800650-8">Ecto.Changeset</span><span class="p" data-group-id="6530800650-8">{</span><span class="p" data-group-id="6530800650-8">}</span><span class="p" data-group-id="6530800650-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_job</span><span class="p" data-group-id="7620226424-5">(</span><span class="p" data-group-id="7620226424-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="7620226424-6">}</span><span class="p" data-group-id="7620226424-5">)</span><span class="w">
+</span><span class="p" data-group-id="7620226424-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7620226424-8">%</span><span class="nc" data-group-id="7620226424-8">Ecto.Changeset</span><span class="p" data-group-id="7620226424-8">{</span><span class="p" data-group-id="7620226424-8">}</span><span class="p" data-group-id="7620226424-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_downstream_jobs_for/2">
@@ -349,7 +351,7 @@ when it called with a trigger that means we are starting from outside the pipeli
     <span id="get_downstream_jobs_for/1"></span>
 
   <div class="detail-header">
-    <a href="#get_downstream_jobs_for/2" class="detail-link" title="Link to this function">
+    <a href="#get_downstream_jobs_for/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -368,7 +370,7 @@ when it called with a trigger that means we are starting from outside the pipeli
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@spec</span> get_downstream_jobs_for(
-  <a href="Lightning.Workflows.Job.html#t:t/0">Lightning.Workflows.Job.t</a>() | <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
+  <a href="Lightning.Workflows.Job.html#t:t/0">Lightning.Workflows.Job.t</a>() | <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
   <a href="Lightning.Workflows.Edge.html#t:edge_condition/0">Lightning.Workflows.Edge.edge_condition</a>() | nil
 ) :: [<a href="Lightning.Workflows.Job.html#t:t/0">Lightning.Workflows.Job.t</a>()]</pre>
 
@@ -383,7 +385,7 @@ when it called with a trigger that means we are starting from outside the pipeli
 <section class="detail" id="get_job!/1">
 
   <div class="detail-header">
-    <a href="#get_job!/1" class="detail-link" title="Link to this function">
+    <a href="#get_job!/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -399,23 +401,23 @@ when it called with a trigger that means we are starting from outside the pipeli
 
   <section class="docstring">
 
-<p>Gets a single job.</p><p>Raises <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.NoResultsError.html"><code class="inline">Ecto.NoResultsError</code></a> if the Job does not exist.</p><h2 id="get_job!/1-examples" class="section-heading">
+<p>Gets a single job.</p><p>Raises <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.NoResultsError.html"><code class="inline">Ecto.NoResultsError</code></a> if the Job does not exist.</p><h2 id="get_job!/1-examples" class="section-heading">
   <a href="#get_job!/1-examples" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_job!</span><span class="p" data-group-id="5274291918-1">(</span><span class="mi">123</span><span class="p" data-group-id="5274291918-1">)</span><span class="w">
-</span><span class="p" data-group-id="5274291918-2">%</span><span class="nc" data-group-id="5274291918-2">Job</span><span class="p" data-group-id="5274291918-2">{</span><span class="p" data-group-id="5274291918-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_job!</span><span class="p" data-group-id="0192924115-1">(</span><span class="mi">123</span><span class="p" data-group-id="0192924115-1">)</span><span class="w">
+</span><span class="p" data-group-id="0192924115-2">%</span><span class="nc" data-group-id="0192924115-2">Job</span><span class="p" data-group-id="0192924115-2">{</span><span class="p" data-group-id="0192924115-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_job!</span><span class="p" data-group-id="5274291918-3">(</span><span class="mi">456</span><span class="p" data-group-id="5274291918-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_job!</span><span class="p" data-group-id="0192924115-3">(</span><span class="mi">456</span><span class="p" data-group-id="0192924115-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_job_with_credential/1">
 
   <div class="detail-header">
-    <a href="#get_job_with_credential/1" class="detail-link" title="Link to this function">
+    <a href="#get_job_with_credential/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -437,7 +439,7 @@ when it called with a trigger that means we are starting from outside the pipeli
 <section class="detail" id="get_upstream_jobs_for/1">
 
   <div class="detail-header">
-    <a href="#get_upstream_jobs_for/1" class="detail-link" title="Link to this function">
+    <a href="#get_upstream_jobs_for/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -467,7 +469,7 @@ when it called with a trigger that means we are starting from outside the pipeli
 <section class="detail" id="jobs_for_project/1">
 
   <div class="detail-header">
-    <a href="#jobs_for_project/1" class="detail-link" title="Link to this function">
+    <a href="#jobs_for_project/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -497,7 +499,7 @@ when it called with a trigger that means we are starting from outside the pipeli
 <section class="detail" id="jobs_for_project_query/1">
 
   <div class="detail-header">
-    <a href="#jobs_for_project_query/1" class="detail-link" title="Link to this function">
+    <a href="#jobs_for_project_query/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -515,7 +517,7 @@ when it called with a trigger that means we are starting from outside the pipeli
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> jobs_for_project_query(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> jobs_for_project_query(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
 
       </div>
 
@@ -525,7 +527,7 @@ when it called with a trigger that means we are starting from outside the pipeli
 <section class="detail" id="list_active_cron_jobs/0">
 
   <div class="detail-header">
-    <a href="#list_active_cron_jobs/0" class="detail-link" title="Link to this function">
+    <a href="#list_active_cron_jobs/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -547,7 +549,7 @@ when it called with a trigger that means we are starting from outside the pipeli
 <section class="detail" id="list_jobs/0">
 
   <div class="detail-header">
-    <a href="#list_jobs/0" class="detail-link" title="Link to this function">
+    <a href="#list_jobs/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -569,7 +571,7 @@ when it called with a trigger that means we are starting from outside the pipeli
 <section class="detail" id="list_jobs_for_workflow/1">
 
   <div class="detail-header">
-    <a href="#list_jobs_for_workflow/1" class="detail-link" title="Link to this function">
+    <a href="#list_jobs_for_workflow/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -598,7 +600,7 @@ when it called with a trigger that means we are starting from outside the pipeli
 <section class="detail" id="update_job/2">
 
   <div class="detail-header">
-    <a href="#update_job/2" class="detail-link" title="Link to this function">
+    <a href="#update_job/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -620,45 +622,44 @@ when it called with a trigger that means we are starting from outside the pipeli
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_job</span><span class="p" data-group-id="4117576663-1">(</span><span class="n">job</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4117576663-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="4117576663-2">}</span><span class="p" data-group-id="4117576663-1">)</span><span class="w">
-</span><span class="p" data-group-id="4117576663-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4117576663-4">%</span><span class="nc" data-group-id="4117576663-4">Job</span><span class="p" data-group-id="4117576663-4">{</span><span class="p" data-group-id="4117576663-4">}</span><span class="p" data-group-id="4117576663-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_job</span><span class="p" data-group-id="7150926678-1">(</span><span class="n">job</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7150926678-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="7150926678-2">}</span><span class="p" data-group-id="7150926678-1">)</span><span class="w">
+</span><span class="p" data-group-id="7150926678-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7150926678-4">%</span><span class="nc" data-group-id="7150926678-4">Job</span><span class="p" data-group-id="7150926678-4">{</span><span class="p" data-group-id="7150926678-4">}</span><span class="p" data-group-id="7150926678-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_job</span><span class="p" data-group-id="4117576663-5">(</span><span class="n">job</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4117576663-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="4117576663-6">}</span><span class="p" data-group-id="4117576663-5">)</span><span class="w">
-</span><span class="p" data-group-id="4117576663-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4117576663-8">%</span><span class="nc" data-group-id="4117576663-8">Ecto.Changeset</span><span class="p" data-group-id="4117576663-8">{</span><span class="p" data-group-id="4117576663-8">}</span><span class="p" data-group-id="4117576663-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_job</span><span class="p" data-group-id="7150926678-5">(</span><span class="n">job</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7150926678-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="7150926678-6">}</span><span class="p" data-group-id="7150926678-5">)</span><span class="w">
+</span><span class="p" data-group-id="7150926678-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7150926678-8">%</span><span class="nc" data-group-id="7150926678-8">Ecto.Changeset</span><span class="p" data-group-id="7150926678-8">{</span><span class="p" data-group-id="7150926678-8">}</span><span class="p" data-group-id="7150926678-7">}</span></code></pre>
   </section>
 </section>
 
     </div>
   </section>
 
-      <footer class="footer">
-        <p>
+    <footer class="footer">
+      <p>
 
-          <span class="line">
-            <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
-              Search HexDocs
-            </button>
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
 
-              <a href="Lightning.epub" title="ePub version">
-                Download ePub version
-              </a>
+            <a href="Lightning.epub" title="ePub version">
+              Download ePub version
+            </a>
 
-          </span>
-        </p>
+        </span>
+      </p>
 
-        <p class="built-using">
-          Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
 
-            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
-        </p>
-      </footer>
-    </div>
+      </p>
+
+    </footer>
   </div>
 </main>
 </div>
-
 
   </body>
 </html>

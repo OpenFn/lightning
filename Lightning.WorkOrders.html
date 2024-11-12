@@ -4,21 +4,19 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="generator" content="ExDoc v0.34.2">
     <meta name="project" content="Lightning v2.10.0-rc.1">
 
+
     <title>Lightning.WorkOrders — Lightning v2.10.0-rc.1</title>
-    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
+    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-0D035C9E.js"></script>
-
-      <script src="docs_config.js"></script>
-
-    <script async src="dist/html-J2ASZTQE.js"></script>
-
+    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
+    <script src="dist/sidebar_items-10E0B7BA.js"></script>
+    <script src="docs_config.js"></script>
+    <script async src="dist/html-YIPIRHGU.js"></script>
 
   </head>
   <body data-type="modules" class="page-module">
@@ -36,43 +34,28 @@
       } catch (error) { }
     </script>
 
-<div class="main">
+<div class="body-wrapper">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
 <nav id="sidebar" class="sidebar">
-  <form class="sidebar-search" action="search.html">
-    <label class="search-label">
-      <span class="sr-only">Search documentation of Lightning</span>
-      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
-    <button type="submit" class="search-button" aria-label="Submit Search">
-      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
-    </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
-      <i class="ri-close-line ri-lg" title="Cancel search"></i>
-    </button>
-  </form>
-
-  <div class="autocomplete">
-    <div class="autocomplete-results">
-    </div>
-  </div>
 
   <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
 
-      <a href="https://openfn.github.io/Lightning">
-        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
-      </a>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
 
-    <div class="sidebar-projectDetails">
-      <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+      <div>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
-      </a>
-      <div class="sidebar-projectVersion" translate="no">
-        v2.10.0-rc.1
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.10.0-rc.1
+        </div>
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -115,28 +98,46 @@ Pages
 
 <main class="content">
   <output role="status" id="toast"></output>
-  <div class="content-outer">
-    <div id="content" class="content-inner">
 
-<h1>
-<button class="icon-action display-settings">
-  <i class="ri-settings-3-line"></i>
-  <span class="sr-only">Settings</span>
-</button>
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+    <span translate="no">Lightning.WorkOrders</span> 
+    <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
+
+  </h1>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L1" title="View Source" class="icon-action" rel="help">
-      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-      <span class="sr-only">View Source</span>
-    </a>
-
-  <span translate="no">Lightning.WorkOrders</span> 
-  <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
-
-</h1>
-
-
-  <section id="moduledoc">
+    <section id="moduledoc">
 <p>Context for creating WorkOrders.</p><h2 id="module-work-orders" class="section-heading">
   <a href="#module-work-orders" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
@@ -156,8 +157,9 @@ the success or failure of a given dataclip.</p><h2 id="module-creating-work-orde
 </h2>
 <p>Work Orders can be created in three ways:</p><ol><li>Via a webhook trigger</li><li>Via a cron trigger</li><li>Manually by a user (via the UI or API)</li></ol><p>Retries do not create new Work Orders, but rather new Runs on the existing
 Work Order.</p>
-  </section>
+    </section>
 
+</div>
 
   <section id="summary" class="details-list">
     <h1 class="section-heading">
@@ -173,7 +175,7 @@ Work Order.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#t:work_order_option/0" translate="no">work_order_option()</a>
+        <a href="#t:work_order_option/0" data-no-tooltip translate="no">work_order_option()</a>
 
       </div>
 
@@ -187,7 +189,7 @@ Work Order.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#build/1" translate="no">build(attrs)</a>
+        <a href="#build/1" data-no-tooltip translate="no">build(attrs)</a>
 
       </div>
 
@@ -195,7 +197,7 @@ Work Order.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#build_for/2" translate="no">build_for(trigger, attrs)</a>
+        <a href="#build_for/2" data-no-tooltip translate="no">build_for(trigger, attrs)</a>
 
       </div>
 
@@ -203,7 +205,7 @@ Work Order.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#create_for/1" translate="no">create_for(manual)</a>
+        <a href="#create_for/1" data-no-tooltip translate="no">create_for(manual)</a>
 
       </div>
 
@@ -211,7 +213,7 @@ Work Order.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#create_for/3" translate="no">create_for(target, multi \\ Multi.new(), opts)</a>
+        <a href="#create_for/3" data-no-tooltip translate="no">create_for(target, multi \\ Multi.new(), opts)</a>
 
       </div>
 
@@ -221,7 +223,7 @@ Work Order.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#enqueue_many_for_retry/2" translate="no">enqueue_many_for_retry(workorders_ids, creating_user_id)</a>
+        <a href="#enqueue_many_for_retry/2" data-no-tooltip translate="no">enqueue_many_for_retry(workorders_ids, creating_user_id)</a>
 
       </div>
 
@@ -231,7 +233,7 @@ Work Order.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get/2" translate="no">get(id, opts \\ [])</a>
+        <a href="#get/2" data-no-tooltip translate="no">get(id, opts \\ [])</a>
 
       </div>
 
@@ -241,7 +243,7 @@ Work Order.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#retry/3" translate="no">retry(run_id, step_id, opts)</a>
+        <a href="#retry/3" data-no-tooltip translate="no">retry(run_id, step_id, opts)</a>
 
       </div>
 
@@ -251,7 +253,7 @@ Work Order.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#retry_many/2" translate="no">retry_many(workorders, opts)</a>
+        <a href="#retry_many/2" data-no-tooltip translate="no">retry_many(workorders, opts)</a>
 
       </div>
 
@@ -259,7 +261,7 @@ Work Order.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#retry_many/3" translate="no">retry_many(workorders, job_id, opts)</a>
+        <a href="#retry_many/3" data-no-tooltip translate="no">retry_many(workorders, job_id, opts)</a>
 
       </div>
 
@@ -267,7 +269,7 @@ Work Order.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#subscribe/1" translate="no">subscribe(project_id)</a>
+        <a href="#subscribe/1" data-no-tooltip translate="no">subscribe(project_id)</a>
 
       </div>
 
@@ -277,7 +279,7 @@ Work Order.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#update_state/1" translate="no">update_state(run)</a>
+        <a href="#update_state/1" data-no-tooltip translate="no">update_state(run)</a>
 
       </div>
 
@@ -301,7 +303,7 @@ Work Order.</p>
 <section class="detail" id="t:work_order_option/0">
 
   <div class="detail-header">
-    <a href="#t:work_order_option/0" class="detail-link" title="Link to this type">
+    <a href="#t:work_order_option/0" class="detail-link" data-no-tooltip title="Link to this type">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this type</span>
     </a>
@@ -323,7 +325,7 @@ Work Order.</p>
   {:workflow, <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>()}
   | {:dataclip, <a href="Lightning.Invocation.Dataclip.html#t:t/0">Lightning.Invocation.Dataclip.t</a>()}
   | {:created_by, <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>()}
-  | {:project_id, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()}
+  | {:project_id, <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()}
   | {:without_run, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()}</pre>
 
       </div>
@@ -346,7 +348,7 @@ Work Order.</p>
 <section class="detail" id="build/1">
 
   <div class="detail-header">
-    <a href="#build/1" class="detail-link" title="Link to this function">
+    <a href="#build/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -368,7 +370,7 @@ Work Order.</p>
 <section class="detail" id="build_for/2">
 
   <div class="detail-header">
-    <a href="#build_for/2" class="detail-link" title="Link to this function">
+    <a href="#build_for/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -387,7 +389,7 @@ Work Order.</p>
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@spec</span> build_for(<a href="Lightning.Workflows.Trigger.html#t:t/0">Lightning.Workflows.Trigger.t</a>() | <a href="Lightning.Workflows.Job.html#t:t/0">Lightning.Workflows.Job.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) ::
-  <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.WorkOrder.html#t:t/0">Lightning.WorkOrder.t</a>())</pre>
+  <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.WorkOrder.html#t:t/0">Lightning.WorkOrder.t</a>())</pre>
 
       </div>
 
@@ -397,7 +399,7 @@ Work Order.</p>
 <section class="detail" id="create_for/1">
 
   <div class="detail-header">
-    <a href="#create_for/1" class="detail-link" title="Link to this function">
+    <a href="#create_for/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -421,7 +423,7 @@ Work Order.</p>
     <span id="create_for/2"></span>
 
   <div class="detail-header">
-    <a href="#create_for/3" class="detail-link" title="Link to this function">
+    <a href="#create_for/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -441,23 +443,23 @@ Work Order.</p>
 
           <pre translate="no"><span class="attribute">@spec</span> create_for(
   <a href="Lightning.Workflows.Trigger.html#t:t/0">Lightning.Workflows.Trigger.t</a>() | <a href="Lightning.Workflows.Job.html#t:t/0">Lightning.Workflows.Job.t</a>(),
-  <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Multi.html#t:t/0">Ecto.Multi.t</a>(),
+  <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Multi.html#t:t/0">Ecto.Multi.t</a>(),
   [
     <a href="#t:work_order_option/0">work_order_option</a>()
   ]
 ) ::
   {:ok, <a href="Lightning.WorkOrder.html#t:t/0">Lightning.WorkOrder.t</a>()}
-  | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.WorkOrder.html#t:t/0">Lightning.WorkOrder.t</a>())}</pre>
+  | {:error, <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.WorkOrder.html#t:t/0">Lightning.WorkOrder.t</a>())}</pre>
 
       </div>
 
-<p>Create a new Work Order.</p><p><strong>For a webhook</strong></p><pre><code class="makeup elixir" translate="no"><span class="n">create_for</span><span class="p" data-group-id="4029307957-1">(</span><span class="n">trigger</span><span class="p">,</span><span class="w"> </span><span class="ss">workflow</span><span class="p">:</span><span class="w"> </span><span class="n">workflow</span><span class="p">,</span><span class="w"> </span><span class="ss">dataclip</span><span class="p">:</span><span class="w"> </span><span class="n">dataclip</span><span class="p" data-group-id="4029307957-1">)</span></code></pre><p><strong>For a user</strong></p><pre><code class="makeup elixir" translate="no"><span class="n">create_for</span><span class="p" data-group-id="7028011608-1">(</span><span class="n">job</span><span class="p">,</span><span class="w"> </span><span class="ss">workflow</span><span class="p">:</span><span class="w"> </span><span class="n">workflow</span><span class="p">,</span><span class="w"> </span><span class="ss">dataclip</span><span class="p">:</span><span class="w"> </span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="7028011608-1">)</span></code></pre>
+<p>Create a new Work Order.</p><p><strong>For a webhook</strong></p><pre><code class="makeup elixir" translate="no"><span class="n">create_for</span><span class="p" data-group-id="2347477071-1">(</span><span class="n">trigger</span><span class="p">,</span><span class="w"> </span><span class="ss">workflow</span><span class="p">:</span><span class="w"> </span><span class="n">workflow</span><span class="p">,</span><span class="w"> </span><span class="ss">dataclip</span><span class="p">:</span><span class="w"> </span><span class="n">dataclip</span><span class="p" data-group-id="2347477071-1">)</span></code></pre><p><strong>For a user</strong></p><pre><code class="makeup elixir" translate="no"><span class="n">create_for</span><span class="p" data-group-id="9163454344-1">(</span><span class="n">job</span><span class="p">,</span><span class="w"> </span><span class="ss">workflow</span><span class="p">:</span><span class="w"> </span><span class="n">workflow</span><span class="p">,</span><span class="w"> </span><span class="ss">dataclip</span><span class="p">:</span><span class="w"> </span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="9163454344-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="enqueue_many_for_retry/2">
 
   <div class="detail-header">
-    <a href="#enqueue_many_for_retry/2" class="detail-link" title="Link to this function">
+    <a href="#enqueue_many_for_retry/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -481,7 +483,7 @@ Work Order.</p>
     <span id="get/1"></span>
 
   <div class="detail-header">
-    <a href="#get/2" class="detail-link" title="Link to this function">
+    <a href="#get/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -499,17 +501,17 @@ Work Order.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> get(<a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(), [{:include, [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()]}]) :: <a href="Lightning.WorkOrder.html#t:t/0">Lightning.WorkOrder.t</a>() | nil</pre>
+          <pre translate="no"><span class="attribute">@spec</span> get(<a href="https://hexdocs.pm/ecto/3.12.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(), [{:include, [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()]}]) :: <a href="Lightning.WorkOrder.html#t:t/0">Lightning.WorkOrder.t</a>() | nil</pre>
 
       </div>
 
-<p>Get a Work Order by id.</p><p>Optionally preload associations by passing a list of atoms to <code class="inline">:include</code>.</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.WorkOrders</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="9936053959-1">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9936053959-2">[</span><span class="ss">:runs</span><span class="p" data-group-id="9936053959-2">]</span><span class="p" data-group-id="9936053959-1">)</span></code></pre>
+<p>Get a Work Order by id.</p><p>Optionally preload associations by passing a list of atoms to <code class="inline">:include</code>.</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.WorkOrders</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="0597073196-1">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0597073196-2">[</span><span class="ss">:runs</span><span class="p" data-group-id="0597073196-2">]</span><span class="p" data-group-id="0597073196-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="retry/3">
 
   <div class="detail-header">
-    <a href="#retry/3" class="detail-link" title="Link to this function">
+    <a href="#retry/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -528,10 +530,10 @@ Work Order.</p>
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@spec</span> retry(
-  <a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>() | <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
-  <a href="Lightning.Invocation.Step.html#t:t/0">Lightning.Invocation.Step.t</a>() | <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
+  <a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>() | <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
+  <a href="Lightning.Invocation.Step.html#t:t/0">Lightning.Invocation.Step.t</a>() | <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
   [<a href="#t:work_order_option/0">work_order_option</a>(), ...]
-) :: {:ok, <a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
+) :: {:ok, <a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
 
       </div>
 
@@ -544,7 +546,7 @@ this new run, but not executed again.</p>
 <section class="detail" id="retry_many/2">
 
   <div class="detail-header">
-    <a href="#retry_many/2" class="detail-link" title="Link to this function">
+    <a href="#retry_many/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -579,7 +581,7 @@ this new run, but not executed again.</p>
 <section class="detail" id="retry_many/3">
 
   <div class="detail-header">
-    <a href="#retry_many/3" class="detail-link" title="Link to this function">
+    <a href="#retry_many/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -597,7 +599,7 @@ this new run, but not executed again.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> retry_many([<a href="Lightning.WorkOrder.html#t:t/0">Lightning.WorkOrder.t</a>(), ...], job_id :: <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(), [
+          <pre translate="no"><span class="attribute">@spec</span> retry_many([<a href="Lightning.WorkOrder.html#t:t/0">Lightning.WorkOrder.t</a>(), ...], job_id :: <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(), [
   <a href="#t:work_order_option/0">work_order_option</a>(),
   ...
 ]) ::
@@ -614,7 +616,7 @@ this new run, but not executed again.</p>
 <section class="detail" id="subscribe/1">
 
   <div class="detail-header">
-    <a href="#subscribe/1" class="detail-link" title="Link to this function">
+    <a href="#subscribe/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -636,7 +638,7 @@ this new run, but not executed again.</p>
 <section class="detail" id="update_state/1">
 
   <div class="detail-header">
-    <a href="#update_state/1" class="detail-link" title="Link to this function">
+    <a href="#update_state/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -666,34 +668,33 @@ Run passed in as the latest run.</p><p>See <a href="Lightning.WorkOrders.Query.h
     </div>
   </section>
 
-      <footer class="footer">
-        <p>
+    <footer class="footer">
+      <p>
 
-          <span class="line">
-            <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
-              Search HexDocs
-            </button>
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
 
-              <a href="Lightning.epub" title="ePub version">
-                Download ePub version
-              </a>
+            <a href="Lightning.epub" title="ePub version">
+              Download ePub version
+            </a>
 
-          </span>
-        </p>
+        </span>
+      </p>
 
-        <p class="built-using">
-          Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
 
-            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
-        </p>
-      </footer>
-    </div>
+      </p>
+
+    </footer>
   </div>
 </main>
 </div>
-
 
   </body>
 </html>

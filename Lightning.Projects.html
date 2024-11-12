@@ -4,21 +4,19 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="generator" content="ExDoc v0.34.2">
     <meta name="project" content="Lightning v2.10.0-rc.1">
 
+
     <title>Lightning.Projects — Lightning v2.10.0-rc.1</title>
-    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
+    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-0D035C9E.js"></script>
-
-      <script src="docs_config.js"></script>
-
-    <script async src="dist/html-J2ASZTQE.js"></script>
-
+    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
+    <script src="dist/sidebar_items-10E0B7BA.js"></script>
+    <script src="docs_config.js"></script>
+    <script async src="dist/html-YIPIRHGU.js"></script>
 
   </head>
   <body data-type="modules" class="page-module">
@@ -36,43 +34,28 @@
       } catch (error) { }
     </script>
 
-<div class="main">
+<div class="body-wrapper">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
 <nav id="sidebar" class="sidebar">
-  <form class="sidebar-search" action="search.html">
-    <label class="search-label">
-      <span class="sr-only">Search documentation of Lightning</span>
-      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
-    <button type="submit" class="search-button" aria-label="Submit Search">
-      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
-    </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
-      <i class="ri-close-line ri-lg" title="Cancel search"></i>
-    </button>
-  </form>
-
-  <div class="autocomplete">
-    <div class="autocomplete-results">
-    </div>
-  </div>
 
   <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
 
-      <a href="https://openfn.github.io/Lightning">
-        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
-      </a>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
 
-    <div class="sidebar-projectDetails">
-      <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+      <div>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
-      </a>
-      <div class="sidebar-projectVersion" translate="no">
-        v2.10.0-rc.1
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.10.0-rc.1
+        </div>
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -115,31 +98,50 @@ Pages
 
 <main class="content">
   <output role="status" id="toast"></output>
-  <div class="content-outer">
-    <div id="content" class="content-inner">
 
-<h1>
-<button class="icon-action display-settings">
-  <i class="ri-settings-3-line"></i>
-  <span class="sr-only">Settings</span>
-</button>
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+    <span translate="no">Lightning.Projects</span> 
+    <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
+
+  </h1>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects.ex#L1" title="View Source" class="icon-action" rel="help">
-      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-      <span class="sr-only">View Source</span>
-    </a>
-
-  <span translate="no">Lightning.Projects</span> 
-  <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
-
-</h1>
-
-
-  <section id="moduledoc">
+    <section id="moduledoc">
 <p>The Projects context.</p>
-  </section>
+    </section>
 
+</div>
 
   <section id="summary" class="details-list">
     <h1 class="section-heading">
@@ -155,7 +157,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#add_project_users/3" translate="no">add_project_users(project, project_users, notify_users \\ true)</a>
+        <a href="#add_project_users/3" data-no-tooltip translate="no">add_project_users(project, project_users, notify_users \\ true)</a>
 
       </div>
 
@@ -163,7 +165,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#cancel_scheduled_deletion/1" translate="no">cancel_scheduled_deletion(project_id)</a>
+        <a href="#cancel_scheduled_deletion/1" data-no-tooltip translate="no">cancel_scheduled_deletion(project_id)</a>
 
       </div>
 
@@ -171,7 +173,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#change_project/2" translate="no">change_project(project, attrs \\ %{})</a>
+        <a href="#change_project/2" data-no-tooltip translate="no">change_project(project, attrs \\ %{})</a>
 
       </div>
 
@@ -181,7 +183,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#create_project/2" translate="no">create_project(attrs \\ %{}, schedule_email? \\ true)</a>
+        <a href="#create_project/2" data-no-tooltip translate="no">create_project(attrs \\ %{}, schedule_email? \\ true)</a>
 
       </div>
 
@@ -191,7 +193,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#delete_project/1" translate="no">delete_project(project)</a>
+        <a href="#delete_project/1" data-no-tooltip translate="no">delete_project(project)</a>
 
       </div>
 
@@ -202,7 +204,7 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#delete_project_user!/1" translate="no">delete_project_user!(project_user)</a>
+        <a href="#delete_project_user!/1" data-no-tooltip translate="no">delete_project_user!(project_user)</a>
 
       </div>
 
@@ -210,7 +212,7 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#export_project/3" translate="no">export_project(atom, project_id, snapshot_ids \\ nil)</a>
+        <a href="#export_project/3" data-no-tooltip translate="no">export_project(atom, project_id, snapshot_ids \\ nil)</a>
 
       </div>
 
@@ -220,7 +222,7 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#find_users_to_notify_of_trigger_failure/1" translate="no">find_users_to_notify_of_trigger_failure(project_id)</a>
+        <a href="#find_users_to_notify_of_trigger_failure/1" data-no-tooltip translate="no">find_users_to_notify_of_trigger_failure(project_id)</a>
 
       </div>
 
@@ -228,7 +230,7 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_project/1" translate="no">get_project(id)</a>
+        <a href="#get_project/1" data-no-tooltip translate="no">get_project(id)</a>
 
       </div>
 
@@ -236,7 +238,7 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_project!/1" translate="no">get_project!(id)</a>
+        <a href="#get_project!/1" data-no-tooltip translate="no">get_project!(id)</a>
 
       </div>
 
@@ -246,7 +248,7 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_project_credential/2" translate="no">get_project_credential(project_id, credential_id)</a>
+        <a href="#get_project_credential/2" data-no-tooltip translate="no">get_project_credential(project_id, credential_id)</a>
 
       </div>
 
@@ -254,7 +256,7 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_project_user/1" translate="no">get_project_user(id)</a>
+        <a href="#get_project_user/1" data-no-tooltip translate="no">get_project_user(id)</a>
 
       </div>
 
@@ -262,7 +264,7 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_project_user/2" translate="no">get_project_user(project, user)</a>
+        <a href="#get_project_user/2" data-no-tooltip translate="no">get_project_user(project, user)</a>
 
       </div>
 
@@ -270,7 +272,7 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_project_user!/1" translate="no">get_project_user!(id)</a>
+        <a href="#get_project_user!/1" data-no-tooltip translate="no">get_project_user!(id)</a>
 
       </div>
 
@@ -280,7 +282,7 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_project_user_role/2" translate="no">get_project_user_role(user, project)</a>
+        <a href="#get_project_user_role/2" data-no-tooltip translate="no">get_project_user_role(user, project)</a>
 
       </div>
 
@@ -291,7 +293,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_project_users!/1" translate="no">get_project_users!(id)</a>
+        <a href="#get_project_users!/1" data-no-tooltip translate="no">get_project_users!(id)</a>
 
       </div>
 
@@ -301,7 +303,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_project_with_users!/1" translate="no">get_project_with_users!(id)</a>
+        <a href="#get_project_with_users!/1" data-no-tooltip translate="no">get_project_with_users!(id)</a>
 
       </div>
 
@@ -311,7 +313,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_projects_for_user/2" translate="no">get_projects_for_user(user, opts \\ [])</a>
+        <a href="#get_projects_for_user/2" data-no-tooltip translate="no">get_projects_for_user(user, opts \\ [])</a>
 
       </div>
 
@@ -321,7 +323,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_projects_overview/2" translate="no">get_projects_overview(user, opts \\ [])</a>
+        <a href="#get_projects_overview/2" data-no-tooltip translate="no">get_projects_overview(user, opts \\ [])</a>
 
       </div>
 
@@ -329,7 +331,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#invite_collaborators/3" translate="no">invite_collaborators(project, collaborators, inviter)</a>
+        <a href="#invite_collaborators/3" data-no-tooltip translate="no">invite_collaborators(project, collaborators, inviter)</a>
 
       </div>
 
@@ -337,7 +339,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#list_project_admin_emails/1" translate="no">list_project_admin_emails(id)</a>
+        <a href="#list_project_admin_emails/1" data-no-tooltip translate="no">list_project_admin_emails(id)</a>
 
       </div>
 
@@ -347,7 +349,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#list_project_credentials/1" translate="no">list_project_credentials(project)</a>
+        <a href="#list_project_credentials/1" data-no-tooltip translate="no">list_project_credentials(project)</a>
 
       </div>
 
@@ -355,7 +357,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#list_project_files/2" translate="no">list_project_files(project, opts \\ [])</a>
+        <a href="#list_project_files/2" data-no-tooltip translate="no">list_project_files(project, opts \\ [])</a>
 
       </div>
 
@@ -363,7 +365,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#list_projects/0" translate="no">list_projects()</a>
+        <a href="#list_projects/0" data-no-tooltip translate="no">list_projects()</a>
 
       </div>
 
@@ -373,7 +375,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#list_projects_having_history_retention/0" translate="no">list_projects_having_history_retention()</a>
+        <a href="#list_projects_having_history_retention/0" data-no-tooltip translate="no">list_projects_having_history_retention()</a>
 
       </div>
 
@@ -383,7 +385,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#member_of?/2" translate="no">member_of?(project, user)</a>
+        <a href="#member_of?/2" data-no-tooltip translate="no">member_of?(project, user)</a>
 
       </div>
 
@@ -391,7 +393,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#perform/1" translate="no">perform(job)</a>
+        <a href="#perform/1" data-no-tooltip translate="no">perform(job)</a>
 
       </div>
 
@@ -402,7 +404,7 @@ will find projects that are ready for permanent deletion and purge them.</p></di
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#project_credentials_query/1" translate="no">project_credentials_query(project)</a>
+        <a href="#project_credentials_query/1" data-no-tooltip translate="no">project_credentials_query(project)</a>
 
       </div>
 
@@ -410,7 +412,7 @@ will find projects that are ready for permanent deletion and purge them.</p></di
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#project_dataclips_query/1" translate="no">project_dataclips_query(project)</a>
+        <a href="#project_dataclips_query/1" data-no-tooltip translate="no">project_dataclips_query(project)</a>
 
       </div>
 
@@ -418,7 +420,7 @@ will find projects that are ready for permanent deletion and purge them.</p></di
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#project_jobs_query/1" translate="no">project_jobs_query(project)</a>
+        <a href="#project_jobs_query/1" data-no-tooltip translate="no">project_jobs_query(project)</a>
 
       </div>
 
@@ -426,7 +428,7 @@ will find projects that are ready for permanent deletion and purge them.</p></di
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#project_run_step_query/1" translate="no">project_run_step_query(project)</a>
+        <a href="#project_run_step_query/1" data-no-tooltip translate="no">project_run_step_query(project)</a>
 
       </div>
 
@@ -434,7 +436,7 @@ will find projects that are ready for permanent deletion and purge them.</p></di
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#project_runs_query/1" translate="no">project_runs_query(project)</a>
+        <a href="#project_runs_query/1" data-no-tooltip translate="no">project_runs_query(project)</a>
 
       </div>
 
@@ -442,7 +444,7 @@ will find projects that are ready for permanent deletion and purge them.</p></di
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#project_steps_query/1" translate="no">project_steps_query(project)</a>
+        <a href="#project_steps_query/1" data-no-tooltip translate="no">project_steps_query(project)</a>
 
       </div>
 
@@ -450,7 +452,7 @@ will find projects that are ready for permanent deletion and purge them.</p></di
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#project_triggers_query/1" translate="no">project_triggers_query(project)</a>
+        <a href="#project_triggers_query/1" data-no-tooltip translate="no">project_triggers_query(project)</a>
 
       </div>
 
@@ -458,7 +460,7 @@ will find projects that are ready for permanent deletion and purge them.</p></di
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#project_user_role_query/2" translate="no">project_user_role_query(user, project)</a>
+        <a href="#project_user_role_query/2" data-no-tooltip translate="no">project_user_role_query(user, project)</a>
 
       </div>
 
@@ -466,7 +468,7 @@ will find projects that are ready for permanent deletion and purge them.</p></di
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#project_users_query/1" translate="no">project_users_query(project)</a>
+        <a href="#project_users_query/1" data-no-tooltip translate="no">project_users_query(project)</a>
 
       </div>
 
@@ -474,7 +476,7 @@ will find projects that are ready for permanent deletion and purge them.</p></di
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#project_workflows_query/1" translate="no">project_workflows_query(project)</a>
+        <a href="#project_workflows_query/1" data-no-tooltip translate="no">project_workflows_query(project)</a>
 
       </div>
 
@@ -482,7 +484,7 @@ will find projects that are ready for permanent deletion and purge them.</p></di
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#project_workorders_query/1" translate="no">project_workorders_query(project)</a>
+        <a href="#project_workorders_query/1" data-no-tooltip translate="no">project_workorders_query(project)</a>
 
       </div>
 
@@ -490,7 +492,7 @@ will find projects that are ready for permanent deletion and purge them.</p></di
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#projects_for_user_query/2" translate="no">projects_for_user_query(user, opts \\ [])</a>
+        <a href="#projects_for_user_query/2" data-no-tooltip translate="no">projects_for_user_query(user, opts \\ [])</a>
 
       </div>
 
@@ -500,7 +502,7 @@ will find projects that are ready for permanent deletion and purge them.</p></di
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#save_dataclips?/1" translate="no">save_dataclips?(id)</a>
+        <a href="#save_dataclips?/1" data-no-tooltip translate="no">save_dataclips?(id)</a>
 
       </div>
 
@@ -510,7 +512,7 @@ will find projects that are ready for permanent deletion and purge them.</p></di
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#schedule_project_deletion/1" translate="no">schedule_project_deletion(project)</a>
+        <a href="#schedule_project_deletion/1" data-no-tooltip translate="no">schedule_project_deletion(project)</a>
 
       </div>
 
@@ -524,7 +526,7 @@ deletion.)</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#select_first_project_for_user/1" translate="no">select_first_project_for_user(user)</a>
+        <a href="#select_first_project_for_user/1" data-no-tooltip translate="no">select_first_project_for_user(user)</a>
 
       </div>
 
@@ -532,7 +534,7 @@ deletion.)</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#update_project/3" translate="no">update_project(project, attrs, user \\ nil)</a>
+        <a href="#update_project/3" data-no-tooltip translate="no">update_project(project, attrs, user \\ nil)</a>
 
       </div>
 
@@ -542,7 +544,7 @@ deletion.)</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#update_project_user/2" translate="no">update_project_user(project_user, attrs)</a>
+        <a href="#update_project_user/2" data-no-tooltip translate="no">update_project_user(project_user, attrs)</a>
 
       </div>
 
@@ -552,7 +554,7 @@ deletion.)</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#update_project_with_users/3" translate="no">update_project_with_users(project, attrs, notify_users \\ true)</a>
+        <a href="#update_project_with_users/3" data-no-tooltip translate="no">update_project_with_users(project, attrs, notify_users \\ true)</a>
 
       </div>
 
@@ -560,7 +562,7 @@ deletion.)</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#validate_for_deletion/2" translate="no">validate_for_deletion(project, attrs)</a>
+        <a href="#validate_for_deletion/2" data-no-tooltip translate="no">validate_for_deletion(project, attrs)</a>
 
       </div>
 
@@ -586,7 +588,7 @@ deletion.)</p></div>
     <span id="add_project_users/2"></span>
 
   <div class="detail-header">
-    <a href="#add_project_users/3" class="detail-link" title="Link to this function">
+    <a href="#add_project_users/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -606,7 +608,7 @@ deletion.)</p></div>
 
           <pre translate="no"><span class="attribute">@spec</span> add_project_users(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>(), [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), ...], <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()) ::
   {:ok, [<a href="Lightning.Projects.ProjectUser.html#t:t/0">Lightning.Projects.ProjectUser.t</a>(), ...]}
-  | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
+  | {:error, <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
 
       </div>
 
@@ -616,7 +618,7 @@ deletion.)</p></div>
 <section class="detail" id="cancel_scheduled_deletion/1">
 
   <div class="detail-header">
-    <a href="#cancel_scheduled_deletion/1" class="detail-link" title="Link to this function">
+    <a href="#cancel_scheduled_deletion/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -640,7 +642,7 @@ deletion.)</p></div>
     <span id="change_project/1"></span>
 
   <div class="detail-header">
-    <a href="#change_project/2" class="detail-link" title="Link to this function">
+    <a href="#change_project/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -662,8 +664,8 @@ deletion.)</p></div>
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_project</span><span class="p" data-group-id="6777698376-1">(</span><span class="n">project</span><span class="p" data-group-id="6777698376-1">)</span><span class="w">
-</span><span class="p" data-group-id="6777698376-2">%</span><span class="nc" data-group-id="6777698376-2">Ecto.Changeset</span><span class="p" data-group-id="6777698376-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6777698376-3">%</span><span class="nc" data-group-id="6777698376-3">Project</span><span class="p" data-group-id="6777698376-3">{</span><span class="p" data-group-id="6777698376-3">}</span><span class="p" data-group-id="6777698376-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_project</span><span class="p" data-group-id="1080840671-1">(</span><span class="n">project</span><span class="p" data-group-id="1080840671-1">)</span><span class="w">
+</span><span class="p" data-group-id="1080840671-2">%</span><span class="nc" data-group-id="1080840671-2">Ecto.Changeset</span><span class="p" data-group-id="1080840671-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1080840671-3">%</span><span class="nc" data-group-id="1080840671-3">Project</span><span class="p" data-group-id="1080840671-3">{</span><span class="p" data-group-id="1080840671-3">}</span><span class="p" data-group-id="1080840671-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="create_project/2">
@@ -673,7 +675,7 @@ deletion.)</p></div>
     <span id="create_project/1"></span>
 
   <div class="detail-header">
-    <a href="#create_project/2" class="detail-link" title="Link to this function">
+    <a href="#create_project/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -695,17 +697,17 @@ deletion.)</p></div>
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_project</span><span class="p" data-group-id="8689212417-1">(</span><span class="p" data-group-id="8689212417-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="8689212417-2">}</span><span class="p" data-group-id="8689212417-1">)</span><span class="w">
-</span><span class="p" data-group-id="8689212417-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8689212417-4">%</span><span class="nc" data-group-id="8689212417-4">Project</span><span class="p" data-group-id="8689212417-4">{</span><span class="p" data-group-id="8689212417-4">}</span><span class="p" data-group-id="8689212417-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_project</span><span class="p" data-group-id="3861360463-1">(</span><span class="p" data-group-id="3861360463-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="3861360463-2">}</span><span class="p" data-group-id="3861360463-1">)</span><span class="w">
+</span><span class="p" data-group-id="3861360463-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3861360463-4">%</span><span class="nc" data-group-id="3861360463-4">Project</span><span class="p" data-group-id="3861360463-4">{</span><span class="p" data-group-id="3861360463-4">}</span><span class="p" data-group-id="3861360463-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_project</span><span class="p" data-group-id="8689212417-5">(</span><span class="p" data-group-id="8689212417-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="8689212417-6">}</span><span class="p" data-group-id="8689212417-5">)</span><span class="w">
-</span><span class="p" data-group-id="8689212417-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8689212417-8">%</span><span class="nc" data-group-id="8689212417-8">Ecto.Changeset</span><span class="p" data-group-id="8689212417-8">{</span><span class="p" data-group-id="8689212417-8">}</span><span class="p" data-group-id="8689212417-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_project</span><span class="p" data-group-id="3861360463-5">(</span><span class="p" data-group-id="3861360463-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="3861360463-6">}</span><span class="p" data-group-id="3861360463-5">)</span><span class="w">
+</span><span class="p" data-group-id="3861360463-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3861360463-8">%</span><span class="nc" data-group-id="3861360463-8">Ecto.Changeset</span><span class="p" data-group-id="3861360463-8">{</span><span class="p" data-group-id="3861360463-8">}</span><span class="p" data-group-id="3861360463-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="delete_project/1">
 
   <div class="detail-header">
-    <a href="#delete_project/1" class="detail-link" title="Link to this function">
+    <a href="#delete_project/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -728,17 +730,17 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_project</span><span class="p" data-group-id="2285027921-1">(</span><span class="n">project</span><span class="p" data-group-id="2285027921-1">)</span><span class="w">
-</span><span class="p" data-group-id="2285027921-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2285027921-3">%</span><span class="nc" data-group-id="2285027921-3">Project</span><span class="p" data-group-id="2285027921-3">{</span><span class="p" data-group-id="2285027921-3">}</span><span class="p" data-group-id="2285027921-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_project</span><span class="p" data-group-id="7269521647-1">(</span><span class="n">project</span><span class="p" data-group-id="7269521647-1">)</span><span class="w">
+</span><span class="p" data-group-id="7269521647-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7269521647-3">%</span><span class="nc" data-group-id="7269521647-3">Project</span><span class="p" data-group-id="7269521647-3">{</span><span class="p" data-group-id="7269521647-3">}</span><span class="p" data-group-id="7269521647-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_project</span><span class="p" data-group-id="2285027921-4">(</span><span class="n">project</span><span class="p" data-group-id="2285027921-4">)</span><span class="w">
-</span><span class="p" data-group-id="2285027921-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2285027921-6">%</span><span class="nc" data-group-id="2285027921-6">Ecto.Changeset</span><span class="p" data-group-id="2285027921-6">{</span><span class="p" data-group-id="2285027921-6">}</span><span class="p" data-group-id="2285027921-5">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_project</span><span class="p" data-group-id="7269521647-4">(</span><span class="n">project</span><span class="p" data-group-id="7269521647-4">)</span><span class="w">
+</span><span class="p" data-group-id="7269521647-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7269521647-6">%</span><span class="nc" data-group-id="7269521647-6">Ecto.Changeset</span><span class="p" data-group-id="7269521647-6">{</span><span class="p" data-group-id="7269521647-6">}</span><span class="p" data-group-id="7269521647-5">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="delete_project_user!/1">
 
   <div class="detail-header">
-    <a href="#delete_project_user!/1" class="detail-link" title="Link to this function">
+    <a href="#delete_project_user!/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -769,7 +771,7 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
     <span id="export_project/2"></span>
 
   <div class="detail-header">
-    <a href="#export_project/3" class="detail-link" title="Link to this function">
+    <a href="#export_project/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -787,7 +789,7 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> export_project(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>(), <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(), [<a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()] | nil) :: {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()}</pre>
+          <pre translate="no"><span class="attribute">@spec</span> export_project(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>(), <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(), [<a href="https://hexdocs.pm/ecto/3.12.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()] | nil) :: {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()}</pre>
 
       </div>
 
@@ -797,14 +799,14 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">export_project</span><span class="p" data-group-id="1943096382-1">(</span><span class="ss">:yaml</span><span class="p">,</span><span class="w"> </span><span class="n">project_id</span><span class="p" data-group-id="1943096382-1">)</span><span class="w">
-</span><span class="p" data-group-id="1943096382-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">string</span><span class="p" data-group-id="1943096382-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">export_project</span><span class="p" data-group-id="7285027998-1">(</span><span class="ss">:yaml</span><span class="p">,</span><span class="w"> </span><span class="n">project_id</span><span class="p" data-group-id="7285027998-1">)</span><span class="w">
+</span><span class="p" data-group-id="7285027998-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">string</span><span class="p" data-group-id="7285027998-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="find_users_to_notify_of_trigger_failure/1">
 
   <div class="detail-header">
-    <a href="#find_users_to_notify_of_trigger_failure/1" class="detail-link" title="Link to this function">
+    <a href="#find_users_to_notify_of_trigger_failure/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -826,7 +828,7 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
 <section class="detail" id="get_project/1">
 
   <div class="detail-header">
-    <a href="#get_project/1" class="detail-link" title="Link to this function">
+    <a href="#get_project/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -848,7 +850,7 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
 <section class="detail" id="get_project!/1">
 
   <div class="detail-header">
-    <a href="#get_project!/1" class="detail-link" title="Link to this function">
+    <a href="#get_project!/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -864,23 +866,23 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
 
   <section class="docstring">
 
-<p>Gets a single project.</p><p>Raises <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.NoResultsError.html"><code class="inline">Ecto.NoResultsError</code></a> if the Project does not exist.</p><h2 id="get_project!/1-examples" class="section-heading">
+<p>Gets a single project.</p><p>Raises <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.NoResultsError.html"><code class="inline">Ecto.NoResultsError</code></a> if the Project does not exist.</p><h2 id="get_project!/1-examples" class="section-heading">
   <a href="#get_project!/1-examples" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_project!</span><span class="p" data-group-id="1767926849-1">(</span><span class="mi">123</span><span class="p" data-group-id="1767926849-1">)</span><span class="w">
-</span><span class="p" data-group-id="1767926849-2">%</span><span class="nc" data-group-id="1767926849-2">Project</span><span class="p" data-group-id="1767926849-2">{</span><span class="p" data-group-id="1767926849-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_project!</span><span class="p" data-group-id="2138343391-1">(</span><span class="mi">123</span><span class="p" data-group-id="2138343391-1">)</span><span class="w">
+</span><span class="p" data-group-id="2138343391-2">%</span><span class="nc" data-group-id="2138343391-2">Project</span><span class="p" data-group-id="2138343391-2">{</span><span class="p" data-group-id="2138343391-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project!</span><span class="p" data-group-id="1767926849-3">(</span><span class="mi">456</span><span class="p" data-group-id="1767926849-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project!</span><span class="p" data-group-id="2138343391-3">(</span><span class="mi">456</span><span class="p" data-group-id="2138343391-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_project_credential/2">
 
   <div class="detail-header">
-    <a href="#get_project_credential/2" class="detail-link" title="Link to this function">
+    <a href="#get_project_credential/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -902,7 +904,7 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
 <section class="detail" id="get_project_user/1">
 
   <div class="detail-header">
-    <a href="#get_project_user/1" class="detail-link" title="Link to this function">
+    <a href="#get_project_user/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -924,7 +926,7 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
 <section class="detail" id="get_project_user/2">
 
   <div class="detail-header">
-    <a href="#get_project_user/2" class="detail-link" title="Link to this function">
+    <a href="#get_project_user/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -946,7 +948,7 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
 <section class="detail" id="get_project_user!/1">
 
   <div class="detail-header">
-    <a href="#get_project_user!/1" class="detail-link" title="Link to this function">
+    <a href="#get_project_user!/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -962,23 +964,23 @@ steps, jobs, runs, triggers, project users, project credentials, and dataclips</
 
   <section class="docstring">
 
-<p>Gets a single project_user.</p><p>Raises <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.NoResultsError.html"><code class="inline">Ecto.NoResultsError</code></a> if the ProjectUser does not exist.</p><h2 id="get_project_user!/1-examples" class="section-heading">
+<p>Gets a single project_user.</p><p>Raises <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.NoResultsError.html"><code class="inline">Ecto.NoResultsError</code></a> if the ProjectUser does not exist.</p><h2 id="get_project_user!/1-examples" class="section-heading">
   <a href="#get_project_user!/1-examples" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user!</span><span class="p" data-group-id="0156173308-1">(</span><span class="mi">123</span><span class="p" data-group-id="0156173308-1">)</span><span class="w">
-</span><span class="p" data-group-id="0156173308-2">%</span><span class="nc" data-group-id="0156173308-2">ProjectUser</span><span class="p" data-group-id="0156173308-2">{</span><span class="p" data-group-id="0156173308-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user!</span><span class="p" data-group-id="9286633250-1">(</span><span class="mi">123</span><span class="p" data-group-id="9286633250-1">)</span><span class="w">
+</span><span class="p" data-group-id="9286633250-2">%</span><span class="nc" data-group-id="9286633250-2">ProjectUser</span><span class="p" data-group-id="9286633250-2">{</span><span class="p" data-group-id="9286633250-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user!</span><span class="p" data-group-id="0156173308-3">(</span><span class="mi">456</span><span class="p" data-group-id="0156173308-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user!</span><span class="p" data-group-id="9286633250-3">(</span><span class="mi">456</span><span class="p" data-group-id="9286633250-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_project_user_role/2">
 
   <div class="detail-header">
-    <a href="#get_project_user_role/2" class="detail-link" title="Link to this function">
+    <a href="#get_project_user_role/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1001,23 +1003,23 @@ Possible roles are :admin, :viewer, :editor, and :owner</p><h2 id="get_project_u
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user_role</span><span class="p" data-group-id="6684551273-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="6684551273-1">)</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user_role</span><span class="p" data-group-id="4208682375-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="4208682375-1">)</span><span class="w">
 </span><span class="ss">:admin</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user_role</span><span class="p" data-group-id="6684551273-2">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="6684551273-2">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user_role</span><span class="p" data-group-id="4208682375-2">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="4208682375-2">)</span><span class="w">
 </span><span class="ss">:viewer</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user_role</span><span class="p" data-group-id="6684551273-3">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="6684551273-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user_role</span><span class="p" data-group-id="4208682375-3">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="4208682375-3">)</span><span class="w">
 </span><span class="ss">:editor</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user_role</span><span class="p" data-group-id="6684551273-4">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="6684551273-4">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project_user_role</span><span class="p" data-group-id="4208682375-4">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="4208682375-4">)</span><span class="w">
 </span><span class="ss">:owner</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_project_users!/1">
 
   <div class="detail-header">
-    <a href="#get_project_users!/1" class="detail-link" title="Link to this function">
+    <a href="#get_project_users!/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1039,7 +1041,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p><h2 id="get_project_u
 <section class="detail" id="get_project_with_users!/1">
 
   <div class="detail-header">
-    <a href="#get_project_with_users!/1" class="detail-link" title="Link to this function">
+    <a href="#get_project_with_users!/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1055,16 +1057,16 @@ Possible roles are :admin, :viewer, :editor, and :owner</p><h2 id="get_project_u
 
   <section class="docstring">
 
-<p>Gets a single project with it's members via <code class="inline">project_users</code>.</p><p>Raises <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.NoResultsError.html"><code class="inline">Ecto.NoResultsError</code></a> if the Project does not exist.</p><h2 id="get_project_with_users!/1-examples" class="section-heading">
+<p>Gets a single project with it's members via <code class="inline">project_users</code>.</p><p>Raises <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.NoResultsError.html"><code class="inline">Ecto.NoResultsError</code></a> if the Project does not exist.</p><h2 id="get_project_with_users!/1-examples" class="section-heading">
   <a href="#get_project_with_users!/1-examples" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_project!</span><span class="p" data-group-id="0032616753-1">(</span><span class="mi">123</span><span class="p" data-group-id="0032616753-1">)</span><span class="w">
-</span><span class="p" data-group-id="0032616753-2">%</span><span class="nc" data-group-id="0032616753-2">Project</span><span class="p" data-group-id="0032616753-2">{</span><span class="p" data-group-id="0032616753-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_project!</span><span class="p" data-group-id="5556759369-1">(</span><span class="mi">123</span><span class="p" data-group-id="5556759369-1">)</span><span class="w">
+</span><span class="p" data-group-id="5556759369-2">%</span><span class="nc" data-group-id="5556759369-2">Project</span><span class="p" data-group-id="5556759369-2">{</span><span class="p" data-group-id="5556759369-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project!</span><span class="p" data-group-id="0032616753-3">(</span><span class="mi">456</span><span class="p" data-group-id="0032616753-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_project!</span><span class="p" data-group-id="5556759369-3">(</span><span class="mi">456</span><span class="p" data-group-id="5556759369-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
@@ -1073,7 +1075,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p><h2 id="get_project_u
     <span id="get_projects_for_user/1"></span>
 
   <div class="detail-header">
-    <a href="#get_projects_for_user/2" class="detail-link" title="Link to this function">
+    <a href="#get_projects_for_user/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1118,7 +1120,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p><h2 id="get_project_u
     <span id="get_projects_overview/1"></span>
 
   <div class="detail-header">
-    <a href="#get_projects_overview/2" class="detail-link" title="Link to this function">
+    <a href="#get_projects_overview/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1140,7 +1142,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p><h2 id="get_project_u
 <section class="detail" id="invite_collaborators/3">
 
   <div class="detail-header">
-    <a href="#invite_collaborators/3" class="detail-link" title="Link to this function">
+    <a href="#invite_collaborators/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1162,7 +1164,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p><h2 id="get_project_u
 <section class="detail" id="list_project_admin_emails/1">
 
   <div class="detail-header">
-    <a href="#list_project_admin_emails/1" class="detail-link" title="Link to this function">
+    <a href="#list_project_admin_emails/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1180,7 +1182,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p><h2 id="get_project_u
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> list_project_admin_emails(<a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) :: [<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), ...] | []</pre>
+          <pre translate="no"><span class="attribute">@spec</span> list_project_admin_emails(<a href="https://hexdocs.pm/ecto/3.12.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) :: [<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), ...] | []</pre>
 
       </div>
 
@@ -1190,7 +1192,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p><h2 id="get_project_u
 <section class="detail" id="list_project_credentials/1">
 
   <div class="detail-header">
-    <a href="#list_project_credentials/1" class="detail-link" title="Link to this function">
+    <a href="#list_project_credentials/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1222,7 +1224,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p><h2 id="get_project_u
     <span id="list_project_files/1"></span>
 
   <div class="detail-header">
-    <a href="#list_project_files/2" class="detail-link" title="Link to this function">
+    <a href="#list_project_files/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1244,7 +1246,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p><h2 id="get_project_u
 <section class="detail" id="list_projects/0">
 
   <div class="detail-header">
-    <a href="#list_projects/0" class="detail-link" title="Link to this function">
+    <a href="#list_projects/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1266,14 +1268,14 @@ Possible roles are :admin, :viewer, :editor, and :owner</p><h2 id="get_project_u
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_projects</span><span class="p" data-group-id="0265825863-1">(</span><span class="p" data-group-id="0265825863-1">)</span><span class="w">
-</span><span class="p" data-group-id="0265825863-2">[</span><span class="p" data-group-id="0265825863-3">%</span><span class="nc" data-group-id="0265825863-3">Project</span><span class="p" data-group-id="0265825863-3">{</span><span class="p" data-group-id="0265825863-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="0265825863-2">]</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_projects</span><span class="p" data-group-id="2223889362-1">(</span><span class="p" data-group-id="2223889362-1">)</span><span class="w">
+</span><span class="p" data-group-id="2223889362-2">[</span><span class="p" data-group-id="2223889362-3">%</span><span class="nc" data-group-id="2223889362-3">Project</span><span class="p" data-group-id="2223889362-3">{</span><span class="p" data-group-id="2223889362-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="2223889362-2">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="list_projects_having_history_retention/0">
 
   <div class="detail-header">
-    <a href="#list_projects_having_history_retention/0" class="detail-link" title="Link to this function">
+    <a href="#list_projects_having_history_retention/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1302,7 +1304,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p><h2 id="get_project_u
 <section class="detail" id="member_of?/2">
 
   <div class="detail-header">
-    <a href="#member_of?/2" class="detail-link" title="Link to this function">
+    <a href="#member_of?/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1324,7 +1326,7 @@ Possible roles are :admin, :viewer, :editor, and :owner</p><h2 id="get_project_u
 <section class="detail" id="perform/1">
 
   <div class="detail-header">
-    <a href="#perform/1" class="detail-link" title="Link to this function">
+    <a href="#perform/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1347,7 +1349,7 @@ will find projects that are ready for permanent deletion and purge them.</p>
 <section class="detail" id="project_credentials_query/1">
 
   <div class="detail-header">
-    <a href="#project_credentials_query/1" class="detail-link" title="Link to this function">
+    <a href="#project_credentials_query/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1369,7 +1371,7 @@ will find projects that are ready for permanent deletion and purge them.</p>
 <section class="detail" id="project_dataclips_query/1">
 
   <div class="detail-header">
-    <a href="#project_dataclips_query/1" class="detail-link" title="Link to this function">
+    <a href="#project_dataclips_query/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1391,7 +1393,7 @@ will find projects that are ready for permanent deletion and purge them.</p>
 <section class="detail" id="project_jobs_query/1">
 
   <div class="detail-header">
-    <a href="#project_jobs_query/1" class="detail-link" title="Link to this function">
+    <a href="#project_jobs_query/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1413,7 +1415,7 @@ will find projects that are ready for permanent deletion and purge them.</p>
 <section class="detail" id="project_run_step_query/1">
 
   <div class="detail-header">
-    <a href="#project_run_step_query/1" class="detail-link" title="Link to this function">
+    <a href="#project_run_step_query/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1435,7 +1437,7 @@ will find projects that are ready for permanent deletion and purge them.</p>
 <section class="detail" id="project_runs_query/1">
 
   <div class="detail-header">
-    <a href="#project_runs_query/1" class="detail-link" title="Link to this function">
+    <a href="#project_runs_query/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1457,7 +1459,7 @@ will find projects that are ready for permanent deletion and purge them.</p>
 <section class="detail" id="project_steps_query/1">
 
   <div class="detail-header">
-    <a href="#project_steps_query/1" class="detail-link" title="Link to this function">
+    <a href="#project_steps_query/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1479,7 +1481,7 @@ will find projects that are ready for permanent deletion and purge them.</p>
 <section class="detail" id="project_triggers_query/1">
 
   <div class="detail-header">
-    <a href="#project_triggers_query/1" class="detail-link" title="Link to this function">
+    <a href="#project_triggers_query/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1501,7 +1503,7 @@ will find projects that are ready for permanent deletion and purge them.</p>
 <section class="detail" id="project_user_role_query/2">
 
   <div class="detail-header">
-    <a href="#project_user_role_query/2" class="detail-link" title="Link to this function">
+    <a href="#project_user_role_query/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1522,7 +1524,7 @@ will find projects that are ready for permanent deletion and purge them.</p>
           <pre translate="no"><span class="attribute">@spec</span> project_user_role_query(
   user :: <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>(),
   project :: <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()
-) :: <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+) :: <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
 
       </div>
 
@@ -1532,7 +1534,7 @@ will find projects that are ready for permanent deletion and purge them.</p>
 <section class="detail" id="project_users_query/1">
 
   <div class="detail-header">
-    <a href="#project_users_query/1" class="detail-link" title="Link to this function">
+    <a href="#project_users_query/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1551,7 +1553,7 @@ will find projects that are ready for permanent deletion and purge them.</p>
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@spec</span> project_users_query(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>() | %{:id =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), optional(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}) ::
-  <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Query.html#t:t/0">Ecto.Query.t</a>()</pre>
+  <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Query.html#t:t/0">Ecto.Query.t</a>()</pre>
 
       </div>
 
@@ -1561,7 +1563,7 @@ will find projects that are ready for permanent deletion and purge them.</p>
 <section class="detail" id="project_workflows_query/1">
 
   <div class="detail-header">
-    <a href="#project_workflows_query/1" class="detail-link" title="Link to this function">
+    <a href="#project_workflows_query/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1583,7 +1585,7 @@ will find projects that are ready for permanent deletion and purge them.</p>
 <section class="detail" id="project_workorders_query/1">
 
   <div class="detail-header">
-    <a href="#project_workorders_query/1" class="detail-link" title="Link to this function">
+    <a href="#project_workorders_query/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1607,7 +1609,7 @@ will find projects that are ready for permanent deletion and purge them.</p>
     <span id="projects_for_user_query/1"></span>
 
   <div class="detail-header">
-    <a href="#projects_for_user_query/2" class="detail-link" title="Link to this function">
+    <a href="#projects_for_user_query/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1626,7 +1628,7 @@ will find projects that are ready for permanent deletion and purge them.</p>
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@spec</span> projects_for_user_query(user :: <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>(), opts :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()) ::
-  <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+  <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
 
       </div>
 
@@ -1648,7 +1650,7 @@ will find projects that are ready for permanent deletion and purge them.</p>
 <section class="detail" id="save_dataclips?/1">
 
   <div class="detail-header">
-    <a href="#save_dataclips?/1" class="detail-link" title="Link to this function">
+    <a href="#save_dataclips?/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1670,7 +1672,7 @@ will find projects that are ready for permanent deletion and purge them.</p>
 <section class="detail" id="schedule_project_deletion/1">
 
   <div class="detail-header">
-    <a href="#schedule_project_deletion/1" class="detail-link" title="Link to this function">
+    <a href="#schedule_project_deletion/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1696,7 +1698,7 @@ deletion.)</p>
 <section class="detail" id="select_first_project_for_user/1">
 
   <div class="detail-header">
-    <a href="#select_first_project_for_user/1" class="detail-link" title="Link to this function">
+    <a href="#select_first_project_for_user/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1727,7 +1729,7 @@ deletion.)</p>
     <span id="update_project/2"></span>
 
   <div class="detail-header">
-    <a href="#update_project/3" class="detail-link" title="Link to this function">
+    <a href="#update_project/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1749,17 +1751,17 @@ deletion.)</p>
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_project</span><span class="p" data-group-id="0368209572-1">(</span><span class="n">project</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0368209572-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="0368209572-2">}</span><span class="p" data-group-id="0368209572-1">)</span><span class="w">
-</span><span class="p" data-group-id="0368209572-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0368209572-4">%</span><span class="nc" data-group-id="0368209572-4">Project</span><span class="p" data-group-id="0368209572-4">{</span><span class="p" data-group-id="0368209572-4">}</span><span class="p" data-group-id="0368209572-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_project</span><span class="p" data-group-id="1655005316-1">(</span><span class="n">project</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1655005316-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="1655005316-2">}</span><span class="p" data-group-id="1655005316-1">)</span><span class="w">
+</span><span class="p" data-group-id="1655005316-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1655005316-4">%</span><span class="nc" data-group-id="1655005316-4">Project</span><span class="p" data-group-id="1655005316-4">{</span><span class="p" data-group-id="1655005316-4">}</span><span class="p" data-group-id="1655005316-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_project</span><span class="p" data-group-id="0368209572-5">(</span><span class="n">project</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0368209572-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="0368209572-6">}</span><span class="p" data-group-id="0368209572-5">)</span><span class="w">
-</span><span class="p" data-group-id="0368209572-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0368209572-8">%</span><span class="nc" data-group-id="0368209572-8">Ecto.Changeset</span><span class="p" data-group-id="0368209572-8">{</span><span class="p" data-group-id="0368209572-8">}</span><span class="p" data-group-id="0368209572-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_project</span><span class="p" data-group-id="1655005316-5">(</span><span class="n">project</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1655005316-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="1655005316-6">}</span><span class="p" data-group-id="1655005316-5">)</span><span class="w">
+</span><span class="p" data-group-id="1655005316-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1655005316-8">%</span><span class="nc" data-group-id="1655005316-8">Ecto.Changeset</span><span class="p" data-group-id="1655005316-8">{</span><span class="p" data-group-id="1655005316-8">}</span><span class="p" data-group-id="1655005316-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="update_project_user/2">
 
   <div class="detail-header">
-    <a href="#update_project_user/2" class="detail-link" title="Link to this function">
+    <a href="#update_project_user/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1781,11 +1783,11 @@ deletion.)</p>
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_project_user</span><span class="p" data-group-id="6159566216-1">(</span><span class="n">project_user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6159566216-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="6159566216-2">}</span><span class="p" data-group-id="6159566216-1">)</span><span class="w">
-</span><span class="p" data-group-id="6159566216-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6159566216-4">%</span><span class="nc" data-group-id="6159566216-4">ProjectUser</span><span class="p" data-group-id="6159566216-4">{</span><span class="p" data-group-id="6159566216-4">}</span><span class="p" data-group-id="6159566216-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_project_user</span><span class="p" data-group-id="2222503428-1">(</span><span class="n">project_user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2222503428-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="2222503428-2">}</span><span class="p" data-group-id="2222503428-1">)</span><span class="w">
+</span><span class="p" data-group-id="2222503428-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2222503428-4">%</span><span class="nc" data-group-id="2222503428-4">ProjectUser</span><span class="p" data-group-id="2222503428-4">{</span><span class="p" data-group-id="2222503428-4">}</span><span class="p" data-group-id="2222503428-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_project_user</span><span class="p" data-group-id="6159566216-5">(</span><span class="n">projectUser</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6159566216-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="6159566216-6">}</span><span class="p" data-group-id="6159566216-5">)</span><span class="w">
-</span><span class="p" data-group-id="6159566216-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6159566216-8">%</span><span class="nc" data-group-id="6159566216-8">Ecto.Changeset</span><span class="p" data-group-id="6159566216-8">{</span><span class="p" data-group-id="6159566216-8">}</span><span class="p" data-group-id="6159566216-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_project_user</span><span class="p" data-group-id="2222503428-5">(</span><span class="n">projectUser</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2222503428-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="2222503428-6">}</span><span class="p" data-group-id="2222503428-5">)</span><span class="w">
+</span><span class="p" data-group-id="2222503428-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2222503428-8">%</span><span class="nc" data-group-id="2222503428-8">Ecto.Changeset</span><span class="p" data-group-id="2222503428-8">{</span><span class="p" data-group-id="2222503428-8">}</span><span class="p" data-group-id="2222503428-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="update_project_with_users/3">
@@ -1793,7 +1795,7 @@ deletion.)</p>
     <span id="update_project_with_users/2"></span>
 
   <div class="detail-header">
-    <a href="#update_project_with_users/3" class="detail-link" title="Link to this function">
+    <a href="#update_project_with_users/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1812,7 +1814,7 @@ deletion.)</p>
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@spec</span> update_project_with_users(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()) ::
-  {:ok, <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
+  {:ok, <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
 
       </div>
 
@@ -1822,7 +1824,7 @@ deletion.)</p>
 <section class="detail" id="validate_for_deletion/2">
 
   <div class="detail-header">
-    <a href="#validate_for_deletion/2" class="detail-link" title="Link to this function">
+    <a href="#validate_for_deletion/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -1844,42 +1846,41 @@ deletion.)</p>
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">validate_for_deletion</span><span class="p" data-group-id="2641134540-1">(</span><span class="n">project</span><span class="p" data-group-id="2641134540-1">)</span><span class="w">
-</span><span class="p" data-group-id="2641134540-2">%</span><span class="nc" data-group-id="2641134540-2">Ecto.Changeset</span><span class="p" data-group-id="2641134540-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2641134540-3">%</span><span class="nc" data-group-id="2641134540-3">Project</span><span class="p" data-group-id="2641134540-3">{</span><span class="p" data-group-id="2641134540-3">}</span><span class="p" data-group-id="2641134540-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">validate_for_deletion</span><span class="p" data-group-id="6407973418-1">(</span><span class="n">project</span><span class="p" data-group-id="6407973418-1">)</span><span class="w">
+</span><span class="p" data-group-id="6407973418-2">%</span><span class="nc" data-group-id="6407973418-2">Ecto.Changeset</span><span class="p" data-group-id="6407973418-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6407973418-3">%</span><span class="nc" data-group-id="6407973418-3">Project</span><span class="p" data-group-id="6407973418-3">{</span><span class="p" data-group-id="6407973418-3">}</span><span class="p" data-group-id="6407973418-2">}</span></code></pre>
   </section>
 </section>
 
     </div>
   </section>
 
-      <footer class="footer">
-        <p>
+    <footer class="footer">
+      <p>
 
-          <span class="line">
-            <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
-              Search HexDocs
-            </button>
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
 
-              <a href="Lightning.epub" title="ePub version">
-                Download ePub version
-              </a>
+            <a href="Lightning.epub" title="ePub version">
+              Download ePub version
+            </a>
 
-          </span>
-        </p>
+        </span>
+      </p>
 
-        <p class="built-using">
-          Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
 
-            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
-        </p>
-      </footer>
-    </div>
+      </p>
+
+    </footer>
   </div>
 </main>
 </div>
-
 
   </body>
 </html>

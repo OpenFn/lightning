@@ -4,21 +4,19 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="generator" content="ExDoc v0.34.2">
     <meta name="project" content="Lightning v2.10.0-rc.1">
 
+
     <title>Lightning.AiAssistant — Lightning v2.10.0-rc.1</title>
-    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
+    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-0D035C9E.js"></script>
-
-      <script src="docs_config.js"></script>
-
-    <script async src="dist/html-J2ASZTQE.js"></script>
-
+    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
+    <script src="dist/sidebar_items-10E0B7BA.js"></script>
+    <script src="docs_config.js"></script>
+    <script async src="dist/html-YIPIRHGU.js"></script>
 
   </head>
   <body data-type="modules" class="page-module">
@@ -36,43 +34,28 @@
       } catch (error) { }
     </script>
 
-<div class="main">
+<div class="body-wrapper">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
 <nav id="sidebar" class="sidebar">
-  <form class="sidebar-search" action="search.html">
-    <label class="search-label">
-      <span class="sr-only">Search documentation of Lightning</span>
-      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
-    <button type="submit" class="search-button" aria-label="Submit Search">
-      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
-    </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
-      <i class="ri-close-line ri-lg" title="Cancel search"></i>
-    </button>
-  </form>
-
-  <div class="autocomplete">
-    <div class="autocomplete-results">
-    </div>
-  </div>
 
   <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
 
-      <a href="https://openfn.github.io/Lightning">
-        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
-      </a>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
 
-    <div class="sidebar-projectDetails">
-      <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+      <div>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
-      </a>
-      <div class="sidebar-projectVersion" translate="no">
-        v2.10.0-rc.1
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.10.0-rc.1
+        </div>
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -115,31 +98,50 @@ Pages
 
 <main class="content">
   <output role="status" id="toast"></output>
-  <div class="content-outer">
-    <div id="content" class="content-inner">
 
-<h1>
-<button class="icon-action display-settings">
-  <i class="ri-settings-3-line"></i>
-  <span class="sr-only">Settings</span>
-</button>
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+    <span translate="no">Lightning.AiAssistant</span> 
+    <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
+
+  </h1>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L1" title="View Source" class="icon-action" rel="help">
-      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-      <span class="sr-only">View Source</span>
-    </a>
-
-  <span translate="no">Lightning.AiAssistant</span> 
-  <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
-
-</h1>
-
-
-  <section id="moduledoc">
+    <section id="moduledoc">
 <p>The AI assistant module.</p>
-  </section>
+    </section>
 
+</div>
 
   <section id="summary" class="details-list">
     <h1 class="section-heading">
@@ -155,7 +157,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#available?/1" translate="no">available?(user)</a>
+        <a href="#available?/1" data-no-tooltip translate="no">available?(user)</a>
 
       </div>
 
@@ -163,7 +165,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#create_session/3" translate="no">create_session(job, user, content)</a>
+        <a href="#create_session/3" data-no-tooltip translate="no">create_session(job, user, content)</a>
 
       </div>
 
@@ -171,7 +173,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#enabled?/0" translate="no">enabled?()</a>
+        <a href="#enabled?/0" data-no-tooltip translate="no">enabled?()</a>
 
       </div>
 
@@ -181,7 +183,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#endpoint_available?/0" translate="no">endpoint_available?()</a>
+        <a href="#endpoint_available?/0" data-no-tooltip translate="no">endpoint_available?()</a>
 
       </div>
 
@@ -191,7 +193,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_session!/1" translate="no">get_session!(id)</a>
+        <a href="#get_session!/1" data-no-tooltip translate="no">get_session!(id)</a>
 
       </div>
 
@@ -199,7 +201,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#list_sessions_for_job/1" translate="no">list_sessions_for_job(job)</a>
+        <a href="#list_sessions_for_job/1" data-no-tooltip translate="no">list_sessions_for_job(job)</a>
 
       </div>
 
@@ -207,7 +209,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#project_has_any_session?/1" translate="no">project_has_any_session?(project_id)</a>
+        <a href="#project_has_any_session?/1" data-no-tooltip translate="no">project_has_any_session?(project_id)</a>
 
       </div>
 
@@ -215,7 +217,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#put_expression_and_adaptor/3" translate="no">put_expression_and_adaptor(session, expression, adaptor)</a>
+        <a href="#put_expression_and_adaptor/3" data-no-tooltip translate="no">put_expression_and_adaptor(session, expression, adaptor)</a>
 
       </div>
 
@@ -223,7 +225,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#query/2" translate="no">query(session, content)</a>
+        <a href="#query/2" data-no-tooltip translate="no">query(session, content)</a>
 
       </div>
 
@@ -233,7 +235,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#save_message/2" translate="no">save_message(session, message)</a>
+        <a href="#save_message/2" data-no-tooltip translate="no">save_message(session, message)</a>
 
       </div>
 
@@ -255,7 +257,7 @@ Pages
 <section class="detail" id="available?/1">
 
   <div class="detail-header">
-    <a href="#available?/1" class="detail-link" title="Link to this function">
+    <a href="#available?/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -277,7 +279,7 @@ Pages
 <section class="detail" id="create_session/3">
 
   <div class="detail-header">
-    <a href="#create_session/3" class="detail-link" title="Link to this function">
+    <a href="#create_session/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -300,7 +302,7 @@ Pages
   <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>(),
   <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()
 ) ::
-  {:ok, Lightning.AiAssistant.ChatSession.t()} | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
+  {:ok, Lightning.AiAssistant.ChatSession.t()} | {:error, <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
 
       </div>
 
@@ -310,7 +312,7 @@ Pages
 <section class="detail" id="enabled?/0">
 
   <div class="detail-header">
-    <a href="#enabled?/0" class="detail-link" title="Link to this function">
+    <a href="#enabled?/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -338,7 +340,7 @@ Pages
 <section class="detail" id="endpoint_available?/0">
 
   <div class="detail-header">
-    <a href="#endpoint_available?/0" class="detail-link" title="Link to this function">
+    <a href="#endpoint_available?/0" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -366,7 +368,7 @@ Pages
 <section class="detail" id="get_session!/1">
 
   <div class="detail-header">
-    <a href="#get_session!/1" class="detail-link" title="Link to this function">
+    <a href="#get_session!/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -384,7 +386,7 @@ Pages
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> get_session!(<a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) :: Lightning.AiAssistant.ChatSession.t()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> get_session!(<a href="https://hexdocs.pm/ecto/3.12.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) :: Lightning.AiAssistant.ChatSession.t()</pre>
 
       </div>
 
@@ -394,7 +396,7 @@ Pages
 <section class="detail" id="list_sessions_for_job/1">
 
   <div class="detail-header">
-    <a href="#list_sessions_for_job/1" class="detail-link" title="Link to this function">
+    <a href="#list_sessions_for_job/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -423,7 +425,7 @@ Pages
 <section class="detail" id="project_has_any_session?/1">
 
   <div class="detail-header">
-    <a href="#project_has_any_session?/1" class="detail-link" title="Link to this function">
+    <a href="#project_has_any_session?/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -441,7 +443,7 @@ Pages
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> project_has_any_session?(<a href="https://hexdocs.pm/ecto/3.11.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> project_has_any_session?(<a href="https://hexdocs.pm/ecto/3.12.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
 
       </div>
 
@@ -451,7 +453,7 @@ Pages
 <section class="detail" id="put_expression_and_adaptor/3">
 
   <div class="detail-header">
-    <a href="#put_expression_and_adaptor/3" class="detail-link" title="Link to this function">
+    <a href="#put_expression_and_adaptor/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -484,7 +486,7 @@ Pages
 <section class="detail" id="query/2">
 
   <div class="detail-header">
-    <a href="#query/2" class="detail-link" title="Link to this function">
+    <a href="#query/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -504,18 +506,18 @@ Pages
 
           <pre translate="no"><span class="attribute">@spec</span> query(Lightning.AiAssistant.ChatSession.t(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) ::
   {:ok, Lightning.AiAssistant.ChatSession.t()}
-  | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>() | :apollo_unavailable}</pre>
+  | {:error, <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>() | :apollo_unavailable}</pre>
 
       </div>
 
-<p>Queries the AI assistant with the given content.</p><p>Returns <code class="inline">{:ok, session}</code> if the query was successful, otherwise <code class="inline">:error</code>.</p><p><strong>Example</strong></p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">AiAssistant</span><span class="o">.</span><span class="n">query</span><span class="p" data-group-id="5119907236-1">(</span><span class="n">session</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;fn()&quot;</span><span class="p" data-group-id="5119907236-1">)</span><span class="w">
-</span><span class="p" data-group-id="5119907236-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">session</span><span class="p" data-group-id="5119907236-2">}</span></code></pre>
+<p>Queries the AI assistant with the given content.</p><p>Returns <code class="inline">{:ok, session}</code> if the query was successful, otherwise <code class="inline">:error</code>.</p><p><strong>Example</strong></p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">AiAssistant</span><span class="o">.</span><span class="n">query</span><span class="p" data-group-id="0409416507-1">(</span><span class="n">session</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;fn()&quot;</span><span class="p" data-group-id="0409416507-1">)</span><span class="w">
+</span><span class="p" data-group-id="0409416507-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">session</span><span class="p" data-group-id="0409416507-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="save_message/2">
 
   <div class="detail-header">
-    <a href="#save_message/2" class="detail-link" title="Link to this function">
+    <a href="#save_message/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -534,7 +536,7 @@ Pages
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@spec</span> save_message(Lightning.AiAssistant.ChatSession.t(), %{required(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}) ::
-  {:ok, Lightning.AiAssistant.ChatSession.t()} | {:error, <a href="https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
+  {:ok, Lightning.AiAssistant.ChatSession.t()} | {:error, <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
 
       </div>
 
@@ -545,34 +547,33 @@ Pages
     </div>
   </section>
 
-      <footer class="footer">
-        <p>
+    <footer class="footer">
+      <p>
 
-          <span class="line">
-            <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
-              Search HexDocs
-            </button>
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
 
-              <a href="Lightning.epub" title="ePub version">
-                Download ePub version
-              </a>
+            <a href="Lightning.epub" title="ePub version">
+              Download ePub version
+            </a>
 
-          </span>
-        </p>
+        </span>
+      </p>
 
-        <p class="built-using">
-          Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
 
-            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
-        </p>
-      </footer>
-    </div>
+      </p>
+
+    </footer>
   </div>
 </main>
 </div>
-
 
   </body>
 </html>

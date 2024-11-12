@@ -4,21 +4,19 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="generator" content="ExDoc v0.34.2">
     <meta name="project" content="Lightning v2.10.0-rc.1">
 
+
     <title>LightningWeb.Pagination — Lightning v2.10.0-rc.1</title>
-    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
+    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-0D035C9E.js"></script>
-
-      <script src="docs_config.js"></script>
-
-    <script async src="dist/html-J2ASZTQE.js"></script>
-
+    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
+    <script src="dist/sidebar_items-10E0B7BA.js"></script>
+    <script src="docs_config.js"></script>
+    <script async src="dist/html-YIPIRHGU.js"></script>
 
   </head>
   <body data-type="modules" class="page-module">
@@ -36,43 +34,28 @@
       } catch (error) { }
     </script>
 
-<div class="main">
+<div class="body-wrapper">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
 <nav id="sidebar" class="sidebar">
-  <form class="sidebar-search" action="search.html">
-    <label class="search-label">
-      <span class="sr-only">Search documentation of Lightning</span>
-      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
-    <button type="submit" class="search-button" aria-label="Submit Search">
-      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
-    </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
-      <i class="ri-close-line ri-lg" title="Cancel search"></i>
-    </button>
-  </form>
-
-  <div class="autocomplete">
-    <div class="autocomplete-results">
-    </div>
-  </div>
 
   <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
 
-      <a href="https://openfn.github.io/Lightning">
-        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
-      </a>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
 
-    <div class="sidebar-projectDetails">
-      <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+      <div>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
-      </a>
-      <div class="sidebar-projectVersion" translate="no">
-        v2.10.0-rc.1
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.10.0-rc.1
+        </div>
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -115,32 +98,51 @@ Pages
 
 <main class="content">
   <output role="status" id="toast"></output>
-  <div class="content-outer">
-    <div id="content" class="content-inner">
 
-<h1>
-<button class="icon-action display-settings">
-  <i class="ri-settings-3-line"></i>
-  <span class="sr-only">Settings</span>
-</button>
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/pagination.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+    <span translate="no">LightningWeb.Pagination</span> 
+    <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
+
+  </h1>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/pagination.ex#L1" title="View Source" class="icon-action" rel="help">
-      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-      <span class="sr-only">View Source</span>
-    </a>
-
-  <span translate="no">LightningWeb.Pagination</span> 
-  <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
-
-</h1>
-
-
-  <section id="moduledoc">
+    <section id="moduledoc">
 <p>Pagination Components</p><p>This has been extracted and adapted from <code class="inline">scrivener_html</code>.
 See: <a href="https://github.com/mgwidmann/scrivener_html">https://github.com/mgwidmann/scrivener_html</a></p>
-  </section>
+    </section>
 
+</div>
 
   <section id="summary" class="details-list">
     <h1 class="section-heading">
@@ -156,7 +158,7 @@ See: <a href="https://github.com/mgwidmann/scrivener_html">https://github.com/mg
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#page_link/1" translate="no">page_link(assigns)</a>
+        <a href="#page_link/1" data-no-tooltip translate="no">page_link(assigns)</a>
 
       </div>
 
@@ -164,17 +166,17 @@ See: <a href="https://github.com/mgwidmann/scrivener_html">https://github.com/mg
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#pagination_bar/1" translate="no">pagination_bar(assigns)</a>
+        <a href="#pagination_bar/1" data-no-tooltip translate="no">pagination_bar(assigns)</a>
 
       </div>
 
-        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">async_page</code> (<a href="https://hexdocs.pm/phoenix_live_view/0.20.12/Phoenix.LiveView.AsyncResult.html"><code class="inline">Phoenix.LiveView.AsyncResult</code></a>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">page</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">url</code> (<code class="inline">:any</code>) (required)</li><li><code class="inline">help_text</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li></ul><h2>Slots</h2><ul><li><code class="inline">action</code></li></ul></div>
+        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">async_page</code> (<a href="https://hexdocs.pm/phoenix_live_view/0.20.17/Phoenix.LiveView.AsyncResult.html"><code class="inline">Phoenix.LiveView.AsyncResult</code></a>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">page</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">url</code> (<code class="inline">:any</code>) (required)</li><li><code class="inline">help_text</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li></ul><h2>Slots</h2><ul><li><code class="inline">action</code></li></ul></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#raw_pagination_links/2" translate="no">raw_pagination_links(paginator, options \\ [])</a>
+        <a href="#raw_pagination_links/2" data-no-tooltip translate="no">raw_pagination_links(paginator, options \\ [])</a>
 
       </div>
 
@@ -201,7 +203,7 @@ and they are as follows</p></div>
 <section class="detail" id="page_link/1">
 
   <div class="detail-header">
-    <a href="#page_link/1" class="detail-link" title="Link to this function">
+    <a href="#page_link/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -223,7 +225,7 @@ and they are as follows</p></div>
 <section class="detail" id="pagination_bar/1">
 
   <div class="detail-header">
-    <a href="#pagination_bar/1" class="detail-link" title="Link to this function">
+    <a href="#pagination_bar/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -245,7 +247,7 @@ and they are as follows</p></div>
   </a>
   <span class="text">Attributes</span>
 </h2>
-<ul><li><code class="inline">async_page</code> (<a href="https://hexdocs.pm/phoenix_live_view/0.20.12/Phoenix.LiveView.AsyncResult.html"><code class="inline">Phoenix.LiveView.AsyncResult</code></a>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">page</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">url</code> (<code class="inline">:any</code>) (required)</li><li><code class="inline">help_text</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li></ul><h2 id="pagination_bar/1-slots" class="section-heading">
+<ul><li><code class="inline">async_page</code> (<a href="https://hexdocs.pm/phoenix_live_view/0.20.17/Phoenix.LiveView.AsyncResult.html"><code class="inline">Phoenix.LiveView.AsyncResult</code></a>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">page</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">url</code> (<code class="inline">:any</code>) (required)</li><li><code class="inline">help_text</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li></ul><h2 id="pagination_bar/1-slots" class="section-heading">
   <a href="#pagination_bar/1-slots" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -259,7 +261,7 @@ and they are as follows</p></div>
     <span id="raw_pagination_links/1"></span>
 
   <div class="detail-header">
-    <a href="#raw_pagination_links/2" class="detail-link" title="Link to this function">
+    <a href="#raw_pagination_links/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -278,47 +280,46 @@ and they are as follows</p></div>
 <p>Returns the raw data in order to generate the proper HTML for pagination links. Data
 is returned in a <code class="inline">{text, page_number}</code> format where <code class="inline">text</code> is intended to be the text
 of the link and <code class="inline">page_number</code> is the page it should go to. Defaults are already supplied
-and they are as follows:</p><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="1319219000-1">[</span><span class="ss">distance</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="ss">next</span><span class="p">:</span><span class="w"> </span><span class="ss">:next</span><span class="p">,</span><span class="w"> </span><span class="ss">previous</span><span class="p">:</span><span class="w"> </span><span class="ss">:previous</span><span class="p">,</span><span class="w"> </span><span class="ss">first</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="p">,</span><span class="w"> </span><span class="ss">last</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="p">,</span><span class="w"> </span><span class="ss">ellipsis</span><span class="p">:</span><span class="w"> </span><span class="ss">:ellipsis</span><span class="p" data-group-id="1319219000-1">]</span></code></pre><p><code class="inline">distance</code> must be a positive non-zero integer or an exception is raised. <code class="inline">next</code> and <code class="inline">previous</code> should be
+and they are as follows:</p><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="1261636117-1">[</span><span class="ss">distance</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="ss">next</span><span class="p">:</span><span class="w"> </span><span class="ss">:next</span><span class="p">,</span><span class="w"> </span><span class="ss">previous</span><span class="p">:</span><span class="w"> </span><span class="ss">:previous</span><span class="p">,</span><span class="w"> </span><span class="ss">first</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="p">,</span><span class="w"> </span><span class="ss">last</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="p">,</span><span class="w"> </span><span class="ss">ellipsis</span><span class="p">:</span><span class="w"> </span><span class="ss">:ellipsis</span><span class="p" data-group-id="1261636117-1">]</span></code></pre><p><code class="inline">distance</code> must be a positive non-zero integer or an exception is raised. <code class="inline">next</code> and <code class="inline">previous</code> should be
 strings but can be anything you want as long as it is truthy, falsey values will remove
 them from the output. <code class="inline">first</code> and <code class="inline">last</code> are only booleans, and they just include/remove
-their respective link from output. An example of the data returned:</p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">Scrivener.HTML</span><span class="o">.</span><span class="n">raw_pagination_links</span><span class="p" data-group-id="8124546908-1">(</span><span class="p" data-group-id="8124546908-2">%{</span><span class="ss">total_pages</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="ss">page_number</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p" data-group-id="8124546908-2">}</span><span class="p" data-group-id="8124546908-1">)</span><span class="w">
-</span><span class="p" data-group-id="8124546908-3">[</span><span class="p" data-group-id="8124546908-4">{</span><span class="s">&quot;&lt;&lt;&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p" data-group-id="8124546908-4">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8124546908-5">{</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="8124546908-5">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8124546908-6">{</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p" data-group-id="8124546908-6">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8124546908-7">{</span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p" data-group-id="8124546908-7">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8124546908-8">{</span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p" data-group-id="8124546908-8">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8124546908-9">{</span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p" data-group-id="8124546908-9">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8124546908-10">{</span><span class="mi">6</span><span class="p">,</span><span class="w"> </span><span class="mi">6</span><span class="p" data-group-id="8124546908-10">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8124546908-11">{</span><span class="mi">7</span><span class="p">,</span><span class="w"> </span><span class="mi">7</span><span class="p" data-group-id="8124546908-11">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8124546908-12">{</span><span class="mi">8</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="p" data-group-id="8124546908-12">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8124546908-13">{</span><span class="mi">9</span><span class="p">,</span><span class="w"> </span><span class="mi">9</span><span class="p" data-group-id="8124546908-13">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8124546908-14">{</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">10</span><span class="p" data-group-id="8124546908-14">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8124546908-15">{</span><span class="s">&quot;&gt;&gt;&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">6</span><span class="p" data-group-id="8124546908-15">}</span><span class="p" data-group-id="8124546908-3">]</span><span class="w">
-</span><span class="gp unselectable">iex&gt; </span><span class="nc">Scrivener.HTML</span><span class="o">.</span><span class="n">raw_pagination_links</span><span class="p" data-group-id="8124546908-16">(</span><span class="p" data-group-id="8124546908-17">%{</span><span class="ss">total_pages</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="ss">page_number</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p" data-group-id="8124546908-17">}</span><span class="p">,</span><span class="w"> </span><span class="ss">first</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8124546908-18">[</span><span class="s">&quot;←&quot;</span><span class="p" data-group-id="8124546908-18">]</span><span class="p">,</span><span class="w"> </span><span class="ss">last</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8124546908-19">[</span><span class="s">&quot;→&quot;</span><span class="p" data-group-id="8124546908-19">]</span><span class="p" data-group-id="8124546908-16">)</span><span class="w">
-</span><span class="p" data-group-id="8124546908-20">[</span><span class="p" data-group-id="8124546908-21">{</span><span class="s">&quot;&lt;&lt;&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">9</span><span class="p" data-group-id="8124546908-21">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8124546908-22">{</span><span class="p" data-group-id="8124546908-23">[</span><span class="s">&quot;←&quot;</span><span class="p" data-group-id="8124546908-23">]</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="8124546908-22">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8124546908-24">{</span><span class="ss">:ellipsis</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8124546908-25">{</span><span class="ss">:safe</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;&amp;hellip;&quot;</span><span class="p" data-group-id="8124546908-25">}</span><span class="p" data-group-id="8124546908-24">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8124546908-26">{</span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p" data-group-id="8124546908-26">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8124546908-27">{</span><span class="mi">6</span><span class="p">,</span><span class="w"> </span><span class="mi">6</span><span class="p" data-group-id="8124546908-27">}</span><span class="p">,</span><span class="p" data-group-id="8124546908-28">{</span><span class="mi">7</span><span class="p">,</span><span class="w"> </span><span class="mi">7</span><span class="p" data-group-id="8124546908-28">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8124546908-29">{</span><span class="mi">8</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="p" data-group-id="8124546908-29">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8124546908-30">{</span><span class="mi">9</span><span class="p">,</span><span class="w"> </span><span class="mi">9</span><span class="p" data-group-id="8124546908-30">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8124546908-31">{</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">10</span><span class="p" data-group-id="8124546908-31">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8124546908-32">{</span><span class="mi">11</span><span class="p">,</span><span class="w"> </span><span class="mi">11</span><span class="p" data-group-id="8124546908-32">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8124546908-33">{</span><span class="mi">12</span><span class="p">,</span><span class="w"> </span><span class="mi">12</span><span class="p" data-group-id="8124546908-33">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8124546908-34">{</span><span class="mi">13</span><span class="p">,</span><span class="w"> </span><span class="mi">13</span><span class="p" data-group-id="8124546908-34">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8124546908-35">{</span><span class="mi">14</span><span class="p">,</span><span class="w"> </span><span class="mi">14</span><span class="p" data-group-id="8124546908-35">}</span><span class="p">,</span><span class="p" data-group-id="8124546908-36">{</span><span class="mi">15</span><span class="p">,</span><span class="w"> </span><span class="mi">15</span><span class="p" data-group-id="8124546908-36">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8124546908-37">{</span><span class="ss">:ellipsis</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8124546908-38">{</span><span class="ss">:safe</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;&amp;hellip;&quot;</span><span class="p" data-group-id="8124546908-38">}</span><span class="p" data-group-id="8124546908-37">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8124546908-39">{</span><span class="p" data-group-id="8124546908-40">[</span><span class="s">&quot;→&quot;</span><span class="p" data-group-id="8124546908-40">]</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p" data-group-id="8124546908-39">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8124546908-41">{</span><span class="s">&quot;&gt;&gt;&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">11</span><span class="p" data-group-id="8124546908-41">}</span><span class="p" data-group-id="8124546908-20">]</span></code></pre><p>Simply loop and pattern match over each item and transform it to your custom HTML.</p>
+their respective link from output. An example of the data returned:</p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">Scrivener.HTML</span><span class="o">.</span><span class="n">raw_pagination_links</span><span class="p" data-group-id="9048983100-1">(</span><span class="p" data-group-id="9048983100-2">%{</span><span class="ss">total_pages</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="ss">page_number</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p" data-group-id="9048983100-2">}</span><span class="p" data-group-id="9048983100-1">)</span><span class="w">
+</span><span class="p" data-group-id="9048983100-3">[</span><span class="p" data-group-id="9048983100-4">{</span><span class="s">&quot;&lt;&lt;&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p" data-group-id="9048983100-4">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9048983100-5">{</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="9048983100-5">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9048983100-6">{</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p" data-group-id="9048983100-6">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9048983100-7">{</span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p" data-group-id="9048983100-7">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9048983100-8">{</span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p" data-group-id="9048983100-8">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9048983100-9">{</span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p" data-group-id="9048983100-9">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9048983100-10">{</span><span class="mi">6</span><span class="p">,</span><span class="w"> </span><span class="mi">6</span><span class="p" data-group-id="9048983100-10">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9048983100-11">{</span><span class="mi">7</span><span class="p">,</span><span class="w"> </span><span class="mi">7</span><span class="p" data-group-id="9048983100-11">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9048983100-12">{</span><span class="mi">8</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="p" data-group-id="9048983100-12">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9048983100-13">{</span><span class="mi">9</span><span class="p">,</span><span class="w"> </span><span class="mi">9</span><span class="p" data-group-id="9048983100-13">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9048983100-14">{</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">10</span><span class="p" data-group-id="9048983100-14">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9048983100-15">{</span><span class="s">&quot;&gt;&gt;&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">6</span><span class="p" data-group-id="9048983100-15">}</span><span class="p" data-group-id="9048983100-3">]</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">Scrivener.HTML</span><span class="o">.</span><span class="n">raw_pagination_links</span><span class="p" data-group-id="9048983100-16">(</span><span class="p" data-group-id="9048983100-17">%{</span><span class="ss">total_pages</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="ss">page_number</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p" data-group-id="9048983100-17">}</span><span class="p">,</span><span class="w"> </span><span class="ss">first</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9048983100-18">[</span><span class="s">&quot;←&quot;</span><span class="p" data-group-id="9048983100-18">]</span><span class="p">,</span><span class="w"> </span><span class="ss">last</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9048983100-19">[</span><span class="s">&quot;→&quot;</span><span class="p" data-group-id="9048983100-19">]</span><span class="p" data-group-id="9048983100-16">)</span><span class="w">
+</span><span class="p" data-group-id="9048983100-20">[</span><span class="p" data-group-id="9048983100-21">{</span><span class="s">&quot;&lt;&lt;&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">9</span><span class="p" data-group-id="9048983100-21">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9048983100-22">{</span><span class="p" data-group-id="9048983100-23">[</span><span class="s">&quot;←&quot;</span><span class="p" data-group-id="9048983100-23">]</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="9048983100-22">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9048983100-24">{</span><span class="ss">:ellipsis</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9048983100-25">{</span><span class="ss">:safe</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;&amp;hellip;&quot;</span><span class="p" data-group-id="9048983100-25">}</span><span class="p" data-group-id="9048983100-24">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9048983100-26">{</span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p" data-group-id="9048983100-26">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9048983100-27">{</span><span class="mi">6</span><span class="p">,</span><span class="w"> </span><span class="mi">6</span><span class="p" data-group-id="9048983100-27">}</span><span class="p">,</span><span class="p" data-group-id="9048983100-28">{</span><span class="mi">7</span><span class="p">,</span><span class="w"> </span><span class="mi">7</span><span class="p" data-group-id="9048983100-28">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9048983100-29">{</span><span class="mi">8</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="p" data-group-id="9048983100-29">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9048983100-30">{</span><span class="mi">9</span><span class="p">,</span><span class="w"> </span><span class="mi">9</span><span class="p" data-group-id="9048983100-30">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9048983100-31">{</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">10</span><span class="p" data-group-id="9048983100-31">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9048983100-32">{</span><span class="mi">11</span><span class="p">,</span><span class="w"> </span><span class="mi">11</span><span class="p" data-group-id="9048983100-32">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9048983100-33">{</span><span class="mi">12</span><span class="p">,</span><span class="w"> </span><span class="mi">12</span><span class="p" data-group-id="9048983100-33">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9048983100-34">{</span><span class="mi">13</span><span class="p">,</span><span class="w"> </span><span class="mi">13</span><span class="p" data-group-id="9048983100-34">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9048983100-35">{</span><span class="mi">14</span><span class="p">,</span><span class="w"> </span><span class="mi">14</span><span class="p" data-group-id="9048983100-35">}</span><span class="p">,</span><span class="p" data-group-id="9048983100-36">{</span><span class="mi">15</span><span class="p">,</span><span class="w"> </span><span class="mi">15</span><span class="p" data-group-id="9048983100-36">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9048983100-37">{</span><span class="ss">:ellipsis</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9048983100-38">{</span><span class="ss">:safe</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;&amp;hellip;&quot;</span><span class="p" data-group-id="9048983100-38">}</span><span class="p" data-group-id="9048983100-37">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9048983100-39">{</span><span class="p" data-group-id="9048983100-40">[</span><span class="s">&quot;→&quot;</span><span class="p" data-group-id="9048983100-40">]</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p" data-group-id="9048983100-39">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9048983100-41">{</span><span class="s">&quot;&gt;&gt;&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">11</span><span class="p" data-group-id="9048983100-41">}</span><span class="p" data-group-id="9048983100-20">]</span></code></pre><p>Simply loop and pattern match over each item and transform it to your custom HTML.</p>
   </section>
 </section>
 
     </div>
   </section>
 
-      <footer class="footer">
-        <p>
+    <footer class="footer">
+      <p>
 
-          <span class="line">
-            <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
-              Search HexDocs
-            </button>
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
 
-              <a href="Lightning.epub" title="ePub version">
-                Download ePub version
-              </a>
+            <a href="Lightning.epub" title="ePub version">
+              Download ePub version
+            </a>
 
-          </span>
-        </p>
+        </span>
+      </p>
 
-        <p class="built-using">
-          Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
 
-            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
-        </p>
-      </footer>
-    </div>
+      </p>
+
+    </footer>
   </div>
 </main>
 </div>
-
 
   </body>
 </html>

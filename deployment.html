@@ -4,21 +4,19 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="generator" content="ExDoc v0.34.2">
     <meta name="project" content="Lightning v2.10.0-rc.1">
 
+
     <title>Deployment — Lightning v2.10.0-rc.1</title>
-    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
+    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-0D035C9E.js"></script>
-
-      <script src="docs_config.js"></script>
-
-    <script async src="dist/html-J2ASZTQE.js"></script>
-
+    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
+    <script src="dist/sidebar_items-10E0B7BA.js"></script>
+    <script src="docs_config.js"></script>
+    <script async src="dist/html-YIPIRHGU.js"></script>
 
   </head>
   <body data-type="extras" class="page-extra">
@@ -36,43 +34,28 @@
       } catch (error) { }
     </script>
 
-<div class="main">
+<div class="body-wrapper">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
 <nav id="sidebar" class="sidebar">
-  <form class="sidebar-search" action="search.html">
-    <label class="search-label">
-      <span class="sr-only">Search documentation of Lightning</span>
-      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
-    <button type="submit" class="search-button" aria-label="Submit Search">
-      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
-    </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
-      <i class="ri-close-line ri-lg" title="Cancel search"></i>
-    </button>
-  </form>
-
-  <div class="autocomplete">
-    <div class="autocomplete-results">
-    </div>
-  </div>
 
   <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
 
-      <a href="https://openfn.github.io/Lightning">
-        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
-      </a>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
 
-    <div class="sidebar-projectDetails">
-      <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+      <div>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
-      </a>
-      <div class="sidebar-projectVersion" translate="no">
-        v2.10.0-rc.1
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.10.0-rc.1
+        </div>
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -115,24 +98,42 @@ Pages
 
 <main class="content">
   <output role="status" id="toast"></output>
-  <div class="content-outer">
-    <div id="content" class="content-inner">
 
-<h1>
-<button class="icon-action display-settings">
-  <i class="ri-settings-3-line"></i>
-  <span class="sr-only">Settings</span>
-</button>
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/DEPLOYMENT.md#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/DEPLOYMENT.md#L1" title="View Source" class="icon-action" rel="help">
-      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-      <span class="sr-only">View Source</span>
-    </a>
-
-
-  <span>Deployment</span>
-</h1>
+    <span>Deployment</span>
+  </h1>
 
 <p>Head to the <a href="https://docs.openfn.org/documentation/deploy/options">Deploy</a>
 section of our docs site to get started.</p><p>See below for technical considerations and instructions.</p><h2 id="encryption" class="section-heading">
@@ -155,7 +156,7 @@ environment.</p><h2 id="workers" class="section-heading">
   <span class="text">Workers</span>
 </h2>
 <p>Lightning uses external worker processes for executing Runs. There are three
-settings required to configure worker authentication.</p><ul><li><code class="inline">WORKER_RUNS_PRIVATE_KEY</code></li><li><code class="inline">WORKER_LIGHTNING_PUBLIC_KEY</code></li><li><code class="inline">WORKER_SECRET</code></li></ul><p>You can use the <code class="inline">mix lightning.gen_worker_keys</code> task to generate these for
+settings required to configure worker authentication.</p><ul><li><code class="inline">WORKER_RUNS_PRIVATE_KEY</code></li><li><code class="inline">WORKER_LIGHTNING_PUBLIC_KEY</code></li><li><code class="inline">WORKER_SECRET</code></li></ul><p>You can use the <a href="Mix.Tasks.Lightning.GenWorkerKeys.html"><code class="inline">mix lightning.gen_worker_keys</code></a> task to generate these for
 convenience.</p><p>For more information see the <a href="workers.html">Workers</a> documentation.</p><h2 id="environment-variables" class="section-heading">
   <a href="#environment-variables" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
@@ -187,7 +188,7 @@ permissions are needed for the github app:</p><table><thead><tr><th style="text-
 app:</p><table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;"><strong>Description</strong></th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">GITHUB_APP_ID</code></td><td style="text-align: left;">the github app ID.</td></tr><tr><td style="text-align: left;"><code class="inline">GITHUB_APP_NAME</code></td><td style="text-align: left;">the github app name. This is the name used in the public link. It is the downcased name with spaces replaced with hyphens</td></tr><tr><td style="text-align: left;"><code class="inline">GITHUB_APP_CLIENT_ID</code></td><td style="text-align: left;">the github app Client ID</td></tr><tr><td style="text-align: left;"><code class="inline">GITHUB_APP_CLIENT_SECRET</code></td><td style="text-align: left;">the github app Client Secret</td></tr><tr><td style="text-align: left;"><code class="inline">GITHUB_CERT</code></td><td style="text-align: left;">the github app private key (Base 64 encoded)</td></tr></tbody></table><p>You can access these from your github app settings menu. Also needed for the
 configuration is:</p><ul><li><code class="inline">REPO_CONNECTION_SIGNING_SECRET</code> - secret used to sign access tokens. This
 access token is used to authenticate requests made from the github actions.
-You can generate this using <code class="inline">mix lightning.gen_encryption_key</code></li></ul><h3 id="storage" class="section-heading">
+You can generate this using <a href="Mix.Tasks.Lightning.GenEncryptionKey.html"><code class="inline">mix lightning.gen_encryption_key</code></a></li></ul><h3 id="storage" class="section-heading">
   <a href="#storage" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -263,9 +264,9 @@ headers and data as received by the Kafka pipeline and write this to a file
 within the subdirectory. The file will be named based on the pattern 
 <code class="inline">&lt;trigger_id&gt;_&lt;message_topic&gt;_&lt;message_partition&gt;_&lt;message_offset&gt;.json</code>.</p><p>To recover the persisted messages, it is suggested that the affected triggers
 be disabled before commencing. Once this is done, the following code needs to
-be run from an IEx console on each node that is running Lightning:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.KafkaTriggers.MessageRecovery</span><span class="o">.</span><span class="n">recover_messages</span><span class="p" data-group-id="3935497629-1">(</span><span class="w">
-  </span><span class="nc">Lightning.Config</span><span class="o">.</span><span class="n">kafka_alternate_storage_file_path</span><span class="p" data-group-id="3935497629-2">(</span><span class="p" data-group-id="3935497629-2">)</span><span class="w">
-</span><span class="p" data-group-id="3935497629-1">)</span></code></pre><p>Further details regarding the behaviour of <code class="inline">MessageRecovery.recover_messages/1</code> 
+be run from an IEx console on each node that is running Lightning:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.KafkaTriggers.MessageRecovery</span><span class="o">.</span><span class="n">recover_messages</span><span class="p" data-group-id="0016335383-1">(</span><span class="w">
+  </span><span class="nc">Lightning.Config</span><span class="o">.</span><span class="n">kafka_alternate_storage_file_path</span><span class="p" data-group-id="0016335383-2">(</span><span class="p" data-group-id="0016335383-2">)</span><span class="w">
+</span><span class="p" data-group-id="0016335383-1">)</span></code></pre><p>Further details regarding the behaviour of <code class="inline">MessageRecovery.recover_messages/1</code> 
 can be found in the module documentation of <code class="inline">MessageRecovery</code>. Recovered
 messages will have the <code class="inline">.json</code> extension modified to <code class="inline">.json.recovered</code> but they
 will be left in place. Future recovery runs will not process files that have
@@ -288,7 +289,9 @@ following environment variables:</p><table><thead><tr><th style="text-align: lef
 <p>Using your Salesforce developer account, create a new Oauth 2.0 connected
 application.</p><p>Set the callback url to: <code class="inline">https://&lt;ENDPOINT DOMAIN&gt;/authenticate/callback</code>.
 Replacing <code class="inline">ENDPOINT DOMAIN</code> with the host name of your instance.</p><p>Grant permissions as desired.</p><p>Once the client has been created set the following environment variables:</p><table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;">Description</th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">SALESFORCE_CLIENT_ID</code></td><td style="text-align: left;">Which is <code class="inline">Consumer Key</code> from the &quot;Manage Consumer Details&quot; screen.</td></tr><tr><td style="text-align: left;"><code class="inline">SALESFORCE_CLIENT_SECRET</code></td><td style="text-align: left;">Which is <code class="inline">Consumer Secret</code> from the &quot;Manage Consumer Details&quot; screen.</td></tr></tbody></table>
-<div class="bottom-actions">
+</div>
+
+<div class="bottom-actions" id="bottom-actions">
   <div class="bottom-actions-item">
 
       <a href="runninglocal.html" class="bottom-actions-button" rel="prev">
@@ -314,34 +317,33 @@ Benchmarking
 
   </div>
 </div>
-      <footer class="footer">
-        <p>
+    <footer class="footer">
+      <p>
 
-          <span class="line">
-            <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
-              Search HexDocs
-            </button>
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
 
-              <a href="Lightning.epub" title="ePub version">
-                Download ePub version
-              </a>
+            <a href="Lightning.epub" title="ePub version">
+              Download ePub version
+            </a>
 
-          </span>
-        </p>
+        </span>
+      </p>
 
-        <p class="built-using">
-          Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
 
-            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
-        </p>
-      </footer>
-    </div>
+      </p>
+
+    </footer>
   </div>
 </main>
 </div>
-
 
   </body>
 </html>

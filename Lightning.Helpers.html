@@ -4,21 +4,19 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="generator" content="ExDoc v0.34.2">
     <meta name="project" content="Lightning v2.10.0-rc.1">
 
+
     <title>Lightning.Helpers — Lightning v2.10.0-rc.1</title>
-    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
+    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-0D035C9E.js"></script>
-
-      <script src="docs_config.js"></script>
-
-    <script async src="dist/html-J2ASZTQE.js"></script>
-
+    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
+    <script src="dist/sidebar_items-10E0B7BA.js"></script>
+    <script src="docs_config.js"></script>
+    <script async src="dist/html-YIPIRHGU.js"></script>
 
   </head>
   <body data-type="modules" class="page-module">
@@ -36,43 +34,28 @@
       } catch (error) { }
     </script>
 
-<div class="main">
+<div class="body-wrapper">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
 <nav id="sidebar" class="sidebar">
-  <form class="sidebar-search" action="search.html">
-    <label class="search-label">
-      <span class="sr-only">Search documentation of Lightning</span>
-      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
-    <button type="submit" class="search-button" aria-label="Submit Search">
-      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
-    </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
-      <i class="ri-close-line ri-lg" title="Cancel search"></i>
-    </button>
-  </form>
-
-  <div class="autocomplete">
-    <div class="autocomplete-results">
-    </div>
-  </div>
 
   <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
 
-      <a href="https://openfn.github.io/Lightning">
-        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
-      </a>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
 
-    <div class="sidebar-projectDetails">
-      <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+      <div>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
-      </a>
-      <div class="sidebar-projectVersion" translate="no">
-        v2.10.0-rc.1
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.10.0-rc.1
+        </div>
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -115,31 +98,50 @@ Pages
 
 <main class="content">
   <output role="status" id="toast"></output>
-  <div class="content-outer">
-    <div id="content" class="content-inner">
 
-<h1>
-<button class="icon-action display-settings">
-  <i class="ri-settings-3-line"></i>
-  <span class="sr-only">Settings</span>
-</button>
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+    <span translate="no">Lightning.Helpers</span> 
+    <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
+
+  </h1>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L1" title="View Source" class="icon-action" rel="help">
-      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-      <span class="sr-only">View Source</span>
-    </a>
-
-  <span translate="no">Lightning.Helpers</span> 
-  <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
-
-</h1>
-
-
-  <section id="moduledoc">
+    <section id="moduledoc">
 <p>Common functions for the context</p>
-  </section>
+    </section>
 
+</div>
 
   <section id="summary" class="details-list">
     <h1 class="section-heading">
@@ -155,7 +157,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#actual_deletion_date/3" translate="no">actual_deletion_date(grace_period, cron_expression \\ &quot;4 2 * * *&quot;, unit \\ :days)</a>
+        <a href="#actual_deletion_date/3" data-no-tooltip translate="no">actual_deletion_date(grace_period, cron_expression \\ &quot;4 2 * * *&quot;, unit \\ :days)</a>
 
       </div>
 
@@ -163,7 +165,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#coerce_json_field/2" translate="no">coerce_json_field(attrs, field)</a>
+        <a href="#coerce_json_field/2" data-no-tooltip translate="no">coerce_json_field(attrs, field)</a>
 
       </div>
 
@@ -174,7 +176,7 @@ If it cannot be converted, it leaves the original value</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#copy_error/4" translate="no">copy_error(changeset, original_key, new_key, opts \\ [overwrite: true])</a>
+        <a href="#copy_error/4" data-no-tooltip translate="no">copy_error(changeset, original_key, new_key, opts \\ [overwrite: true])</a>
 
       </div>
 
@@ -184,7 +186,7 @@ If it cannot be converted, it leaves the original value</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#format_date/2" translate="no">format_date(date, formatter \\ &quot;%a %d/%m/%Y at %H:%M:%S&quot;)</a>
+        <a href="#format_date/2" data-no-tooltip translate="no">format_date(date, formatter \\ &quot;%a %d/%m/%Y at %H:%M:%S&quot;)</a>
 
       </div>
 
@@ -192,7 +194,7 @@ If it cannot be converted, it leaves the original value</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#json_safe/1" translate="no">json_safe(data)</a>
+        <a href="#json_safe/1" data-no-tooltip translate="no">json_safe(data)</a>
 
       </div>
 
@@ -203,7 +205,7 @@ where all keys are strings and all values are json safe (primitive values).</p><
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#ms_to_human/1" translate="no">ms_to_human(milliseconds)</a>
+        <a href="#ms_to_human/1" data-no-tooltip translate="no">ms_to_human(milliseconds)</a>
 
       </div>
 
@@ -215,7 +217,7 @@ where all keys are strings and all values are json safe (primitive values).</p><
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#url_safe_name/1" translate="no">url_safe_name(name)</a>
+        <a href="#url_safe_name/1" data-no-tooltip translate="no">url_safe_name(name)</a>
 
       </div>
 
@@ -244,7 +246,7 @@ replacing unwanted characters with hyphens, and trimming leading/trailing hyphen
     <span id="actual_deletion_date/2"></span>
 
   <div class="detail-header">
-    <a href="#actual_deletion_date/3" class="detail-link" title="Link to this function">
+    <a href="#actual_deletion_date/3" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -266,7 +268,7 @@ replacing unwanted characters with hyphens, and trimming leading/trailing hyphen
 <section class="detail" id="coerce_json_field/2">
 
   <div class="detail-header">
-    <a href="#coerce_json_field/2" class="detail-link" title="Link to this function">
+    <a href="#coerce_json_field/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -297,7 +299,7 @@ If it cannot be converted, it leaves the original value</p>
     <span id="copy_error/3"></span>
 
   <div class="detail-header">
-    <a href="#copy_error/4" class="detail-link" title="Link to this function">
+    <a href="#copy_error/4" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -325,10 +327,10 @@ If it cannot be converted, it leaves the original value</p>
   </a>
   <span class="text">Example</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">changeset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="4761520151-1">%</span><span class="nc" data-group-id="4761520151-1">Ecto.Changeset</span><span class="p" data-group-id="4761520151-1">{</span><span class="ss">errors</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4761520151-2">[</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4761520151-3">{</span><span class="s">&quot;has already been taken&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4761520151-4">[</span><span class="p" data-group-id="4761520151-4">]</span><span class="p" data-group-id="4761520151-3">}</span><span class="p" data-group-id="4761520151-2">]</span><span class="p" data-group-id="4761520151-1">}</span><span class="w">
-</span><span class="gp unselectable">iex&gt; </span><span class="n">updated_changeset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Helpers</span><span class="o">.</span><span class="n">copy_error</span><span class="p" data-group-id="4761520151-5">(</span><span class="n">changeset</span><span class="p">,</span><span class="w"> </span><span class="ss">:name</span><span class="p">,</span><span class="w"> </span><span class="ss">:raw_name</span><span class="p" data-group-id="4761520151-5">)</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">changeset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="2790358509-1">%</span><span class="nc" data-group-id="2790358509-1">Ecto.Changeset</span><span class="p" data-group-id="2790358509-1">{</span><span class="ss">errors</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2790358509-2">[</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2790358509-3">{</span><span class="s">&quot;has already been taken&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2790358509-4">[</span><span class="p" data-group-id="2790358509-4">]</span><span class="p" data-group-id="2790358509-3">}</span><span class="p" data-group-id="2790358509-2">]</span><span class="p" data-group-id="2790358509-1">}</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">updated_changeset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Helpers</span><span class="o">.</span><span class="n">copy_error</span><span class="p" data-group-id="2790358509-5">(</span><span class="n">changeset</span><span class="p">,</span><span class="w"> </span><span class="ss">:name</span><span class="p">,</span><span class="w"> </span><span class="ss">:raw_name</span><span class="p" data-group-id="2790358509-5">)</span><span class="w">
 </span><span class="gp unselectable">iex&gt; </span><span class="n">updated_changeset</span><span class="o">.</span><span class="n">errors</span><span class="w">
-</span><span class="p" data-group-id="4761520151-6">[</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4761520151-7">{</span><span class="s">&quot;has already been taken&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4761520151-8">[</span><span class="p" data-group-id="4761520151-8">]</span><span class="p" data-group-id="4761520151-7">}</span><span class="p">,</span><span class="w"> </span><span class="ss">raw_name</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4761520151-9">{</span><span class="s">&quot;has already been taken&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4761520151-10">[</span><span class="p" data-group-id="4761520151-10">]</span><span class="p" data-group-id="4761520151-9">}</span><span class="p" data-group-id="4761520151-6">]</span></code></pre><p>If the <code class="inline">original_key</code> doesn't exist in the errors, or if the <code class="inline">new_key</code> already exists and <code class="inline">overwrite</code> is set to <code class="inline">false</code>, the changeset is returned unchanged.</p>
+</span><span class="p" data-group-id="2790358509-6">[</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2790358509-7">{</span><span class="s">&quot;has already been taken&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2790358509-8">[</span><span class="p" data-group-id="2790358509-8">]</span><span class="p" data-group-id="2790358509-7">}</span><span class="p">,</span><span class="w"> </span><span class="ss">raw_name</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2790358509-9">{</span><span class="s">&quot;has already been taken&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2790358509-10">[</span><span class="p" data-group-id="2790358509-10">]</span><span class="p" data-group-id="2790358509-9">}</span><span class="p" data-group-id="2790358509-6">]</span></code></pre><p>If the <code class="inline">original_key</code> doesn't exist in the errors, or if the <code class="inline">new_key</code> already exists and <code class="inline">overwrite</code> is set to <code class="inline">false</code>, the changeset is returned unchanged.</p>
   </section>
 </section>
 <section class="detail" id="format_date/2">
@@ -336,7 +338,7 @@ If it cannot be converted, it leaves the original value</p>
     <span id="format_date/1"></span>
 
   <div class="detail-header">
-    <a href="#format_date/2" class="detail-link" title="Link to this function">
+    <a href="#format_date/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -358,7 +360,7 @@ If it cannot be converted, it leaves the original value</p>
 <section class="detail" id="json_safe/1">
 
   <div class="detail-header">
-    <a href="#json_safe/1" class="detail-link" title="Link to this function">
+    <a href="#json_safe/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -381,7 +383,7 @@ where all keys are strings and all values are json safe (primitive values).</p>
 <section class="detail" id="ms_to_human/1">
 
   <div class="detail-header">
-    <a href="#ms_to_human/1" class="detail-link" title="Link to this function">
+    <a href="#ms_to_human/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -411,7 +413,7 @@ where all keys are strings and all values are json safe (primitive values).</p>
 <section class="detail" id="url_safe_name/1">
 
   <div class="detail-header">
-    <a href="#url_safe_name/1" class="detail-link" title="Link to this function">
+    <a href="#url_safe_name/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -447,10 +449,10 @@ percent-encoded in URLs by browsers.</p><h2 id="url_safe_name/1-parameters" clas
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">url_safe_name</span><span class="p" data-group-id="3167675167-1">(</span><span class="s">&quot;My Project!!&quot;</span><span class="p" data-group-id="3167675167-1">)</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">url_safe_name</span><span class="p" data-group-id="0226641971-1">(</span><span class="s">&quot;My Project!!&quot;</span><span class="p" data-group-id="0226641971-1">)</span><span class="w">
 </span><span class="s">&quot;my-project&quot;</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">url_safe_name</span><span class="p" data-group-id="3167675167-2">(</span><span class="no">nil</span><span class="p" data-group-id="3167675167-2">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">url_safe_name</span><span class="p" data-group-id="0226641971-2">(</span><span class="no">nil</span><span class="p" data-group-id="0226641971-2">)</span><span class="w">
 </span><span class="s">&quot;&quot;</span></code></pre>
   </section>
 </section>
@@ -458,34 +460,33 @@ percent-encoded in URLs by browsers.</p><h2 id="url_safe_name/1-parameters" clas
     </div>
   </section>
 
-      <footer class="footer">
-        <p>
+    <footer class="footer">
+      <p>
 
-          <span class="line">
-            <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
-              Search HexDocs
-            </button>
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
 
-              <a href="Lightning.epub" title="ePub version">
-                Download ePub version
-              </a>
+            <a href="Lightning.epub" title="ePub version">
+              Download ePub version
+            </a>
 
-          </span>
-        </p>
+        </span>
+      </p>
 
-        <p class="built-using">
-          Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
 
-            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
-        </p>
-      </footer>
-    </div>
+      </p>
+
+    </footer>
   </div>
 </main>
 </div>
-
 
   </body>
 </html>

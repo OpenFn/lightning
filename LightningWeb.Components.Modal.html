@@ -4,21 +4,19 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="generator" content="ExDoc v0.34.2">
     <meta name="project" content="Lightning v2.10.0-rc.1">
 
+
     <title>LightningWeb.Components.Modal — Lightning v2.10.0-rc.1</title>
-    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
+    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-0D035C9E.js"></script>
-
-      <script src="docs_config.js"></script>
-
-    <script async src="dist/html-J2ASZTQE.js"></script>
-
+    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
+    <script src="dist/sidebar_items-10E0B7BA.js"></script>
+    <script src="docs_config.js"></script>
+    <script async src="dist/html-YIPIRHGU.js"></script>
 
   </head>
   <body data-type="modules" class="page-module">
@@ -36,43 +34,28 @@
       } catch (error) { }
     </script>
 
-<div class="main">
+<div class="body-wrapper">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
 <nav id="sidebar" class="sidebar">
-  <form class="sidebar-search" action="search.html">
-    <label class="search-label">
-      <span class="sr-only">Search documentation of Lightning</span>
-      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
-    <button type="submit" class="search-button" aria-label="Submit Search">
-      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
-    </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
-      <i class="ri-close-line ri-lg" title="Cancel search"></i>
-    </button>
-  </form>
-
-  <div class="autocomplete">
-    <div class="autocomplete-results">
-    </div>
-  </div>
 
   <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
 
-      <a href="https://openfn.github.io/Lightning">
-        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
-      </a>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
 
-    <div class="sidebar-projectDetails">
-      <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+      <div>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
-      </a>
-      <div class="sidebar-projectVersion" translate="no">
-        v2.10.0-rc.1
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.10.0-rc.1
+        </div>
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -115,32 +98,51 @@ Pages
 
 <main class="content">
   <output role="status" id="toast"></output>
-  <div class="content-outer">
-    <div id="content" class="content-inner">
 
-<h1>
-<button class="icon-action display-settings">
-  <i class="ri-settings-3-line"></i>
-  <span class="sr-only">Settings</span>
-</button>
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/components/modal.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+    <span translate="no">LightningWeb.Components.Modal</span> 
+    <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
+
+  </h1>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/components/modal.ex#L1" title="View Source" class="icon-action" rel="help">
-      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-      <span class="sr-only">View Source</span>
-    </a>
-
-  <span translate="no">LightningWeb.Components.Modal</span> 
-  <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
-
-</h1>
-
-
-  <section id="moduledoc">
+    <section id="moduledoc">
 <p>A modal component that can be used to display a modal on the page.</p><p>This currently isn't used anywhere but should be used in the future to
 replace the existing modal implementations.</p>
-  </section>
+    </section>
 
+</div>
 
   <section id="summary" class="details-list">
     <h1 class="section-heading">
@@ -156,7 +158,7 @@ replace the existing modal implementations.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#hide_modal/2" translate="no">hide_modal(js \\ %JS{}, id)</a>
+        <a href="#hide_modal/2" data-no-tooltip translate="no">hide_modal(js \\ %JS{}, id)</a>
 
       </div>
 
@@ -164,17 +166,17 @@ replace the existing modal implementations.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#modal/1" translate="no">modal(assigns)</a>
+        <a href="#modal/1" data-no-tooltip translate="no">modal(assigns)</a>
 
       </div>
 
-        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">show</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">with_frame</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">true</code>.</li><li><code class="inline">target</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">position</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;fixed inset-0&quot;</code>.</li><li><code class="inline">width</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;max-w-3xl&quot;</code>.</li><li><code class="inline">close_on_click_away</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">true</code>.</li><li><code class="inline">close_on_keydown</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">true</code>.</li><li><code class="inline">on_close</code> (<a href="https://hexdocs.pm/phoenix_live_view/0.20.12/Phoenix.LiveView.JS.html"><code class="inline">Phoenix.LiveView.JS</code></a>) - Defaults to <code class="inline">%Phoenix.LiveView.JS{ops: []}</code>.</li><li><code class="inline">on_open</code> (<a href="https://hexdocs.pm/phoenix_live_view/0.20.12/Phoenix.LiveView.JS.html"><code class="inline">Phoenix.LiveView.JS</code></a>) - Defaults to <code class="inline">%Phoenix.LiveView.JS{ops: []}</code>.</li><li>Global attributes are accepted.</li></ul><h2>Slots</h2><ul><li><code class="inline">inner_block</code> (required)</li><li><code class="inline">title</code></li><li><code class="inline">subtitle</code></li><li><code class="inline">footer</code> - Accepts attributes:<ul><li><code class="inline">class</code> (<code class="inline">:string</code>)</li></ul></li></ul></div>
+        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">show</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">with_frame</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">true</code>.</li><li><code class="inline">target</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">position</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;fixed inset-0&quot;</code>.</li><li><code class="inline">width</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;max-w-3xl&quot;</code>.</li><li><code class="inline">close_on_click_away</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">true</code>.</li><li><code class="inline">close_on_keydown</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">true</code>.</li><li><code class="inline">on_close</code> (<a href="https://hexdocs.pm/phoenix_live_view/0.20.17/Phoenix.LiveView.JS.html"><code class="inline">Phoenix.LiveView.JS</code></a>) - Defaults to <code class="inline">%Phoenix.LiveView.JS{ops: []}</code>.</li><li><code class="inline">on_open</code> (<a href="https://hexdocs.pm/phoenix_live_view/0.20.17/Phoenix.LiveView.JS.html"><code class="inline">Phoenix.LiveView.JS</code></a>) - Defaults to <code class="inline">%Phoenix.LiveView.JS{ops: []}</code>.</li><li>Global attributes are accepted.</li></ul><h2>Slots</h2><ul><li><code class="inline">inner_block</code> (required)</li><li><code class="inline">title</code></li><li><code class="inline">subtitle</code></li><li><code class="inline">footer</code> - Accepts attributes:<ul><li><code class="inline">class</code> (<code class="inline">:string</code>)</li></ul></li></ul></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#modal_footer/1" translate="no">modal_footer(assigns)</a>
+        <a href="#modal_footer/1" data-no-tooltip translate="no">modal_footer(assigns)</a>
 
       </div>
 
@@ -184,7 +186,7 @@ replace the existing modal implementations.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#show_modal/2" translate="no">show_modal(js \\ %JS{}, id)</a>
+        <a href="#show_modal/2" data-no-tooltip translate="no">show_modal(js \\ %JS{}, id)</a>
 
       </div>
 
@@ -208,7 +210,7 @@ replace the existing modal implementations.</p>
     <span id="hide_modal/1"></span>
 
   <div class="detail-header">
-    <a href="#hide_modal/2" class="detail-link" title="Link to this function">
+    <a href="#hide_modal/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -230,7 +232,7 @@ replace the existing modal implementations.</p>
 <section class="detail" id="modal/1">
 
   <div class="detail-header">
-    <a href="#modal/1" class="detail-link" title="Link to this function">
+    <a href="#modal/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -252,7 +254,7 @@ replace the existing modal implementations.</p>
   </a>
   <span class="text">Attributes</span>
 </h2>
-<ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">show</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">with_frame</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">true</code>.</li><li><code class="inline">target</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">position</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;fixed inset-0&quot;</code>.</li><li><code class="inline">width</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;max-w-3xl&quot;</code>.</li><li><code class="inline">close_on_click_away</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">true</code>.</li><li><code class="inline">close_on_keydown</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">true</code>.</li><li><code class="inline">on_close</code> (<a href="https://hexdocs.pm/phoenix_live_view/0.20.12/Phoenix.LiveView.JS.html"><code class="inline">Phoenix.LiveView.JS</code></a>) - Defaults to <code class="inline">%Phoenix.LiveView.JS{ops: []}</code>.</li><li><code class="inline">on_open</code> (<a href="https://hexdocs.pm/phoenix_live_view/0.20.12/Phoenix.LiveView.JS.html"><code class="inline">Phoenix.LiveView.JS</code></a>) - Defaults to <code class="inline">%Phoenix.LiveView.JS{ops: []}</code>.</li><li>Global attributes are accepted.</li></ul><h2 id="modal/1-slots" class="section-heading">
+<ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">show</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">with_frame</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">true</code>.</li><li><code class="inline">target</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">position</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;fixed inset-0&quot;</code>.</li><li><code class="inline">width</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;max-w-3xl&quot;</code>.</li><li><code class="inline">close_on_click_away</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">true</code>.</li><li><code class="inline">close_on_keydown</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">true</code>.</li><li><code class="inline">on_close</code> (<a href="https://hexdocs.pm/phoenix_live_view/0.20.17/Phoenix.LiveView.JS.html"><code class="inline">Phoenix.LiveView.JS</code></a>) - Defaults to <code class="inline">%Phoenix.LiveView.JS{ops: []}</code>.</li><li><code class="inline">on_open</code> (<a href="https://hexdocs.pm/phoenix_live_view/0.20.17/Phoenix.LiveView.JS.html"><code class="inline">Phoenix.LiveView.JS</code></a>) - Defaults to <code class="inline">%Phoenix.LiveView.JS{ops: []}</code>.</li><li>Global attributes are accepted.</li></ul><h2 id="modal/1-slots" class="section-heading">
   <a href="#modal/1-slots" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -264,7 +266,7 @@ replace the existing modal implementations.</p>
 <section class="detail" id="modal_footer/1">
 
   <div class="detail-header">
-    <a href="#modal_footer/1" class="detail-link" title="Link to this function">
+    <a href="#modal_footer/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -300,7 +302,7 @@ replace the existing modal implementations.</p>
     <span id="show_modal/1"></span>
 
   <div class="detail-header">
-    <a href="#show_modal/2" class="detail-link" title="Link to this function">
+    <a href="#show_modal/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -323,34 +325,33 @@ replace the existing modal implementations.</p>
     </div>
   </section>
 
-      <footer class="footer">
-        <p>
+    <footer class="footer">
+      <p>
 
-          <span class="line">
-            <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
-              Search HexDocs
-            </button>
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
 
-              <a href="Lightning.epub" title="ePub version">
-                Download ePub version
-              </a>
+            <a href="Lightning.epub" title="ePub version">
+              Download ePub version
+            </a>
 
-          </span>
-        </p>
+        </span>
+      </p>
 
-        <p class="built-using">
-          Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
 
-            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
-        </p>
-      </footer>
-    </div>
+      </p>
+
+    </footer>
   </div>
 </main>
 </div>
-
 
   </body>
 </html>

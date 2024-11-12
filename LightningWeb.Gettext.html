@@ -4,21 +4,19 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.30.9">
+    <meta name="generator" content="ExDoc v0.34.2">
     <meta name="project" content="Lightning v2.10.0-rc.1">
 
+
     <title>LightningWeb.Gettext — Lightning v2.10.0-rc.1</title>
-    <link rel="stylesheet" href="dist/html-elixir-XFYN5IVA.css" />
+    <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-EPF2X7PV.js"></script>
-    <script src="dist/sidebar_items-0D035C9E.js"></script>
-
-      <script src="docs_config.js"></script>
-
-    <script async src="dist/html-J2ASZTQE.js"></script>
-
+    <script src="dist/handlebars.templates-K7URE6B4.js"></script>
+    <script src="dist/sidebar_items-10E0B7BA.js"></script>
+    <script src="docs_config.js"></script>
+    <script async src="dist/html-YIPIRHGU.js"></script>
 
   </head>
   <body data-type="modules" class="page-module">
@@ -36,43 +34,28 @@
       } catch (error) { }
     </script>
 
-<div class="main">
+<div class="body-wrapper">
 
-<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
   <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
 </button>
 
 <nav id="sidebar" class="sidebar">
-  <form class="sidebar-search" action="search.html">
-    <label class="search-label">
-      <span class="sr-only">Search documentation of Lightning</span>
-      <input name="q" type="text" class="search-input" placeholder="Search..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-    </label>
-    <button type="submit" class="search-button" aria-label="Submit Search">
-      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
-    </button>
-    <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
-      <i class="ri-close-line ri-lg" title="Cancel search"></i>
-    </button>
-  </form>
-
-  <div class="autocomplete">
-    <div class="autocomplete-results">
-    </div>
-  </div>
 
   <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
 
-      <a href="https://openfn.github.io/Lightning">
-        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
-      </a>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
 
-    <div class="sidebar-projectDetails">
-      <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+      <div>
+        <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
 Lightning
-      </a>
-      <div class="sidebar-projectVersion" translate="no">
-        v2.10.0-rc.1
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.10.0-rc.1
+        </div>
       </div>
     </div>
     <ul id="sidebar-listNav" class="sidebar-listNav" role="tablist">
@@ -115,43 +98,62 @@ Pages
 
 <main class="content">
   <output role="status" id="toast"></output>
-  <div class="content-outer">
-    <div id="content" class="content-inner">
 
-<h1>
-<button class="icon-action display-settings">
-  <i class="ri-settings-3-line"></i>
-  <span class="sr-only">Settings</span>
-</button>
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true" title="Submit search"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/gettext.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+    <span translate="no">LightningWeb.Gettext</span> 
+    <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
+
+  </h1>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/gettext.ex#L1" title="View Source" class="icon-action" rel="help">
-      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-      <span class="sr-only">View Source</span>
-    </a>
-
-  <span translate="no">LightningWeb.Gettext</span> 
-  <small class="app-vsn" translate="no">(Lightning v2.10.0-rc.1)</small>
-
-</h1>
-
-
-  <section id="moduledoc">
+    <section id="moduledoc">
 <p>A module providing Internationalization with a gettext-based API.</p><p>By using <a href="https://hexdocs.pm/gettext">Gettext</a>,
 your module gains a set of macros for translations, for example:</p><pre><code class="makeup elixir" translate="no"><span class="kn">import</span><span class="w"> </span><span class="nc">LightningWeb.Gettext</span><span class="w">
 
 </span><span class="c1"># Simple translation</span><span class="w">
-</span><span class="n">gettext</span><span class="p" data-group-id="0342641901-1">(</span><span class="s">&quot;Here is the string to translate&quot;</span><span class="p" data-group-id="0342641901-1">)</span><span class="w">
+</span><span class="n">gettext</span><span class="p" data-group-id="9811489571-1">(</span><span class="s">&quot;Here is the string to translate&quot;</span><span class="p" data-group-id="9811489571-1">)</span><span class="w">
 
 </span><span class="c1"># Plural translation</span><span class="w">
-</span><span class="n">ngettext</span><span class="p" data-group-id="0342641901-2">(</span><span class="s">&quot;Here is the string to translate&quot;</span><span class="p">,</span><span class="w">
+</span><span class="n">ngettext</span><span class="p" data-group-id="9811489571-2">(</span><span class="s">&quot;Here is the string to translate&quot;</span><span class="p">,</span><span class="w">
          </span><span class="s">&quot;Here are the strings to translate&quot;</span><span class="p">,</span><span class="w">
-         </span><span class="mi">3</span><span class="p" data-group-id="0342641901-2">)</span><span class="w">
+         </span><span class="mi">3</span><span class="p" data-group-id="9811489571-2">)</span><span class="w">
 
 </span><span class="c1"># Domain-based translation</span><span class="w">
-</span><span class="n">dgettext</span><span class="p" data-group-id="0342641901-3">(</span><span class="s">&quot;errors&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Here is the error message to translate&quot;</span><span class="p" data-group-id="0342641901-3">)</span></code></pre><p>See the <a href="https://hexdocs.pm/gettext">Gettext Docs</a> for detailed usage.</p>
-  </section>
+</span><span class="n">dgettext</span><span class="p" data-group-id="9811489571-3">(</span><span class="s">&quot;errors&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Here is the error message to translate&quot;</span><span class="p" data-group-id="9811489571-3">)</span></code></pre><p>See the <a href="https://hexdocs.pm/gettext">Gettext Docs</a> for detailed usage.</p>
+    </section>
 
+</div>
 
   <section id="summary" class="details-list">
     <h1 class="section-heading">
@@ -167,7 +169,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#dgettext/3" translate="no">dgettext(domain, msgid, bindings \\ Macro.escape(%{}))</a>
+        <a href="#dgettext/3" data-no-tooltip translate="no">dgettext(domain, msgid, bindings \\ Macro.escape(%{}))</a>
 
       </div>
 
@@ -177,7 +179,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#dgettext_noop/2" translate="no">dgettext_noop(domain, msgid)</a>
+        <a href="#dgettext_noop/2" data-no-tooltip translate="no">dgettext_noop(domain, msgid)</a>
 
       </div>
 
@@ -187,7 +189,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#dngettext/5" translate="no">dngettext(domain, msgid, msgid_plural, n, bindings \\ Macro.escape(%{}))</a>
+        <a href="#dngettext/5" data-no-tooltip translate="no">dngettext(domain, msgid, msgid_plural, n, bindings \\ Macro.escape(%{}))</a>
 
       </div>
 
@@ -197,7 +199,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#dngettext_noop/3" translate="no">dngettext_noop(domain, msgid, msgid_plural)</a>
+        <a href="#dngettext_noop/3" data-no-tooltip translate="no">dngettext_noop(domain, msgid, msgid_plural)</a>
 
       </div>
 
@@ -207,7 +209,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#dpgettext/4" translate="no">dpgettext(domain, msgctxt, msgid, bindings \\ Macro.escape(%{}))</a>
+        <a href="#dpgettext/4" data-no-tooltip translate="no">dpgettext(domain, msgctxt, msgid, bindings \\ Macro.escape(%{}))</a>
 
       </div>
 
@@ -217,7 +219,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#dpgettext_noop/3" translate="no">dpgettext_noop(domain, msgctxt, msgid)</a>
+        <a href="#dpgettext_noop/3" data-no-tooltip translate="no">dpgettext_noop(domain, msgctxt, msgid)</a>
 
       </div>
 
@@ -225,7 +227,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#dpngettext/6" translate="no">dpngettext(domain, msgctxt, msgid, msgid_plural, n, bindings \\ Macro.escape(%{}))</a>
+        <a href="#dpngettext/6" data-no-tooltip translate="no">dpngettext(domain, msgctxt, msgid, msgid_plural, n, bindings \\ Macro.escape(%{}))</a>
 
       </div>
 
@@ -235,7 +237,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#dpngettext_noop/4" translate="no">dpngettext_noop(domain, msgctxt, msgid, msgid_plural)</a>
+        <a href="#dpngettext_noop/4" data-no-tooltip translate="no">dpngettext_noop(domain, msgctxt, msgid, msgid_plural)</a>
 
       </div>
 
@@ -243,7 +245,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#gettext/2" translate="no">gettext(msgid, bindings \\ Macro.escape(%{}))</a>
+        <a href="#gettext/2" data-no-tooltip translate="no">gettext(msgid, bindings \\ Macro.escape(%{}))</a>
 
       </div>
 
@@ -253,7 +255,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#gettext_comment/1" translate="no">gettext_comment(comment)</a>
+        <a href="#gettext_comment/1" data-no-tooltip translate="no">gettext_comment(comment)</a>
 
       </div>
 
@@ -263,7 +265,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#gettext_noop/1" translate="no">gettext_noop(msgid)</a>
+        <a href="#gettext_noop/1" data-no-tooltip translate="no">gettext_noop(msgid)</a>
 
       </div>
 
@@ -273,7 +275,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#handle_missing_bindings/2" translate="no">handle_missing_bindings(exception, incomplete)</a>
+        <a href="#handle_missing_bindings/2" data-no-tooltip translate="no">handle_missing_bindings(exception, incomplete)</a>
 
       </div>
 
@@ -283,7 +285,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#handle_missing_plural_translation/7" translate="no">handle_missing_plural_translation(locale, domain, msgctxt, msgid, msgid_plural, n, bindings)</a>
+        <a href="#handle_missing_plural_translation/7" data-no-tooltip translate="no">handle_missing_plural_translation(locale, domain, msgctxt, msgid, msgid_plural, n, bindings)</a>
 
       </div>
 
@@ -293,7 +295,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#handle_missing_translation/5" translate="no">handle_missing_translation(locale, domain, msgctxt, msgid, bindings)</a>
+        <a href="#handle_missing_translation/5" data-no-tooltip translate="no">handle_missing_translation(locale, domain, msgctxt, msgid, bindings)</a>
 
       </div>
 
@@ -303,7 +305,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#lgettext/5" translate="no">lgettext(locale, domain, msgctxt \\ nil, msgid, bindings)</a>
+        <a href="#lgettext/5" data-no-tooltip translate="no">lgettext(locale, domain, msgctxt \\ nil, msgid, bindings)</a>
 
       </div>
 
@@ -311,7 +313,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#lngettext/7" translate="no">lngettext(locale, domain, msgctxt \\ nil, msgid, msgid_plural, n, bindings)</a>
+        <a href="#lngettext/7" data-no-tooltip translate="no">lngettext(locale, domain, msgctxt \\ nil, msgid, msgid_plural, n, bindings)</a>
 
       </div>
 
@@ -319,7 +321,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#ngettext/4" translate="no">ngettext(msgid, msgid_plural, n, bindings \\ Macro.escape(%{}))</a>
+        <a href="#ngettext/4" data-no-tooltip translate="no">ngettext(msgid, msgid_plural, n, bindings \\ Macro.escape(%{}))</a>
 
       </div>
 
@@ -329,7 +331,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#ngettext_noop/2" translate="no">ngettext_noop(msgid, msgid_plural)</a>
+        <a href="#ngettext_noop/2" data-no-tooltip translate="no">ngettext_noop(msgid, msgid_plural)</a>
 
       </div>
 
@@ -339,7 +341,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#pgettext/3" translate="no">pgettext(msgctxt, msgid, bindings \\ Macro.escape(%{}))</a>
+        <a href="#pgettext/3" data-no-tooltip translate="no">pgettext(msgctxt, msgid, bindings \\ Macro.escape(%{}))</a>
 
       </div>
 
@@ -349,7 +351,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#pgettext_noop/2" translate="no">pgettext_noop(msgid, context)</a>
+        <a href="#pgettext_noop/2" data-no-tooltip translate="no">pgettext_noop(msgid, context)</a>
 
       </div>
 
@@ -357,7 +359,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#pngettext/5" translate="no">pngettext(msgctxt, msgid, msgid_plural, n, bindings \\ Macro.escape(%{}))</a>
+        <a href="#pngettext/5" data-no-tooltip translate="no">pngettext(msgctxt, msgid, msgid_plural, n, bindings \\ Macro.escape(%{}))</a>
 
       </div>
 
@@ -367,7 +369,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#pngettext_noop/3" translate="no">pngettext_noop(msgctxt, msgid, msgid_plural)</a>
+        <a href="#pngettext_noop/3" data-no-tooltip translate="no">pngettext_noop(msgctxt, msgid, msgid_plural)</a>
 
       </div>
 
@@ -391,7 +393,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
     <span id="dgettext/2"></span>
 
   <div class="detail-header">
-    <a href="#dgettext/3" class="detail-link" title="Link to this macro">
+    <a href="#dgettext/3" class="detail-link" data-no-tooltip title="Link to this macro">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this macro</span>
     </a>
@@ -415,7 +417,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 <section class="detail" id="dgettext_noop/2">
 
   <div class="detail-header">
-    <a href="#dgettext_noop/2" class="detail-link" title="Link to this macro">
+    <a href="#dgettext_noop/2" class="detail-link" data-no-tooltip title="Link to this macro">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this macro</span>
     </a>
@@ -441,7 +443,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
     <span id="dngettext/4"></span>
 
   <div class="detail-header">
-    <a href="#dngettext/5" class="detail-link" title="Link to this macro">
+    <a href="#dngettext/5" class="detail-link" data-no-tooltip title="Link to this macro">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this macro</span>
     </a>
@@ -465,7 +467,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 <section class="detail" id="dngettext_noop/3">
 
   <div class="detail-header">
-    <a href="#dngettext_noop/3" class="detail-link" title="Link to this macro">
+    <a href="#dngettext_noop/3" class="detail-link" data-no-tooltip title="Link to this macro">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this macro</span>
     </a>
@@ -491,7 +493,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
     <span id="dpgettext/3"></span>
 
   <div class="detail-header">
-    <a href="#dpgettext/4" class="detail-link" title="Link to this macro">
+    <a href="#dpgettext/4" class="detail-link" data-no-tooltip title="Link to this macro">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this macro</span>
     </a>
@@ -515,7 +517,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 <section class="detail" id="dpgettext_noop/3">
 
   <div class="detail-header">
-    <a href="#dpgettext_noop/3" class="detail-link" title="Link to this macro">
+    <a href="#dpgettext_noop/3" class="detail-link" data-no-tooltip title="Link to this macro">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this macro</span>
     </a>
@@ -541,7 +543,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
     <span id="dpngettext/5"></span>
 
   <div class="detail-header">
-    <a href="#dpngettext/6" class="detail-link" title="Link to this macro">
+    <a href="#dpngettext/6" class="detail-link" data-no-tooltip title="Link to this macro">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this macro</span>
     </a>
@@ -565,7 +567,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 <section class="detail" id="dpngettext_noop/4">
 
   <div class="detail-header">
-    <a href="#dpngettext_noop/4" class="detail-link" title="Link to this macro">
+    <a href="#dpngettext_noop/4" class="detail-link" data-no-tooltip title="Link to this macro">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this macro</span>
     </a>
@@ -591,7 +593,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
     <span id="gettext/1"></span>
 
   <div class="detail-header">
-    <a href="#gettext/2" class="detail-link" title="Link to this macro">
+    <a href="#gettext/2" class="detail-link" data-no-tooltip title="Link to this macro">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this macro</span>
     </a>
@@ -615,7 +617,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 <section class="detail" id="gettext_comment/1">
 
   <div class="detail-header">
-    <a href="#gettext_comment/1" class="detail-link" title="Link to this macro">
+    <a href="#gettext_comment/1" class="detail-link" data-no-tooltip title="Link to this macro">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this macro</span>
     </a>
@@ -639,7 +641,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 <section class="detail" id="gettext_noop/1">
 
   <div class="detail-header">
-    <a href="#gettext_noop/1" class="detail-link" title="Link to this macro">
+    <a href="#gettext_noop/1" class="detail-link" data-no-tooltip title="Link to this macro">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this macro</span>
     </a>
@@ -663,7 +665,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 <section class="detail" id="handle_missing_bindings/2">
 
   <div class="detail-header">
-    <a href="#handle_missing_bindings/2" class="detail-link" title="Link to this function">
+    <a href="#handle_missing_bindings/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -685,7 +687,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 <section class="detail" id="handle_missing_plural_translation/7">
 
   <div class="detail-header">
-    <a href="#handle_missing_plural_translation/7" class="detail-link" title="Link to this function">
+    <a href="#handle_missing_plural_translation/7" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -707,7 +709,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 <section class="detail" id="handle_missing_translation/5">
 
   <div class="detail-header">
-    <a href="#handle_missing_translation/5" class="detail-link" title="Link to this function">
+    <a href="#handle_missing_translation/5" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -731,7 +733,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
     <span id="lgettext/4"></span>
 
   <div class="detail-header">
-    <a href="#lgettext/5" class="detail-link" title="Link to this function">
+    <a href="#lgettext/5" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -755,7 +757,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
     <span id="lngettext/6"></span>
 
   <div class="detail-header">
-    <a href="#lngettext/7" class="detail-link" title="Link to this function">
+    <a href="#lngettext/7" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
@@ -779,7 +781,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
     <span id="ngettext/3"></span>
 
   <div class="detail-header">
-    <a href="#ngettext/4" class="detail-link" title="Link to this macro">
+    <a href="#ngettext/4" class="detail-link" data-no-tooltip title="Link to this macro">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this macro</span>
     </a>
@@ -803,7 +805,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 <section class="detail" id="ngettext_noop/2">
 
   <div class="detail-header">
-    <a href="#ngettext_noop/2" class="detail-link" title="Link to this macro">
+    <a href="#ngettext_noop/2" class="detail-link" data-no-tooltip title="Link to this macro">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this macro</span>
     </a>
@@ -829,7 +831,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
     <span id="pgettext/2"></span>
 
   <div class="detail-header">
-    <a href="#pgettext/3" class="detail-link" title="Link to this macro">
+    <a href="#pgettext/3" class="detail-link" data-no-tooltip title="Link to this macro">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this macro</span>
     </a>
@@ -853,7 +855,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 <section class="detail" id="pgettext_noop/2">
 
   <div class="detail-header">
-    <a href="#pgettext_noop/2" class="detail-link" title="Link to this macro">
+    <a href="#pgettext_noop/2" class="detail-link" data-no-tooltip title="Link to this macro">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this macro</span>
     </a>
@@ -879,7 +881,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
     <span id="pngettext/4"></span>
 
   <div class="detail-header">
-    <a href="#pngettext/5" class="detail-link" title="Link to this macro">
+    <a href="#pngettext/5" class="detail-link" data-no-tooltip title="Link to this macro">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this macro</span>
     </a>
@@ -903,7 +905,7 @@ your module gains a set of macros for translations, for example:</p><pre><code c
 <section class="detail" id="pngettext_noop/3">
 
   <div class="detail-header">
-    <a href="#pngettext_noop/3" class="detail-link" title="Link to this macro">
+    <a href="#pngettext_noop/3" class="detail-link" data-no-tooltip title="Link to this macro">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this macro</span>
     </a>
@@ -928,34 +930,33 @@ your module gains a set of macros for translations, for example:</p><pre><code c
     </div>
   </section>
 
-      <footer class="footer">
-        <p>
+    <footer class="footer">
+      <p>
 
-          <span class="line">
-            <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
-              Search HexDocs
-            </button>
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
 
-              <a href="Lightning.epub" title="ePub version">
-                Download ePub version
-              </a>
+            <a href="Lightning.epub" title="ePub version">
+              Download ePub version
+            </a>
 
-          </span>
-        </p>
+        </span>
+      </p>
 
-        <p class="built-using">
-          Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.30.9) for the
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.34.2) for the
 
-            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
-        </p>
-      </footer>
-    </div>
+      </p>
+
+    </footer>
   </div>
 </main>
 </div>
-
 
   </body>
 </html>
