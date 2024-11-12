@@ -1661,6 +1661,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
+  def handle_event(_unhandled_event, _params, socket) do
+    # TODO: add a warning and/or log for unhandled events
+    {:noreply, socket}
+  end
+
   @impl true
   def handle_info(
         %WorkflowUpdated{workflow: updated_workflow},

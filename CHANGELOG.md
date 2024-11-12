@@ -17,12 +17,29 @@ and this project adheres to
 
 ### Added
 
+- Bootstrap script to help install and configure the Lightning app for development
+  [#2654](https://github.com/OpenFn/lightning/pull/2654) 
+
 ### Changed
 
 - Upgrade dependencies
-  [PR#2624](https://github.com/OpenFn/lightning/pull/2624)
+  [#2624](https://github.com/OpenFn/lightning/pull/2624)
+- Hide the collections and fhir-jembi adaptors from the available adaptors list
+  [#2648](https://github.com/OpenFn/lightning/issues/2648)
+- Change column name for "Last Activity" to "Last Modified" on Projects list
+  [#2593](https://github.com/OpenFn/lightning/issues/2593)
 
 ### Fixed
+
+- Fix LiveView crash when pressing "esc" on inspector
+  [#2622](https://github.com/OpenFn/lightning/issues/2622)
+
+## [v2.10.0-rc.1] - 2024-11-08
+
+### Changed
+
+- Reduce transaction time when fetching collection items by fetching upfront
+  [#2645](https://github.com/OpenFn/lightning/issues/2645)
 
 ## [v2.10.0-rc.0] - 2024-11-07
 

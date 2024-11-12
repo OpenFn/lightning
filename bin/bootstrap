@@ -1,0 +1,63 @@
+#! /usr/bin/env bash
+# This script installs all dependencies required to setup Lightning for development.
+
+set -e
+
+trap 'echo "❌ Script interrupted"; exit 1' INT
+
+if ! command -v node &>/dev/null; then
+  echo "❌ Node.js is not installed"
+  exit 1
+else
+  echo "✅ Node.js is installed"
+fi
+
+if ! command -v elixir &>/dev/null; then
+  echo "❌ Elixir is not installed"
+  exit 1
+else
+  echo "✅ Elixir is installed"
+fi
+
+if [[ "$(uname)" == "Darwin" && "$(uname -m)" == "arm64" ]]; then
+  echo "Running on macOS with ARM64 architecture"
+
+  if command -v brew &>/dev/null; then
+    echo "✅ Homebrew is installed"
+    if brew list libsodium &>/dev/null; then
+      echo "✅ libsodium is installed"
+      export CPATH=/opt/homebrew/include
+      export LIBRARY_PATH=/opt/homebrew/lib
+    else
+      echo "❌ libsodium is not installed"
+      if brew install libsodium; then
+        echo "✅ libsodium has been installed"
+      else
+        echo "❌ Failed to install libsodium"
+        exit 1
+      fi
+    fi
+  else
+    echo "❌ Homebrew is not installed"
+    exit 1
+  fi
+fi
+mix local.hex --if-missing
+mix local.rebar --if-missing
+
+mix deps.get
+mix deps.compile
+
+if [[ "$(uname)" == "Darwin" && "$(uname -m)" == "arm64" ]]; then
+  mix compile.rambo
+fi
+
+mix ecto.create
+mix ecto.migrate
+
+mix lightning.install_runtime
+mix lightning.install_schemas
+mix lightning.install_adaptor_icons
+npm install --prefix assets
+
+echo "✅ All dependencies installed"

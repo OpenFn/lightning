@@ -36,7 +36,7 @@ defmodule Lightning.Runs.Handlers do
     def new(params) do
       %__MODULE__{}
       |> cast(params, [:timestamp])
-      |> put_new_change(:timestamp, DateTime.utc_now())
+      |> put_new_change(:timestamp, Lightning.current_time())
       |> validate_required([:timestamp])
     end
 
@@ -92,7 +92,7 @@ defmodule Lightning.Runs.Handlers do
     def new(params) do
       %__MODULE__{}
       |> cast(params, [:state, :reason, :error_type, :timestamp])
-      |> put_new_change(:timestamp, DateTime.utc_now())
+      |> put_new_change(:timestamp, Lightning.current_time())
       |> then(fn changeset ->
         if reason = get_change(changeset, :reason) do
           put_new_change(changeset, :state, reason_to_state(reason))
@@ -366,7 +366,7 @@ defmodule Lightning.Runs.Handlers do
           id: dataclip_id,
           project_id: project_id,
           body: nil,
-          wiped_at: DateTime.utc_now() |> DateTime.truncate(:second),
+          wiped_at: Lightning.current_time() |> DateTime.truncate(:second),
           type: :step_result
         })
         |> Repo.insert()

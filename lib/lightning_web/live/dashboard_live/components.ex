@@ -55,7 +55,7 @@ defmodule LightningWeb.DashboardLive.Components do
       phx-click="select-arcade-resource"
       phx-target={@target}
       phx-value-resource={@resource.id}
-      class="relative flex items-end h-[150px] bg-gradient-to-r from-blue-400 to-purple-500 text-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 p-4 text-left"
+      class="relative flex items-end h-[150px] bg-gradient-to-r from-primary-800 to-primary-500 text-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 p-4 text-left"
     >
       <h2 class="text-lg font-semibold absolute bottom-4 left-4">
         <%= @resource.title %>
@@ -123,14 +123,18 @@ defmodule LightningWeb.DashboardLive.Components do
   end
 
   def user_projects_table(assigns) do
-    next_sort_icon = %{asc: "hero-chevron-up", desc: "hero-chevron-down"}
+    next_sort_icon = %{
+      asc_nulls_last: "hero-chevron-up",
+      desc_nulls_last: "hero-chevron-down"
+    }
 
     assigns =
       assign(assigns,
         projects_count: assigns.projects |> Enum.count(),
         empty?: assigns.projects |> Enum.empty?(),
         name_sort_icon: next_sort_icon[assigns.name_direction],
-        last_activity_sort_icon: next_sort_icon[assigns.last_activity_direction]
+        last_updated_at_sort_icon:
+          next_sort_icon[assigns.last_updated_at_direction]
       )
 
     ~H"""
@@ -164,14 +168,14 @@ defmodule LightningWeb.DashboardLive.Components do
             <.th>Collaborators</.th>
             <.th>
               <div class="group inline-flex items-center">
-                Last Activity
+                Last Updated
                 <span
                   phx-click="sort"
-                  phx-value-by="last_activity"
+                  phx-value-by="last_updated_at"
                   phx-target={@target}
                   class="cursor-pointer align-middle ml-2 flex-none rounded text-gray-400 group-hover:visible group-focus:visible"
                 >
-                  <.icon name={@last_activity_sort_icon} />
+                  <.icon name={@last_updated_at_sort_icon} />
                 </span>
               </div>
             </.th>
@@ -208,13 +212,13 @@ defmodule LightningWeb.DashboardLive.Components do
               </.link>
             </.td>
             <.td>
-              <%= if project.last_activity do %>
+              <%= if project.last_updated_at do %>
                 <%= Lightning.Helpers.format_date(
-                  project.last_activity,
+                  project.last_updated_at,
                   "%d/%m/%Y %H:%M:%S"
                 ) %>
               <% else %>
-                No activity
+                N/A
               <% end %>
             </.td>
             <.td class="text-right">

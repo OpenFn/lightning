@@ -127,34 +127,23 @@ defmodule Lightning.Collections do
     Repo.get_by(Item, collection_id: collection_id, key: key)
   end
 
-  @spec stream_all(Collection.t(), Enum.t()) :: Enum.t()
-  def stream_all(%{id: collection_id}, params \\ %{}) do
+  @spec get_all(Collection.t(), Enum.t(), String.t() | nil) :: Enum.t()
+  def get_all(%{id: collection_id}, params, key_pattern \\ nil) do
     params = Map.new(params)
     cursor = Map.get(params, :cursor)
     limit = Map.fetch!(params, :limit)
 
     collection_id
-    |> stream_query(cursor, limit)
+    |> all_query(cursor, limit)
     |> filter_by_inserted_at(params)
-    |> Repo.stream()
-  end
-
-  @spec stream_match(Collection.t(), String.t(), Enum.t()) :: Enum.t()
-  def stream_match(
-        %{id: collection_id},
-        pattern,
-        params \\ %{}
-      ) do
-    pattern = format_pattern(pattern)
-    params = Map.new(params)
-    cursor = Map.get(params, :cursor)
-    limit = Map.fetch!(params, :limit)
-
-    collection_id
-    |> stream_query(cursor, limit)
-    |> filter_by_inserted_at(params)
-    |> where([i], like(i.key, ^pattern))
-    |> Repo.stream()
+    |> then(fn query ->
+      if key_pattern do
+        where(query, [i], like(i.key, ^format_pattern(key_pattern)))
+      else
+        query
+      end
+    end)
+    |> Repo.all()
   end
 
   @spec put(Collection.t(), String.t(), String.t()) ::
@@ -222,7 +211,7 @@ defmodule Lightning.Collections do
     with {count, _nil} <- Repo.delete_all(query), do: {:ok, count}
   end
 
-  defp stream_query(collection_id, cursor, limit) do
+  defp all_query(collection_id, cursor, limit) do
     Item
     |> where([i], i.collection_id == ^collection_id)
     |> order_by([i], asc: i.inserted_at)

@@ -1,8 +1,8 @@
 defmodule LightningWeb.WorkflowLive.EditTest do
   use LightningWeb.ConnCase, async: true
-  use Retry
 
   import Ecto.Query
+  import Eventually
   import Lightning.Factories
   import Lightning.JobsFixtures
   import Lightning.WorkflowLive.Helpers
@@ -2099,23 +2099,23 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       high_priority_view |> form("#workflow-form") |> render_submit()
 
-      retry with: exponential_backoff() |> cap(1_000) |> expiry(6_000),
-            rescue_only: [ExUnit.AssertionError] do
-        assert high_priority_view
-               |> has_element?("#inspector-workflow-version", "latest")
+      assert high_priority_view
+             |> has_element?("#inspector-workflow-version", "latest")
 
-        refute low_priority_view
-               |> has_element?("#inspector-workflow-version", "latest")
+      refute_eventually(
+        low_priority_view
+        |> has_element?("#inspector-workflow-version", "latest"),
+        10_000
+      )
 
-        assert low_priority_view
-               |> has_element?(
-                 "#inspector-workflow-version",
-                 "#{String.slice(snapshot.id, 0..6)}"
-               )
+      assert low_priority_view
+             |> has_element?(
+               "#inspector-workflow-version",
+               "#{String.slice(snapshot.id, 0..6)}"
+             )
 
-        assert low_priority_view |> render() =~
-                 "This workflow has been updated. You&#39;re no longer on the latest version."
-      end
+      assert low_priority_view |> render() =~
+               "This workflow has been updated. You&#39;re no longer on the latest version."
 
       workflow = Repo.reload(workflow)
 
