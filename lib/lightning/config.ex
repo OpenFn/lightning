@@ -126,6 +126,11 @@ defmodule Lightning.Config do
     end
 
     @impl true
+    def usage_tracking_run_chunk_size do
+      usage_tracking() |> Keyword.get(:run_chunk_size)
+    end
+
+    @impl true
     def reset_password_token_validity_in_days do
       1
     end
@@ -235,6 +240,7 @@ defmodule Lightning.Config do
   @callback storage(key :: atom()) :: term()
   @callback token_signer() :: Joken.Signer.t()
   @callback usage_tracking() :: Keyword.t()
+  @callback usage_tracking_run_chunk_size() :: integer()
   @callback usage_tracking_cron_opts() :: [Oban.Plugins.Cron.cron_input()]
   @callback worker_secret() :: binary() | nil
   @callback worker_token_signer() :: Joken.Signer.t()
@@ -339,6 +345,10 @@ defmodule Lightning.Config do
 
   def usage_tracking_cron_opts do
     impl().usage_tracking_cron_opts()
+  end
+
+  def usage_tracking_run_chunk_size do
+    impl().usage_tracking_run_chunk_size()
   end
 
   def kafka_triggers_enabled? do

@@ -53,7 +53,7 @@ defmodule Lightning.UsageTracking.RunServiceTest do
 
   describe ".finished_steps/2" do
     test "returns all run steps that finished on report date" do
-      run_1 =
+      run =
         insert(
           :run,
           work_order: build(:workorder),
@@ -61,24 +61,12 @@ defmodule Lightning.UsageTracking.RunServiceTest do
           starting_job: build(:job)
         )
 
-      run_2 =
-        insert(
-          :run,
-          work_order: build(:workorder),
-          dataclip: build(:dataclip),
-          starting_job: build(:job)
-        )
+      finished = insert_steps(run)
 
-      finished_1 = insert_steps(run_1)
-      finished_2 = insert_steps(run_2)
+      run = run |> Repo.preload(:steps)
 
-      run_1 = run_1 |> Repo.preload(:steps)
-      run_2 = run_2 |> Repo.preload(:steps)
-
-      runs = [run_1, run_2]
-
-      expected_ids = (finished_1 ++ finished_2) |> MapSet.new(& &1.id)
-      actual_ids = RunService.finished_steps(runs, @date) |> MapSet.new(& &1.id)
+      expected_ids = MapSet.new(finished, & &1.id)
+      actual_ids = RunService.finished_steps(run, @date) |> MapSet.new(& &1.id)
 
       assert(actual_ids == expected_ids)
     end

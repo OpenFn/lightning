@@ -1,5 +1,6 @@
 defmodule Lightning.UsageTracking.WorkflowMetricsServiceTest do
-  use Lightning.DataCase, async: true
+  # Async false becuase Mox returns nil whenit should return 100 for seed 976623
+  use Lightning.DataCase, async: false
 
   alias Lightning.UsageTracking.WorkflowMetricsService
 
@@ -52,6 +53,38 @@ defmodule Lightning.UsageTracking.WorkflowMetricsServiceTest do
   describe "generate_metrics/3 - cleartext disabled" do
     setup context do
       context |> Map.merge(%{enabled: false})
+    end
+
+    test "returns the appropriate metrics without the cleartext uuid", %{
+      enabled: enabled,
+      no_of_jobs: no_of_jobs,
+      no_of_runs: no_of_runs,
+      no_of_steps: no_of_steps,
+      no_of_unique_jobs: no_of_unique_jobs,
+      workflow: workflow
+    } do
+      assert %{
+               hashed_uuid: @hashed_id,
+               cleartext_uuid: nil,
+               no_of_active_jobs: no_of_unique_jobs,
+               no_of_jobs: no_of_jobs,
+               no_of_runs: no_of_runs,
+               no_of_steps: no_of_steps
+             } ==
+               WorkflowMetricsService.generate_metrics(workflow, enabled, @date)
+    end
+
+    test "it sets the stream size to the configured run chunk size", %{
+      enabled: enabled,
+      workflow: workflow
+    } do
+      Mox.expect(Lightning.MockConfig, :usage_tracking_run_chunk_size, fn ->
+        100
+      end)
+
+      WorkflowMetricsService.generate_metrics(workflow, enabled, @date)
+
+      Mox.verify!()
     end
 
     test "includes the hashed workflow uuid", config do
@@ -136,6 +169,38 @@ defmodule Lightning.UsageTracking.WorkflowMetricsServiceTest do
   describe "generate_metrics/3 - cleartext enabled" do
     setup context do
       context |> Map.merge(%{enabled: true})
+    end
+
+    test "returns the appropriate metrics including the cleartext uuid", %{
+      enabled: enabled,
+      no_of_jobs: no_of_jobs,
+      no_of_runs: no_of_runs,
+      no_of_steps: no_of_steps,
+      no_of_unique_jobs: no_of_unique_jobs,
+      workflow: workflow
+    } do
+      assert %{
+               hashed_uuid: @hashed_id,
+               cleartext_uuid: @workflow_id,
+               no_of_active_jobs: no_of_unique_jobs,
+               no_of_jobs: no_of_jobs,
+               no_of_runs: no_of_runs,
+               no_of_steps: no_of_steps
+             } ==
+               WorkflowMetricsService.generate_metrics(workflow, enabled, @date)
+    end
+
+    test "it sets the stream size to the configured run chunk size", %{
+      enabled: enabled,
+      workflow: workflow
+    } do
+      Mox.expect(Lightning.MockConfig, :usage_tracking_run_chunk_size, fn ->
+        100
+      end)
+
+      WorkflowMetricsService.generate_metrics(workflow, enabled, @date)
+
+      Mox.verify!()
     end
 
     test "includes the hashed workflow uuid", config do

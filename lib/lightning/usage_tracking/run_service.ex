@@ -9,9 +9,8 @@ defmodule Lightning.UsageTracking.RunService do
     |> finished_on(date)
   end
 
-  def finished_steps(runs, date) do
-    runs
-    |> Enum.flat_map(& &1.steps)
+  def finished_steps(run, date) do
+    run.steps
     |> finished_on(date)
   end
 
