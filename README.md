@@ -227,17 +227,7 @@ You can find more on
 
 ```sh
 asdf install  # Install language versions
-mix local.hex
-mix deps.get
-mix local.rebar --force
-mix ecto.create # Create a development database in Postgres
-mix ecto.migrate
-[[ $(uname -m) == 'arm64' ]] && CPATH=/opt/homebrew/include LIBRARY_PATH=/opt/homebrew/lib mix deps.compile enacl # Force compile enacl if on M1
-[[ $(uname -m) == 'arm64' ]] && mix compile.rambo # Force compile rambo if on M1
-mix lightning.install_runtime
-mix lightning.install_schemas
-mix lightning.install_adaptor_icons
-npm install --prefix assets
+./bin/bootstrap
 ```
 
 #### Run the app
