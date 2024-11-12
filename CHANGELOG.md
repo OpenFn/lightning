@@ -18,7 +18,7 @@ and this project adheres to
 ### Added
 
 - Bootstrap script to help install and configure the Lightning app for development
-  [#2654](https://github.com/OpenFn/lightning/pull/2654) 
+  [#2654](https://github.com/OpenFn/lightning/pull/2654)
 
 ### Changed
 
@@ -33,6 +33,8 @@ and this project adheres to
 
 - Fix LiveView crash when pressing "esc" on inspector
   [#2622](https://github.com/OpenFn/lightning/issues/2622)
+- Delete project data in batches to avoid timeouts in the db connection
+  [#2632](https://github.com/OpenFn/lightning/issues/2632)
 
 ## [v2.10.0-rc.1] - 2024-11-08
 

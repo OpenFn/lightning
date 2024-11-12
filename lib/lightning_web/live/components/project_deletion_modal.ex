@@ -36,18 +36,20 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
       |> Map.put(:action, :validate)
 
     if changeset.valid? do
-      delete_project(socket.assigns.project)
-      |> case do
-        {:deleted, _project} ->
+      case delete_project(socket.assigns.project) do
+        {:ok, %Oban.Job{}} ->
           {:noreply,
            socket
-           |> put_flash(:info, "Project deleted")
+           |> put_flash(
+             :info,
+             "Project deletion initiated. This could take upto 10 minutes, depending on the size of your data"
+           )
            |> push_navigate(to: socket.assigns.save_return_to)}
 
-        {:scheduled, _project} ->
+        {:ok, %Projects.Project{}} ->
           {:noreply,
            socket
-           |> put_flash(:info, "Project scheduled for deletion")
+           |> put_flash(:info, "Project scheduled for deletion later")
            |> push_navigate(to: socket.assigns.save_return_to)}
 
         {:error, %Ecto.Changeset{} = changeset} ->
@@ -63,26 +65,11 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
     {:noreply, push_navigate(socket, to: socket.assigns.cancel_return_to)}
   end
 
-  # TODO: This should be moved into the Projects module
   defp delete_project(project) do
     if project.scheduled_deletion do
-      Projects.delete_project(project)
-      |> case do
-        {:ok, project} ->
-          {:deleted, project}
-
-        any ->
-          any
-      end
+      Projects.delete_project_async(project)
     else
       Projects.schedule_project_deletion(project)
-      |> case do
-        {:ok, project} ->
-          {:scheduled, project}
-
-        any ->
-          any
-      end
     end
   end
 
