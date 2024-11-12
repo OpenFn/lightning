@@ -192,8 +192,6 @@ async function loadDTS(specifier: string): Promise<Lib[]> {
     }))
   );
 
-  results.forEach(r => console.log(r.content));
-
   return results;
 }
 
