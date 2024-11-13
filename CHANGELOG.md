@@ -21,7 +21,14 @@ and this project adheres to
 
 ### Fixed
 
+## [v2.10.1] - 2024-11-13
+
+### Fixed
+
 - Fix metadata loading as code-assist in the editor
+  [#2669](https://github.com/OpenFn/lightning/pull/2669)
+- Fix Broken Input Dataclip UI
+  [#2670](https://github.com/OpenFn/lightning/pull/2670)
 
 ## [v2.10.0] - 2024-11-13
 
