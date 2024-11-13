@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Increase collection items value limit to 1M characters 
+  [#2661](https://github.com/OpenFn/lightning/pull/2661)
+
 ### Fixed
 
 - Fix issues loading suggestions for code-assist

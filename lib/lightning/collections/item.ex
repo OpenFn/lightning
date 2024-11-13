@@ -15,7 +15,7 @@ defmodule Lightning.Collections.Item do
         }
 
   @primary_key false
-  schema "collections_items" do
+  schema "collection_items" do
     belongs_to :collection, Lightning.Collections.Collection, primary_key: true
     field :key, :string, primary_key: true
     field :value, :string

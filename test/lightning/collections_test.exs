@@ -301,7 +301,7 @@ defmodule Lightning.CollectionsTest do
                     {"does not exist",
                      [
                        constraint: :foreign,
-                       constraint_name: "collections_items_collection_id_fkey"
+                       constraint_name: "collection_items_collection_id_fkey"
                      ]}
                 ]
               }} = Collections.put(%{id: Ecto.UUID.generate()}, "key", "value")
