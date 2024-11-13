@@ -47,16 +47,9 @@ defmodule LightningWeb.CollectionsController do
 
   def put_all(conn, %{"name" => col_name, "items" => items}) do
     with {:ok, collection} <- Collections.get_collection(col_name),
-         :ok <- authorize(conn, collection) do
-      case Collections.put_all(collection, items) do
-        {:ok, count} ->
-          json(conn, %{upserted: count, error: nil})
-
-        :error ->
-          conn
-          |> put_status(:internal_server_error)
-          |> json(%{upserted: 0, error: "Database Error"})
-      end
+         :ok <- authorize(conn, collection),
+         {:ok, count} <- Collections.put_all(collection, items) do
+      json(conn, %{upserted: count, error: nil})
     end
   end
 

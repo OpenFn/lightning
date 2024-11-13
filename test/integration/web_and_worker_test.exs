@@ -58,7 +58,7 @@ defmodule Lightning.WebAndWorkerTest do
       conn = post(conn, "/i/#{webhook_trigger_id}", webhook_body)
 
       assert %{"work_order_id" => wo_id} =
-               json_response(conn, 200) |> IO.inspect()
+               json_response(conn, 200)
 
       assert %{runs: [run]} =
                WorkOrders.get(wo_id, include: [:runs])

@@ -270,6 +270,29 @@ defmodule Lightning.CollectionsTest do
                Repo.get_by!(Item, key: "some-key")
     end
 
+    test "returns an :error if the value is bigger than max len" do
+      collection = insert(:collection)
+
+      assert {:error,
+              %{
+                errors: [
+                  value:
+                    {"should be at most %{count} character(s)",
+                     [
+                       count: 1_000_000,
+                       validation: :length,
+                       kind: :max,
+                       type: :string
+                     ]}
+                ]
+              }} =
+               Collections.put(
+                 collection,
+                 "key",
+                 String.duplicate("a", 1_000_001)
+               )
+    end
+
     test "returns an :error if the collection does not exist" do
       assert {:error,
               %{
@@ -278,7 +301,7 @@ defmodule Lightning.CollectionsTest do
                     {"does not exist",
                      [
                        constraint: :foreign,
-                       constraint_name: "collections_items_collection_id_fkey"
+                       constraint_name: "collection_items_collection_id_fkey"
                      ]}
                 ]
               }} = Collections.put(%{id: Ecto.UUID.generate()}, "key", "value")
@@ -329,6 +352,19 @@ defmodule Lightning.CollectionsTest do
 
       assert %{value: "value5", updated_at: ^updated_at5} =
                Repo.get_by(Item, key: "key5")
+    end
+
+    test "raises Postgrex error when an item is bigger than allowed max len" do
+      collection = insert(:collection)
+
+      items = [
+        %{"key" => "key1", "value" => "adsf"},
+        %{"key" => "key1", "value" => String.duplicate("a", 1_000_001)}
+      ]
+
+      assert_raise Postgrex.Error, fn ->
+        Collections.put_all(collection, items)
+      end
     end
   end
 
