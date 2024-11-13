@@ -57,6 +57,18 @@ defmodule Lightning.Workflows do
           {:ok, Workflow.t()} | {:error, Ecto.Changeset.t(Workflow.t())}
   def save_workflow(%Ecto.Changeset{data: %Workflow{}} = changeset) do
     Multi.new()
+    |> Multi.run(:validate, fn _repo, _changes ->
+      if is_nil(changeset.data.deleted_at) do
+        {:ok, true}
+      else
+        {:error,
+         Ecto.Changeset.add_error(
+           changeset,
+           :deleted_at,
+           "cannot update a deleted workflow"
+         )}
+      end
+    end)
     |> Multi.insert_or_update(:workflow, changeset)
     |> then(fn multi ->
       if changeset.changes == %{} do
@@ -75,6 +87,9 @@ defmodule Lightning.Workflows do
         {:ok, workflow}
 
       {:error, :workflow, changeset, _changes} ->
+        {:error, changeset}
+
+      {:error, :validate, changeset, _changes} ->
         {:error, changeset}
 
       {:error, :snapshot, snapshot_changeset, %{workflow: workflow}} ->

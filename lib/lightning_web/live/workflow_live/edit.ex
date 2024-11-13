@@ -27,7 +27,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
   alias Lightning.WorkOrders
-  alias LightningWeb.Components.Form
   alias LightningWeb.WorkflowLive.Helpers
   alias LightningWeb.WorkflowNewLive.WorkflowParams
   alias Phoenix.LiveView.JS
@@ -146,6 +145,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 <.offline_indicator />
               </div>
               <.save_workflow_button
+                id="top-bar-save-workflow-btn"
                 changeset={@changeset}
                 can_edit_workflow={@can_edit_workflow}
                 snapshot_version_tag={@snapshot_version_tag}
@@ -323,6 +323,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   />
                   <.with_changes_indicator changeset={@changeset}>
                     <.save_workflow_button
+                      id="inspector-save-workflow-btn"
                       changeset={@changeset}
                       can_edit_workflow={@can_edit_workflow}
                       snapshot_version_tag={@snapshot_version_tag}
@@ -447,7 +448,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
               <.job_form
                 on_change={&send_form_changed/1}
                 editable={
-                  @can_edit_workflow && @snapshot_version_tag == "latest" &&
+                  is_nil(@workflow.deleted_at) && @can_edit_workflow &&
+                    @snapshot_version_tag == "latest" &&
                     @has_presence_edit_priority
                 }
                 form={jf}
@@ -472,12 +474,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         phx-value-id={@selected_job.id}
                         class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
                         disabled={
-                          !@can_edit_workflow or @has_child_edges or @is_first_job or
+                          !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                            @has_child_edges or @is_first_job or
                             @snapshot_version_tag != "latest" ||
                             !@has_presence_edit_priority
                         }
                         tooltip={
-                          deletion_tooltip_message(
+                          job_deletion_tooltip_message(
+                            is_struct(@workflow.deleted_at),
                             @can_edit_workflow,
                             @has_child_edges,
                             @is_first_job
@@ -524,7 +528,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   form={tf}
                   on_change={&send_form_changed/1}
                   disabled={
-                    !@can_edit_workflow or
+                    !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
                       @snapshot_version_tag != "latest" ||
                       !@has_presence_edit_priority
                   }
@@ -556,7 +560,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 <.edge_form
                   form={ef}
                   disabled={
-                    !@can_edit_workflow or
+                    !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
                       @snapshot_version_tag != "latest" ||
                       !@has_presence_edit_priority
                   }
@@ -772,12 +776,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   defp processing(_run), do: false
 
-  defp deletion_tooltip_message(
+  defp job_deletion_tooltip_message(
+         workflow_deleted,
          can_edit_job,
          has_child_edges,
          is_first_job
        ) do
     cond do
+      workflow_deleted ->
+        "You cannot modify a deleted workflow"
+
       !can_edit_job ->
         "You are not authorized to delete this step."
 
@@ -1759,10 +1767,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
     %{
       has_presence_edit_priority: has_edit_priority,
       snapshot_version_tag: version,
-      can_edit_workflow: can_edit_workflow
+      can_edit_workflow: can_edit_workflow,
+      workflow: workflow
     } = socket.assigns
 
-    disabled = !(has_edit_priority && version == "latest" && can_edit_workflow)
+    disabled =
+      !(is_nil(workflow.deleted_at) && has_edit_priority && version == "latest" &&
+          can_edit_workflow)
 
     push_event(socket, "set-disabled", %{disabled: disabled})
   end
@@ -1904,6 +1915,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
     case attrs do
       %{manual_run_form: nil} ->
         true
+
+      %{workflow: workflow} ->
+        !is_nil(workflow.deleted_at)
 
       %{
         manual_run_form: manual_run_form,
@@ -2297,6 +2311,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     """
   end
 
+  attr :id, :string, required: true
   attr :can_edit_workflow, :boolean, required: true
   attr :changeset, Ecto.Changeset, required: true
   attr :snapshot_version_tag, :string, required: true
@@ -2314,22 +2329,44 @@ defmodule LightningWeb.WorkflowLive.Edit do
       assigns
       |> assign(
         disabled:
-          !can_edit_workflow or !changeset.valid? or
-            snapshot_version_tag != "latest" || !has_presence_priority
+          !is_nil(changeset.data.deleted_at) or !can_edit_workflow or
+            !changeset.valid? or
+            snapshot_version_tag != "latest" or !has_presence_priority
       )
+      |> assign_new(:tooltip, fn ->
+        cond do
+          !is_nil(changeset.data.deleted_at) ->
+            "Workflow has been deleted"
+
+          !can_edit_workflow ->
+            "You do not have permission to edit this workflow"
+
+          !changeset.valid? ->
+            "You have some unresolved errors in your workflow"
+
+          snapshot_version_tag != "latest" ->
+            "You cannot edit an old snapshot of a workflow"
+
+          true ->
+            nil
+        end
+      end)
 
     ~H"""
-    <Form.submit_button
+    <.button
+      id={@id}
       phx-disable-with="Saving..."
       disabled={@disabled}
+      type="submit"
       form="workflow-form"
       phx-disconnected={JS.set_attribute({"disabled", ""})}
+      tooltip={@tooltip}
       phx-connected={
         !@disabled && !@has_presence_priority && JS.remove_attribute("disabled")
       }
     >
       Save
-    </Form.submit_button>
+    </.button>
     """
   end
 
