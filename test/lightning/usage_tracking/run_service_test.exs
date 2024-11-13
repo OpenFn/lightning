@@ -10,47 +10,6 @@ defmodule Lightning.UsageTracking.RunServiceTest do
   @finished_at ~U[2024-02-05 12:11:10Z]
   @other_finished_at ~U[2024-02-04 12:11:10Z]
 
-  describe ".finished_runs/2" do
-    test "returns the subset of runs finished on the given date" do
-      finished_on_report_date = insert_finished_runs(@finished_at)
-      finished_on_other_date = insert_finished_runs(@other_finished_at)
-      unfinished = insert_unfinished_runs()
-
-      run_list = finished_on_other_date ++ finished_on_report_date ++ unfinished
-
-      assert(
-        RunService.finished_runs(run_list, @date) == finished_on_report_date
-      )
-    end
-
-    defp insert_finished_runs(finished_at) do
-      Run.final_states()
-      |> Enum.map(fn state ->
-        insert(
-          :run,
-          state: state,
-          finished_at: finished_at,
-          work_order: build(:workorder),
-          dataclip: build(:dataclip),
-          starting_job: build(:job)
-        )
-      end)
-    end
-
-    defp insert_unfinished_runs do
-      [:available, :claimed, :started]
-      |> Enum.map(fn state ->
-        insert(
-          :run,
-          state: state,
-          work_order: build(:workorder),
-          dataclip: build(:dataclip),
-          starting_job: build(:job)
-        )
-      end)
-    end
-  end
-
   describe ".finished_steps/2" do
     test "returns all run steps that finished on report date" do
       run =

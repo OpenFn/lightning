@@ -4,11 +4,6 @@ defmodule Lightning.UsageTracking.RunService do
 
 
   """
-  def finished_runs(all_runs, date) do
-    all_runs
-    |> finished_on(date)
-  end
-
   def finished_steps(run, date) do
     run.steps
     |> finished_on(date)
