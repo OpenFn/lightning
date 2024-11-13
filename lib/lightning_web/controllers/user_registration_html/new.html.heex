@@ -56,17 +56,15 @@
 
               <div class="flex items-start">
                 <div class="flex items-center h-5">
-                  <%= Phoenix.HTML.Form.checkbox(f, :terms_accepted,
-                    class:
-                      "focus:ring-primary-500 h-4 w-4 text-primary-600 text-sm border-secondary-300 rounded"
-                  ) %>
+                  <.input field={f[:terms_accepted]} type="checkbox" />
                 </div>
                 <div class="ml-3 text-sm">
-                  <%= Phoenix.HTML.Form.label(
-                    f,
-                    "I accept the terms of service.",
-                    class: "font-medium text-secondary-700"
-                  ) %>
+                  <.label
+                    for={f[:terms_accepted].id}
+                    class="font-medium text-secondary-700"
+                  >
+                    I accept the terms of service
+                  </.label>
                   <br />
                   <span class="text-xs text-secondary-500">
                     Please check with the host of this instance of Lightning to
@@ -80,7 +78,6 @@
                   </span>
                 </div>
               </div>
-              <.old_error field={f[:terms_accepted]} />
               <LightningWeb.Components.Form.submit_button>
                 Register
               </LightningWeb.Components.Form.submit_button>

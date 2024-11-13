@@ -2,34 +2,26 @@
   <.form :let={f} for={@changeset} id="dataclip-form" phx-target={@myself}>
     <div class="grid grid-cols-6 gap-6">
       <div class="col-span-3">
-        <%= Phoenix.HTML.Form.label(f, :type,
-          class: "block text-sm font-medium text-secondary-700"
-        ) %>
-        <div class="flex w-full items-center gap-2 pb-3">
-          <div class="grow">
-            <.select_field
-              form={f}
-              name={:type}
-              id="type"
-              values={@types}
-              disabled={true}
-            />
-          </div>
-        </div>
+        <.input
+          type="select"
+          field={f[:type]}
+          id="type"
+          options={@types}
+          disabled={true}
+          label="Type"
+        />
       </div>
     </div>
     <div class="grid grid-cols-6 gap-6">
       <div class="col-span-3">
-        <%= Phoenix.HTML.Form.label(f, :body,
-          class: "block text-sm font-medium text-secondary-700"
-        ) %>
-        <%= Phoenix.HTML.Form.textarea(f, :body,
-          disabled: true,
-          class:
-            "rounded-md w-full font-mono bg-secondary-800 text-secondary-50 h-96",
-          phx_debounce: "blur"
-        ) %>
-        <.old_error field={f[:body]} />
+        <.input
+          type="textarea"
+          field={f[:body]}
+          label="Body"
+          phx-debounce="blur"
+          disabled={true}
+          class="rounded-md w-full font-mono bg-secondary-800 text-secondary-50 h-96"
+        />
       </div>
     </div>
     <div class="hidden sm:block" aria-hidden="true">

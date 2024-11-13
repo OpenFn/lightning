@@ -186,7 +186,8 @@ defmodule LightningWeb.Components.Common do
     """
   end
 
-  attr :icon_classes, :string, default: "h-4 w-4 inline-block mr-1"
+  attr :icon_classes, :string,
+    default: "size-4 flex-none my-auto align-middle opacity-20"
 
   def version_chip(assigns) do
     {display, message, type} =
@@ -214,20 +215,26 @@ defmodule LightningWeb.Components.Common do
       )
 
     ~H"""
-    <div class="px-3 pb-3 rounded-md text-xs rounded-md block text-center">
-      <span class="opacity-20" title={@message}>
-        <%= case @type do %>
-          <% :release -> %>
-            <Heroicons.check_badge class={@icon_classes} />
-          <% :edge -> %>
-            <Heroicons.cube class={@icon_classes} />
-          <% :warn -> %>
-            <Heroicons.exclamation_triangle class={@icon_classes} />
-          <% :no_docker -> %>
-        <% end %>
-      </span>
+    <div class="px-3 pb-3 text-xs block flex gap-1">
+      <%= case @type do %>
+        <% :release -> %>
+          <.icon name="hero-check-badge" class={@icon_classes} title={@message} />
+        <% :edge -> %>
+          <.icon name="hero-cube" class={@icon_classes} title={@message} />
+        <% :warn -> %>
+          <.icon
+            name="hero-exclamation-triangle"
+            class={@icon_classes}
+            title={@message}
+          />
+        <% :no_docker -> %>
+      <% end %>
       <code
-        class="px-2 py-1 opacity-20 bg-gray-100 rounded-md font-mono text-indigo-500 inline-block align-middle"
+        class={[
+          "px-2 py-1 flex-grow opacity-20 bg-gray-100 rounded-md",
+          "break-keep font-mono text-indigo-500",
+          "inline-block align-middle text-center"
+        ]}
         title={"OpenFn/Lightning #{@display}"}
       >
         <%= @display %>
@@ -371,10 +378,15 @@ defmodule LightningWeb.Components.Common do
     end
   end
 
+  attr :kind, :atom, required: true, values: [:error, :info]
+  attr :flash, :map, required: true
+
   def flash(%{kind: :error} = assigns) do
+    assigns = assign(assigns, msg: Phoenix.Flash.get(assigns[:flash], :error))
+
     ~H"""
     <div
-      :if={msg = live_flash(@flash, @kind)}
+      :if={@msg}
       id="flash"
       class="rounded-md bg-red-200 border-red-300 p-4 fixed w-fit mx-auto flex justify-center bottom-3 right-0 left-0 z-[100]"
       phx-click={
@@ -387,7 +399,7 @@ defmodule LightningWeb.Components.Common do
       <div class="flex justify-between items-center space-x-3 text-red-900">
         <Heroicons.exclamation_circle solid class="w-5 h-5" />
         <p class="flex-1 text-sm font-medium" role="alert">
-          <%= msg %>
+          <%= @msg %>
         </p>
         <button
           type="button"
@@ -404,9 +416,11 @@ defmodule LightningWeb.Components.Common do
   end
 
   def flash(%{kind: :info} = assigns) do
+    assigns = assign(assigns, msg: Phoenix.Flash.get(assigns[:flash], :info))
+
     ~H"""
     <div
-      :if={msg = live_flash(@flash, @kind)}
+      :if={@msg}
       id="flash"
       class="rounded-md bg-blue-200 border-blue-300 rounded-md p-4 fixed w-fit mx-auto flex justify-center bottom-3 right-0 left-0 z-[100]"
       phx-click={
@@ -420,7 +434,7 @@ defmodule LightningWeb.Components.Common do
       <div class="flex justify-between items-center space-x-3 text-blue-900">
         <Heroicons.check_circle solid class="w-5 h-5" />
         <p class="flex-1 text-sm font-medium" role="alert">
-          <%= msg %>
+          <%= @msg %>
         </p>
         <button
           type="button"

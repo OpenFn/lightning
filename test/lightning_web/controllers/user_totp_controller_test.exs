@@ -49,10 +49,12 @@ defmodule LightningWeb.UserTOTPControllerTest do
       conn =
         get(conn, Routes.user_totp_path(conn, :new), user: [remember_me: "true"])
 
-      response = html_response(conn, 200)
+      response = html_response(conn, 200) |> Floki.parse_document!()
 
-      assert response =~
-               ~s|<input id="user_remember_me" name="user[remember_me]" type="hidden" value="true">|
+      assert Floki.find(
+               response,
+               ~s|input#user_remember_me[name="user[remember_me]"][type="hidden"][value="true"]|
+             )
     end
 
     test "redirects to login if not logged in" do

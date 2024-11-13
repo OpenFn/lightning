@@ -20,13 +20,7 @@ defmodule Lightning.Extensions.ProjectHook do
   @spec handle_delete_project(Project.t()) ::
           {:ok, Project.t()} | {:error, Changeset.t()}
   def handle_delete_project(project) do
-    Projects.project_runs_query(project) |> Repo.delete_all()
-
-    Projects.project_run_step_query(project) |> Repo.delete_all()
-
-    Projects.project_workorders_query(project) |> Repo.delete_all()
-
-    Projects.project_steps_query(project) |> Repo.delete_all()
+    Projects.delete_project_workorders(project)
 
     Projects.project_jobs_query(project) |> Repo.delete_all()
 
@@ -38,7 +32,7 @@ defmodule Lightning.Extensions.ProjectHook do
 
     Projects.project_credentials_query(project) |> Repo.delete_all()
 
-    Projects.project_dataclips_query(project) |> Repo.delete_all()
+    Projects.delete_project_dataclips(project)
 
     Repo.delete(project)
   end

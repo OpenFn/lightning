@@ -288,7 +288,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       {:noreply,
        socket
        |> put_flash(:error, "You are not authorized to perform this action.")
-       |> push_redirect(to: socket.assigns.return_to)}
+       |> push_navigate(to: socket.assigns.return_to)}
     end
   end
 
@@ -319,7 +319,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
               aria-label={gettext("close")}
             >
               <span class="sr-only">Close</span>
-              <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
+              <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
             </button>
           </div>
         </:title>
@@ -398,7 +398,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
               aria-label={gettext("close")}
             >
               <span class="sr-only">Close</span>
-              <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
+              <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
             </button>
           </div>
         </:title>
@@ -439,7 +439,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
               aria-label={gettext("close")}
             >
               <span class="sr-only">Close</span>
-              <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
+              <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
             </button>
           </div>
         </:title>
@@ -596,7 +596,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       Path.wildcard("#{schemas_path}/*.json")
       |> Enum.map(fn p ->
         name = p |> Path.basename() |> String.replace(".json", "")
-        {name |> Phoenix.HTML.Form.humanize(), name, nil, nil}
+        {Phoenix.Naming.humanize(name), name, nil, nil}
       end)
 
     schemas_options
@@ -665,7 +665,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       {:noreply,
        socket
        |> put_flash(:info, "Credential updated successfully")
-       |> push_redirect(to: socket.assigns.return_to)}
+       |> push_navigate(to: socket.assigns.return_to)}
     else
       {:same_user, false} ->
         {:noreply,
@@ -674,7 +674,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
            :error,
            "Invalid credentials. Please log in again."
          )
-         |> push_redirect(to: socket.assigns.return_to)}
+         |> push_navigate(to: socket.assigns.return_to)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}

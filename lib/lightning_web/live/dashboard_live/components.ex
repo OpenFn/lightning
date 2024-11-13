@@ -123,14 +123,18 @@ defmodule LightningWeb.DashboardLive.Components do
   end
 
   def user_projects_table(assigns) do
-    next_sort_icon = %{asc: "hero-chevron-up", desc: "hero-chevron-down"}
+    next_sort_icon = %{
+      asc_nulls_last: "hero-chevron-up",
+      desc_nulls_last: "hero-chevron-down"
+    }
 
     assigns =
       assign(assigns,
         projects_count: assigns.projects |> Enum.count(),
         empty?: assigns.projects |> Enum.empty?(),
         name_sort_icon: next_sort_icon[assigns.name_direction],
-        last_activity_sort_icon: next_sort_icon[assigns.last_activity_direction]
+        last_updated_at_sort_icon:
+          next_sort_icon[assigns.last_updated_at_direction]
       )
 
     ~H"""
@@ -143,89 +147,91 @@ defmodule LightningWeb.DashboardLive.Components do
           <%= render_slot(@create_project_button) %>
         </div>
       </div>
-      <.table id="projects-table">
-        <.tr>
-          <.th>
-            <div class="group inline-flex items-center">
-              Name
-              <span
-                phx-click="sort"
-                phx-value-by="name"
-                phx-target={@target}
-                class="cursor-pointer align-middle ml-2 flex-none rounded text-gray-400 group-hover:visible group-focus:visible"
-              >
-                <.icon name={@name_sort_icon} />
-              </span>
-            </div>
-          </.th>
-          <.th>Role</.th>
-          <.th>Workflows</.th>
-          <.th>Collaborators</.th>
-          <.th>
-            <div class="group inline-flex items-center">
-              Last Activity
-              <span
-                phx-click="sort"
-                phx-value-by="last_activity"
-                phx-target={@target}
-                class="cursor-pointer align-middle ml-2 flex-none rounded text-gray-400 group-hover:visible group-focus:visible"
-              >
-                <.icon name={@last_activity_sort_icon} />
-              </span>
-            </div>
-          </.th>
-          <.th></.th>
-        </.tr>
+      <div id="projects-table">
+        <.table>
+          <.tr>
+            <.th>
+              <div class="group inline-flex items-center">
+                Name
+                <span
+                  phx-click="sort"
+                  phx-value-by="name"
+                  phx-target={@target}
+                  class="cursor-pointer align-middle ml-2 flex-none rounded text-gray-400 group-hover:visible group-focus:visible"
+                >
+                  <.icon name={@name_sort_icon} />
+                </span>
+              </div>
+            </.th>
+            <.th>Role</.th>
+            <.th>Workflows</.th>
+            <.th>Collaborators</.th>
+            <.th>
+              <div class="group inline-flex items-center">
+                Last Updated
+                <span
+                  phx-click="sort"
+                  phx-value-by="last_updated_at"
+                  phx-target={@target}
+                  class="cursor-pointer align-middle ml-2 flex-none rounded text-gray-400 group-hover:visible group-focus:visible"
+                >
+                  <.icon name={@last_updated_at_sort_icon} />
+                </span>
+              </div>
+            </.th>
+            <.th></.th>
+          </.tr>
 
-        <.tr
-          :for={project <- @projects}
-          id={"projects-table-row-#{project.id}"}
-          class="hover:bg-gray-100 transition-colors duration-200"
-        >
-          <.td>
-            <.link
-              class="break-words max-w-[15rem] text-gray-800"
-              href={~p"/projects/#{project.id}/w"}
-            >
-              <%= project.name %>
-            </.link>
-          </.td>
-          <.td class="break-words max-w-[25rem]">
-            <%= project.role
-            |> Atom.to_string()
-            |> String.capitalize() %>
-          </.td>
-          <.td class="break-words max-w-[10rem]">
-            <%= project.workflows_count %>
-          </.td>
-          <.td class="break-words max-w-[5rem]">
-            <.link
-              class="link"
-              href={~p"/projects/#{project.id}/settings#collaboration"}
-            >
-              <%= project.collaborators_count %>
-            </.link>
-          </.td>
-          <.td>
-            <%= if project.last_activity do %>
-              <%= Lightning.Helpers.format_date(
-                project.last_activity,
-                "%d/%m/%Y %H:%M:%S"
-              ) %>
-            <% else %>
-              No activity
-            <% end %>
-          </.td>
-          <.td class="text-right">
-            <.link
-              class="table-action"
-              navigate={~p"/projects/#{project.id}/history"}
-            >
-              History
-            </.link>
-          </.td>
-        </.tr>
-      </.table>
+          <.tr
+            :for={project <- @projects}
+            id={"projects-table-row-#{project.id}"}
+            class="hover:bg-gray-100 transition-colors duration-200"
+          >
+            <.td>
+              <.link
+                class="break-words max-w-[15rem] text-gray-800"
+                href={~p"/projects/#{project.id}/w"}
+              >
+                <%= project.name %>
+              </.link>
+            </.td>
+            <.td class="break-words max-w-[25rem]">
+              <%= project.role
+              |> Atom.to_string()
+              |> String.capitalize() %>
+            </.td>
+            <.td class="break-words max-w-[10rem]">
+              <%= project.workflows_count %>
+            </.td>
+            <.td class="break-words max-w-[5rem]">
+              <.link
+                class="link"
+                href={~p"/projects/#{project.id}/settings#collaboration"}
+              >
+                <%= project.collaborators_count %>
+              </.link>
+            </.td>
+            <.td>
+              <%= if project.last_updated_at do %>
+                <%= Lightning.Helpers.format_date(
+                  project.last_updated_at,
+                  "%d/%m/%Y %H:%M:%S"
+                ) %>
+              <% else %>
+                N/A
+              <% end %>
+            </.td>
+            <.td class="text-right">
+              <.link
+                class="table-action"
+                navigate={~p"/projects/#{project.id}/history"}
+              >
+                History
+              </.link>
+            </.td>
+          </.tr>
+        </.table>
+      </div>
     <% end %>
     """
   end

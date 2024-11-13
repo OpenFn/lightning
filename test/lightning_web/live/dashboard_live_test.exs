@@ -218,8 +218,8 @@ defmodule LightningWeb.DashboardLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/projects")
 
-      projects_sorted_by_last_activity =
-        get_sorted_projects_by_last_activity(projects)
+      projects_sorted_by_last_updated_at =
+        get_sorted_projects_by_last_updated_at(projects)
 
       html = render(view)
 
@@ -227,14 +227,14 @@ defmodule LightningWeb.DashboardLiveTest do
         extract_project_last_activities_from_html(html)
 
       assert project_last_activities_from_html ==
-               projects_sorted_by_last_activity
+               projects_sorted_by_last_updated_at
 
       view
-      |> element("span[phx-click='sort'][phx-value-by='last_activity']")
+      |> element("span[phx-click='sort'][phx-value-by='last_updated_at']")
       |> render_click()
 
-      projects_sorted_by_last_activity_desc =
-        get_sorted_projects_by_last_activity(projects, :desc)
+      projects_sorted_by_last_updated_at_desc =
+        get_sorted_projects_by_last_updated_at(projects, :desc)
 
       html = render(view)
 
@@ -242,7 +242,7 @@ defmodule LightningWeb.DashboardLiveTest do
         extract_project_last_activities_from_html(html)
 
       assert project_last_activities_from_html ==
-               projects_sorted_by_last_activity_desc
+               projects_sorted_by_last_updated_at_desc
     end
 
     test "Toggles the welcome banner", %{conn: conn, user: user} do
@@ -353,7 +353,7 @@ defmodule LightningWeb.DashboardLiveTest do
            )
   end
 
-  defp get_sorted_projects_by_last_activity(projects, order \\ :asc) do
+  defp get_sorted_projects_by_last_updated_at(projects, order \\ :asc) do
     projects_with_workflows = Repo.preload(projects, :workflows)
 
     projects_with_workflows
@@ -367,16 +367,16 @@ defmodule LightningWeb.DashboardLiveTest do
       order
     )
     |> Enum.map(fn project ->
-      last_activity =
+      last_updated_at =
         project
         |> Map.get(:workflows)
         |> Enum.map(& &1.updated_at)
         |> Enum.max(fn -> nil end)
 
-      if last_activity do
-        Lightning.Helpers.format_date(last_activity, "%d/%m/%Y %H:%M:%S")
+      if last_updated_at do
+        Lightning.Helpers.format_date(last_updated_at, "%d/%m/%Y %H:%M:%S")
       else
-        "No activity"
+        "N/A"
       end
     end)
   end

@@ -770,20 +770,19 @@ defmodule Lightning.ProjectsTest do
           scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: -10)
         )
 
-      project_fixture(
-        scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: 10)
-      )
+      not_to_delete =
+        project_fixture(
+          scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: 10)
+        )
 
       count_before = Repo.all(Project) |> Enum.count()
 
-      {:ok, %{projects_deleted: projects_deleted}} =
-        Projects.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+      :ok = Projects.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
 
-      assert count_before - 1 == Repo.all(Project) |> Enum.count()
-      assert 1 == projects_deleted |> Enum.count()
+      assert Repo.aggregate(Project, :count) == count_before - 1
 
-      assert project_to_delete.id ==
-               projects_deleted |> Enum.at(0) |> Map.get(:id)
+      refute Repo.get(Project, project_to_delete.id)
+      assert Repo.get(Project, not_to_delete.id)
     end
   end
 
@@ -1618,7 +1617,7 @@ defmodule Lightning.ProjectsTest do
              ] = result
     end
 
-    test "orders projects by last_activity (updated_at of workflows) descending when specified" do
+    test "orders projects by last_updated_at (updated_at of workflows) descending when specified" do
       user = insert(:user)
 
       project_a =
@@ -1640,7 +1639,9 @@ defmodule Lightning.ProjectsTest do
       )
 
       result =
-        Projects.get_projects_overview(user, order_by: {:desc, :last_activity})
+        Projects.get_projects_overview(user,
+          order_by: {:desc_nulls_last, :last_updated_at}
+        )
 
       assert [
                %ProjectOverviewRow{id: ^project_b_id, name: "Project B"},
@@ -1648,7 +1649,7 @@ defmodule Lightning.ProjectsTest do
              ] = result
     end
 
-    test "orders projects by last_activity ascending when specified" do
+    test "orders projects by last_updated_at ascending when specified" do
       user = insert(:user)
 
       project_a =
@@ -1670,7 +1671,9 @@ defmodule Lightning.ProjectsTest do
       )
 
       result =
-        Projects.get_projects_overview(user, order_by: {:asc, :last_activity})
+        Projects.get_projects_overview(user,
+          order_by: {:asc_nulls_last, :last_updated_at}
+        )
 
       assert [
                %ProjectOverviewRow{id: ^project_a_id, name: "Project A"},
@@ -1694,7 +1697,7 @@ defmodule Lightning.ProjectsTest do
                  id: ^project_id,
                  name: "Project No Workflow",
                  workflows_count: 0,
-                 last_activity: nil
+                 last_updated_at: nil
                }
              ] = result
     end

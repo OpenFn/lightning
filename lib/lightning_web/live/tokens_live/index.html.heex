@@ -19,135 +19,103 @@
         return_to={~p"/profile/tokens"}
       />
     <% end %>
-    <.table id="tokens">
-      <%= if @new_token do %>
-        <.tr data-entity="new_token">
-          <.td colspan="3" class="bg-blue-100">
-            <div class="my-auto whitespace-nowrap font-medium text-gray-900">
-              <div class="flex">
-                <span class="my-auto whitespace-nowrap">
-                  <Heroicons.exclamation_triangle outline class="h-5 w-5" />
-                </span>
-                <div class="text-lg font-medium p-2">
-                  Make sure to copy your token now as you will not be able to see it again.
-                </div>
-              </div>
-              <div class="flex rounded overflow-auto p-2 bg-gray-100 w-auto justify-between">
-                <input
-                  type="text"
-                  id="new_token"
-                  value={@new_token}
-                  class="my-auto w-full border-0 bg-inherit disabled:opacity-70 mr-1"
-                  disabled
-                />
-                <PetalComponents.Button.icon_button
-                  link_type="button"
-                  size="xs"
-                  color="info"
-                  id="copy"
-                  data-to="#new_token"
-                  phx-hook="Copy"
-                  phx-click="copy"
-                  class="bg-blue-100"
-                >
-                  <Heroicons.clipboard outline />
-                </PetalComponents.Button.icon_button>
-              </div>
-            </div>
-          </.td>
-        </.tr>
-      <% end %>
-      <.tr>
-        <.th>Token</.th>
-        <.th>
-          <span class="px-4">Created at</span>
-        </.th>
-        <.th class={
-          if Enum.empty?(@tokens) do
-            "text-right"
-          end
-        }>
-          <span class="px-4">Last Used at</span>
-        </.th>
-      </.tr>
-      <%= if Enum.empty?(@tokens) do %>
-        <.tr>
-          <.td>
-            <div class="flex content-center gap-2">
-              <div>
-                <Heroicons.finger_print outline class="h-12 w-12 text-black" />
-              </div>
-              <div>
-                <h3 class="mt-1 text-sm font-semibold text-gray-900">
-                  No Personal Access Tokens
-                </h3>
-                <p class="mt-1 text-sm text-gray-500">
-                  Get started by creating a new access token.
-                </p>
-              </div>
-            </div>
-          </.td>
-          <.td colspan="2">
-            <div class="my-auto p-4 text-right">
-              <Common.button
-                phx-click="generate_new_token"
-                id="generate_new_token"
-              >
-                <div class="h-full">
-                  <Icon.plus class="h-4 w-4 inline-block" />
-                  <span class="inline-block align-middle">
-                    Generate New Token
-                  </span>
-                </div>
-              </Common.button>
-            </div>
-          </.td>
-        </.tr>
-      <% end %>
-      <%= for token <- @tokens do %>
-        <.tr id={"token-#{token.id}"}>
-          <.td>
-            <div class="flex rounded overflow-auto p-2 w-auto justify-between">
-              <code class="my-auto whitespace-nowrap align-baseline leading-none">
-                <span>
-                  <%= mask_token(token) %>
-                </span>
-              </code>
-            </div>
-          </.td>
-          <.td>
-            <div class="flex content-center justify-between">
-              <span class="my-auto whitespace-nowrap py-2 px-4 text-center align-baseline font-medium leading-none">
-                <%= Calendar.strftime(token.inserted_at, "%a, %-d %b %Y at %X") %>
-              </span>
-            </div>
-          </.td>
-          <.td>
-            <div class="flex content-center justify-between">
-              <span class="my-auto whitespace-nowrap py-2 px-4 text-center align-baseline font-medium leading-none">
-                <%= if token.last_used_at do %>
-                  <%= Timex.Format.DateTime.Formatters.Relative.format!(
-                    token.last_used_at,
-                    "{relative}"
-                  ) %>
-                <% else %>
-                  Never used
-                <% end %>
-              </span>
+    <div :if={@new_token} data-entity="new_token" class="bg-blue-100">
+      <div class="my-auto whitespace-nowrap font-medium text-gray-900 p-4">
+        <div class="flex">
+          <span class="my-auto whitespace-nowrap">
+            <.icon name="hero-exclamation-triangle" class="h-5 w-5" />
+          </span>
+          <div class="text-lg font-medium p-2">
+            Make sure to copy your token now as you will not be able to see it again.
+          </div>
+        </div>
+        <div class="flex rounded overflow-auto p-2 bg-gray-100 w-auto justify-between">
+          <input
+            type="text"
+            id="new_token"
+            value={@new_token}
+            class="my-auto w-full border-0 bg-inherit disabled:opacity-70 mr-1"
+            disabled
+          />
 
-              <PetalComponents.Button.icon_button
-                to={~p"/profile/tokens/#{token.id}/delete"}
-                link_type="live_patch"
-                size="xs"
-                color="danger"
-                id={"delete-token-#{token.id}"}
-              >
-                <Heroicons.trash outline />
-              </PetalComponents.Button.icon_button>
-            </div>
-          </.td>
-        </.tr>
-      <% end %>
+          <button
+            id="copy"
+            type="button"
+            phx-hook="Copy"
+            phx-click="copy"
+            phx-then={%JS{}}
+            data-to="#new_token"
+            class="rounded-full bg-blue-100 p-2 text-indigo-700 shadow-sm hover:opacity-75"
+          >
+            <.icon name="hero-clipboard" class="h-5 w-5" />
+            <span class="sr-only">Copy</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    <.table id="tokens" rows={@tokens}>
+      <:col :let={token} label="Token">
+        <code class="my-auto whitespace-nowrap align-baseline leading-none">
+          <span>
+            <%= mask_token(token) %>
+          </span>
+        </code>
+      </:col>
+      <:col :let={token} label="Created at">
+        <span class="my-auto whitespace-nowrap text-center align-baseline font-medium leading-none">
+          <%= Calendar.strftime(token.inserted_at, "%a, %-d %b %Y at %X") %>
+        </span>
+      </:col>
+      <:col :let={token} label="Last Used at">
+        <div class="flex content-center justify-between">
+          <span class="my-auto whitespace-nowrap text-center align-baseline font-medium leading-none">
+            <%= if token.last_used_at do %>
+              <%= Timex.Format.DateTime.Formatters.Relative.format!(
+                token.last_used_at,
+                "{relative}"
+              ) %>
+            <% else %>
+              Never used
+            <% end %>
+          </span>
+
+          <.link
+            id={"delete-token-#{token.id}"}
+            patch={~p"/profile/tokens/#{token.id}/delete"}
+            class="text-red-600"
+          >
+            <.icon name="hero-trash" class="w-5 h-5" />
+          </.link>
+        </div>
+      </:col>
     </.table>
+    <div :if={Enum.empty?(@tokens)} class="flex justify-between items-center">
+      <div class="flex content-center gap-2">
+        <div>
+          <.icon name="hero-finger-print" class="h-12 w-12 text-black" />
+        </div>
+        <div>
+          <h3 class="mt-1 text-sm font-semibold text-gray-900">
+            No Personal Access Tokens
+          </h3>
+          <p class="mt-1 text-sm text-gray-500">
+            Get started by creating a new access token.
+          </p>
+        </div>
+      </div>
+      <div class="my-auto p-4 text-right">
+        <.button
+          type="button"
+          phx-click="generate_new_token"
+          id="generate_new_token"
+          class="inline-flex items-center gap-x-1.5"
+        >
+          <.icon name="hero-plus" class="-ml-0.5 h-5 w-5" />
+          <span class="inline-block align-middle">
+            Generate New Token
+          </span>
+        </.button>
+      </div>
+    </div>
   </LayoutComponents.centered>
 </LayoutComponents.page_content>

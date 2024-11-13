@@ -4,11 +4,12 @@ defmodule LightningWeb.TokensLive.Index do
   """
   use LightningWeb, :live_view
 
-  import PetalComponents.Table
+  import LightningWeb.Components.Table
 
   alias Lightning.Accounts
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.Users
+  alias Phoenix.LiveView.JS
 
   on_mount {LightningWeb.Hooks, :assign_projects}
 

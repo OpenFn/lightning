@@ -45,12 +45,12 @@ defmodule Lightning.Projects do
       :role,
       :workflows_count,
       :collaborators_count,
-      :last_activity
+      :last_updated_at
     ]
   end
 
   def get_projects_overview(%User{id: user_id}, opts \\ []) do
-    order_by = Keyword.get(opts, :order_by, {:asc, :name})
+    order_by = Keyword.get(opts, :order_by, {:asc_nulls_last, :name})
 
     from(p in Project,
       join: pu in assoc(p, :project_users),
@@ -64,7 +64,7 @@ defmodule Lightning.Projects do
         role: pu.role,
         workflows_count: count(w.id, :distinct),
         collaborators_count: count(pu_all.user_id, :distinct),
-        last_activity: max(w.updated_at)
+        last_updated_at: max(w.updated_at)
       },
       order_by: ^dynamic_order_by(order_by)
     )
@@ -75,7 +75,7 @@ defmodule Lightning.Projects do
     {direction, dynamic([p, _pu, _w, _pu_all], field(p, :name))}
   end
 
-  defp dynamic_order_by({direction, :last_activity}) do
+  defp dynamic_order_by({direction, :last_updated_at}) do
     {direction, dynamic([_p, _pu, w, _pu_all], max(w.updated_at))}
   end
 
@@ -84,17 +84,27 @@ defmodule Lightning.Projects do
   will find projects that are ready for permanent deletion and purge them.
   """
   @impl Oban.Worker
+  def perform(%Oban.Job{
+        args: %{"project_id" => project_id, "type" => "purge_deleted"}
+      }) do
+    project_id |> get_project!() |> delete_project()
+
+    :ok
+  end
+
   def perform(%Oban.Job{args: %{"type" => "purge_deleted"}}) do
-    projects_to_delete =
+    jobs =
       from(p in Project,
         where: p.scheduled_deletion <= ago(0, "second")
       )
       |> Repo.all()
+      |> Enum.map(fn project ->
+        new(%{project_id: project.id, type: "purge_deleted"}, max_attempts: 3)
+      end)
 
-    :ok =
-      Enum.each(projects_to_delete, fn project -> delete_project(project) end)
+    Oban.insert_all(Lightning.Oban, jobs)
 
-    {:ok, %{projects_deleted: projects_to_delete}}
+    :ok
   end
 
   def perform(%Oban.Job{
@@ -439,20 +449,24 @@ defmodule Lightning.Projects do
       # coveralls-ignore-stop
     end)
 
-    Repo.transact(fn ->
-      with {:ok, project} <- ProjectHook.handle_delete_project(project) do
-        Logger.debug(fn ->
-          # coveralls-ignore-start
-          "Project ##{project.id} deleted."
-          # coveralls-ignore-stop
-        end)
+    with {:ok, project} <- ProjectHook.handle_delete_project(project) do
+      Logger.debug(fn ->
+        # coveralls-ignore-start
+        "Project ##{project.id} deleted."
+        # coveralls-ignore-stop
+      end)
 
-        {:ok, project}
-      end
-    end)
-    |> tap(fn result ->
-      with {:ok, _project} <- result, do: Events.project_deleted(project)
-    end)
+      Events.project_deleted(project)
+
+      {:ok, project}
+    end
+  end
+
+  @spec delete_project_async(Project.t()) :: {:ok, Oban.Job.t()}
+  def delete_project_async(project) do
+    job = new(%{project_id: project.id, type: "purge_deleted"}, max_attempts: 3)
+
+    {:ok, _} = Oban.insert(Lightning.Oban, job)
   end
 
   def project_runs_query(project) do
@@ -713,6 +727,30 @@ defmodule Lightning.Projects do
   end
 
   @doc """
+  Deletes project work orders in batches
+  """
+  @spec delete_project_workorders(Project.t(), non_neg_integer()) :: :ok
+  def delete_project_workorders(project, batch_size \\ 1000) do
+    workorders_query =
+      from wo in WorkOrder,
+        join: wf in assoc(wo, :workflow),
+        on: wf.project_id == ^project.id,
+        select: wo.id
+
+    delete_workorders_history(workorders_query, batch_size)
+  end
+
+  @doc """
+  Deletes project dataclips in batches
+  """
+  @spec delete_project_dataclips(Project.t(), non_neg_integer()) :: :ok
+  def delete_project_dataclips(project, batch_size \\ 1000) do
+    project
+    |> project_dataclips_query()
+    |> delete_dataclips(batch_size)
+  end
+
+  @doc """
   Returns an `%Ecto.Changeset{}` for changing the project scheduled_deletion.
 
   ## Examples
@@ -756,8 +794,33 @@ defmodule Lightning.Projects do
         where: wo.last_activity < ago(^period, "day"),
         select: wo.id
 
+    delete_workorders_history(workorders_query, 1000)
+
+    dataclips_query =
+      from d in Dataclip,
+        as: :dataclip,
+        where: d.project_id == ^project.id,
+        where: d.inserted_at < ago(^period, "day"),
+        left_join: wo in WorkOrder,
+        on: d.id == wo.dataclip_id,
+        left_join: r in Run,
+        on: d.id == r.dataclip_id,
+        left_join: s in Step,
+        on: d.id == s.input_dataclip_id or d.id == s.output_dataclip_id,
+        where: is_nil(wo.id) and is_nil(r.id) and is_nil(s.id),
+        select: d.id
+
+    delete_dataclips(dataclips_query, 1000)
+
+    :ok
+  end
+
+  defp delete_history_for(_project) do
+    {:error, :missing_history_retention_period}
+  end
+
+  defp delete_workorders_history(workorders_query, batch_size) do
     workorders_count = Repo.aggregate(workorders_query, :count)
-    batch_size = 1000
 
     workorders_delete_query =
       WorkOrder
@@ -788,33 +851,20 @@ defmodule Lightning.Projects do
       )
     end
 
-    dataclips_query =
-      from d in Dataclip,
-        as: :dataclip,
-        where: d.project_id == ^project.id,
-        where: d.inserted_at < ago(^period, "day"),
-        left_join: wo in WorkOrder,
-        on: d.id == wo.dataclip_id,
-        left_join: r in Run,
-        on: d.id == r.dataclip_id,
-        left_join: s in Step,
-        on: d.id == s.input_dataclip_id or d.id == s.output_dataclip_id,
-        where: is_nil(wo.id) and is_nil(r.id) and is_nil(s.id),
-        select: d.id
+    :ok
+  end
 
+  defp delete_dataclips(dataclips_query, batch_size) do
     dataclips_count = Repo.aggregate(dataclips_query, :count)
-    dataclips_batch_size = 500
 
-    for i <- 1..ceil(dataclips_count / dataclips_batch_size) do
-      count_to_delete = dataclips_batch_size * i
+    dataclips_delete_query =
+      Dataclip
+      |> with_cte("dataclips_to_delete",
+        as: ^limit(dataclips_query, ^batch_size)
+      )
+      |> join(:inner, [d], dtd in "dataclips_to_delete", on: d.id == dtd.id)
 
-      dataclips_delete_query =
-        Dataclip
-        |> with_cte("dataclips_to_delete",
-          as: ^limit(dataclips_query, ^count_to_delete)
-        )
-        |> join(:inner, [d], dtd in "dataclips_to_delete", on: d.id == dtd.id)
-
+    for _i <- 1..ceil(dataclips_count / batch_size) do
       {_count, _dataclips} =
         Repo.delete_all(dataclips_delete_query,
           returning: false,
@@ -823,10 +873,6 @@ defmodule Lightning.Projects do
     end
 
     :ok
-  end
-
-  defp delete_history_for(_project) do
-    {:error, :missing_history_retention_period}
   end
 
   def invite_collaborators(project, collaborators, inviter) do

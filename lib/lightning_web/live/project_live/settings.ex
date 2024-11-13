@@ -18,7 +18,6 @@ defmodule LightningWeb.ProjectLive.Settings do
   alias Lightning.VersionControl
   alias Lightning.WebhookAuthMethods
   alias Lightning.Workflows.WebhookAuthMethod
-  alias LightningWeb.Components.Form
   alias LightningWeb.Components.GithubComponents
   alias LightningWeb.LiveHelpers
 
@@ -510,13 +509,15 @@ defmodule LightningWeb.ProjectLive.Settings do
           phx-change="set_failure_alert"
           id={"failure-alert-#{@project_user.id}"}
         >
-          <%= Phoenix.HTML.Form.hidden_input(form, :project_user_id,
-            value: @project_user.id
-          ) %>
-          <LightningWeb.Components.Form.select_field
-            form={form}
-            name="failure_alert"
-            values={[Disabled: false, Enabled: true]}
+          <.input
+            type="hidden"
+            field={form[:project_user_id]}
+            value={@project_user.id}
+          />
+          <.input
+            type="select"
+            field={form[:failure_alert]}
+            options={[Disabled: false, Enabled: true]}
           />
         </.form>
       <% @can_receive_failure_alerts -> %>
@@ -547,13 +548,16 @@ defmodule LightningWeb.ProjectLive.Settings do
         phx-change="set_digest"
         id={"digest-#{@project_user.id}"}
       >
-        <%= Phoenix.HTML.Form.hidden_input(form, :project_user_id,
-          value: @project_user.id
-        ) %>
-        <LightningWeb.Components.Form.select_field
-          form={form}
-          name="digest"
-          values={[
+        <.input
+          type="hidden"
+          field={form[:project_user_id]}
+          value={@project_user.id}
+        />
+
+        <.input
+          type="select"
+          field={form[:digest]}
+          options={[
             Never: "never",
             Daily: "daily",
             Weekly: "weekly",
@@ -632,7 +636,7 @@ defmodule LightningWeb.ProjectLive.Settings do
             aria-label={gettext("close")}
           >
             <span class="sr-only">Close</span>
-            <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
+            <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
           </button>
         </div>
       </:title>

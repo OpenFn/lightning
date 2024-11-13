@@ -19,15 +19,34 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+- Fix issues loading suggestions for code-assist
+  [#2662](https://github.com/OpenFn/lightning/pull/2662)
+
+## [v2.10.0-rc.2] - 2024-11-12
+
+### Added
+
+- Bootstrap script to help install and configure the Lightning app for
+  development [#2654](https://github.com/OpenFn/lightning/pull/2654)
+
+### Changed
+
+- Upgrade dependencies [#2624](https://github.com/OpenFn/lightning/pull/2624)
 - Hide the collections and fhir-jembi adaptors from the available adaptors list
   [#2648](https://github.com/OpenFn/lightning/issues/2648)
+- Change column name for "Last Activity" to "Last Modified" on Projects list
+  [#2593](https://github.com/OpenFn/lightning/issues/2593)
 
 ### Fixed
 
 - Fix LiveView crash when pressing "esc" on inspector
   [#2622](https://github.com/OpenFn/lightning/issues/2622)
-- Fix issues loading suggestions for code-assist
-  [#2662](https://github.com/OpenFn/lightning/pull/2662)
+- Delete project data in batches to avoid timeouts in the db connection
+  [#2632](https://github.com/OpenFn/lightning/issues/2632)
+- Fix MetadataService crashing when errors are encountered
+  [#2659](https://github.com/OpenFn/lightning/issues/2659)
 
 ## [v2.10.0-rc.1] - 2024-11-08
 

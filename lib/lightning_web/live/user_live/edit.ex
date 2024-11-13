@@ -24,7 +24,7 @@ defmodule LightningWeb.UserLive.Edit do
     else
       {:ok,
        put_flash(socket, :nav, :no_access)
-       |> push_redirect(to: "/projects")}
+       |> push_navigate(to: "/projects")}
     end
   end
 

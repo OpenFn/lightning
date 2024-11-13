@@ -72,6 +72,7 @@ defmodule LightningWeb do
       import LightningWeb.Components.NewInputs
 
       unquote(html_helpers())
+      on_mount Sentry.LiveViewHook
     end
   end
 
