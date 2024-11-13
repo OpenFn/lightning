@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix issues loading suggestions for code-assist
+  [#2662](https://github.com/OpenFn/lightning/pull/2662)
+
 ## [v2.10.0-rc.2] - 2024-11-12
 
 ### Added
