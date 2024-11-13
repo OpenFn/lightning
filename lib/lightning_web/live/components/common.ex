@@ -186,7 +186,8 @@ defmodule LightningWeb.Components.Common do
     """
   end
 
-  attr :icon_classes, :string, default: "h-4 w-4 inline-block mr-1"
+  attr :icon_classes, :string,
+    default: "size-4 flex-none my-auto align-middle opacity-20"
 
   def version_chip(assigns) do
     {display, message, type} =
@@ -214,20 +215,26 @@ defmodule LightningWeb.Components.Common do
       )
 
     ~H"""
-    <div class="px-3 pb-3 rounded-md text-xs rounded-md block text-center">
-      <span class="opacity-20" title={@message}>
-        <%= case @type do %>
-          <% :release -> %>
-            <.icon name="hero-check-badge" class={@icon_classes} />
-          <% :edge -> %>
-            <.icon name="hero-cube" class={@icon_classes} />
-          <% :warn -> %>
-            <.icon name="hero-exclamation-triangle" class={@icon_classes} />
-          <% :no_docker -> %>
-        <% end %>
-      </span>
+    <div class="px-3 pb-3 text-xs block flex gap-1">
+      <%= case @type do %>
+        <% :release -> %>
+          <.icon name="hero-check-badge" class={@icon_classes} title={@message} />
+        <% :edge -> %>
+          <.icon name="hero-cube" class={@icon_classes} title={@message} />
+        <% :warn -> %>
+          <.icon
+            name="hero-exclamation-triangle"
+            class={@icon_classes}
+            title={@message}
+          />
+        <% :no_docker -> %>
+      <% end %>
       <code
-        class="px-2 py-1 opacity-20 bg-gray-100 rounded-md font-mono text-indigo-500 inline-block align-middle"
+        class={[
+          "px-2 py-1 flex-grow opacity-20 bg-gray-100 rounded-md",
+          "break-keep font-mono text-indigo-500",
+          "inline-block align-middle text-center"
+        ]}
         title={"OpenFn/Lightning #{@display}"}
       >
         <%= @display %>
