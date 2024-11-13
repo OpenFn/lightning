@@ -125,7 +125,7 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
         type="textarea"
         field={@form[:body]}
         disabled={@disabled}
-        class="h-full pb-2 font-mono proportional-nums"
+        class="h-full font-mono proportional-nums text-slate-200 bg-slate-700 "
         phx-debounce="300"
         phx-hook="BlurDataclipEditor"
       />
