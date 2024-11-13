@@ -3,7 +3,7 @@ defmodule Lightning.Repo.Migrations.IncreaseCollectionsItems do
 
   def change do
     alter table(:collections_items, primary_key: false) do
-      modify :value, :string, length: 1_000_000
+      modify :value, :string, size: 1_000_000, from: {:string, size: 255}
     end
   end
 end

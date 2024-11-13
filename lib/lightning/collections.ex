@@ -177,13 +177,12 @@ defmodule Lightning.Collections do
         }
       end)
 
-    case Repo.insert_all(Item, item_list,
-           conflict_target: [:collection_id, :key],
-           on_conflict: {:replace, [:value, :updated_at]}
-         ) do
-      {n, nil} when n > 0 -> {:ok, n}
-      _error -> :error
-    end
+    with {count, _nil} <-
+           Repo.insert_all(Item, item_list,
+             conflict_target: [:collection_id, :key],
+             on_conflict: {:replace, [:value, :updated_at]}
+           ),
+         do: {:ok, count}
   end
 
   @spec delete(Collection.t(), String.t()) :: :ok | {:error, :not_found}
