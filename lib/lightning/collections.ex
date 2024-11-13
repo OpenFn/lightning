@@ -161,7 +161,7 @@ defmodule Lightning.Collections do
   end
 
   @spec put_all(Collection.t(), [{String.t(), String.t()}]) ::
-          {:ok, non_neg_integer()} | :error
+          {:ok, non_neg_integer()}
   def put_all(%{id: collection_id}, kv_list) do
     item_list =
       Enum.with_index(kv_list, fn %{"key" => key, "value" => value},
