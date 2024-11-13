@@ -170,8 +170,8 @@ defmodule LightningWeb.Components.NewInputs do
 
   attr :class, :string, default: ""
 
-  attr :wrapper_class, :string,
-    default: "h-full",
+  attr :stretch, :boolean,
+    default: false,
     doc: "control the wrapping div classes of some components like the textarea"
 
   attr :display_errors, :boolean, default: true
@@ -252,7 +252,7 @@ defmodule LightningWeb.Components.NewInputs do
 
   def input(%{type: "textarea"} = assigns) do
     ~H"""
-    <div phx-feedback-for={@name} class={@wrapper_class}>
+    <div phx-feedback-for={@name} class={@stretch && "h-full"}>
       <.label :if={@label} for={@id}>
         <%= @label %><span
           :if={Map.get(@rest, :required, false)}
