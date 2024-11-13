@@ -147,7 +147,7 @@ async function loadDTS(specifier: string): Promise<Lib[]> {
 
       // Remove js doc annotations
       // this regex means: find a * then an @ (with 1+ space in between), then match everything up to a closing comment */
-      content = content.replace(/\* +@(.+?)\*\//gs, '*/');
+      // content = content.replace(/\* +@(.+?)\*\//gs, '*/');
 
       let fileName = filePath.split('/').at(-1).replace('.d.ts', '');
 

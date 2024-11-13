@@ -21,6 +21,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix metadata loading as code-assist in the editor
+
 ## [v2.10.0] - 2024-11-13
 
 ### Changed
