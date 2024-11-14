@@ -170,6 +170,10 @@ defmodule LightningWeb.Components.NewInputs do
 
   attr :class, :string, default: ""
 
+  attr :stretch, :boolean,
+    default: false,
+    doc: "control the wrapping div classes of some components like the textarea"
+
   attr :display_errors, :boolean, default: true
 
   attr :tooltip, :any, default: nil
@@ -225,8 +229,9 @@ defmodule LightningWeb.Components.NewInputs do
               "block w-full rounded-lg border border-secondary-300 bg-white",
               "sm:text-sm shadow-sm",
               "focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50",
-              "disabled:cursor-not-allowed #{@button_placement == "right" && "rounded-r-none"}",
-              "#{@button_placement == "left" && "rounded-l-none"}",
+              "disabled:cursor-not-allowed",
+              @button_placement == "right" && "rounded-r-none",
+              @button_placement == "left" && "rounded-l-none",
               @class
             ]}
             multiple={@multiple}
@@ -247,7 +252,7 @@ defmodule LightningWeb.Components.NewInputs do
 
   def input(%{type: "textarea"} = assigns) do
     ~H"""
-    <div phx-feedback-for={@name}>
+    <div phx-feedback-for={@name} class={@stretch && "h-full"}>
       <.label :if={@label} for={@id}>
         <%= @label %><span
           :if={Map.get(@rest, :required, false)}

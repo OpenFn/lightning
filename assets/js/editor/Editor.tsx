@@ -94,21 +94,17 @@ type Lib = {
   filePath?: string;
 };
 
-async function loadDTS(
-  specifier: string,
-  type: 'namespace' | 'module' = 'namespace'
-): Promise<Lib[]> {
+async function loadDTS(specifier: string): Promise<Lib[]> {
   // Work out the module name from the specifier
   // (his gets a bit tricky with @openfn/ module names)
   const nameParts = specifier.split('@');
   nameParts.pop(); // remove the version
   const name = nameParts.join('@');
 
-  const results: Lib[] = [
-    {
-      content: dts_es5,
-    },
-  ];
+  const results: Lib[] = [{ content: dts_es5 }];
+
+  // Load common into its own module
+  // TODO maybe we need other dependencies too? collections?
   if (name !== '@openfn/language-common') {
     const pkg = await fetchFile(`${specifier}/package.json`);
     const commonVersion = JSON.parse(pkg || '{}').dependencies?.[
@@ -123,40 +119,78 @@ async function loadDTS(
       );
     }
 
-    const common = await loadDTS(
-      `@openfn/language-common@${commonVersion.replace('^', '')}`,
-      'module'
-    );
-    results.push(...common);
+    const commonSpecifier = `@openfn/language-common@${commonVersion.replace(
+      '^',
+      ''
+    )}`;
+    for await (const filePath of fetchDTSListing(commonSpecifier)) {
+      if (!filePath.startsWith('node_modules')) {
+        // Load every common typedef into the common module
+        let content = await fetchFile(`${commonSpecifier}${filePath}`);
+        content = content.replace(/\* +@(.+?)\*\//gs, '*/');
+        results.push({
+          content: `declare module '@openfn/language-common' { ${content} }`,
+        });
+      }
+    }
   }
+
+  // This will store types.d.ts, if we can find it
+  let types = '';
+
+  // This stores string content for our adaptor
+  let adaptorDefs: string[] = [];
 
   for await (const filePath of fetchDTSListing(specifier)) {
     if (!filePath.startsWith('node_modules')) {
       let content = await fetchFile(`${specifier}${filePath}`);
 
       // Remove js doc annotations
-      // this regex assumes that all jsdoc annotations are together in a single block
-      // which is probably fair?
       // this regex means: find a * then an @ (with 1+ space in between), then match everything up to a closing comment */
-      content = content.replace(/\* +@(.+?)\*\//sg, '*/')
+      // content = content.replace(/\* +@(.+?)\*\//gs, '*/');
 
-      // this is a bit cheeky
-      // we'll manually build namespaces from the file structure
-      // I don't understand why index.d.ts doesn't just do this though.
-      const fileName = filePath.split('/').at(-1).replace('.d.ts', '');
+      let fileName = filePath.split('/').at(-1).replace('.d.ts', '');
 
+      // Import the index as the global namespace - but take care to convert all paths to absolute
       if (fileName === 'index' || fileName === 'Adaptor') {
-        results.push({
-          content: `declare ${type} { ${content} }`,
-        });
+        content = content.replace(/from '\.\//g, `from '${name}/`);
+        content = content.replace(/import '\.\//g, `import '${name}/`);
+
+        // It turns out that "export * as " seems to straight up not work in Monaco
+        // So this little hack will refactor import statements in a way that works
+        content = content.replace(
+          /export \* as (\w+) from '(.+)';/g,
+          `
+
+          import * as $1 from '$2';
+          export { $1 };`
+        );
+        adaptorDefs.push(`declare namespace {
+  {{$TYPES}} 
+  ${content}
+`);
+      } else if (fileName === 'types') {
+        types = content;
       } else {
-        results.push({
-          content: `declare ${type} ${fileName} { ${content} }`,
-          // Note that file path seems to break everything?
-        });
+        // Declare every other module as file
+        adaptorDefs.push(`declare module '${name}/${fileName}' {
+  {{$TYPES}}
+  ${content}
+}`);
       }
     }
   }
+
+  // This just ensures that the global type defs appear in every scope
+  // This is basically a hack to work around https://github.com/OpenFn/lightning/issues/2641
+  // If we find a types.d.ts, append it to every other file
+  adaptorDefs = adaptorDefs.map(def => def.replace('{{$TYPES}}', types));
+
+  results.push(
+    ...adaptorDefs.map(content => ({
+      content,
+    }))
+  );
 
   return results;
 }
@@ -188,77 +222,82 @@ export default function Editor({
     [onChange]
   );
 
-  const handleEditorDidMount = useCallback((editor: any, monaco: Monaco) => {
-    setMonaco(monaco);
+  const handleEditorDidMount = useCallback(
+    (editor: any, monaco: Monaco) => {
+      setMonaco(monaco);
 
-    editor.addCommand(
-      monaco.KeyCode.Escape,
-      () => {
-        document.activeElement.blur();
-      },
-      '!suggestWidgetVisible'
-    );
+      editor.addCommand(
+        monaco.KeyCode.Escape,
+        () => {
+          document.activeElement.blur();
+        },
+        '!suggestWidgetVisible'
+      );
 
-    editor.addCommand(
-      // https://microsoft.github.io/monaco-editor/typedoc/classes/KeyMod.html
-      // https://microsoft.github.io/monaco-editor/typedoc/enums/KeyCode.html
-      monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
-      function () {
-        const actionButton = document.getElementById('save-and-run')!;
-        initiateSaveAndRun(actionButton);
-      }
-    );
+      editor.addCommand(
+        // https://microsoft.github.io/monaco-editor/typedoc/classes/KeyMod.html
+        // https://microsoft.github.io/monaco-editor/typedoc/enums/KeyCode.html
+        monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
+        function () {
+          const actionButton = document.getElementById('save-and-run')!;
+          initiateSaveAndRun(actionButton);
+        }
+      );
 
-    editor.addCommand(
-      // https://microsoft.github.io/monaco-editor/typedoc/classes/KeyMod.html
-      // https://microsoft.github.io/monaco-editor/typedoc/enums/KeyCode.html
-      monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter,
-      function () {
-        const actionButton = document.getElementById('create-new-work-order')!;
-        initiateSaveAndRun(actionButton);
-      }
-    );
+      editor.addCommand(
+        // https://microsoft.github.io/monaco-editor/typedoc/classes/KeyMod.html
+        // https://microsoft.github.io/monaco-editor/typedoc/enums/KeyCode.html
+        monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter,
+        function () {
+          const actionButton = document.getElementById(
+            'create-new-work-order'
+          )!;
+          initiateSaveAndRun(actionButton);
+        }
+      );
 
-    monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
-      // This seems to be needed to track the modules in d.ts files
-      allowNonTsExtensions: true,
+      monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
+        // This seems to be needed to track the modules in d.ts files
+        allowNonTsExtensions: true,
 
-      // Disables core js libs in code completion
-      noLib: true,
-    });
+        // Disables core js libs in code completion
+        noLib: true,
+      });
 
-    listeners.current.insertSnippet = (e: Event) => {
-      // Snippets are always added to the end of the job code
-      const model = editor.getModel();
-      const lastLine = model.getLineCount();
-      const eol = model.getLineLength(lastLine);
-      const op = {
-        range: new monaco.Range(lastLine, eol, lastLine, eol),
-        // @ts-ignore event typings
-        text: `\n${e.snippet}`,
-        forceMoveMarkers: true,
+      listeners.current.insertSnippet = (e: Event) => {
+        // Snippets are always added to the end of the job code
+        const model = editor.getModel();
+        const lastLine = model.getLineCount();
+        const eol = model.getLineLength(lastLine);
+        const op = {
+          range: new monaco.Range(lastLine, eol, lastLine, eol),
+          // @ts-ignore event typings
+          text: `\n${e.snippet}`,
+          forceMoveMarkers: true,
+        };
+
+        // Append the snippet
+        // https://microsoft.github.io/monaco-editor/api/interfaces/monaco.editor.ICodeEditor.html#executeEdits
+        editor.executeEdits('snippets', [op]);
+
+        // Ensure the snippet is fully visible
+        const newLastLine = model.getLineCount();
+        editor.revealLines(lastLine + 1, newLastLine, 0); // 0 = smooth scroll
+
+        // Set the selection to the start of the snippet
+        editor.setSelection(new monaco.Range(lastLine + 1, 0, lastLine + 1, 0));
+
+        // ensure the editor has focus
+        editor.focus();
       };
 
-      // Append the snippet
-      // https://microsoft.github.io/monaco-editor/api/interfaces/monaco.editor.ICodeEditor.html#executeEdits
-      editor.executeEdits('snippets', [op]);
-
-      // Ensure the snippet is fully visible
-      const newLastLine = model.getLineCount();
-      editor.revealLines(lastLine + 1, newLastLine, 0); // 0 = smooth scroll
-
-      // Set the selection to the start of the snippet
-      editor.setSelection(new monaco.Range(lastLine + 1, 0, lastLine + 1, 0));
-
-      // ensure the editor has focus
-      editor.focus();
-    };
-
-    document.addEventListener(
-      'insert-snippet',
-      listeners.current.insertSnippet
-    );
-  }, [lib]);
+      document.addEventListener(
+        'insert-snippet',
+        listeners.current.insertSnippet
+      );
+    },
+    [lib]
+  );
 
   useEffect(() => {
     if (monaco && metadata) {
@@ -312,9 +351,7 @@ export default function Editor({
   }, [adaptor]);
 
   useEffect(() => {
-    monaco?.languages.typescript.javascriptDefaults.setExtraLibs(
-      lib!
-    );
+    monaco?.languages.typescript.javascriptDefaults.setExtraLibs(lib!);
   }, [monaco, lib]);
 
   return (
