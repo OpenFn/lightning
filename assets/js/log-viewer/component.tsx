@@ -3,21 +3,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useShallow } from 'zustand/react/shallow';
 import { Monaco, MonacoEditor } from '../monaco';
-import { LogLine, createLogStore } from './store';
-
-function findLogIndicesByStepId(
-  logs: LogLine[],
-  stepId: string
-): { first: number | null; last: number | null } {
-  let firstIndex = logs.findIndex(log => log.step_id === stepId);
-  let lastIndex = logs.findLastIndex(log => log.step_id === stepId);
-
-  if (firstIndex === -1) {
-    return { first: null, last: null };
-  } else {
-    return { first: firstIndex, last: lastIndex + 1 };
-  }
-}
+import { createLogStore } from './store';
+import { addContextualCommand } from '../common';
 
 export function mount(
   el: HTMLElement,
@@ -53,6 +40,17 @@ const LogViewer = ({
 
   const decorationsCollection =
     useRef<__MonacoEditor.IEditorDecorationsCollection | null>(null);
+
+  useEffect(() => {
+    if (monaco && editor) {
+      addContextualCommand(
+        editor,
+        monaco.KeyCode.F1,
+        'LogViewerContext',
+        () => {}
+      );
+    }
+  }, [editor, monaco]);
 
   useEffect(() => {
     if (stepId && highlightedRanges.length > 0) {
