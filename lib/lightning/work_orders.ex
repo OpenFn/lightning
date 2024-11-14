@@ -310,6 +310,13 @@ defmodule Lightning.WorkOrders do
         preload: [:job]
       )
     end)
+    |> Multi.run(:workflow_deleted?, fn _repo, %{run: run} ->
+      if run.work_order.workflow.deleted_at do
+        {:error, :workflow_deleted}
+      else
+        {:ok, false}
+      end
+    end)
     |> Multi.run(:input_dataclip_id, fn
       _repo, %{step: %Step{input_dataclip_id: input_dataclip_id}} ->
         {:ok, input_dataclip_id}
@@ -672,6 +679,8 @@ defmodule Lightning.WorkOrders do
   defp fetch_retriable_workorders(workorder_ids) do
     workorder_ids
     |> workorders_with_dataclips_query()
+    |> join([wo], :inner, wf in assoc(wo, :workflow), as: :workflow)
+    |> where([workflow: wf], is_nil(wf.deleted_at))
     |> Repo.all()
   end
 

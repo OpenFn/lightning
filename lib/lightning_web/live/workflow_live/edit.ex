@@ -1464,6 +1464,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
         {:error, %{text: message}} ->
           {:noreply, put_flash(socket, :error, message)}
 
+        {:error, :deleted} ->
+          {:noreply,
+           put_flash(
+             socket,
+             :error,
+             "Oops! You cannot modify a deleted workflow"
+           )}
+
         {:error, %Ecto.Changeset{} = changeset} ->
           {:noreply,
            socket
@@ -1666,6 +1674,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       {:error, %{text: message}} ->
         {:noreply, put_flash(socket, :error, message)}
+
+      {:error, :deleted} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           "Oops! You cannot modify a deleted workflow"
+         )}
     end
   end
 
