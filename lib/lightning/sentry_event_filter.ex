@@ -4,12 +4,13 @@ defmodule Lightning.SentryEventFilter do
   @behaviour Sentry.EventFilter
 
   @ignored_exceptions [
+    Phoenix.NotAcceptableError,
     Phoenix.Router.NoRouteError,
-    Plug.Parsers.RequestTooLargeError,
+    Plug.Conn.InvalidQueryError,
     Plug.Parsers.BadEncodingError,
     Plug.Parsers.ParseError,
-    Plug.Parsers.UnsupportedMediaTypeError,
-    Phoenix.NotAcceptableError
+    Plug.Parsers.RequestTooLargeError,
+    Plug.Parsers.UnsupportedMediaTypeError
   ]
 
   def exclude_exception?(%x{}, :plug) when x in @ignored_exceptions do

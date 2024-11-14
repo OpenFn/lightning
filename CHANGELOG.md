@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Ignore Plug.Conn.InvalidQueryError in Sentry
+  [#2672](https://github.com/OpenFn/lightning/issues/2672)
+
 ### Fixed
 
 ## [v2.10.1] - 2024-11-13
