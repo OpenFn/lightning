@@ -1,6 +1,5 @@
 defmodule Lightning.UsageTracking.WorkflowMetricsServiceTest do
-  # Async false becuase Mox returns nil whenit should return 100 for seed 976623
-  use Lightning.DataCase, async: false
+  use Lightning.DataCase, async: true
 
   alias Lightning.UsageTracking.WorkflowMetricsService
 
