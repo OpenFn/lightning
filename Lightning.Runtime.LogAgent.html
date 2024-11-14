@@ -5,10 +5,10 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.34.2">
-    <meta name="project" content="Lightning v2.10.1">
+    <meta name="project" content="Lightning v2.10.2">
 
 
-    <title>Lightning.Runtime.LogAgent — Lightning v2.10.1</title>
+    <title>Lightning.Runtime.LogAgent — Lightning v2.10.2</title>
     <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
 
@@ -54,7 +54,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.10.1
+          v2.10.2
         </div>
       </div>
     </div>
@@ -132,16 +132,16 @@ Pages
       </a>
 
     <span translate="no">Lightning.Runtime.LogAgent</span> 
-    <small class="app-vsn" translate="no">(Lightning v2.10.1)</small>
+    <small class="app-vsn" translate="no">(Lightning v2.10.2)</small>
 
   </h1>
 
 
     <section id="moduledoc">
 <p>Agent facility to consume STDOUT/STDERR byte by byte.</p><p>Since it works on a byte by byte basis, you will need to perform line-splitting
-yourself.</p><p>Usage:</p><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="3239249563-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">log</span><span class="p" data-group-id="3239249563-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">LogAgent</span><span class="o">.</span><span class="n">start_link</span><span class="p" data-group-id="3239249563-2">(</span><span class="p" data-group-id="3239249563-2">)</span><span class="w">
-</span><span class="s">&quot;foo&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">LogAgent</span><span class="o">.</span><span class="n">process_chunk</span><span class="p" data-group-id="3239249563-3">(</span><span class="n">log</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3239249563-4">{</span><span class="ss">:stdout</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;foo&quot;</span><span class="p" data-group-id="3239249563-4">}</span><span class="p" data-group-id="3239249563-3">)</span><span class="w">
-</span><span class="s">&quot;foobar&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">LogAgent</span><span class="o">.</span><span class="n">process_chunk</span><span class="p" data-group-id="3239249563-5">(</span><span class="n">log</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3239249563-6">{</span><span class="ss">:stdout</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;bar&quot;</span><span class="p" data-group-id="3239249563-6">}</span><span class="p" data-group-id="3239249563-5">)</span></code></pre>
+yourself.</p><p>Usage:</p><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="2394022125-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">log</span><span class="p" data-group-id="2394022125-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">LogAgent</span><span class="o">.</span><span class="n">start_link</span><span class="p" data-group-id="2394022125-2">(</span><span class="p" data-group-id="2394022125-2">)</span><span class="w">
+</span><span class="s">&quot;foo&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">LogAgent</span><span class="o">.</span><span class="n">process_chunk</span><span class="p" data-group-id="2394022125-3">(</span><span class="n">log</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2394022125-4">{</span><span class="ss">:stdout</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;foo&quot;</span><span class="p" data-group-id="2394022125-4">}</span><span class="p" data-group-id="2394022125-3">)</span><span class="w">
+</span><span class="s">&quot;foobar&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">LogAgent</span><span class="o">.</span><span class="n">process_chunk</span><span class="p" data-group-id="2394022125-5">(</span><span class="n">log</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2394022125-6">{</span><span class="ss">:stdout</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;bar&quot;</span><span class="p" data-group-id="2394022125-6">}</span><span class="p" data-group-id="2394022125-5">)</span></code></pre>
     </section>
 
 </div>

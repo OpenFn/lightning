@@ -5,10 +5,10 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.34.2">
-    <meta name="project" content="Lightning v2.10.1">
+    <meta name="project" content="Lightning v2.10.2">
 
 
-    <title>Lightning.Collections — Lightning v2.10.1</title>
+    <title>Lightning.Collections — Lightning v2.10.2</title>
     <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
 
@@ -54,7 +54,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.10.1
+          v2.10.2
         </div>
       </div>
     </div>
@@ -132,7 +132,7 @@ Pages
       </a>
 
     <span translate="no">Lightning.Collections</span> 
-    <small class="app-vsn" translate="no">(Lightning v2.10.1)</small>
+    <small class="app-vsn" translate="no">(Lightning v2.10.2)</small>
 
   </h1>
 
@@ -308,11 +308,11 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_collection</span><span class="p" data-group-id="8014581334-1">(</span><span class="p" data-group-id="8014581334-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;New Collection&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Description here&quot;</span><span class="p" data-group-id="8014581334-2">}</span><span class="p" data-group-id="8014581334-1">)</span><span class="w">
-</span><span class="p" data-group-id="8014581334-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8014581334-4">%</span><span class="nc" data-group-id="8014581334-4">Collection</span><span class="p" data-group-id="8014581334-4">{</span><span class="p" data-group-id="8014581334-4">}</span><span class="p" data-group-id="8014581334-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_collection</span><span class="p" data-group-id="5054354174-1">(</span><span class="p" data-group-id="5054354174-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;New Collection&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Description here&quot;</span><span class="p" data-group-id="5054354174-2">}</span><span class="p" data-group-id="5054354174-1">)</span><span class="w">
+</span><span class="p" data-group-id="5054354174-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5054354174-4">%</span><span class="nc" data-group-id="5054354174-4">Collection</span><span class="p" data-group-id="5054354174-4">{</span><span class="p" data-group-id="5054354174-4">}</span><span class="p" data-group-id="5054354174-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_collection</span><span class="p" data-group-id="8014581334-5">(</span><span class="p" data-group-id="8014581334-6">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="no">nil</span><span class="p" data-group-id="8014581334-6">}</span><span class="p" data-group-id="8014581334-5">)</span><span class="w">
-</span><span class="p" data-group-id="8014581334-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8014581334-8">%</span><span class="nc" data-group-id="8014581334-8">Ecto.Changeset</span><span class="p" data-group-id="8014581334-8">{</span><span class="p" data-group-id="8014581334-8">}</span><span class="p" data-group-id="8014581334-7">}</span></code></pre><h2 id="create_collection/1-returns" class="section-heading">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_collection</span><span class="p" data-group-id="5054354174-5">(</span><span class="p" data-group-id="5054354174-6">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="no">nil</span><span class="p" data-group-id="5054354174-6">}</span><span class="p" data-group-id="5054354174-5">)</span><span class="w">
+</span><span class="p" data-group-id="5054354174-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5054354174-8">%</span><span class="nc" data-group-id="5054354174-8">Ecto.Changeset</span><span class="p" data-group-id="5054354174-8">{</span><span class="p" data-group-id="5054354174-8">}</span><span class="p" data-group-id="5054354174-7">}</span></code></pre><h2 id="create_collection/1-returns" class="section-heading">
   <a href="#create_collection/1-returns" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -569,11 +569,11 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_collections</span><span class="p" data-group-id="7501375697-1">(</span><span class="p" data-group-id="7501375697-1">)</span><span class="w">
-</span><span class="p" data-group-id="7501375697-2">[</span><span class="p" data-group-id="7501375697-3">%</span><span class="nc" data-group-id="7501375697-3">Collection</span><span class="p" data-group-id="7501375697-3">{</span><span class="p" data-group-id="7501375697-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="7501375697-2">]</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_collections</span><span class="p" data-group-id="8429960219-1">(</span><span class="p" data-group-id="8429960219-1">)</span><span class="w">
+</span><span class="p" data-group-id="8429960219-2">[</span><span class="p" data-group-id="8429960219-3">%</span><span class="nc" data-group-id="8429960219-3">Collection</span><span class="p" data-group-id="8429960219-3">{</span><span class="p" data-group-id="8429960219-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="8429960219-2">]</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">list_collections</span><span class="p" data-group-id="7501375697-4">(</span><span class="ss">order_by</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7501375697-5">[</span><span class="ss">asc</span><span class="p">:</span><span class="w"> </span><span class="ss">:inserted_at</span><span class="p" data-group-id="7501375697-5">]</span><span class="p">,</span><span class="w"> </span><span class="ss">preload</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7501375697-6">[</span><span class="ss">:project</span><span class="p">,</span><span class="w"> </span><span class="ss">:user</span><span class="p" data-group-id="7501375697-6">]</span><span class="p" data-group-id="7501375697-4">)</span><span class="w">
-</span><span class="p" data-group-id="7501375697-7">[</span><span class="p" data-group-id="7501375697-8">%</span><span class="nc" data-group-id="7501375697-8">Collection</span><span class="p" data-group-id="7501375697-8">{</span><span class="p" data-group-id="7501375697-8">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="7501375697-7">]</span></code></pre><h2 id="list_collections/1-returns" class="section-heading">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">list_collections</span><span class="p" data-group-id="8429960219-4">(</span><span class="ss">order_by</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8429960219-5">[</span><span class="ss">asc</span><span class="p">:</span><span class="w"> </span><span class="ss">:inserted_at</span><span class="p" data-group-id="8429960219-5">]</span><span class="p">,</span><span class="w"> </span><span class="ss">preload</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8429960219-6">[</span><span class="ss">:project</span><span class="p">,</span><span class="w"> </span><span class="ss">:user</span><span class="p" data-group-id="8429960219-6">]</span><span class="p" data-group-id="8429960219-4">)</span><span class="w">
+</span><span class="p" data-group-id="8429960219-7">[</span><span class="p" data-group-id="8429960219-8">%</span><span class="nc" data-group-id="8429960219-8">Collection</span><span class="p" data-group-id="8429960219-8">{</span><span class="p" data-group-id="8429960219-8">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="8429960219-7">]</span></code></pre><h2 id="list_collections/1-returns" class="section-heading">
   <a href="#list_collections/1-returns" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -678,11 +678,11 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_collection</span><span class="p" data-group-id="1990088523-1">(</span><span class="n">collection</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1990088523-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Updated Name&quot;</span><span class="p" data-group-id="1990088523-2">}</span><span class="p" data-group-id="1990088523-1">)</span><span class="w">
-</span><span class="p" data-group-id="1990088523-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1990088523-4">%</span><span class="nc" data-group-id="1990088523-4">Collection</span><span class="p" data-group-id="1990088523-4">{</span><span class="p" data-group-id="1990088523-4">}</span><span class="p" data-group-id="1990088523-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_collection</span><span class="p" data-group-id="0844394952-1">(</span><span class="n">collection</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0844394952-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Updated Name&quot;</span><span class="p" data-group-id="0844394952-2">}</span><span class="p" data-group-id="0844394952-1">)</span><span class="w">
+</span><span class="p" data-group-id="0844394952-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0844394952-4">%</span><span class="nc" data-group-id="0844394952-4">Collection</span><span class="p" data-group-id="0844394952-4">{</span><span class="p" data-group-id="0844394952-4">}</span><span class="p" data-group-id="0844394952-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_collection</span><span class="p" data-group-id="1990088523-5">(</span><span class="n">collection</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1990088523-6">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="no">nil</span><span class="p" data-group-id="1990088523-6">}</span><span class="p" data-group-id="1990088523-5">)</span><span class="w">
-</span><span class="p" data-group-id="1990088523-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1990088523-8">%</span><span class="nc" data-group-id="1990088523-8">Ecto.Changeset</span><span class="p" data-group-id="1990088523-8">{</span><span class="p" data-group-id="1990088523-8">}</span><span class="p" data-group-id="1990088523-7">}</span></code></pre><h2 id="update_collection/2-returns" class="section-heading">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_collection</span><span class="p" data-group-id="0844394952-5">(</span><span class="n">collection</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0844394952-6">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="no">nil</span><span class="p" data-group-id="0844394952-6">}</span><span class="p" data-group-id="0844394952-5">)</span><span class="w">
+</span><span class="p" data-group-id="0844394952-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0844394952-8">%</span><span class="nc" data-group-id="0844394952-8">Ecto.Changeset</span><span class="p" data-group-id="0844394952-8">{</span><span class="p" data-group-id="0844394952-8">}</span><span class="p" data-group-id="0844394952-7">}</span></code></pre><h2 id="update_collection/2-returns" class="section-heading">
   <a href="#update_collection/2-returns" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
