@@ -73,12 +73,7 @@ defmodule Lightning.AuditingTest do
     end
 
     test "full audit entry for an user event", %{
-      user:
-        %{
-          first_name: first_name,
-          last_name: last_name,
-          email: email
-        } = user,
+      user: %{first_name: first_name, last_name: last_name, email: email},
       user_event_3: user_event_3
     } do
       %{
@@ -91,8 +86,6 @@ defmodule Lightning.AuditingTest do
         changes: changes
       } = user_event_3
 
-      user = Repo.reload!(user)
-
       actor_display_label = "#{first_name} #{last_name}"
 
       %{entries: [entry | _other_entries]} =
@@ -100,9 +93,6 @@ defmodule Lightning.AuditingTest do
 
       assert %{
                id: ^id,
-               project_repo_connection: nil,
-               trigger: nil,
-               user: ^user,
                actor_display: %{
                  identifier: ^email,
                  label: ^actor_display_label
@@ -137,9 +127,6 @@ defmodule Lightning.AuditingTest do
 
       assert %{
                id: ^id,
-               project_repo_connection: nil,
-               trigger: nil,
-               user: nil,
                actor_display: %{
                  identifier: nil,
                  label: "(User deleted)"
@@ -154,7 +141,6 @@ defmodule Lightning.AuditingTest do
     end
 
     test "full audit entry for an event linked to a repo connection", %{
-      repo_connection: repo_connection,
       repo_event_3: repo_event_3
     } do
       %{
@@ -167,16 +153,11 @@ defmodule Lightning.AuditingTest do
         changes: changes
       } = repo_event_3
 
-      repo_connection = Repo.reload!(repo_connection)
-
       %{entries: [_user_entry | [entry | _other_entries]]} =
         Auditing.list_all(page: 2, page_size: 6)
 
       assert %{
                id: ^id,
-               project_repo_connection: ^repo_connection,
-               trigger: nil,
-               user: nil,
                actor_display: %{
                  identifier: nil,
                  label: "GitHub"
@@ -211,9 +192,6 @@ defmodule Lightning.AuditingTest do
 
       assert %{
                id: ^id,
-               project_repo_connection: nil,
-               trigger: nil,
-               user: nil,
                actor_display: %{
                  identifier: nil,
                  label: "(Project Repo Connection Deleted)"
@@ -228,7 +206,6 @@ defmodule Lightning.AuditingTest do
     end
 
     test "full audit entry for an event linked to a trigger", %{
-      trigger: trigger,
       trigger_event_3: trigger_event_3
     } do
       %{
@@ -241,16 +218,11 @@ defmodule Lightning.AuditingTest do
         changes: changes
       } = trigger_event_3
 
-      trigger = Repo.reload!(trigger)
-
       %{entries: [_user_entry | [_repo_entry | [entry | _other_entries]]]} =
         Auditing.list_all(page: 2, page_size: 6)
 
       assert %{
                id: ^id,
-               project_repo_connection: nil,
-               trigger: ^trigger,
-               user: nil,
                actor_display: %{
                  identifier: nil,
                  label: "Webhook"
@@ -285,9 +257,6 @@ defmodule Lightning.AuditingTest do
 
       assert %{
                id: ^id,
-               project_repo_connection: nil,
-               trigger: nil,
-               user: nil,
                actor_display: %{
                  identifier: nil,
                  label: "(Trigger Deleted)"
