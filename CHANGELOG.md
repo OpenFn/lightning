@@ -16,6 +16,8 @@ and this project adheres to
 ## [Unreleased]
 
 ### Added
+- Make provision for non-User actors when creating Audit entries.
+  [#2601](https://github.com/OpenFn/lightning/issues/2601)
 
 - Audit history exports events
   [#2367](https://github.com/OpenFn/lightning/issues/2367)
@@ -65,8 +67,6 @@ and this project adheres to
   [#2648](https://github.com/OpenFn/lightning/issues/2648)
 - Change column name for "Last Activity" to "Last Modified" on Projects list
   [#2593](https://github.com/OpenFn/lightning/issues/2593)
-- Make provision for non-User actors when creating Audit entries.
-  [#2601](https://github.com/OpenFn/lightning/issues/2601)
 
 ### Fixed
 
