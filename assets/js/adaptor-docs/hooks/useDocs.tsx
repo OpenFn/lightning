@@ -6,7 +6,7 @@ import { describePackage, PackageDescription } from '@openfn/describe-package';
 const cache: Record<string, PackageDescription | null | false> = {};
 
 const useDocs = (specifier: string) => {
-  const [docs, setDocs] = useState<PackageDescription | null | false>(null);
+  const [docs, setDocs] = useState<PackageDescription | false>();
 
   useEffect(() => {
     if (cache.hasOwnProperty(specifier)) {

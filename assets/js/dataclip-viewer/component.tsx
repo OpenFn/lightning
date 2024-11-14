@@ -1,6 +1,6 @@
-import type { editor as __MonacoEditor } from 'monaco-editor/esm/vs/editor/editor.api';
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { editor as e } from 'monaco-editor';
 import { Monaco, MonacoEditor } from '../monaco';
 import { addContextualCommand } from '../common';
 
@@ -39,9 +39,8 @@ async function fetchDataclipContent(dataclipId: string) {
 const DataclipViewer = ({ dataclipId }: { dataclipId: string }) => {
   const [content, setContent] = useState<string>('');
 
-  const [monaco, setMonaco] = useState<Monaco | null>(null);
-  const [editor, setEditor] =
-    useState<__MonacoEditor.IStandaloneCodeEditor | null>(null);
+  const [monaco, setMonaco] = useState<Monaco>();
+  const [editor, setEditor] = useState<e.IStandaloneCodeEditor>();
 
   useEffect(() => {
     if (monaco && editor) {

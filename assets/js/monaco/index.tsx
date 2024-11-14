@@ -28,8 +28,8 @@ export const MonacoEditor = ({
   onMount = (_editor: editor.IStandaloneCodeEditor, _monaco: Monaco) => {},
   ...props
 }) => {
-  const monacoRef = useRef<Monaco | null>(null);
-  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const monacoRef = useRef<Monaco>();
+  const editorRef = useRef<editor.IStandaloneCodeEditor>();
 
   const handleOnMount = useCallback((editor: any, monaco: Monaco) => {
     monacoRef.current = monaco;
