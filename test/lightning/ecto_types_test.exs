@@ -31,6 +31,14 @@ defmodule Lightning.EctoTypesTest do
       assert {:ok, ~s<5.893>} =
                LogMessage.cast(5.893)
     end
+
+    test "can be cast from a boolean" do
+      assert {:ok, ~s<true>} =
+               LogMessage.cast(true)
+
+      assert {:ok, ~s<false>} =
+               LogMessage.cast(false)
+    end
   end
 
   describe "UnixDateTime" do

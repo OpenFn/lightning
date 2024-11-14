@@ -24,6 +24,9 @@ and this project adheres to
 
 ### Fixed
 
+- Error when the logger receives a boolean
+  [#2666](https://github.com/OpenFn/lightning/issues/2666)
+
 ## [v2.10.1] - 2024-11-13
 
 ### Fixed
