@@ -26,6 +26,8 @@ and this project adheres to
 
 - Error when the logger receives a boolean
   [#2666](https://github.com/OpenFn/lightning/issues/2666)
+- Disable save and run actions on deleted workflows
+  [#2170](https://github.com/OpenFn/lightning/issues/2170)
 
 ## [v2.10.1] - 2024-11-13
 
