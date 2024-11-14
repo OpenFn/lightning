@@ -682,7 +682,7 @@ defmodule Lightning.Invocation do
     |> Ecto.Multi.insert(
       :audit,
       ExportAudit.event(
-        "started",
+        "requested",
         project.id,
         user.id,
         %{},

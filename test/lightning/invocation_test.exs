@@ -1148,7 +1148,7 @@ defmodule Lightning.InvocationTest do
         assert {:ok, %{audit: audit, project_file: project_file}} =
                  result
 
-        assert audit.event == "started"
+        assert audit.event == "requested"
         assert audit.item_type == "history_export"
         assert audit.actor_id == user.id
         assert audit.metadata == %{search_params: search_params}

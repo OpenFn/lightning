@@ -5,5 +5,5 @@ defmodule Lightning.WorkOrders.ExportAudit do
   use Lightning.Auditing.Audit,
     repo: Lightning.Repo,
     item: "history_export",
-    events: ["started"]
+    events: ["requested"]
 end
