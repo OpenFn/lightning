@@ -283,7 +283,7 @@ defmodule Lightning.WorkOrders do
           Step.t() | Ecto.UUID.t(),
           [work_order_option(), ...]
         ) ::
-          {:ok, Run.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, Run.t()} | {:error, Ecto.Changeset.t() | :workflow_deleted}
   def retry(%Run{id: run_id}, %Step{id: step_id}, opts) do
     retry(run_id, step_id, opts)
   end
@@ -508,7 +508,10 @@ defmodule Lightning.WorkOrders do
           retry(run_step.run_id, run_step.step_id, opts)
         end)
 
-      {:ok, Enum.count(results, fn result -> match?({:ok, _}, result) end), 0}
+      success_count =
+        Enum.count(results, fn result -> match?({:ok, _}, result) end)
+
+      {:ok, success_count, Enum.count(results) - success_count}
     end
   end
 

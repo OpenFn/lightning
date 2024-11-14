@@ -1411,20 +1411,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("save", params, socket) do
-    %{
-      project: project,
-      workflow_params: initial_params,
-      can_edit_workflow: can_edit_workflow,
-      snapshot_version_tag: tag,
-      has_presence_edit_priority: has_presence_edit_priority
-    } =
-      socket.assigns
+    %{project: project, workflow_params: initial_params} = socket.assigns
 
-    with true <- can_edit_workflow || :not_authorized,
-         true <- tag == "latest" || :view_only,
-         true <-
-           has_presence_edit_priority ||
-             :presence_low_priority do
+    with :ok <- check_user_can_save_workflow(socket) do
       next_params =
         case params do
           %{"workflow" => params} ->
@@ -1480,27 +1469,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
            |> put_flash(:error, "Workflow could not be saved")
            |> push_patches_applied(initial_params)}
       end
-    else
-      :view_only ->
-        {:noreply,
-         socket
-         |> put_flash(
-           :error,
-           "Cannot save in snapshot mode, switch to the latest version."
-         )}
-
-      :presence_low_priority ->
-        {:noreply,
-         socket
-         |> put_flash(
-           :error,
-           "Cannot save in view-only mode"
-         )}
-
-      :not_authorized ->
-        {:noreply,
-         socket
-         |> put_flash(:error, "You are not authorized to perform this action.")}
     end
   end
 
@@ -1601,9 +1569,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
       selected_job: selected_job,
       current_user: current_user,
       workflow_params: workflow_params,
-      can_edit_workflow: can_edit_workflow,
-      can_run_workflow: can_run_workflow,
-      snapshot_version_tag: tag,
       has_presence_edit_priority: has_presence_edit_priority,
       workflow: workflow,
       manual_run_form: form
@@ -1626,62 +1591,52 @@ defmodule LightningWeb.WorkflowLive.Edit do
         get_workflow_by_id(workflow.id)
       end
 
-    with true <- (can_run_workflow && can_edit_workflow) || :not_authorized,
-         true <- tag == "latest" || :view_only,
-         {:ok, %{workorder: workorder, workflow: workflow}} <-
-           Helpers.run_workflow(
+    with :ok <- check_user_can_manual_run_workflow(socket) do
+      case Helpers.run_workflow(
              workflow_or_changeset,
              params,
              project: project,
              selected_job: selected_job,
              created_by: current_user
            ) do
-      %{runs: [run]} = workorder
+        {:ok, %{workorder: workorder, workflow: workflow}} ->
+          %{runs: [run]} = workorder
 
-      Runs.subscribe(run)
+          Runs.subscribe(run)
 
-      snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
+          snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
 
-      {:noreply,
-       socket
-       |> assign_workflow(workflow, snapshot)
-       |> follow_run(run)
-       |> push_event("push-hash", %{"hash" => "log"})}
-    else
-      {:error, %Ecto.Changeset{data: %WorkOrders.Manual{}} = changeset} ->
-        {:noreply,
-         socket
-         |> assign_manual_run_form(changeset)}
+          {:noreply,
+           socket
+           |> assign_workflow(workflow, snapshot)
+           |> follow_run(run)
+           |> push_event("push-hash", %{"hash" => "log"})}
 
-      {:error, %Ecto.Changeset{data: %Workflow{}} = changeset} ->
-        {
-          :noreply,
-          socket
-          |> assign_changeset(changeset)
-          |> mark_validated()
-          |> put_flash(:error, "Workflow could not be saved")
-        }
+        {:error, %Ecto.Changeset{data: %WorkOrders.Manual{}} = changeset} ->
+          {:noreply,
+           socket
+           |> assign_manual_run_form(changeset)}
 
-      :not_authorized ->
-        {:noreply,
-         socket
-         |> put_flash(:error, "You are not authorized to perform this action.")}
+        {:error, %Ecto.Changeset{data: %Workflow{}} = changeset} ->
+          {
+            :noreply,
+            socket
+            |> assign_changeset(changeset)
+            |> mark_validated()
+            |> put_flash(:error, "Workflow could not be saved")
+          }
 
-      :view_only ->
-        {:noreply,
-         socket
-         |> put_flash(:error, "Cannot run in snapshot mode, switch to latest.")}
+        {:error, %{text: message}} ->
+          {:noreply, put_flash(socket, :error, message)}
 
-      {:error, %{text: message}} ->
-        {:noreply, put_flash(socket, :error, message)}
-
-      {:error, :deleted} ->
-        {:noreply,
-         put_flash(
-           socket,
-           :error,
-           "Oops! You cannot modify a deleted workflow"
-         )}
+        {:error, :deleted} ->
+          {:noreply,
+           put_flash(
+             socket,
+             :error,
+             "Oops! You cannot modify a deleted workflow"
+           )}
+      end
     end
   end
 
@@ -1777,6 +1732,61 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   def handle_info(%{}, socket) do
     {:noreply, socket}
+  end
+
+  defp check_user_can_manual_run_workflow(socket) do
+    case socket.assigns do
+      %{
+        can_edit_workflow: true,
+        can_run_workflow: true,
+        snapshot_version_tag: "latest"
+      } ->
+        :ok
+
+      %{can_edit_workflow: false} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "You are not authorized to perform this action.")}
+
+      %{can_run_workflow: false} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "You are not authorized to perform this action.")}
+
+      _snapshot_not_latest ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Cannot run in snapshot mode, switch to latest.")}
+    end
+  end
+
+  defp check_user_can_save_workflow(socket) do
+    case socket.assigns do
+      %{
+        can_edit_workflow: true,
+        has_presence_edit_priority: true,
+        snapshot_version_tag: "latest"
+      } ->
+        :ok
+
+      %{can_edit_workflow: false} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "You are not authorized to perform this action.")}
+
+      %{has_presence_edit_priority: false} ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :error,
+           "Cannot save in view-only mode"
+         )}
+
+      _snapshot_not_latest ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Cannot save in snapshot mode, switch to latest.")}
+    end
   end
 
   defp maybe_disable_canvas(socket) do
