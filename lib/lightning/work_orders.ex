@@ -679,7 +679,7 @@ defmodule Lightning.WorkOrders do
   defp fetch_retriable_workorders(workorder_ids) do
     workorder_ids
     |> workorders_with_dataclips_query()
-    |> join([wo], :inner, wf in assoc(wo, :workflow), as: :workflow)
+    |> join(:inner, [wo], wf in assoc(wo, :workflow), as: :workflow)
     |> where([workflow: wf], is_nil(wf.deleted_at))
     |> Repo.all()
   end
