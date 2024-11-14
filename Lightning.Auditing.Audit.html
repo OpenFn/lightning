@@ -14,7 +14,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-0F9A31EB.js"></script>
+    <script src="dist/sidebar_items-757CF219.js"></script>
     <script src="docs_config.js"></script>
     <script async src="dist/html-YIPIRHGU.js"></script>
 
@@ -173,7 +173,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#event/6" data-no-tooltip translate="no">event(item_type, event, item_id, actor_id, changes \\ %{}, update_fun \\ fn x -&gt; x end)</a>
+        <a href="#event/7" data-no-tooltip translate="no">event(item_type, event, item_id, actor_id, changes \\ %{}, metadata \\ %{}, update_fun \\ fn x -&gt; x end)</a>
 
       </div>
 
@@ -245,20 +245,22 @@ by <code class="inline">actor_id</code>.</p></div>
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="event/6">
+<section class="detail" id="event/7">
 
     <span id="event/4"></span>
 
     <span id="event/5"></span>
 
+    <span id="event/6"></span>
+
   <div class="detail-header">
-    <a href="#event/6" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#event/7" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">event(item_type, event, item_id, actor_id, changes \\ %{}, update_fun \\ fn x -&gt; x end)</h1>
+    <h1 class="signature" translate="no">event(item_type, event, item_id, actor_id, changes \\ %{}, metadata \\ %{}, update_fun \\ fn x -&gt; x end)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auditing/audit.ex#L182" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auditing/audit.ex#L191" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -276,6 +278,7 @@ by <code class="inline">actor_id</code>.</p></div>
   <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
   <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
   <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>() | nil,
+  <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(),
   update_changes_fun :: (<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>() -&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>())
 ) :: :no_changes | <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()</pre>
 
@@ -295,7 +298,7 @@ or an <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html"><code class="
     </a>
     <h1 class="signature" translate="no">save(changes, repo)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auditing/audit.ex#L154" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auditing/audit.ex#L162" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
