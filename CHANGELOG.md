@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Disable monaco command palette in Input and Log viewers
+  [#2643](https://github.com/OpenFn/lightning/issues/2643)
+
 ### Changed
 
 - Ignore Plug.Conn.InvalidQueryError in Sentry
