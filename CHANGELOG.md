@@ -24,6 +24,8 @@ and this project adheres to
 
 - Ignore Plug.Conn.InvalidQueryError in Sentry
   [#2672](https://github.com/OpenFn/lightning/issues/2672)
+- Add Index to `dataclip_id` on `runs` and `work_orders` tables to fasten deletion
+  [PR#2677](https://github.com/OpenFn/lightning/pull/2677)
 
 ### Fixed
 
