@@ -887,6 +887,32 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert view |> save_is_disabled?()
     end
 
+    test "Save button is disabled when workflow is deleted", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      workflow
+      |> Ecto.Changeset.change(%{
+        deleted_at: DateTime.utc_now() |> DateTime.truncate(:second)
+      })
+      |> Lightning.Repo.update!()
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+        )
+
+      assert view |> page_title() =~ workflow.name
+
+      assert view |> save_is_disabled?()
+
+      # try changing the workflow name anyway
+      assert render_click(view, "save", %{name: "updatename"}) =~
+               "Oops! You cannot modify a deleted workflow"
+    end
+
     test "opens edge Path form and saves the JS expression", %{
       conn: conn,
       project: project,

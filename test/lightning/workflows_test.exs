@@ -70,7 +70,7 @@ defmodule Lightning.WorkflowsTest do
       workflow = insert(:workflow, deleted_at: DateTime.utc_now())
       update_attrs = %{name: "some-updated-name"}
 
-      assert {:error, :deleted} =
+      assert {:error, :workflow_deleted} =
                Workflows.change_workflow(workflow, update_attrs)
                |> Workflows.save_workflow()
     end

@@ -1453,7 +1453,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         {:error, %{text: message}} ->
           {:noreply, put_flash(socket, :error, message)}
 
-        {:error, :deleted} ->
+        {:error, :workflow_deleted} ->
           {:noreply,
            put_flash(
              socket,
@@ -1542,6 +1542,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
       {:error, %{text: message}} ->
         {:noreply, put_flash(socket, :error, message)}
 
+      {:error, :workflow_deleted} ->
+        {:noreply,
+         put_flash(socket, :error, "Cannot rerun a deleted a workflow")}
+
       {:error, _changeset} ->
         {:noreply,
          socket
@@ -1629,7 +1633,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         {:error, %{text: message}} ->
           {:noreply, put_flash(socket, :error, message)}
 
-        {:error, :deleted} ->
+        {:error, :workflow_deleted} ->
           {:noreply,
            put_flash(
              socket,
@@ -2344,39 +2348,39 @@ defmodule LightningWeb.WorkflowLive.Edit do
   attr :has_presence_priority, :boolean, required: true
 
   defp save_workflow_button(assigns) do
-    %{
-      can_edit_workflow: can_edit_workflow,
-      changeset: changeset,
-      snapshot_version_tag: snapshot_version_tag,
-      has_presence_priority: has_presence_priority
-    } = assigns
+    {disabled, tooltip} =
+      case assigns do
+        %{
+          changeset: %{valid?: true, data: %{deleted_at: nil}},
+          can_edit_workflow: true,
+          snapshot_version_tag: "latest",
+          has_presence_priority: true
+        } ->
+          {false, nil}
+
+        %{changeset: %{data: %{deleted_at: deleted_at}}}
+        when is_struct(deleted_at) ->
+          {true, "Workflow has been deleted"}
+
+        %{can_edit_workflow: false} ->
+          {true, "You do not have permission to edit this workflow"}
+
+        %{changeset: %{valid?: false}} ->
+          {true, "You have some unresolved errors in your workflow"}
+
+        %{snapshot_version_tag: tag} when tag != "latest" ->
+          {true, "You cannot edit an old snapshot of a workflow"}
+
+        _other ->
+          {true, nil}
+      end
 
     assigns =
       assigns
       |> assign(
-        disabled:
-          !is_nil(changeset.data.deleted_at) or !can_edit_workflow or
-            !changeset.valid? or
-            snapshot_version_tag != "latest" or !has_presence_priority
+        disabled: disabled,
+        tooltip: tooltip
       )
-      |> assign_new(:tooltip, fn ->
-        cond do
-          !is_nil(changeset.data.deleted_at) ->
-            "Workflow has been deleted"
-
-          !can_edit_workflow ->
-            "You do not have permission to edit this workflow"
-
-          !changeset.valid? ->
-            "You have some unresolved errors in your workflow"
-
-          snapshot_version_tag != "latest" ->
-            "You cannot edit an old snapshot of a workflow"
-
-          true ->
-            nil
-        end
-      end)
 
     ~H"""
     <.button

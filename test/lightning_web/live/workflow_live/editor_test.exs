@@ -1283,6 +1283,46 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       live_children(view) |> Enum.each(&render_async/1)
     end
 
+    test "can't retry when workflow has been deleted",
+         %{
+           conn: conn,
+           project: project,
+           workflow: %{jobs: [_job_1, job_2 | _rest]} = workflow,
+           snapshot: snapshot
+         } do
+      {_dataclips, %{runs: [run]} = _workorder} =
+        rerun_setup(project, workflow, snapshot)
+
+      workflow
+      |> Ecto.Changeset.change(%{
+        deleted_at: DateTime.utc_now() |> DateTime.truncate(:second)
+      })
+      |> Lightning.Repo.update!()
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand", v: workflow.lock_version]}"
+        )
+
+      live_children(view) |> Enum.each(&render_async/1)
+
+      # user gets no option to rerun
+      assert has_element?(view, "button[disabled='disabled']", "Retry from here")
+
+      assert has_element?(
+               view,
+               "button[disabled='disabled']",
+               "Create New Work Order"
+             )
+
+      # submit event regardless
+      step = Enum.find(run.steps, fn step -> step.job_id == job_2.id end)
+
+      assert render_click(view, "rerun", %{run_id: run.id, step_id: step.id}) =~
+               "Cannot rerun a deleted a workflow"
+    end
+
     test "followed run with wiped dataclip renders the page correctly",
          %{
            conn: conn,
