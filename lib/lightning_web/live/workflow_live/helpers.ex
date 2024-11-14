@@ -25,7 +25,8 @@ defmodule LightningWeb.WorkflowLive.Helpers do
 
   @spec save_workflow(Ecto.Changeset.t()) ::
           {:ok, Workflows.Workflow.t()}
-          | {:error, Ecto.Changeset.t() | UsageLimiting.message() | :deleted}
+          | {:error,
+             Ecto.Changeset.t() | UsageLimiting.message() | :workflow_deleted}
   def save_workflow(changeset) do
     case WorkflowUsageLimiter.limit_workflow_activation(changeset) do
       :ok ->

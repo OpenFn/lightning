@@ -78,7 +78,8 @@ defmodule Lightning.WorkOrders do
       create_for(job, workflow: workflow, dataclip: dataclip, user: user)
   """
   @spec create_for(Trigger.t() | Job.t(), Multi.t(), [work_order_option()]) ::
-          {:ok, WorkOrder.t()} | {:error, Ecto.Changeset.t(WorkOrder.t())}
+          {:ok, WorkOrder.t()}
+          | {:error, Ecto.Changeset.t(WorkOrder.t()) | :workflow_deleted}
   def create_for(target, multi \\ Multi.new(), opts)
 
   def create_for(%Trigger{} = trigger, multi, opts) do
@@ -118,6 +119,13 @@ defmodule Lightning.WorkOrders do
 
   def create_for(%Manual{} = manual) do
     Multi.new()
+    |> Multi.run(:workflow_deleted?, fn _repo, _changes ->
+      if manual.workflow.deleted_at do
+        {:error, :workflow_deleted}
+      else
+        {:ok, false}
+      end
+    end)
     |> get_or_insert_dataclip(manual)
     |> Multi.put(:workflow, manual.workflow)
     |> get_or_create_snapshot()
