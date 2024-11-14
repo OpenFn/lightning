@@ -1125,4 +1125,37 @@ defmodule Lightning.InvocationTest do
       %{id: Ecto.UUID.generate(), message: message, timestamp: build(:timestamp)}
     end
   end
+
+  describe "export_workorders/3" do
+    setup do
+      project = insert(:project)
+      user = insert(:user)
+      search_params = SearchParams.new(%{})
+
+      {:ok, project: project, user: user, search_params: search_params}
+    end
+
+    test "initiates a work orders export successfully and logs the audit event",
+         %{
+           project: project,
+           user: user,
+           search_params: search_params
+         } do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        result =
+          Lightning.Invocation.export_workorders(project, user, search_params)
+
+        assert {:ok, %{audit: audit, project_file: project_file}} =
+                 result
+
+        assert audit.event == "requested"
+        assert audit.item_type == "history_export"
+        assert audit.actor_id == user.id
+        assert audit.metadata == %{search_params: search_params}
+
+        assert project_file.status == :enqueued
+        assert project_file.type == :export
+      end)
+    end
+  end
 end

@@ -80,6 +80,7 @@ defmodule Lightning.AuditingTest do
           Ecto.UUID.generate(),
           Ecto.UUID.generate(),
           changeset,
+          %{},
           update_fun
         )
 
