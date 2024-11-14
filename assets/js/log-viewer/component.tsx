@@ -4,7 +4,6 @@ import { useShallow } from 'zustand/react/shallow';
 import { editor as e } from 'monaco-editor';
 import { Monaco, MonacoEditor } from '../monaco';
 import { createLogStore } from './store';
-import { addContextualCommand } from '../common';
 
 export function mount(
   el: HTMLElement,
@@ -38,17 +37,6 @@ const LogViewer = ({
   const [editor, setEditor] = useState<e.IStandaloneCodeEditor>();
 
   const decorationsCollection = useRef<e.IEditorDecorationsCollection>();
-
-  useEffect(() => {
-    if (monaco && editor) {
-      addContextualCommand(
-        editor,
-        monaco.KeyCode.F1,
-        'LogViewerContext',
-        () => {}
-      );
-    }
-  }, [editor, monaco]);
 
   useEffect(() => {
     if (stepId && highlightedRanges.length > 0) {

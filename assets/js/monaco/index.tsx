@@ -34,6 +34,19 @@ export const MonacoEditor = ({
   const handleOnMount = useCallback((editor: any, monaco: Monaco) => {
     monacoRef.current = monaco;
     editorRef.current = editor;
+    if (!props.options.enableCommandPalette) {
+      const ctxKey = editor.createContextKey('command-palette-override', true);
+
+      editor.addCommand(
+        monaco.KeyCode.F1,
+        () => {},
+        'command-palette-override'
+      );
+
+      editor.onDidDispose(() => {
+        ctxKey.reset();
+      });
+    }
     setTheme(monaco);
     onMount(editor, monaco);
   }, []);

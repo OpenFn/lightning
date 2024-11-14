@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { editor as e } from 'monaco-editor';
-import { Monaco, MonacoEditor } from '../monaco';
-import { addContextualCommand } from '../common';
+import { MonacoEditor } from '../monaco';
 
 export function mount(el: HTMLElement, dataclipId: string) {
   const componentRoot = createRoot(el);
@@ -39,20 +37,6 @@ async function fetchDataclipContent(dataclipId: string) {
 const DataclipViewer = ({ dataclipId }: { dataclipId: string }) => {
   const [content, setContent] = useState<string>('');
 
-  const [monaco, setMonaco] = useState<Monaco>();
-  const [editor, setEditor] = useState<e.IStandaloneCodeEditor>();
-
-  useEffect(() => {
-    if (monaco && editor) {
-      addContextualCommand(
-        editor,
-        monaco.KeyCode.F1,
-        'DataclipViewerContext',
-        () => {}
-      );
-    }
-  }, [editor, monaco]);
-
   useEffect(() => {
     fetchDataclipContent(dataclipId).then(setContent);
   }, [dataclipId]);
@@ -62,8 +46,6 @@ const DataclipViewer = ({ dataclipId }: { dataclipId: string }) => {
       defaultLanguage="json"
       theme="default"
       value={content}
-      beforeMount={setMonaco}
-      onMount={setEditor}
       loading={<div>Loading...</div>}
       options={{
         readOnly: true,
