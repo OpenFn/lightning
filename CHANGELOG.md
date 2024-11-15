@@ -17,8 +17,10 @@ and this project adheres to
 
 ### Added
 
+- Make provision for non-User actors when creating Audit entries.
+  [#2601](https://github.com/OpenFn/lightning/issues/2601)
 - Audit history exports events
-  [#2367](https://github.com/OpenFn/lightning/issues/2367)
+  [#2637](https://github.com/OpenFn/lightning/issues/2637)
 
 ### Changed
 
@@ -33,6 +35,8 @@ and this project adheres to
   [#2621](https://github.com/OpenFn/lightning/issues/2621)
 - Error when the logger receives a boolean
   [#2666](https://github.com/OpenFn/lightning/issues/2666)
+- Attempt to reduce memory consumption when generating UsageTracking reports.
+  [#2636](https://github.com/OpenFn/lightning/issues/2636)
 
 ## [v2.10.1] - 2024-11-13
 

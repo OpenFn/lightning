@@ -1,5 +1,5 @@
 defmodule Lightning.KafkaTriggers.TriggerKafkaMessageRecordTest do
-  use Lightning.DataCase
+  use Lightning.DataCase, async: true
 
   alias Ecto.Changeset
   alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord, as: TKMR

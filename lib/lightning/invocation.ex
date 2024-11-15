@@ -684,7 +684,7 @@ defmodule Lightning.Invocation do
       ExportAudit.event(
         "requested",
         project.id,
-        user.id,
+        user,
         %{},
         %{search_params: search_params}
       )
