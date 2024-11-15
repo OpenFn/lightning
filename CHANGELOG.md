@@ -29,6 +29,8 @@ and this project adheres to
 
 ### Fixed
 
+- Superusers can't update users passwords
+  [#2621](https://github.com/OpenFn/lightning/issues/2621)
 - Error when the logger receives a boolean
   [#2666](https://github.com/OpenFn/lightning/issues/2666)
 
