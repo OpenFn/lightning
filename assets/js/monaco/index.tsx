@@ -28,12 +28,25 @@ export const MonacoEditor = ({
   onMount = (_editor: editor.IStandaloneCodeEditor, _monaco: Monaco) => {},
   ...props
 }) => {
-  const monacoRef = useRef<Monaco | null>(null);
-  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const monacoRef = useRef<Monaco>();
+  const editorRef = useRef<editor.IStandaloneCodeEditor>();
 
   const handleOnMount = useCallback((editor: any, monaco: Monaco) => {
     monacoRef.current = monaco;
     editorRef.current = editor;
+    if (!props.options.enableCommandPalette) {
+      const ctxKey = editor.createContextKey('command-palette-override', true);
+
+      editor.addCommand(
+        monaco.KeyCode.F1,
+        () => {},
+        'command-palette-override'
+      );
+
+      editor.onDidDispose(() => {
+        ctxKey.reset();
+      });
+    }
     setTheme(monaco);
     onMount(editor, monaco);
   }, []);

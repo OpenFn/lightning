@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Disable monaco command palette in Input and Log viewers
+  [#2643](https://github.com/OpenFn/lightning/issues/2643)
 - Make provision for non-User actors when creating Audit entries.
   [#2601](https://github.com/OpenFn/lightning/issues/2601)
 - Audit history exports events

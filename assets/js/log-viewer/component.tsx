@@ -1,23 +1,9 @@
-import type { editor as __MonacoEditor } from 'monaco-editor/esm/vs/editor/editor.api';
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useShallow } from 'zustand/react/shallow';
+import { editor as e } from 'monaco-editor';
 import { Monaco, MonacoEditor } from '../monaco';
-import { LogLine, createLogStore } from './store';
-
-function findLogIndicesByStepId(
-  logs: LogLine[],
-  stepId: string
-): { first: number | null; last: number | null } {
-  let firstIndex = logs.findIndex(log => log.step_id === stepId);
-  let lastIndex = logs.findLastIndex(log => log.step_id === stepId);
-
-  if (firstIndex === -1) {
-    return { first: null, last: null };
-  } else {
-    return { first: firstIndex, last: lastIndex + 1 };
-  }
-}
+import { createLogStore } from './store';
 
 export function mount(
   el: HTMLElement,
@@ -47,12 +33,10 @@ const LogViewer = ({
     useShallow(state => state.formattedLogLines)
   );
 
-  const [monaco, setMonaco] = useState<Monaco | null>(null);
-  const [editor, setEditor] =
-    useState<__MonacoEditor.IStandaloneCodeEditor | null>(null);
+  const [monaco, setMonaco] = useState<Monaco>();
+  const [editor, setEditor] = useState<e.IStandaloneCodeEditor>();
 
-  const decorationsCollection =
-    useRef<__MonacoEditor.IEditorDecorationsCollection | null>(null);
+  const decorationsCollection = useRef<e.IEditorDecorationsCollection>();
 
   useEffect(() => {
     if (stepId && highlightedRanges.length > 0) {
