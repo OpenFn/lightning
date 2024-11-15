@@ -1,5 +1,5 @@
 defmodule LightningWeb.UserTOTPControllerTest do
-  use LightningWeb.ConnCase, async: false
+  use LightningWeb.ConnCase, async: true
 
   import Lightning.Factories
 

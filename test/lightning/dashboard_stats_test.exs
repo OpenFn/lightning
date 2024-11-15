@@ -1,6 +1,5 @@
 defmodule Lightning.DashboardStatsTest do
-  @moduledoc false
-  use Lightning.DataCase
+  use Lightning.DataCase, async: true
 
   import Lightning.WorkflowsFixtures
 
