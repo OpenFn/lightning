@@ -152,6 +152,7 @@ For Google Cloud Storage, the following environment variables are required:
 | `USAGE_TRACKING_DAILY_BATCH_SIZE`        | The number of days that will be reported on with each run of `UsageTracking.DayWorker`. This will only have a noticeable effect in cases where there is a backlog or where reports are being generated retroactively (defaults to 10). |
 | `USAGE_TRACKING_ENABLED`                 | Enables the submission of anonymized usage data to OpenFn (defaults to `true`)                                                                                                                                                         |
 | `USAGE_TRACKING_RESUBMISSION_BATCH_SIZE` | The number of failed reports that will be submitted on each resubmission run (defaults to 10)                                                                                                                                          |
+| `USAGE_TRACKING_RUN_CHUNK_SIZE`          | The size of each batch of runs that is streamed from the database when generating UsageTracking reports (default 100). Decreasing this may decrease memory consumption when generating reports.                                        |
 | `USAGE_TRACKING_UUIDS`                   | Indicates whether submissions should include cleartext UUIDs or not. Options are `cleartext` or `hashed_only`, with the default being `hashed_only`.                                                                                   |
 
 ### AI Chat

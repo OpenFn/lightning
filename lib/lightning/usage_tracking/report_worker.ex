@@ -14,16 +14,18 @@ defmodule Lightning.UsageTracking.ReportWorker do
   def perform(%{args: %{"date" => date_string}}) do
     date = Date.from_iso8601!(date_string)
 
-    env = Application.get_env(:lightning, :usage_tracking)
-
     config = UsageTracking.find_enabled_daily_report_config()
 
-    if env[:enabled] && config do
-      cleartext_uuids_enabled = env[:cleartext_uuids_enabled]
+    if Lightning.Config.usage_tracking_enabled?() && config do
+      cleartext_uuids_enabled =
+        Lightning.Config.usage_tracking_cleartext_uuids_enabled?()
 
       case UsageTracking.insert_report(config, cleartext_uuids_enabled, date) do
         {:ok, report} ->
-          report |> UsageTracking.submit_report(env[:host])
+          UsageTracking.submit_report(
+            report,
+            Lightning.Config.usage_tracking_host()
+          )
 
         _error ->
           nil

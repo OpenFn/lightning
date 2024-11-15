@@ -484,7 +484,8 @@ defmodule Lightning.Config.Bootstrap do
       host: env!("USAGE_TRACKER_HOST", :string, "https://impact.openfn.org"),
       resubmission_batch_size:
         env!("USAGE_TRACKING_RESUBMISSION_BATCH_SIZE", :integer, 10),
-      daily_batch_size: env!("USAGE_TRACKING_DAILY_BATCH_SIZE", :integer, 10)
+      daily_batch_size: env!("USAGE_TRACKING_DAILY_BATCH_SIZE", :integer, 10),
+      run_chunk_size: env!("USAGE_TRACKING_RUN_CHUNK_SIZE", :integer, 100)
 
     config :lightning, :kafka_triggers,
       alternate_storage_enabled:

@@ -19,20 +19,24 @@ and this project adheres to
 
 - Disable monaco command palette in Input and Log viewers
   [#2643](https://github.com/OpenFn/lightning/issues/2643)
+- Make provision for non-User actors when creating Audit entries.
+  [#2601](https://github.com/OpenFn/lightning/issues/2601)
 - Audit history exports events
-  [#2367](https://github.com/OpenFn/lightning/issues/2367)
+  [#2637](https://github.com/OpenFn/lightning/issues/2637)
 
 ### Changed
 
 - Ignore Plug.Conn.InvalidQueryError in Sentry
   [#2672](https://github.com/OpenFn/lightning/issues/2672)
-- Add Index to `dataclip_id` on `runs` and `work_orders` tables to fasten deletion
-  [PR#2677](https://github.com/OpenFn/lightning/pull/2677)
+- Add Index to `dataclip_id` on `runs` and `work_orders` tables to speed up
+  deletion [PR#2677](https://github.com/OpenFn/lightning/pull/2677)
 
 ### Fixed
 
 - Error when the logger receives a boolean
   [#2666](https://github.com/OpenFn/lightning/issues/2666)
+- Attempt to reduce memory consumption when generating UsageTracking reports.
+  [#2636](https://github.com/OpenFn/lightning/issues/2636)
 
 ## [v2.10.1] - 2024-11-13
 

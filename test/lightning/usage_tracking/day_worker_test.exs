@@ -1,7 +1,7 @@
 defmodule Lightning.UsageTracking.DayWorkerTest do
-  use Lightning.DataCase
+  use Lightning.DataCase, async: true
 
-  import Lightning.ApplicationHelpers, only: [put_temporary_env: 3]
+  import Mox
 
   alias Lightning.Repo
   alias Lightning.UsageTracking
@@ -17,7 +17,11 @@ defmodule Lightning.UsageTracking.DayWorkerTest do
     # to prevent the tests flickering - e.g if .utc_now() changes during
     # the execution of the test
     setup do
-      put_temporary_env(:lightning, :usage_tracking, enabled: true)
+      stub(Lightning.MockConfig, :usage_tracking, fn ->
+        %{enabled: true}
+      end)
+
+      :ok
     end
 
     test "enables the configuration" do
@@ -36,20 +40,16 @@ defmodule Lightning.UsageTracking.DayWorkerTest do
       UsageTracking.enable_daily_report(enabled_at)
 
       Oban.Testing.with_testing_mode(:manual, fn ->
-        perform_job(DayWorker, %{batch_size: @batch_size})
+        assert :ok == perform_job(DayWorker, %{batch_size: @batch_size})
       end)
 
       assert length(all_enqueued(worker: ReportWorker)) == @batch_size
-    end
-
-    test "returns :ok" do
-      assert(perform_job(DayWorker, %{batch_size: @batch_size}) == :ok)
     end
   end
 
   describe "perform/1 without reference time passed in - tracking is disabled" do
     setup do
-      put_temporary_env(:lightning, :usage_tracking, enabled: false)
+      stub(Lightning.MockConfig, :usage_tracking_enabled?, fn -> false end)
 
       UsageTracking.enable_daily_report(DateTime.utc_now())
 
@@ -57,13 +57,8 @@ defmodule Lightning.UsageTracking.DayWorkerTest do
     end
 
     test "disables the configuration" do
-      perform_job(DayWorker, %{batch_size: @batch_size})
-
+      assert :ok == perform_job(DayWorker, %{batch_size: @batch_size})
       assert %{tracking_enabled_at: nil} = Repo.one(DailyReportConfiguration)
-    end
-
-    test "returns :ok" do
-      assert(perform_job(DayWorker, %{batch_size: @batch_size}) == :ok)
     end
   end
 end

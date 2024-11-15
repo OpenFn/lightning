@@ -338,6 +338,15 @@ defmodule Lightning.Factories do
     }
   end
 
+  def audit_factory do
+    %Lightning.Auditing.Audit{
+      item_type: "item_type",
+      item_id: fn -> Ecto.UUID.generate() end,
+      event: "something_happened",
+      changes: %{before: %{"stuff" => "bad"}, after: %{"stuff" => "good"}}
+    }
+  end
+
   # ----------------------------------------------------------------------------
   # Helpers
   # ----------------------------------------------------------------------------
