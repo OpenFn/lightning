@@ -31,8 +31,7 @@ defmodule Lightning.Projects.Audit do
   defp event_changeset(%Ecto.Changeset{} = changeset, field, user) do
     project_id = Ecto.Changeset.get_field(changeset, :id)
 
-    "#{field}_updated"
-    |> event(project_id, user.id, changeset)
+    event("#{field}_updated", project_id, user, changeset)
   end
 
   defp operation_name(:dataclip_retention_period), do: :audit_dataclip_retention

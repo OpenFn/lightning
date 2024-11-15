@@ -17,8 +17,10 @@ and this project adheres to
 
 ### Added
 
+- Make provision for non-User actors when creating Audit entries.
+  [#2601](https://github.com/OpenFn/lightning/issues/2601)
 - Audit history exports events
-  [#2367](https://github.com/OpenFn/lightning/issues/2367)
+  [#2637](https://github.com/OpenFn/lightning/issues/2637)
 
 ### Changed
 
