@@ -1789,7 +1789,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
       _snapshot_not_latest ->
         {:noreply,
          socket
-         |> put_flash(:error, "Cannot save in snapshot mode, switch to latest.")}
+         |> put_flash(
+           :error,
+           "Cannot save in snapshot mode, switch to the latest version."
+         )}
     end
   end
 
@@ -1946,8 +1949,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
       %{manual_run_form: nil} ->
         true
 
-      %{workflow: workflow} ->
-        !is_nil(workflow.deleted_at)
+      %{workflow: %{deleted_at: deleted_at}} when is_struct(deleted_at) ->
+        true
 
       %{
         manual_run_form: manual_run_form,
