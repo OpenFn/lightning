@@ -17,10 +17,15 @@ and this project adheres to
 
 ### Added
 
+- Audit history exports events
+  [#2367](https://github.com/OpenFn/lightning/issues/2367)
+
 ### Changed
 
 - Ignore Plug.Conn.InvalidQueryError in Sentry
   [#2672](https://github.com/OpenFn/lightning/issues/2672)
+- Add Index to `dataclip_id` on `runs` and `work_orders` tables to speed up
+  deletion [PR#2677](https://github.com/OpenFn/lightning/pull/2677)
 
 ### Fixed
 
