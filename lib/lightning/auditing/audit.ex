@@ -303,10 +303,6 @@ defmodule Lightning.Auditing.Audit do
   end
 
   defp extract_actor_type(struct_name) do
-    case struct_name do
-      Lightning.VersionControl.ProjectRepoConnection -> :project_repo_connection
-      Lightning.Workflows.Trigger -> :trigger
-      Lightning.Accounts.User -> :user
-    end
+    struct_name |> Module.split() |> List.last() |> Macro.underscore()
   end
 end
