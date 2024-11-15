@@ -8,60 +8,60 @@ defmodule Lightning.UsageTracking.WorkflowMetricsServiceTest do
   @hashed_id "EECF8CFDD120E8DF8D9A12CA92AC3E815908223F95CFB11F19261A3C0EB34AEC"
   @workflow_id "3cfb674b-e878-470d-b7c0-cfa8f7e003ae"
 
-  setup do
-    no_of_jobs = 6
-    no_of_work_orders = 3
-    no_of_runs_per_work_order = 2
-    no_of_unique_jobs_in_steps = 2
-    no_of_steps_per_unique_job = 4
+  describe "generate_metrics/3" do
+    setup do
+      no_of_jobs = 6
+      no_of_work_orders = 3
+      no_of_runs_per_work_order = 2
+      no_of_unique_jobs_in_steps = 2
+      no_of_steps_per_unique_job = 4
 
-    workflow =
-      build_workflow(
-        @workflow_id,
+      workflow =
+        build_workflow(
+          @workflow_id,
+          no_of_jobs: no_of_jobs,
+          no_of_work_orders: no_of_work_orders,
+          no_of_runs_per_work_order: no_of_runs_per_work_order,
+          no_of_unique_jobs_in_steps: no_of_unique_jobs_in_steps,
+          no_of_steps_per_unique_job: no_of_steps_per_unique_job
+        )
+
+      _other_workflow =
+        build_workflow(
+          Ecto.UUID.generate(),
+          no_of_jobs: no_of_jobs + 1,
+          no_of_work_orders: no_of_work_orders + 1,
+          no_of_runs_per_work_order: no_of_runs_per_work_order + 1,
+          no_of_unique_jobs_in_steps: no_of_unique_jobs_in_steps + 1,
+          no_of_steps_per_unique_job: no_of_steps_per_unique_job + 1
+        )
+
+      no_of_runs = no_of_work_orders * no_of_runs_per_work_order
+
+      no_of_steps =
+        no_of_runs * no_of_unique_jobs_in_steps * no_of_steps_per_unique_job
+
+      %{
+        workflow: workflow,
         no_of_jobs: no_of_jobs,
-        no_of_work_orders: no_of_work_orders,
-        no_of_runs_per_work_order: no_of_runs_per_work_order,
-        no_of_unique_jobs_in_steps: no_of_unique_jobs_in_steps,
-        no_of_steps_per_unique_job: no_of_steps_per_unique_job
-      )
-
-    _other_workflow =
-      build_workflow(
-        Ecto.UUID.generate(),
-        no_of_jobs: no_of_jobs + 1,
-        no_of_work_orders: no_of_work_orders + 1,
-        no_of_runs_per_work_order: no_of_runs_per_work_order + 1,
-        no_of_unique_jobs_in_steps: no_of_unique_jobs_in_steps + 1,
-        no_of_steps_per_unique_job: no_of_steps_per_unique_job + 1
-      )
-
-    no_of_runs = no_of_work_orders * no_of_runs_per_work_order
-
-    no_of_steps =
-      no_of_runs * no_of_unique_jobs_in_steps * no_of_steps_per_unique_job
-
-    %{
-      workflow: workflow,
-      no_of_jobs: no_of_jobs,
-      no_of_runs: no_of_runs,
-      no_of_steps: no_of_steps,
-      no_of_unique_jobs: no_of_unique_jobs_in_steps
-    }
-  end
-
-  describe "generate_metrics/3 - cleartext disabled" do
-    setup context do
-      context |> Map.merge(%{enabled: false})
+        no_of_runs: no_of_runs,
+        no_of_steps: no_of_steps,
+        no_of_unique_jobs: no_of_unique_jobs_in_steps
+      }
     end
 
-    test "returns the appropriate metrics without the cleartext uuid", %{
-      enabled: enabled,
-      no_of_jobs: no_of_jobs,
-      no_of_runs: no_of_runs,
-      no_of_steps: no_of_steps,
-      no_of_unique_jobs: no_of_unique_jobs,
-      workflow: workflow
-    } do
+    test "returns the appropriate metrics depending on cleartext_uuids are enable or not",
+         %{
+           no_of_jobs: no_of_jobs,
+           no_of_runs: no_of_runs,
+           no_of_steps: no_of_steps,
+           no_of_unique_jobs: no_of_unique_jobs,
+           workflow: workflow
+         } do
+      Mox.expect(Lightning.MockConfig, :usage_tracking_run_chunk_size, 2, fn ->
+        100
+      end)
+
       assert %{
                hashed_uuid: @hashed_id,
                cleartext_uuid: nil,
@@ -70,36 +70,8 @@ defmodule Lightning.UsageTracking.WorkflowMetricsServiceTest do
                no_of_runs: no_of_runs,
                no_of_steps: no_of_steps
              } ==
-               WorkflowMetricsService.generate_metrics(workflow, enabled, @date)
-    end
+               WorkflowMetricsService.generate_metrics(workflow, false, @date)
 
-    test "it sets the stream size to the configured run chunk size", %{
-      enabled: enabled,
-      workflow: workflow
-    } do
-      Mox.expect(Lightning.MockConfig, :usage_tracking_run_chunk_size, fn ->
-        100
-      end)
-
-      WorkflowMetricsService.generate_metrics(workflow, enabled, @date)
-
-      Mox.verify!()
-    end
-  end
-
-  describe "generate_metrics/3 - cleartext enabled" do
-    setup context do
-      context |> Map.merge(%{enabled: true})
-    end
-
-    test "returns the appropriate metrics including the cleartext uuid", %{
-      enabled: enabled,
-      no_of_jobs: no_of_jobs,
-      no_of_runs: no_of_runs,
-      no_of_steps: no_of_steps,
-      no_of_unique_jobs: no_of_unique_jobs,
-      workflow: workflow
-    } do
       assert %{
                hashed_uuid: @hashed_id,
                cleartext_uuid: @workflow_id,
@@ -108,18 +80,7 @@ defmodule Lightning.UsageTracking.WorkflowMetricsServiceTest do
                no_of_runs: no_of_runs,
                no_of_steps: no_of_steps
              } ==
-               WorkflowMetricsService.generate_metrics(workflow, enabled, @date)
-    end
-
-    test "it sets the stream size to the configured run chunk size", %{
-      enabled: enabled,
-      workflow: workflow
-    } do
-      Mox.expect(Lightning.MockConfig, :usage_tracking_run_chunk_size, fn ->
-        100
-      end)
-
-      WorkflowMetricsService.generate_metrics(workflow, enabled, @date)
+               WorkflowMetricsService.generate_metrics(workflow, true, @date)
 
       Mox.verify!()
     end
