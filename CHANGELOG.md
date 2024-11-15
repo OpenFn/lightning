@@ -17,10 +17,30 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.10.3] - 2024-11-13
+
+### Added
+
 - Disable monaco command palette in Input and Log viewers
   [#2643](https://github.com/OpenFn/lightning/issues/2643)
 - Make provision for non-User actors when creating Audit entries.
   [#2601](https://github.com/OpenFn/lightning/issues/2601)
+
+### Fixed
+
+- Superusers can't update users passwords
+  [#2621](https://github.com/OpenFn/lightning/issues/2621)
+- Attempt to reduce memory consumption when generating UsageTracking reports.
+  [#2636](https://github.com/OpenFn/lightning/issues/2636)
+
+## [v2.10.2] - 2024-11-14
+
+### Added
+
 - Audit history exports events
   [#2637](https://github.com/OpenFn/lightning/issues/2637)
 
@@ -33,12 +53,8 @@ and this project adheres to
 
 ### Fixed
 
-- Superusers can't update users passwords
-  [#2621](https://github.com/OpenFn/lightning/issues/2621)
 - Error when the logger receives a boolean
   [#2666](https://github.com/OpenFn/lightning/issues/2666)
-- Attempt to reduce memory consumption when generating UsageTracking reports.
-  [#2636](https://github.com/OpenFn/lightning/issues/2636)
 
 ## [v2.10.1] - 2024-11-13
 
