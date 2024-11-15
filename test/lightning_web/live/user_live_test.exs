@@ -1,11 +1,12 @@
 defmodule LightningWeb.UserLiveTest do
-  alias Lightning.AccountsFixtures
   use LightningWeb.ConnCase, async: true
 
-  import Lightning.{AccountsFixtures}
+  alias Lightning.AccountsFixtures
+
+  import Lightning.AccountsFixtures
+  import Lightning.Factories
   import Phoenix.LiveViewTest
   import Swoosh.TestAssertions
-  import Lightning.Factories
 
   @create_attrs %{
     email: "test@example.com",
@@ -304,7 +305,7 @@ defmodule LightningWeb.UserLiveTest do
   def user_attrs_match?(user, attrs) do
     Enum.all?(attrs, fn
       {:password, password} ->
-        Bcrypt.verify_pass(password, user.hashed_password)
+        Lightning.Accounts.User.valid_password?(user, password)
 
       {key, value} ->
         Map.get(user, key) == value
