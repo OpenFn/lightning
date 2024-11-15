@@ -31,6 +31,8 @@ and this project adheres to
 
 - Error when the logger receives a boolean
   [#2666](https://github.com/OpenFn/lightning/issues/2666)
+- Attempt to reduce memory consumption when generating UsageTracking reports.
+  [#2636](https://github.com/OpenFn/lightning/issues/2636)
 
 ## [v2.10.1] - 2024-11-13
 

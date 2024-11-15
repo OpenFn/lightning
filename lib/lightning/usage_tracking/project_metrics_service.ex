@@ -17,7 +17,7 @@ defmodule Lightning.UsageTracking.ProjectMetricsService do
     query =
       from p in Project,
         where: p.inserted_at <= ^report_time,
-        preload: [:users, [workflows: [:jobs, runs: [steps: [:job]]]]]
+        preload: [:users, [workflows: [:jobs]]]
 
     query |> Repo.all()
   end
