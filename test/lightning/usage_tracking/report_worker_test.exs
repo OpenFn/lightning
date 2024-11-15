@@ -2,8 +2,8 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
   use Lightning.DataCase, async: true
 
   import Mock
+  import Mox
   import Tesla.Mock
-  import Lightning.ApplicationHelpers, only: [put_temporary_env: 3]
 
   alias Lightning.UsageTracking
   alias Lightning.UsageTracking.GithubClient
@@ -23,11 +23,12 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
       report_config =
         UsageTracking.enable_daily_report(DateTime.utc_now())
 
-      put_temporary_env(:lightning, :usage_tracking,
-        cleartext_uuids_enabled: cleartext_uuids_enabled,
-        enabled: true,
-        host: @host
-      )
+      stub(Lightning.MockConfig, :usage_tracking_cleartext_uuids_enabled?, fn ->
+        cleartext_uuids_enabled
+      end)
+
+      stub(Lightning.MockConfig, :usage_tracking_enabled?, fn -> true end)
+      stub(Lightning.MockConfig, :usage_tracking_host, fn -> @host end)
 
       %{instance: instance_metrics} =
         ReportData.generate(report_config, cleartext_uuids_enabled, @date)
@@ -88,11 +89,12 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
       report_config =
         UsageTracking.enable_daily_report(DateTime.utc_now())
 
-      put_temporary_env(:lightning, :usage_tracking,
-        cleartext_uuids_enabled: cleartext_uuids_enabled,
-        enabled: true,
-        host: @host
-      )
+      stub(Lightning.MockConfig, :usage_tracking_cleartext_uuids_enabled?, fn ->
+        cleartext_uuids_enabled
+      end)
+
+      stub(Lightning.MockConfig, :usage_tracking_enabled?, fn -> true end)
+      stub(Lightning.MockConfig, :usage_tracking_host, fn -> @host end)
 
       %{instance: instance_metrics} =
         ReportData.generate(report_config, cleartext_uuids_enabled, @date)
@@ -150,11 +152,12 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
     ]) do
       UsageTracking.enable_daily_report(DateTime.utc_now())
 
-      put_temporary_env(:lightning, :usage_tracking,
-        cleartext_uuids_enabled: false,
-        enabled: true,
-        host: @host
-      )
+      stub(Lightning.MockConfig, :usage_tracking_cleartext_uuids_enabled?, fn ->
+        false
+      end)
+
+      stub(Lightning.MockConfig, :usage_tracking_enabled?, fn -> true end)
+      stub(Lightning.MockConfig, :usage_tracking_host, fn -> @host end)
 
       insert(:usage_tracking_report, report_date: @date, data: %{})
 
@@ -178,11 +181,14 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
     setup do
       UsageTracking.disable_daily_report()
 
-      put_temporary_env(:lightning, :usage_tracking,
-        cleartext_uuids_enabled: false,
-        enabled: true,
-        host: @host
-      )
+      stub(Lightning.MockConfig, :usage_tracking_cleartext_uuids_enabled?, fn ->
+        false
+      end)
+
+      stub(Lightning.MockConfig, :usage_tracking_enabled?, fn -> true end)
+      stub(Lightning.MockConfig, :usage_tracking_host, fn -> @host end)
+
+      :ok
     end
 
     test "does not submit metrics to the ImpactTracker" do
@@ -210,10 +216,14 @@ defmodule Lightning.UsageTracking.ReportWorkerTest do
     setup do
       UsageTracking.enable_daily_report(DateTime.utc_now())
 
-      put_temporary_env(:lightning, :usage_tracking,
-        enabled: false,
-        host: @host
-      )
+      stub(Lightning.MockConfig, :usage_tracking_cleartext_uuids_enabled?, fn ->
+        false
+      end)
+
+      stub(Lightning.MockConfig, :usage_tracking_enabled?, fn -> false end)
+      stub(Lightning.MockConfig, :usage_tracking_host, fn -> @host end)
+
+      :ok
     end
 
     test "does not submit metrics to the ImpactTracker" do
