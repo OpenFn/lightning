@@ -244,9 +244,9 @@ defmodule LightningWeb.DashboardLive.Components do
       ]}
     >
       <%= if @current_sort_key == @target_sort_key and @current_sort_direction == "desc" do %>
-        <.icon name="hero-chevron-down" class="size-5" />
-      <% else %>
         <.icon name="hero-chevron-up" class="size-5" />
+      <% else %>
+        <.icon name="hero-chevron-down" class="size-5" />
       <% end %>
     </span>
     """
