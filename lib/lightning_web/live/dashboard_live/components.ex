@@ -123,18 +123,10 @@ defmodule LightningWeb.DashboardLive.Components do
   end
 
   def user_projects_table(assigns) do
-    next_sort_icon = %{
-      asc_nulls_last: "hero-chevron-up",
-      desc_nulls_last: "hero-chevron-down"
-    }
-
     assigns =
       assign(assigns,
         projects_count: assigns.projects |> Enum.count(),
-        empty?: assigns.projects |> Enum.empty?(),
-        name_sort_icon: next_sort_icon[assigns.name_direction],
-        last_updated_at_sort_icon:
-          next_sort_icon[assigns.last_updated_at_direction]
+        empty?: assigns.projects |> Enum.empty?()
       )
 
     ~H"""
@@ -153,14 +145,12 @@ defmodule LightningWeb.DashboardLive.Components do
             <.th>
               <div class="group inline-flex items-center">
                 Name
-                <span
-                  phx-click="sort"
-                  phx-value-by="name"
-                  phx-target={@target}
-                  class="cursor-pointer align-middle ml-2 flex-none rounded text-gray-400 group-hover:visible group-focus:visible"
-                >
-                  <.icon name={@name_sort_icon} />
-                </span>
+                <.table_sort_icon
+                  target_sort_key="name"
+                  current_sort_key={@sort_key}
+                  current_sort_direction={@sort_direction}
+                  target={@target}
+                />
               </div>
             </.th>
             <.th>Role</.th>
@@ -169,14 +159,12 @@ defmodule LightningWeb.DashboardLive.Components do
             <.th>
               <div class="group inline-flex items-center">
                 Last Updated
-                <span
-                  phx-click="sort"
-                  phx-value-by="last_updated_at"
-                  phx-target={@target}
-                  class="cursor-pointer align-middle ml-2 flex-none rounded text-gray-400 group-hover:visible group-focus:visible"
-                >
-                  <.icon name={@last_updated_at_sort_icon} />
-                </span>
+                <.table_sort_icon
+                  target_sort_key="last_updated_at"
+                  current_sort_key={@sort_key}
+                  current_sort_direction={@sort_direction}
+                  target={@target}
+                />
               </div>
             </.th>
             <.th></.th>
@@ -233,6 +221,34 @@ defmodule LightningWeb.DashboardLive.Components do
         </.table>
       </div>
     <% end %>
+    """
+  end
+
+  attr :current_sort_key, :string, required: true
+  attr :current_sort_direction, :string, required: true
+  attr :target, :any, required: true
+  attr :target_sort_key, :string, required: true
+
+  defp table_sort_icon(assigns) do
+    ~H"""
+    <span
+      phx-click="sort"
+      phx-value-by={@target_sort_key}
+      phx-target={@target}
+      class={[
+        "cursor-pointer align-middle ml-2 flex-none rounded text-gray-400",
+        if(@current_sort_key == @target_sort_key,
+          do: "bg-gray-200 text-gray-900 group-hover:bg-gray-300",
+          else: "opacity-50"
+        )
+      ]}
+    >
+      <%= if @current_sort_key == @target_sort_key and @current_sort_direction == "desc" do %>
+        <.icon name="hero-chevron-down" class="size-5" />
+      <% else %>
+        <.icon name="hero-chevron-up" class="size-5" />
+      <% end %>
+    </span>
     """
   end
 end

@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Distinguish active and inactive sort arrows in projects overview table
+  [#2423](https://github.com/OpenFn/lightning/issues/2423)
+
 ## [v2.10.3] - 2024-11-13
 
 ### Added

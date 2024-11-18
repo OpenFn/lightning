@@ -3,51 +3,46 @@ defmodule LightningWeb.DashboardLive.UserProjectsSection do
 
   import LightningWeb.DashboardLive.Components
 
-  alias Lightning.Accounts.User
   alias Lightning.Projects
 
   require Logger
 
   @impl true
   def update(assigns, socket) do
-    projects = projects_for_user(assigns.current_user)
-
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:projects, projects)
-     |> assign(:name_sort_direction, :asc_nulls_last)
-     |> assign(:last_updated_at_sort_direction, :asc_nulls_last)}
+     |> assign(sort_key: "name", sort_direction: "asc")
+     |> assign_projects()}
   end
 
   @impl true
   def handle_event("sort", %{"by" => field}, socket) do
-    sort_key = String.to_atom("#{field}_sort_direction")
-    order_column = String.to_atom(field)
+    sort_assigns =
+      case socket.assigns do
+        %{sort_key: ^field, sort_direction: direction} ->
+          %{sort_key: field, sort_direction: switch_sort_direction(direction)}
 
-    sort_direction =
-      socket.assigns
-      |> Map.get(sort_key, :asc_nulls_last)
-      |> switch_sort_direction()
-
-    projects =
-      projects_for_user(socket.assigns.current_user,
-        order_by: {sort_direction, order_column}
-      )
+        _new_sort_key ->
+          %{sort_key: field, sort_direction: "asc"}
+      end
 
     {:noreply,
      socket
-     |> assign(:projects, projects)
-     |> assign(sort_key, sort_direction)}
+     |> assign(sort_assigns)
+     |> assign_projects()}
   end
 
-  defp switch_sort_direction(:asc_nulls_last), do: :desc_nulls_last
-  defp switch_sort_direction(:desc_nulls_last), do: :asc_nulls_last
+  defp switch_sort_direction("asc"), do: "desc"
+  defp switch_sort_direction("desc"), do: "asc"
 
-  defp projects_for_user(%User{} = user, opts \\ []) do
-    order_by = Keyword.get(opts, :order_by, {:asc_nulls_last, :name})
+  defp assign_projects(%{assigns: assigns} = socket) do
+    sort_param = "#{assigns.sort_key}_#{assigns.sort_direction}"
 
-    Projects.get_projects_overview(user, order_by: order_by)
+    projects =
+      Projects.get_projects_overview(assigns.current_user, order_by: sort_param)
+
+    assign(socket, :projects, projects)
   end
 
   @impl true
@@ -58,8 +53,8 @@ defmodule LightningWeb.DashboardLive.UserProjectsSection do
         projects={@projects}
         user={@current_user}
         target={@myself}
-        name_direction={@name_sort_direction}
-        last_updated_at_direction={@last_updated_at_sort_direction}
+        sort_key={@sort_key}
+        sort_direction={@sort_direction}
       >
         <:empty_state>
           <button
