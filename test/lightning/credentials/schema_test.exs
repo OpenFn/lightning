@@ -69,6 +69,23 @@ defmodule Lightning.Credentials.SchemaTest do
   end
 
   describe "validate/2" do
+    test "successfully validates field with json schema email format" do
+      schema = Credentials.get_schema("godata")
+
+      changeset =
+        Ecto.Changeset.put_change(
+          %Ecto.Changeset{
+            data: %{password: "1234", apiUrl: "http://addr"},
+            types: schema.types
+          },
+          :email,
+          "some@email.com"
+        )
+
+      assert %Ecto.Changeset{errors: [], changes: %{email: "some@email.com"}} =
+               Schema.validate(changeset, schema)
+    end
+
     test "returns a changeset with 2 expected formats" do
       schema = Credentials.get_schema("postgresql")
 
@@ -102,6 +119,24 @@ defmodule Lightning.Credentials.SchemaTest do
       assert Enum.any?(
                errors,
                &(&1 == {:baseUrl, {"expected to be a URI", []}})
+             )
+    end
+
+    test "returns a changeset with expected email format" do
+      schema = Credentials.get_schema("godata")
+
+      changeset =
+        Ecto.Changeset.put_change(
+          %Ecto.Changeset{data: %{}, types: schema.types},
+          :email,
+          "not-an-email@"
+        )
+
+      assert %Ecto.Changeset{errors: errors} = Schema.validate(changeset, schema)
+
+      assert Enum.any?(
+               errors,
+               &(&1 == {:email, {"expected to be an email", []}})
              )
     end
 

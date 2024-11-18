@@ -1,0 +1,43 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+        "apiUrl": {
+            "title": "API URL",
+            "type": "string",
+            "description": "Godata API URL",
+            "default": "https://www.who-godata.com/api",
+            "format": "uri",
+            "minLength": 1,
+            "examples": [
+                "https://www.who-godata.com/api"
+            ]
+        },
+        "email": {
+            "title": "Email",
+            "type": "string",
+            "description": "Your Godata login email",
+            "format": "email",
+            "minLength": 1,
+            "examples": [
+                "test@openfn.org"
+            ]
+        },
+        "password": {
+            "title": "Password",
+            "type": "string",
+            "description": "Your Godata login password",
+            "writeOnly": true,
+            "minLength": 1,
+            "examples": [
+                "@some(!)Strongpassword"
+            ]
+        }
+    },
+    "type": "object",
+    "additionalProperties": true,
+    "required": [
+        "apiUrl",
+        "email",
+        "password"
+    ]
+}
