@@ -272,10 +272,10 @@ defmodule Lightning.WorkOrdersTest do
         Lightning.WorkOrders.Manual.new(
           %{
             "body" =>
-            Jason.encode!(%{
-              "key_left" => "value_left",
-              "configuration" => %{"password" => "secret"}
-            })
+              Jason.encode!(%{
+                "key_left" => "value_left",
+                "configuration" => %{"password" => "secret"}
+              })
           },
           workflow: workflow,
           project: workflow.project,
@@ -349,7 +349,7 @@ defmodule Lightning.WorkOrdersTest do
 
     test "with a job, assigns the actor to the audit if snapshot created", %{
       job: job,
-      workflow: workflow,
+      workflow: workflow
     } do
       Repo.delete_all(Snapshot)
 
@@ -681,11 +681,11 @@ defmodule Lightning.WorkOrdersTest do
               dataclip: dataclip,
               starting_trigger: trigger,
               steps: [
-                  insert(:step,
-                    job: job_a,
-                    input_dataclip: dataclip,
-                    output_dataclip: output_dataclip
-                  ),
+                insert(:step,
+                  job: job_a,
+                  input_dataclip: dataclip,
+                  output_dataclip: output_dataclip
+                ),
                 second_step =
                   insert(:step, job: job_b, input_dataclip: output_dataclip),
                 insert(:step, job: job_c)
@@ -2578,17 +2578,19 @@ defmodule Lightning.WorkOrdersTest do
     test "assigns the creating user as the auditing actor" do
       dataclip = insert(:dataclip)
       workflow = insert(:simple_workflow)
+
       %{id: work_order_id} =
         insert(:workorder, workflow: workflow, dataclip: dataclip)
+
       %{id: user_id} = insert(:user)
-      
+
       WorkOrders.enqueue_many_for_retry([work_order_id], user_id)
 
       assert %{actor_id: ^user_id} = Repo.one(Audit)
     end
   end
 
-  describe ".build"  do
+  describe ".build" do
     test "uses the provided actor for the snapshot audit event" do
       dataclip = insert(:dataclip)
       workflow = insert(:simple_workflow)

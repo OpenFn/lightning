@@ -149,11 +149,11 @@ defmodule Lightning.Workflows.SchedulerTest do
 
       %{id: trigger_id} =
         trigger =
-          insert(:trigger, %{
-            type: :cron,
-            cron_expression: "* * * * *",
-            workflow: job.workflow
-          })
+        insert(:trigger, %{
+          type: :cron,
+          cron_expression: "* * * * *",
+          workflow: job.workflow
+        })
 
       insert(:edge, %{
         workflow: job.workflow,
@@ -165,12 +165,12 @@ defmodule Lightning.Workflows.SchedulerTest do
 
       insert(:run,
         work_order:
-        build(:workorder,
-          workflow: job.workflow,
-          dataclip: dataclip,
-          trigger: trigger,
-          state: :success
-        ),
+          build(:workorder,
+            workflow: job.workflow,
+            dataclip: dataclip,
+            trigger: trigger,
+            state: :success
+          ),
         starting_trigger: trigger,
         state: :success,
         dataclip: dataclip,
@@ -180,7 +180,7 @@ defmodule Lightning.Workflows.SchedulerTest do
             job: job,
             input_dataclip: dataclip,
             output_dataclip:
-            build(:dataclip, type: :step_result, body: %{"changed" => true})
+              build(:dataclip, type: :step_result, body: %{"changed" => true})
           )
         ]
       )

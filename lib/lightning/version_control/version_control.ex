@@ -166,8 +166,8 @@ defmodule Lightning.VersionControl do
   end
 
   defp list_or_create_snapshots_for_project(
-       %{project_id: project_id} = repo_connection
-  ) do
+         %{project_id: project_id} = repo_connection
+       ) do
     current_query =
       from w in Workflow,
         left_join: s in assoc(w, :snapshots),
@@ -181,6 +181,7 @@ defmodule Lightning.VersionControl do
       if is_nil(snapshot_id) do
         {:ok, snapshot} =
           Snapshot.get_or_create_latest_for(workflow, repo_connection)
+
         [snapshot.id | acc]
       else
         [snapshot_id | acc]

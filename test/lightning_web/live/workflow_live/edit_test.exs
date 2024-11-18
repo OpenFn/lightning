@@ -25,8 +25,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       actor = insert(:user)
       %{job: job} = workflow_job_fixture(project_id: project.id)
       workflow = Repo.get(Workflow, job.workflow_id)
+
       {:ok, snapshot} =
         Workflows.Snapshot.get_or_create_latest_for(workflow, actor)
+
       %{job: job, workflow: workflow, snapshot: snapshot}
     end
 
@@ -348,8 +350,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
         )
 
-       {:ok, snapshot} =
-         Snapshot.get_or_create_latest_for(workflow, insert(:user))
+      {:ok, snapshot} =
+        Snapshot.get_or_create_latest_for(workflow, insert(:user))
 
       assert snapshot.lock_version == workflow.lock_version
 
@@ -688,8 +690,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
            user: user,
            workflow: workflow
          } do
-         {:ok, earliest_snapshot} =
-           Snapshot.get_or_create_latest_for(workflow, user)
+      {:ok, earliest_snapshot} =
+        Snapshot.get_or_create_latest_for(workflow, user)
 
       run_1 =
         insert(:run,
@@ -1346,8 +1348,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         |> with_edge({job_b, job_c})
         |> insert()
 
-       {:ok, _snapshot} =
-         Workflows.Snapshot.get_or_create_latest_for(workflow, insert(:user))
+      {:ok, _snapshot} =
+        Workflows.Snapshot.get_or_create_latest_for(workflow, insert(:user))
 
       {:ok, view, html} =
         live(

@@ -434,8 +434,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         insert(:workflow, project: project)
         |> Lightning.Repo.preload([:jobs, :work_orders])
 
-           {:ok, _snapshot} =
-             Workflows.Snapshot.get_or_create_latest_for(workflow, insert(:user))
+      {:ok, _snapshot} =
+        Workflows.Snapshot.get_or_create_latest_for(workflow, insert(:user))
 
       new_job_name = "new job"
 
