@@ -143,29 +143,27 @@ defmodule LightningWeb.DashboardLive.Components do
         <.table>
           <.tr>
             <.th>
-              <div class="group inline-flex items-center">
+              <.sortable_table_header
+                target_sort_key="name"
+                current_sort_key={@sort_key}
+                current_sort_direction={@sort_direction}
+                target={@target}
+              >
                 Name
-                <.table_sort_icon
-                  target_sort_key="name"
-                  current_sort_key={@sort_key}
-                  current_sort_direction={@sort_direction}
-                  target={@target}
-                />
-              </div>
+              </.sortable_table_header>
             </.th>
             <.th>Role</.th>
             <.th>Workflows</.th>
             <.th>Collaborators</.th>
             <.th>
-              <div class="group inline-flex items-center">
+              <.sortable_table_header
+                target_sort_key="last_updated_at"
+                current_sort_key={@sort_key}
+                current_sort_direction={@sort_direction}
+                target={@target}
+              >
                 Last Updated
-                <.table_sort_icon
-                  target_sort_key="last_updated_at"
-                  current_sort_key={@sort_key}
-                  current_sort_direction={@sort_direction}
-                  target={@target}
-                />
-              </div>
+              </.sortable_table_header>
             </.th>
             <.th></.th>
           </.tr>
@@ -228,27 +226,32 @@ defmodule LightningWeb.DashboardLive.Components do
   attr :current_sort_direction, :string, required: true
   attr :target, :any, required: true
   attr :target_sort_key, :string, required: true
+  slot :inner_block, required: true
 
-  defp table_sort_icon(assigns) do
+  defp sortable_table_header(assigns) do
     ~H"""
-    <span
+    <a
+      href="#"
+      class="group inline-flex"
       phx-click="sort"
       phx-value-by={@target_sort_key}
       phx-target={@target}
-      class={[
-        "cursor-pointer align-middle ml-2 flex-none rounded text-gray-400",
-        if(@current_sort_key == @target_sort_key,
-          do: "bg-gray-200 text-gray-900 group-hover:bg-gray-300",
-          else: "opacity-50"
-        )
-      ]}
     >
-      <%= if @current_sort_key == @target_sort_key and @current_sort_direction == "desc" do %>
-        <.icon name="hero-chevron-up" class="size-5" />
-      <% else %>
-        <.icon name="hero-chevron-down" class="size-5" />
-      <% end %>
-    </span>
+      <%= render_slot(@inner_block) %>
+      <span class={[
+        "ml-2 flex-none rounded",
+        if(@current_sort_key == @target_sort_key,
+          do: "bg-gray-100 text-gray-900 group-hover:bg-gray-200",
+          else: "invisible text-gray-400 group-hover:visible group-focus:visible"
+        )
+      ]}>
+        <%= if @current_sort_key == @target_sort_key and @current_sort_direction == "desc" do %>
+          <.icon name="hero-chevron-up" class="size-5" />
+        <% else %>
+          <.icon name="hero-chevron-down" class="size-5" />
+        <% end %>
+      </span>
+    </a>
     """
   end
 end
