@@ -450,6 +450,70 @@ defmodule LightningWeb.API.CollectionsControllerTest do
                |> json_response(200)
     end
 
+    test "using a key pattern and update filters", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      collection = insert(:collection, project: project)
+
+      before_insert = DateTime.utc_now()
+
+      insert(:collection_item, collection: collection, key: "foo:bar:baz")
+      insert(:collection_item, collection: collection, key: "foo:moon:baz")
+      insert(:collection_item, collection: collection, key: "foo:bar:baz:out")
+
+      after_insert = DateTime.utc_now() |> DateTime.add(10, :millisecond)
+
+      insert(:collection_item,
+        collection: collection,
+        key: "foo:in:baz",
+        updated_at: DateTime.add(after_insert, 1, :millisecond)
+      )
+
+      token = Lightning.Accounts.generate_api_token(user)
+
+      conn = assign_bearer(conn, token)
+
+      assert %{
+               "items" => [%{"key" => "foo:in:baz", "value" => _}],
+               "cursor" => nil
+             } =
+               conn
+               |> get(~p"/collections/#{collection.name}",
+                 key: "foo:*:baz",
+                 updated_after: after_insert
+               )
+               |> json_response(200)
+
+      assert %{
+               "items" => [],
+               "cursor" => nil
+             } =
+               conn
+               |> get(~p"/collections/#{collection.name}",
+                 key: "foo:*:baz",
+                 updated_before: before_insert
+               )
+               |> json_response(200)
+
+      assert %{
+               "items" => [
+                 %{"key" => "foo:bar:baz", "value" => _},
+                 %{"key" => "foo:moon:baz", "value" => _}
+               ],
+               "cursor" => nil
+             } =
+               conn
+               |> get(~p"/collections/#{collection.name}",
+                 key: "foo:*:baz",
+                 updated_after: before_insert,
+                 updated_before: after_insert
+               )
+               |> json_response(200)
+    end
+
     test "using creation filters", %{conn: conn} do
       user = insert(:user)
       project = insert(:project, project_users: [%{user: user}])
@@ -468,29 +532,82 @@ defmodule LightningWeb.API.CollectionsControllerTest do
 
       conn = assign_bearer(conn, token)
 
+      items = Enum.map(collection.items, &encode_decode/1)
+
       assert %{
-               "items" => [],
+               "items" => ^items,
                "cursor" => nil
              } =
                conn
                |> get(~p"/collections/#{collection.name}",
-                 created_after: after_insert
+                 created_after: before_insert
                )
                |> json_response(200)
 
       assert %{
-               "items" => [],
+               "items" => ^items,
                "cursor" => nil
              } =
                conn
                |> get(~p"/collections/#{collection.name}",
-                 created_before: before_insert
+                 created_before: after_insert
                )
                |> json_response(200)
+
+      items = Enum.map(collection.items, &encode_decode/1)
+
+      assert %{
+               "items" => ^items,
+               "cursor" => nil
+             } =
+               conn
+               |> get(~p"/collections/#{collection.name}")
+               |> json_response(200)
+    end
+
+    test "using update filters", %{conn: conn} do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+
+      collection = insert(:collection, project: project)
+
+      old_item =
+        insert(:collection_item, collection: collection, key: "old-key")
+        |> encode_decode()
+
+      before_insert_list = DateTime.utc_now()
 
       items =
-        collection.items
+        insert_list(3, :collection_item, collection: collection)
         |> Enum.map(&encode_decode/1)
+
+      after_insert = DateTime.utc_now() |> DateTime.add(10, :millisecond)
+
+      token = Lightning.Accounts.generate_api_token(user)
+
+      conn = assign_bearer(conn, token)
+
+      assert %{
+               "items" => ^items,
+               "cursor" => nil
+             } =
+               conn
+               |> get(~p"/collections/#{collection.name}",
+                 updated_after: DateTime.to_iso8601!(before_insert_list)
+               )
+               |> json_response(200)
+
+      items = [old_item | items]
+
+      assert %{
+               "items" => ^items,
+               "cursor" => nil
+             } =
+               conn
+               |> get(~p"/collections/#{collection.name}",
+                 updated_before: DateTime.to_iso8601!(after_insert)
+               )
+               |> json_response(200)
 
       assert %{
                "items" => ^items,

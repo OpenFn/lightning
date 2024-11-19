@@ -8,7 +8,7 @@ defmodule LightningWeb.CollectionsController do
 
   require Logger
 
-  @max_chunk_size 50
+  @max_chunk_size 100
 
   @limits Application.compile_env!(:lightning, __MODULE__)
 
@@ -20,7 +20,9 @@ defmodule LightningWeb.CollectionsController do
     "cursor",
     "limit",
     "created_after",
-    "created_before"
+    "created_before",
+    "updated_after",
+    "updated_before"
   ]
 
   defp authorize(conn, collection) do
@@ -92,22 +94,11 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
-  def stream(conn, %{"name" => col_name, "key" => key_pattern}) do
-    with {:ok, collection, filters, response_limit} <-
-           validate_query(conn, col_name) do
+  def stream(conn, %{"name" => col_name} = params) do
+    with {:ok, collection, filters} <- validate_query(conn, col_name) do
+      key_pattern = Map.get(params, "key")
       items_stream = stream_all_in_chunks(collection, filters, key_pattern)
-
-      case stream_chunked(conn, items_stream, response_limit) do
-        {:error, conn} -> conn
-        {:ok, conn} -> conn
-      end
-    end
-  end
-
-  def stream(conn, %{"name" => col_name}) do
-    with {:ok, collection, filters, response_limit} <-
-           validate_query(conn, col_name) do
-      items_stream = stream_all_in_chunks(collection, filters)
+      response_limit = Map.fetch!(filters, :limit)
 
       case stream_chunked(conn, items_stream, response_limit) do
         {:error, conn} -> conn
@@ -119,9 +110,10 @@ defmodule LightningWeb.CollectionsController do
   defp stream_all_in_chunks(
          collection,
          %{cursor: initial_cursor, limit: limit} = filters,
-         key_pattern \\ nil
+         key_pattern
        ) do
-    filters = Map.put(filters, :limit, min(limit, @max_database_limit))
+    # returns one more than the limit to determine if there are more items for the cursor
+    filters = Map.put(filters, :limit, min(limit, @max_database_limit) + 1)
 
     Stream.unfold(initial_cursor, fn cursor ->
       filters = Map.put(filters, :cursor, cursor)
@@ -164,13 +156,7 @@ defmodule LightningWeb.CollectionsController do
              "limit" => "#{@default_stream_limit}"
            }),
          {:ok, filters} <- validate_query_params(query_params) do
-      # returns one more from db than the limit to determine if there are more items for the cursor
-      db_query_filters =
-        Map.update(filters, :limit, @default_stream_limit, &(&1 + 1))
-
-      response_limit = Map.fetch!(filters, :limit)
-
-      {:ok, collection, db_query_filters, response_limit}
+      {:ok, collection, filters}
     end
   end
 

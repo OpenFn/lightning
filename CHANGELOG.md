@@ -20,6 +20,9 @@ and this project adheres to
 - Support dynamic json schema email format validation.
   [#2664](https://github.com/OpenFn/lightning/issues/2664)
 
+- Allow filtering collection items by updated_before and updated_after.
+  [#2693](https://github.com/OpenFn/lightning/issues/2693)
+
 ### Changed
 
 ### Fixed

@@ -28,14 +28,18 @@ end
 
 sampleA = Enum.map(1..keys_count, fn i -> record.("keyA", i) end)
 sampleB = Enum.map(1..keys_count, fn i -> record.("keyB", i) end)
-{sampleC1, sampleC2} = Enum.map(1..keys_count * 2, fn i -> record.("keyC", i) end) |> Enum.split(keys_count)
+sampleC1 = Enum.map(1..keys_count, fn i -> record.("keyC", i) end)
+sampleC2 =
+  keys_count..keys_count * 2
+  |> Enum.map(fn i -> record.("keyC", i) end)
+  |> Enum.map(fn {k, v} -> %{"key" => k, "value" => v} end)
 
 :timer.tc(fn ->
   [sampleA, sampleB, sampleC1]
   |> Enum.map(fn sample ->
     Task.async(fn ->
       Enum.with_index(sample, fn {key, value}, idx ->
-        if rem(idx, 50) == 0, do: IO.puts("Inserting " <> key)
+        if rem(idx, 1000) == 0, do: IO.puts("Inserting " <> key)
         :ok = Collections.put(collection, key, value)
       end)
       :ok
@@ -50,7 +54,7 @@ end)
 
 IO.puts("Inserting #{length(sampleC2)} items with put_all...")
 :timer.tc(fn ->
-  :ok = Collections.put_all(collection, sampleC2)
+  {:ok, _n} = Collections.put_all(collection, sampleC2)
 end)
 |> tap(fn {duration, _res} ->
   IO.puts("elapsed time: #{div(duration, 1_000)}ms\n")
@@ -91,9 +95,9 @@ end)
 stream_all =
   fn ->
     Stream.unfold(nil, fn cursor ->
-      case Repo.transaction(fn -> Collections.stream_all(collection, cursor) |> Enum.to_list() end) do
-        {:ok, []} -> nil
-        {:ok, list} -> {list, List.last(list).updated_at}
+      case Collections.get_all(collection, %{cursor: cursor, limit: 500}) do
+        [] -> nil
+        list -> {list, List.last(list).updated_at}
       end
     end)
     |> Enum.to_list()
@@ -103,9 +107,9 @@ stream_all =
 stream_match_all =
   fn ->
     Stream.unfold(nil, fn cursor ->
-      case Repo.transaction(fn -> Collections.stream_match(collection, "key*", cursor) |> Enum.to_list() end) do
-        {:ok, []} -> nil
-        {:ok, list} -> {list, List.last(list).updated_at}
+      case Collections.get_all(collection, %{cursor: cursor, limit: 500}, "key*") do
+        [] -> nil
+        list -> {list, List.last(list).updated_at}
       end
     end)
     |> Enum.to_list()
@@ -115,9 +119,9 @@ stream_match_all =
 stream_match_prefix =
   fn ->
     Stream.unfold(nil, fn cursor ->
-      case Repo.transaction(fn -> Collections.stream_match(collection, "keyA*", cursor) |> Enum.to_list() end) do
-        {:ok, []} -> nil
-        {:ok, list} -> {list, List.last(list).updated_at}
+      case Collections.get_all(collection, %{cursor: cursor, limit: 500}, "keyA*") do
+        [] -> nil
+        list -> {list, List.last(list).updated_at}
       end
     end)
     |> Enum.to_list()
@@ -127,15 +131,16 @@ stream_match_prefix =
 stream_match_trigram =
   fn ->
     Stream.unfold(nil, fn cursor ->
-      case Repo.transaction(fn -> Collections.stream_match(collection, "keyB*bar*", cursor) |> Enum.to_list() end) do
-        {:ok, []} -> nil
-        {:ok, list} -> {list, List.last(list).updated_at}
+        case Collections.get_all(collection, %{cursor: cursor, limit: 500}, "keyB*bar*") do
+        [] -> nil
+        list -> {list, List.last(list).updated_at}
       end
     end)
     |> Enum.to_list()
     |> List.flatten()
   end
 
+# Process.exit(self(), :normal)
 
 IO.puts("\n### Round record count ({microsecs, count}):")
 :timer.tc(fn -> stream_all.() |> Enum.count() end) |> IO.inspect(label: "stream_all")
