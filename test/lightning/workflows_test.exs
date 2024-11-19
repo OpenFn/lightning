@@ -90,7 +90,7 @@ defmodule Lightning.WorkflowsTest do
                    "snapshot_id" => ^snapshot_id
                  }
                }
-             } = Audit |> Repo.one()
+             } = Repo.one(Audit)
     end
 
     test "save_workflow/1 with attrs audits creation of the snapshot" do
@@ -112,7 +112,7 @@ defmodule Lightning.WorkflowsTest do
                    "snapshot_id" => ^snapshot_id
                  }
                }
-             } = Audit |> Repo.one()
+             } = Repo.one(Audit)
     end
 
     test "save_workflow/1 publishes event for updated Kafka triggers" do

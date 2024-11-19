@@ -474,7 +474,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: snapshot.lock_version]}"
         )
 
-      # RORY COPY FROM HERE
       assert view
              |> has_element?(
                "[id='canvas-workflow-version'][aria-label='You are viewing a snapshot of this workflow that was taken on #{Helpers.format_date(snapshot.inserted_at)}']",
