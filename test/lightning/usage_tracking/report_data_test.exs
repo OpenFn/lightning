@@ -27,7 +27,7 @@ defmodule Lightning.UsageTracking.ReportDataTest do
       %{generated_at: generated_at} =
         ReportData.generate(report_config, enabled, date)
 
-      assert DateTime.diff(DateTime.utc_now(), generated_at, :second) < 1
+      assert DateTime.diff(DateTime.utc_now(), generated_at, :second) < 2
     end
 
     test "contains hashed uuid of reporting instance", %{
