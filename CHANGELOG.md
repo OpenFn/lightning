@@ -24,6 +24,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix show password toggle icon gets flipped after changing the password value
+  [#2611](https://github.com/OpenFn/lightning/issues/2611)
+
 ## [v2.10.3] - 2024-11-13
 
 ### Added
@@ -37,6 +40,8 @@ and this project adheres to
 
 - Superusers can't update users passwords
   [#2621](https://github.com/OpenFn/lightning/issues/2621)
+- Attempt to reduce memory consumption when generating UsageTracking reports.
+  [#2636](https://github.com/OpenFn/lightning/issues/2636)
 - Attempt to reduce memory consumption when generating UsageTracking reports.
   [#2636](https://github.com/OpenFn/lightning/issues/2636)
 
