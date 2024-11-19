@@ -3,6 +3,8 @@ defmodule LightningWeb.DashboardLive.Components do
 
   import PetalComponents.Table
 
+  alias LightningWeb.Components.Common
+
   def welcome_banner(assigns) do
     ~H"""
     <div class="pb-6">
@@ -230,28 +232,15 @@ defmodule LightningWeb.DashboardLive.Components do
 
   defp sortable_table_header(assigns) do
     ~H"""
-    <a
-      href="#"
-      class="group inline-flex"
+    <Common.sortable_table_header
       phx-click="sort"
       phx-value-by={@target_sort_key}
       phx-target={@target}
+      active={@current_sort_key == @target_sort_key}
+      sort_direction={@current_sort_direction}
     >
       <%= render_slot(@inner_block) %>
-      <span class={[
-        "ml-2 flex-none rounded",
-        if(@current_sort_key == @target_sort_key,
-          do: "bg-gray-100 text-gray-900 group-hover:bg-gray-200",
-          else: "invisible text-gray-400 group-hover:visible group-focus:visible"
-        )
-      ]}>
-        <%= if @current_sort_key == @target_sort_key and @current_sort_direction == "desc" do %>
-          <.icon name="hero-chevron-up" class="size-5" />
-        <% else %>
-          <.icon name="hero-chevron-down" class="size-5" />
-        <% end %>
-      </span>
-    </a>
+    </Common.sortable_table_header>
     """
   end
 end
