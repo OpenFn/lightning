@@ -10,6 +10,7 @@ defmodule Lightning.VersionControl do
 
   alias Lightning.Accounts.User
   alias Lightning.Extensions.UsageLimiting
+  alias Lightning.Projects.Audit
   alias Lightning.Repo
   alias Lightning.VersionControl.Events
   alias Lightning.VersionControl.GithubClient
@@ -35,6 +36,10 @@ defmodule Lightning.VersionControl do
 
     Repo.transact(fn ->
       with {:ok, repo_connection} <- Repo.insert(changeset),
+           {:ok, _audit} <-
+             repo_connection
+             |> Audit.repo_connection_created(user)
+             |> Repo.insert(),
            :ok <-
              VersionControlUsageLimiter.limit_github_sync(
                repo_connection.project_id
