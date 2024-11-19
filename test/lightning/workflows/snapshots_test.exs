@@ -159,6 +159,32 @@ defmodule Lightning.Workflows.SnapshotsTest do
              } = audit
     end
 
+    test "called with multi - creates an audit entry if snapshot was created", %{
+      actor: %{id: actor_id} = actor
+    } do
+      %{id: workflow_id} = workflow = insert(:simple_workflow)
+
+      {:ok, %{snapshot: %{id: snapshot_id}}} =
+        Workflows.Snapshot.get_or_create_latest_for(
+          Ecto.Multi.new(),
+          workflow,
+          actor
+        )
+        |> Repo.transaction()
+
+      audit = Repo.one!(Audit)
+
+      assert %{
+               event: "snapshot_created",
+               item_id: ^workflow_id,
+               actor_id: ^actor_id,
+               changes: %{
+                 after: %{"snapshot_id" => ^snapshot_id}
+               }
+             } = audit
+
+    end
+
     test "with an existing snapshot", %{actor: actor} do
       workflow = insert(:simple_workflow)
 
