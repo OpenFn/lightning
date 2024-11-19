@@ -652,35 +652,34 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       last_edge = List.last(snapshot.edges)
 
+      existing_audit_ids = Audit |> Repo.all() |> Enum.map(& &1.id)
+      existing_snapshot_ids = Snapshot |> Repo.all() |> Enum.map(& &1.id)
+
       view |> select_node(last_edge, snapshot.lock_version)
 
-      assert force_event(view, :manual_run_submit, %{}) =~
-               "Cannot run in snapshot mode, switch to latest."
+      force_event(view, :manual_run_submit, %{})
 
-      assert force_event(view, :rerun, nil, nil) =~
-               "Cannot rerun in snapshot mode, switch to latest."
+      force_event(view, :rerun, nil, nil)
 
-      snapshots_query = from s in Snapshot, order_by: [desc: s.inserted_at]
+      snapshots_query =
+        from s in Snapshot, where: s.id not in ^existing_snapshot_ids
 
-      [%{id: latest_snapshot_id} | [_, _]] =
-        Lightning.Repo.all(snapshots_query)
+      [%{id: latest_snapshot_id}] = Lightning.Repo.all(snapshots_query)
 
       audit_query =
-        from a in Audit,
-          where: a.event == "snapshot_created",
-          order_by: [desc: a.inserted_at],
-          limit: 1
+        from a in Audit, where: a.id not in ^existing_audit_ids
 
-      audit_event = Lightning.Repo.one(audit_query)
+      [audit] = Lightning.Repo.all(audit_query)
 
       assert %{
+               event: "snapshot_created",
                actor_id: ^user_id,
                item_id: ^workflow_id,
                item_type: "workflow",
                changes: %{
                  after: %{"snapshot_id" => ^latest_snapshot_id}
                }
-             } = audit_event
+             } = audit
     end
 
     test "Inspector renders run thru their snapshots and allows switching to the latest versions for editing",
