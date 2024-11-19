@@ -182,7 +182,6 @@ defmodule Lightning.Workflows.SnapshotsTest do
                  after: %{"snapshot_id" => ^snapshot_id}
                }
              } = audit
-
     end
 
     test "with an existing snapshot", %{actor: actor} do
