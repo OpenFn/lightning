@@ -54,8 +54,7 @@ defmodule Lightning.Workflows do
 
   def get_workflow(id), do: Repo.get(Workflow, id)
 
-  # TODO Change typespec from any() to struct() when done
-  @spec save_workflow(Ecto.Changeset.t(Workflow.t()) | map(), any()) ::
+  @spec save_workflow(Ecto.Changeset.t(Workflow.t()) | map(), struct()) ::
           {:ok, Workflow.t()} | {:error, Ecto.Changeset.t(Workflow.t())}
   def save_workflow(%Ecto.Changeset{data: %Workflow{}} = changeset, actor) do
     Multi.new()
