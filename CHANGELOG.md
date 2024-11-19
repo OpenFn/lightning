@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Support dynamic json schema email format validation.
+  [#2664](https://github.com/OpenFn/lightning/issues/2664)
+
 ### Changed
 
 ### Fixed

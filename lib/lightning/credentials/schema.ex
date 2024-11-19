@@ -92,12 +92,19 @@ defmodule Lightning.Credentials.Schema do
     |> error_to_changeset(changeset)
   end
 
+  @error_messages %{
+    "uri" => "expected to be a URI",
+    "email" => "expected to be an email"
+  }
+  @expected_formats Map.keys(@error_messages)
+
   defp error_to_changeset(%{path: path, error: error}, changeset) do
     field = String.slice(path, 2..-1//1) |> String.to_existing_atom()
 
     case error do
-      %{expected: "uri"} ->
-        Changeset.add_error(changeset, field, "expected to be a URI")
+      %{expected: format} when format in @expected_formats ->
+        error_msg = Map.fetch!(@error_messages, format)
+        Changeset.add_error(changeset, field, error_msg)
 
       %{any_of: formats} ->
         formats =
