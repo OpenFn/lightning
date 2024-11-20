@@ -15,15 +15,15 @@ defmodule LightningWeb.CollectionsController do
   @default_stream_limit @limits[:default_stream_limit]
   @max_database_limit @limits[:max_database_limit]
 
-  @valid_params [
-    "key",
-    "cursor",
-    "limit",
+  @timestamp_params [
     "created_after",
     "created_before",
     "updated_after",
     "updated_before"
   ]
+
+  @valid_params ["key", "cursor", "limit" | @timestamp_params]
+
 
   defp authorize(conn, collection) do
     Permissions.can(
@@ -167,9 +167,9 @@ defmodule LightningWeb.CollectionsController do
            Map.drop(query_params, @valid_params),
          {:ok, cursor} <- validate_cursor(cursor),
          {limit, ""} <- Integer.parse(limit),
-         valid_params <- Map.take(query_params, @valid_params) do
+         :ok <- validate_timestamps(query_params) do
       filters =
-        valid_params
+        query_params
         |> Map.new(fn {key, value} -> {String.to_existing_atom(key), value} end)
         |> Map.put(:limit, limit)
         |> Map.put(:cursor, cursor)
@@ -187,6 +187,16 @@ defmodule LightningWeb.CollectionsController do
     with {:ok, decoded} <- Base.decode64(cursor),
          {:ok, datetime, _off} <- DateTime.from_iso8601(decoded) do
       {:ok, datetime}
+    end
+  end
+
+  defp validate_timestamps(params) do
+    params
+    |> Map.take(@timestamp_params)
+    |> Enum.all?(fn {_key, value} -> match?({:ok, _dt, _time}, DateTime.from_iso8601(value)) end)
+    |> case do
+      true -> :ok
+      false -> :error
     end
   end
 

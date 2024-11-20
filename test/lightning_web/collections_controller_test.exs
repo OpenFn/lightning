@@ -419,7 +419,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
                conn
                |> get(~p"/collections/#{collection.name}",
                  key: "foo:*:baz",
-                 created_after: after_insert
+                 created_after: DateTime.to_iso8601(after_insert)
                )
                |> json_response(200)
 
@@ -430,7 +430,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
                conn
                |> get(~p"/collections/#{collection.name}",
                  key: "foo:*:baz",
-                 created_before: before_insert
+                 created_before: DateTime.to_iso8601(before_insert)
                )
                |> json_response(200)
 
@@ -444,8 +444,8 @@ defmodule LightningWeb.API.CollectionsControllerTest do
                conn
                |> get(~p"/collections/#{collection.name}",
                  key: "foo:*:baz",
-                 created_after: before_insert,
-                 created_before: after_insert
+                 created_after: DateTime.to_iso8601(before_insert),
+                 created_before: DateTime.to_iso8601(after_insert)
                )
                |> json_response(200)
     end
@@ -483,7 +483,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
                conn
                |> get(~p"/collections/#{collection.name}",
                  key: "foo:*:baz",
-                 updated_after: after_insert
+                 updated_after: DateTime.to_iso8601(after_insert)
                )
                |> json_response(200)
 
@@ -494,7 +494,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
                conn
                |> get(~p"/collections/#{collection.name}",
                  key: "foo:*:baz",
-                 updated_before: before_insert
+                 updated_before: DateTime.to_iso8601(before_insert)
                )
                |> json_response(200)
 
@@ -508,8 +508,8 @@ defmodule LightningWeb.API.CollectionsControllerTest do
                conn
                |> get(~p"/collections/#{collection.name}",
                  key: "foo:*:baz",
-                 updated_after: before_insert,
-                 updated_before: after_insert
+                 updated_after: DateTime.to_iso8601(before_insert),
+                 updated_before: DateTime.to_iso8601(after_insert)
                )
                |> json_response(200)
     end
@@ -540,7 +540,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
              } =
                conn
                |> get(~p"/collections/#{collection.name}",
-                 created_after: before_insert
+                 created_after: DateTime.to_iso8601(before_insert)
                )
                |> json_response(200)
 
@@ -550,7 +550,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
              } =
                conn
                |> get(~p"/collections/#{collection.name}",
-                 created_before: after_insert
+                 created_before: DateTime.to_iso8601(after_insert)
                )
                |> json_response(200)
 
@@ -587,17 +587,11 @@ defmodule LightningWeb.API.CollectionsControllerTest do
 
       conn = assign_bearer(conn, token)
 
-      assert %{
-               "items" => ^items,
-               "cursor" => nil
-             } =
-               conn
+      assert conn
                |> get(~p"/collections/#{collection.name}",
-                 updated_after: DateTime.to_iso8601!(before_insert_list)
+                 updated_after: DateTime.to_date(before_insert_list) |> Date.to_iso8601()
                )
-               |> json_response(200)
-
-      items = [old_item | items]
+               |> json_response(400)
 
       assert %{
                "items" => ^items,
@@ -605,12 +599,24 @@ defmodule LightningWeb.API.CollectionsControllerTest do
              } =
                conn
                |> get(~p"/collections/#{collection.name}",
-                 updated_before: DateTime.to_iso8601!(after_insert)
+                 updated_after: DateTime.to_iso8601(before_insert_list)
+               )
+               |> json_response(200)
+
+      expected_items = [old_item | items]
+
+      assert %{
+               "items" => ^expected_items,
+               "cursor" => nil
+             } =
+               conn
+               |> get(~p"/collections/#{collection.name}",
+                 updated_before: DateTime.to_iso8601(after_insert)
                )
                |> json_response(200)
 
       assert %{
-               "items" => ^items,
+               "items" => ^expected_items,
                "cursor" => nil
              } =
                conn
