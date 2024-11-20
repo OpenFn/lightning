@@ -151,16 +151,11 @@ defmodule Lightning.Workflows do
     multi
     |> Multi.to_list()
     |> Enum.find_value(fn
-      {key, {_action, changeset_or_struct, _}} ->
-        case changeset_or_struct do
-          %{data: %{__struct__: model}} when model in [Job, Edge, Trigger] ->
-            key
+      {key, {_action, %Ecto.Changeset{data: %mod{}}, _}}
+      when mod in [Job, Edge, Trigger] ->
+        key
 
-          _other ->
-            false
-        end
-
-      {_key, {:put, _struct}} ->
+      _other ->
         false
     end)
   end
