@@ -24,7 +24,6 @@ defmodule LightningWeb.CollectionsController do
 
   @valid_params ["key", "cursor", "limit" | @timestamp_params]
 
-
   defp authorize(conn, collection) do
     Permissions.can(
       Lightning.Policies.Collections,
@@ -97,6 +96,7 @@ defmodule LightningWeb.CollectionsController do
   def stream(conn, %{"name" => col_name} = params) do
     with {:ok, collection, filters} <- validate_query(conn, col_name) do
       key_pattern = Map.get(params, "key")
+
       items_stream = stream_all_in_chunks(collection, filters, key_pattern)
       response_limit = Map.fetch!(filters, :limit)
 
@@ -107,13 +107,18 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
+  defp stream_all_in_chunks(collection, %{limit: limit} = filters, key_pattern)
+       when limit <= @max_database_limit do
+    Collections.get_all(collection, filters, key_pattern)
+  end
+
   defp stream_all_in_chunks(
          collection,
-         %{cursor: initial_cursor, limit: limit} = filters,
+         %{cursor: initial_cursor} = filters,
          key_pattern
        ) do
     # returns one more than the limit to determine if there are more items for the cursor
-    filters = Map.put(filters, :limit, min(limit, @max_database_limit) + 1)
+    filters = Map.put(filters, :limit, @max_database_limit + 1)
 
     Stream.unfold(initial_cursor, fn cursor ->
       filters = Map.put(filters, :cursor, cursor)
@@ -193,7 +198,9 @@ defmodule LightningWeb.CollectionsController do
   defp validate_timestamps(params) do
     params
     |> Map.take(@timestamp_params)
-    |> Enum.all?(fn {_key, value} -> match?({:ok, _dt, _time}, DateTime.from_iso8601(value)) end)
+    |> Enum.all?(fn {_key, value} ->
+      match?({:ok, _dt, _time}, DateTime.from_iso8601(value))
+    end)
     |> case do
       true -> :ok
       false -> :error

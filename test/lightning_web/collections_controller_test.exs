@@ -10,7 +10,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
             LightningWeb.CollectionsController
           )
 
-  @default_limit @limits[:default_stream_limit]
+  @default_stream_limit @limits[:default_stream_limit]
   @max_database_limit @limits[:max_database_limit]
 
   setup %{conn: conn} do
@@ -588,10 +588,11 @@ defmodule LightningWeb.API.CollectionsControllerTest do
       conn = assign_bearer(conn, token)
 
       assert conn
-               |> get(~p"/collections/#{collection.name}",
-                 updated_after: DateTime.to_date(before_insert_list) |> Date.to_iso8601()
-               )
-               |> json_response(400)
+             |> get(~p"/collections/#{collection.name}",
+               updated_after:
+                 DateTime.to_date(before_insert_list) |> Date.to_iso8601()
+             )
+             |> json_response(400)
 
       assert %{
                "items" => ^items,
@@ -657,7 +658,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
         Enum.concat(
           items,
           insert_list(
-            @default_limit - length(collection.items),
+            @default_stream_limit - length(collection.items),
             :collection_item,
             collection: collection
           )
@@ -727,7 +728,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
       collection = insert(:collection, project: project)
 
       items =
-        insert_list(@max_database_limit + 1, :collection_item,
+        insert_list(@default_stream_limit + 1, :collection_item,
           collection: collection
         )
 
@@ -740,7 +741,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
 
       assert conn.state == :chunked
 
-      expected_items = Enum.take(items, @default_limit)
+      expected_items = Enum.take(items, @default_stream_limit)
       last_item = List.last(expected_items)
 
       assert %{
@@ -810,7 +811,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
       user = insert(:user)
       project = insert(:project, project_users: [%{user: user}])
       collection = insert(:collection, project: project)
-      limit = 5
+      limit = @default_stream_limit
 
       all_items =
         insert_list(2 * limit, :collection_item, collection: collection)
