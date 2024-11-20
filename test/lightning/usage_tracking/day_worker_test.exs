@@ -17,8 +17,8 @@ defmodule Lightning.UsageTracking.DayWorkerTest do
     # to prevent the tests flickering - e.g if .utc_now() changes during
     # the execution of the test
     setup do
-      stub(Lightning.MockConfig, :usage_tracking, fn ->
-        %{enabled: true}
+      stub(Lightning.MockConfig, :usage_tracking_enabled?, fn ->
+        true
       end)
 
       :ok

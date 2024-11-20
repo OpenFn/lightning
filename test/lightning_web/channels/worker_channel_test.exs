@@ -54,6 +54,7 @@ defmodule LightningWeb.WorkerChannelTest do
         |> Enum.map(fn _ ->
           {:ok, %{runs: [run]}} =
             WorkOrders.create_for(trigger,
+              actor: insert(:user),
               workflow: workflow,
               dataclip: params_with_assocs(:dataclip)
             )

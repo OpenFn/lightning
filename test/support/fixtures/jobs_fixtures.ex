@@ -31,7 +31,7 @@ defmodule Lightning.JobsFixtures do
         name: "some name",
         adaptor: "@openfn/language-common"
       })
-      |> Lightning.Jobs.create_job()
+      |> Lightning.Jobs.create_job(insert(:user))
 
     job
   end

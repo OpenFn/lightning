@@ -20,6 +20,7 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.VersionControl.ProjectRepoConnection
   alias Lightning.VersionControl.VersionControlUsageLimiter
   alias Lightning.Workflows
+  alias Lightning.Workflows.Audit
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
@@ -53,7 +54,11 @@ defmodule Lightning.Projects.Provisioner do
              Repo.insert_or_update(project_changeset),
            updated_project <- preload_dependencies(project),
            {:ok, _changes} <-
-             create_snapshots(project_changeset, updated_project.workflows) do
+             create_snapshots(
+               project_changeset,
+               updated_project.workflows,
+               user_or_repo_connection
+             ) do
         Enum.each(workflows, &Workflows.Events.workflow_updated/1)
 
         project_changeset
@@ -73,7 +78,11 @@ defmodule Lightning.Projects.Provisioner do
     |> maybe_add_project_credentials(user_or_repo_connection)
   end
 
-  defp create_snapshots(project_changeset, inserted_workflows) do
+  defp create_snapshots(
+         project_changeset,
+         inserted_workflows,
+         user_or_repo_connection
+       ) do
     project_changeset
     |> get_assoc(:workflows)
     |> Enum.reject(fn changeset ->
@@ -86,7 +95,19 @@ defmodule Lightning.Projects.Provisioner do
           workflow.id == get_field(changeset, :id)
         end)
 
-      Multi.insert(multi, "snapshot_#{workflow.id}", Snapshot.build(workflow))
+      snapshot_operation = "snapshot_#{workflow.id}"
+
+      Multi.insert(multi, snapshot_operation, Snapshot.build(workflow))
+      |> Multi.insert(
+        "audit_snapshot_#{workflow.id}",
+        fn %{^snapshot_operation => %{id: snapshot_id}} ->
+          Audit.snapshot_created(
+            workflow.id,
+            snapshot_id,
+            user_or_repo_connection
+          )
+        end
+      )
     end)
     |> Repo.transaction()
     |> case do

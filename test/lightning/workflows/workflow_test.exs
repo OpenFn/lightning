@@ -12,7 +12,7 @@ defmodule Lightning.Workflows.WorkflowTest do
       {:ok, workflow} =
         insert(:simple_workflow, project: insert(:project))
         |> Workflow.touch()
-        |> Workflows.save_workflow()
+        |> Workflows.save_workflow(insert(:user))
 
       assert from(s in Ecto.assoc(workflow, :snapshots),
                where: s.lock_version == ^workflow.lock_version

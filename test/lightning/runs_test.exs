@@ -47,6 +47,7 @@ defmodule Lightning.RunsTest do
 
       {:ok, %{runs: [run]}} =
         WorkOrders.create_for(trigger,
+          actor: insert(:user),
           workflow: workflow,
           dataclip: params_with_assocs(:dataclip)
         )
@@ -67,6 +68,7 @@ defmodule Lightning.RunsTest do
         |> Enum.map(fn _ ->
           {:ok, %{runs: [run]}} =
             WorkOrders.create_for(trigger,
+              actor: insert(:user),
               workflow: workflow,
               dataclip: params_with_assocs(:dataclip)
             )
@@ -93,6 +95,7 @@ defmodule Lightning.RunsTest do
       [second_last_run, last_run] =
         Enum.map(1..2, fn _i ->
           WorkOrders.create_for(trigger,
+            actor: insert(:user),
             workflow: workflow,
             dataclip: params_with_assocs(:dataclip)
           )
@@ -158,6 +161,7 @@ defmodule Lightning.RunsTest do
 
       {:ok, %{runs: [run]}} =
         WorkOrders.create_for(trigger,
+          actor: insert(:user),
           workflow: workflow,
           dataclip: params_with_assocs(:dataclip)
         )
@@ -234,7 +238,7 @@ defmodule Lightning.RunsTest do
       # creating a new snapshot.
       {:ok, %{jobs: [new_job]}} =
         Workflows.change_workflow(workflow, %{jobs: [params_for(:job)]})
-        |> Workflows.save_workflow()
+        |> Workflows.save_workflow(insert(:user))
 
       {:error, changeset} =
         Runs.start_step(run_1, %{

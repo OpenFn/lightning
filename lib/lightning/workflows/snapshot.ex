@@ -12,6 +12,7 @@ defmodule Lightning.Workflows.Snapshot do
 
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Repo
+  alias Lightning.Workflows.Audit
   alias Lightning.Workflows.WebhookAuthMethod
   alias Lightning.Workflows.Workflow
 
@@ -199,11 +200,11 @@ defmodule Lightning.Workflows.Snapshot do
   @doc """
   Get the latest snapshot for a workflow, or create one if it doesn't exist.
   """
-  @spec get_or_create_latest_for(Workflow.t()) ::
+  @spec get_or_create_latest_for(Workflow.t(), struct()) ::
           {:ok, t()} | {:error, Ecto.Changeset.t()}
-  def get_or_create_latest_for(workflow) do
+  def get_or_create_latest_for(workflow, actor) do
     Multi.new()
-    |> get_or_create_latest_for(workflow)
+    |> get_or_create_latest_for(workflow, actor)
     |> Repo.transaction()
     |> case do
       {:ok, %{snapshot: snapshot}} -> {:ok, snapshot}
@@ -211,23 +212,33 @@ defmodule Lightning.Workflows.Snapshot do
     end
   end
 
-  @spec get_or_create_latest_for(Multi.t(), binary() | :snapshot, Workflow.t()) ::
+  @spec get_or_create_latest_for(
+          Multi.t(),
+          binary() | :snapshot,
+          Workflow.t(),
+          struct()
+        ) ::
           Multi.t()
-  def get_or_create_latest_for(multi, name \\ :snapshot, workflow) do
+  def get_or_create_latest_for(multi, name \\ :snapshot, workflow, actor) do
     unique_op = "_existing#{System.unique_integer()}"
 
     multi
     |> Multi.one(unique_op, get_current_query(workflow))
     |> Multi.merge(fn %{^unique_op => snapshot} ->
-      return_or_create(name, snapshot, workflow)
+      return_or_create(name, snapshot, workflow, actor)
     end)
   end
 
-  defp return_or_create(name, snapshot, workflow) do
+  defp return_or_create(name, snapshot, workflow, actor) do
     if snapshot do
       Multi.new() |> Multi.put(name, snapshot)
     else
       unique_op = "_workflow#{System.unique_integer()}"
+
+      audit_snapshot =
+        fn %{^name => %{id: snapshot_id}} ->
+          Audit.snapshot_created(workflow.id, snapshot_id, actor)
+        end
 
       Multi.new()
       |> Multi.one(
@@ -240,7 +251,9 @@ defmodule Lightning.Workflows.Snapshot do
       )
       |> Multi.merge(fn %{^unique_op => workflow} ->
         if workflow do
-          Multi.new() |> Multi.insert(name, build(workflow))
+          Multi.new()
+          |> Multi.insert(name, build(workflow))
+          |> Multi.insert(String.to_atom("audit_of_#{name}"), audit_snapshot)
         else
           Multi.new() |> Multi.error(:workflow, :no_workflow)
         end
