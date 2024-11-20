@@ -121,11 +121,6 @@ defmodule Lightning.Config do
     end
 
     @impl true
-    def usage_tracking do
-      Application.get_env(:lightning, :usage_tracking)
-    end
-
-    @impl true
     def reset_password_token_validity_in_days do
       1
     end
@@ -139,6 +134,31 @@ defmodule Lightning.Config do
     def storage(key) do
       storage()
       |> Keyword.get(key)
+    end
+
+    @impl true
+    def usage_tracking do
+      Application.get_env(:lightning, :usage_tracking)
+    end
+
+    @impl true
+    def usage_tracking_cleartext_uuids_enabled? do
+      usage_tracking() |> Keyword.get(:cleartext_uuids_enabled)
+    end
+
+    @impl true
+    def usage_tracking_enabled? do
+      usage_tracking() |> Keyword.get(:enabled)
+    end
+
+    @impl true
+    def usage_tracking_host do
+      usage_tracking() |> Keyword.get(:host)
+    end
+
+    @impl true
+    def usage_tracking_run_chunk_size do
+      usage_tracking() |> Keyword.get(:run_chunk_size)
     end
 
     @impl true
@@ -235,7 +255,11 @@ defmodule Lightning.Config do
   @callback storage(key :: atom()) :: term()
   @callback token_signer() :: Joken.Signer.t()
   @callback usage_tracking() :: Keyword.t()
+  @callback usage_tracking_cleartext_uuids_enabled?() :: boolean()
   @callback usage_tracking_cron_opts() :: [Oban.Plugins.Cron.cron_input()]
+  @callback usage_tracking_enabled?() :: boolean()
+  @callback usage_tracking_host() :: String.t()
+  @callback usage_tracking_run_chunk_size() :: integer()
   @callback worker_secret() :: binary() | nil
   @callback worker_token_signer() :: Joken.Signer.t()
 
@@ -321,10 +345,6 @@ defmodule Lightning.Config do
     impl().email_sender_name()
   end
 
-  def usage_tracking do
-    impl().usage_tracking()
-  end
-
   def reset_password_token_validity_in_days do
     impl().reset_password_token_validity_in_days()
   end
@@ -337,8 +357,28 @@ defmodule Lightning.Config do
     impl().storage(key)
   end
 
+  def usage_tracking do
+    impl().usage_tracking()
+  end
+
+  def usage_tracking_cleartext_uuids_enabled? do
+    impl().usage_tracking_cleartext_uuids_enabled?()
+  end
+
   def usage_tracking_cron_opts do
     impl().usage_tracking_cron_opts()
+  end
+
+  def usage_tracking_enabled? do
+    impl().usage_tracking_enabled?()
+  end
+
+  def usage_tracking_host do
+    impl().usage_tracking_host()
+  end
+
+  def usage_tracking_run_chunk_size do
+    impl().usage_tracking_run_chunk_size()
   end
 
   def kafka_triggers_enabled? do

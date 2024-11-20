@@ -17,8 +17,35 @@ and this project adheres to
 
 ### Added
 
+- Support dynamic json schema email format validation.
+  [#2664](https://github.com/OpenFn/lightning/issues/2664)
+
+### Changed
+
+### Fixed
+
+## [v2.10.3] - 2024-11-13
+
+### Added
+
+- Disable monaco command palette in Input and Log viewers
+  [#2643](https://github.com/OpenFn/lightning/issues/2643)
+- Make provision for non-User actors when creating Audit entries.
+  [#2601](https://github.com/OpenFn/lightning/issues/2601)
+
+### Fixed
+
+- Superusers can't update users passwords
+  [#2621](https://github.com/OpenFn/lightning/issues/2621)
+- Attempt to reduce memory consumption when generating UsageTracking reports.
+  [#2636](https://github.com/OpenFn/lightning/issues/2636)
+
+## [v2.10.2] - 2024-11-14
+
+### Added
+
 - Audit history exports events
-  [#2367](https://github.com/OpenFn/lightning/issues/2367)
+  [#2637](https://github.com/OpenFn/lightning/issues/2637)
 
 ### Changed
 

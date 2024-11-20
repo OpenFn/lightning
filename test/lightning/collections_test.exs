@@ -1,5 +1,5 @@
 defmodule Lightning.CollectionsTest do
-  use Lightning.DataCase
+  use Lightning.DataCase, async: true
 
   alias Lightning.Collections
   alias Lightning.Collections.Collection

@@ -210,6 +210,7 @@ defmodule Lightning.Accounts.User do
     user
     |> cast(attrs, [
       :email,
+      :password,
       :first_name,
       :last_name,
       :role,
@@ -217,6 +218,7 @@ defmodule Lightning.Accounts.User do
       :scheduled_deletion
     ])
     |> validate_email()
+    |> validate_password([])
     |> validate_name()
     |> trim_name()
     |> validate_role()

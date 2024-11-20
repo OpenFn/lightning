@@ -162,7 +162,7 @@ defmodule Lightning.WebhookAuthMethods do
     Multi.new()
     |> Multi.insert(:auth_method, changeset)
     |> Multi.insert(:audit, fn %{auth_method: auth_method} ->
-      WebhookAuthMethodAudit.event("created", auth_method.id, user.id, changeset)
+      WebhookAuthMethodAudit.event("created", auth_method.id, user, changeset)
     end)
     |> Repo.transaction()
     |> case do
@@ -185,13 +185,13 @@ defmodule Lightning.WebhookAuthMethods do
     Multi.new()
     |> Multi.insert(:auth_method, changeset)
     |> Multi.insert(:created_audit, fn %{auth_method: auth_method} ->
-      WebhookAuthMethodAudit.event("created", auth_method.id, user.id, changeset)
+      WebhookAuthMethodAudit.event("created", auth_method.id, user, changeset)
     end)
     |> Multi.insert(:add_to_trigger_audit, fn %{auth_method: auth_method} ->
       WebhookAuthMethodAudit.event(
         "added_to_trigger",
         auth_method.id,
-        user.id,
+        user,
         %{before: %{trigger_id: nil}, after: %{trigger_id: trigger.id}}
       )
     end)
@@ -260,7 +260,7 @@ defmodule Lightning.WebhookAuthMethods do
         WebhookAuthMethodAudit.event(
           "updated",
           auth_method.id,
-          user.id,
+          user,
           changeset
         )
       end
@@ -350,7 +350,7 @@ defmodule Lightning.WebhookAuthMethods do
             WebhookAuthMethodAudit.event(
               "added_to_trigger",
               auth_id,
-              user.id,
+              user,
               %{before: %{trigger_id: nil}, after: %{trigger_id: trigger.id}}
             )
 
@@ -362,7 +362,7 @@ defmodule Lightning.WebhookAuthMethods do
           WebhookAuthMethodAudit.event(
             "removed_from_trigger",
             auth_id,
-            user.id,
+            user,
             %{before: %{trigger_id: trigger.id}, after: %{trigger_id: nil}}
           )
 
@@ -660,7 +660,7 @@ defmodule Lightning.WebhookAuthMethods do
   @spec schedule_for_deletion(WebhookAuthMethod.t(), actor: User.t()) ::
           {:ok, WebhookAuthMethod.t()} | {:error, Ecto.Changeset.t()}
   def schedule_for_deletion(%WebhookAuthMethod{} = webhook_auth_method,
-        actor: %User{id: user_id}
+        actor: %User{} = user
       ) do
     if webhook_auth_method.scheduled_deletion do
       changeset =
@@ -685,7 +685,7 @@ defmodule Lightning.WebhookAuthMethods do
         WebhookAuthMethodAudit.event(
           "deleted",
           auth_method.id,
-          user_id,
+          user,
           %{
             before: %{scheduled_deletion: nil},
             after: %{scheduled_deletion: deletion_date}

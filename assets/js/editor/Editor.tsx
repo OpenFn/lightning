@@ -370,6 +370,7 @@ export default function Editor({
           readOnlyMessage: {
             value: disabledMessage,
           },
+          enableCommandPalette: true,
         }}
         onMount={handleEditorDidMount}
         onChange={handleSourceChange}

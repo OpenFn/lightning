@@ -516,6 +516,54 @@ defmodule LightningWeb.CredentialLiveTest do
       {_path, flash} = assert_redirect(index_live)
       assert flash == %{"info" => "Credential created successfully"}
     end
+
+    test "allows the user to define and save a credential with email (godata)",
+         %{
+           conn: conn
+         } do
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      select_credential_type(view, "godata")
+      click_continue(view)
+
+      assert fill_credential(view, %{body: %{email: ""}}) =~ "can&#39;t be blank"
+
+      assert submit_disabled(view, "#save-credential-button-new")
+
+      assert click_save(view) =~ "can&#39;t be blank"
+
+      refute_redirected(view, ~p"/credentials")
+
+      assert fill_credential(view, %{
+               name: "Godata Credential",
+               body: %{
+                 apiUrl: "http://url",
+                 password: "baz1234",
+                 email: "incomplete-email"
+               }
+             }) =~ "expected to be an email"
+
+      assert submit_disabled(view, "#save-credential-button-new")
+
+      refute fill_credential(view, %{
+               name: "Godata Credential",
+               body: %{
+                 apiUrl: "http://url",
+                 password: "baz1234",
+                 email: "good@email.com"
+               }
+             }) =~ "expected to be an email"
+
+      refute submit_disabled(view, "#save-credential-button-new")
+
+      {:ok, _view, _html} =
+        view
+        |> click_save()
+        |> follow_redirect(conn, ~p"/credentials")
+
+      {_path, flash} = assert_redirect(view)
+      assert flash == %{"info" => "Credential created successfully"}
+    end
   end
 
   describe "Edit" do
