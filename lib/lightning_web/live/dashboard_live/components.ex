@@ -3,6 +3,8 @@ defmodule LightningWeb.DashboardLive.Components do
 
   import PetalComponents.Table
 
+  alias LightningWeb.Components.Common
+
   def welcome_banner(assigns) do
     ~H"""
     <div class="pb-6">
@@ -123,18 +125,10 @@ defmodule LightningWeb.DashboardLive.Components do
   end
 
   def user_projects_table(assigns) do
-    next_sort_icon = %{
-      asc_nulls_last: "hero-chevron-up",
-      desc_nulls_last: "hero-chevron-down"
-    }
-
     assigns =
       assign(assigns,
         projects_count: assigns.projects |> Enum.count(),
-        empty?: assigns.projects |> Enum.empty?(),
-        name_sort_icon: next_sort_icon[assigns.name_direction],
-        last_updated_at_sort_icon:
-          next_sort_icon[assigns.last_updated_at_direction]
+        empty?: assigns.projects |> Enum.empty?()
       )
 
     ~H"""
@@ -151,33 +145,27 @@ defmodule LightningWeb.DashboardLive.Components do
         <.table>
           <.tr>
             <.th>
-              <div class="group inline-flex items-center">
+              <.sortable_table_header
+                target_sort_key="name"
+                current_sort_key={@sort_key}
+                current_sort_direction={@sort_direction}
+                target={@target}
+              >
                 Name
-                <span
-                  phx-click="sort"
-                  phx-value-by="name"
-                  phx-target={@target}
-                  class="cursor-pointer align-middle ml-2 flex-none rounded text-gray-400 group-hover:visible group-focus:visible"
-                >
-                  <.icon name={@name_sort_icon} />
-                </span>
-              </div>
+              </.sortable_table_header>
             </.th>
             <.th>Role</.th>
             <.th>Workflows</.th>
             <.th>Collaborators</.th>
             <.th>
-              <div class="group inline-flex items-center">
+              <.sortable_table_header
+                target_sort_key="last_updated_at"
+                current_sort_key={@sort_key}
+                current_sort_direction={@sort_direction}
+                target={@target}
+              >
                 Last Updated
-                <span
-                  phx-click="sort"
-                  phx-value-by="last_updated_at"
-                  phx-target={@target}
-                  class="cursor-pointer align-middle ml-2 flex-none rounded text-gray-400 group-hover:visible group-focus:visible"
-                >
-                  <.icon name={@last_updated_at_sort_icon} />
-                </span>
-              </div>
+              </.sortable_table_header>
             </.th>
             <.th></.th>
           </.tr>
@@ -233,6 +221,26 @@ defmodule LightningWeb.DashboardLive.Components do
         </.table>
       </div>
     <% end %>
+    """
+  end
+
+  attr :current_sort_key, :string, required: true
+  attr :current_sort_direction, :string, required: true
+  attr :target, :any, required: true
+  attr :target_sort_key, :string, required: true
+  slot :inner_block, required: true
+
+  defp sortable_table_header(assigns) do
+    ~H"""
+    <Common.sortable_table_header
+      phx-click="sort"
+      phx-value-by={@target_sort_key}
+      phx-target={@target}
+      active={@current_sort_key == @target_sort_key}
+      sort_direction={@current_sort_direction}
+    >
+      <%= render_slot(@inner_block) %>
+    </Common.sortable_table_header>
     """
   end
 end

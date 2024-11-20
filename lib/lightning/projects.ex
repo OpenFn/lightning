@@ -50,7 +50,7 @@ defmodule Lightning.Projects do
   end
 
   def get_projects_overview(%User{id: user_id}, opts \\ []) do
-    order_by = Keyword.get(opts, :order_by, {:asc_nulls_last, :name})
+    order_by = Keyword.get(opts, :order_by, "name_asc")
 
     from(p in Project,
       join: pu in assoc(p, :project_users),
@@ -71,12 +71,20 @@ defmodule Lightning.Projects do
     |> Repo.all()
   end
 
-  defp dynamic_order_by({direction, :name}) do
-    {direction, dynamic([p, _pu, _w, _pu_all], field(p, :name))}
+  defp dynamic_order_by("name_asc") do
+    {:asc_nulls_last, dynamic([p, _pu, _w, _pu_all], field(p, :name))}
   end
 
-  defp dynamic_order_by({direction, :last_updated_at}) do
-    {direction, dynamic([_p, _pu, w, _pu_all], max(w.updated_at))}
+  defp dynamic_order_by("name_desc") do
+    {:desc_nulls_last, dynamic([p, _pu, _w, _pu_all], field(p, :name))}
+  end
+
+  defp dynamic_order_by("last_updated_at_asc") do
+    {:asc_nulls_last, dynamic([_p, _pu, w, _pu_all], max(w.updated_at))}
+  end
+
+  defp dynamic_order_by("last_updated_at_desc") do
+    {:desc_nulls_last, dynamic([_p, _pu, w, _pu_all], max(w.updated_at))}
   end
 
   @doc """

@@ -189,7 +189,7 @@ defmodule LightningWeb.DashboardLiveTest do
       assert project_names_from_html == projects_sorted_by_name
 
       view
-      |> element("span[phx-click='sort'][phx-value-by='name']")
+      |> element("a[phx-click='sort'][phx-value-by='name']")
       |> render_click()
 
       projects_sorted_by_name_desc = get_sorted_projects_by_name(projects, :desc)
@@ -198,7 +198,7 @@ defmodule LightningWeb.DashboardLiveTest do
       assert project_names_from_html == projects_sorted_by_name_desc
 
       view
-      |> element("span[phx-click='sort'][phx-value-by='name']")
+      |> element("a[phx-click='sort'][phx-value-by='name']")
       |> render_click()
 
       projects_sorted_by_name_asc = get_sorted_projects_by_name(projects, :asc)
@@ -230,7 +230,7 @@ defmodule LightningWeb.DashboardLiveTest do
                projects_sorted_by_last_updated_at
 
       view
-      |> element("span[phx-click='sort'][phx-value-by='last_updated_at']")
+      |> element("a[phx-click='sort'][phx-value-by='last_updated_at']")
       |> render_click()
 
       projects_sorted_by_last_updated_at_desc =
