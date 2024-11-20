@@ -110,7 +110,6 @@ defmodule Lightning.WorkOrders do
   def create_for(%Job{} = job, multi, opts) do
     multi
     |> Multi.put(:workflow, opts[:workflow])
-    # get_or_create_snapshot unnecessary due to build_for?
     |> get_or_create_snapshot(opts[:actor])
     |> Multi.insert(:workorder, build_for(job, opts |> Map.new()))
     |> Runs.enqueue()
