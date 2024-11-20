@@ -254,11 +254,31 @@ defmodule Lightning.Config.Bootstrap do
     # adapter. You may configure the swoosh api client of your choice. We
     # automatically configure Mailgun if an API key has been provided. See
     # https://hexdocs.pm/swoosh/Swoosh.html#module-installation for more details.
-    if api_key = env!("MAILGUN_API_KEY", :string, nil) do
-      config :lightning, Lightning.Mailer,
-        adapter: Swoosh.Adapters.Mailgun,
-        api_key: api_key,
-        domain: env!("MAILGUN_DOMAIN", :string)
+    case env!("MAIL_PROVIDER", :string, "local") do
+      "local" ->
+        config :lightning, Lightning.Mailer, adapter: Swoosh.Adapters.Local
+
+      "mailgun" ->
+        config :lightning, Lightning.Mailer,
+          adapter: Swoosh.Adapters.Mailgun,
+          api_key: env!("MAILGUN_API_KEY", :string),
+          domain: env!("MAILGUN_DOMAIN", :string)
+
+      "smtp" ->
+        # TODO: HOW DO WE LET USERS PICK WHAT TO CONFIGURE HERE?
+        # https://hexdocs.pm/swoosh/Swoosh.Adapters.SMTP.html#content
+        config :lightning, Lightning.Mailer, adapter: Swoosh.Adapters.SMTP
+
+      unknown ->
+        raise """
+        Unknown mail provider: #{unknown}
+
+        Currently supported providers are:
+
+        - local (default)
+        - mailgun
+        - smtp
+        """
     end
 
     # Use the `PRIMARY_ENCRYPTION_KEY` env variable if available, else fall back
