@@ -42,8 +42,6 @@ and this project adheres to
   [#2621](https://github.com/OpenFn/lightning/issues/2621)
 - Attempt to reduce memory consumption when generating UsageTracking reports.
   [#2636](https://github.com/OpenFn/lightning/issues/2636)
-- Attempt to reduce memory consumption when generating UsageTracking reports.
-  [#2636](https://github.com/OpenFn/lightning/issues/2636)
 
 ## [v2.10.2] - 2024-11-14
 

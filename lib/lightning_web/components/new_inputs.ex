@@ -332,7 +332,7 @@ defmodule LightningWeb.Components.NewInputs do
           />
         </div>
       </div>
-      <div :if={Enum.any?(@errors) and @display_errors} class="error-space h-6">
+      <div :if={Enum.any?(@errors) and @display_errors} class="error-space">
         <.error :for={msg <- @errors}><%= msg %></.error>
       </div>
     </div>
@@ -383,7 +383,7 @@ defmodule LightningWeb.Components.NewInputs do
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         {@rest}
       />
-      <div :if={Enum.any?(@errors) and @display_errors} class="error-space h-6">
+      <div :if={Enum.any?(@errors) and @display_errors} class="error-space">
         <.error :for={msg <- @errors}><%= msg %></.error>
       </div>
     </div>
@@ -557,7 +557,7 @@ defmodule LightningWeb.Components.NewInputs do
       )
 
     ~H"""
-    <div :if={Enum.any?(@errors)} class="error-space h-6">
+    <div :if={Enum.any?(@errors)} class="error-space">
       <.error :for={msg <- @errors}><%= msg %></.error>
     </div>
     """
