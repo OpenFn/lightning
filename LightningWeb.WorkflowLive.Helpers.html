@@ -14,7 +14,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-27CA98EE.js"></script>
+    <script src="dist/sidebar_items-244BBED8.js"></script>
     <script src="docs_config.js"></script>
     <script async src="dist/html-YIPIRHGU.js"></script>
 
@@ -173,7 +173,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#save_workflow/1" data-no-tooltip translate="no">save_workflow(changeset)</a>
+        <a href="#save_workflow/2" data-no-tooltip translate="no">save_workflow(changeset, actor)</a>
 
       </div>
 
@@ -267,14 +267,14 @@ Pages
 
   </section>
 </section>
-<section class="detail" id="save_workflow/1">
+<section class="detail" id="save_workflow/2">
 
   <div class="detail-header">
-    <a href="#save_workflow/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#save_workflow/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">save_workflow(changeset)</h1>
+    <h1 class="signature" translate="no">save_workflow(changeset, actor)</h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L30" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
@@ -288,7 +288,10 @@ Pages
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> save_workflow(<a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()) ::
+          <pre translate="no"><span class="attribute">@spec</span> save_workflow(
+  <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>(),
+  <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">struct</a>()
+) ::
   {:ok, <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>()}
   | {:error,
      <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()
