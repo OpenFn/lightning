@@ -78,7 +78,8 @@ defmodule Lightning.WorkOrders do
       create_for(job, workflow: workflow, dataclip: dataclip, user: user)
   """
   @spec create_for(Trigger.t() | Job.t(), Multi.t(), [work_order_option()]) ::
-          {:ok, WorkOrder.t()} | {:error, Ecto.Changeset.t(WorkOrder.t())}
+          {:ok, WorkOrder.t()}
+          | {:error, Ecto.Changeset.t(WorkOrder.t()) | :workflow_deleted}
   def create_for(target, multi \\ Multi.new(), opts)
 
   def create_for(%Trigger{} = trigger, multi, opts) do
@@ -118,6 +119,13 @@ defmodule Lightning.WorkOrders do
 
   def create_for(%Manual{} = manual) do
     Multi.new()
+    |> Multi.run(:workflow_deleted?, fn _repo, _changes ->
+      if manual.workflow.deleted_at do
+        {:error, :workflow_deleted}
+      else
+        {:ok, false}
+      end
+    end)
     |> get_or_insert_dataclip(manual)
     |> Multi.put(:workflow, manual.workflow)
     |> get_or_create_snapshot()
@@ -283,7 +291,7 @@ defmodule Lightning.WorkOrders do
           Step.t() | Ecto.UUID.t(),
           [work_order_option(), ...]
         ) ::
-          {:ok, Run.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, Run.t()} | {:error, Ecto.Changeset.t() | :workflow_deleted}
   def retry(%Run{id: run_id}, %Step{id: step_id}, opts) do
     retry(run_id, step_id, opts)
   end
@@ -309,6 +317,13 @@ defmodule Lightning.WorkOrders do
         where: s.id == ^step_id and is_nil(d.wiped_at),
         preload: [:job]
       )
+    end)
+    |> Multi.run(:workflow_deleted?, fn _repo, %{run: run} ->
+      if run.work_order.workflow.deleted_at do
+        {:error, :workflow_deleted}
+      else
+        {:ok, false}
+      end
     end)
     |> Multi.run(:input_dataclip_id, fn
       _repo, %{step: %Step{input_dataclip_id: input_dataclip_id}} ->
@@ -501,7 +516,10 @@ defmodule Lightning.WorkOrders do
           retry(run_step.run_id, run_step.step_id, opts)
         end)
 
-      {:ok, Enum.count(results, fn result -> match?({:ok, _}, result) end), 0}
+      success_count =
+        Enum.count(results, fn result -> match?({:ok, _}, result) end)
+
+      {:ok, success_count, Enum.count(results) - success_count}
     end
   end
 
@@ -672,6 +690,8 @@ defmodule Lightning.WorkOrders do
   defp fetch_retriable_workorders(workorder_ids) do
     workorder_ids
     |> workorders_with_dataclips_query()
+    |> join(:inner, [wo], wf in assoc(wo, :workflow), as: :workflow)
+    |> where([workflow: wf], is_nil(wf.deleted_at))
     |> Repo.all()
   end
 

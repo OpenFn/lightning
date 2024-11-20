@@ -54,9 +54,18 @@ defmodule Lightning.Workflows do
   def get_workflow(id), do: Repo.get(Workflow, id)
 
   @spec save_workflow(Ecto.Changeset.t(Workflow.t()) | map()) ::
-          {:ok, Workflow.t()} | {:error, Ecto.Changeset.t(Workflow.t())}
+          {:ok, Workflow.t()}
+          | {:error, Ecto.Changeset.t(Workflow.t())}
+          | {:error, :workflow_deleted}
   def save_workflow(%Ecto.Changeset{data: %Workflow{}} = changeset) do
     Multi.new()
+    |> Multi.run(:validate, fn _repo, _changes ->
+      if is_nil(changeset.data.deleted_at) do
+        {:ok, true}
+      else
+        {:error, :workflow_deleted}
+      end
+    end)
     |> Multi.insert_or_update(:workflow, changeset)
     |> then(fn multi ->
       if changeset.changes == %{} do
@@ -86,6 +95,9 @@ defmodule Lightning.Workflows do
         end)
 
         {:error, false}
+
+      {:error, _action, reason, _changes} ->
+        {:error, reason}
     end
   end
 

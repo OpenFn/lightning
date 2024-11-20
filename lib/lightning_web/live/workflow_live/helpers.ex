@@ -25,7 +25,8 @@ defmodule LightningWeb.WorkflowLive.Helpers do
 
   @spec save_workflow(Ecto.Changeset.t()) ::
           {:ok, Workflows.Workflow.t()}
-          | {:error, Ecto.Changeset.t() | UsageLimiting.message()}
+          | {:error,
+             Ecto.Changeset.t() | UsageLimiting.message() | :workflow_deleted}
   def save_workflow(changeset) do
     case WorkflowUsageLimiter.limit_workflow_activation(changeset) do
       :ok ->
@@ -52,6 +53,7 @@ defmodule LightningWeb.WorkflowLive.Helpers do
           | {:error, Ecto.Changeset.t(Workflows.Workflow.t())}
           | {:error, Ecto.Changeset.t(WorkOrders.Manual.t())}
           | {:error, UsageLimiting.message()}
+          | {:error, :workflow_deleted}
   def run_workflow(workflow_or_changeset, params, opts) do
     Lightning.Repo.transact(fn ->
       %{id: project_id} = Keyword.fetch!(opts, :project)

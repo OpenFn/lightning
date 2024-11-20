@@ -337,6 +337,11 @@ defmodule LightningWeb.RunLive.Index do
            socket
            |> put_flash(:error, error_text)}
 
+        {:error, :workflow_deleted} ->
+          {:noreply,
+           socket
+           |> put_flash(:error, "Runs for deleted workflows cannot be retried")}
+
         {:error, _changeset} ->
           {:noreply,
            socket
@@ -356,10 +361,10 @@ defmodule LightningWeb.RunLive.Index do
        socket
        |> put_flash(
          :info,
-         "New run#{if count > 1, do: "s", else: ""} enqueued for #{count} workorder#{if count > 1, do: "s", else: ""}"
+         "New run#{if count > 1, do: "s"} enqueued for #{count} workorder#{if count > 1, do: "s"}"
          |> then(fn msg ->
            if discarded_count > 0 do
-             msg <> " (#{discarded_count} were discarded due to wiped dataclip)"
+             "#{msg} (#{discarded_count} were discarded due to wiped dataclip/workflow being deleted)"
            else
              msg
            end

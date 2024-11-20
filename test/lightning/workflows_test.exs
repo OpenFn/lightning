@@ -66,6 +66,15 @@ defmodule Lightning.WorkflowsTest do
       assert workflow.name == "some-updated-name"
     end
 
+    test "save_workflow/1 for a deleted workflow returns an error" do
+      workflow = insert(:workflow, deleted_at: DateTime.utc_now())
+      update_attrs = %{name: "some-updated-name"}
+
+      assert {:error, :workflow_deleted} =
+               Workflows.change_workflow(workflow, update_attrs)
+               |> Workflows.save_workflow()
+    end
+
     test "save_workflow/1 publishes event for updated Kafka triggers" do
       kafka_configuration = build(:triggers_kafka_configuration)
 
