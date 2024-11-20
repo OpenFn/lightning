@@ -26,6 +26,13 @@ and this project adheres to
 
 ### Fixed
 
+- Disable save and run actions on deleted workflows
+  [#2170](https://github.com/OpenFn/lightning/issues/2170)
+- Distinguish active and inactive sort arrows in projects overview table
+  [#2423](https://github.com/OpenFn/lightning/issues/2423)
+- Fix show password toggle icon gets flipped after changing the password value
+  [#2611](https://github.com/OpenFn/lightning/issues/2611)
+
 ## [v2.10.3] - 2024-11-13
 
 ### Added

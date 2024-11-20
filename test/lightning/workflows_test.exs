@@ -69,6 +69,16 @@ defmodule Lightning.WorkflowsTest do
       assert workflow.name == "some-updated-name"
     end
 
+    test "save_workflow/1 for a deleted workflow returns an error" do
+      user = insert(:user)
+      workflow = insert(:workflow, deleted_at: DateTime.utc_now())
+      update_attrs = %{name: "some-updated-name"}
+
+      assert {:error, :workflow_deleted} =
+               Workflows.change_workflow(workflow, update_attrs)
+               |> Workflows.save_workflow(user)
+    end
+
     test "save_workflow/1 with changeset audits creation of the snapshot" do
       %{id: user_id} = user = insert(:user)
       %{id: workflow_id} = workflow = insert(:workflow)

@@ -659,6 +659,45 @@ defmodule Lightning.WorkOrdersTest do
       }
     end
 
+    test "returns error in case the workflow is deleted", %{
+      workflow: workflow,
+      snapshot: snapshot,
+      trigger: trigger,
+      jobs: [job | _rest]
+    } do
+      user = insert(:user)
+      dataclip = insert(:dataclip)
+      # create existing complete run
+      %{runs: [run]} =
+        insert(:workorder,
+          workflow: workflow,
+          snapshot: snapshot,
+          trigger: trigger,
+          dataclip: dataclip,
+          runs: [
+            %{
+              state: :failed,
+              dataclip: dataclip,
+              snapshot: snapshot,
+              starting_trigger: trigger,
+              steps: [
+                step = insert(:step, job: job, input_dataclip: dataclip)
+              ]
+            }
+          ]
+        )
+
+      # delete workflow
+      workflow
+      |> Ecto.Changeset.change(%{
+        deleted_at: DateTime.utc_now() |> DateTime.truncate(:second)
+      })
+      |> Repo.update!()
+
+      assert {:error, :workflow_deleted} =
+               WorkOrders.retry(run, step, created_by: user)
+    end
+
     test "if snapshot is created, uses creating user as audit actor", %{
       workflow: workflow,
       snapshot: snapshot,
@@ -2163,6 +2202,98 @@ defmodule Lightning.WorkOrdersTest do
                )
       end)
     end
+
+    test "retrying multiple workorders only retries workorders with workflows that havent been deleted",
+         %{
+           jobs: [job_a | _rest],
+           snapshot: snapshot,
+           trigger: trigger,
+           user: user,
+           workflow: workflow
+         } do
+      workorder_1 =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: build(:dataclip),
+          snapshot: snapshot,
+          runs: [
+            %{
+              state: :failed,
+              dataclip: build(:dataclip),
+              starting_trigger: trigger,
+              snapshot: snapshot,
+              steps: [
+                insert(:step,
+                  job: job_a,
+                  input_dataclip: build(:dataclip),
+                  output_dataclip: build(:dataclip)
+                )
+              ]
+            }
+          ]
+        )
+
+      deleted_workflow =
+        insert(:simple_workflow,
+          project: workflow.project,
+          deleted_at: DateTime.utc_now()
+        )
+
+      deleted_workflow_job = hd(deleted_workflow.jobs)
+
+      snapshot_2 =
+        Lightning.Workflows.Snapshot.build(deleted_workflow) |> Repo.insert!()
+
+      workorder_2 =
+        insert(:workorder,
+          workflow: deleted_workflow,
+          trigger: hd(deleted_workflow.triggers),
+          dataclip: build(:dataclip),
+          snapshot: snapshot_2,
+          runs: [
+            %{
+              state: :failed,
+              dataclip: build(:dataclip),
+              starting_trigger: hd(deleted_workflow.triggers),
+              snapshot: snapshot_2,
+              steps: [
+                insert(:step,
+                  job: deleted_workflow_job,
+                  input_dataclip: build(:dataclip),
+                  output_dataclip: build(:dataclip)
+                )
+              ]
+            }
+          ]
+        )
+
+      refute Repo.get_by(Lightning.Run,
+               work_order_id: workorder_1.id,
+               starting_job_id: job_a.id
+             )
+
+      refute Repo.get_by(Lightning.Run,
+               work_order_id: workorder_2.id,
+               starting_job_id: deleted_workflow_job.id
+             )
+
+      {:ok, 1, 1} =
+        WorkOrders.retry_many([workorder_2, workorder_1],
+          created_by: user,
+          project_id: workflow.project_id
+        )
+
+      assert Repo.get_by(Lightning.Run,
+               work_order_id: workorder_1.id,
+               starting_job_id: job_a.id
+             )
+
+      refute Repo.get_by(Lightning.Run,
+               work_order_id: workorder_2.id,
+               starting_job_id: deleted_workflow_job.id
+             )
+    end
   end
 
   describe "retry_many/2 for RunSteps" do
@@ -2533,7 +2664,7 @@ defmodule Lightning.WorkOrdersTest do
                starting_job_id: job_a.id
              )
 
-      {:ok, 1, 0} =
+      {:ok, 1, 1} =
         WorkOrders.retry_many([run_step_2_a, run_step_1_a],
           created_by: user,
           project_id: workflow.project_id
