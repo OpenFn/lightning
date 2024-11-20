@@ -64,6 +64,10 @@ let liveSocket = new LiveSocket('/live', Socket, {
         to.setAttribute('hidden', from.getAttribute('hidden'));
       }
 
+      if (from.attributes['lv-keep-type']) {
+        to.setAttribute('type', from.getAttribute('type'));
+      }
+
       if (from.attributes['lv-keep-aria']) {
         Object.values(from.attributes).forEach(attr => {
           if (attr.name.startsWith('aria-')) {
