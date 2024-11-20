@@ -231,7 +231,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">run_workflow(workflow_or_changeset, params, opts)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L55" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L57" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -259,7 +259,8 @@ Pages
    }}
   | {:error, <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>())}
   | {:error, <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.WorkOrders.Manual.html#t:t/0">Lightning.WorkOrders.Manual.t</a>())}
-  | {:error, <a href="Lightning.Extensions.UsageLimiting.html#t:message/0">Lightning.Extensions.UsageLimiting.message</a>()}</pre>
+  | {:error, <a href="Lightning.Extensions.UsageLimiting.html#t:message/0">Lightning.Extensions.UsageLimiting.message</a>()}
+  | {:error, :workflow_deleted}</pre>
 
       </div>
 
@@ -275,7 +276,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">save_workflow(changeset)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L29" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L30" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -289,7 +290,10 @@ Pages
 
           <pre translate="no"><span class="attribute">@spec</span> save_workflow(<a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()) ::
   {:ok, <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>()}
-  | {:error, <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>() | <a href="Lightning.Extensions.UsageLimiting.html#t:message/0">Lightning.Extensions.UsageLimiting.message</a>()}</pre>
+  | {:error,
+     <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()
+     | <a href="Lightning.Extensions.UsageLimiting.html#t:message/0">Lightning.Extensions.UsageLimiting.message</a>()
+     | :workflow_deleted}</pre>
 
       </div>
 
