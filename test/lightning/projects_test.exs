@@ -1640,7 +1640,7 @@ defmodule Lightning.ProjectsTest do
 
       result =
         Projects.get_projects_overview(user,
-          order_by: {:desc_nulls_last, :last_updated_at}
+          order_by: "last_updated_at_desc"
         )
 
       assert [
@@ -1672,7 +1672,7 @@ defmodule Lightning.ProjectsTest do
 
       result =
         Projects.get_projects_overview(user,
-          order_by: {:asc_nulls_last, :last_updated_at}
+          order_by: "last_updated_at_asc"
         )
 
       assert [

@@ -548,4 +548,33 @@ defmodule LightningWeb.Components.Common do
     </div>
     """
   end
+
+  attr :sort_direction, :string,
+    values: ["asc", "desc"],
+    default: "asc"
+
+  attr :active, :boolean, required: true
+  attr :rest, :global, include: ~w(id href patch navigate), default: %{href: "#"}
+  slot :inner_block, required: true
+
+  def sortable_table_header(assigns) do
+    ~H"""
+    <.link class="group inline-flex" {@rest}>
+      <%= render_slot(@inner_block) %>
+      <span class={[
+        "ml-2 flex-none rounded",
+        if(@active,
+          do: "bg-gray-200 text-gray-900 group-hover:bg-gray-300",
+          else: "invisible text-gray-400 group-hover:visible group-focus:visible"
+        )
+      ]}>
+        <%= if @active and @sort_direction == "desc" do %>
+          <.icon name="hero-chevron-up" class="size-5" />
+        <% else %>
+          <.icon name="hero-chevron-down" class="size-5" />
+        <% end %>
+      </span>
+    </.link>
+    """
+  end
 end
