@@ -8,6 +8,7 @@ defmodule Lightning.VersionControl do
 
   import Ecto.Query, warn: false
 
+  alias Ecto.Multi
   alias Lightning.Accounts.User
   alias Lightning.Extensions.UsageLimiting
   alias Lightning.Projects.Audit
@@ -108,10 +109,12 @@ defmodule Lightning.VersionControl do
   Deletes a github connection
   """
   def remove_github_connection(repo_connection, user) do
-    repo_connection
-    |> Repo.delete()
+    Multi.new()
+    |> Multi.delete(:delete_repo_connection, repo_connection)
+    |> Multi.insert(:audit, Audit.repo_connection_removed(repo_connection, user))
+    |> Repo.transaction()
     |> tap(fn
-      {:ok, repo_connection} ->
+      {:ok, %{delete_repo_connection: repo_connection}} ->
         undo_repo_actions(
           repo_connection,
           user
