@@ -5,6 +5,7 @@ defmodule Lightning.Workflows do
 
   import Ecto.Query
 
+  alias Lightning.Workflows
   alias Ecto.Multi
 
   alias Lightning.KafkaTriggers
@@ -22,6 +23,32 @@ defmodule Lightning.Workflows do
 
   defdelegate subscribe(project_id), to: Events
   require Logger
+
+  def enable_or_disable_workflow(
+        workflow_or_changeset,
+        enabled?
+      ) do
+    updated_triggers =
+      case workflow_or_changeset do
+        %Ecto.Changeset{} = changeset ->
+          changeset
+          |> Ecto.Changeset.get_field(:triggers, [])
+          |> Enum.map(&Ecto.Changeset.change(&1, %{enabled: enabled?}))
+
+        %Workflow{} = workflow ->
+          workflow.triggers
+          |> Enum.map(&Ecto.Changeset.change(&1, %{enabled: enabled?}))
+      end
+
+    if is_struct(workflow_or_changeset, Ecto.Changeset) do
+      workflow_or_changeset
+      |> Ecto.Changeset.put_assoc(:triggers, updated_triggers)
+    else
+      workflow_or_changeset
+      |> Workflows.change_workflow()
+      |> Ecto.Changeset.put_assoc(:triggers, updated_triggers)
+    end
+  end
 
   @doc """
   Returns the list of workflows.

@@ -120,23 +120,13 @@ defmodule LightningWeb.WorkflowLive.Index do
         %{"state" => current_state, "workflow" => workflow_id},
         socket
       ) do
-    enabled? = current_state == "disabled"
-
     %{current_user: actor, project: project_id} = socket.assigns
 
-    %{triggers: triggers} =
-      workflow =
-      Workflows.get_workflow!(workflow_id, include: [:triggers])
+    workflow = Workflows.get_workflow!(workflow_id, include: [:triggers])
 
-    updated_triggers =
-      Enum.map(triggers, &Ecto.Changeset.change(&1, %{enabled: enabled?}))
-
-    workflow_changeset =
-      workflow
-      |> Workflows.change_workflow()
-      |> Ecto.Changeset.put_assoc(:triggers, updated_triggers)
-
-    case Workflows.save_workflow(workflow_changeset, actor) do
+    Workflows.enable_or_disable_workflow(workflow, current_state == "disabled")
+    |> Workflows.save_workflow(actor)
+    |> case do
       {:ok, _workflow} ->
         {:noreply,
          socket
