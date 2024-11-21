@@ -47,6 +47,9 @@ and this project adheres to
   ⚠️️ Please note that `EMAIL_ADMIN` defaults to `lightning@example.com` in
   production environments
 
+- Extend display of audit events to cater for deletions.
+  [#2701](https://github.com/OpenFn/lightning/issues/2701)
+
 ### Fixed
 
 - Fix cursor for small limit on collections request
