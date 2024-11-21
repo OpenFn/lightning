@@ -211,7 +211,8 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
           name: "workflow 1"
         )
 
-      {:ok, snapshot_1} = Snapshot.get_or_create_latest_for(workflow_1)
+      {:ok, snapshot_1} =
+        Snapshot.get_or_create_latest_for(workflow_1, insert(:user))
 
       {:ok, updated_workflow_1} =
         workflow_1
@@ -224,7 +225,8 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
           name: "workflow 2"
         )
 
-      {:ok, snapshot_2} = Snapshot.get_or_create_latest_for(workflow_2)
+      {:ok, snapshot_2} =
+        Snapshot.get_or_create_latest_for(workflow_2, insert(:user))
 
       conn =
         get(conn, ~p"/api/provision/#{project_id}", snapshots: [snapshot_1.id])
@@ -426,7 +428,8 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
           name: "workflow 1"
         )
 
-      {:ok, snapshot_1} = Snapshot.get_or_create_latest_for(workflow_1)
+      {:ok, snapshot_1} =
+        Snapshot.get_or_create_latest_for(workflow_1, insert(:user))
 
       {:ok, updated_workflow_1} =
         workflow_1
@@ -439,7 +442,8 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
           name: "workflow 2"
         )
 
-      {:ok, snapshot_2} = Snapshot.get_or_create_latest_for(workflow_2)
+      {:ok, snapshot_2} =
+        Snapshot.get_or_create_latest_for(workflow_2, insert(:user))
 
       conn =
         Plug.Conn.put_req_header(

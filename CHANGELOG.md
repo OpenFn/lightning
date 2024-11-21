@@ -19,6 +19,8 @@ and this project adheres to
 
 - Support dynamic json schema email format validation.
   [#2664](https://github.com/OpenFn/lightning/issues/2664)
+- Audit snapshot creation
+  [#2601](https://github.com/OpenFn/lightning/issues/2601)
 
 - Allow filtering collection items by updated_before and updated_after.
   [#2693](https://github.com/OpenFn/lightning/issues/2693)
@@ -26,6 +28,13 @@ and this project adheres to
 ### Changed
 
 ### Fixed
+
+- Disable save and run actions on deleted workflows
+  [#2170](https://github.com/OpenFn/lightning/issues/2170)
+- Distinguish active and inactive sort arrows in projects overview table
+  [#2423](https://github.com/OpenFn/lightning/issues/2423)
+- Fix show password toggle icon gets flipped after changing the password value
+  [#2611](https://github.com/OpenFn/lightning/issues/2611)
 
 ## [v2.10.3] - 2024-11-13
 

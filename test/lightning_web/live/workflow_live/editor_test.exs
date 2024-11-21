@@ -7,6 +7,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
   import Ecto.Query
 
+  alias Lightning.Auditing.Audit
   alias Lightning.Invocation
   alias Lightning.Workflows
   alias Lightning.Workflows.Workflow
@@ -433,7 +434,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         insert(:workflow, project: project)
         |> Lightning.Repo.preload([:jobs, :work_orders])
 
-      {:ok, _snapshot} = Workflows.Snapshot.get_or_create_latest_for(workflow)
+      {:ok, _snapshot} =
+        Workflows.Snapshot.get_or_create_latest_for(workflow, insert(:user))
 
       new_job_name = "new job"
 
@@ -1283,6 +1285,46 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       live_children(view) |> Enum.each(&render_async/1)
     end
 
+    test "can't retry when workflow has been deleted",
+         %{
+           conn: conn,
+           project: project,
+           workflow: %{jobs: [_job_1, job_2 | _rest]} = workflow,
+           snapshot: snapshot
+         } do
+      {_dataclips, %{runs: [run]} = _workorder} =
+        rerun_setup(project, workflow, snapshot)
+
+      workflow
+      |> Ecto.Changeset.change(%{
+        deleted_at: DateTime.utc_now() |> DateTime.truncate(:second)
+      })
+      |> Lightning.Repo.update!()
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand", v: workflow.lock_version]}"
+        )
+
+      live_children(view) |> Enum.each(&render_async/1)
+
+      # user gets no option to rerun
+      assert has_element?(view, "button[disabled='disabled']", "Retry from here")
+
+      assert has_element?(
+               view,
+               "button[disabled='disabled']",
+               "Create New Work Order"
+             )
+
+      # submit event regardless
+      step = Enum.find(run.steps, fn step -> step.job_id == job_2.id end)
+
+      assert render_click(view, "rerun", %{run_id: run.id, step_id: step.id}) =~
+               "Cannot rerun a deleted a workflow"
+    end
+
     test "followed run with wiped dataclip renders the page correctly",
          %{
            conn: conn,
@@ -1367,7 +1409,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         )
 
       {:ok, snapshot} =
-        Lightning.Workflows.Snapshot.get_or_create_latest_for(workflow)
+        Lightning.Workflows.Snapshot.get_or_create_latest_for(
+          workflow,
+          insert(:user)
+        )
 
       %{runs: [run]} =
         insert(:workorder,
@@ -1443,6 +1488,53 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       html = view |> element("#manual-job-#{job_1.id}") |> render()
       assert html =~ "data for this step has not been retained"
+    end
+
+    test "audits snapshot creation", %{
+      conn: conn,
+      project: project,
+      user: %{id: user_id}
+    } do
+      workflow =
+        insert(:workflow, project: project)
+        |> Lightning.Repo.preload([:jobs, :work_orders])
+
+      {:ok, _snapshot} =
+        Workflows.Snapshot.get_or_create_latest_for(workflow, insert(:user))
+
+      new_job_name = "new job"
+
+      %{"value" => %{"id" => job_id}} =
+        job_patch = add_job_patch(new_job_name)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[v: workflow.lock_version]}"
+        )
+
+      # add a job to it but don't save
+      view |> push_patches_to_view([job_patch])
+
+      view |> select_node(%{id: job_id}, workflow.lock_version)
+
+      view |> click_edit(%{id: job_id})
+
+      view |> change_editor_text("some body")
+
+      # Clear any audit entries that may have been created by fixtures
+
+      Repo.delete_all(Audit)
+
+      view
+      |> form("#manual_run_form", %{
+        manual: %{body: Jason.encode!(%{})}
+      })
+      |> render_submit()
+
+      audit = Audit |> Repo.one()
+
+      assert %{event: "snapshot_created", actor_id: ^user_id} = audit
     end
 
     test "followed crashed run without steps renders the page correctly",

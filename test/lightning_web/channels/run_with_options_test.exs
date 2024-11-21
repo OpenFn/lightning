@@ -10,10 +10,12 @@ defmodule LightningWeb.RunWithOptionsTest do
 
   describe "rendering a run" do
     test "renders a workflow using a snapshot" do
+      user = insert(:user)
+
       {:ok, %{triggers: [trigger], jobs: [job], edges: [edge]} = workflow} =
         insert(:simple_workflow)
         |> Workflow.touch()
-        |> Workflows.save_workflow()
+        |> Workflows.save_workflow(user)
 
       %{runs: [run]} =
         work_order_for(trigger,
@@ -60,7 +62,7 @@ defmodule LightningWeb.RunWithOptionsTest do
       {:ok, workflow} =
         workflow
         |> Workflows.change_workflow(%{jobs: [%{id: job.id, body: "foo()"}]})
-        |> Workflows.save_workflow()
+        |> Workflows.save_workflow(user)
 
       %{runs: [run]} =
         work_order_for(trigger,

@@ -1,6 +1,7 @@
 defmodule Lightning.Projects.ProvisionerTest do
   use Lightning.DataCase, async: true
 
+  alias Lightning.Auditing.Audit
   alias Lightning.Projects.Provisioner
   alias Lightning.ProjectsFixtures
   alias Lightning.Workflows.Snapshot
@@ -201,6 +202,72 @@ defmodule Lightning.Projects.ProvisionerTest do
              |> Enum.any?(fn pu ->
                pu.user_id == user.id && pu.role == :owner
              end)
+    end
+
+    test "audit the creation of a snapshot" do
+      Mox.verify_on_exit!()
+      %{id: user_id} = user = insert(:user)
+
+      credential = insert(:credential, name: "Test Credential", user: user)
+
+      %{
+        body: %{"workflows" => [workflow]} = body,
+        workflow_id: workflow_id,
+        first_job_id: first_job_id
+      } = valid_document()
+
+      project_credential_id = Ecto.UUID.generate()
+
+      credentials_payload =
+        [
+          %{
+            "id" => project_credential_id,
+            "name" => credential.name,
+            "owner" => user.email
+          }
+        ]
+
+      updated_workflow_jobs =
+        Enum.map(workflow["jobs"], fn job ->
+          if job["id"] == first_job_id do
+            job
+            |> Map.put("project_credential_id", project_credential_id)
+          else
+            job
+          end
+        end)
+
+      body_with_credentials =
+        body
+        |> Map.put("project_credentials", credentials_payload)
+        |> Map.put("workflows", [%{workflow | "jobs" => updated_workflow_jobs}])
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      Provisioner.import_document(
+        %Lightning.Projects.Project{},
+        user,
+        body_with_credentials
+      )
+
+      %{id: snapshot_id} = Snapshot |> Repo.one!()
+
+      audit = Audit |> Repo.one!()
+
+      assert %{
+               event: "snapshot_created",
+               item_id: ^workflow_id,
+               actor_id: ^user_id,
+               changes: %{
+                 after: %{
+                   "snapshot_id" => ^snapshot_id
+                 }
+               }
+             } = audit
     end
   end
 

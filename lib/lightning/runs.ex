@@ -14,7 +14,6 @@ defmodule Lightning.Runs do
   alias Lightning.Runs.Events
   alias Lightning.Runs.Handlers
   alias Lightning.Services.RunQueue
-  alias Lightning.Workflows
 
   require Logger
 
@@ -75,27 +74,7 @@ defmodule Lightning.Runs do
       get_query(id, include: [snapshot: [jobs: :credential]])
     )
     |> Multi.merge(fn %{__pre_check_run__: run} ->
-      case run do
-        %{snapshot_id: nil} ->
-          # TODO: remove this after the next minor release, all runs created after
-          # this point will have a snapshot associated.
-
-          Multi.new()
-          |> Multi.one(:workflow, Ecto.assoc(run, :workflow))
-          |> Multi.run(:snapshot, fn _repo, %{workflow: workflow} ->
-            Workflows.Snapshot.get_or_create_latest_for(workflow)
-          end)
-          |> Multi.update(:run_with_snapshot, fn %{snapshot: snapshot} ->
-            Ecto.Changeset.change(run, snapshot_id: snapshot.id)
-          end)
-          |> Multi.one(
-            :run,
-            get_query(id, include: [snapshot: [jobs: :credential]])
-          )
-
-        run ->
-          Multi.new() |> Multi.put(:run, run)
-      end
+      Multi.new() |> Multi.put(:run, run)
     end)
     |> Repo.transaction()
     |> case do

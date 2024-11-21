@@ -21,11 +21,12 @@ defmodule LightningWeb.WorkOrderLiveTest do
   setup :stub_usage_limiter_ok
 
   defp setup_work_order(project) do
+    actor = insert(:user)
     dataclip = insert(:dataclip)
     %{jobs: [job]} = workflow = insert(:simple_workflow, project: project)
 
     {:ok, snapshot} =
-      Workflows.Snapshot.get_or_create_latest_for(workflow)
+      Workflows.Snapshot.get_or_create_latest_for(workflow, actor)
 
     work_order =
       work_order_for(job,
@@ -497,7 +498,8 @@ defmodule LightningWeb.WorkOrderLiveTest do
       job = insert(:job, workflow: workflow)
       dataclip = insert(:dataclip)
 
-      {:ok, snapshot} = Workflows.Snapshot.get_or_create_latest_for(workflow)
+      {:ok, snapshot} =
+        Workflows.Snapshot.get_or_create_latest_for(workflow, insert(:user))
 
       runs_params = [
         %{state: :claimed, state_timestamp: build(:timestamp)},
@@ -546,7 +548,8 @@ defmodule LightningWeb.WorkOrderLiveTest do
       trigger = insert(:trigger, type: :webhook, workflow: workflow)
       job = insert(:job, workflow: workflow)
 
-      {:ok, snapshot} = Workflows.Snapshot.get_or_create_latest_for(workflow)
+      {:ok, snapshot} =
+        Workflows.Snapshot.get_or_create_latest_for(workflow, insert(:user))
 
       dataclip = insert(:dataclip)
 
@@ -710,7 +713,10 @@ defmodule LightningWeb.WorkOrderLiveTest do
       dataclip = insert(:dataclip)
 
       {:ok, snapshot} =
-        Lightning.Workflows.Snapshot.get_or_create_latest_for(workflow)
+        Lightning.Workflows.Snapshot.get_or_create_latest_for(
+          workflow,
+          insert(:user)
+        )
 
       work_order =
         insert(:workorder,
@@ -817,7 +823,10 @@ defmodule LightningWeb.WorkOrderLiveTest do
       dataclip = insert(:dataclip)
 
       {:ok, snapshot} =
-        Lightning.Workflows.Snapshot.get_or_create_latest_for(workflow)
+        Lightning.Workflows.Snapshot.get_or_create_latest_for(
+          workflow,
+          insert(:user)
+        )
 
       work_order =
         insert(:workorder,
@@ -894,7 +903,10 @@ defmodule LightningWeb.WorkOrderLiveTest do
         )
 
       {:ok, snapshot} =
-        Lightning.Workflows.Snapshot.get_or_create_latest_for(workflow)
+        Lightning.Workflows.Snapshot.get_or_create_latest_for(
+          workflow,
+          insert(:user)
+        )
 
       dataclip = insert(:dataclip)
 
@@ -933,7 +945,10 @@ defmodule LightningWeb.WorkOrderLiveTest do
         )
 
       {:ok, snapshot_two} =
-        Lightning.Workflows.Snapshot.get_or_create_latest_for(workflow_two)
+        Lightning.Workflows.Snapshot.get_or_create_latest_for(
+          workflow_two,
+          insert(:user)
+        )
 
       dataclip_two = insert(:dataclip)
 
@@ -1018,7 +1033,10 @@ defmodule LightningWeb.WorkOrderLiveTest do
         )
 
       {:ok, snapshot_one} =
-        Workflows.Snapshot.get_or_create_latest_for(workflow_one)
+        Workflows.Snapshot.get_or_create_latest_for(
+          workflow_one,
+          insert(:user)
+        )
 
       dataclip =
         insert(:dataclip,
@@ -1057,7 +1075,10 @@ defmodule LightningWeb.WorkOrderLiveTest do
       job_two = insert(:job, workflow: workflow_two)
 
       {:ok, snapshot_two} =
-        Workflows.Snapshot.get_or_create_latest_for(workflow_two)
+        Workflows.Snapshot.get_or_create_latest_for(
+          workflow_two,
+          insert(:user)
+        )
 
       dataclip =
         insert(:dataclip, type: :http_request, body: %{"username" => "qassim"})
@@ -1369,7 +1390,8 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       dataclip = insert(:dataclip, project: project)
 
-      {:ok, snapshot} = Workflows.Snapshot.get_or_create_latest_for(workflow)
+      {:ok, snapshot} =
+        Workflows.Snapshot.get_or_create_latest_for(workflow, insert(:user))
 
       workorder =
         insert(:workorder,
@@ -1478,7 +1500,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
       )
 
       {:ok, snapshot} =
-        Workflows.Snapshot.get_or_create_latest_for(workflow)
+        Workflows.Snapshot.get_or_create_latest_for(workflow, insert(:user))
 
       dataclip = insert(:dataclip, project: project)
 
@@ -1636,7 +1658,8 @@ defmodule LightningWeb.WorkOrderLiveTest do
       job_1 = insert(:job, workflow: workflow)
       job_2 = insert(:job, workflow: workflow)
 
-      {:ok, snapshot} = Workflows.Snapshot.get_or_create_latest_for(workflow)
+      {:ok, snapshot} =
+        Workflows.Snapshot.get_or_create_latest_for(workflow, insert(:user))
 
       dataclip = insert(:dataclip)
 
