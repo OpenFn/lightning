@@ -8,20 +8,21 @@ defmodule LightningWeb.CollectionsController do
 
   require Logger
 
-  @max_chunk_size 50
+  @max_chunk_size 100
 
   @limits Application.compile_env!(:lightning, __MODULE__)
 
   @default_stream_limit @limits[:default_stream_limit]
   @max_database_limit @limits[:max_database_limit]
 
-  @valid_params [
-    "key",
-    "cursor",
-    "limit",
+  @timestamp_params [
     "created_after",
-    "created_before"
+    "created_before",
+    "updated_after",
+    "updated_before"
   ]
+
+  @valid_params ["key", "cursor", "limit" | @timestamp_params]
 
   defp authorize(conn, collection) do
     Permissions.can(
@@ -92,10 +93,12 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
-  def stream(conn, %{"name" => col_name, "key" => key_pattern}) do
-    with {:ok, collection, filters, response_limit} <-
-           validate_query(conn, col_name) do
+  def stream(conn, %{"name" => col_name} = params) do
+    with {:ok, collection, filters} <- validate_query(conn, col_name) do
+      key_pattern = Map.get(params, "key")
+
       items_stream = stream_all_in_chunks(collection, filters, key_pattern)
+      response_limit = Map.fetch!(filters, :limit)
 
       case stream_chunked(conn, items_stream, response_limit) do
         {:error, conn} -> conn
@@ -104,24 +107,18 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
-  def stream(conn, %{"name" => col_name}) do
-    with {:ok, collection, filters, response_limit} <-
-           validate_query(conn, col_name) do
-      items_stream = stream_all_in_chunks(collection, filters)
-
-      case stream_chunked(conn, items_stream, response_limit) do
-        {:error, conn} -> conn
-        {:ok, conn} -> conn
-      end
-    end
+  defp stream_all_in_chunks(collection, %{limit: limit} = filters, key_pattern)
+       when limit <= @max_database_limit do
+    Collections.get_all(collection, filters, key_pattern)
   end
 
   defp stream_all_in_chunks(
          collection,
-         %{cursor: initial_cursor, limit: limit} = filters,
-         key_pattern \\ nil
+         %{cursor: initial_cursor} = filters,
+         key_pattern
        ) do
-    filters = Map.put(filters, :limit, min(limit, @max_database_limit))
+    # returns one more than the limit to determine if there are more items for the cursor
+    filters = Map.put(filters, :limit, @max_database_limit + 1)
 
     Stream.unfold(initial_cursor, fn cursor ->
       filters = Map.put(filters, :cursor, cursor)
@@ -164,13 +161,7 @@ defmodule LightningWeb.CollectionsController do
              "limit" => "#{@default_stream_limit}"
            }),
          {:ok, filters} <- validate_query_params(query_params) do
-      # returns one more from db than the limit to determine if there are more items for the cursor
-      db_query_filters =
-        Map.update(filters, :limit, @default_stream_limit, &(&1 + 1))
-
-      response_limit = Map.fetch!(filters, :limit)
-
-      {:ok, collection, db_query_filters, response_limit}
+      {:ok, collection, filters}
     end
   end
 
@@ -181,9 +172,9 @@ defmodule LightningWeb.CollectionsController do
            Map.drop(query_params, @valid_params),
          {:ok, cursor} <- validate_cursor(cursor),
          {limit, ""} <- Integer.parse(limit),
-         valid_params <- Map.take(query_params, @valid_params) do
+         :ok <- validate_timestamps(query_params) do
       filters =
-        valid_params
+        query_params
         |> Map.new(fn {key, value} -> {String.to_existing_atom(key), value} end)
         |> Map.put(:limit, limit)
         |> Map.put(:cursor, cursor)
@@ -201,6 +192,18 @@ defmodule LightningWeb.CollectionsController do
     with {:ok, decoded} <- Base.decode64(cursor),
          {:ok, datetime, _off} <- DateTime.from_iso8601(decoded) do
       {:ok, datetime}
+    end
+  end
+
+  defp validate_timestamps(params) do
+    params
+    |> Map.take(@timestamp_params)
+    |> Enum.all?(fn {_key, value} ->
+      match?({:ok, _dt, _time}, DateTime.from_iso8601(value))
+    end)
+    |> case do
+      true -> :ok
+      false -> :error
     end
   end
 

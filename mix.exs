@@ -152,7 +152,8 @@ defmodule Lightning.MixProject do
       {:enacl, github: "aeternity/enacl", branch: "master"},
       {:earmark, "~> 1.4"},
       {:eventually, "~> 1.1", only: [:test]},
-      {:benchee, "~> 1.3.1", only: :dev}
+      {:benchee, "~> 1.3.1", only: :dev},
+      {:statistics, "~> 0.6", only: :dev}
     ]
   end
 

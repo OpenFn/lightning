@@ -21,6 +21,8 @@ and this project adheres to
   [#2664](https://github.com/OpenFn/lightning/issues/2664)
 - Audit snapshot creation
   [#2601](https://github.com/OpenFn/lightning/issues/2601)
+- Allow filtering collection items by updated_before and updated_after.
+  [#2693](https://github.com/OpenFn/lightning/issues/2693)
 
 ### Changed
 

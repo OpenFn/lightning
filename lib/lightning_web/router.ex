@@ -102,7 +102,6 @@ defmodule LightningWeb.Router do
   end
 
   ## Authentication routes
-
   scope "/", LightningWeb do
     pipe_through [:browser, :redirect_if_user_is_authenticated]
 

@@ -136,6 +136,7 @@ defmodule Lightning.Collections do
     collection_id
     |> all_query(cursor, limit)
     |> filter_by_inserted_at(params)
+    |> filter_by_updated_at(params)
     |> then(fn query ->
       if key_pattern do
         where(query, [i], like(i.key, ^format_pattern(key_pattern)))
@@ -229,6 +230,12 @@ defmodule Lightning.Collections do
     |> filter_by_created_after(params)
   end
 
+  defp filter_by_updated_at(query, params) do
+    query
+    |> filter_by_updated_before(params)
+    |> filter_by_updated_after(params)
+  end
+
   defp filter_by_created_after(query, %{created_after: created_after}),
     do: where(query, [i], i.inserted_at >= ^created_after)
 
@@ -238,6 +245,16 @@ defmodule Lightning.Collections do
     do: where(query, [i], i.inserted_at < ^created_before)
 
   defp filter_by_created_before(query, _params), do: query
+
+  defp filter_by_updated_after(query, %{updated_after: updated_after}),
+    do: where(query, [i], i.updated_at >= ^updated_after)
+
+  defp filter_by_updated_after(query, _params), do: query
+
+  defp filter_by_updated_before(query, %{updated_before: updated_before}),
+    do: where(query, [i], i.updated_at < ^updated_before)
+
+  defp filter_by_updated_before(query, _params), do: query
 
   defp format_pattern(pattern) do
     pattern
