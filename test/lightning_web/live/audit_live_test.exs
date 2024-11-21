@@ -129,12 +129,18 @@ defmodule LightningWeb.AuditLiveTest do
       assert html =~ ~r"<li>bar&nbsp;\s+<svg.+bar_after</li>"s
     end
 
-    @tag :skip
-    test "excludes any extra keys in the before" do
+    test "includes any extra keys in the before (string keys)" do
       assigns = %{
         metadata: %{
-          before: %{"foo" => "foo_before", "bar" => "bar_before", "baz" => "baz_before"},
-          after: %{"foo" => "foo_after", "bar" => "bar_after"}
+          before: %{
+            "foo" => "foo_before",
+            "bar" => "bar_before",
+            "baz" => "baz_before"
+          },
+          after: %{
+            "foo" => "foo_after",
+            "bar" => "bar_after"
+          }
         }
       }
 
@@ -142,11 +148,32 @@ defmodule LightningWeb.AuditLiveTest do
 
       assert html =~ ~r"<li>foo.+foo_before.+foo_after</li>"s
       assert html =~ ~r"<li>bar.+bar_before.+bar_after</li>"s
-      refute html =~ "baz"
+      assert html =~ ~r"<li>baz.+baz_before.+?</svg>\s+?</li>"s
     end
 
-    @tag :skip
-    test "excludes any extra keys in the after" do
+    test "includes any extra keys in the before (atom keys)" do
+      assigns = %{
+        metadata: %{
+          before: %{
+            foo: "foo_before",
+            bar: "bar_before",
+            baz: "baz_before"
+          },
+          after: %{
+            foo: "foo_after",
+            bar: "bar_after"
+          }
+        }
+      }
+
+      html = render_component(&AuditLive.Index.diff/1, assigns)
+
+      assert html =~ ~r"<li>foo.+foo_before.+foo_after</li>"s
+      assert html =~ ~r"<li>bar.+bar_before.+bar_after</li>"s
+      assert html =~ ~r"<li>baz.+baz_before.+?</svg>\s+?</li>"s
+    end
+
+    test "includes any extra keys in the after (string keys)" do
       assigns = %{
         metadata: %{
           before: %{
@@ -165,16 +192,21 @@ defmodule LightningWeb.AuditLiveTest do
 
       assert html =~ ~r"<li>foo.+foo_before.+foo_after</li>"s
       assert html =~ ~r"<li>bar.+bar_before.+bar_after</li>"s
-      refute html =~ "baz"
+      assert html =~ ~r"<li>baz&nbsp;\s+?<svg.+?</svg>\s+?baz_after</li>"s
     end
 
-    @tag :skip
-    # Currnet behaviour, but won't be retained
-    test "excludes any extra keys in the after (atom edition)" do
+    test "includes any extra keys in the after (atom keys)" do
       assigns = %{
         metadata: %{
-          before: %{foo: "foo_before", bar: "bar_before"},
-          after: %{foo: "foo_after", bar: "bar_after", baz: "baz_after"}
+          before: %{
+            foo: "foo_before",
+            bar: "bar_before"
+          },
+          after: %{
+            foo: "foo_after",
+            bar: "bar_after",
+            baz: "baz_after"
+          }
         }
       }
 
@@ -182,10 +214,10 @@ defmodule LightningWeb.AuditLiveTest do
 
       assert html =~ ~r"<li>foo.+foo_before.+foo_after</li>"s
       assert html =~ ~r"<li>bar.+bar_before.+bar_after</li>"s
-      refute html =~ "baz"
+      assert html =~ ~r"<li>baz&nbsp;\s+?<svg.+?</svg>\s+?baz_after</li>"s
     end
 
-    test "list changes in order if the keys are strings" do
+    test "list changes in order (string keys)" do
       assigns = %{
         metadata: %{
           before: %{
@@ -206,8 +238,7 @@ defmodule LightningWeb.AuditLiveTest do
       assert html =~ ~r"bar&nbsp;.+baz&nbsp;.+foo&nbsp;"s
     end
 
-    @tag :skip
-    test "list changes in sequence if the keys are atoms" do
+    test "list changes in order (atom keys)" do
       assigns = %{
         metadata: %{
           before: %{foo: "foo_before", bar: "bar_before", baz: "baz_before"},

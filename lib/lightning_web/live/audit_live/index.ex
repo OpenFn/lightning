@@ -53,11 +53,21 @@ defmodule LightningWeb.AuditLive.Index do
       assigns.metadata.before ||
         Enum.into(rhs, %{}, fn {key, _val} -> {key, nil} end)
 
-    assigns =
-      assign(assigns,
-        changes:
-          Enum.zip([lhs |> Map.keys(), lhs |> Map.values(), rhs |> Map.values()])
-      )
+    changes =
+      Map.keys(lhs)
+      |> Enum.concat(Map.keys(rhs))
+      |> Enum.sort()
+      |> Enum.uniq()
+      |> Enum.map(fn key ->
+        {key, Map.get(lhs, key), Map.get(rhs, key)}
+      end)
+
+    assigns = assign(assigns, changes: changes)
+    # assigns =
+    #   assign(assigns,
+    #     changes:
+    #       Enum.zip([lhs |> Map.keys(), lhs |> Map.values(), rhs |> Map.values()])
+    #   )
 
     ~H"""
     <%= for {field, old, new} <- @changes do %>
