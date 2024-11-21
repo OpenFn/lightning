@@ -7,7 +7,6 @@ defmodule LightningWeb.WorkflowLive.Index do
   alias Lightning.DashboardStats
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
-  alias Lightning.Repo
   alias Lightning.Workflows
   alias LightningWeb.LiveHelpers
   alias LightningWeb.WorkflowLive.DashboardComponents
@@ -121,7 +120,8 @@ defmodule LightningWeb.WorkflowLive.Index do
         %{"state" => current_state, "workflow" => workflow_id},
         socket
       ) do
-    workflow = Workflows.get_workflow!(workflow_id, include: [:triggers])
+    workflow =
+      Workflows.get_workflow!(workflow_id, include: [:triggers])
 
     updated_triggers =
       workflow.triggers
@@ -131,10 +131,10 @@ defmodule LightningWeb.WorkflowLive.Index do
 
     workflow_changeset =
       workflow
-      |> Ecto.Changeset.change()
+      |> Workflows.change_workflow()
       |> Ecto.Changeset.put_assoc(:triggers, updated_triggers)
 
-    case Repo.update(workflow_changeset) do
+    case Workflows.save_workflow(workflow_changeset, socket.assigns.current_user) do
       {:ok, _workflow} ->
         {:noreply,
          socket
