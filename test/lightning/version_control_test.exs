@@ -297,6 +297,71 @@ defmodule Lightning.VersionControlTest do
       assert Repo.aggregate(ProjectRepoConnection, :count) == 0
     end
 
+    test "audits the removal of the repo connection" do
+      %{id: project_id} = project = insert(:project)
+      %{id: user_id} = user = user_with_valid_github_oauth()
+
+      repo = "someaccount/somerepo"
+      branch = "somebranch"
+
+      repo_connection =
+        insert(:project_repo_connection,
+          project: project,
+          repo: repo,
+          branch: branch,
+          github_installation_id: "1234",
+          access_token: "someaccesstoken"
+        )
+
+      assert is_map(user.github_oauth_token)
+
+      # check if deploy yml exists for deletion
+      expected_deploy_yml_path =
+        ".github/workflows/openfn-#{project.id}-deploy.yml"
+
+      expect_get_repo_content(repo_connection.repo, expected_deploy_yml_path)
+
+      # deletes successfully
+      expect_delete_repo_content(
+        repo_connection.repo,
+        expected_deploy_yml_path
+      )
+
+      # check if deploy yml exists for deletion
+      expected_config_json_path = "openfn-#{project.id}-config.json"
+      expect_get_repo_content(repo_connection.repo, expected_config_json_path)
+      # fails to delete
+      expect_delete_repo_content(
+        repo_connection.repo,
+        expected_config_json_path,
+        400,
+        %{"something" => "happened"}
+      )
+
+      # delete secret
+      expect_delete_repo_secret(
+        repo_connection.repo,
+        "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
+      )
+
+      VersionControl.remove_github_connection(repo_connection, user)
+
+      audit = Repo.one!(Audit)
+
+      assert %{
+               event: "repo_connection_removed",
+               item_id: ^project_id,
+               item_type: "project",
+               actor_id: ^user_id,
+               changes: %{
+                 before: %{
+                   "repo" => ^repo,
+                   "branch" => ^branch,
+                 }
+               }
+             } = audit
+    end
+
     test "user without an oauth token can successfully remove a connection" do
       project = insert(:project)
       user = insert(:user)

@@ -8,7 +8,8 @@ defmodule Lightning.Projects.Audit do
     events: [
       "dataclip_retention_period_updated",
       "history_retention_period_updated",
-      "repo_connection_created"
+      "repo_connection_created",
+      "repo_connection_removed"
     ]
 
   alias Ecto.Multi
@@ -73,5 +74,30 @@ defmodule Lightning.Projects.Audit do
     changes = %{after: connection_properties}
 
     event("repo_connection_created", project_id, user, changes)
+  end
+
+  def repo_connection_removed(repo_connection, user) do
+    %{
+      branch: branch,
+      config_path: config_path,
+      project_id: project_id,
+      repo: repo
+    } = repo_connection
+
+    connection_properties =
+      %{
+        branch: branch,
+        repo: repo,
+      }
+      |> Map.merge(
+        case config_path do
+          nil -> %{}
+          path -> %{config_path: path}
+        end
+      )
+
+    changes = %{before: connection_properties, after: nil}
+
+    event("repo_connection_removed", project_id, user, changes)
   end
 end
