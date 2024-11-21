@@ -101,7 +101,7 @@ defmodule LightningWeb.AuditLiveTest do
       assert html =~ ~r"<li>bar.+bar_before.+bar_after</li>"s
     end
 
-    test "correctly lists changes if no before settings (string keys)" do
+    test "correctly lists changes if before is nil (string keys)" do
       assigns = %{
         metadata: %{
           before: nil,
@@ -115,7 +115,7 @@ defmodule LightningWeb.AuditLiveTest do
       assert html =~ ~r"<li>bar&nbsp;\s+<svg.+bar_after</li>"s
     end
 
-    test "correctly lists changes if no before settings (atom keys)" do
+    test "correctly lists changes if before is nil (atom keys)" do
       assigns = %{
         metadata: %{
           before: nil,
@@ -127,6 +127,90 @@ defmodule LightningWeb.AuditLiveTest do
 
       assert html =~ ~r"<li>foo&nbsp;\s+<svg.+foo_after</li>"s
       assert html =~ ~r"<li>bar&nbsp;\s+<svg.+bar_after</li>"s
+    end
+
+    test "correctly lists changes if before is empty (string keys)" do
+      assigns = %{
+        metadata: %{
+          before: %{},
+          after: %{"foo" => "foo_after", "bar" => "bar_after"}
+        }
+      }
+
+      html = render_component(&AuditLive.Index.diff/1, assigns)
+
+      assert html =~ ~r"<li>foo&nbsp;\s+<svg.+foo_after</li>"s
+      assert html =~ ~r"<li>bar&nbsp;\s+<svg.+bar_after</li>"s
+    end
+
+    test "correctly lists changes if before is empty (atom keys)" do
+      assigns = %{
+        metadata: %{
+          before: %{},
+          after: %{foo: "foo_after", bar: "bar_after"}
+        }
+      }
+
+      html = render_component(&AuditLive.Index.diff/1, assigns)
+
+      assert html =~ ~r"<li>foo&nbsp;\s+<svg.+foo_after</li>"s
+      assert html =~ ~r"<li>bar&nbsp;\s+<svg.+bar_after</li>"s
+    end
+
+    test "correctly lists changes if after is nil (string keys)" do
+      assigns = %{
+        metadata: %{
+          before: %{"foo" => "foo_before", "bar" => "bar_before"},
+          after: nil
+        }
+      }
+
+      html = render_component(&AuditLive.Index.diff/1, assigns)
+
+      assert html =~ ~r"<li>foo.+foo_before.+?svg>\s+?</li>"s
+      assert html =~ ~r"<li>bar.+bar_before.+?svg>\s+?</li>"s
+    end
+
+    test "correctly lists changes if after is nil (atom keys)" do
+      assigns = %{
+        metadata: %{
+          before: %{foo: "foo_before", bar: "bar_before"},
+          after: nil
+        }
+      }
+
+      html = render_component(&AuditLive.Index.diff/1, assigns)
+
+      assert html =~ ~r"<li>foo.+foo_before.+?svg>\s+?</li>"s
+      assert html =~ ~r"<li>bar.+bar_before.+?svg>\s+?</li>"s
+    end
+
+    test "correctly lists changes if after is empty (string keys)" do
+      assigns = %{
+        metadata: %{
+          before: %{"foo" => "foo_before", "bar" => "bar_before"},
+          after: %{}
+        }
+      }
+
+      html = render_component(&AuditLive.Index.diff/1, assigns)
+
+      assert html =~ ~r"<li>foo.+foo_before.+?svg>\s+?</li>"s
+      assert html =~ ~r"<li>bar.+bar_before.+?svg>\s+?</li>"s
+    end
+
+    test "correctly lists changes if after is empty (atom keys)" do
+      assigns = %{
+        metadata: %{
+          before: %{foo: "foo_before", bar: "bar_before"},
+          after: %{}
+        }
+      }
+
+      html = render_component(&AuditLive.Index.diff/1, assigns)
+
+      assert html =~ ~r"<li>foo.+foo_before.+?svg>\s+?</li>"s
+      assert html =~ ~r"<li>bar.+bar_before.+?svg>\s+?</li>"s
     end
 
     test "includes any extra keys in the before (string keys)" do
@@ -249,6 +333,22 @@ defmodule LightningWeb.AuditLiveTest do
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
       assert html =~ ~r"bar&nbsp;.+baz&nbsp;.+foo&nbsp;"s
+    end
+
+    test "when both before and after are nil, return `No changes`" do
+      assigns = %{metadata: %{before: nil, after: nil}}
+
+      html = render_component(&AuditLive.Index.diff/1, assigns)
+
+      assert html =~ "No changes"
+    end
+
+    test "when both before and after are empty, return `No changes`" do
+      assigns = %{metadata: %{before: nil, after: nil}}
+
+      html = render_component(&AuditLive.Index.diff/1, assigns)
+
+      assert html =~ "No changes"
     end
   end
 end
