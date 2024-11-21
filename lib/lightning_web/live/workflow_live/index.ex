@@ -120,32 +120,37 @@ defmodule LightningWeb.WorkflowLive.Index do
         %{"state" => current_state, "workflow" => workflow_id},
         socket
       ) do
-    workflow =
+    enabled? = current_state == "disabled"
+
+    %{current_user: actor, project: project_id} = socket.assigns
+
+    %{triggers: triggers} =
+      workflow =
       Workflows.get_workflow!(workflow_id, include: [:triggers])
 
     updated_triggers =
-      workflow.triggers
-      |> Enum.map(
-        &Ecto.Changeset.change(&1, %{enabled: current_state == "disabled"})
-      )
+      Enum.map(triggers, &Ecto.Changeset.change(&1, %{enabled: enabled?}))
 
     workflow_changeset =
       workflow
       |> Workflows.change_workflow()
       |> Ecto.Changeset.put_assoc(:triggers, updated_triggers)
 
-    case Workflows.save_workflow(workflow_changeset, socket.assigns.current_user) do
+    case Workflows.save_workflow(workflow_changeset, actor) do
       {:ok, _workflow} ->
         {:noreply,
          socket
          |> put_flash(:info, "Workflow updated successfully!")
-         |> push_patch(to: ~p"/projects/#{socket.assigns.project}/w")}
+         |> push_patch(to: ~p"/projects/#{project_id}/w")}
 
       {:error, _changeset} ->
         {:noreply,
          socket
-         |> put_flash(:error, "Failed to update workflow. Please try again.")
-         |> push_patch(to: ~p"/projects/#{socket.assigns.project}/w")}
+         |> put_flash(
+           :error,
+           "Failed to update workflow. Please try again."
+         )
+         |> push_patch(to: ~p"/projects/#{project_id}/w")}
     end
   end
 
