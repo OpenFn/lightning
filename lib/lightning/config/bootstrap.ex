@@ -317,12 +317,15 @@ defmodule Lightning.Config.Bootstrap do
     # get_env(:lightning, :emails) |> IO.inspect()
     config :lightning,
       emails: [
-        sender_name: env!("EMAIL_SENDER_NAME", :string, "OpenFn")
+        sender_name: env!("EMAIL_SENDER_NAME", :string, "OpenFn"),
+        admin_email:
+          env!(
+            "EMAIL_ADMIN",
+            :string,
+            get_env(:lightning, [:emails, :admin_email]) ||
+              "lightning@example.com"
+          )
       ]
-
-    if !get_env(:lightning, [:emails, :admin_email]) do
-      config :lightning, :emails, admin_email: env!("EMAIL_ADMIN", :string)
-    end
 
     # Use the `PRIMARY_ENCRYPTION_KEY` env variable if available, else fall back
     # to defaults.

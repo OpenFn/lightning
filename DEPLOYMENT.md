@@ -137,7 +137,7 @@ variable to one of the following:
 - `mailgun`
 - `smtp`
 
-You will also need to set the `EMAIL_ADMIN` environment variable to the email
+You will also want to set the `EMAIL_ADMIN` environment variable to the email
 address that will be used as the sender for system emails.
 
 #### Mailgun

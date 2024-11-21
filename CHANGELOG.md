@@ -25,7 +25,8 @@ and this project adheres to
   [#2693](https://github.com/OpenFn/lightning/issues/2693)
 - Add support for SMTP email configuration
   [#2699](https://github.com/OpenFn/lightning/issues/2699)  
-  ⚠️️ Please note that you must now set `EMAIL_ADMIN` in production environments
+  ⚠️️ Please note that `EMAIL_ADMIN` defaults to `lightning@example.com` in
+  production environments
 
 ### Changed
 

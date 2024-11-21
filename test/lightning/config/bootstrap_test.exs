@@ -228,7 +228,7 @@ defmodule Lightning.Config.BootstrapTest do
     end
 
     @tag env: %{}
-    test "throws an error if the admin mail address isn't provided" do
+    test "defaults the admin mail address isn't provided" do
       # This is not the cleanest test, in the real world, the admin email
       # key wouldn't exist - but since we fallback to real config (in this test case)
       # test.exs, we need to find a way to provide an invalid but available
@@ -237,9 +237,12 @@ defmodule Lightning.Config.BootstrapTest do
       # on a compile time injected module.
       Process.put(@config_key, lightning: [emails: [admin_email: false]])
 
-      assert_raise RuntimeError, ~r/EMAIL_ADMIN not set/, fn ->
-        Bootstrap.configure()
-      end
+      Bootstrap.configure()
+
+      assert {:admin_email, "lightning@example.com"} in get_env(
+               :lightning,
+               :emails
+             )
     end
 
     @tag env: %{"MAIL_PROVIDER" => "mailgun"}
