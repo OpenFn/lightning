@@ -42,7 +42,7 @@ defmodule Lightning.Config.Bootstrap do
   end
 
   # credo:disable-for-this-file Credo.Check.Refactor.CyclomaticComplexity
-  def configure() do
+  def configure do
     unless Process.get(:dotenvy_vars) do
       raise """
       Environment variables haven't been sourced first.
@@ -747,11 +747,9 @@ defmodule Lightning.Config.Bootstrap do
   the application environment.
   """
   def get_env(app, keys) do
-    with v when not is_nil(v) <- get_env(app) |> get_in(keys) do
-      v
-    else
-      nil ->
-        Application.get_all_env(app) |> get_in(keys)
+    case get_env(app) |> get_in(keys) do
+      nil -> Application.get_all_env(app) |> get_in(keys)
+      value -> value
     end
   end
 end
