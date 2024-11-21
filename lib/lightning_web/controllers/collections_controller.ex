@@ -106,9 +106,12 @@ defmodule LightningWeb.CollectionsController do
       end
     end
   end
-
+ # Streams records from database without depending on holding a transaction from database pool.
+  # It streams one more than the limit to allow determining if there are more items for the response cursor.
   defp stream_all_in_chunks(collection, %{limit: limit} = filters, key_pattern)
        when limit <= @max_database_limit do
+    filters = Map.put(filters, :limit, limit + 1)
+
     Collections.get_all(collection, filters, key_pattern)
   end
 
@@ -117,7 +120,6 @@ defmodule LightningWeb.CollectionsController do
          %{cursor: initial_cursor} = filters,
          key_pattern
        ) do
-    # returns one more than the limit to determine if there are more items for the cursor
     filters = Map.put(filters, :limit, @max_database_limit + 1)
 
     Stream.unfold(initial_cursor, fn cursor ->
