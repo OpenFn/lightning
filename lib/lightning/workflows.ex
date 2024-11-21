@@ -37,7 +37,7 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
-  Gets a single workflow.
+  Gets a single workflow with optional preloads.
 
   Raises `Ecto.NoResultsError` if the Workflow does not exist.
 
@@ -49,10 +49,43 @@ defmodule Lightning.Workflows do
       iex> get_workflow!(456)
       ** (Ecto.NoResultsError)
 
-  """
-  def get_workflow!(id), do: Repo.get!(Workflow, id)
+      iex> get_workflow!(123, include: [:triggers])
+      %Workflow{triggers: [...]}
 
-  def get_workflow(id), do: Repo.get(Workflow, id)
+  """
+  def get_workflow!(id, opts \\ []) do
+    include = Keyword.get(opts, :include, [])
+
+    Workflow
+    |> Repo.get!(id)
+    |> Repo.preload(include)
+  end
+
+  @doc """
+  Gets a single workflow with optional preloads, returns `nil` if not found.
+
+  ## Examples
+
+      iex> get_workflow(123)
+      %Workflow{}
+
+      iex> get_workflow(456)
+      nil
+
+      iex> get_workflow(123, include: [:triggers])
+      %Workflow{triggers: [...]}
+
+  """
+  def get_workflow(id, opts \\ []) do
+    include = Keyword.get(opts, :include, [])
+
+    Workflow
+    |> Repo.get(id)
+    |> case do
+      nil -> nil
+      workflow -> Repo.preload(workflow, include)
+    end
+  end
 
   @spec save_workflow(Ecto.Changeset.t(Workflow.t()) | map(), struct()) ::
           {:ok, Workflow.t()}

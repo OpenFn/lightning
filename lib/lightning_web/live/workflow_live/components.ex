@@ -384,22 +384,6 @@ defmodule LightningWeb.WorkflowLive.Components do
           </div>
       <% end %>
     </div>
-    <div class="hidden sm:block" aria-hidden="true">
-      <div class="py-2"></div>
-    </div>
-    <hr class="h-px bg-gray-200 border-0 dark:bg-gray-700 position:absolute" />
-    <div class="hidden sm:block" aria-hidden="true">
-      <div class="py-2"></div>
-    </div>
-    <.input
-      type="checkbox"
-      field={@form[:enabled]}
-      label="Disable this trigger"
-      disabled={@disabled}
-      checked_value={false}
-      unchecked_value={true}
-      value={@trigger_enabled}
-    />
     """
   end
 

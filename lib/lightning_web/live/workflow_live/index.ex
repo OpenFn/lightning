@@ -7,6 +7,7 @@ defmodule LightningWeb.WorkflowLive.Index do
   alias Lightning.DashboardStats
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
+  alias Lightning.Repo
   alias Lightning.Workflows
   alias LightningWeb.LiveHelpers
   alias LightningWeb.WorkflowLive.DashboardComponents
@@ -115,6 +116,39 @@ defmodule LightningWeb.WorkflowLive.Index do
   end
 
   @impl true
+  def handle_event(
+        "toggle_enable_workflow",
+        %{"state" => current_state, "workflow" => workflow_id},
+        socket
+      ) do
+    workflow = Workflows.get_workflow!(workflow_id, include: [:triggers])
+
+    updated_triggers =
+      workflow.triggers
+      |> Enum.map(
+        &Ecto.Changeset.change(&1, %{enabled: current_state == "disabled"})
+      )
+
+    workflow_changeset =
+      workflow
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_assoc(:triggers, updated_triggers)
+
+    case Repo.update(workflow_changeset) do
+      {:ok, _workflow} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Workflow updated successfully!")
+         |> push_patch(to: ~p"/projects/#{socket.assigns.project}/w")}
+
+      {:error, _changeset} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Failed to update workflow. Please try again.")
+         |> push_patch(to: ~p"/projects/#{socket.assigns.project}/w")}
+    end
+  end
+
   def handle_event("validate_workflow", %{"new_workflow" => params}, socket) do
     changeset =
       NewWorkflowForm.validate(params, socket.assigns.project.id)
