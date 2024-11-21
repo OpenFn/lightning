@@ -42,13 +42,20 @@ defmodule Lightning.Config.Bootstrap do
   end
 
   # credo:disable-for-this-file Credo.Check.Refactor.CyclomaticComplexity
-  def configure do
+  def configure() do
     unless Process.get(:dotenvy_vars) do
       raise """
       Environment variables haven't been sourced first.
       Please call `source_envs/0` before calling `configure/0`.
       """
     end
+
+    # Merge the configuration from the existing application environment into
+    # this processes config dictionary.
+    # Without this, values set in the application environment previously
+    # via `confix.exs` and others won't be available in the current process,
+    # and must be fetched via `Application.get_env/2` or `Utils.get_env/2`.
+    # config :lightning, Application.get_all_env(:lightning)
 
     # Start the phoenix server if environment is set and running in a release
     if env!("PHX_SERVER", :boolean, false) &&
@@ -143,10 +150,6 @@ defmodule Lightning.Config.Bootstrap do
     release = release_info()
 
     config :lightning, :release, release
-
-    config :lightning, :emails,
-      admin_email: env!("EMAIL_ADMIN", :string, "support@openfn.org"),
-      sender_name: env!("EMAIL_SENDER_NAME", :string, "OpenFn")
 
     config :lightning, :adaptor_service,
       adaptors_path: env!("ADAPTORS_PATH", :string, "./priv/openfn")
@@ -251,34 +254,74 @@ defmodule Lightning.Config.Bootstrap do
            env!("INIT_PROJECT_FOR_NEW_USER", &Utils.ensure_boolean/1, false)
 
     # To actually send emails you need to configure the mailer to use a real
-    # adapter. You may configure the swoosh api client of your choice. We
-    # automatically configure Mailgun if an API key has been provided. See
-    # https://hexdocs.pm/swoosh/Swoosh.html#module-installation for more details.
-    case env!("MAIL_PROVIDER", :string, "local") do
-      "local" ->
-        config :lightning, Lightning.Mailer, adapter: Swoosh.Adapters.Local
+    # adapter. You may configure the swoosh api client of your choice.
+    # See # https://hexdocs.pm/swoosh/Swoosh.html#module-installation for more details.
+    if mail_provider = env!("MAIL_PROVIDER", :string, nil) do
+      case mail_provider do
+        "local" ->
+          config :lightning, Lightning.Mailer, adapter: Swoosh.Adapters.Local
 
-      "mailgun" ->
-        config :lightning, Lightning.Mailer,
-          adapter: Swoosh.Adapters.Mailgun,
-          api_key: env!("MAILGUN_API_KEY", :string),
-          domain: env!("MAILGUN_DOMAIN", :string)
+        "mailgun" ->
+          config :lightning, Lightning.Mailer,
+            adapter: Swoosh.Adapters.Mailgun,
+            api_key: env!("MAILGUN_API_KEY", :string),
+            domain: env!("MAILGUN_DOMAIN", :string)
 
-      "smtp" ->
-        # TODO: HOW DO WE LET USERS PICK WHAT TO CONFIGURE HERE?
-        # https://hexdocs.pm/swoosh/Swoosh.Adapters.SMTP.html#content
-        config :lightning, Lightning.Mailer, adapter: Swoosh.Adapters.SMTP
+        "smtp" ->
+          # TODO: HOW DO WE LET USERS PICK WHAT TO CONFIGURE HERE?
+          # https://hexdocs.pm/swoosh/Swoosh.Adapters.SMTP.html#content
+          config :lightning, Lightning.Mailer,
+            adapter: Swoosh.Adapters.SMTP,
+            username: env!("SMTP_USERNAME", :string),
+            password: env!("SMTP_PASSWORD", :string),
+            relay: env!("SMTP_RELAY", :string),
+            tls:
+              env!(
+                "SMTP_TLS",
+                fn v ->
+                  case v do
+                    "true" ->
+                      :always
 
-      unknown ->
-        raise """
-        Unknown mail provider: #{unknown}
+                    "false" ->
+                      :never
 
-        Currently supported providers are:
+                    "if_available" ->
+                      :if_available
 
-        - local (default)
-        - mailgun
-        - smtp
-        """
+                    unknown ->
+                      raise """
+                      Unknown SMTP_TLS value: #{unknown}
+
+                      Must be one of: true, false, if_available
+                      """
+                  end
+                end,
+                :always
+              ),
+            port: env!("SMTP_PORT", :integer, 587)
+
+        unknown ->
+          raise """
+          Unknown mail provider: #{unknown}
+
+          Currently supported providers are:
+
+          - local (default)
+          - mailgun
+          - smtp
+          """
+      end
+    end
+
+    # get_env(:lightning, :emails) |> IO.inspect()
+    config :lightning,
+      emails: [
+        sender_name: env!("EMAIL_SENDER_NAME", :string, "OpenFn")
+      ]
+
+    if !get_env(:lightning, [:emails, :admin_email]) do
+      config :lightning, :emails, admin_email: env!("EMAIL_ADMIN", :string)
     end
 
     # Use the `PRIMARY_ENCRYPTION_KEY` env variable if available, else fall back
@@ -687,5 +730,25 @@ defmodule Lightning.Config.Bootstrap do
       branch: env!("BRANCH", :string, nil),
       commit: env!("COMMIT", :string, nil)
     ]
+  end
+
+  defp get_env(app) do
+    Process.get({Config, :config})
+    |> Keyword.get(app)
+  end
+
+  @doc """
+  Retrieve a value nested in the application environment.
+
+  It first searches the current process's config dictionary, then falls back to
+  the application environment.
+  """
+  def get_env(app, keys) do
+    with v when not is_nil(v) <- get_env(app) |> get_in(keys) do
+      v
+    else
+      nil ->
+        Application.get_all_env(app) |> get_in(keys)
+    end
   end
 end

@@ -23,6 +23,9 @@ and this project adheres to
   [#2601](https://github.com/OpenFn/lightning/issues/2601)
 - Allow filtering collection items by updated_before and updated_after.
   [#2693](https://github.com/OpenFn/lightning/issues/2693)
+- Add support for SMTP email configuration
+  [#2699](https://github.com/OpenFn/lightning/issues/2699)  
+  ⚠️️ Please note that you must now set `EMAIL_ADMIN` in production environments
 
 ### Changed
 

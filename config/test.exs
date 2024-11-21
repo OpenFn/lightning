@@ -1,5 +1,6 @@
 import Config
 
+config :lightning, :emails, admin_email: "support@openfn.org"
 # Only in tests, remove the complexity from the password hashing algorithm
 config :bcrypt_elixir, :log_rounds, 1
 
