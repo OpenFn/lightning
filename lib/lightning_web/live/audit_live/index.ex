@@ -47,40 +47,36 @@ defmodule LightningWeb.AuditLive.Index do
   end
 
   def diff(assigns) do
-    rhs = assigns.metadata.after || %{}
+    with lhs <- assigns.metadata.before || %{},
+         rhs <- assigns.metadata.after || %{},
+         true <- lhs != %{} || rhs != %{} do
+      changes =
+        lhs
+        |> Map.keys()
+        |> Enum.concat(Map.keys(rhs))
+        |> Enum.sort()
+        |> Enum.uniq()
+        |> Enum.map(fn key ->
+          {key, Map.get(lhs, key), Map.get(rhs, key)}
+        end)
 
-    lhs =
-      assigns.metadata.before ||
-        Enum.into(rhs, %{}, fn {key, _val} -> {key, nil} end)
+      assigns = assign(assigns, changes: changes)
 
-    case [lhs, rhs] do
-      [lhs, rhs] when lhs == %{} and rhs == %{} ->
-        ~H"""
-          <.td colspan="4" class="font-mono text-xs">
-            No changes
-          </.td>
-        """
-
-      [lhs, rhs] ->
-        changes =
-          Map.keys(lhs)
-          |> Enum.concat(Map.keys(rhs))
-          |> Enum.sort()
-          |> Enum.uniq()
-          |> Enum.map(fn key ->
-            {key, Map.get(lhs, key), Map.get(rhs, key)}
-          end)
-
-        assigns = assign(assigns, changes: changes)
-
-        ~H"""
-          <.td colspan="4" class="font-mono text-xs break-all">
-            <%= for {field, old, new} <- @changes do %>
-            <li><%= field %>&nbsp; <%= old %>
+      ~H"""
+      <.td colspan="4" class="font-mono text-xs break-all">
+        <%= for {field, old, new} <- @changes do %>
+          <li><%= field %>&nbsp; <%= old %>
             <Heroicons.arrow_right class="h-5 w-5 inline-block mr-2" />
             <%= new %></li>
-            <% end %>
-          </.td>
+        <% end %>
+      </.td>
+      """
+    else
+      false ->
+        ~H"""
+        <.td colspan="4" class="font-mono text-xs">
+          No changes
+        </.td>
         """
     end
   end

@@ -68,10 +68,12 @@ defmodule LightningWeb.AuditLiveTest do
         metadata: %{
           before: %{
             "foo" => "foo_before",
-            "bar" =>  "bar_before"
+            "bar" => "bar_before"
           },
           after: %{
-            "foo" => "foo_after", "bar" => "bar_after"}
+            "foo" => "foo_after",
+            "bar" => "bar_after"
+          }
         }
       }
 
@@ -86,7 +88,7 @@ defmodule LightningWeb.AuditLiveTest do
         metadata: %{
           before: %{
             foo: "foo_before",
-            bar:  "bar_before"
+            bar: "bar_before"
           },
           after: %{
             foo: "foo_after",
