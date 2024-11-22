@@ -86,7 +86,7 @@ defmodule Lightning.WorkOrders do
     multi
     |> Multi.put(:workflow, opts[:workflow])
     |> get_or_insert_dataclip(opts[:dataclip])
-    |> get_or_create_snapshot(opts[:workflow], opts[:actor])
+    |> Snapshot.include_latest_snapshot(opts[:workflow])
     |> Multi.insert(:workorder, fn %{dataclip: dataclip, snapshot: snapshot} ->
       {without_run?, opts} = Keyword.pop(opts, :without_run, false)
 
@@ -111,7 +111,7 @@ defmodule Lightning.WorkOrders do
   def create_for(%Job{} = job, multi, opts) do
     multi
     |> Multi.put(:workflow, opts[:workflow])
-    |> get_or_create_snapshot(opts[:actor])
+    |> Snapshot.include_latest_snapshot(opts[:workflow])
     |> Multi.insert(:workorder, build_for(job, opts |> Map.new()))
     |> Runs.enqueue()
     |> emit_and_return_work_order()
@@ -128,7 +128,7 @@ defmodule Lightning.WorkOrders do
     end)
     |> get_or_insert_dataclip(manual)
     |> Multi.put(:workflow, manual.workflow)
-    |> get_or_create_snapshot(manual.created_by)
+    |> Snapshot.include_latest_snapshot(manual.workflow)
     |> Multi.insert(:workorder, fn %{dataclip: dataclip, snapshot: snapshot} ->
       build_for(manual.job, %{
         workflow: manual.workflow,
@@ -154,7 +154,7 @@ defmodule Lightning.WorkOrders do
     {:error, changeset}
   end
 
-  defp get_or_create_snapshot(multi, workflow \\ nil, name \\ :snapshot, actor) do
+  defp maybe_get_snapshot(multi, workflow \\ nil, name \\ :snapshot) do
     multi
     |> Multi.merge(fn
       %{^name => _snapshot} ->
@@ -163,7 +163,7 @@ defmodule Lightning.WorkOrders do
 
       changes ->
         workflow = workflow || changes[:workflow]
-        Snapshot.get_or_create_latest_for(Multi.new(), name, workflow, actor)
+        Snapshot.include_latest_snapshot(Multi.new(), name, workflow)
     end)
   end
 
@@ -202,14 +202,8 @@ defmodule Lightning.WorkOrders do
     if snapshot = attrs |> Map.get(:snapshot) do
       changeset |> put_assoc(:snapshot, snapshot)
     else
-      Snapshot.get_or_create_latest_for(attrs[:workflow], attrs[:actor])
-      |> case do
-        {:ok, snapshot} ->
-          changeset |> put_assoc(:snapshot, snapshot)
-
-        {:error, _changeset} ->
-          changeset
-      end
+      snapshot = Snapshot.get_current_for(attrs[:workflow])
+      changeset |> put_assoc(:snapshot, snapshot)
     end
   end
 
@@ -347,7 +341,7 @@ defmodule Lightning.WorkOrders do
     |> Multi.run(:workflow, fn _repo, %{run: run} ->
       {:ok, run.work_order.workflow}
     end)
-    |> get_or_create_snapshot(creating_user)
+    |> maybe_get_snapshot()
     |> Multi.insert(:new_run, fn %{
                                    run: run,
                                    step: step,
@@ -543,7 +537,7 @@ defmodule Lightning.WorkOrders do
       snapshot_op = "snapshot-#{workflow.id}"
 
       multi
-      |> get_or_create_snapshot(workflow, snapshot_op, creating_user)
+      |> maybe_get_snapshot(workflow, snapshot_op)
       |> Multi.insert(run_op, fn %{^snapshot_op => snapshot} ->
         starting_job = determine_starting_job(workorder)
 
