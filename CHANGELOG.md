@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.10.4] - 2024-11-22
+
+### Added
+
 - Support dynamic json schema email format validation.
   [#2664](https://github.com/OpenFn/lightning/issues/2664)
 - Audit snapshot creation
@@ -28,10 +36,7 @@ and this project adheres to
   ⚠️️ Please note that `EMAIL_ADMIN` defaults to `lightning@example.com` in
   production environments
 
-### Changed
-
 ### Fixed
-
 
 - Fix cursor for small limit on collections request
   [#2683](https://github.com/OpenFn/lightning/issues/2683)
