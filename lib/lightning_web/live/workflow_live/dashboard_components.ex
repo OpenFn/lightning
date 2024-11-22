@@ -150,6 +150,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
           <div class="mr-2 pt-2">
             <div :if={@can_delete_workflow} class="flex items-center gap-2">
               <Components.workflow_state_toggle
+                id={"toggle-workflow-state-#{workflow.id}"}
                 workflow_or_changeset={workflow}
                 on_click="toggle_workflow_state"
               />

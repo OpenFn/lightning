@@ -130,6 +130,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 class="w-5 h-5 place-self-center text-gray-300"
               />
               <.workflow_state_toggle
+                id="toggle-workflow-state"
                 workflow_or_changeset={@changeset}
                 on_click="toggle_workflow_state"
                 label="Enabled"
@@ -1432,24 +1433,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("save", params, socket) do
-    # <<<<<<< HEAD
-    #     %{
-    #       current_user: current_user,
-    #       project: project,
-    #       workflow_params: initial_params,
-    #       can_edit_workflow: can_edit_workflow,
-    #       snapshot_version_tag: tag,
-    #       has_presence_edit_priority: has_presence_edit_priority
-    #     } =
-    #       socket.assigns
-    # =======
     %{
       project: project,
       workflow_params: initial_params,
       current_user: current_user
     } = socket.assigns
-
-    # >>>>>>> origin/main
 
     with :ok <- check_user_can_save_workflow(socket) do
       next_params =

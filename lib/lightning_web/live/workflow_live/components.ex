@@ -821,6 +821,7 @@ defmodule LightningWeb.WorkflowLive.Components do
         else: String.at(user.last_name, 0)
   end
 
+  attr :id, :string
   attr :label, :string, default: nil
   attr :on_click, :string, required: true
   attr :workflow_or_changeset, :any, required: true
@@ -868,8 +869,9 @@ defmodule LightningWeb.WorkflowLive.Components do
       )
 
     ~H"""
-    <div class="flex flex-row m-auto gap-2">
+    <div id={@id} class="flex flex-row m-auto gap-2">
       <button
+        id={"#{@id}-button"}
         type="button"
         class={"relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent #{@bg} transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"}
         role="switch"
