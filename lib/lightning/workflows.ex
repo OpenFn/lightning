@@ -5,7 +5,6 @@ defmodule Lightning.Workflows do
 
   import Ecto.Query
 
-  alias Lightning.Workflows
   alias Ecto.Multi
 
   alias Lightning.KafkaTriggers
@@ -73,7 +72,7 @@ defmodule Lightning.Workflows do
       |> update_triggers(enabled?)
 
     workflow
-    |> Workflows.change_workflow()
+    |> change_workflow()
     |> Ecto.Changeset.put_assoc(:triggers, updated_triggers)
   end
 
