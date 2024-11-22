@@ -14,7 +14,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-D999D465.js"></script>
+    <script src="dist/sidebar_items-64C39C4F.js"></script>
     <script src="docs_config.js"></script>
     <script async src="dist/html-YIPIRHGU.js"></script>
 
@@ -184,7 +184,10 @@ as run_results via the websocket connection from a worker.</li></ul><h3 id="gith
   <span class="text">Github</span>
 </h3>
 <p>Lightning enables connection to github via Github Apps. The following github
-permissions are needed for the github app:</p><table><thead><tr><th style="text-align: left;"><strong>Resource</strong></th><th style="text-align: left;"><strong>Access</strong></th></tr></thead><tbody><tr><td style="text-align: left;">Actions</td><td style="text-align: left;">Read and Write</td></tr><tr><td style="text-align: left;">Contents</td><td style="text-align: left;">Read and Write</td></tr><tr><td style="text-align: left;">Metadata</td><td style="text-align: left;">Read only</td></tr><tr><td style="text-align: left;">Secrets</td><td style="text-align: left;">Read and Write</td></tr><tr><td style="text-align: left;">Workflows</td><td style="text-align: left;">Read and Write</td></tr></tbody></table><p>Ensure you set the following URLs:</p><ul><li><strong>Homepage URL:</strong> <code class="inline">&lt;app_url_here&gt;</code></li><li><strong>Callback URL for authorizing users:</strong> <code class="inline">&lt;app_url_here&gt;/oauth/github/callback</code> (Do NOT check the two checkboxes in this section requesting Device Flow and OAuth.)</li><li><strong>Setup URL for Post installation:</strong> <code class="inline">&lt;app_url_here&gt;/setup_vcs</code> (Check the box for <strong>Redirect on update</strong>)</li></ul><p>These envrionment variables will need to be set in order to configure the github
+permissions are needed for the github app:</p><table><thead><tr><th style="text-align: left;"><strong>Resource</strong></th><th style="text-align: left;"><strong>Access</strong></th></tr></thead><tbody><tr><td style="text-align: left;">Actions</td><td style="text-align: left;">Read and Write</td></tr><tr><td style="text-align: left;">Contents</td><td style="text-align: left;">Read and Write</td></tr><tr><td style="text-align: left;">Metadata</td><td style="text-align: left;">Read only</td></tr><tr><td style="text-align: left;">Secrets</td><td style="text-align: left;">Read and Write</td></tr><tr><td style="text-align: left;">Workflows</td><td style="text-align: left;">Read and Write</td></tr></tbody></table><p>Ensure you set the following URLs:</p><ul><li><strong>Homepage URL:</strong> <code class="inline">&lt;app_url_here&gt;</code></li><li><strong>Callback URL for authorizing users:</strong> <code class="inline">&lt;app_url_here&gt;/oauth/github/callback</code>
+(Do NOT check the two checkboxes in this section requesting Device Flow and
+OAuth.)</li><li><strong>Setup URL for Post installation:</strong> <code class="inline">&lt;app_url_here&gt;/setup_vcs</code> (Check the box
+for <strong>Redirect on update</strong>)</li></ul><p>These envrionment variables will need to be set in order to configure the github
 app:</p><table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;"><strong>Description</strong></th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">GITHUB_APP_ID</code></td><td style="text-align: left;">the github app ID.</td></tr><tr><td style="text-align: left;"><code class="inline">GITHUB_APP_NAME</code></td><td style="text-align: left;">the github app name. This is the name used in the public link. It is the downcased name with spaces replaced with hyphens</td></tr><tr><td style="text-align: left;"><code class="inline">GITHUB_APP_CLIENT_ID</code></td><td style="text-align: left;">the github app Client ID</td></tr><tr><td style="text-align: left;"><code class="inline">GITHUB_APP_CLIENT_SECRET</code></td><td style="text-align: left;">the github app Client Secret</td></tr><tr><td style="text-align: left;"><code class="inline">GITHUB_CERT</code></td><td style="text-align: left;">the github app private key (Base 64 encoded)</td></tr></tbody></table><p>You can access these from your github app settings menu. Also needed for the
 configuration is:</p><ul><li><code class="inline">REPO_CONNECTION_SIGNING_SECRET</code> - secret used to sign access tokens. This
 access token is used to authenticate requests made from the github actions.
@@ -195,7 +198,16 @@ You can generate this using <a href="Mix.Tasks.Lightning.GenEncryptionKey.html">
   <span class="text">Storage</span>
 </h3>
 <p>Lightning can use a storage backend to store exports.</p><table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;">Description</th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">STORAGE_BACKEND</code></td><td style="text-align: left;">the storage backend to use. (default is <code class="inline">local</code>)</td></tr><tr><td style="text-align: left;"><code class="inline">STORAGE_PATH</code></td><td style="text-align: left;">the path to store files in. (default is <code class="inline">.</code>)</td></tr></tbody></table><h4>Supported backends:</h4><ul><li><code class="inline">local</code> - local file storage</li><li><code class="inline">gcs</code> - Google Cloud Storage</li></ul><h4>Google Cloud Storage</h4><p>For Google Cloud Storage, the following environment variables are required:</p><table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;">Description</th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">GCS_BUCKET</code></td><td style="text-align: left;">the name of the bucket to store files in</td></tr><tr><td style="text-align: left;"><code class="inline">GOOGLE_APPLICATION_CREDENTIALS_JSON</code></td><td style="text-align: left;">A base64 encoded JSON keyfile for the service account with access to the bucket.</td></tr></tbody></table><blockquote><p>ℹ️ Note: The <code class="inline">GOOGLE_APPLICATION_CREDENTIALS_JSON</code> should be base64 encoded,
-currently Workload Identity is not supported.</p></blockquote><h3 id="other-config" class="section-heading">
+currently Workload Identity is not supported.</p></blockquote><h3 id="mail" class="section-heading">
+  <a href="#mail" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Mail</span>
+</h3>
+<p>Lightning can send emails for various reasons, such as password resets and
+alerts for failed runs.</p><p>In order to send emails, you need to set the <code class="inline">MAIL_PROVIDER</code> environment
+variable to one of the following:</p><ul><li><code class="inline">local</code> (the default)</li><li><code class="inline">mailgun</code></li><li><code class="inline">smtp</code></li></ul><p>You will also want to set the <code class="inline">EMAIL_ADMIN</code> environment variable to the email
+address that will be used as the sender for system emails.</p><h4>Mailgun</h4><p>For mailgun, the following environment variables are required:</p><table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;">Description</th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">MAIL_PROVIDER</code></td><td style="text-align: left;">Must be set to <code class="inline">mailgun</code></td></tr><tr><td style="text-align: left;"><code class="inline">MAILGUN_API_KEY</code></td><td style="text-align: left;">the mail gun api key</td></tr><tr><td style="text-align: left;"><code class="inline">MAILGUN_DOMAIN</code></td><td style="text-align: left;">the mail gun domain</td></tr></tbody></table><h4>SMTP</h4><p>For SMTP, the following environment variables are required:</p><table><thead><tr><th style="text-align: left;"><strong>Variable</strong></th><th style="text-align: left;">Description</th></tr></thead><tbody><tr><td style="text-align: left;"><code class="inline">MAIL_PROVIDER</code></td><td style="text-align: left;">Must be set to <code class="inline">smtp</code></td></tr><tr><td style="text-align: left;"><code class="inline">SMTP_USERNAME</code></td><td style="text-align: left;">Username for your server</td></tr><tr><td style="text-align: left;"><code class="inline">SMTP_PASSWORD</code></td><td style="text-align: left;">Password for the user</td></tr><tr><td style="text-align: left;"><code class="inline">SMTP_RELAY</code></td><td style="text-align: left;">IP address or hostname</td></tr><tr><td style="text-align: left;"><code class="inline">SMTP_TLS</code></td><td style="text-align: left;">Use TLS, defaults to <code class="inline">true</code>, options are <code class="inline">true</code>, <code class="inline">false</code>, <code class="inline">if_available</code></td></tr><tr><td style="text-align: left;"><code class="inline">SMTP_PORT</code></td><td style="text-align: left;">Which port to use, defaults to <code class="inline">587</code></td></tr></tbody></table><h3 id="other-config" class="section-heading">
   <a href="#other-config" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -236,37 +248,37 @@ message received. This to protect against the ingestion of duplicate messages
 from the cluster. These records are periodically cleaned out. The duration for
 which they are retained is controlled by
 <code class="inline">KAFKA_DUPLICATE_TRACKING_RETENTION_SECONDS</code>. The default value is 3600.</p><h4>Disabling Kafka Triggers</h4><p>After a Kafka consumer group connects to a Kafka cluster, the cluster will track
-the last committed offset for a given consumer group ,to ensure that the consumer
-group receives the correct messages.</p><p>This data is retained for a finite period. If an enabled Kafka trigger is
+the last committed offset for a given consumer group ,to ensure that the
+consumer group receives the correct messages.</p><p>This data is retained for a finite period. If an enabled Kafka trigger is
 disabled for longer than the offset retention period the consumer group offset
 data will be cleared.</p><p>If the Kafka trigger is re-enabled after the offset data has been cleared, this
 will result in the consumer group reverting to what has been configured as the
 'Initial offset reset policy' for the trigger. This may result in the
-duplication of messages or even data loss.</p><p>It is recommended that you check the value of the <code class="inline">offsets.retention.minutes</code> for
-the Kafka cluster to determine what the cluster's retention period is, and
+duplication of messages or even data loss.</p><p>It is recommended that you check the value of the <code class="inline">offsets.retention.minutes</code>
+for the Kafka cluster to determine what the cluster's retention period is, and
 consider this when disabling a Kafka trigger for an extended period.</p><h4>Failure notifications</h4><p>Under certain failure conditions, a Kafka trigger will send an email to certain
 user that are associated with a project. After each email an embargo is applied
-to ensure that Lightning does not flood the recipients with email. The length
-of the embargo is controlled by the <code class="inline">KAFKA_NOTIFICATION_EMBARGO_SECONDS</code> ENV
-variable.</p><h4>Persisting Failed Messages</h4><p><strong>PLEASE NOTE: If alternate file storage is not enabled, messages that fail
-to be persisted will not be retained by Lightning ans this can result in data
-loss, if the Kafka cluster can not make these messages available again.</strong></p><p>If a Kafka message files to be persisted as a WorkOrder, Run and Dataclip, the 
-option exists to write the failed message to a location on the local file system.
-If this option is enabled by setting <code class="inline">KAFKA_ALTERNATE_STORAGE_ENABLED</code>, then the
-<code class="inline">KAFKA_ALTERNATE_STORAGE_PATH</code> ENV variable must be set to the path that exists
-and is writable by Lightning. The location shoudl also be suitably protected to
-prevent data exposure as Lightning <strong>will not encrypt</strong> the message contents when
-writing it.</p><p>If the option is enabled and a message fails to be persisted, Lightning will
-create a subdirectory named with the id if the affected trigger's workflow 
-in the location specified by <code class="inline">KAFKA_ALTERNATE_STORAGE_PATH</code> (assuming such a
+to ensure that Lightning does not flood the recipients with email. The length of
+the embargo is controlled by the <code class="inline">KAFKA_NOTIFICATION_EMBARGO_SECONDS</code> ENV
+variable.</p><h4>Persisting Failed Messages</h4><p><strong>PLEASE NOTE: If alternate file storage is not enabled, messages that fail to
+be persisted will not be retained by Lightning ans this can result in data loss,
+if the Kafka cluster can not make these messages available again.</strong></p><p>If a Kafka message files to be persisted as a WorkOrder, Run and Dataclip, the
+option exists to write the failed message to a location on the local file
+system. If this option is enabled by setting <code class="inline">KAFKA_ALTERNATE_STORAGE_ENABLED</code>,
+then the <code class="inline">KAFKA_ALTERNATE_STORAGE_PATH</code> ENV variable must be set to the path
+that exists and is writable by Lightning. The location shoudl also be suitably
+protected to prevent data exposure as Lightning <strong>will not encrypt</strong> the message
+contents when writing it.</p><p>If the option is enabled and a message fails to be persisted, Lightning will
+create a subdirectory named with the id if the affected trigger's workflow in
+the location specified by <code class="inline">KAFKA_ALTERNATE_STORAGE_PATH</code> (assuming such a
 subdirectory does not already exist). Lightning will serialise the message
 headers and data as received by the Kafka pipeline and write this to a file
-within the subdirectory. The file will be named based on the pattern 
-<code class="inline">&lt;trigger_id&gt;_&lt;message_topic&gt;_&lt;message_partition&gt;_&lt;message_offset&gt;.json</code>.</p><p>To recover the persisted messages, it is suggested that the affected triggers
-be disabled before commencing. Once this is done, the following code needs to
-be run from an IEx console on each node that is running Lightning:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.KafkaTriggers.MessageRecovery</span><span class="o">.</span><span class="n">recover_messages</span><span class="p" data-group-id="8029512355-1">(</span><span class="w">
-  </span><span class="nc">Lightning.Config</span><span class="o">.</span><span class="n">kafka_alternate_storage_file_path</span><span class="p" data-group-id="8029512355-2">(</span><span class="p" data-group-id="8029512355-2">)</span><span class="w">
-</span><span class="p" data-group-id="8029512355-1">)</span></code></pre><p>Further details regarding the behaviour of <code class="inline">MessageRecovery.recover_messages/1</code> 
+within the subdirectory. The file will be named based on the pattern
+<code class="inline">&lt;trigger_id&gt;_&lt;message_topic&gt;_&lt;message_partition&gt;_&lt;message_offset&gt;.json</code>.</p><p>To recover the persisted messages, it is suggested that the affected triggers be
+disabled before commencing. Once this is done, the following code needs to be
+run from an IEx console on each node that is running Lightning:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.KafkaTriggers.MessageRecovery</span><span class="o">.</span><span class="n">recover_messages</span><span class="p" data-group-id="4594183014-1">(</span><span class="w">
+  </span><span class="nc">Lightning.Config</span><span class="o">.</span><span class="n">kafka_alternate_storage_file_path</span><span class="p" data-group-id="4594183014-2">(</span><span class="p" data-group-id="4594183014-2">)</span><span class="w">
+</span><span class="p" data-group-id="4594183014-1">)</span></code></pre><p>Further details regarding the behaviour of <code class="inline">MessageRecovery.recover_messages/1</code>
 can be found in the module documentation of <code class="inline">MessageRecovery</code>. Recovered
 messages will have the <code class="inline">.json</code> extension modified to <code class="inline">.json.recovered</code> but they
 will be left in place. Future recovery runs will not process files that have
