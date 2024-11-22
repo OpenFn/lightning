@@ -197,6 +197,49 @@ defmodule Lightning.Workflows.SnapshotsTest do
     end
   end
 
+  describe "include_latest_snapshot/3" do
+    setup do
+      workflow = insert(:simple_workflow)
+      other_workflow = insert(:simple_workflow)
+
+      {:ok, _initial_snapshot} = Workflows.Snapshot.create(workflow)
+      {:ok, _other_snapshot} = Workflows.Snapshot.create(other_workflow)
+
+      updated_workflow =
+        workflow
+        |> Workflows.change_workflow(%{name: "new name"})
+        |> Repo.update!()
+
+      {:ok, snapshot} = Workflows.Snapshot.create(updated_workflow)
+
+      %{snapshot: snapshot, workflow: updated_workflow}
+    end
+
+    test "includes snapshot in multi", %{
+      snapshot: snapshot,
+      workflow: workflow
+    } do
+      result =
+        Ecto.Multi.new()
+        |> Workflows.Snapshot.include_latest_snapshot(workflow)
+        |> Repo.transaction()
+
+      assert {:ok, %{snapshot: ^snapshot}} = result
+    end
+
+    test "includes snapshot in multi with custom op name", %{
+      snapshot: snapshot,
+      workflow: workflow
+    } do
+      result =
+        Ecto.Multi.new()
+        |> Workflows.Snapshot.include_latest_snapshot(:fuzzy_wuzzy, workflow)
+        |> Repo.transaction()
+
+      assert {:ok, %{fuzzy_wuzzy: ^snapshot}} = result
+    end
+  end
+
   defp assert_edge_equal(snapshot, original) do
     assert only_fields(snapshot) ==
              Map.take(original, [
