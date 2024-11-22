@@ -181,6 +181,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       view |> change_editor_text("some body")
 
+      # By default, workflows are disabled to ensure a controlled setup.
+      # Here, we enable the workflow to test the :too_many_workflows limit action,
+      view |> element("#toggle-workflow-state-button") |> render_click()
+
       refute view |> save_is_disabled?()
 
       assert view |> has_pending_changes()
