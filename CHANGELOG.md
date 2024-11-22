@@ -32,6 +32,9 @@ and this project adheres to
 
 ### Fixed
 
+
+- Fix cursor for small limit on collections request
+  [#2683](https://github.com/OpenFn/lightning/issues/2683)
 - Disable save and run actions on deleted workflows
   [#2170](https://github.com/OpenFn/lightning/issues/2170)
 - Distinguish active and inactive sort arrows in projects overview table

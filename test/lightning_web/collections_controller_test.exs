@@ -710,6 +710,30 @@ defmodule LightningWeb.API.CollectionsControllerTest do
                  Base.encode64(DateTime.to_iso8601(last_item.inserted_at))
              }
 
+      # Test for the existence of a cursor when the limit is less than the
+      # database limit
+      half_limit = (@max_database_limit / 2) |> floor()
+
+      expected_items =
+        all_items |> Enum.take(half_limit)
+
+      last_item =
+        collection.items
+        |> Enum.take(half_limit)
+        |> List.last()
+
+      conn =
+        conn
+        |> get(~p"/collections/#{collection.name}",
+          limit: half_limit
+        )
+
+      assert json_response(conn, 200) == %{
+               "items" => expected_items,
+               "cursor" =>
+                 Base.encode64(DateTime.to_iso8601(last_item.inserted_at))
+             }
+
       # Request everything, shouldn't be getting a cursor
       conn =
         conn |> get(~p"/collections/#{collection.name}", limit: limit + 1)
