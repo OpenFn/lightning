@@ -1464,11 +1464,19 @@ defmodule LightningWeb.WorkflowLive.Edit do
             |> Map.put("v", workflow.lock_version)
             |> Map.reject(fn {_key, value} -> is_nil(value) end)
 
+          flash_msg =
+            "Workflow saved successfully." <>
+              if not loaded?(changeset.data) and not workflow_enabled?(workflow) do
+                " Remember to enable your workflow to run it automatically."
+              else
+                ""
+              end
+
           {:noreply,
            socket
            |> assign(page_title: workflow.name)
            |> assign_workflow(workflow, snapshot)
-           |> put_flash(:info, "Workflow saved")
+           |> put_flash(:info, flash_msg)
            |> push_patches_applied(initial_params)
            |> maybe_push_workflow_created(workflow)
            |> push_patch(
@@ -2467,4 +2475,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
        |> push_event("push-hash", %{"hash" => "log"})}
     end
   end
+
+  defp loaded?(%Workflow{} = workflow), do: workflow.__meta__.state == :loaded
+
+  defp workflow_enabled?(%Workflow{} = workflow),
+    do: Enum.all?(workflow.triggers, & &1.enabled)
 end

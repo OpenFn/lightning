@@ -895,7 +895,12 @@ defmodule LightningWeb.WorkflowLive.Components do
           </span>
         </span>
       </button>
-      <span :if={@label}><%= @label %></span>
+      <span
+        :if={@label}
+        class="flex flex-row m-auto text-sm font-medium text-gray-500"
+      >
+        <%= @label %>
+      </span>
     </div>
     """
   end
