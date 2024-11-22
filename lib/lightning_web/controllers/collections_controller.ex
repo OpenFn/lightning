@@ -106,7 +106,8 @@ defmodule LightningWeb.CollectionsController do
       end
     end
   end
- # Streams records from database without depending on holding a transaction from database pool.
+
+  # Streams records from database without depending on holding a transaction from database pool.
   # It streams one more than the limit to allow determining if there are more items for the response cursor.
   defp stream_all_in_chunks(collection, %{limit: limit} = filters, key_pattern)
        when limit <= @max_database_limit do
