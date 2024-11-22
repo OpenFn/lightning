@@ -260,4 +260,14 @@ defmodule Lightning.Workflows.Snapshot do
       end)
     end
   end
+
+  @spec include_latest_snapshot(Multi.t(), binary() | :snapshot, Workflow.t()) ::
+          Multi.t()
+  def include_latest_snapshot(multi, name \\ :snapshot, workflow) do
+    get_snapshot  = fn repo, _changes ->
+      {:ok, get_current_query(workflow) |> repo.one()}
+    end
+
+    multi |> Multi.run(name, get_snapshot)
+  end
 end
