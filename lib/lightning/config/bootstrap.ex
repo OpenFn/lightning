@@ -256,65 +256,65 @@ defmodule Lightning.Config.Bootstrap do
     # To actually send emails you need to configure the mailer to use a real
     # adapter. You may configure the swoosh api client of your choice.
     # See # https://hexdocs.pm/swoosh/Swoosh.html#module-installation for more details.
-    if mail_provider = env!("MAIL_PROVIDER", :string, nil) do
-      case mail_provider do
-        "local" ->
-          config :lightning, Lightning.Mailer, adapter: Swoosh.Adapters.Local
+    case env!("MAIL_PROVIDER", :string, nil) do
+      nil ->
+        nil
 
-        "mailgun" ->
-          config :lightning, Lightning.Mailer,
-            adapter: Swoosh.Adapters.Mailgun,
-            api_key: env!("MAILGUN_API_KEY", :string),
-            domain: env!("MAILGUN_DOMAIN", :string)
+      "local" ->
+        config :lightning, Lightning.Mailer, adapter: Swoosh.Adapters.Local
 
-        "smtp" ->
-          # TODO: HOW DO WE LET USERS PICK WHAT TO CONFIGURE HERE?
-          # https://hexdocs.pm/swoosh/Swoosh.Adapters.SMTP.html#content
-          config :lightning, Lightning.Mailer,
-            adapter: Swoosh.Adapters.SMTP,
-            username: env!("SMTP_USERNAME", :string),
-            password: env!("SMTP_PASSWORD", :string),
-            relay: env!("SMTP_RELAY", :string),
-            tls:
-              env!(
-                "SMTP_TLS",
-                fn v ->
-                  case v do
-                    "true" ->
-                      :always
+      "mailgun" ->
+        config :lightning, Lightning.Mailer,
+          adapter: Swoosh.Adapters.Mailgun,
+          api_key: env!("MAILGUN_API_KEY", :string),
+          domain: env!("MAILGUN_DOMAIN", :string)
 
-                    "false" ->
-                      :never
+      "smtp" ->
+        # TODO: HOW DO WE LET USERS PICK WHAT TO CONFIGURE HERE?
+        # https://hexdocs.pm/swoosh/Swoosh.Adapters.SMTP.html#content
+        config :lightning, Lightning.Mailer,
+          adapter: Swoosh.Adapters.SMTP,
+          username: env!("SMTP_USERNAME", :string),
+          password: env!("SMTP_PASSWORD", :string),
+          relay: env!("SMTP_RELAY", :string),
+          tls:
+            env!(
+              "SMTP_TLS",
+              fn v ->
+                case v do
+                  "true" ->
+                    :always
 
-                    "if_available" ->
-                      :if_available
+                  "false" ->
+                    :never
 
-                    unknown ->
-                      raise """
-                      Unknown SMTP_TLS value: #{unknown}
+                  "if_available" ->
+                    :if_available
 
-                      Must be one of: true, false, if_available
-                      """
-                  end
-                end,
-                :always
-              ),
-            port: env!("SMTP_PORT", :integer, 587)
+                  unknown ->
+                    raise """
+                    Unknown SMTP_TLS value: #{unknown}
 
-        unknown ->
-          raise """
-          Unknown mail provider: #{unknown}
+                    Must be one of: true, false, if_available
+                    """
+                end
+              end,
+              :always
+            ),
+          port: env!("SMTP_PORT", :integer, 587)
 
-          Currently supported providers are:
+      unknown ->
+        raise """
+        Unknown mail provider: #{unknown}
 
-          - local (default)
-          - mailgun
-          - smtp
-          """
-      end
+        Currently supported providers are:
+
+        - local (default)
+        - mailgun
+        - smtp
+        """
     end
 
-    # get_env(:lightning, :emails) |> IO.inspect()
     config :lightning,
       emails: [
         sender_name: env!("EMAIL_SENDER_NAME", :string, "OpenFn"),
