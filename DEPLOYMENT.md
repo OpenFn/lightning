@@ -73,20 +73,24 @@ permissions are needed for the github app:
 | Workflows    | Read and Write |
 
 Ensure you set the following URLs:
-* **Homepage URL:** `<app_url_here>`
-* **Callback URL for authorizing users:** `<app_url_here>/oauth/github/callback` (Do NOT check the two checkboxes in this section requesting Device Flow and OAuth.)
-* **Setup URL for Post installation:** `<app_url_here>/setup_vcs` (Check the box for **Redirect on update**)
+
+- **Homepage URL:** `<app_url_here>`
+- **Callback URL for authorizing users:** `<app_url_here>/oauth/github/callback`
+  (Do NOT check the two checkboxes in this section requesting Device Flow and
+  OAuth.)
+- **Setup URL for Post installation:** `<app_url_here>/setup_vcs` (Check the box
+  for **Redirect on update**)
 
 These envrionment variables will need to be set in order to configure the github
 app:
 
-| **Variable**               | **Description**                                                                                                                    |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `GITHUB_APP_ID`            | the github app ID.                                                                                                                 |
-| `GITHUB_APP_NAME`          | the github app name. This is the name used in the public link. It is the downcased name with spaces replaced with hyphens          |
-| `GITHUB_APP_CLIENT_ID`     | the github app Client ID                                                                                                           |
-| `GITHUB_APP_CLIENT_SECRET` | the github app Client Secret                                                                                                       |
-| `GITHUB_CERT`              | the github app private key (Base 64 encoded)                                                                                       |
+| **Variable**               | **Description**                                                                                                           |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `GITHUB_APP_ID`            | the github app ID.                                                                                                        |
+| `GITHUB_APP_NAME`          | the github app name. This is the name used in the public link. It is the downcased name with spaces replaced with hyphens |
+| `GITHUB_APP_CLIENT_ID`     | the github app Client ID                                                                                                  |
+| `GITHUB_APP_CLIENT_SECRET` | the github app Client Secret                                                                                              |
+| `GITHUB_CERT`              | the github app private key (Base 64 encoded)                                                                              |
 
 You can access these from your github app settings menu. Also needed for the
 configuration is:
@@ -120,6 +124,44 @@ For Google Cloud Storage, the following environment variables are required:
 
 > ℹ️ Note: The `GOOGLE_APPLICATION_CREDENTIALS_JSON` should be base64 encoded,
 > currently Workload Identity is not supported.
+
+### Mail
+
+Lightning can send emails for various reasons, such as password resets and
+alerts for failed runs.
+
+In order to send emails, you need to set the `MAIL_PROVIDER` environment
+variable to one of the following:
+
+- `local` (the default)
+- `mailgun`
+- `smtp`
+
+You will also want to set the `EMAIL_ADMIN` environment variable to the email
+address that will be used as the sender for system emails.
+
+#### Mailgun
+
+For mailgun, the following environment variables are required:
+
+| **Variable**      | Description              |
+| ----------------- | ------------------------ |
+| `MAIL_PROVIDER`   | Must be set to `mailgun` |
+| `MAILGUN_API_KEY` | the mail gun api key     |
+| `MAILGUN_DOMAIN`  | the mail gun domain      |
+
+#### SMTP
+
+For SMTP, the following environment variables are required:
+
+| **Variable**    | Description                                                              |
+| --------------- | ------------------------------------------------------------------------ |
+| `MAIL_PROVIDER` | Must be set to `smtp`                                                    |
+| `SMTP_USERNAME` | Username for your server                                                 |
+| `SMTP_PASSWORD` | Password for the user                                                    |
+| `SMTP_RELAY`    | IP address or hostname                                                   |
+| `SMTP_TLS`      | Use TLS, defaults to `true`, options are `true`, `false`, `if_available` |
+| `SMTP_PORT`     | Which port to use, defaults to `587`                                     |
 
 ### Other config
 
@@ -213,8 +255,8 @@ which they are retained is controlled by
 #### Disabling Kafka Triggers
 
 After a Kafka consumer group connects to a Kafka cluster, the cluster will track
-the last committed offset for a given consumer group ,to ensure that the consumer
-group receives the correct messages.
+the last committed offset for a given consumer group ,to ensure that the
+consumer group receives the correct messages.
 
 This data is retained for a finite period. If an enabled Kafka trigger is
 disabled for longer than the offset retention period the consumer group offset
@@ -225,43 +267,43 @@ will result in the consumer group reverting to what has been configured as the
 'Initial offset reset policy' for the trigger. This may result in the
 duplication of messages or even data loss.
 
-It is recommended that you check the value of the `offsets.retention.minutes` for
-the Kafka cluster to determine what the cluster's retention period is, and
+It is recommended that you check the value of the `offsets.retention.minutes`
+for the Kafka cluster to determine what the cluster's retention period is, and
 consider this when disabling a Kafka trigger for an extended period.
 
 #### Failure notifications
 
 Under certain failure conditions, a Kafka trigger will send an email to certain
 user that are associated with a project. After each email an embargo is applied
-to ensure that Lightning does not flood the recipients with email. The length
-of the embargo is controlled by the `KAFKA_NOTIFICATION_EMBARGO_SECONDS` ENV
+to ensure that Lightning does not flood the recipients with email. The length of
+the embargo is controlled by the `KAFKA_NOTIFICATION_EMBARGO_SECONDS` ENV
 variable.
 
 #### Persisting Failed Messages
 
-**PLEASE NOTE: If alternate file storage is not enabled, messages that fail
-to be persisted will not be retained by Lightning ans this can result in data
-loss, if the Kafka cluster can not make these messages available again.**
+**PLEASE NOTE: If alternate file storage is not enabled, messages that fail to
+be persisted will not be retained by Lightning ans this can result in data loss,
+if the Kafka cluster can not make these messages available again.**
 
-If a Kafka message files to be persisted as a WorkOrder, Run and Dataclip, the 
-option exists to write the failed message to a location on the local file system.
-If this option is enabled by setting `KAFKA_ALTERNATE_STORAGE_ENABLED`, then the
-`KAFKA_ALTERNATE_STORAGE_PATH` ENV variable must be set to the path that exists
-and is writable by Lightning. The location shoudl also be suitably protected to
-prevent data exposure as Lightning **will not encrypt** the message contents when
-writing it.
+If a Kafka message files to be persisted as a WorkOrder, Run and Dataclip, the
+option exists to write the failed message to a location on the local file
+system. If this option is enabled by setting `KAFKA_ALTERNATE_STORAGE_ENABLED`,
+then the `KAFKA_ALTERNATE_STORAGE_PATH` ENV variable must be set to the path
+that exists and is writable by Lightning. The location shoudl also be suitably
+protected to prevent data exposure as Lightning **will not encrypt** the message
+contents when writing it.
 
 If the option is enabled and a message fails to be persisted, Lightning will
-create a subdirectory named with the id if the affected trigger's workflow 
-in the location specified by `KAFKA_ALTERNATE_STORAGE_PATH` (assuming such a
+create a subdirectory named with the id if the affected trigger's workflow in
+the location specified by `KAFKA_ALTERNATE_STORAGE_PATH` (assuming such a
 subdirectory does not already exist). Lightning will serialise the message
 headers and data as received by the Kafka pipeline and write this to a file
-within the subdirectory. The file will be named based on the pattern 
+within the subdirectory. The file will be named based on the pattern
 `<trigger_id>_<message_topic>_<message_partition>_<message_offset>.json`.
 
-To recover the persisted messages, it is suggested that the affected triggers
-be disabled before commencing. Once this is done, the following code needs to
-be run from an IEx console on each node that is running Lightning:
+To recover the persisted messages, it is suggested that the affected triggers be
+disabled before commencing. Once this is done, the following code needs to be
+run from an IEx console on each node that is running Lightning:
 
 ```elixir
 Lightning.KafkaTriggers.MessageRecovery.recover_messages(
@@ -269,7 +311,7 @@ Lightning.KafkaTriggers.MessageRecovery.recover_messages(
 )
 ```
 
-Further details regarding the behaviour of `MessageRecovery.recover_messages/1` 
+Further details regarding the behaviour of `MessageRecovery.recover_messages/1`
 can be found in the module documentation of `MessageRecovery`. Recovered
 messages will have the `.json` extension modified to `.json.recovered` but they
 will be left in place. Future recovery runs will not process files that have

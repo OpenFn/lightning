@@ -1,5 +1,7 @@
 import Config
 
+config :lightning, :emails, admin_email: "support@openfn.org"
+
 # Configure your database
 config :lightning, Lightning.Repo,
   username: "postgres",

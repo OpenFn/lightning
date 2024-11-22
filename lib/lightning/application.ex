@@ -54,16 +54,21 @@ defmodule Lightning.Application do
          warmer(module: Lightning.AuthProviders.CacheWarmer)
        ]}
 
-    events = [
-      [:oban, :circuit, :open],
-      [:oban, :circuit, :trip],
-      [:oban, :job, :exception]
-    ]
-
     :telemetry.attach_many(
       "oban-errors",
-      events,
+      [
+        [:oban, :circuit, :open],
+        [:oban, :circuit, :trip],
+        [:oban, :job, :exception]
+      ],
       &Lightning.ObanManager.handle_event/4,
+      nil
+    )
+
+    :telemetry.attach_many(
+      "swoosh-mailer",
+      [[:swoosh, :deliver, :stop]],
+      &Lightning.Mailer.EventHandler.handle_event/4,
       nil
     )
 

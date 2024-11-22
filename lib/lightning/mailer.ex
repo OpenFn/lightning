@@ -8,4 +8,22 @@ defmodule Lightning.Mailer do
        user.email}
     end
   end
+
+  defmodule EventHandler do
+    @moduledoc false
+    require Logger
+
+    def handle_event([:swoosh, :deliver, :stop], _, metadata, _) do
+      case metadata do
+        %{error: error} ->
+          Logger.error("Failed to send email: #{inspect(error)}")
+
+        %{result: result} ->
+          Logger.info("Email sent: #{inspect(result)}")
+
+        _ ->
+          :ok
+      end
+    end
+  end
 end

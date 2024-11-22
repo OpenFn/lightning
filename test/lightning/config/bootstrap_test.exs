@@ -209,6 +209,104 @@ defmodule Lightning.Config.BootstrapTest do
     end
   end
 
+  describe "setting up a mailer" do
+    setup context do
+      envs = Map.get(context, :env) |> List.wrap()
+      Dotenvy.source(envs)
+
+      :ok
+    end
+
+    @tag env: %{}
+    test "doesn't change anything by default" do
+      Process.put(@config_key, lightning: Application.get_all_env(:lightning))
+      Bootstrap.configure()
+
+      assert get_env(:lightning, Lightning.Mailer) == [
+               adapter: Swoosh.Adapters.Test
+             ]
+    end
+
+    @tag env: %{}
+    test "defaults the admin mail address isn't provided" do
+      # This is not the cleanest test, in the real world, the admin email
+      # key wouldn't exist - but since we fallback to real config (in this test case)
+      # test.exs, we need to find a way to provide an invalid but available
+      # value.
+      # TODO: consider wrapping Application in a mock, and call get_env/3
+      # on a compile time injected module.
+      Process.put(@config_key, lightning: [emails: [admin_email: false]])
+
+      Bootstrap.configure()
+
+      assert {:admin_email, "lightning@example.com"} in get_env(
+               :lightning,
+               :emails
+             )
+    end
+
+    @tag env: %{"MAIL_PROVIDER" => "mailgun"}
+    test "sets up for mailgun", %{env: env} do
+      assert_raise RuntimeError, ~r/MAILGUN_API_KEY not set/, fn ->
+        Bootstrap.configure()
+      end
+
+      Dotenvy.source([
+        env,
+        %{"MAILGUN_API_KEY" => "foo", "MAILGUN_DOMAIN" => "bar"}
+      ])
+
+      Bootstrap.configure()
+
+      assert get_env(:lightning, Lightning.Mailer) == [
+               adapter: Swoosh.Adapters.Mailgun,
+               api_key: "foo",
+               domain: "bar"
+             ]
+    end
+
+    @tag env: %{"MAIL_PROVIDER" => "local"}
+    test "sets up for local" do
+      Bootstrap.configure()
+
+      assert get_env(:lightning, Lightning.Mailer) == [
+               adapter: Swoosh.Adapters.Local
+             ]
+    end
+
+    @tag env: %{"MAIL_PROVIDER" => "smtp"}
+    test "sets up for smtp", %{env: env} do
+      # Incrementally add the required environment variables, these are checked
+      # in order and all of them are required.
+      [
+        {"SMTP_USERNAME", "foo"},
+        {"SMTP_PASSWORD", "bar"},
+        {"SMTP_RELAY", "baz"}
+      ]
+      |> Enum.reduce(
+        env,
+        fn {key, value}, env ->
+          assert_raise RuntimeError, ~r/#{key} not set/, fn ->
+            Bootstrap.configure()
+          end
+
+          Dotenvy.source!([env, %{key => value}])
+        end
+      )
+
+      Bootstrap.configure()
+
+      assert get_env(:lightning, Lightning.Mailer) == [
+               adapter: Swoosh.Adapters.SMTP,
+               username: "foo",
+               password: "bar",
+               relay: "baz",
+               tls: :always,
+               port: 587
+             ]
+    end
+  end
+
   describe "kafka alternate storage" do
     setup %{
             tmp_dir: tmp_dir,
@@ -217,9 +315,7 @@ defmodule Lightning.Config.BootstrapTest do
           } = context do
       path = Map.get(context, :path, tmp_dir)
 
-      %{
-        "KAFKA_ALTERNATE_STORAGE_ENABLED" => enabled
-      }
+      %{"KAFKA_ALTERNATE_STORAGE_ENABLED" => enabled}
       |> then(fn vars ->
         if path do
           vars
