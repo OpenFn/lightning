@@ -148,10 +148,10 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
             <% end %>
           </div>
           <div class="mr-2 pt-2">
-            <div :if={@can_delete_workflow} class="py-0.5">
-              <Components.enable_workflow_toggle
-                source_type={:workflow}
-                source={workflow}
+            <div :if={@can_delete_workflow} class="flex items-center gap-2">
+              <Components.workflow_state_toggle
+                workflow_or_changeset={workflow}
+                on_click="toggle_workflow_state"
               />
               <.link
                 href="#"

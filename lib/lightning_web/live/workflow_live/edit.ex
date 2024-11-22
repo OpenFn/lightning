@@ -129,7 +129,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 name="hero-lock-closed"
                 class="w-5 h-5 place-self-center text-gray-300"
               />
-              <.enable_workflow_toggle source_type={:changeset} source={@changeset} />
+              <.workflow_state_toggle
+                workflow_or_changeset={@changeset}
+                on_click="toggle_workflow_state"
+                label="Enabled"
+              />
               <div class="flex flex-row m-auto gap-2">
                 <div>
                   <.link
@@ -1253,11 +1257,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   @impl true
-  def handle_event("toggle_enable_workflow", %{"state" => current_state}, socket) do
+  def handle_event("toggle_workflow_state", %{"state" => state}, socket) do
     changeset =
-      Workflows.enable_or_disable_workflow(
+      Workflows.update_triggers_enabled_state(
         socket.assigns.changeset,
-        current_state == "disabled"
+        state == "disabled"
       )
 
     params = WorkflowParams.to_map(changeset)

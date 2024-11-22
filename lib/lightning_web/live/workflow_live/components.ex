@@ -4,6 +4,7 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   import PetalComponents.Table
 
+  alias Lightning.Workflows.Workflow
   alias Phoenix.LiveView.JS
 
   attr :socket, :map, required: true
@@ -820,39 +821,46 @@ defmodule LightningWeb.WorkflowLive.Components do
         else: String.at(user.last_name, 0)
   end
 
-  def enable_workflow_toggle(assigns) do
-    triggers_enabled? =
-      case Map.get(assigns, :source_type) do
-        :workflow ->
-          Map.get(assigns.source, :triggers, [])
-          |> Enum.all?(& &1.enabled)
+  attr :label, :string, default: nil
+  attr :on_click, :string, required: true
+  attr :workflow_or_changeset, :any, required: true
 
-        :changeset ->
-          assigns.source
+  def workflow_state_toggle(assigns) do
+    triggers_enabled? =
+      case assigns.workflow_or_changeset do
+        %Ecto.Changeset{} ->
+          assigns.workflow_or_changeset
           |> Ecto.Changeset.fetch_field!(:triggers)
           |> Enum.all?(& &1.enabled)
+
+        %Workflow{} ->
+          Map.get(assigns.workflow_or_changeset, :triggers, [])
+          |> Enum.all?(& &1.enabled)
+
+        _ ->
+          false
       end
 
     assigns =
       assigns
       |> assign(:enabled?, triggers_enabled?)
       |> assign(
-        :toggle_classes,
+        :bg,
         if(triggers_enabled?, do: "bg-indigo-600", else: "bg-gray-200")
       )
       |> assign(
-        :toggle_position,
+        :translate,
         if(triggers_enabled?, do: "translate-x-5", else: "translate-x-0")
       )
       |> assign(
-        :icon_inactive_classes,
+        :inactive_opacity,
         if(triggers_enabled?,
           do: "opacity-0 duration-100 ease-out",
           else: "opacity-100 transition-opacity duration-200 ease-in"
         )
       )
       |> assign(
-        :icon_active_classes,
+        :active_opacity,
         if(triggers_enabled?,
           do: "opacity-100 duration-200 ease-in",
           else: "opacity-0 transition-opacity duration-100 ease-out"
@@ -863,43 +871,29 @@ defmodule LightningWeb.WorkflowLive.Components do
     <div class="flex flex-row m-auto gap-2">
       <button
         type="button"
-        class={"relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent #{@toggle_classes} transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"}
+        class={"relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent #{@bg} transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"}
         role="switch"
-        phx-click="toggle_enable_workflow"
+        phx-click={@on_click}
         phx-value-state={if @enabled?, do: "enabled", else: "disabled"}
-        phx-value-workflow={Map.get(assigns.source, :id)}
+        phx-value-workflow={Map.get(assigns.workflow_or_changeset, :id)}
         aria-checked={@enabled?}
       >
-        <span class="sr-only">Use setting</span>
-        <span class={"pointer-events-none relative inline-block size-5 #{@toggle_position} transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"}>
+        <span class={"pointer-events-none relative inline-block size-5 #{@translate} transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"}>
           <span
-            class={"absolute inset-0 flex size-full items-center justify-center #{@icon_inactive_classes}"}
+            class={"absolute inset-0 flex size-full items-center justify-center #{@inactive_opacity}"}
             aria-hidden="true"
           >
-            <svg class="size-3 text-gray-400" fill="none" viewBox="0 0 12 12">
-              <path
-                d="M4 8l2-2m0 0l2-2M6 6L4 4m2 2l2 2"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
+            <.icon name="hero-x-mark" class="h-4 w-4 text-gray-400" />
           </span>
           <span
-            class={"absolute inset-0 flex size-full items-center justify-center #{@icon_active_classes}"}
+            class={"absolute inset-0 flex size-full items-center justify-center #{@active_opacity}"}
             aria-hidden="true"
           >
-            <svg
-              class="size-3 text-indigo-600"
-              fill="currentColor"
-              viewBox="0 0 12 12"
-            >
-              <path d="M3.707 5.293a1 1 0 00-1.414 1.414l1.414-1.414zM5 8l-.707.707a1 1 0 001.414 0L5 8zm4.707-3.293a1 1 0 00-1.414-1.414l1.414 1.414zm-7.414 2l2 2 1.414-1.414-2-2-1.414 1.414zm3.414 2l4-4-1.414-1.414-4 4 1.414 1.414z" />
-            </svg>
+            <.icon name="hero-check" class="h-4 w-4 text-indigo-600" />
           </span>
         </span>
       </button>
+      <span :if={@label}><%= @label %></span>
     </div>
     """
   end
