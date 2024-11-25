@@ -8,7 +8,6 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   alias Lightning.Projects.Project
   alias Lightning.Workflows.WorkflowUsageLimiter
   alias Lightning.WorkOrders.SearchParams
-  # alias LightningWeb.WorkflowLive.Components
   alias Timex.Format.DateTime.Formatters.Relative
 
   def workflow_list(assigns) do
@@ -154,6 +153,14 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                 state={:on}
                 on_click="toggle_workflow_state"
               /> --%>
+              <.input
+                type="toggle"
+                name="workflow_state"
+                value={workflow_enabled?(workflow)}
+                tooltip={workflow_state_tooltip(workflow)}
+                on_click="toggle_workflow_state"
+                value_key={workflow.id}
+              />
               <.link
                 href="#"
                 class="table-action"
@@ -170,6 +177,29 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
     </.table>
     """
   end
+
+  defp workflow_state_tooltip(%Lightning.Workflows.Workflow{} = workflow) do
+    case {Enum.all?(workflow.triggers, & &1.enabled),
+          List.first(workflow.triggers) |> Map.get(:type)} do
+      {true, :cron} -> "This workflow is active (cron trigger enabled)"
+      {true, :webhook} -> "This workflow is active (webhook trigger enabled)"
+      {false, _} -> "This workflow is inactive (manual runs only)"
+    end
+  end
+
+  defp workflow_enabled?(%Lightning.Workflows.Workflow{} = workflow),
+    do: Enum.all?(workflow.triggers, & &1.enabled)
+
+  defp workflow_enabled?(%Ecto.Changeset{} = changeset),
+    do:
+      Ecto.Changeset.get_field(changeset, :triggers)
+      |> Enum.all?(&trigger_enabled?/1)
+
+  defp trigger_enabled?(%Ecto.Changeset{} = trigger),
+    do: Ecto.Changeset.get_field(trigger, :enabled)
+
+  defp trigger_enabled?(trigger),
+    do: trigger.enabled
 
   attr :project, :map, required: true
   attr :workflow, :map, required: true

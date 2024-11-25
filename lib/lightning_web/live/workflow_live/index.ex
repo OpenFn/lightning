@@ -117,14 +117,14 @@ defmodule LightningWeb.WorkflowLive.Index do
   @impl true
   def handle_event(
         "toggle_workflow_state",
-        %{"state" => state, "workflow" => workflow_id},
+        %{"workflow_state" => state, "value_key" => workflow_id},
         socket
       ) do
     %{current_user: actor, project: project_id} = socket.assigns
 
     workflow = Workflows.get_workflow!(workflow_id, include: [:triggers])
 
-    Workflows.update_triggers_enabled_state(workflow, state == "disabled")
+    Workflows.update_triggers_enabled_state(workflow, state)
     |> Workflows.save_workflow(actor)
     |> case do
       {:ok, _workflow} ->

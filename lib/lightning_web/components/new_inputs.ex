@@ -180,6 +180,8 @@ defmodule LightningWeb.Components.NewInputs do
 
   attr :on_click, :string, default: nil
 
+  attr :value_key, :any, default: nil
+
   slot :inner_block
 
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
@@ -427,6 +429,7 @@ defmodule LightningWeb.Components.NewInputs do
         id={"toggle-#{@id}"}
         class="flex items-center gap-3"
         data-on-click={@on_click}
+        data-value-key={@value_key}
       >
         <div class="relative inline-flex items-center">
           <%= if @checked do %>

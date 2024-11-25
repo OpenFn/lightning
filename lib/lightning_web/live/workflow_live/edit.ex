@@ -134,7 +134,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   type="toggle"
                   name="workflow_state"
                   value={workflow_enabled?(@changeset)}
-                  tooltip={workflow_state_tooltip(@changeset) |> IO.inspect()}
+                  tooltip={workflow_state_tooltip(@changeset)}
                   on_click="toggle_workflow_state"
                 />
                 <div>
@@ -165,7 +165,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
       </:header>
 
       <div class="relative h-full flex" id={"workflow-edit-#{@workflow.id}"}>
-        <%!-- Job Edit View --%>
         <div class="flex-none" id="job-editor-pane">
           <div
             :if={@selected_job && @selection_mode == "expand"}

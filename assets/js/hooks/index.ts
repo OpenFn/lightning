@@ -51,10 +51,8 @@ export const Toggle = {
       toggle.setAttribute('aria-checked', checked);
     };
 
-    // Update visual state whenever the component updates
     updateVisualState(checkbox.checked);
 
-    // Remove old event listeners if they exist
     if (this.clickListener) {
       toggle.removeEventListener('click', this.clickListener);
     }
@@ -62,7 +60,6 @@ export const Toggle = {
       checkbox.removeEventListener('change', this.changeListener);
     }
 
-    // Set up new event listeners
     if (!checkbox.disabled) {
       this.clickListener = () => {
         checkbox.checked = !checkbox.checked;
@@ -72,10 +69,12 @@ export const Toggle = {
           checkbox.dispatchEvent(new Event('change', { bubbles: true }));
         } else {
           const onClick = wrapper.dataset.onClick;
+          const valueKey = wrapper.dataset.valueKey;
           if (onClick) {
             this.pushEvent(onClick, {
               _target: checkbox.name,
               [checkbox.name]: checkbox.checked,
+              value_key: valueKey,
             });
           }
         }
