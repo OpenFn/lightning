@@ -363,18 +363,7 @@ defmodule LightningWeb.Components.NewInputs do
   def input(%{type: "toggle"} = assigns) do
     assigns =
       assigns
-      |> assign_new(:checked, fn ->
-        case assigns do
-          %{field: %Phoenix.HTML.FormField{} = field} ->
-            Phoenix.HTML.Form.normalize_value("checkbox", field.value) == true
-
-          %{value: value} ->
-            Phoenix.HTML.Form.normalize_value("checkbox", value) == true
-
-          _ ->
-            false
-        end
-      end)
+      |> assign_new(:checked, fn -> get_checkbox_value(assigns) end)
       |> assign_new(:disabled, fn -> false end)
       |> assign_new(:required, fn -> false end)
       |> assign_new(:help_text, fn -> nil end)
@@ -382,41 +371,12 @@ defmodule LightningWeb.Components.NewInputs do
       |> assign_new(:size, fn -> "md" end)
       |> assign_new(:color, fn -> "primary" end)
 
-    toggle_size_classes =
-      case assigns.size do
-        "sm" -> "w-8 h-4"
-        "md" -> "w-11 h-6"
-        "lg" -> "w-14 h-7"
-      end
-
-    handle_size_classes =
-      case assigns.size do
-        "sm" -> "h-3 w-3"
-        "md" -> "h-5 w-5"
-        "lg" -> "h-6 w-6"
-      end
-
-    icon_size_classes =
-      case assigns.size do
-        "sm" -> "h-2 w-2"
-        "md" -> "h-4 w-4"
-        "lg" -> "h-5 w-5"
-      end
-
-    active_color_classes =
-      case assigns.color do
-        "primary" -> "bg-indigo-600 focus:ring-indigo-500"
-        "success" -> "bg-green-600 focus:ring-green-500"
-        "warning" -> "bg-yellow-600 focus:ring-yellow-500"
-        "danger" -> "bg-red-600 focus:ring-red-500"
-      end
-
     assigns =
       assigns
-      |> assign(:toggle_size_classes, toggle_size_classes)
-      |> assign(:handle_size_classes, handle_size_classes)
-      |> assign(:icon_size_classes, icon_size_classes)
-      |> assign(:active_color_classes, active_color_classes)
+      |> assign(:toggle_size_classes, get_toggle_size_classes(assigns))
+      |> assign(:handle_size_classes, get_handle_size_classes(assigns))
+      |> assign(:icon_size_classes, get_icon_size_classes(assigns))
+      |> assign(:active_color_classes, get_active_color_classes(assigns))
 
     ~H"""
     <div
@@ -774,5 +734,48 @@ defmodule LightningWeb.Components.NewInputs do
       <%= render_slot(@inner_block) %>
     </p>
     """
+  end
+
+  defp get_checkbox_value(%{field: %Phoenix.HTML.FormField{} = field}) do
+    Phoenix.HTML.Form.normalize_value("checkbox", field.value) == true
+  end
+
+  defp get_checkbox_value(%{value: value}) do
+    Phoenix.HTML.Form.normalize_value("checkbox", value) == true
+  end
+
+  defp get_checkbox_value(_), do: false
+
+  defp get_toggle_size_classes(assigns) do
+    case assigns.size do
+      "sm" -> "w-8 h-4"
+      "md" -> "w-11 h-6"
+      "lg" -> "w-14 h-7"
+    end
+  end
+
+  defp get_handle_size_classes(assigns) do
+    case assigns.size do
+      "sm" -> "h-3 w-3"
+      "md" -> "h-5 w-5"
+      "lg" -> "h-6 w-6"
+    end
+  end
+
+  defp get_icon_size_classes(assigns) do
+    case assigns.size do
+      "sm" -> "h-2 w-2"
+      "md" -> "h-4 w-4"
+      "lg" -> "h-5 w-5"
+    end
+  end
+
+  defp get_active_color_classes(assigns) do
+    case assigns.color do
+      "primary" -> "bg-indigo-600 focus:ring-indigo-500"
+      "success" -> "bg-green-600 focus:ring-green-500"
+      "warning" -> "bg-yellow-600 focus:ring-yellow-500"
+      "danger" -> "bg-red-600 focus:ring-red-500"
+    end
   end
 end

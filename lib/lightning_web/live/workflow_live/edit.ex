@@ -2537,10 +2537,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   defp loaded?(%Workflow{} = workflow), do: workflow.__meta__.state == :loaded
 
-  @spec workflow_enabled?(
-          %Workflow{triggers: [Workflows.Trigger.t(), ...]}
-          | %Ecto.Changeset{}
-        ) :: boolean()
   defp workflow_enabled?(%Workflow{} = workflow),
     do: Enum.all?(workflow.triggers, & &1.enabled)
 

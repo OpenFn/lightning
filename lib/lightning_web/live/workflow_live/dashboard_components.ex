@@ -190,17 +190,6 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   defp workflow_enabled?(%Lightning.Workflows.Workflow{} = workflow),
     do: Enum.all?(workflow.triggers, & &1.enabled)
 
-  defp workflow_enabled?(%Ecto.Changeset{} = changeset),
-    do:
-      Ecto.Changeset.get_field(changeset, :triggers)
-      |> Enum.all?(&trigger_enabled?/1)
-
-  defp trigger_enabled?(%Ecto.Changeset{} = trigger),
-    do: Ecto.Changeset.get_field(trigger, :enabled)
-
-  defp trigger_enabled?(trigger),
-    do: trigger.enabled
-
   attr :project, :map, required: true
   attr :workflow, :map, required: true
   attr :trigger_enabled, :boolean
