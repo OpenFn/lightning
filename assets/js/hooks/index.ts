@@ -18,6 +18,79 @@ export {
   TabbedPanels,
 };
 
+export const Toggle = {
+  mounted() {
+    this.setupToggle();
+  },
+
+  updated() {
+    this.setupToggle();
+  },
+
+  setupToggle() {
+    const wrapper = this.el;
+    const toggle = wrapper.querySelector('[data-toggle]');
+    const checkbox = wrapper.querySelector('input[type="checkbox"]');
+    const handle = toggle.querySelector('[data-handle]');
+    const xMark = handle.querySelector('[data-x-mark]');
+    const checkMark = handle.querySelector('[data-check-mark]');
+    const form = wrapper.closest('form');
+
+    if (!toggle || !checkbox || !handle) return;
+
+    const updateVisualState = checked => {
+      const size = toggle.classList.contains('w-14') ? '7' : '5';
+      toggle.classList.toggle('bg-indigo-600', checked);
+      toggle.classList.toggle('bg-gray-200', !checked);
+      handle.classList.toggle(`translate-x-${size}`, checked);
+      handle.classList.toggle('translate-x-0', !checked);
+      xMark.classList.toggle('opacity-0', checked);
+      xMark.classList.toggle('opacity-100', !checked);
+      checkMark.classList.toggle('opacity-100', checked);
+      checkMark.classList.toggle('opacity-0', !checked);
+      toggle.setAttribute('aria-checked', checked);
+    };
+
+    // Update visual state whenever the component updates
+    updateVisualState(checkbox.checked);
+
+    // Remove old event listeners if they exist
+    if (this.clickListener) {
+      toggle.removeEventListener('click', this.clickListener);
+    }
+    if (this.changeListener) {
+      checkbox.removeEventListener('change', this.changeListener);
+    }
+
+    // Set up new event listeners
+    if (!checkbox.disabled) {
+      this.clickListener = () => {
+        checkbox.checked = !checkbox.checked;
+        updateVisualState(checkbox.checked);
+
+        if (form) {
+          checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+        } else {
+          const onClick = wrapper.dataset.onClick;
+          if (onClick) {
+            this.pushEvent(onClick, {
+              _target: checkbox.name,
+              [checkbox.name]: checkbox.checked,
+            });
+          }
+        }
+      };
+
+      this.changeListener = () => {
+        updateVisualState(checkbox.checked);
+      };
+
+      toggle.addEventListener('click', this.clickListener);
+      checkbox.addEventListener('change', this.changeListener);
+    }
+  },
+};
+
 export const Combobox = {
   mounted() {
     this.input = this.el.querySelector('input');

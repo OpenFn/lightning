@@ -4,7 +4,6 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   import PetalComponents.Table
 
-  alias Lightning.Workflows.Workflow
   alias Phoenix.LiveView.JS
 
   attr :socket, :map, required: true
@@ -385,22 +384,6 @@ defmodule LightningWeb.WorkflowLive.Components do
           </div>
       <% end %>
     </div>
-    <div class="hidden sm:block" aria-hidden="true">
-      <div class="py-2"></div>
-    </div>
-    <hr class="h-px bg-gray-200 border-0 dark:bg-gray-700 position:absolute" />
-    <div class="hidden sm:block" aria-hidden="true">
-      <div class="py-2"></div>
-    </div>
-    <.input
-      type="checkbox"
-      field={@form[:enabled]}
-      label="Disable this trigger"
-      disabled={@disabled}
-      checked_value={false}
-      unchecked_value={true}
-      value={@trigger_enabled}
-    />
     """
   end
 
@@ -819,89 +802,5 @@ defmodule LightningWeb.WorkflowLive.Components do
       if is_nil(user.last_name),
         do: "",
         else: String.at(user.last_name, 0)
-  end
-
-  attr :id, :string
-  attr :label, :string, default: nil
-  attr :on_click, :string, required: true
-  attr :workflow_or_changeset, :any, required: true
-
-  def workflow_state_toggle(assigns) do
-    triggers_enabled? =
-      case assigns.workflow_or_changeset do
-        %Ecto.Changeset{} ->
-          assigns.workflow_or_changeset
-          |> Ecto.Changeset.fetch_field!(:triggers)
-          |> Enum.all?(& &1.enabled)
-
-        %Workflow{} ->
-          Map.get(assigns.workflow_or_changeset, :triggers, [])
-          |> Enum.all?(& &1.enabled)
-
-        _ ->
-          false
-      end
-
-    assigns =
-      assigns
-      |> assign(:enabled?, triggers_enabled?)
-      |> assign(
-        :bg,
-        if(triggers_enabled?, do: "bg-indigo-600", else: "bg-gray-200")
-      )
-      |> assign(
-        :translate,
-        if(triggers_enabled?, do: "translate-x-5", else: "translate-x-0")
-      )
-      |> assign(
-        :inactive_opacity,
-        if(triggers_enabled?,
-          do: "opacity-0 duration-100 ease-out",
-          else: "opacity-100 transition-opacity duration-200 ease-in"
-        )
-      )
-      |> assign(
-        :active_opacity,
-        if(triggers_enabled?,
-          do: "opacity-100 duration-200 ease-in",
-          else: "opacity-0 transition-opacity duration-100 ease-out"
-        )
-      )
-
-    ~H"""
-    <div id={@id} class="flex flex-row m-auto gap-2">
-      <button
-        id={"#{@id}-button"}
-        type="button"
-        class={"relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent #{@bg} transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"}
-        role="switch"
-        phx-click={@on_click}
-        phx-value-state={if @enabled?, do: "enabled", else: "disabled"}
-        phx-value-workflow={Map.get(assigns.workflow_or_changeset, :id)}
-        aria-checked={@enabled?}
-      >
-        <span class={"pointer-events-none relative inline-block size-5 #{@translate} transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"}>
-          <span
-            class={"absolute inset-0 flex size-full items-center justify-center #{@inactive_opacity}"}
-            aria-hidden="true"
-          >
-            <.icon name="hero-x-mark" class="h-4 w-4 text-gray-400" />
-          </span>
-          <span
-            class={"absolute inset-0 flex size-full items-center justify-center #{@active_opacity}"}
-            aria-hidden="true"
-          >
-            <.icon name="hero-check" class="h-4 w-4 text-indigo-600" />
-          </span>
-        </span>
-      </button>
-      <span
-        :if={@label}
-        class="flex flex-row m-auto text-sm font-medium text-gray-500"
-      >
-        <%= @label %>
-      </span>
-    </div>
-    """
   end
 end

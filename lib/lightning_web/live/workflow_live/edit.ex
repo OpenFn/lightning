@@ -129,13 +129,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 name="hero-lock-closed"
                 class="w-5 h-5 place-self-center text-gray-300"
               />
-              <.workflow_state_toggle
-                id="toggle-workflow-state"
-                workflow_or_changeset={@changeset}
-                on_click="toggle_workflow_state"
-                label="Enabled"
-              />
               <div class="flex flex-row m-auto gap-2">
+                <.input
+                  type="toggle"
+                  name="workflow_state"
+                  value={
+                    workflow_enabled?(@changeset)
+                    |> IO.inspect(label: "What are you initially ?")
+                  }
+                  on_click="toggle_workflow_state"
+                />
                 <div>
                   <.link
                     patch={
@@ -529,22 +532,32 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 end)
               }
             >
-              <div class="w-auto h-full" id={"trigger-pane-#{@workflow.id}"}>
-                <!-- Show only the currently selected one -->
-                <.trigger_form
-                  form={tf}
-                  on_change={&send_form_changed/1}
-                  disabled={
-                    !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                      @snapshot_version_tag != "latest" ||
-                      !@has_presence_edit_priority
-                  }
-                  can_write_webhook_auth_method={@can_write_webhook_auth_method}
-                  selected_trigger={@selected_trigger}
-                  action={@live_action}
-                  cancel_url={close_url(assigns, :selected_trigger, :unselect)}
-                />
-              </div>
+              <!-- Show only the currently selected one -->
+              <.trigger_form
+                form={tf}
+                on_change={&send_form_changed/1}
+                disabled={}
+                can_write_webhook_auth_method={@can_write_webhook_auth_method}
+                selected_trigger={@selected_trigger}
+                action={@live_action}
+                cancel_url={close_url(assigns, :selected_trigger, :unselect)}
+              />
+              <:footer>
+                <div class="flex flex-row">
+                  <div class="flex items-center">
+                    <.input
+                      type="toggle"
+                      field={tf[:enabled]}
+                      disabled={
+                        !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                          @snapshot_version_tag != "latest" ||
+                          !@has_presence_edit_priority
+                      }
+                      label="Enabled"
+                    />
+                  </div>
+                </div>
+              </:footer>
             </.panel>
           </.single_inputs_for>
           <.single_inputs_for
@@ -782,6 +795,23 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp processing(_run), do: false
+
+  # defp workflow_state_tooltip(%Ecto.Changeset{} = changeset) do
+  #   triggers = Ecto.Changeset.fetch_field!(changeset, :triggers)
+
+  #   case {Enum.all?(triggers, & &1.enabled),
+  #         List.first(triggers) |> Map.get(:type)} do
+  #     {true, :cron} -> "This workflow is active (cron trigger enabled)"
+  #     {true, :webhook} -> "This workflow is active (webhook trigger enabled)"
+  #     {false, _} -> "This workflow is inactive (manual runs only)"
+  #   end
+  # end
+
+  # defp workflow_state(%Ecto.Changeset{} = changeset) do
+  #   triggers = Ecto.Changeset.fetch_field!(changeset, :triggers)
+
+  #   if Enum.all?(triggers, & &1.enabled), do: :on, else: :off
+  # end
 
   defp job_deletion_tooltip_message(
          workflow_deleted,
@@ -1258,21 +1288,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   @impl true
-  def handle_event("toggle_workflow_state", %{"state" => state}, socket) do
-    changeset =
-      Workflows.update_triggers_enabled_state(
-        socket.assigns.changeset,
-        state == "disabled"
-      )
-
-    params = WorkflowParams.to_map(changeset)
-
-    {:noreply,
-     socket
-     |> assign(:changeset, changeset)
-     |> handle_new_params(params, :workflow)}
-  end
-
   def handle_event("get-initial-state", _params, socket) do
     {:noreply,
      socket
@@ -1678,10 +1693,25 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  def handle_event(_unhandled_event, _params, socket) do
-    # TODO: add a warning and/or log for unhandled events
-    {:noreply, socket}
+  def handle_event("toggle_workflow_state", %{"workflow_state" => state}, socket) do
+    changeset =
+      Workflows.update_triggers_enabled_state(
+        socket.assigns.changeset,
+        state
+      )
+
+    params = WorkflowParams.to_map(changeset)
+
+    {:noreply,
+     socket
+     |> assign(:changeset, changeset)
+     |> handle_new_params(params, :workflow)}
   end
+
+  # def handle_event(_unhandled_event, _params, socket) do
+  #   # TODO: add a warning and/or log for unhandled events
+  #   {:noreply, socket}
+  # end
 
   @impl true
   def handle_info(
@@ -2480,4 +2510,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   defp workflow_enabled?(%Workflow{} = workflow),
     do: Enum.all?(workflow.triggers, & &1.enabled)
+
+  defp workflow_enabled?(%Ecto.Changeset{} = changeset),
+    do:
+      Ecto.Changeset.fetch_field!(changeset, :triggers)
+      |> Enum.all?(& &1.enabled)
 end

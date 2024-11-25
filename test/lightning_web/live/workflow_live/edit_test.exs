@@ -1586,6 +1586,26 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert html =~ error_msg
     end
+
+    test "workflows are disabled by default", %{
+      conn: conn,
+      user: user
+    } do
+      project = insert(:project, project_users: [%{user: user, role: :editor}])
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/w/new?m=settings")
+
+      view |> fill_workflow_name("My Workflow")
+
+      html = click_save(view)
+
+      html |> IO.puts()
+
+      Workflows.get_workflows_for(project) |> IO.inspect()
+
+      assert html =~ "Workflow saved successfully"
+    end
   end
 
   describe "AI Assistant:" do
