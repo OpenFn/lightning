@@ -20,73 +20,17 @@ export {
 
 export const Toggle = {
   mounted() {
-    this.setupToggle();
-  },
+    const checkbox = this.el.querySelector('input[type="checkbox"]');
+    const formId = this.el.dataset.form;
 
-  updated() {
-    this.setupToggle();
-  },
+    console.log(formId);
 
-  setupToggle() {
-    const wrapper = this.el;
-    const toggle = wrapper.querySelector('[data-toggle]');
-    const checkbox = wrapper.querySelector('input[type="checkbox"]');
-    const handle = toggle.querySelector('[data-handle]');
-    const xMark = handle.querySelector('[data-x-mark]');
-    const checkMark = handle.querySelector('[data-check-mark]');
-    const form = wrapper.closest('form');
+    if (checkbox?.disabled) return;
 
-    if (!toggle || !checkbox || !handle) return;
-
-    const updateVisualState = checked => {
-      const size = toggle.classList.contains('w-14') ? '7' : '5';
-      toggle.classList.toggle('bg-indigo-600', checked);
-      toggle.classList.toggle('bg-gray-200', !checked);
-      handle.classList.toggle(`translate-x-${size}`, checked);
-      handle.classList.toggle('translate-x-0', !checked);
-      xMark.classList.toggle('opacity-0', checked);
-      xMark.classList.toggle('opacity-100', !checked);
-      checkMark.classList.toggle('opacity-100', checked);
-      checkMark.classList.toggle('opacity-0', !checked);
-      toggle.setAttribute('aria-checked', checked);
-    };
-
-    updateVisualState(checkbox.checked);
-
-    if (this.clickListener) {
-      toggle.removeEventListener('click', this.clickListener);
-    }
-    if (this.changeListener) {
-      checkbox.removeEventListener('change', this.changeListener);
-    }
-
-    if (!checkbox.disabled) {
-      this.clickListener = () => {
-        checkbox.checked = !checkbox.checked;
-        updateVisualState(checkbox.checked);
-
-        if (form) {
-          checkbox.dispatchEvent(new Event('change', { bubbles: true }));
-        } else {
-          const onClick = wrapper.dataset.onClick;
-          const valueKey = wrapper.dataset.valueKey;
-          if (onClick) {
-            this.pushEvent(onClick, {
-              _target: checkbox.name,
-              [checkbox.name]: checkbox.checked,
-              value_key: valueKey,
-            });
-          }
-        }
-      };
-
-      this.changeListener = () => {
-        updateVisualState(checkbox.checked);
-      };
-
-      toggle.addEventListener('click', this.clickListener);
-      checkbox.addEventListener('change', this.changeListener);
-    }
+    this.el.addEventListener('click', () => {
+      checkbox.checked = !checkbox.checked;
+      checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+    });
   },
 };
 

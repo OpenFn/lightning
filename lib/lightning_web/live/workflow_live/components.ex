@@ -458,6 +458,7 @@ defmodule LightningWeb.WorkflowLive.Components do
           label="Label"
           field={@form[:condition_label]}
           maxlength="255"
+          disabled={@disabled}
         />
       </div>
       <div>
@@ -481,6 +482,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             phx-debounce="300"
             maxlength="255"
             placeholder="eg: !state.error"
+            disabled={@disabled}
           />
           <details class="mt-5 ml-1">
             <summary class="text-xs cursor-pointer">

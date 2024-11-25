@@ -382,16 +382,21 @@ defmodule LightningWeb.Components.NewInputs do
 
     ~H"""
     <div
-      id={"toggle-wrapper-#{@id}"}
+      id={"toggle-container-#{@id}"}
       class={["flex flex-col gap-1", @class]}
       {if @tooltip, do: ["phx-hook": "Tooltip", "aria-label": @tooltip], else: []}
     >
       <div
         phx-hook="Toggle"
-        id={"toggle-#{@id}"}
+        id={"toggle-control-#{@id}"}
         class="flex items-center gap-3"
-        data-on-click={@on_click}
-        data-value-key={@value_key}
+        {if @on_click, do: ["phx-click": JS.push(@on_click,
+          value: %{
+            _target: @name,
+            "#{@name}": !@checked,
+            value_key: to_string(@value_key)
+          }
+        )], else: []}
       >
         <div class="relative inline-flex items-center">
           <%= if @checked do %>
@@ -428,58 +433,53 @@ defmodule LightningWeb.Components.NewInputs do
             tabindex={if @disabled, do: "-1", else: "0"}
             role="switch"
             aria-checked={@checked}
-            class={
-              [
-                "relative inline-flex rounded-full transition-colors duration-200 ease-in-out border-2 border-transparent",
-                "focus:outline-none focus:ring-2 focus:ring-offset-2",
-                @toggle_size_classes,
-                # Fixed initial state classes
-                (@checked && @active_color_classes) || "bg-gray-200",
-                if(@disabled,
-                  do: "opacity-50 cursor-not-allowed",
-                  else: "cursor-pointer"
-                )
-              ]
-            }
-            data-tooltip={@tooltip}
+            class={[
+              "relative inline-flex rounded-full transition-colors duration-200 ease-in-out border-2 border-transparent",
+              "focus:outline-none focus:ring-2 focus:ring-offset-2",
+              @toggle_size_classes,
+              @checked && "bg-indigo-600",
+              !@checked && "bg-gray-200",
+              if(@disabled,
+                do: "opacity-50 cursor-not-allowed",
+                else: "cursor-pointer"
+              )
+            ]}
           >
             <span
               data-handle
-              class={
-                [
-                  "pointer-events-none absolute inline-block transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
-                  @handle_size_classes,
-                  # Fixed initial transform state
-                  (@checked &&
-                     if(@size == "lg", do: "translate-x-7", else: "translate-x-5")) ||
-                    "translate-x-0"
-                ]
-              }
+              class={[
+                "pointer-events-none absolute inline-block transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                @handle_size_classes,
+                @checked && ((@size == "lg" && "translate-x-7") || "translate-x-5"),
+                !@checked && "translate-x-0"
+              ]}
             >
               <span
                 data-x-mark
                 class={[
                   "absolute inset-0 flex h-full w-full items-center justify-center transition-opacity duration-200 ease-in",
-                  (@checked && "opacity-0") || "opacity-100"
+                  @checked && "opacity-0",
+                  !@checked && "opacity-100"
                 ]}
                 aria-hidden="true"
               >
                 <.icon
                   name="hero-x-mark-micro"
-                  class={"#{@icon_size_classes} text-gray-400"}
+                  class={@icon_size_classes <> " text-gray-400"}
                 />
               </span>
               <span
                 data-check-mark
                 class={[
                   "absolute inset-0 flex h-full w-full items-center justify-center transition-opacity duration-200 ease-in",
-                  (@checked && "opacity-100") || "opacity-0"
+                  @checked && "opacity-100",
+                  !@checked && "opacity-0"
                 ]}
                 aria-hidden="true"
               >
                 <.icon
                   name="hero-check-micro"
-                  class={"#{@icon_size_classes} text-indigo-600"}
+                  class={@icon_size_classes <> " text-indigo-600"}
                 />
               </span>
             </span>
@@ -502,7 +502,7 @@ defmodule LightningWeb.Components.NewInputs do
       <div
         :if={@help_text}
         class="text-sm text-gray-500 ml-14"
-        id={"#{@id}-description"}
+        id={"toggle-description-#{@id}"}
       >
         <%= @help_text %>
       </div>

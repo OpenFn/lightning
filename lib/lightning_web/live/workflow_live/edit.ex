@@ -131,6 +131,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               />
               <div class="flex flex-row m-auto gap-2">
                 <.input
+                  id="workflow"
                   type="toggle"
                   name="workflow_state"
                   value={workflow_enabled?(@changeset)}
@@ -531,7 +532,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
               <.trigger_form
                 form={tf}
                 on_change={&send_form_changed/1}
-                disabled={}
+                disabled={
+                  !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                    @snapshot_version_tag != "latest" ||
+                    !@has_presence_edit_priority
+                }
                 can_write_webhook_auth_method={@can_write_webhook_auth_method}
                 selected_trigger={@selected_trigger}
                 action={@live_action}
@@ -834,11 +839,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp workflow_state_tooltip(%Ecto.Changeset{} = changeset) do
     triggers = Ecto.Changeset.fetch_field!(changeset, :triggers)
 
-    case {Enum.all?(triggers, & &1.enabled),
-          List.first(triggers) |> Map.get(:type)} do
-      {true, :cron} -> "This workflow is active (cron trigger enabled)"
-      {true, :webhook} -> "This workflow is active (webhook trigger enabled)"
-      {false, _} -> "This workflow is inactive (manual runs only)"
+    case {Enum.all?(triggers, & &1.enabled), triggers} do
+      {_, []} ->
+        "This workflow is inactive (no triggers configured)"
+
+      {true, [first_trigger | _]} ->
+        case first_trigger.type do
+          :cron -> "This workflow is active (cron trigger enabled)"
+          :webhook -> "This workflow is active (webhook trigger enabled)"
+        end
+
+      {false, _} ->
+        "This workflow is inactive (manual runs only)"
     end
   end
 

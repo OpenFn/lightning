@@ -148,12 +148,8 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
           </div>
           <div class="mr-2 pt-2">
             <div :if={@can_delete_workflow} class="flex items-center gap-2">
-              <%!-- <Components.workflow_state_toggle
-                id={"toggle-workflow-state-#{workflow.id}"}
-                state={:on}
-                on_click="toggle_workflow_state"
-              /> --%>
               <.input
+                id={workflow.id}
                 type="toggle"
                 name="workflow_state"
                 value={workflow_enabled?(workflow)}
@@ -178,12 +174,19 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
     """
   end
 
-  defp workflow_state_tooltip(%Lightning.Workflows.Workflow{} = workflow) do
-    case {Enum.all?(workflow.triggers, & &1.enabled),
-          List.first(workflow.triggers) |> Map.get(:type)} do
-      {true, :cron} -> "This workflow is active (cron trigger enabled)"
-      {true, :webhook} -> "This workflow is active (webhook trigger enabled)"
-      {false, _} -> "This workflow is inactive (manual runs only)"
+  defp workflow_state_tooltip(%Lightning.Workflows.Workflow{triggers: triggers}) do
+    case {Enum.all?(triggers, & &1.enabled), triggers} do
+      {_, []} ->
+        "This workflow is inactive (no triggers configured)"
+
+      {true, [first_trigger | _]} ->
+        case first_trigger.type do
+          :cron -> "This workflow is active (cron trigger enabled)"
+          :webhook -> "This workflow is active (webhook trigger enabled)"
+        end
+
+      {false, _} ->
+        "This workflow is inactive (manual runs only)"
     end
   end
 
