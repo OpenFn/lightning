@@ -199,11 +199,8 @@ defmodule Lightning.Workflows.SnapshotsTest do
 
   describe "include_latest_snapshot/3" do
     setup do
-      workflow = insert(:simple_workflow)
-      other_workflow = insert(:simple_workflow)
-
-      {:ok, _initial_snapshot} = Workflows.Snapshot.create(workflow)
-      {:ok, _other_snapshot} = Workflows.Snapshot.create(other_workflow)
+      workflow = insert(:simple_workflow) |> with_snapshot()
+      _other_workflow = insert(:simple_workflow) |> with_snapshot()
 
       updated_workflow =
         workflow
