@@ -26,6 +26,10 @@ Mox.defmock(Lightning.Extensions.MockUsageLimiter,
   for: Lightning.Extensions.UsageLimiting
 )
 
+Mox.defmock(Lightning.VersionControl.MockVersionControlUsageLimiter,
+  for: Lightning.VersionControl.VersionControlUsageLimiting
+)
+
 Mox.defmock(Lightning.Extensions.MockAccountHook,
   for: Lightning.Extensions.AccountHooking
 )

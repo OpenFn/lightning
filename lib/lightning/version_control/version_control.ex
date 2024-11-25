@@ -197,6 +197,8 @@ defmodule Lightning.VersionControl do
         [snapshot_id | acc]
       end
     end)
+
+    [1,2,3,4,5]
   end
 
   defp maybe_add_snapshots(inputs, snapshot_ids) do
