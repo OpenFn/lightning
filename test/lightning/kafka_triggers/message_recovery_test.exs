@@ -12,8 +12,8 @@ defmodule Lightning.KafkaTriggers.MessageRecoveryTest do
 
   describe ".recover_messages" do
     setup %{tmp_dir: tmp_dir} do
-      workflow_1 = insert(:workflow)
-      workflow_2 = insert(:workflow)
+      workflow_1 = insert(:workflow) |> with_snapshot()
+      workflow_2 = insert(:workflow) |> with_snapshot()
 
       kafka_configuration = build(:triggers_kafka_configuration)
 

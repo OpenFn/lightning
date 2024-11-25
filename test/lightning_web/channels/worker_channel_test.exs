@@ -44,8 +44,7 @@ defmodule LightningWeb.WorkerChannelTest do
 
     test "returns runs", %{socket: socket} do
       %{triggers: [trigger]} =
-        workflow =
-        insert(:simple_workflow)
+        workflow = insert(:simple_workflow) |> with_snapshot()
 
       Lightning.Stub.reset_time()
 
@@ -54,7 +53,6 @@ defmodule LightningWeb.WorkerChannelTest do
         |> Enum.map(fn _ ->
           {:ok, %{runs: [run]}} =
             WorkOrders.create_for(trigger,
-              actor: insert(:user),
               workflow: workflow,
               dataclip: params_with_assocs(:dataclip)
             )
