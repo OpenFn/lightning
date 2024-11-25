@@ -7,6 +7,8 @@ defmodule LightningWeb.Components.NewInputs do
 
   import LightningWeb.Components.Icons
 
+  alias Phoenix.HTML.Form
+  alias Phoenix.HTML.FormField
   alias Phoenix.LiveView.JS
 
   @doc """
@@ -278,7 +280,7 @@ defmodule LightningWeb.Components.NewInputs do
           @class
         ]}
         {@rest}
-      ><%= Phoenix.HTML.Form.normalize_value("textarea", @value) %></textarea>
+      ><%= Form.normalize_value("textarea", @value) %></textarea>
       <.error :for={msg <- @errors} :if={@display_errors}><%= msg %></.error>
     </div>
     """
@@ -298,7 +300,7 @@ defmodule LightningWeb.Components.NewInputs do
           type={@type}
           name={@name}
           id={@id}
-          value={Phoenix.HTML.Form.normalize_value(@type, @value)}
+          value={Form.normalize_value(@type, @value)}
           lv-keep-type
           class={[
             "focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
@@ -518,7 +520,7 @@ defmodule LightningWeb.Components.NewInputs do
       type="hidden"
       name={@name}
       id={@id}
-      value={Phoenix.HTML.Form.normalize_value(@type, @value)}
+      value={Form.normalize_value(@type, @value)}
     />
     """
   end
@@ -536,7 +538,7 @@ defmodule LightningWeb.Components.NewInputs do
         name={@name}
         id={@id}
         class={@class}
-        value={Phoenix.HTML.Form.normalize_value(@type, @value)}
+        value={Form.normalize_value(@type, @value)}
         {@rest}
       />
       <div :if={Enum.any?(@errors) and @display_errors} class="error-space">
@@ -736,12 +738,12 @@ defmodule LightningWeb.Components.NewInputs do
     """
   end
 
-  defp get_checkbox_value(%{field: %Phoenix.HTML.FormField{} = field}) do
-    Phoenix.HTML.Form.normalize_value("checkbox", field.value) == true
+  defp get_checkbox_value(%{field: %FormField{} = field}) do
+    Form.normalize_value("checkbox", field.value) == true
   end
 
   defp get_checkbox_value(%{value: value}) do
-    Phoenix.HTML.Form.normalize_value("checkbox", value) == true
+    Form.normalize_value("checkbox", value) == true
   end
 
   defp get_checkbox_value(_), do: false
