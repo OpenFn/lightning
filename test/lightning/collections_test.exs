@@ -119,7 +119,7 @@ defmodule Lightning.CollectionsTest do
           )
         end)
 
-      %{inserted_at: cursor} = Enum.at(items, 4)
+      %{id: cursor} = Enum.at(items, 4)
 
       assert Collections.get_all(collection, cursor: cursor, limit: 50)
              |> Enum.count() == 30 - (4 + 1)
@@ -187,7 +187,7 @@ defmodule Lightning.CollectionsTest do
           )
         end)
 
-      %{inserted_at: cursor} = Enum.at(items, 9)
+      %{id: cursor} = Enum.at(items, 9)
 
       insert(:collection_item, key: "rkeyB", collection: collection)
 

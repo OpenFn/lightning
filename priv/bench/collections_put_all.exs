@@ -7,12 +7,15 @@ IO.puts "### Indexes on collection_items table"
 Enum.each(rows, &IO.puts(Enum.join(&1, ":\n")))
 
 keys_count = 5_000
+rounds = 300
+# keys_count = 10_000
+# rounds = 1
 
 Repo.delete_all(Collections.Collection)
 
 project =
   with nil <- Repo.get_by(Projects.Project, name: "bench") do
-    user = Repo.get_by(Lightning.Accounts.User, email: "demo@openfn.org")
+    user = Repo.get_by(Lightning.Accounts.User, email: "demo@openfn.org") || raise "This benchmark requires demo/known user"
     {:ok, project} = Projects.create_project(%{name: "bench", project_users: [%{user_id: user.id, role: :owner}]})
     project
   end
@@ -49,7 +52,6 @@ record2 = fn prefix, i ->
   }
 end
 
-rounds = 300
 samples1 =
   1..keys_count * rounds
   |> Enum.map(fn i -> record1.("keyA", i) end)
@@ -60,21 +62,22 @@ samples2 =
   |> Enum.map(fn i -> record2.("keyB", i) end)
   |> Enum.chunk_every(keys_count)
 
-IO.puts("\n### Inserting #{rounds} rounds of 2x5000 with put_all...")
+IO.puts("\n### Inserting #{rounds} rounds of 2x#{keys_count} with put_all...")
 
 durations =
   Enum.zip(samples1, samples2)
-  |> Enum.with_index(fn {sample1, sample2}, i ->
-  :timer.tc(fn ->
-    {:ok, _n} = Collections.put_all(collection1, sample1)
-    {:ok, _n} = Collections.put_all(collection2, sample2)
-  end)
-  |> then(fn {duration, _res} ->
-    duration_ms = div(duration, 1_000)
-    IO.puts("[#{i}] elapsed time: #{duration_ms}ms")
+  |> Enum.flat_map(fn {sample1, sample2} -> [sample1, sample2] end)
+  |> Task.async_stream(fn sample ->
+    {duration, _res} = :timer.tc(fn ->
+      {:ok, _n} = Collections.put_all(collection1, sample)
+    end)
+
+    div(duration, 1_000)
+  end, max_concurrency: 2, timeout: :infinity)
+  |> Enum.map(fn {:ok, duration_ms} ->
+    IO.puts("elapsed time: #{duration_ms}ms")
     duration_ms
   end)
-end)
 
 IO.puts "Average: #{Statistics.mean(durations)}ms"
 IO.puts "Std Deviation: #{Statistics.stdev(durations)}ms"

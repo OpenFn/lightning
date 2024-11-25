@@ -206,6 +206,33 @@ defmodule LightningWeb.API.CollectionsControllerTest do
   end
 
   describe "POST /collections/:name" do
+    test "inserts multiple items with same timestamp", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      collection = insert(:collection, project: project)
+
+      token = Lightning.Accounts.generate_api_token(user)
+
+      conn = assign_bearer(conn, token)
+
+      assert %{"upserted" => 1_000, "error" => nil} =
+               post(conn, ~p"/collections/#{collection.name}", %{
+                 items:
+                   Enum.map(1..1_000, &%{key: "foo#{&1}", value: "bar#{&1}"})
+               })
+               |> json_response(200)
+
+      assert %{"items" => items, "cursor" => nil} =
+               get(conn, ~p"/collections/#{collection.name}", limit: 1_000)
+               |> json_response(200)
+
+      assert MapSet.new(items, & &1["created"]) |> MapSet.size() == 1
+      assert Enum.count(items) == 1_000
+    end
+
     test "upserted multiple items", %{conn: conn} do
       user = insert(:user)
 
@@ -706,8 +733,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
 
       assert json_response(conn, 200) == %{
                "items" => expected_items,
-               "cursor" =>
-                 Base.encode64(DateTime.to_iso8601(last_item.inserted_at))
+               "cursor" => Base.encode64(to_string(last_item.id))
              }
 
       # Test for the existence of a cursor when the limit is less than the
@@ -730,8 +756,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
 
       assert json_response(conn, 200) == %{
                "items" => expected_items,
-               "cursor" =>
-                 Base.encode64(DateTime.to_iso8601(last_item.inserted_at))
+               "cursor" => Base.encode64(to_string(last_item.id))
              }
 
       # Request everything, shouldn't be getting a cursor
@@ -777,7 +802,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
                expected_items
                |> Enum.map(&encode_decode/1)
 
-      assert cursor == Base.encode64(DateTime.to_iso8601(last_item.inserted_at))
+      assert cursor == Base.encode64(to_string(last_item.id))
     end
 
     test "up to the limit from a cursor returning a cursor", %{conn: conn} do
@@ -821,14 +846,14 @@ defmodule LightningWeb.API.CollectionsControllerTest do
                "cursor" => cursor
              } = json_response(conn, 200)
 
-      %{inserted_at: last_inserted_at} =
+      %{id: id} =
         Repo.get_by(Collections.Item,
           collection_id: collection.id,
           key: List.last(expected_items)["key"]
         )
 
-      assert {:ok, ^last_inserted_at, 0} =
-               cursor |> Base.decode64!() |> DateTime.from_iso8601()
+      assert {^id, ""} =
+               cursor |> Base.decode64!() |> Integer.parse()
     end
 
     test "up exactly to the limit from a cursor", %{conn: conn} do

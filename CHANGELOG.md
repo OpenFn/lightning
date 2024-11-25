@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Insert all on a collection with the same timestamp 
+[#2711](https://github.com/OpenFn/lightning/issues/2711)
+
 ### Fixed
 
 ## [v2.10.4] - 2024-11-22
