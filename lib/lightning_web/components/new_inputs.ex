@@ -417,7 +417,11 @@ defmodule LightningWeb.Components.NewInputs do
       |> assign(:active_color_classes, active_color_classes)
 
     ~H"""
-    <div class={["flex flex-col gap-1", @class]}>
+    <div
+      id={"toggle-wrapper-#{@id}"}
+      class={["flex flex-col gap-1", @class]}
+      {if @tooltip, do: ["phx-hook": "Tooltip", "aria-label": @tooltip], else: []}
+    >
       <div
         phx-hook="Toggle"
         id={"toggle-#{@id}"}

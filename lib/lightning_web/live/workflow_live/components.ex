@@ -509,41 +509,6 @@ defmodule LightningWeb.WorkflowLive.Components do
           </details>
         </div>
       <% end %>
-      <%= if @form[:source_trigger_id].value do %>
-        <div class="max-w-xl text-sm text-gray-500 mt-3">
-          <p>This path will be active if its trigger is enabled</p>
-        </div>
-      <% else %>
-        <div class="mt-7 border-t flex flex-col justify-between">
-          <h2 class=" flex mt-3">
-            <.input
-              type="checkbox"
-              field={@form[:enabled]}
-              disabled={@disabled}
-              label="Disable this path"
-              checked_value={false}
-              unchecked_value={true}
-              value={@edge_enabled}
-            />
-          </h2>
-        </div>
-      <% end %>
-      <%= unless @form[:source_trigger_id].value do %>
-        <div class="grow flex justify-end">
-          <label>
-            <.button
-              id="delete-edge-button"
-              class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
-              data-confirm="Are you sure you want to delete this path?"
-              phx-click="delete_edge"
-              phx-value-id={@form[:id].value}
-              disabled={@disabled or @form[:source_trigger_id].value}
-            >
-              Delete Path
-            </.button>
-          </label>
-        </div>
-      <% end %>
     </div>
     """
   end

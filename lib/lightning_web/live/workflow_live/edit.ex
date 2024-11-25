@@ -133,10 +133,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 <.input
                   type="toggle"
                   name="workflow_state"
-                  value={
-                    workflow_enabled?(@changeset)
-                    |> IO.inspect(label: "What are you initially ?")
-                  }
+                  value={workflow_enabled?(@changeset)}
+                  tooltip={workflow_state_tooltip(@changeset) |> IO.inspect()}
                   on_click="toggle_workflow_state"
                 />
                 <div>
@@ -454,7 +452,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
               phx-mounted={fade_in()}
               phx-remove={fade_out()}
             >
-              <!-- Show only the currently selected one -->
               <.job_form
                 on_change={&send_form_changed/1}
                 editable={
@@ -532,7 +529,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 end)
               }
             >
-              <!-- Show only the currently selected one -->
               <.trigger_form
                 form={tf}
                 on_change={&send_form_changed/1}
@@ -575,18 +571,58 @@ defmodule LightningWeb.WorkflowLive.Edit do
               phx-mounted={fade_in()}
               phx-remove={fade_out()}
             >
-              <div class="w-auto h-full" id={"edge-pane-#{@workflow.id}"}>
-                <!-- Show only the currently selected one -->
-                <.edge_form
-                  form={ef}
-                  disabled={
-                    !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                      @snapshot_version_tag != "latest" ||
-                      !@has_presence_edit_priority
-                  }
-                  cancel_url={close_url(assigns, :selected_edge, :unselect)}
-                />
-              </div>
+              <.edge_form
+                form={ef}
+                disabled={
+                  !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                    @snapshot_version_tag != "latest" ||
+                    !@has_presence_edit_priority
+                }
+                cancel_url={close_url(assigns, :selected_edge, :unselect)}
+              />
+              <:footer>
+                <div class="flex flex-row">
+                  <div class="flex items-center">
+                    <%= if ef[:source_trigger_id].value do %>
+                      <p class="text-sm text-gray-500">
+                        This path will be active if its trigger is enabled
+                      </p>
+                    <% else %>
+                      <.input
+                        type="toggle"
+                        field={ef[:enabled]}
+                        disabled={
+                          !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                            @snapshot_version_tag != "latest" ||
+                            !@has_presence_edit_priority
+                        }
+                        label="Enabled"
+                      />
+                    <% end %>
+                  </div>
+                  <div class="grow flex justify-end">
+                    <label>
+                      <%= unless ef[:source_trigger_id].value do %>
+                        <.button
+                          id="delete-edge-button"
+                          class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
+                          data-confirm="Are you sure you want to delete this path?"
+                          phx-click="delete_edge"
+                          phx-value-id={ef[:id].value}
+                          disabled={
+                            !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                              @snapshot_version_tag != "latest" ||
+                              !@has_presence_edit_priority or
+                              ef[:source_trigger_id].value
+                          }
+                        >
+                          Delete Path
+                        </.button>
+                      <% end %>
+                    </label>
+                  </div>
+                </div>
+              </:footer>
             </.panel>
           </.single_inputs_for>
         </.form>
@@ -796,22 +832,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   defp processing(_run), do: false
 
-  # defp workflow_state_tooltip(%Ecto.Changeset{} = changeset) do
-  #   triggers = Ecto.Changeset.fetch_field!(changeset, :triggers)
+  defp workflow_state_tooltip(%Ecto.Changeset{} = changeset) do
+    triggers = Ecto.Changeset.fetch_field!(changeset, :triggers)
 
-  #   case {Enum.all?(triggers, & &1.enabled),
-  #         List.first(triggers) |> Map.get(:type)} do
-  #     {true, :cron} -> "This workflow is active (cron trigger enabled)"
-  #     {true, :webhook} -> "This workflow is active (webhook trigger enabled)"
-  #     {false, _} -> "This workflow is inactive (manual runs only)"
-  #   end
-  # end
-
-  # defp workflow_state(%Ecto.Changeset{} = changeset) do
-  #   triggers = Ecto.Changeset.fetch_field!(changeset, :triggers)
-
-  #   if Enum.all?(triggers, & &1.enabled), do: :on, else: :off
-  # end
+    case {Enum.all?(triggers, & &1.enabled),
+          List.first(triggers) |> Map.get(:type)} do
+      {true, :cron} -> "This workflow is active (cron trigger enabled)"
+      {true, :webhook} -> "This workflow is active (webhook trigger enabled)"
+      {false, _} -> "This workflow is inactive (manual runs only)"
+    end
+  end
 
   defp job_deletion_tooltip_message(
          workflow_deleted,
@@ -1708,10 +1738,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> handle_new_params(params, :workflow)}
   end
 
-  # def handle_event(_unhandled_event, _params, socket) do
-  #   # TODO: add a warning and/or log for unhandled events
-  #   {:noreply, socket}
-  # end
+  def handle_event(_unhandled_event, _params, socket) do
+    # TODO: add a warning and/or log for unhandled events
+    {:noreply, socket}
+  end
 
   @impl true
   def handle_info(
@@ -2508,11 +2538,21 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   defp loaded?(%Workflow{} = workflow), do: workflow.__meta__.state == :loaded
 
+  @spec workflow_enabled?(
+          %Workflow{triggers: [Workflows.Trigger.t(), ...]}
+          | %Ecto.Changeset{}
+        ) :: boolean()
   defp workflow_enabled?(%Workflow{} = workflow),
     do: Enum.all?(workflow.triggers, & &1.enabled)
 
   defp workflow_enabled?(%Ecto.Changeset{} = changeset),
     do:
-      Ecto.Changeset.fetch_field!(changeset, :triggers)
-      |> Enum.all?(& &1.enabled)
+      Ecto.Changeset.get_field(changeset, :triggers)
+      |> Enum.all?(&trigger_enabled?/1)
+
+  defp trigger_enabled?(%Ecto.Changeset{} = trigger),
+    do: Ecto.Changeset.get_field(trigger, :enabled)
+
+  defp trigger_enabled?(trigger),
+    do: trigger.enabled
 end
