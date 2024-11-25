@@ -465,7 +465,7 @@ defmodule LightningWeb.Components.NewInputs do
                 aria-hidden="true"
               >
                 <.icon
-                  name="hero-x-mark"
+                  name="hero-x-mark-micro"
                   class={"#{@icon_size_classes} text-gray-400"}
                 />
               </span>
@@ -478,7 +478,7 @@ defmodule LightningWeb.Components.NewInputs do
                 aria-hidden="true"
               >
                 <.icon
-                  name="hero-check"
+                  name="hero-check-micro"
                   class={"#{@icon_size_classes} text-indigo-600"}
                 />
               </span>
