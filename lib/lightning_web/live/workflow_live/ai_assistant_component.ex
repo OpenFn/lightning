@@ -330,7 +330,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
   defp render_session(assigns) do
     ~H"""
-    <div class="grid grid-cols-1 grid-rows-2 gap-4 h-full flow-root">
+    <div class="grid grid-cols-1 grid-rows-2 h-full flow-root">
       <%= case @action do %>
         <% :new -> %>
           <.render_all_sessions
@@ -501,14 +501,18 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
   defp render_individual_session(assigns) do
     ~H"""
-    <div class="row-span-full overflow-y-auto">
-      <div class="sticky top-0 bg-gray-100 p-2 flex justify-between border-solid border-t-2 border-b-2">
+    <div class="row-span-full flex flex-col">
+      <div class="bg-gray-100 p-2 flex justify-between border-solid border-t-2 border-b-2">
         <span class="font-medium"><%= @session.title %></span>
         <.link patch={redirect_url(@base_url, Map.put(@query_params, "chat", nil))}>
           <.icon name="hero-x-mark" class="h-5 w-5" />
         </.link>
       </div>
-      <div class="flex flex-col gap-4 p-2 overflow-y-auto">
+      <div
+        id={"ai-session-#{@session.id}-messages"}
+        phx-hook="ScrollToBottom"
+        class="flex flex-col gap-4 p-2 overflow-y-auto w-full h-full"
+      >
         <%= for message <- @session.messages do %>
           <div
             :if={message.role == :user}
@@ -531,8 +535,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
               </div>
             </div>
 
-            <div>
-              <div>
+            <div class="max-w-full">
+              <div class="max-w-full">
                 <%= message.content |> Earmark.as_html!() |> raw() %>
               </div>
               <!-- TODO: restore this message and add a link to the docs site -->

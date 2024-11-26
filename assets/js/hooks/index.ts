@@ -469,6 +469,21 @@ export const BlurDataclipEditor = {
   },
 } as PhoenixHook;
 
+export const ScrollToBottom = {
+  mounted() {
+    this.scrollToLastElement();
+  },
+  updated() {
+    this.scrollToLastElement();
+  },
+  scrollToLastElement() {
+    this.el.lastElementChild &&
+      this.el.lastElementChild.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+  },
+};
 /**
  * Factory function to create a hook for listening to specific key combinations.
  *
