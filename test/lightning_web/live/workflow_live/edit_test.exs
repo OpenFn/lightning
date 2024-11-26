@@ -1598,17 +1598,17 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project}/w/new?m=settings")
 
-      view |> push_patches_to_view(initial_workflow_patchset(project))
+      push_patches_to_view(view, initial_workflow_patchset(project))
 
-      view |> fill_workflow_name("My Workflow")
+      fill_workflow_name(view, "My Workflow")
 
-      {job, _, _} = view |> select_first_job()
+      {job, _, _} = select_first_job(view)
 
-      view |> fill_job_fields(job, %{name: "My Job"})
+      fill_job_fields(view, job, %{name: "My Job"})
 
-      view |> click_edit(job)
+      click_edit(view, job)
 
-      view |> change_editor_text("some body")
+      change_editor_text(view, "some body")
 
       html = click_save(view)
 
@@ -1620,6 +1620,71 @@ defmodule LightningWeb.WorkflowLive.EditTest do
              |> Map.get(:triggers)
              |> List.first()
              |> Map.get(:enabled)
+    end
+
+    test "when workflow is enabled, reminder flash message is not displayed for the first save",
+         %{
+           conn: conn,
+           user: user
+         } do
+      project = insert(:project, project_users: [%{user: user, role: :editor}])
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/w/new?m=settings")
+
+      push_patches_to_view(view, initial_workflow_patchset(project))
+
+      fill_workflow_name(view, "My Workflow")
+
+      {job, _, _} = select_first_job(view)
+
+      fill_job_fields(view, job, %{name: "My Job"})
+
+      click_edit(view, job)
+
+      change_editor_text(view, "some body")
+
+      view
+      |> element("#toggle-control-workflow")
+      |> render_click()
+
+      html = click_save(view)
+
+      refute html =~
+               "Workflow saved successfully. Remember to enable your workflow to run it automatically."
+
+      assert html =~
+               "Workflow saved successfully."
+
+      assert Workflows.get_workflows_for(project)
+             |> List.first()
+             |> Map.get(:triggers)
+             |> List.first()
+             |> Map.get(:enabled)
+    end
+
+    test "clicking on the toggle disables all the triggers of a workflow", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
+        )
+
+      assert workflow.triggers |> Enum.all?(& &1.enabled)
+
+      view
+      |> element("#toggle-control-workflow")
+      |> render_click()
+
+      click_save(view)
+
+      workflow = Workflows.get_workflow(workflow.id, include: [:triggers])
+
+      refute workflow.triggers |> Enum.any?(& &1.enabled)
     end
   end
 
