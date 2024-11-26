@@ -9,7 +9,6 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
   alias Lightning.Auditing.Audit
   alias Lightning.Invocation
-  alias Lightning.Workflows
   alias Lightning.Workflows.Workflow
 
   setup :register_and_log_in_user
@@ -433,9 +432,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       workflow =
         insert(:workflow, project: project)
         |> Lightning.Repo.preload([:jobs, :work_orders])
-
-      {:ok, _snapshot} =
-        Workflows.Snapshot.get_or_create_latest_for(workflow, insert(:user))
+        |> with_snapshot()
 
       new_job_name = "new job"
 
@@ -1397,6 +1394,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
          %{
            conn: conn,
            project: project,
+           snapshot: snapshot,
            workflow: %{jobs: [job_1, _job_2 | _rest]} = workflow
          } do
       unique_val = "random" <> Ecto.UUID.generate()
@@ -1406,12 +1404,6 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
           project: project,
           type: :saved_input,
           body: %{"foo" => unique_val}
-        )
-
-      {:ok, snapshot} =
-        Lightning.Workflows.Snapshot.get_or_create_latest_for(
-          workflow,
-          insert(:user)
         )
 
       %{runs: [run]} =
@@ -1498,9 +1490,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       workflow =
         insert(:workflow, project: project)
         |> Lightning.Repo.preload([:jobs, :work_orders])
-
-      {:ok, _snapshot} =
-        Workflows.Snapshot.get_or_create_latest_for(workflow, insert(:user))
+        |> with_snapshot()
 
       new_job_name = "new job"
 
