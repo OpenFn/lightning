@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Audit Enabling / Disabling Workflows
+  [#2697](https://github.com/OpenFn/lightning/issues/2697)
 - Enable / Disable Workflows UI
   [#2698](https://github.com/OpenFn/lightning/issues/2698)
 
