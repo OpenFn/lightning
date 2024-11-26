@@ -38,8 +38,7 @@ defmodule Lightning.VersionControl.VersionControlUsageLimiterTest do
       end)
 
       assert VersionControlUsageLimiter.limit_github_sync(project_id) ==
-             {:error, message}
-
+               {:error, message}
     end
   end
 end
