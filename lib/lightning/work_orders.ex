@@ -206,7 +206,7 @@ defmodule Lightning.WorkOrders do
     )
   end
 
-  def build(attrs) do
+  defp build(attrs) do
     %WorkOrder{}
     |> change()
     |> put_if_provided(:state, attrs)
