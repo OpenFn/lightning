@@ -463,9 +463,6 @@ defmodule Lightning.VersionControlTest do
       snapshots: [snapshot, other_snapshot],
       user: %{email: user_email},
     } do
-      # path = ProjectRepoConnection.config_path(repo_connection)
-      # path_to_config = Path.relative_to(path, ".")
-
       commit_message = "user #{user_email} initiated a sync from Lightning"
 
       expect_create_installation_token(repo_connection.github_installation_id)
