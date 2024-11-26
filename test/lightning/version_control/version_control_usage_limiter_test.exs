@@ -20,8 +20,6 @@ defmodule Lightning.VersionControl.VersionControlUsageLimiterTest do
 
       Mox.stub(MockUsageLimiter, :limit_action, fn ^action, ^context ->
         :ok
-        # {:error, :too_many_runs,
-        #  %Message{text: "Too many runs in the last minute"}}
       end)
 
       assert VersionControlUsageLimiter.limit_github_sync(project_id) == :ok
