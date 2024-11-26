@@ -14,7 +14,8 @@ defmodule LightningWeb.Components.UserDeletionModal do
      |> assign(
        delete_now?: !is_nil(user.scheduled_deletion),
        has_activity_in_projects?: Accounts.has_activity_in_projects?(user),
-       scheduled_deletion_changeset: Accounts.change_scheduled_deletion(user)
+       scheduled_deletion_changeset: Accounts.change_scheduled_deletion(user),
+       is_superuser_menu: Map.get(assigns, :is_superuser_menu, false)
      )
      |> assign(assigns)}
   end
@@ -158,10 +159,12 @@ defmodule LightningWeb.Components.UserDeletionModal do
         >
           <div class="">
             <p class="">
-              This user's account and credential data will be deleted. Please make sure none of these credentials are used in production workflows.
+              <%= if @is_superuser_menu, do: "This user's", else: "Your" %> account and credential data will be deleted. Please make sure none of these credentials are used in production workflows.
             </p>
             <p :if={@has_activity_in_projects?} class="mt-2">
-              *Note that this user still has activity related to active projects. We may not be able to delete them entirely from the app until those projects are deleted.
+              *Note that <%= if @is_superuser_menu,
+                do: "this user still has",
+                else: "you still have" %> activity related to active projects. We may not be able to delete them entirely from the app until those projects are deleted.
             </p>
             <br />
             <.input
