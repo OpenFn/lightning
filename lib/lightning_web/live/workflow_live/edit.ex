@@ -134,8 +134,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   id="workflow"
                   type="toggle"
                   name="workflow_state"
-                  value={workflow_enabled?(@changeset)}
-                  tooltip={workflow_state_tooltip(@changeset)}
+                  value={Helpers.workflow_enabled?(@changeset)}
+                  tooltip={Helpers.workflow_state_tooltip(@changeset)}
                   on_click="toggle_workflow_state"
                 />
                 <div>
@@ -836,24 +836,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   defp processing(_run), do: false
 
-  defp workflow_state_tooltip(%Ecto.Changeset{} = changeset) do
-    triggers = Ecto.Changeset.fetch_field!(changeset, :triggers)
-
-    case {Enum.all?(triggers, & &1.enabled), triggers} do
-      {_, []} ->
-        "This workflow is inactive (no triggers configured)"
-
-      {true, [first_trigger | _]} ->
-        case first_trigger.type do
-          :cron -> "This workflow is active (cron trigger enabled)"
-          :webhook -> "This workflow is active (webhook trigger enabled)"
-        end
-
-      {false, _} ->
-        "This workflow is inactive (manual runs only)"
-    end
-  end
-
   defp job_deletion_tooltip_message(
          workflow_deleted,
          can_edit_job,
@@ -1522,7 +1504,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
           flash_msg =
             "Workflow saved successfully." <>
-              if not loaded?(changeset.data) and not workflow_enabled?(workflow) do
+              if not loaded?(changeset.data) and
+                   not Helpers.workflow_enabled?(workflow) do
                 " Remember to enable your workflow to run it automatically."
               else
                 ""
@@ -2548,15 +2531,4 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp loaded?(%Workflow{} = workflow), do: workflow.__meta__.state == :loaded
-
-  defp workflow_enabled?(%Workflow{} = workflow),
-    do: Enum.all?(workflow.triggers, & &1.enabled)
-
-  defp workflow_enabled?(%Ecto.Changeset{} = changeset),
-    do:
-      Ecto.Changeset.get_field(changeset, :triggers)
-      |> Enum.all?(&trigger_enabled?/1)
-
-  defp trigger_enabled?(trigger),
-    do: trigger.enabled
 end

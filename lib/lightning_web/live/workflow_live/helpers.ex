@@ -94,4 +94,48 @@ defmodule LightningWeb.WorkflowLive.Helpers do
     |> WorkOrders.Manual.new(opts)
     |> Ecto.Changeset.apply_action(:validate)
   end
+
+  @doc """
+  Determines if a workflow is enabled based on its triggers.
+  Accepts either a Workflow struct or an Ecto.Changeset.
+  """
+  def workflow_enabled?(%Workflow{} = workflow) do
+    Enum.all?(workflow.triggers, & &1.enabled)
+  end
+
+  def workflow_enabled?(%Ecto.Changeset{} = changeset) do
+    Ecto.Changeset.get_field(changeset, :triggers)
+    |> Enum.all?(&trigger_enabled?/1)
+  end
+
+  @doc """
+  Generates a tooltip describing the workflow's state.
+  Accepts either a Workflow struct or an Ecto.Changeset.
+  """
+  def workflow_state_tooltip(%Workflow{triggers: triggers}) do
+    generate_tooltip(triggers, Enum.all?(triggers, & &1.enabled))
+  end
+
+  def workflow_state_tooltip(%Ecto.Changeset{} = changeset) do
+    triggers = Ecto.Changeset.fetch_field!(changeset, :triggers)
+    generate_tooltip(triggers, Enum.all?(triggers, & &1.enabled))
+  end
+
+  defp trigger_enabled?(trigger), do: trigger.enabled
+
+  defp generate_tooltip(triggers, all_enabled) do
+    case {all_enabled, triggers} do
+      {_, []} ->
+        "This workflow is inactive (no triggers configured)"
+
+      {true, [first_trigger | _]} ->
+        case first_trigger.type do
+          :cron -> "This workflow is active (cron trigger enabled)"
+          :webhook -> "This workflow is active (webhook trigger enabled)"
+        end
+
+      {false, _} ->
+        "This workflow is inactive (manual runs only)"
+    end
+  end
 end

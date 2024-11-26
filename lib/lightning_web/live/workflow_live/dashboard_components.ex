@@ -8,6 +8,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   alias Lightning.Projects.Project
   alias Lightning.Workflows.WorkflowUsageLimiter
   alias Lightning.WorkOrders.SearchParams
+  alias LightningWeb.WorkflowLive.Helpers
   alias Timex.Format.DateTime.Formatters.Relative
 
   def workflow_list(assigns) do
@@ -152,8 +153,8 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                 id={workflow.id}
                 type="toggle"
                 name="workflow_state"
-                value={workflow_enabled?(workflow)}
-                tooltip={workflow_state_tooltip(workflow)}
+                value={Helpers.workflow_enabled?(workflow)}
+                tooltip={Helpers.workflow_state_tooltip(workflow)}
                 on_click="toggle_workflow_state"
                 value_key={workflow.id}
               />
@@ -173,25 +174,6 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
     </.table>
     """
   end
-
-  defp workflow_state_tooltip(%Lightning.Workflows.Workflow{triggers: triggers}) do
-    case {Enum.all?(triggers, & &1.enabled), triggers} do
-      {_, []} ->
-        "This workflow is inactive (no triggers configured)"
-
-      {true, [first_trigger | _]} ->
-        case first_trigger.type do
-          :cron -> "This workflow is active (cron trigger enabled)"
-          :webhook -> "This workflow is active (webhook trigger enabled)"
-        end
-
-      {false, _} ->
-        "This workflow is inactive (manual runs only)"
-    end
-  end
-
-  defp workflow_enabled?(%Lightning.Workflows.Workflow{} = workflow),
-    do: Enum.all?(workflow.triggers, & &1.enabled)
 
   attr :project, :map, required: true
   attr :workflow, :map, required: true
