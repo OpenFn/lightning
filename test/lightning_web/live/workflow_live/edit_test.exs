@@ -1687,6 +1687,34 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       refute workflow.triggers |> Enum.any?(& &1.enabled)
     end
 
+    test "workflow can still be disabled / enabled from the trigger form", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
+        )
+
+      assert workflow.triggers |> Enum.all?(& &1.enabled)
+
+      select_trigger(view)
+
+      view
+      |> form("#workflow-form", %{
+        "workflow" => %{"triggers" => %{"0" => %{"enabled" => "false"}}}
+      })
+      |> render_change()
+
+      click_save(view)
+
+      workflow = Workflows.get_workflow(workflow.id, include: [:triggers])
+
+      refute workflow.triggers |> Enum.any?(& &1.enabled)
+    end
+
     test "workflow state toggle tooltip messages vary by trigger type", %{
       conn: conn,
       user: user,
