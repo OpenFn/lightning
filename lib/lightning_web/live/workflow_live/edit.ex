@@ -2557,9 +2557,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
       Ecto.Changeset.get_field(changeset, :triggers)
       |> Enum.all?(&trigger_enabled?/1)
 
-  defp trigger_enabled?(%Ecto.Changeset{} = trigger),
-    do: Ecto.Changeset.get_field(trigger, :enabled)
-
   defp trigger_enabled?(trigger),
     do: trigger.enabled
 end
