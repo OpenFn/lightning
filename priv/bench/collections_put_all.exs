@@ -66,10 +66,10 @@ IO.puts("\n### Inserting #{rounds} rounds of 2x#{keys_count} with put_all...")
 
 durations =
   Enum.zip(samples1, samples2)
-  |> Enum.flat_map(fn {sample1, sample2} -> [sample1, sample2] end)
-  |> Task.async_stream(fn sample ->
+  |> Enum.flat_map(fn {sample1, sample2} -> [{sample1, collection1}, {sample2, collection2}] end)
+  |> Task.async_stream(fn {sample, collection} ->
     {duration, _res} = :timer.tc(fn ->
-      {:ok, _n} = Collections.put_all(collection1, sample)
+      {:ok, _n} = Collections.put_all(collection, sample)
     end)
 
     div(duration, 1_000)
