@@ -202,7 +202,7 @@ defmodule LightningWeb.ProfileLiveTest do
         )
 
       assert html =~
-               "This user&#39;s account and credential data will be deleted"
+               "Your account and credential data will be deleted"
 
       assert new_live
              |> form("#scheduled_deletion_form",
@@ -258,7 +258,7 @@ defmodule LightningWeb.ProfileLiveTest do
         )
 
       assert html =~
-               "This user&#39;s account and credential data will be deleted"
+               "Your account and credential data will be deleted"
 
       {:ok, _new_live, html} =
         new_live

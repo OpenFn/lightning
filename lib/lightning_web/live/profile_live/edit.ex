@@ -3,6 +3,9 @@ defmodule LightningWeb.ProfileLive.Edit do
   LiveView for user profile page.
   """
   use LightningWeb, :live_view
+
+  import LightningWeb.ProfileLive.CommonComponents
+
   alias Lightning.VersionControl
 
   on_mount {LightningWeb.Hooks, :assign_projects}
@@ -70,6 +73,7 @@ defmodule LightningWeb.ProfileLive.Edit do
       socket
       |> assign(:page_title, "User Profile")
       |> assign(:user, user)
+      |> assign(:user_deletion_modal, LightningWeb.Components.UserDeletionModal)
     else
       put_flash(socket, :error, "You can't perform this action")
       |> push_patch(to: ~p"/profile")

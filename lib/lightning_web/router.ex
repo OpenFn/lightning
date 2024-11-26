@@ -156,7 +156,6 @@ defmodule LightningWeb.Router do
     live_session :settings, on_mount: LightningWeb.InitAssigns do
       live "/settings", SettingsLive.Index, :index
 
-      live "/settings/users", UserLive.Index, :index
       live "/settings/users/new", UserLive.Edit, :new
       live "/settings/users/:id", UserLive.Edit, :edit
       live "/settings/users/:id/delete", UserLive.Index, :delete
@@ -198,7 +197,6 @@ defmodule LightningWeb.Router do
       live "/credentials/new", CredentialLive.Edit, :new
       live "/credentials/:id", CredentialLive.Edit, :edit
 
-      live "/profile", ProfileLive.Edit, :edit
       live "/profile/:id/delete", ProfileLive.Edit, :delete
 
       live "/profile/tokens", TokensLive.Index, :index

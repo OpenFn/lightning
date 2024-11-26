@@ -6,28 +6,14 @@
   </:header>
   <LayoutComponents.centered>
     <div class="grid grid-cols-1 gap-x-8 gap-y-8 md:grid-cols-3">
-      <div class="px-4 sm:px-0">
-        <h2 class="text-base font-semibold leading-7 text-gray-900">
-          <%= @current_user.first_name %> <%= @current_user.last_name %>
-        </h2>
-        <p class="mt-1 text-sm leading-6 text-gray-600">
-          Change name, email, password, and request deletion.
-        </p>
-        <div class="border-b border-gray-900/10 mt-6 mb-6" />
-        <p class="mt-1 text-sm leading-6 text-gray-600">
-          Created: <%= @current_user.inserted_at |> Calendar.strftime("%c %Z") %> UTC
-        </p>
-        <p class="mt-1 text-sm leading-6 text-gray-600">
-          Email: <%= @current_user.email %>
-        </p>
-      </div>
-      <.live_component
-        module={LightningWeb.ProfileLive.FormComponent}
-        id={@current_user.id}
-        title={@page_title}
-        action={@live_action}
-        user={@user}
-        return_to={~p"/profile"}
+      <.user_info current_user={@current_user} />
+      <.action_cards
+        page_title={@page_title}
+        current_user={@current_user}
+        live_action={@live_action}
+        delete_user_url={
+          Routes.profile_edit_path(@socket, :delete, @current_user)
+        }
       />
     </div>
   </LayoutComponents.centered>

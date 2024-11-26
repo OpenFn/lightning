@@ -4,7 +4,7 @@ defmodule LightningWeb.UserLive.Index do
   """
   use LightningWeb, :live_view
 
-  import PetalComponents.Table
+  import LightningWeb.UserLive.CommonComponents
 
   alias Lightning.Accounts
   alias Lightning.Policies.Permissions
@@ -17,10 +17,16 @@ defmodule LightningWeb.UserLive.Index do
       |> Permissions.can?(:access_admin_space, socket.assigns.current_user, {})
 
     if can_access_admin_space do
-      {:ok,
-       assign(socket, :users, list_users())
-       |> assign(:active_menu_item, :users),
-       layout: {LightningWeb.Layouts, :settings}}
+      modal = Map.get(socket, :private, %{})[:delete_modal]
+
+      socket =
+        assign(socket,
+          users: list_users(),
+          active_menu_item: :users,
+          user_deletion_modal: modal
+        )
+
+      {:ok, socket, layout: {LightningWeb.Layouts, :settings}}
     else
       {:ok,
        put_flash(socket, :nav, :no_access)
@@ -36,13 +42,13 @@ defmodule LightningWeb.UserLive.Index do
   defp apply_action(socket, :index, _params) do
     socket
     |> assign(:page_title, "Users")
-    |> assign(:user, nil)
+    |> assign(:delete_user, nil)
   end
 
   defp apply_action(socket, :delete, %{"id" => id}) do
     socket
     |> assign(:page_title, "Users")
-    |> assign(:user, Accounts.get_user!(id))
+    |> assign(:delete_user, Accounts.get_user!(id))
   end
 
   @impl true
@@ -61,67 +67,5 @@ defmodule LightningWeb.UserLive.Index do
 
   defp list_users do
     Accounts.list_users()
-  end
-
-  def delete_action(%{user: %{role: :user}} = assigns) do
-    if assigns.user.scheduled_deletion do
-      ~H"""
-      <.cancel_deletion user={@user} /> |
-      <span>
-        <.link
-          id={"delete-now-#{@user.id}"}
-          class="table-action"
-          navigate={Routes.user_index_path(@socket, :delete, @user)}
-        >
-          Delete now
-        </.link>
-      </span>
-      """
-    else
-      ~H"""
-      <span>
-        <.link
-          id={"delete-#{@user.id}"}
-          class="table-action"
-          navigate={Routes.user_index_path(@socket, :delete, @user)}
-        >
-          Delete
-        </.link>
-      </span>
-      """
-    end
-  end
-
-  def delete_action(%{user: %{role: :superuser}} = assigns) do
-    if assigns.user.scheduled_deletion do
-      ~H"""
-      <.cancel_deletion user={@user} /> |
-      <span id={"delete-now-#{@user.id}"} class="table-action-disabled">
-        Delete now
-      </span>
-      """
-    else
-      ~H"""
-      <span id={"delete-#{@user.id}"} class="table-action-disabled">
-        Delete
-      </span>
-      """
-    end
-  end
-
-  defp cancel_deletion(assigns) do
-    ~H"""
-    <span>
-      <.link
-        id={"cancel-deletion-#{@user.id}"}
-        href="#"
-        phx-click="cancel_deletion"
-        phx-value-id={@user.id}
-        class="table-action"
-      >
-        Cancel deletion
-      </.link>
-    </span>
-    """
   end
 end
