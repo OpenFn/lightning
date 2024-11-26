@@ -368,7 +368,6 @@ defmodule LightningWeb.Components.NewInputs do
       |> assign_new(:checked, fn -> get_checkbox_value(assigns) end)
       |> assign_new(:disabled, fn -> false end)
       |> assign_new(:required, fn -> false end)
-      |> assign_new(:help_text, fn -> nil end)
       |> assign_new(:tooltip, fn -> nil end)
       |> assign_new(:size, fn -> "md" end)
       |> assign_new(:color, fn -> "primary" end)
@@ -410,7 +409,6 @@ defmodule LightningWeb.Components.NewInputs do
               class="sr-only peer"
               disabled={@disabled}
               required={@required}
-              aria-describedby={if @help_text, do: "#{@id}-description"}
               {@rest}
             />
           <% else %>
@@ -423,7 +421,6 @@ defmodule LightningWeb.Components.NewInputs do
               class="sr-only peer"
               disabled={@disabled}
               required={@required}
-              aria-describedby={if @help_text, do: "#{@id}-description"}
               {@rest}
             />
           <% end %>
@@ -497,18 +494,6 @@ defmodule LightningWeb.Components.NewInputs do
           <%= @label %>
           <span :if={@required} class="text-red-500 ml-1">*</span>
         </label>
-      </div>
-
-      <div
-        :if={@help_text}
-        class="text-sm text-gray-500 ml-14"
-        id={"toggle-description-#{@id}"}
-      >
-        <%= @help_text %>
-      </div>
-
-      <div :if={@errors != [] and @display_errors} class="mt-1 ml-14">
-        <.error :for={msg <- @errors}><%= msg %></.error>
       </div>
     </div>
     """
@@ -738,46 +723,31 @@ defmodule LightningWeb.Components.NewInputs do
     """
   end
 
-  defp get_checkbox_value(%{field: %FormField{} = field}) do
-    Form.normalize_value("checkbox", field.value) == true
-  end
-
   defp get_checkbox_value(%{value: value}) do
     Form.normalize_value("checkbox", value) == true
   end
 
-  defp get_checkbox_value(_), do: false
-
   defp get_toggle_size_classes(assigns) do
     case assigns.size do
-      "sm" -> "w-8 h-4"
       "md" -> "w-11 h-6"
-      "lg" -> "w-14 h-7"
     end
   end
 
   defp get_handle_size_classes(assigns) do
     case assigns.size do
-      "sm" -> "h-3 w-3"
       "md" -> "h-5 w-5"
-      "lg" -> "h-6 w-6"
     end
   end
 
   defp get_icon_size_classes(assigns) do
     case assigns.size do
-      "sm" -> "h-2 w-2"
       "md" -> "h-4 w-4"
-      "lg" -> "h-5 w-5"
     end
   end
 
   defp get_active_color_classes(assigns) do
     case assigns.color do
       "primary" -> "bg-indigo-600 focus:ring-indigo-500"
-      "success" -> "bg-green-600 focus:ring-green-500"
-      "warning" -> "bg-yellow-600 focus:ring-yellow-500"
-      "danger" -> "bg-red-600 focus:ring-red-500"
     end
   end
 end
