@@ -106,6 +106,7 @@ defmodule Lightning.Workflows do
         multi |> capture_snapshot()
       end
     end)
+    |> maybe_audit_workflow_state_changes(changeset)
     |> Repo.transaction()
     |> case do
       {:ok, %{workflow: workflow}} ->
@@ -209,11 +210,42 @@ defmodule Lightning.Workflows do
       &(Map.get(&1, :workflow) |> Snapshot.build()),
       returning: false
     )
-    |> Multi.insert(:audit, fn changes ->
+    |> Multi.insert(:audit_snapshot_creation, fn changes ->
       %{snapshot: %{id: snapshot_id}, workflow: %{id: workflow_id}} = changes
 
       Audit.snapshot_created(workflow_id, snapshot_id, changes.actor)
     end)
+  end
+
+  defp maybe_audit_workflow_state_changes(multi, changeset) do
+    with triggers when not is_nil(triggers) <- get_change(changeset, :triggers),
+         trigger when not is_nil(trigger) <- find_changed(triggers, :enabled),
+         value <- get_change(trigger, :enabled) do
+      Ecto.Multi.insert(
+        multi,
+        :audit_workflow_state_change,
+        fn %{workflow: %{id: workflow_id}, actor: actor} ->
+          Audit.workflow_state_changed(
+            if(value, do: "enabled", else: "disabled"),
+            workflow_id,
+            actor,
+            %{before: %{enabled: !value}, after: %{enabled: value}}
+          )
+        end
+      )
+    else
+      _ -> multi
+    end
+  end
+
+  defp find_changed(changesets, changed_key) do
+    Enum.find(changesets, fn changeset ->
+      Ecto.Changeset.changed?(changeset, changed_key)
+    end)
+  end
+
+  defp get_change(changeset, change_key) do
+    Ecto.Changeset.get_change(changeset, change_key)
   end
 
   # Helper to preload associations only if they are present in the attributes
