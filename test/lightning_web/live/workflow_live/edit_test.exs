@@ -1686,6 +1686,70 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       refute workflow.triggers |> Enum.any?(& &1.enabled)
     end
+
+    test "workflow state toggle tooltip messages vary by trigger type", %{
+      conn: conn,
+      user: user,
+      project: project
+    } do
+      cron_trigger = build(:trigger, type: :cron, enabled: false)
+      webhook_trigger = build(:trigger, type: :webhook, enabled: true)
+
+      job_1 = build(:job)
+      job_2 = build(:job)
+
+      cron_workflow =
+        build(:workflow)
+        |> with_job(job_1)
+        |> with_trigger(cron_trigger)
+        |> with_edge({cron_trigger, job_1})
+        |> insert()
+
+      webhook_workflow =
+        build(:workflow)
+        |> with_job(job_2)
+        |> with_trigger(webhook_trigger)
+        |> with_edge({webhook_trigger, job_2})
+        |> insert()
+
+      Lightning.Workflows.Snapshot.get_or_create_latest_for(cron_workflow, user)
+
+      Lightning.Workflows.Snapshot.get_or_create_latest_for(
+        webhook_workflow,
+        user
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{cron_workflow.id}"
+        )
+
+      assert view
+             |> has_element?(
+               "#toggle-container-workflow[aria-label='This workflow is inactive (manual runs only)']"
+             )
+
+      view
+      |> element("#toggle-control-workflow")
+      |> render_click()
+
+      assert view
+             |> has_element?(
+               "#toggle-container-workflow[aria-label='This workflow is active (cron trigger enabled)']"
+             )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{webhook_workflow.id}"
+        )
+
+      assert view
+             |> has_element?(
+               "#toggle-container-workflow[aria-label='This workflow is active (webhook trigger enabled)']"
+             )
+    end
   end
 
   describe "AI Assistant:" do
