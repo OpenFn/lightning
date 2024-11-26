@@ -49,7 +49,6 @@ defmodule LightningWeb.WebhooksController do
            ) do
       {:ok, work_order} =
         WorkOrders.create_for(trigger,
-          actor: trigger,
           workflow: trigger.workflow,
           dataclip: %{
             body: conn.body_params,
