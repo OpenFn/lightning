@@ -738,7 +738,8 @@ defmodule Lightning.Projects.ProvisionerTest do
           ],
           "triggers" => [
             %{
-              "id" => trigger_id
+              "id" => trigger_id,
+              "enabled" => true
             }
           ],
           "edges" => [

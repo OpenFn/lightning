@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Enable / Disable Workflows UI
+  [#2698](https://github.com/OpenFn/lightning/issues/2698)
+
 ### Changed
 
 ### Fixed

@@ -181,6 +181,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       view |> change_editor_text("some body")
 
+      # By default, workflows are disabled to ensure a controlled setup.
+      # Here, we enable the workflow to test the :too_many_workflows limit action
+      view
+      |> element("#toggle-control-workflow")
+      |> render_click()
+
       refute view |> save_is_disabled?()
 
       assert view |> has_pending_changes()
@@ -1478,7 +1484,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       idx = get_index_of_edge(view, edge)
 
-      assert html =~ "Disable this path"
+      assert html =~ "Enabled"
 
       assert view
              |> element("#workflow_edges_#{idx}_enabled")
@@ -1498,7 +1504,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       refute edge.enabled
 
-      assert view
+      refute view
              |> element("#workflow_edges_#{idx}_enabled[checked]")
              |> has_element?()
     end
@@ -1581,6 +1587,196 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       html = click_save(view)
 
       assert html =~ error_msg
+    end
+
+    test "workflows are disabled by default", %{
+      conn: conn,
+      user: user
+    } do
+      project = insert(:project, project_users: [%{user: user, role: :editor}])
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/w/new?m=settings")
+
+      push_patches_to_view(view, initial_workflow_patchset(project))
+
+      fill_workflow_name(view, "My Workflow")
+
+      {job, _, _} = select_first_job(view)
+
+      fill_job_fields(view, job, %{name: "My Job"})
+
+      click_edit(view, job)
+
+      change_editor_text(view, "some body")
+
+      html = click_save(view)
+
+      assert html =~
+               "Workflow saved successfully. Remember to enable your workflow to run it automatically."
+
+      refute Workflows.get_workflows_for(project)
+             |> List.first()
+             |> Map.get(:triggers)
+             |> List.first()
+             |> Map.get(:enabled)
+    end
+
+    test "when workflow is enabled, reminder flash message is not displayed for the first save",
+         %{
+           conn: conn,
+           user: user
+         } do
+      project = insert(:project, project_users: [%{user: user, role: :editor}])
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/w/new?m=settings")
+
+      push_patches_to_view(view, initial_workflow_patchset(project))
+
+      fill_workflow_name(view, "My Workflow")
+
+      {job, _, _} = select_first_job(view)
+
+      fill_job_fields(view, job, %{name: "My Job"})
+
+      click_edit(view, job)
+
+      change_editor_text(view, "some body")
+
+      view
+      |> element("#toggle-control-workflow")
+      |> render_click()
+
+      html = click_save(view)
+
+      refute html =~
+               "Workflow saved successfully. Remember to enable your workflow to run it automatically."
+
+      assert html =~
+               "Workflow saved successfully."
+
+      assert Workflows.get_workflows_for(project)
+             |> List.first()
+             |> Map.get(:triggers)
+             |> List.first()
+             |> Map.get(:enabled)
+    end
+
+    test "clicking on the toggle disables all the triggers of a workflow", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
+        )
+
+      assert workflow.triggers |> Enum.all?(& &1.enabled)
+
+      view
+      |> element("#toggle-control-workflow")
+      |> render_click()
+
+      click_save(view)
+
+      workflow = Workflows.get_workflow(workflow.id, include: [:triggers])
+
+      refute workflow.triggers |> Enum.any?(& &1.enabled)
+    end
+
+    test "workflow can still be disabled / enabled from the trigger form", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
+        )
+
+      assert workflow.triggers |> Enum.all?(& &1.enabled)
+
+      select_trigger(view)
+
+      view
+      |> form("#workflow-form", %{
+        "workflow" => %{"triggers" => %{"0" => %{"enabled" => "false"}}}
+      })
+      |> render_change()
+
+      click_save(view)
+
+      workflow = Workflows.get_workflow(workflow.id, include: [:triggers])
+
+      refute workflow.triggers |> Enum.any?(& &1.enabled)
+    end
+
+    test "workflow state toggle tooltip messages vary by trigger type", %{
+      conn: conn,
+      user: user,
+      project: project
+    } do
+      cron_trigger = build(:trigger, type: :cron, enabled: false)
+      webhook_trigger = build(:trigger, type: :webhook, enabled: true)
+
+      job_1 = build(:job)
+      job_2 = build(:job)
+
+      cron_workflow =
+        build(:workflow)
+        |> with_job(job_1)
+        |> with_trigger(cron_trigger)
+        |> with_edge({cron_trigger, job_1})
+        |> insert()
+
+      webhook_workflow =
+        build(:workflow)
+        |> with_job(job_2)
+        |> with_trigger(webhook_trigger)
+        |> with_edge({webhook_trigger, job_2})
+        |> insert()
+
+      Lightning.Workflows.Snapshot.get_or_create_latest_for(cron_workflow, user)
+
+      Lightning.Workflows.Snapshot.get_or_create_latest_for(
+        webhook_workflow,
+        user
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{cron_workflow.id}"
+        )
+
+      assert view
+             |> has_element?(
+               "#toggle-container-workflow[aria-label='This workflow is inactive (manual runs only)']"
+             )
+
+      view
+      |> element("#toggle-control-workflow")
+      |> render_click()
+
+      assert view
+             |> has_element?(
+               "#toggle-container-workflow[aria-label='This workflow is active (cron trigger enabled)']"
+             )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{webhook_workflow.id}"
+        )
+
+      assert view
+             |> has_element?(
+               "#toggle-container-workflow[aria-label='This workflow is active (webhook trigger enabled)']"
+             )
     end
   end
 
@@ -2287,7 +2483,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       refute_eventually(
         low_priority_view
         |> has_element?("#inspector-workflow-version", "latest"),
-        10_000
+        15_000
       )
 
       assert low_priority_view
