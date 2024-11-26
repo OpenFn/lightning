@@ -24,63 +24,6 @@ defmodule Lightning.Workflows do
   require Logger
 
   @doc """
-  Updates the `enabled` state of triggers associated with a given workflow as a struct or as a changeset.
-
-  ## **Parameters**
-  - **`workflow_or_changeset`**:
-  - An `%Ecto.Changeset{}` containing a `:triggers` association.
-  - A `%Workflow{}` struct with a `triggers` field.
-  - **`enabled?`**:
-  - A boolean indicating whether to enable (`true`) or disable (`false`) the triggers.
-
-  ## **Returns**
-  - An updated `%Ecto.Changeset{}` with the `:triggers` association modified.
-  - An updated `%Ecto.Changeset{}` derived from the given `%Workflow{}`.
-
-  ## **Examples**
-
-  ### **Using an `Ecto.Changeset`**
-  ```elixir
-  changeset = Ecto.Changeset.change(%Workflow{}, %{triggers: [%Trigger{enabled: false}]})
-  updated_changeset = update_triggers_enabled_state(changeset, true)
-  # The triggers in the changeset will now have `enabled: true`.
-  ```
-
-  ### **Using a `Workflow` struct**
-  ```elixir
-  workflow = %Workflow{triggers: [%Trigger{enabled: false}]}
-  updated_changeset = update_triggers_enabled_state(workflow, true)
-  # The returned changeset will have triggers with `enabled: true`.
-  ```
-  """
-  def update_triggers_enabled_state(
-        %Ecto.Changeset{data: %Workflow{}} = changeset,
-        enabled?
-      ) do
-    updated_triggers =
-      changeset
-      |> Ecto.Changeset.get_field(:triggers, [])
-      |> update_triggers(enabled?)
-
-    changeset
-    |> Ecto.Changeset.put_assoc(:triggers, updated_triggers)
-  end
-
-  def update_triggers_enabled_state(%Workflow{} = workflow, enabled?) do
-    updated_triggers =
-      workflow.triggers
-      |> update_triggers(enabled?)
-
-    workflow
-    |> change_workflow()
-    |> Ecto.Changeset.put_assoc(:triggers, updated_triggers)
-  end
-
-  defp update_triggers(triggers, enabled?) do
-    Enum.map(triggers, &Ecto.Changeset.change(&1, %{enabled: enabled?}))
-  end
-
-  @doc """
   Returns the list of workflows.
 
   ## Examples
@@ -537,5 +480,62 @@ defmodule Lightning.Workflows do
   def has_newer_version?(%Workflow{lock_version: version, id: id}) do
     from(w in Workflow, where: w.lock_version > ^version and w.id == ^id)
     |> Repo.exists?()
+  end
+
+  @doc """
+  Updates the `enabled` state of triggers associated with a given workflow as a struct or as a changeset.
+
+  ## **Parameters**
+  - **`workflow_or_changeset`**:
+  - An `%Ecto.Changeset{}` containing a `:triggers` association.
+  - A `%Workflow{}` struct with a `triggers` field.
+  - **`enabled?`**:
+  - A boolean indicating whether to enable (`true`) or disable (`false`) the triggers.
+
+  ## **Returns**
+  - An updated `%Ecto.Changeset{}` with the `:triggers` association modified.
+  - An updated `%Ecto.Changeset{}` derived from the given `%Workflow{}`.
+
+  ## **Examples**
+
+  ### **Using an `Ecto.Changeset`**
+  ```elixir
+  changeset = Ecto.Changeset.change(%Workflow{}, %{triggers: [%Trigger{enabled: false}]})
+  updated_changeset = update_triggers_enabled_state(changeset, true)
+  # The triggers in the changeset will now have `enabled: true`.
+  ```
+
+  ### **Using a `Workflow` struct**
+  ```elixir
+  workflow = %Workflow{triggers: [%Trigger{enabled: false}]}
+  updated_changeset = update_triggers_enabled_state(workflow, true)
+  # The returned changeset will have triggers with `enabled: true`.
+  ```
+  """
+  def update_triggers_enabled_state(
+        %Ecto.Changeset{data: %Workflow{}} = changeset,
+        enabled?
+      ) do
+    updated_triggers =
+      changeset
+      |> Ecto.Changeset.get_field(:triggers, [])
+      |> update_triggers(enabled?)
+
+    changeset
+    |> Ecto.Changeset.put_assoc(:triggers, updated_triggers)
+  end
+
+  def update_triggers_enabled_state(%Workflow{} = workflow, enabled?) do
+    updated_triggers =
+      workflow.triggers
+      |> update_triggers(enabled?)
+
+    workflow
+    |> change_workflow()
+    |> Ecto.Changeset.put_assoc(:triggers, updated_triggers)
+  end
+
+  defp update_triggers(triggers, enabled?) do
+    Enum.map(triggers, &Ecto.Changeset.change(&1, %{enabled: enabled?}))
   end
 end
