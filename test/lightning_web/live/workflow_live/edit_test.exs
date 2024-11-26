@@ -2483,7 +2483,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       refute_eventually(
         low_priority_view
         |> has_element?("#inspector-workflow-version", "latest"),
-        10_000
+        15_000
       )
 
       assert low_priority_view

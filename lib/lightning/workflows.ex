@@ -54,11 +54,7 @@ defmodule Lightning.Workflows do
 
   """
   def get_workflow!(id, opts \\ []) do
-    include = Keyword.get(opts, :include, [])
-
-    Workflow
-    |> Repo.get!(id)
-    |> Repo.preload(include)
+    get_workflow_query(id, opts) |> Repo.one!()
   end
 
   @doc """
@@ -77,14 +73,15 @@ defmodule Lightning.Workflows do
 
   """
   def get_workflow(id, opts \\ []) do
+    get_workflow_query(id, opts) |> Repo.one()
+  end
+
+  defp get_workflow_query(id, opts) do
     include = Keyword.get(opts, :include, [])
 
     Workflow
-    |> Repo.get(id)
-    |> case do
-      nil -> nil
-      workflow -> Repo.preload(workflow, include)
-    end
+    |> where(id: ^id)
+    |> preload(^include)
   end
 
   @spec save_workflow(Ecto.Changeset.t(Workflow.t()) | map(), struct()) ::

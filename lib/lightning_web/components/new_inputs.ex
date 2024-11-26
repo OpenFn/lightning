@@ -364,7 +364,9 @@ defmodule LightningWeb.Components.NewInputs do
   def input(%{type: "toggle"} = assigns) do
     assigns =
       assigns
-      |> assign_new(:checked, fn -> get_checkbox_value(assigns) end)
+      |> assign_new(:checked, fn ->
+        Form.normalize_value("checkbox", assigns[:value]) == true
+      end)
       |> assign_new(:disabled, fn -> false end)
       |> assign_new(:required, fn -> false end)
       |> assign_new(:tooltip, fn -> nil end)
@@ -681,9 +683,5 @@ defmodule LightningWeb.Components.NewInputs do
       <%= render_slot(@inner_block) %>
     </p>
     """
-  end
-
-  defp get_checkbox_value(%{value: value}) do
-    Form.normalize_value("checkbox", value) == true
   end
 end
