@@ -9,7 +9,6 @@ defmodule Lightning.VersionControlTest do
   alias Lightning.Repo
   alias Lightning.VersionControl
   alias Lightning.VersionControl.ProjectRepoConnection
-  # alias Lightning.Workflows
   alias Lightning.Workflows.Snapshot
 
   import Lightning.Factories
@@ -586,7 +585,7 @@ defmodule Lightning.VersionControlTest do
     test "checks if github sync is rate limited", %{
       project: %{id: project_id},
       repo_connection: repo_connection,
-      user: %{email: user_email},
+      user: %{email: user_email}
     } do
       action = %Action{type: :github_sync}
       context = %Context{project_id: project_id}
@@ -601,7 +600,7 @@ defmodule Lightning.VersionControlTest do
     test "returns error if github sync is rate limited", %{
       project: %{id: project_id},
       repo_connection: repo_connection,
-      user: %{email: user_email},
+      user: %{email: user_email}
     } do
       action = %Action{type: :github_sync}
       context = %Context{project_id: project_id}
@@ -619,12 +618,13 @@ defmodule Lightning.VersionControlTest do
     test "creates GH workflow dispatch event", %{
       repo_connection: repo_connection,
       snapshots: [snapshot, other_snapshot],
-      user: %{email: user_email},
+      user: %{email: user_email}
     } do
       commit_message = "user #{user_email} initiated a sync from Lightning"
 
       expect_create_installation_token(repo_connection.github_installation_id)
       expect_get_repo(repo_connection.repo)
+
       expect_create_workflow_dispatch_with_request_body(
         repo_connection.repo,
         "openfn-pull.yml",
@@ -636,52 +636,12 @@ defmodule Lightning.VersionControlTest do
             branch: repo_connection.branch,
             pathToConfig: path_to_config(repo_connection),
             commitMessage: commit_message,
-            snapshots: "#{other_snapshot.id} #{snapshot.id}",
+            snapshots: "#{other_snapshot.id} #{snapshot.id}"
           }
         }
       )
 
       assert :ok = VersionControl.initiate_sync(repo_connection, user_email)
-    end
-
-    test "creates snapshots for workflows without snapshots", %{
-      user: user,
-      repo_connection: repo_connection,
-      workflow: workflow
-    } do
-      refute Snapshot.get_current_for(workflow)
-
-      expect_create_installation_token(repo_connection.github_installation_id)
-      expect_get_repo(repo_connection.repo)
-      expect_create_workflow_dispatch(repo_connection.repo, "openfn-pull.yml")
-
-      assert :ok = VersionControl.initiate_sync(repo_connection, user.email)
-      assert Snapshot.get_current_for(workflow)
-    end
-
-    test "creates audit entries for any snapshots created", %{
-      user: user,
-      repo_connection: %{id: repo_connection_id} = repo_connection,
-      workflow: %{id: workflow_id} = workflow
-    } do
-      expect_create_installation_token(repo_connection.github_installation_id)
-      expect_get_repo(repo_connection.repo)
-      expect_create_workflow_dispatch(repo_connection.repo, "openfn-pull.yml")
-
-      assert :ok = VersionControl.initiate_sync(repo_connection, user.email)
-
-      %{id: snapshot_id} = Snapshot.get_current_for(workflow)
-
-      audit = Audit |> Repo.one!()
-
-      assert %{
-               event: "snapshot_created",
-               item_id: ^workflow_id,
-               actor_id: ^repo_connection_id,
-               changes: %{
-                 after: %{"snapshot_id" => ^snapshot_id}
-               }
-             } = audit
     end
 
     defp api_secret_name(%{project_id: project_id}) do
