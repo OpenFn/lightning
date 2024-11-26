@@ -18,19 +18,6 @@ export {
   TabbedPanels,
 };
 
-export const Toggle = {
-  mounted() {
-    const checkbox = this.el.querySelector('input[type="checkbox"]');
-
-    if (checkbox?.disabled) return;
-
-    this.el.addEventListener('click', () => {
-      checkbox.checked = !checkbox.checked;
-      checkbox.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-  },
-};
-
 export const Combobox = {
   mounted() {
     this.input = this.el.querySelector('input');

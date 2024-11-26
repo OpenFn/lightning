@@ -376,7 +376,6 @@ defmodule LightningWeb.Components.NewInputs do
       {if @tooltip, do: ["phx-hook": "Tooltip", "aria-label": @tooltip], else: []}
     >
       <div
-        phx-hook="Toggle"
         id={"toggle-control-#{@id}"}
         class="flex items-center gap-3"
         {if @on_click, do: ["phx-click": JS.push(@on_click,
@@ -387,7 +386,7 @@ defmodule LightningWeb.Components.NewInputs do
           }
         )], else: []}
       >
-        <div class="relative inline-flex items-center">
+        <label class="relative inline-flex items-center cursor-pointer">
           <input type="hidden" name={@name} value="false" />
           <input
             type="checkbox"
@@ -402,7 +401,6 @@ defmodule LightningWeb.Components.NewInputs do
           />
 
           <div
-            data-toggle
             tabindex={if @disabled, do: "-1", else: "0"}
             role="switch"
             aria-checked={@checked}
@@ -417,16 +415,12 @@ defmodule LightningWeb.Components.NewInputs do
               )
             ]}
           >
-            <span
-              data-handle
-              class={[
-                "pointer-events-none absolute h-5 w-5 inline-block transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
-                @checked && "translate-x-5",
-                !@checked && "translate-x-0"
-              ]}
-            >
+            <span class={[
+              "pointer-events-none absolute h-5 w-5 inline-block transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+              @checked && "translate-x-5",
+              !@checked && "translate-x-0"
+            ]}>
               <span
-                data-x-mark
                 class={[
                   "absolute inset-0 flex h-full w-full items-center justify-center transition-opacity duration-200 ease-in",
                   @checked && "opacity-0",
@@ -437,7 +431,6 @@ defmodule LightningWeb.Components.NewInputs do
                 <.icon name="hero-x-mark-micro" class="h-4 w-4 text-gray-400" />
               </span>
               <span
-                data-check-mark
                 class={[
                   "absolute inset-0 flex h-full w-full items-center justify-center transition-opacity duration-200 ease-in",
                   @checked && "opacity-100",
@@ -449,18 +442,17 @@ defmodule LightningWeb.Components.NewInputs do
               </span>
             </span>
           </div>
-        </div>
 
-        <label
-          :if={@label}
-          for={@id}
-          class={[
-            "text-sm font-medium select-none",
-            if(@disabled, do: "text-gray-400", else: "text-gray-900")
-          ]}
-        >
-          <%= @label %>
-          <span :if={@required} class="text-red-500 ml-1">*</span>
+          <span
+            :if={@label}
+            class={[
+              "ml-3 text-sm font-medium select-none",
+              if(@disabled, do: "text-gray-400", else: "text-gray-900")
+            ]}
+          >
+            <%= @label %>
+            <span :if={@required} class="text-red-500 ml-1">*</span>
+          </span>
         </label>
       </div>
     </div>
