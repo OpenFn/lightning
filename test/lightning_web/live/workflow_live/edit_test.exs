@@ -369,14 +369,17 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     end
 
     test "Switching between workflow versions maintains correct read-only and edit modes",
-         %{conn: conn, project: project, workflow: workflow} do
+         %{
+           conn: conn,
+           project: project,
+           snapshot: snapshot,
+           workflow: workflow
+         } do
       {:ok, view, _html} =
         live(
           conn,
           ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
         )
-
-      {:ok, snapshot} = Snapshot.create(workflow)
 
       assert snapshot.lock_version == workflow.lock_version
 
@@ -626,6 +629,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     test "Creating an audit event on rerun", %{
       conn: conn,
       project: project,
+      snapshot: snapshot,
       user: %{id: user_id},
       workflow: %{id: workflow_id} = workflow
     } do
@@ -634,8 +638,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           conn,
           ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
         )
-
-      {:ok, snapshot} = Snapshot.create(workflow)
 
       view |> fill_workflow_name("#{workflow.name} v2")
 
@@ -736,13 +738,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           }
         end)
 
-          workflow |> IO.inspect(label: :before_change)
       {:ok, workflow} =
         Workflows.change_workflow(workflow, %{jobs: jobs_attrs})
         |> Workflows.save_workflow(user)
 
-          workflow |> IO.inspect(label: :after_change)
-      {:ok, latest_snapshot} = Snapshot.create(workflow)
+      latest_snapshot = Snapshot.get_current_for(workflow)
 
       run_2 =
         insert(:run,
@@ -814,11 +814,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     test "Can't switch to the latest version from a deleted step", %{
       conn: conn,
       project: project,
+      snapshot: snapshot,
       user: user,
       workflow: workflow
     } do
-      {:ok, snapshot} = Snapshot.create(workflow)
-
       run =
         insert(:run,
           work_order: build(:workorder, workflow: workflow),
@@ -845,7 +844,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         Workflows.change_workflow(workflow, %{jobs: jobs_attrs})
         |> Workflows.save_workflow(user)
 
-      {:ok, latest_snapshot} = Snapshot.create(workflow)
+      latest_snapshot = Snapshot.get_current_for(workflow)
 
       insert(:run,
         work_order: build(:workorder, workflow: workflow),
