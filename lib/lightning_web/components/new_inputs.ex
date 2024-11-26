@@ -368,15 +368,6 @@ defmodule LightningWeb.Components.NewInputs do
       |> assign_new(:disabled, fn -> false end)
       |> assign_new(:required, fn -> false end)
       |> assign_new(:tooltip, fn -> nil end)
-      |> assign_new(:size, fn -> "md" end)
-      |> assign_new(:color, fn -> "primary" end)
-
-    assigns =
-      assigns
-      |> assign(:toggle_size_classes, get_toggle_size_classes(assigns))
-      |> assign(:handle_size_classes, get_handle_size_classes(assigns))
-      |> assign(:icon_size_classes, get_icon_size_classes(assigns))
-      |> assign(:active_color_classes, get_active_color_classes(assigns))
 
     ~H"""
     <div
@@ -397,32 +388,18 @@ defmodule LightningWeb.Components.NewInputs do
         )], else: []}
       >
         <div class="relative inline-flex items-center">
-          <%= if @checked do %>
-            <input type="hidden" name={@name} value="false" />
-            <input
-              type="checkbox"
-              id={@id}
-              name={@name}
-              value="true"
-              checked="checked"
-              class="sr-only peer"
-              disabled={@disabled}
-              required={@required}
-              {@rest}
-            />
-          <% else %>
-            <input type="hidden" name={@name} value="false" />
-            <input
-              type="checkbox"
-              id={@id}
-              name={@name}
-              value="true"
-              class="sr-only peer"
-              disabled={@disabled}
-              required={@required}
-              {@rest}
-            />
-          <% end %>
+          <input type="hidden" name={@name} value="false" />
+          <input
+            type="checkbox"
+            id={@id}
+            name={@name}
+            value="true"
+            class="sr-only peer"
+            checked={@checked}
+            disabled={@disabled}
+            required={@required}
+            {@rest}
+          />
 
           <div
             data-toggle
@@ -430,9 +407,8 @@ defmodule LightningWeb.Components.NewInputs do
             role="switch"
             aria-checked={@checked}
             class={[
-              "relative inline-flex rounded-full transition-colors duration-200 ease-in-out border-2 border-transparent",
-              "focus:outline-none focus:ring-2 focus:ring-offset-2",
-              @toggle_size_classes,
+              "relative inline-flex w-11 h-6 rounded-full transition-colors duration-200 ease-in-out border-2 border-transparent",
+              "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500",
               @checked && "bg-indigo-600",
               !@checked && "bg-gray-200",
               if(@disabled,
@@ -444,9 +420,8 @@ defmodule LightningWeb.Components.NewInputs do
             <span
               data-handle
               class={[
-                "pointer-events-none absolute inline-block transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
-                @handle_size_classes,
-                @checked && ((@size == "lg" && "translate-x-7") || "translate-x-5"),
+                "pointer-events-none absolute h-5 w-5 inline-block transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                @checked && "translate-x-5",
                 !@checked && "translate-x-0"
               ]}
             >
@@ -459,10 +434,7 @@ defmodule LightningWeb.Components.NewInputs do
                 ]}
                 aria-hidden="true"
               >
-                <.icon
-                  name="hero-x-mark-micro"
-                  class={@icon_size_classes <> " text-gray-400"}
-                />
+                <.icon name="hero-x-mark-micro" class="h-4 w-4 text-gray-400" />
               </span>
               <span
                 data-check-mark
@@ -473,10 +445,7 @@ defmodule LightningWeb.Components.NewInputs do
                 ]}
                 aria-hidden="true"
               >
-                <.icon
-                  name="hero-check-micro"
-                  class={@icon_size_classes <> " text-indigo-600"}
-                />
+                <.icon name="hero-check-micro" class="h-4 w-4 text-indigo-600" />
               </span>
             </span>
           </div>
@@ -724,29 +693,5 @@ defmodule LightningWeb.Components.NewInputs do
 
   defp get_checkbox_value(%{value: value}) do
     Form.normalize_value("checkbox", value) == true
-  end
-
-  defp get_toggle_size_classes(assigns) do
-    case assigns.size do
-      "md" -> "w-11 h-6"
-    end
-  end
-
-  defp get_handle_size_classes(assigns) do
-    case assigns.size do
-      "md" -> "h-5 w-5"
-    end
-  end
-
-  defp get_icon_size_classes(assigns) do
-    case assigns.size do
-      "md" -> "h-4 w-4"
-    end
-  end
-
-  defp get_active_color_classes(assigns) do
-    case assigns.color do
-      "primary" -> "bg-indigo-600 focus:ring-indigo-500"
-    end
   end
 end
