@@ -182,7 +182,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       view |> change_editor_text("some body")
 
       # By default, workflows are disabled to ensure a controlled setup.
-      # Here, we enable the workflow to test the :too_many_workflows limit action,
+      # Here, we enable the workflow to test the :too_many_workflows limit action
       view
       |> element("#toggle-control-workflow")
       |> render_click()
@@ -1589,25 +1589,38 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert html =~ error_msg
     end
 
-    # test "workflows are disabled by default", %{
-    #   conn: conn,
-    #   user: user
-    # } do
-    #   project = insert(:project, project_users: [%{user: user, role: :editor}])
+    test "workflows are disabled by default", %{
+      conn: conn,
+      user: user
+    } do
+      project = insert(:project, project_users: [%{user: user, role: :editor}])
 
-    #   {:ok, view, _html} =
-    #     live(conn, ~p"/projects/#{project}/w/new?m=settings")
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/w/new?m=settings")
 
-    #   view |> fill_workflow_name("My Workflow")
+      view |> push_patches_to_view(initial_workflow_patchset(project))
 
-    #   html = click_save(view)
+      view |> fill_workflow_name("My Workflow")
 
-    #   html |> IO.puts()
+      {job, _, _} = view |> select_first_job()
 
-    #   Workflows.get_workflows_for(project) |> IO.inspect()
+      view |> fill_job_fields(job, %{name: "My Job"})
 
-    #   assert html =~ "Workflow saved successfully"
-    # end
+      view |> click_edit(job)
+
+      view |> change_editor_text("some body")
+
+      html = click_save(view)
+
+      assert html =~
+               "Workflow saved successfully. Remember to enable your workflow to run it automatically."
+
+      refute Workflows.get_workflows_for(project)
+             |> List.first()
+             |> Map.get(:triggers)
+             |> List.first()
+             |> Map.get(:enabled)
+    end
   end
 
   describe "AI Assistant:" do

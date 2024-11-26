@@ -21,9 +21,6 @@ export {
 export const Toggle = {
   mounted() {
     const checkbox = this.el.querySelector('input[type="checkbox"]');
-    const formId = this.el.dataset.form;
-
-    console.log(formId);
 
     if (checkbox?.disabled) return;
 
