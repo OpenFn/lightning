@@ -2,9 +2,14 @@ defmodule Lightning.VersionControlTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Auditing.Audit
+  alias Lightning.Extensions.MockUsageLimiter
+  alias Lightning.Extensions.Message
+  alias Lightning.Extensions.UsageLimiting.Action
+  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Repo
   alias Lightning.VersionControl
   alias Lightning.VersionControl.ProjectRepoConnection
+  # alias Lightning.Workflows
   alias Lightning.Workflows.Snapshot
 
   import Lightning.Factories
@@ -559,7 +564,13 @@ defmodule Lightning.VersionControlTest do
       verify_on_exit!()
 
       project = insert(:project)
+
       workflow = insert(:simple_workflow, project: project)
+      {:ok, snapshot} = Snapshot.create(workflow)
+
+      other_workflow = insert(:simple_workflow, project: project)
+      {:ok, other_snapshot} = Snapshot.create(other_workflow)
+
       user = user_with_valid_github_oauth()
       repo_connection = insert(:project_repo_connection, project: project)
 
@@ -567,8 +578,70 @@ defmodule Lightning.VersionControlTest do
         project: project,
         user: user,
         repo_connection: repo_connection,
+        snapshots: [snapshot, other_snapshot],
         workflow: workflow
       ]
+    end
+
+    test "checks if github sync is rate limited", %{
+      project: %{id: project_id},
+      repo_connection: repo_connection,
+      user: %{email: user_email},
+    } do
+      action = %Action{type: :github_sync}
+      context = %Context{project_id: project_id}
+
+      Mox.expect(MockUsageLimiter, :limit_action, fn ^action, ^context ->
+        :ok
+      end)
+
+      VersionControl.initiate_sync(repo_connection, user_email)
+    end
+
+    test "returns error if github sync is rate limited", %{
+      project: %{id: project_id},
+      repo_connection: repo_connection,
+      user: %{email: user_email},
+    } do
+      action = %Action{type: :github_sync}
+      context = %Context{project_id: project_id}
+
+      message = %Message{text: "You melted the CPU."}
+
+      Mox.stub(MockUsageLimiter, :limit_action, fn ^action, ^context ->
+        {:error, :melted, message}
+      end)
+
+      assert {:error, ^message} =
+               VersionControl.initiate_sync(repo_connection, user_email)
+    end
+
+    test "creates GH workflow dispatch event", %{
+      repo_connection: repo_connection,
+      snapshots: [snapshot, other_snapshot],
+      user: %{email: user_email},
+    } do
+      commit_message = "user #{user_email} initiated a sync from Lightning"
+
+      expect_create_installation_token(repo_connection.github_installation_id)
+      expect_get_repo(repo_connection.repo)
+      expect_create_workflow_dispatch_with_request_body(
+        repo_connection.repo,
+        "openfn-pull.yml",
+        %{
+          ref: "main",
+          inputs: %{
+            projectId: repo_connection.project_id,
+            apiSecretName: api_secret_name(repo_connection),
+            branch: repo_connection.branch,
+            pathToConfig: path_to_config(repo_connection),
+            commitMessage: commit_message,
+            snapshots: "#{other_snapshot.id} #{snapshot.id}",
+          }
+        }
+      )
+
+      assert :ok = VersionControl.initiate_sync(repo_connection, user_email)
     end
 
     test "creates snapshots for workflows without snapshots", %{
@@ -609,6 +682,18 @@ defmodule Lightning.VersionControlTest do
                  after: %{"snapshot_id" => ^snapshot_id}
                }
              } = audit
+    end
+
+    defp api_secret_name(%{project_id: project_id}) do
+      project_id
+      |> String.replace("-", "_")
+      |> then(&"OPENFN_#{&1}_API_KEY")
+    end
+
+    defp path_to_config(repo_connection) do
+      repo_connection
+      |> ProjectRepoConnection.config_path()
+      |> Path.relative_to(".")
     end
   end
 
