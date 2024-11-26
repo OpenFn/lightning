@@ -8,7 +8,6 @@ defmodule LightningWeb.Components.NewInputs do
   import LightningWeb.Components.Icons
 
   alias Phoenix.HTML.Form
-  alias Phoenix.HTML.FormField
   alias Phoenix.LiveView.JS
 
   @doc """
