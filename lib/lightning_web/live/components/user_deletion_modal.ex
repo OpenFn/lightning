@@ -107,7 +107,7 @@ defmodule LightningWeb.Components.UserDeletionModal do
         </:title>
         <div class="">
           <p class="text-sm text-gray-500">
-            This user cannot be deleted until their auditable activities have also been purged.
+          <%= if @is_superuser_menu, do: "This user", else: "Your account" %> cannot be deleted until their auditable activities have also been purged.
             <br /><br />Audit trails are removed on a project-basis and may be controlled by the project owner or a superuser.
           </p>
         </div>
