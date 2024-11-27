@@ -346,7 +346,7 @@ defmodule LightningWeb.AuditLiveTest do
     end
 
     test "when both before and after are empty, return `No changes`" do
-      assigns = %{metadata: %{before: nil, after: nil}}
+      assigns = %{metadata: %{before: %{}, after: %{}}}
 
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
