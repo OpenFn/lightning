@@ -6,6 +6,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   alias Phoenix.LiveView.AsyncResult
   alias Phoenix.LiveView.JS
 
+  @dialyzer {:nowarn_function, maybe_style_links: 1}
+
   def mount(socket) do
     {:ok,
      socket
@@ -533,7 +535,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
             <div>
               <div>
-                <%= message.content |> Earmark.as_html!() |> raw() %>
+                <%= message.content |> maybe_style_links |> raw %>
               </div>
               <!-- TODO: restore this message and add a link to the docs site -->
               <%!-- <div
@@ -582,6 +584,28 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
       </div>
     </div>
     """
+  end
+
+  @spec maybe_style_links(binary()) :: String.t() | binary()
+  defp maybe_style_links(content) do
+    case Earmark.Parser.as_ast(content) do
+      {:ok, ast, _} ->
+        ast
+        |> Earmark.Transform.map_ast(fn
+          {"a", _, _, _} = node ->
+            Earmark.AstTools.merge_atts_in_node(node,
+              class: "text-primary-400 hover:text-primary-600",
+              target: "_blank"
+            )
+
+          other ->
+            other
+        end)
+        |> Earmark.Transform.transform()
+
+      _ ->
+        content
+    end
   end
 
   attr :user, Lightning.Accounts.User, required: true
