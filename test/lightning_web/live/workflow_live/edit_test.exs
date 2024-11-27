@@ -2357,6 +2357,168 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert has_element?(view, "#ai-assistant-error", error_message)
     end
+
+    @tag email: "user@openfn.org"
+    test "assistant messages have properly styled links", %{
+      conn: conn,
+      project: project,
+      user: user,
+      workflow: %{jobs: [job_1 | _]} = workflow
+    } do
+      apollo_endpoint = "http://localhost:4001"
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> apollo_endpoint
+        :openai_api_key -> "openai_api_key"
+      end)
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        fn
+          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
+            {:ok, %Tesla.Env{status: 200}}
+
+          %{method: :post}, _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{
+                 "history" => [
+                   %{"role" => "user", "content" => "Hello"},
+                   %{
+                     "role" => "assistant",
+                     "content" => """
+                     Here are some links:
+                     - [Apollo Repo](https://github.com/OpenFn/apollo)
+                     - Plain text
+                     - [Lightning Repo](https://github.com/OpenFn/lightning)
+                     """
+                   }
+                 ]
+               }
+             }}
+        end
+      )
+
+      insert(:chat_session, user: user, job: job_1)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      view
+      |> form("#ai-assistant-form")
+      |> render_submit(%{content: "Hello"})
+
+      html = render_async(view) |> Floki.parse_document!()
+
+      links = Floki.find(html, "a")
+
+      openfn_link =
+        links
+        |> Enum.find(
+          &(Floki.attribute(&1, "href") == ["https://github.com/OpenFn/apollo"])
+        )
+
+      assert openfn_link != nil
+
+      assert Floki.attribute(openfn_link, "class") == [
+               "text-primary-400 hover:text-primary-600"
+             ]
+
+      assert Floki.attribute(openfn_link, "target") == ["_blank"]
+
+      docs_link =
+        links
+        |> Enum.find(
+          &(Floki.attribute(&1, "href") == [
+              "https://github.com/OpenFn/lightning"
+            ])
+        )
+
+      assert docs_link != nil
+
+      assert Floki.attribute(docs_link, "class") == [
+               "text-primary-400 hover:text-primary-600"
+             ]
+
+      assert Floki.attribute(docs_link, "target") == ["_blank"]
+
+      assert Floki.find(html, "li")
+             |> Enum.any?(&(Floki.text(&1) == "\nPlain text  "))
+    end
+
+    @tag email: "user@openfn.org"
+    test "assistant messages handle content with invalid markdown links", %{
+      conn: conn,
+      project: project,
+      user: user,
+      workflow: %{jobs: [job_1 | _]} = workflow
+    } do
+      apollo_endpoint = "http://localhost:4001"
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> apollo_endpoint
+        :openai_api_key -> "openai_api_key"
+      end)
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        fn
+          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
+            {:ok, %Tesla.Env{status: 200}}
+
+          %{method: :post}, _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{
+                 "history" => [
+                   %{
+                     "role" => "assistant",
+                     "content" => """
+                     Broken [link(test.com
+                     [Another](working.com)
+                     """
+                   }
+                 ]
+               }
+             }}
+        end
+      )
+
+      insert(:chat_session, user: user, job: job_1)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      view
+      |> form("#ai-assistant-form")
+      |> render_submit(%{content: "Hello"})
+
+      html = render_async(view) |> Floki.parse_document!()
+
+      assert html |> Floki.text() =~ "Broken [link(test.com"
+
+      working_link =
+        Floki.find(html, "a")
+        |> Enum.find(&(Floki.attribute(&1, "href") == ["working.com"]))
+
+      assert working_link != nil
+
+      assert Floki.attribute(working_link, "class") == [
+               "text-primary-400 hover:text-primary-600"
+             ]
+
+      assert Floki.attribute(working_link, "target") == ["_blank"]
+    end
   end
 
   describe "Allow low priority access users to retry steps and create workorders" do
