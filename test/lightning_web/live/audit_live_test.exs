@@ -113,8 +113,8 @@ defmodule LightningWeb.AuditLiveTest do
 
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
-      assert html =~ ~r"<li>foo&nbsp;\s+<svg.+foo_after</li>"s
-      assert html =~ ~r"<li>bar&nbsp;\s+<svg.+bar_after</li>"s
+      assert html =~ ~r"<li>foo&nbsp;\s+<span.+foo_after</li>"s
+      assert html =~ ~r"<li>bar&nbsp;\s+<span.+bar_after</li>"s
     end
 
     test "correctly lists changes if before is nil (atom keys)" do
@@ -127,8 +127,8 @@ defmodule LightningWeb.AuditLiveTest do
 
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
-      assert html =~ ~r"<li>foo&nbsp;\s+<svg.+foo_after</li>"s
-      assert html =~ ~r"<li>bar&nbsp;\s+<svg.+bar_after</li>"s
+      assert html =~ ~r"<li>foo&nbsp;\s+<span.+foo_after</li>"s
+      assert html =~ ~r"<li>bar&nbsp;\s+<span.+bar_after</li>"s
     end
 
     test "correctly lists changes if before is empty (string keys)" do
@@ -141,8 +141,8 @@ defmodule LightningWeb.AuditLiveTest do
 
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
-      assert html =~ ~r"<li>foo&nbsp;\s+<svg.+foo_after</li>"s
-      assert html =~ ~r"<li>bar&nbsp;\s+<svg.+bar_after</li>"s
+      assert html =~ ~r"<li>foo&nbsp;\s+<span.+foo_after</li>"s
+      assert html =~ ~r"<li>bar&nbsp;\s+<span.+bar_after</li>"s
     end
 
     test "correctly lists changes if before is empty (atom keys)" do
@@ -155,8 +155,8 @@ defmodule LightningWeb.AuditLiveTest do
 
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
-      assert html =~ ~r"<li>foo&nbsp;\s+<svg.+foo_after</li>"s
-      assert html =~ ~r"<li>bar&nbsp;\s+<svg.+bar_after</li>"s
+      assert html =~ ~r"<li>foo&nbsp;\s+<span.+foo_after</li>"s
+      assert html =~ ~r"<li>bar&nbsp;\s+<span.+bar_after</li>"s
     end
 
     test "correctly lists changes if after is nil (string keys)" do
@@ -169,8 +169,8 @@ defmodule LightningWeb.AuditLiveTest do
 
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
-      assert html =~ ~r"<li>foo.+foo_before.+?svg>\s+?</li>"s
-      assert html =~ ~r"<li>bar.+bar_before.+?svg>\s+?</li>"s
+      assert html =~ ~r"<li>foo.+foo_before.+?span>\s+?</li>"s
+      assert html =~ ~r"<li>bar.+bar_before.+?span>\s+?</li>"s
     end
 
     test "correctly lists changes if after is nil (atom keys)" do
@@ -183,8 +183,8 @@ defmodule LightningWeb.AuditLiveTest do
 
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
-      assert html =~ ~r"<li>foo.+foo_before.+?svg>\s+?</li>"s
-      assert html =~ ~r"<li>bar.+bar_before.+?svg>\s+?</li>"s
+      assert html =~ ~r"<li>foo.+foo_before.+?span>\s+?</li>"s
+      assert html =~ ~r"<li>bar.+bar_before.+?span>\s+?</li>"s
     end
 
     test "correctly lists changes if after is empty (string keys)" do
@@ -197,8 +197,8 @@ defmodule LightningWeb.AuditLiveTest do
 
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
-      assert html =~ ~r"<li>foo.+foo_before.+?svg>\s+?</li>"s
-      assert html =~ ~r"<li>bar.+bar_before.+?svg>\s+?</li>"s
+      assert html =~ ~r"<li>foo.+foo_before.+?span>\s+?</li>"s
+      assert html =~ ~r"<li>bar.+bar_before.+?span>\s+?</li>"s
     end
 
     test "correctly lists changes if after is empty (atom keys)" do
@@ -211,8 +211,8 @@ defmodule LightningWeb.AuditLiveTest do
 
       html = render_component(&AuditLive.Index.diff/1, assigns)
 
-      assert html =~ ~r"<li>foo.+foo_before.+?svg>\s+?</li>"s
-      assert html =~ ~r"<li>bar.+bar_before.+?svg>\s+?</li>"s
+      assert html =~ ~r"<li>foo.+foo_before.+?span>\s+?</li>"s
+      assert html =~ ~r"<li>bar.+bar_before.+?span>\s+?</li>"s
     end
 
     test "includes any extra keys in the before (string keys)" do
@@ -234,7 +234,7 @@ defmodule LightningWeb.AuditLiveTest do
 
       assert html =~ ~r"<li>foo.+foo_before.+foo_after</li>"s
       assert html =~ ~r"<li>bar.+bar_before.+bar_after</li>"s
-      assert html =~ ~r"<li>baz.+baz_before.+?</svg>\s+?</li>"s
+      assert html =~ ~r"<li>baz.+baz_before.+?</span>\s+?</li>"s
     end
 
     test "includes any extra keys in the before (atom keys)" do
@@ -256,7 +256,7 @@ defmodule LightningWeb.AuditLiveTest do
 
       assert html =~ ~r"<li>foo.+foo_before.+foo_after</li>"s
       assert html =~ ~r"<li>bar.+bar_before.+bar_after</li>"s
-      assert html =~ ~r"<li>baz.+baz_before.+?</svg>\s+?</li>"s
+      assert html =~ ~r"<li>baz.+baz_before.+?</span>\s+?</li>"s
     end
 
     test "includes any extra keys in the after (string keys)" do
@@ -278,7 +278,7 @@ defmodule LightningWeb.AuditLiveTest do
 
       assert html =~ ~r"<li>foo.+foo_before.+foo_after</li>"s
       assert html =~ ~r"<li>bar.+bar_before.+bar_after</li>"s
-      assert html =~ ~r"<li>baz&nbsp;\s+?<svg.+?</svg>\s+?baz_after</li>"s
+      assert html =~ ~r"<li>baz&nbsp;\s+?<span.+?</span>\s+?baz_after</li>"s
     end
 
     test "includes any extra keys in the after (atom keys)" do
@@ -300,7 +300,7 @@ defmodule LightningWeb.AuditLiveTest do
 
       assert html =~ ~r"<li>foo.+foo_before.+foo_after</li>"s
       assert html =~ ~r"<li>bar.+bar_before.+bar_after</li>"s
-      assert html =~ ~r"<li>baz&nbsp;\s+?<svg.+?</svg>\s+?baz_after</li>"s
+      assert html =~ ~r"<li>baz&nbsp;\s+?<span.+?</span>\s+?baz_after</li>"s
     end
 
     test "list changes in order (string keys)" do
