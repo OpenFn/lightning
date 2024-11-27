@@ -4,7 +4,7 @@ defmodule LightningWeb.UserLive.Index do
   """
   use LightningWeb, :live_view
 
-  import LightningWeb.UserLive.CommonComponents
+  import LightningWeb.UserLive.Components
 
   alias Lightning.Accounts
   alias Lightning.Policies.Permissions

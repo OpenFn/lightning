@@ -4,7 +4,7 @@ defmodule LightningWeb.ProfileLive.Edit do
   """
   use LightningWeb, :live_view
 
-  import LightningWeb.ProfileLive.CommonComponents
+  import LightningWeb.ProfileLive.Components
 
   alias Lightning.VersionControl
 

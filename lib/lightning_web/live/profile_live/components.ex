@@ -1,4 +1,4 @@
-defmodule LightningWeb.ProfileLive.CommonComponents do
+defmodule LightningWeb.ProfileLive.Components do
   use LightningWeb, :component
 
   attr :current_user, Lightning.Accounts.User, required: true

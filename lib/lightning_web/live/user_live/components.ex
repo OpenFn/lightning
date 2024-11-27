@@ -1,4 +1,4 @@
-defmodule LightningWeb.UserLive.CommonComponents do
+defmodule LightningWeb.UserLive.Components do
   use LightningWeb, :component
 
   import PetalComponents.Table
