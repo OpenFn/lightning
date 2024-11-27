@@ -73,16 +73,11 @@ defmodule Lightning.WorkOrders do
 
   **For a webhook**
       create_for(trigger, workflow: workflow, dataclip: dataclip)
-
-  **For a user**
-      create_for(job, workflow: workflow, dataclip: dataclip, user: user)
   """
-  @spec create_for(Trigger.t() | Job.t(), Multi.t(), [work_order_option()]) ::
+  @spec create_for(Trigger.t(), Multi.t(), [work_order_option()]) ::
           {:ok, WorkOrder.t()}
           | {:error, Ecto.Changeset.t(WorkOrder.t()) | :workflow_deleted}
-  def create_for(target, multi \\ Multi.new(), opts)
-
-  def create_for(%Trigger{} = trigger, multi, opts) do
+  def create_for(%Trigger{} = trigger, multi \\ Multi.new(), opts) do
     multi
     |> Multi.put(:workflow, opts[:workflow])
     |> get_or_insert_dataclip(opts[:dataclip])
@@ -104,15 +99,6 @@ defmodule Lightning.WorkOrders do
 
       build_for(trigger, attrs)
     end)
-    |> Runs.enqueue()
-    |> emit_and_return_work_order()
-  end
-
-  def create_for(%Job{} = job, multi, opts) do
-    multi
-    |> Multi.put(:workflow, opts[:workflow])
-    |> Snapshot.include_latest_snapshot(opts[:workflow])
-    |> Multi.insert(:workorder, build_for(job, opts |> Map.new()))
     |> Runs.enqueue()
     |> emit_and_return_work_order()
   end
