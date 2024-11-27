@@ -17,13 +17,10 @@ defmodule LightningWeb.UserLive.Index do
       |> Permissions.can?(:access_admin_space, socket.assigns.current_user, {})
 
     if can_access_admin_space do
-      modal = Map.get(socket, :private, %{})[:delete_modal]
-
       socket =
         assign(socket,
           users: list_users(),
-          active_menu_item: :users,
-          user_deletion_modal: modal
+          active_menu_item: :users
         )
 
       {:ok, socket, layout: {LightningWeb.Layouts, :settings}}
@@ -46,9 +43,15 @@ defmodule LightningWeb.UserLive.Index do
   end
 
   defp apply_action(socket, :delete, %{"id" => id}) do
+    modal =
+      socket.router
+      |> Phoenix.Router.route_info("GET", ~p"/settings/users", nil)
+      |> Map.get(:delete_modal)
+
     socket
     |> assign(:page_title, "Users")
     |> assign(:delete_user, Accounts.get_user!(id))
+    |> assign(:user_deletion_modal, modal)
   end
 
   @impl true
