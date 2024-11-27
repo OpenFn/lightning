@@ -81,14 +81,13 @@ defmodule Lightning.WorkOrders do
     multi
     |> Multi.put(:workflow, opts[:workflow])
     |> get_or_insert_dataclip(opts[:dataclip])
-    |> Snapshot.include_latest_snapshot(opts[:workflow])
-    |> Multi.insert(:workorder, fn %{dataclip: dataclip, snapshot: snapshot} ->
+    |> Multi.insert(:workorder, fn %{dataclip: dataclip} ->
       {without_run?, opts} = Keyword.pop(opts, :without_run, false)
 
       attrs =
         opts
         |> Map.new()
-        |> Map.merge(%{dataclip: dataclip, snapshot: snapshot})
+        |> Map.merge(%{dataclip: dataclip})
         |> then(fn attrs ->
           if without_run? do
             attrs |> Map.put(:state, :rejected)
@@ -114,14 +113,12 @@ defmodule Lightning.WorkOrders do
     end)
     |> get_or_insert_dataclip(manual)
     |> Multi.put(:workflow, manual.workflow)
-    |> Snapshot.include_latest_snapshot(manual.workflow)
-    |> Multi.insert(:workorder, fn %{dataclip: dataclip, snapshot: snapshot} ->
+    |> Multi.insert(:workorder, fn %{dataclip: dataclip} ->
       build_for(manual.job, %{
         workflow: manual.workflow,
         dataclip: dataclip,
         created_by: manual.created_by,
-        priority: :immediate,
-        snapshot: snapshot
+        priority: :immediate
       })
     end)
     |> Runs.enqueue()
@@ -184,19 +181,11 @@ defmodule Lightning.WorkOrders do
     get_or_insert_dataclip(multi, Dataclip.new(params))
   end
 
-  defp try_put_snapshot(changeset, attrs) do
-    put_assoc(
-      changeset,
-      :snapshot,
-      Map.get(attrs, :snapshot) || Snapshot.get_current_for(attrs[:workflow])
-    )
-  end
-
   defp build(attrs) do
     %WorkOrder{}
     |> change()
     |> put_if_provided(:state, attrs)
-    |> try_put_snapshot(attrs)
+    |> put_assoc(:snapshot, Snapshot.get_current_for(attrs[:workflow]))
     |> put_assoc(:workflow, attrs[:workflow])
     |> put_assoc(:dataclip, attrs[:dataclip])
   end
