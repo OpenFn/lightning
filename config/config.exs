@@ -41,9 +41,10 @@ config :lightning, Lightning.Extensions.Routing,
   session_opts: [on_mount: LightningWeb.InitAssigns],
   routes: [
     {"/projects", LightningWeb.DashboardLive.Index, :index, []},
-    {"/profile", LightningWeb.ProfileLive.Edit, :edit, []},
+    {"/profile", LightningWeb.ProfileLive.Edit, :edit,
+     metadata: %{delete_modal: LightningWeb.Components.UserDeletionModal}},
     {"/settings/users", LightningWeb.UserLive.Index, :index,
-     private: %{delete_modal: LightningWeb.Components.UserDeletionModal}}
+     metadata: %{delete_modal: LightningWeb.Components.UserDeletionModal}}
   ]
 
 # TODO: don't use this value in production
