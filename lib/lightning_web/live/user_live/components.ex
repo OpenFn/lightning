@@ -98,7 +98,6 @@ defmodule LightningWeb.UserLive.Components do
         Cancel deletion
       </.link>
     </span>
-    |
     <span>
       <.link
         id={"delete-now-#{@user.id}"}
