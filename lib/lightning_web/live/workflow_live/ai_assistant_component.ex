@@ -6,7 +6,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   alias Phoenix.LiveView.AsyncResult
   alias Phoenix.LiveView.JS
 
-  @dialyzer {:nowarn_function, maybe_style_links: 1}
+  @dialyzer {:nowarn_function, apply_styles: 1}
 
   def mount(socket) do
     {:ok,
@@ -535,7 +535,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
             <div>
               <div>
-                <%= message.content |> maybe_style_links |> raw %>
+                <%= message.content |> apply_styles() |> raw() %>
               </div>
               <!-- TODO: restore this message and add a link to the docs site -->
               <%!-- <div
@@ -586,17 +586,48 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     """
   end
 
-  @spec maybe_style_links(binary()) :: String.t() | binary()
-  defp maybe_style_links(content) do
+  @spec apply_styles(binary()) :: String.t() | binary()
+  defp apply_styles(content) do
+    styles = %{
+      "a" => %{
+        class: "text-primary-400 hover:text-primary-600",
+        target: "_blank"
+      },
+      "h1" => %{
+        class: "text-2xl font-bold mb-6"
+      },
+      "h2" => %{
+        class: "text-xl font-semibold mb-4 mt-8"
+      },
+      "ol" => %{
+        class: "list-decimal pl-8 mb-6 space-y-2"
+      },
+      "ul" => %{
+        class: "list-disc pl-8 mb-6 space-y-2"
+      },
+      "li" => %{
+        class: "text-gray-800"
+      },
+      "p" => %{
+        class: "mb-4 text-gray-700"
+      }
+    }
+
     case Earmark.Parser.as_ast(content) do
       {:ok, ast, _} ->
         ast
         |> Earmark.Transform.map_ast(fn
-          {"a", _, _, _} = node ->
-            Earmark.AstTools.merge_atts_in_node(node,
-              class: "text-primary-400 hover:text-primary-600",
-              target: "_blank"
-            )
+          {element_type, _attrs, _content, _meta} = node ->
+            case Map.get(styles, element_type) do
+              nil ->
+                node
+
+              style_map ->
+                Earmark.AstTools.merge_atts_in_node(
+                  node,
+                  Map.to_list(style_map)
+                )
+            end
 
           other ->
             other
