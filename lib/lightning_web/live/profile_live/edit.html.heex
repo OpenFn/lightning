@@ -11,6 +11,7 @@
         page_title={@page_title}
         current_user={@current_user}
         live_action={@live_action}
+        user_deletion_modal={assigns[:user_deletion_modal]}
         delete_user_url={
           Routes.profile_edit_path(@socket, :delete, @current_user)
         }

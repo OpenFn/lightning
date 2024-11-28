@@ -43,8 +43,7 @@ config :lightning, Lightning.Extensions.Routing,
     {"/projects", LightningWeb.DashboardLive.Index, :index, []},
     {"/profile", LightningWeb.ProfileLive.Edit, :edit,
      metadata: %{delete_modal: LightningWeb.Components.UserDeletionModal}},
-    {"/settings/users", LightningWeb.UserLive.Index, :index,
-     metadata: %{delete_modal: LightningWeb.Components.UserDeletionModal}}
+    {"/settings/users", LightningWeb.UserLive.Index, :index, []}
   ]
 
 # TODO: don't use this value in production

@@ -27,7 +27,7 @@ defmodule LightningWeb.ProfileLive.Components do
   attr :live_action, :atom, required: true
   attr :current_user, Lightning.Accounts.User, required: true
 
-  attr :user_deletion_modal, :map,
+  attr :user_deletion_modal, :atom,
     default: LightningWeb.Components.UserDeletionModal
 
   attr :delete_user_url, :string, required: true

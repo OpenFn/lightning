@@ -43,15 +43,9 @@ defmodule LightningWeb.UserLive.Index do
   end
 
   defp apply_action(socket, :delete, %{"id" => id}) do
-    modal =
-      socket.router
-      |> Phoenix.Router.route_info("GET", ~p"/settings/users", nil)
-      |> Map.get(:delete_modal)
-
     socket
     |> assign(:page_title, "Users")
     |> assign(:delete_user, Accounts.get_user!(id))
-    |> assign(:user_deletion_modal, modal)
   end
 
   @impl true
