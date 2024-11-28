@@ -6,6 +6,7 @@ defmodule Lightning.AiAssistant do
   import Ecto.Query
 
   alias Ecto.Multi
+  alias Lightning.Accounts
   alias Lightning.Accounts.User
   alias Lightning.AiAssistant.ChatSession
   alias Lightning.ApolloClient
@@ -144,6 +145,16 @@ defmodule Lightning.AiAssistant do
 
   def available?(user) do
     String.match?(user.email, ~r/@openfn\.org/i)
+  end
+
+  @spec user_has_read_disclaimer?(User.t()) :: boolean()
+  def user_has_read_disclaimer?(user) do
+    Accounts.get_preference(user, "ai_assistant.disclaimer_read") || false
+  end
+
+  @spec mark_disclaimer_read(User.t()) :: {:ok, User.t()}
+  def mark_disclaimer_read(user) do
+    Accounts.update_user_preference(user, "ai_assistant.disclaimer_read", true)
   end
 
   @doc """

@@ -1,16 +1,20 @@
 defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   use LightningWeb, :live_component
 
+  alias Lightning.Accounts
   alias Lightning.AiAssistant
   alias Lightning.AiAssistant.Limiter
   alias Phoenix.LiveView.AsyncResult
   alias Phoenix.LiveView.JS
+
+  @disclaimer_user_preference "ai_assistant.disclaimer_read"
 
   def mount(socket) do
     {:ok,
      socket
      |> assign(%{
        ai_limit_result: nil,
+       has_read_disclaimer: false,
        pending_message: AsyncResult.ok(nil),
        process_message_on_show: false,
        all_sessions: AsyncResult.ok([]),
@@ -23,20 +27,23 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
      end)}
   end
 
-  def update(%{action: action} = assigns, socket) do
+  def update(%{action: action, current_user: current_user} = assigns, socket) do
     {:ok,
      socket
      |> assign(assigns)
+     |> assign(
+       has_read_disclaimer:
+         Accounts.get_preference(current_user, @disclaimer_user_preference)
+     )
      |> maybe_check_limit()
      |> apply_action(action, assigns)}
   end
 
-  defp apply_action(socket, :new, %{selected_job: job} = assigns) do
+  defp apply_action(socket, :new, %{selected_job: job}) do
     socket
     |> assign_async(:all_sessions, fn ->
       {:ok, %{all_sessions: AiAssistant.list_sessions_for_job(job)}}
     end)
-    |> assign(has_read_disclaimer: assigns.project_has_chat_sessions)
   end
 
   defp apply_action(socket, :show, %{
@@ -64,7 +71,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   def render(assigns) do
     ~H"""
     <div id={@id} class="h-full relative">
-      <%= if @action == :new and !@has_read_disclaimer do %>
+      <%= if !@has_read_disclaimer do %>
         <.render_onboarding myself={@myself} can_edit_workflow={@can_edit_workflow} />
       <% else %>
         <.render_session {assigns} />
@@ -98,6 +105,13 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   end
 
   def handle_event("mark_disclaimer_read", _params, socket) do
+    {:ok, _} =
+      Accounts.update_user_preference(
+        socket.assigns.current_user,
+        @disclaimer_user_preference,
+        true
+      )
+
     {:noreply, assign(socket, has_read_disclaimer: true)}
   end
 
@@ -196,9 +210,15 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   end
 
   defp render_onboarding(assigns) do
+    assigns = assign(assigns, ai_quote: ai_quotes() |> Enum.random())
+
     ~H"""
     <div class="h-full flex flex-col">
       <div class="flex-1 flex flex-col items-center justify-center relative">
+        <blockquote class="text-gray-700 font-medium mb-6 w-2/3 text-center border-l-4 border-blue-500">
+          <p class="italic"><%= @ai_quote.quote %></p>
+          <p class="text-sm font-semibold">- <%= @ai_quote.author %></p>
+        </blockquote>
         <p class="text-gray-700 font-medium mb-4 w-1/2 text-center">
           The AI Assistant is an experimental new feature to help you write job code.
           <br />
@@ -220,6 +240,95 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
       <.render_ai_footer />
     </div>
     """
+  end
+
+  defp ai_quotes do
+    [
+      %{
+        quote: "What hath God wrought?",
+        author: "Samuel Morse",
+        source_attribute: "Samuel Morse in the first telegraph message",
+        source_link: "https://www.history.com",
+        enabled: true
+      },
+      %{
+        quote: "All models are wrong, but some are useful",
+        author: "George Box",
+        source_attribute: "Wikipedia",
+        source_link: "https://en.wikipedia.org/wiki/All_models_are_wrong",
+        enabled: true
+      },
+      %{
+        quote: "AI is neither artificial nor intelligent",
+        author: "Kate Crawford",
+        source_link: "http://rfkhuamnrights.org",
+        enabled: true
+      },
+      %{
+        quote: "With big data comes big responsibilities",
+        author: "Kate Crawford",
+        source_link: "http://technologyreview.com",
+        enabled: true
+      },
+      %{
+        quote: "AI is holding the internet hostage",
+        author: "Bryan Walsh",
+        source_link:
+          "https://www.vox.com/technology/352849/openai-chatgpt-google-meta-artificial-intelligence-vox-media-chatbots",
+        enabled: true
+      },
+      %{
+        quote: "Remember the human",
+        author: "OpenFn Responsible AI Policy",
+        source_link: "https://www.openfn.org/ai",
+        enabled: true
+      },
+      %{
+        quote: "Be skeptical, but don’t be cynical",
+        author: "OpenFn Responsible AI Policy",
+        source_link: "https://www.openfn.org/ai",
+        enabled: true
+      },
+      %{
+        quote:
+          "Out of the crooked timber of humanity no straight thing was ever made",
+        author: "Emmanuel Kant"
+      },
+      %{
+        quote:
+          "The more helpful our phones get, the harder it is to be ourselves",
+        author: "Brain Chrstian"
+      },
+      %{
+        quote:
+          "If a machine can think, it might think more intelligently than we do, and then where should we be?",
+        author: "Alan Turing"
+      },
+      %{
+        quote:
+          "If you make an algorithm, and let it optimise for a certain value, then it won't care what you really want",
+        author: "Tom Chivers"
+      },
+      %{
+        quote:
+          "By far the greatest danger of Artificial Intelligence is that people conclude too early that they understand it",
+        author: "Eliezer Yudkowsky"
+      },
+      %{
+        quote:
+          "The AI does not hate you, nor does it love you, but you are made out of atoms which it can use for something else",
+        author: "Eliezer Yudkowsky"
+      },
+      %{
+        quote:
+          "World domination is such an ugly phrase. I prefer to call it world optimisation",
+        author: "Eliezer Yudkowsky"
+      },
+      %{
+        quote: "AI is not ultimately responsible for its output: we are",
+        author: "OpenFn Responsible AI Policy"
+      }
+    ]
   end
 
   defp render_ai_footer(assigns) do

@@ -191,6 +191,8 @@ defmodule Lightning.Config.Bootstrap do
       {"0 10 1 * *", Lightning.DigestEmailWorker,
        args: %{"type" => "monthly_project_digest"}},
       {"1 2 * * *", Lightning.Projects, args: %{"type" => "data_retention"}},
+      {"8 2 * * *", Lightning.Accounts,
+       args: %{"type" => "reset_user_preferences"}},
       {"*/10 * * * *", Lightning.KafkaTriggers.DuplicateTrackingCleanupWorker}
     ]
 
