@@ -2519,6 +2519,86 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert Floki.attribute(working_link, "target") == ["_blank"]
     end
+
+    @tag email: "user@openfn.org"
+    test "elements without defined styles remain unchanged", %{
+      conn: conn,
+      project: project,
+      user: user,
+      workflow: %{jobs: [job_1 | _]} = workflow
+    } do
+      apollo_endpoint = "http://localhost:4001"
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> apollo_endpoint
+        :openai_api_key -> "openai_api_key"
+      end)
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        fn
+          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
+            {:ok, %Tesla.Env{status: 200}}
+
+          %{method: :post}, _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{
+                 "history" => [
+                   %{
+                     "role" => "assistant",
+                     "content" => """
+                     <weirdo>Some code</weirdo>
+                     <pierdo>Preformatted text</pierdo>
+                     [A link](https://weirdopierdo.com)
+                     """
+                   }
+                 ]
+               }
+             }}
+        end
+      )
+
+      insert(:chat_session, user: user, job: job_1)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      view
+      |> form("#ai-assistant-form")
+      |> render_submit(%{content: "Hello"})
+
+      html = render_async(view) |> Floki.parse_document!()
+
+      code = Floki.find(html, "weirdo")
+      pre = Floki.find(html, "pierdo")
+
+      assert code |> Floki.attribute("class") == []
+      assert pre |> Floki.attribute("class") == []
+
+      links = Floki.find(html, "a")
+
+      link =
+        links
+        |> Enum.find(
+          &(Floki.attribute(&1, "href") == [
+              "https://weirdopierdo.com"
+            ])
+        )
+
+      assert link != nil
+
+      assert Floki.attribute(link, "class") == [
+               "text-primary-400 hover:text-primary-600"
+             ]
+
+      assert Floki.attribute(link, "target") == ["_blank"]
+    end
   end
 
   describe "Allow low priority access users to retry steps and create workorders" do
