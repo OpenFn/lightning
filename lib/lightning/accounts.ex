@@ -449,11 +449,16 @@ defmodule Lightning.Accounts do
   end
 
   def cancel_scheduled_deletion(user_id) do
-    get_user!(user_id)
-    |> update_user_details(%{
-      scheduled_deletion: nil,
-      disabled: false
-    })
+    user_id
+    |> get_user!()
+    |> then(fn user ->
+      User.scheduled_deletion_changeset(user, %{
+        scheduled_deletion: nil,
+        disabled: false,
+        scheduled_deletion_email: user.email
+      })
+    end)
+    |> Repo.update()
   end
 
   @doc """
@@ -672,9 +677,9 @@ defmodule Lightning.Accounts do
       end
 
     User.scheduled_deletion_changeset(user, %{
-      "scheduled_deletion" => date,
-      "disabled" => true,
-      "scheduled_deletion_email" => email
+      scheduled_deletion: date,
+      disabled: true,
+      scheduled_deletion_email: email
     })
     |> Repo.update()
     |> case do

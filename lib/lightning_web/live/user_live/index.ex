@@ -54,12 +54,18 @@ defmodule LightningWeb.UserLive.Index do
         %{"id" => user_id},
         socket
       ) do
-    Accounts.cancel_scheduled_deletion(user_id)
+    case Accounts.cancel_scheduled_deletion(user_id) do
+      {:ok, _change} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "User deletion canceled")
+         |> push_navigate(to: ~p"/settings/users")}
 
-    {:noreply,
-     socket
-     |> put_flash(:info, "User deletion canceled")
-     |> push_patch(to: ~p"/settings/users")}
+      {:error, _reason} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Cancel user deletion failed")}
+    end
   end
 
   defp list_users do
