@@ -17,7 +17,9 @@ and this project adheres to
 
 ### Added
 
-- Enable / Disable Workflows UI
+- Auditing when enabling/disabling a workflow
+  [#2697](https://github.com/OpenFn/lightning/issues/2697)
+- Ability to enable/disable a workflow from the workflow editor
   [#2698](https://github.com/OpenFn/lightning/issues/2698)
 
 ### Changed
