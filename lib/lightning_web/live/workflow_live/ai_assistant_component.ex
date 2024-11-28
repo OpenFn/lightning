@@ -6,7 +6,17 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   alias Phoenix.LiveView.AsyncResult
   alias Phoenix.LiveView.JS
 
-  @dialyzer {:nowarn_function, apply_styles: 1}
+  @dialyzer {:nowarn_function, process_ast: 2}
+
+  @assistant_messages_attributes %{
+    "a" => %{class: "text-primary-400 hover:text-primary-600", target: "_blank"},
+    "h1" => %{class: "text-2xl font-bold mb-6"},
+    "h2" => %{class: "text-xl font-semibold mb-4 mt-8"},
+    "ol" => %{class: "list-decimal pl-8 space-y-1"},
+    "ul" => %{class: "list-disc pl-8 space-y-1"},
+    "li" => %{class: "text-gray-800"},
+    "p" => %{class: "mt-1 mb-2 text-gray-800"}
+  }
 
   def mount(socket) do
     {:ok,
@@ -534,9 +544,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             </div>
 
             <div>
-              <div>
-                <%= message.content |> apply_styles() |> raw() %>
-              </div>
+              <.formatted_content content={message.content} />
               <!-- TODO: restore this message and add a link to the docs site -->
               <%!-- <div
                 class="flex mt-1 text-xs text-gray-400 select-none"
@@ -586,57 +594,44 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     """
   end
 
-  @spec apply_styles(binary()) :: String.t() | binary()
-  defp apply_styles(content) do
-    styles = %{
-      "a" => %{
-        class: "text-primary-400 hover:text-primary-600",
-        target: "_blank"
-      },
-      "h1" => %{
-        class: "text-2xl font-bold mb-6"
-      },
-      "h2" => %{
-        class: "text-xl font-semibold mb-4 mt-8"
-      },
-      "ol" => %{
-        class: "list-decimal pl-8 mb-6 space-y-2"
-      },
-      "ul" => %{
-        class: "list-disc pl-8 mb-6 space-y-2"
-      },
-      "li" => %{
-        class: "text-gray-800"
-      },
-      "p" => %{
-        class: "mb-4 text-gray-700"
-      }
-    }
+  attr :content, :string, required: true
+  attr :attributes, :map, default: %{}
 
-    case Earmark.Parser.as_ast(content) do
-      {:ok, ast, _} ->
-        ast
-        |> Earmark.Transform.map_ast(fn
-          {element_type, _attrs, _content, _meta} = node ->
-            case Map.get(styles, element_type) do
-              nil ->
-                node
+  def formatted_content(assigns) do
+    merged_attributes =
+      Map.merge(@assistant_messages_attributes, assigns.attributes)
 
-              style_map ->
-                Earmark.AstTools.merge_atts_in_node(
-                  node,
-                  Map.to_list(style_map)
-                )
-            end
+    assigns =
+      case Earmark.Parser.as_ast(assigns.content) do
+        {:ok, ast, _} ->
+          process_ast(ast, merged_attributes)
 
-          other ->
-            other
-        end)
-        |> Earmark.Transform.transform()
+        _ ->
+          assigns.content
+      end
+      |> then(&assign(assigns, :content, &1))
 
-      _ ->
-        content
-    end
+    ~H"""
+    <article><%= raw(@content) %></article>
+    """
+  end
+
+  defp process_ast(ast, attributes) do
+    ast
+    |> Earmark.Transform.map_ast(fn
+      {element_type, _attrs, _content, _meta} = node ->
+        case Map.get(attributes, element_type) do
+          nil ->
+            node
+
+          attribute_map ->
+            Earmark.AstTools.merge_atts_in_node(node, Map.to_list(attribute_map))
+        end
+
+      other ->
+        other
+    end)
+    |> Earmark.Transform.transform()
   end
 
   attr :user, Lightning.Accounts.User, required: true

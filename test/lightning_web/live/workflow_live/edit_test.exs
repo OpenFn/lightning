@@ -1,4 +1,5 @@
 defmodule LightningWeb.WorkflowLive.EditTest do
+  alias LightningWeb.WorkflowLive.AiAssistantComponent
   use LightningWeb.ConnCase, async: true
 
   import Ecto.Query
@@ -2358,68 +2359,26 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert has_element?(view, "#ai-assistant-error", error_message)
     end
 
-    @tag email: "user@openfn.org"
-    test "assistant messages have properly styled links", %{
-      conn: conn,
-      project: project,
-      user: user,
-      workflow: %{jobs: [job_1 | _]} = workflow
-    } do
-      apollo_endpoint = "http://localhost:4001"
+    test "renders assistant messages with properly styled links" do
+      content = """
+      Here are some links:
+      - [Apollo Repo](https://github.com/OpenFn/apollo)
+      - Plain text
+      - [Lightning Repo](https://github.com/OpenFn/lightning)
+      """
 
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
-      end)
-
-      Mox.stub(
-        Lightning.Tesla.Mock,
-        :call,
-        fn
-          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-            {:ok, %Tesla.Env{status: 200}}
-
-          %{method: :post}, _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{
-                 "history" => [
-                   %{"role" => "user", "content" => "Hello"},
-                   %{
-                     "role" => "assistant",
-                     "content" => """
-                     Here are some links:
-                     - [Apollo Repo](https://github.com/OpenFn/apollo)
-                     - Plain text
-                     - [Lightning Repo](https://github.com/OpenFn/lightning)
-                     """
-                   }
-                 ]
-               }
-             }}
-        end
-      )
-
-      insert(:chat_session, user: user, job: job_1)
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+      html =
+        render_component(&AiAssistantComponent.formatted_content/1,
+          content: content
         )
 
-      view
-      |> form("#ai-assistant-form")
-      |> render_submit(%{content: "Hello"})
+      parsed_html = Floki.parse_document!(html)
 
-      html = render_async(view) |> Floki.parse_document!()
-
-      links = Floki.find(html, "a")
+      links = Floki.find(parsed_html, "a")
 
       openfn_link =
-        links
-        |> Enum.find(
+        Enum.find(
+          links,
           &(Floki.attribute(&1, "href") == ["https://github.com/OpenFn/apollo"])
         )
 
@@ -2432,8 +2391,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert Floki.attribute(openfn_link, "target") == ["_blank"]
 
       docs_link =
-        links
-        |> Enum.find(
+        Enum.find(
+          links,
           &(Floki.attribute(&1, "href") == [
               "https://github.com/OpenFn/lightning"
             ])
@@ -2447,68 +2406,30 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert Floki.attribute(docs_link, "target") == ["_blank"]
 
-      assert Floki.find(html, "li")
-             |> Enum.any?(&(Floki.text(&1) == "\nPlain text  "))
+      list_items = Floki.find(parsed_html, "li")
+
+      assert Enum.any?(list_items, fn li ->
+               Floki.text(li) |> String.trim() == "Plain text"
+             end)
     end
 
-    @tag email: "user@openfn.org"
-    test "assistant messages handle content with invalid markdown links", %{
-      conn: conn,
-      project: project,
-      user: user,
-      workflow: %{jobs: [job_1 | _]} = workflow
-    } do
-      apollo_endpoint = "http://localhost:4001"
+    test "handles content with invalid markdown links" do
+      content = """
+      Broken [link(test.com
+      [Another](working.com)
+      """
 
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
-      end)
-
-      Mox.stub(
-        Lightning.Tesla.Mock,
-        :call,
-        fn
-          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-            {:ok, %Tesla.Env{status: 200}}
-
-          %{method: :post}, _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{
-                 "history" => [
-                   %{
-                     "role" => "assistant",
-                     "content" => """
-                     Broken [link(test.com
-                     [Another](working.com)
-                     """
-                   }
-                 ]
-               }
-             }}
-        end
-      )
-
-      insert(:chat_session, user: user, job: job_1)
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+      html =
+        render_component(&AiAssistantComponent.formatted_content/1,
+          content: content
         )
 
-      view
-      |> form("#ai-assistant-form")
-      |> render_submit(%{content: "Hello"})
+      parsed_html = Floki.parse_document!(html)
 
-      html = render_async(view) |> Floki.parse_document!()
-
-      assert html |> Floki.text() =~ "Broken [link(test.com"
+      assert Floki.text(parsed_html) =~ "Broken [link(test.com"
 
       working_link =
-        Floki.find(html, "a")
+        Floki.find(parsed_html, "a")
         |> Enum.find(&(Floki.attribute(&1, "href") == ["working.com"]))
 
       assert working_link != nil
@@ -2520,75 +2441,30 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert Floki.attribute(working_link, "target") == ["_blank"]
     end
 
-    @tag email: "user@openfn.org"
-    test "elements without defined styles remain unchanged", %{
-      conn: conn,
-      project: project,
-      user: user,
-      workflow: %{jobs: [job_1 | _]} = workflow
-    } do
-      apollo_endpoint = "http://localhost:4001"
+    test "elements without defined styles remain unchanged" do
+      content = """
+      <weirdo>Some code</weirdo>
+      <pierdo>Preformatted text</pierdo>
+      [A link](https://weirdopierdo.com)
+      """
 
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
-      end)
-
-      Mox.stub(
-        Lightning.Tesla.Mock,
-        :call,
-        fn
-          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-            {:ok, %Tesla.Env{status: 200}}
-
-          %{method: :post}, _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{
-                 "history" => [
-                   %{
-                     "role" => "assistant",
-                     "content" => """
-                     <weirdo>Some code</weirdo>
-                     <pierdo>Preformatted text</pierdo>
-                     [A link](https://weirdopierdo.com)
-                     """
-                   }
-                 ]
-               }
-             }}
-        end
-      )
-
-      insert(:chat_session, user: user, job: job_1)
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+      html =
+        render_component(&AiAssistantComponent.formatted_content/1,
+          content: content
         )
 
-      view
-      |> form("#ai-assistant-form")
-      |> render_submit(%{content: "Hello"})
+      parsed_html = Floki.parse_document!(html)
 
-      html = render_async(view) |> Floki.parse_document!()
+      code = Floki.find(parsed_html, "weirdo")
+      pre = Floki.find(parsed_html, "pierdo")
 
-      code = Floki.find(html, "weirdo")
-      pre = Floki.find(html, "pierdo")
-
-      assert code |> Floki.attribute("class") == []
-      assert pre |> Floki.attribute("class") == []
-
-      links = Floki.find(html, "a")
+      assert Floki.attribute(code, "class") == []
+      assert Floki.attribute(pre, "class") == []
 
       link =
-        links
+        Floki.find(parsed_html, "a")
         |> Enum.find(
-          &(Floki.attribute(&1, "href") == [
-              "https://weirdopierdo.com"
-            ])
+          &(Floki.attribute(&1, "href") == ["https://weirdopierdo.com"])
         )
 
       assert link != nil
@@ -2600,67 +2476,50 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert Floki.attribute(link, "target") == ["_blank"]
     end
 
-    @tag email: "user@openfn.org"
-    test "handles content that cannot be parsed as AST", %{
-      conn: conn,
-      project: project,
-      user: user,
-      workflow: %{jobs: [job_1 | _]} = workflow
-    } do
-      apollo_endpoint = "http://localhost:4001"
+    test "handles content that cannot be parsed as AST" do
+      content = """
+      <div>Unclosed div
+      <span>Unclosed span
+      Some text
+      """
 
-      Mox.stub(Lightning.MockConfig, :apollo, fn
-        :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
-      end)
-
-      # Mock response with content that will cause AST parsing to fail
-      # Using unclosed HTML tags which Earmark can't parse into AST
-      Mox.stub(
-        Lightning.Tesla.Mock,
-        :call,
-        fn
-          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
-            {:ok, %Tesla.Env{status: 200}}
-
-          %{method: :post}, _opts ->
-            {:ok,
-             %Tesla.Env{
-               status: 200,
-               body: %{
-                 "history" => [
-                   %{
-                     "role" => "assistant",
-                     "content" => """
-                     <div>Unclosed div
-                     <span>Unclosed span
-                     Some text
-                     """
-                   }
-                 ]
-               }
-             }}
-        end
-      )
-
-      insert(:chat_session, user: user, job: job_1)
-
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+      html =
+        render_component(&AiAssistantComponent.formatted_content/1,
+          content: content
         )
 
-      view
-      |> form("#ai-assistant-form")
-      |> render_submit(%{content: "Hello"})
+      parsed_html = Floki.parse_document!(html)
 
-      html = render_async(view) |> Floki.parse_document!()
+      text = Floki.text(parsed_html)
+      assert text =~ "Unclosed div"
+      assert text =~ "Unclosed span"
+      assert text =~ "Some text"
+    end
 
-      # The content should be returned as-is without styling
-      assert html |> Floki.text() =~ "Unclosed div"
-      assert html |> Floki.text() =~ "Unclosed span"
-      assert html |> Floki.text() =~ "Some text"
+    test "applies styles to elements not defined in the default styles" do
+      content = """
+      <custom-tag>Custom styled content</custom-tag>
+      """
+
+      custom_attributes = %{
+        "custom-tag" => %{class: "custom-class text-green-700"}
+      }
+
+      html =
+        render_component(&AiAssistantComponent.formatted_content/1, %{
+          content: content,
+          attributes: custom_attributes
+        })
+
+      parsed_html = Floki.parse_document!(html)
+
+      custom_tag = Floki.find(parsed_html, "custom-tag") |> hd()
+
+      assert custom_tag != nil
+
+      assert Floki.attribute(custom_tag, "class") == [
+               "custom-class text-green-700"
+             ]
     end
   end
 
