@@ -5,6 +5,8 @@ defmodule Lightning.Projects.ProvisionerTest do
   alias Lightning.Projects.Provisioner
   alias Lightning.ProjectsFixtures
   alias Lightning.Workflows.Snapshot
+
+  import Ecto.Query
   import Lightning.Factories
   import LightningWeb.CoreComponents, only: [translate_error: 1]
 
@@ -254,12 +256,11 @@ defmodule Lightning.Projects.ProvisionerTest do
         body_with_credentials
       )
 
-      %{id: snapshot_id} = Snapshot |> Repo.one!()
+      %{id: snapshot_id} = Repo.one!(Snapshot)
 
-      audit = Audit |> Repo.one!()
+      audit = Repo.one!(from a in Audit, where: a.event == "snapshot_created")
 
       assert %{
-               event: "snapshot_created",
                item_id: ^workflow_id,
                actor_id: ^user_id,
                changes: %{
@@ -329,10 +330,9 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       %{id: snapshot_id} = Snapshot |> Repo.one!()
 
-      audit = Audit |> Repo.one!()
+      audit = Repo.one!(from a in Audit, where: a.event == "snapshot_created")
 
       assert %{
-               event: "snapshot_created",
                item_id: ^workflow_id,
                actor_id: ^user_id,
                changes: %{
