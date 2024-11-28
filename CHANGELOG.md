@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Add styles to AI chat messages
+  [#2484](https://github.com/OpenFn/lightning/issues/2484)
+
 - Enable / Disable Workflows UI
   [#2698](https://github.com/OpenFn/lightning/issues/2698)
 
