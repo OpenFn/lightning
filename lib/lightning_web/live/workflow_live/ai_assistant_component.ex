@@ -600,16 +600,16 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         class: "text-xl font-semibold mb-4 mt-8"
       },
       "ol" => %{
-        class: "list-decimal pl-8 mb-6 space-y-2"
+        class: "list-decimal pl-8 space-y-1"
       },
       "ul" => %{
-        class: "list-disc pl-8 mb-6 space-y-2"
+        class: "list-disc pl-8 space-y-1"
       },
       "li" => %{
         class: "text-gray-800"
       },
       "p" => %{
-        class: "mb-4 text-gray-700"
+        class: "mt-1 mb-2 text-gray-800"
       }
     }
 
