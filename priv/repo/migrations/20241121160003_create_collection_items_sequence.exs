@@ -11,6 +11,8 @@ defmodule Lightning.Repo.Migrations.CollectionItemsSequence do
         null: false,
         default: fragment("nextval('collection_items_id_seq'::regclass)")
     end
+
+    execute("SELECT setval('collection_items_id_seq'::regclass, MAX(id)) FROM collection_items")
   end
 
   def down do
