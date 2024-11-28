@@ -205,7 +205,11 @@ defmodule LightningWeb.UserLiveTest do
 
       assert index_live
              |> element("#user-#{user.id} a", "Cancel deletion")
-             |> render_click() =~ "User deletion canceled"
+             |> render_click()
+
+      flash = assert_redirected(index_live, ~p"/settings/users")
+
+      assert flash["info"] == "User deletion canceled"
     end
 
     test "allows a superuser to perform delete now action on users", %{
