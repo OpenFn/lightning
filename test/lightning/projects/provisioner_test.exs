@@ -311,6 +311,38 @@ defmodule Lightning.Projects.ProvisionerTest do
       refute user2.id in project_user_ids
     end
 
+    test "audit the creation of a snapshot", %{
+      project: %{id: project_id} = project,
+      user: %{id: user_id} = user
+    } do
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, %{project_id: ^project_id} ->
+          :ok
+        end
+      )
+
+      %{body: body, workflow_id: workflow_id} = valid_document(project.id)
+
+      {:ok, _project} = Provisioner.import_document(project, user, body)
+
+      %{id: snapshot_id} = Snapshot |> Repo.one!()
+
+      audit = Audit |> Repo.one!()
+
+      assert %{
+               event: "snapshot_created",
+               item_id: ^workflow_id,
+               actor_id: ^user_id,
+               changes: %{
+                 after: %{
+                   "snapshot_id" => ^snapshot_id
+                 }
+               }
+             } = audit
+    end
+
     test "changing, adding records", %{
       project: %{id: project_id} = project,
       user: user
