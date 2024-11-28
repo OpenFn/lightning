@@ -2599,6 +2599,69 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert Floki.attribute(link, "target") == ["_blank"]
     end
+
+    @tag email: "user@openfn.org"
+    test "handles content that cannot be parsed as AST", %{
+      conn: conn,
+      project: project,
+      user: user,
+      workflow: %{jobs: [job_1 | _]} = workflow
+    } do
+      apollo_endpoint = "http://localhost:4001"
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> apollo_endpoint
+        :openai_api_key -> "openai_api_key"
+      end)
+
+      # Mock response with content that will cause AST parsing to fail
+      # Using unclosed HTML tags which Earmark can't parse into AST
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        fn
+          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
+            {:ok, %Tesla.Env{status: 200}}
+
+          %{method: :post}, _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{
+                 "history" => [
+                   %{
+                     "role" => "assistant",
+                     "content" => """
+                     <div>Unclosed div
+                     <span>Unclosed span
+                     Some text
+                     """
+                   }
+                 ]
+               }
+             }}
+        end
+      )
+
+      insert(:chat_session, user: user, job: job_1)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      view
+      |> form("#ai-assistant-form")
+      |> render_submit(%{content: "Hello"})
+
+      html = render_async(view) |> Floki.parse_document!()
+
+      # The content should be returned as-is without styling
+      assert html |> Floki.text() =~ "Unclosed div"
+      assert html |> Floki.text() =~ "Unclosed span"
+      assert html |> Floki.text() =~ "Some text"
+    end
   end
 
   describe "Allow low priority access users to retry steps and create workorders" do
