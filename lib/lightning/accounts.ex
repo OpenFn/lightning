@@ -451,13 +451,10 @@ defmodule Lightning.Accounts do
   def cancel_scheduled_deletion(user_id) do
     user_id
     |> get_user!()
-    |> then(fn user ->
-      User.scheduled_deletion_changeset(user, %{
-        scheduled_deletion: nil,
-        disabled: false,
-        scheduled_deletion_email: user.email
-      })
-    end)
+    |> User.details_changeset(%{
+      "scheduled_deletion" => nil,
+      "disabled" => false
+    })
     |> Repo.update()
   end
 
@@ -676,10 +673,11 @@ defmodule Lightning.Accounts do
         integer -> DateTime.utc_now() |> Timex.shift(days: integer)
       end
 
-    User.scheduled_deletion_changeset(user, %{
-      scheduled_deletion: date,
-      disabled: true,
-      scheduled_deletion_email: email
+    user
+    |> User.scheduled_deletion_changeset(%{
+      "scheduled_deletion" => date,
+      "disabled" => true,
+      "scheduled_deletion_email" => email
     })
     |> Repo.update()
     |> case do

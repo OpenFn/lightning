@@ -67,7 +67,7 @@ defmodule LightningWeb.UserLive.Components do
       *Note that a <code>superuser</code> can access <em>everything</em> in a
       Lightning installation across all projects, including this page. Most
       day-to-day user management (adding and removing collaborators) will be
-      done by project "admins" via the forthcoming project settings page.
+      done by project "admins" via the project settings page.
     </.p>
     """
   end
@@ -75,17 +75,49 @@ defmodule LightningWeb.UserLive.Components do
   attr :delete_url, :string, required: true
   attr :user, :string, required: true
 
-  defp delete_action(%{user: %{scheduled_deletion: nil}} = assigns) do
-    ~H"""
-    <span>
-      <.link id={"delete-#{@user.id}"} class="table-action" navigate={@delete_url}>
+  defp delete_action(%{user: %{role: :superuser}} = assigns) do
+    if assigns.user.scheduled_deletion do
+      ~H"""
+      <.cancel_deletion user={@user} /> |
+      <span id={"delete-now-#{@user.id}"} class="table-action-disabled">
+        Delete now
+      </span>
+      """
+    else
+      ~H"""
+      <span id={"delete-#{@user.id}"} class="table-action-disabled">
         Delete
-      </.link>
-    </span>
-    """
+      </span>
+      """
+    end
   end
 
-  defp delete_action(assigns) do
+  defp delete_action(%{user: %{role: :user}} = assigns) do
+    if assigns.user.scheduled_deletion do
+      ~H"""
+      <.cancel_deletion user={@user} /> |
+      <span>
+        <.link
+          id={"delete-now-#{@user.id}"}
+          class="table-action"
+          navigate={@delete_url}
+        >
+          Delete now
+        </.link>
+      </span>
+      """
+    else
+      ~H"""
+      <span>
+        <.link id={"delete-#{@user.id}"} class="table-action" navigate={@delete_url}>
+          Delete
+        </.link>
+      </span>
+      """
+    end
+  end
+
+  defp cancel_deletion(assigns) do
     ~H"""
     <span>
       <.link
@@ -96,15 +128,6 @@ defmodule LightningWeb.UserLive.Components do
         class="table-action"
       >
         Cancel deletion
-      </.link>
-    </span>
-    <span>
-      <.link
-        id={"delete-now-#{@user.id}"}
-        class="table-action"
-        navigate={@delete_url}
-      >
-        Delete now
       </.link>
     </span>
     """

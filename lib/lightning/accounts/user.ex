@@ -269,7 +269,7 @@ defmodule Lightning.Accounts.User do
     user
     |> cast(attrs, [:scheduled_deletion, :disabled])
     |> validate_role_for_deletion()
-    |> validate_email_for_deletion(attrs[:scheduled_deletion_email])
+    |> validate_email_for_deletion(attrs["scheduled_deletion_email"])
   end
 
   @doc """
