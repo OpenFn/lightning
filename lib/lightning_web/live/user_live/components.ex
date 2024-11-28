@@ -16,7 +16,7 @@ defmodule LightningWeb.UserLive.Components do
     ~H"""
     <.live_component
       :if={@live_action == :delete}
-      module={assigns[:user_deletion_modal]}
+      module={@user_deletion_modal}
       id={@delete_user.id}
       user={@delete_user}
       is_superuser_menu={true}
