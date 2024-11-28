@@ -218,34 +218,32 @@ defmodule Lightning.Workflows do
   end
 
   defp maybe_audit_workflow_state_changes(multi, changeset) do
-    with triggers when not is_nil(triggers) <- get_change(changeset, :triggers),
-         trigger when not is_nil(trigger) <- find_changed(triggers, :enabled),
-         value <- get_change(trigger, :enabled) do
-      Ecto.Multi.insert(
-        multi,
-        :audit_workflow_state_change,
-        fn %{workflow: %{id: workflow_id}, actor: actor} ->
-          Audit.workflow_state_changed(
-            if(value, do: "enabled", else: "disabled"),
-            workflow_id,
-            actor,
-            %{before: %{enabled: !value}, after: %{enabled: value}}
-          )
-        end
-      )
-    else
-      _ -> multi
-    end
-  end
-
-  defp find_changed(changesets, changed_key) do
-    Enum.find(changesets, fn changeset ->
-      Ecto.Changeset.changed?(changeset, changed_key)
+    changeset
+    |> Ecto.Changeset.get_change(:triggers, [])
+    |> Enum.reduce_while(nil, fn trigger_changeset, _previous ->
+      case Ecto.Changeset.get_change(trigger_changeset, :enabled) do
+        nil -> {:cont, nil}
+        changed -> {:halt, {trigger_changeset.data.enabled, changed}}
+      end
     end)
-  end
+    |> case do
+      nil ->
+        multi
 
-  defp get_change(changeset, change_key) do
-    Ecto.Changeset.get_change(changeset, change_key)
+      {from, to} ->
+        Ecto.Multi.insert(
+          multi,
+          :audit_workflow_state_change,
+          fn %{workflow: %{id: workflow_id}, actor: actor} ->
+            Audit.workflow_state_changed(
+              if(to, do: "enabled", else: "disabled"),
+              workflow_id,
+              actor,
+              %{before: %{enabled: from}, after: %{enabled: to}}
+            )
+          end
+        )
+    end
   end
 
   # Helper to preload associations only if they are present in the attributes
