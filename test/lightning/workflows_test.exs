@@ -125,6 +125,75 @@ defmodule Lightning.WorkflowsTest do
              } = Repo.one(Audit)
     end
 
+    test "save_workflow/1 audits when a trigger is enabled" do
+      %{id: user_id} = user = insert(:user)
+      workflow = create_workflow()
+
+      {:ok, _workflow} =
+        workflow
+        |> Workflows.update_triggers_enabled_state(true)
+        |> Workflows.save_workflow(user)
+
+      assert_trigger_state_audit(workflow.id, user_id, false, true, "enabled")
+    end
+
+    test "save_workflow/1 audits when a trigger is disabled" do
+      %{id: user_id} = user = insert(:user)
+      workflow = create_workflow(enabled: true)
+
+      {:ok, _workflow} =
+        workflow
+        |> Workflows.update_triggers_enabled_state(false)
+        |> Workflows.save_workflow(user)
+
+      assert_trigger_state_audit(workflow.id, user_id, true, false, "disabled")
+    end
+
+    test "save_workflow/1 does not audit when trigger enabled state doesn't change" do
+      user = insert(:user)
+      workflow = create_workflow(enabled: true)
+
+      {:ok, _workflow} =
+        workflow
+        |> Workflows.update_triggers_enabled_state(true)
+        |> Workflows.save_workflow(user)
+
+      assert Repo.aggregate(Audit, :count) == 0
+    end
+
+    test "save_workflow/1 does not audit when updating other workflow attributes" do
+      user = insert(:user)
+      workflow = create_workflow(enabled: true)
+
+      {:ok, _workflow} =
+        workflow
+        |> Workflows.change_workflow(%{name: "updated name"})
+        |> Workflows.save_workflow(user)
+
+      assert Repo.aggregate(
+               from(a in Audit, where: a.event in ["enabled", "disabled"]),
+               :count
+             ) == 0
+    end
+
+    test "save_workflow/1 with simultaneous trigger and name changes only audits trigger" do
+      %{id: user_id} = user = insert(:user)
+      workflow = create_workflow(enabled: true)
+
+      {:ok, _workflow} =
+        workflow
+        |> Workflows.change_workflow(%{name: "new name"})
+        |> Workflows.update_triggers_enabled_state(false)
+        |> Workflows.save_workflow(user)
+
+      assert_trigger_state_audit(workflow.id, user_id, true, false, "disabled")
+
+      assert Repo.aggregate(
+               from(a in Audit, where: a.event in ["enabled", "disabled"]),
+               :count
+             ) == 1
+    end
+
     test "save_workflow/1 publishes event for updated Kafka triggers" do
       kafka_configuration = build(:triggers_kafka_configuration)
 
@@ -675,5 +744,39 @@ defmodule Lightning.WorkflowsTest do
       assert_received %KafkaTriggerUpdated{trigger_id: ^kafka_trigger_2_id}
       assert_received %KafkaTriggerUpdated{trigger_id: ^kafka_trigger_1_id}
     end
+  end
+
+  defp assert_trigger_state_audit(
+         workflow_id,
+         user_id,
+         before_state,
+         after_state,
+         event
+       ) do
+    audit =
+      from(a in Audit, where: a.event in ["enabled", "disabled"]) |> Repo.one!()
+
+    assert %{
+             event: ^event,
+             item_type: "workflow",
+             item_id: ^workflow_id,
+             actor_id: ^user_id,
+             changes: %{
+               before: %{"enabled" => ^before_state},
+               after: %{"enabled" => ^after_state}
+             }
+           } = audit
+  end
+
+  defp create_workflow(opts \\ []) do
+    enabled = Keyword.get(opts, :enabled, false)
+    trigger = build(:trigger, type: :cron, enabled: enabled)
+    job = build(:job)
+
+    build(:workflow)
+    |> with_job(job)
+    |> with_trigger(trigger)
+    |> with_edge({trigger, job})
+    |> insert()
   end
 end
