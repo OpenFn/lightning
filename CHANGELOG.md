@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Ctrl/Cmd + Enter to Send a Message to the AI Assistant
+  [#2406](https://github.com/OpenFn/lightning/issues/2406)
 - Auditing when enabling/disabling a workflow
   [#2697](https://github.com/OpenFn/lightning/issues/2697)
 - Ability to enable/disable a workflow from the workflow editor
