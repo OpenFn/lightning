@@ -14,7 +14,7 @@ defmodule Lightning.Repo.Migrations.SetCollectionItemsSerialId do
     WHERE collection_items.collection_id = ordered_rows.collection_id
       AND collection_items.key = ordered_rows.key;
     """
-    end
+  end
 
   def down do
     :ok
