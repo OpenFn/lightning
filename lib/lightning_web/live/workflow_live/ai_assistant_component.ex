@@ -210,14 +210,31 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   end
 
   defp render_onboarding(assigns) do
-    assigns = assign(assigns, ai_quote: ai_quotes() |> Enum.random())
+    assigns =
+      assign(assigns,
+        ai_quote:
+          ai_quotes()
+          |> Enum.filter(fn map -> map[:enabled] end)
+          |> Enum.random()
+      )
 
     ~H"""
     <div class="h-full flex flex-col">
       <div class="flex-1 flex flex-col items-center justify-center relative">
         <blockquote class="text-gray-700 font-medium mb-6 w-2/3 text-center border-l-4 border-blue-500">
           <p class="italic"><%= @ai_quote.quote %></p>
-          <p class="text-sm font-semibold">- <%= @ai_quote.author %></p>
+          <p class="text-sm font-semibold">
+            -
+            <.link
+              id="ai-quote-source"
+              class="text-primary-400 hover:text-blue-600"
+              href={@ai_quote.source_link}
+              target="_blank"
+              {if(@ai_quote[:source_attribute], do: ["phx-hook": "Tooltip", "aria-label": @ai_quote.source_attribute], else: [])}
+            >
+              <%= @ai_quote.author %>
+            </.link>
+          </p>
         </blockquote>
         <p class="text-gray-700 font-medium mb-4 w-1/2 text-center">
           The AI Assistant is an experimental new feature to help you write job code.
@@ -292,41 +309,57 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
       %{
         quote:
           "Out of the crooked timber of humanity no straight thing was ever made",
-        author: "Emmanuel Kant"
+        author: "Emmanuel Kant",
+        source_link:
+          "https://www.goodreads.com/quotes/74482-out-of-the-crooked-timber-of-humanity-no-straight-thing"
       },
       %{
         quote:
           "The more helpful our phones get, the harder it is to be ourselves",
-        author: "Brain Chrstian"
+        author: "Brain Chrstian",
+        source_attribute: "The most human Human",
+        source_link:
+          "https://www.goodreads.com/book/show/8884400-the-most-human-human"
       },
       %{
         quote:
           "If a machine can think, it might think more intelligently than we do, and then where should we be?",
-        author: "Alan Turing"
+        author: "Alan Turing",
+        source_link:
+          "https://turingarchive.kings.cam.ac.uk/publications-lectures-and-talks-amtb/amt-b-5"
       },
       %{
         quote:
           "If you make an algorithm, and let it optimise for a certain value, then it won't care what you really want",
-        author: "Tom Chivers"
+        author: "Tom Chivers",
+        source_link: "http://effectivealtruism.org"
       },
       %{
         quote:
           "By far the greatest danger of Artificial Intelligence is that people conclude too early that they understand it",
-        author: "Eliezer Yudkowsky"
+        author: "Eliezer Yudkowsky",
+        source_attribute:
+          "Artificial Intelligence as a Positive and Negative Factor in Global Risk",
+        source_link: "http://intelligence.org"
       },
       %{
         quote:
           "The AI does not hate you, nor does it love you, but you are made out of atoms which it can use for something else",
-        author: "Eliezer Yudkowsky"
+        author: "Eliezer Yudkowsky",
+        source_attribute:
+          "Artificial Intelligence as a Positive and Negative Factor in Global Risk",
+        source_link: "http://intelligence.org"
       },
       %{
         quote:
           "World domination is such an ugly phrase. I prefer to call it world optimisation",
-        author: "Eliezer Yudkowsky"
+        author: "Eliezer Yudkowsky",
+        source_link: "https://hpmor.com/"
       },
       %{
         quote: "AI is not ultimately responsible for its output: we are",
-        author: "OpenFn Responsible AI Policy"
+        author: "OpenFn Responsible AI Policy",
+        source_link: "https://www.openfn.org/ai"
       }
     ]
   end

@@ -743,6 +743,35 @@ defmodule Lightning.AccountsTest do
                project_user.user_id == another_user.id
              end)
     end
+
+    test "sets ai_assistant.disclaimer_read preference to false" do
+      user_1 = insert(:user, preferences: %{})
+      user_2 = insert(:user, preferences: %{"other" => "value"})
+      # intentionally set to string value
+      user_3 =
+        insert(:user, preferences: %{"ai_assistant.disclaimer_read" => "false"})
+
+      user_4 =
+        insert(:user,
+          preferences: %{
+            "ai_assistant.disclaimer_read" => true,
+            "other" => "value"
+          }
+        )
+
+      :ok =
+        Accounts.perform(%Oban.Job{args: %{"type" => "reset_user_preferences"}})
+
+      for user <- [user_1, user_2, user_3, user_4] do
+        updated_user = Lightning.Repo.reload(user)
+
+        assert updated_user.preferences["ai_assistant.disclaimer_read"] === false
+
+        assert Map.drop(updated_user.preferences, [
+                 "ai_assistant.disclaimer_read"
+               ]) == Map.drop(user.preferences, ["ai_assistant.disclaimer_read"])
+      end
+    end
   end
 
   describe "apply_user_email/3" do
