@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Enable Tab Key for Indenting Text in AI Assistant Input Box
+  [#2407](https://github.com/OpenFn/lightning/issues/2407)
 - Add styles to AI chat messages
   [#2484](https://github.com/OpenFn/lightning/issues/2484)
 - Auditing when enabling/disabling a workflow
