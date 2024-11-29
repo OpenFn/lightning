@@ -393,10 +393,10 @@ defmodule Lightning.Projects.ProvisionerTest do
         body
         |> Map.put("name", "test-project-renamed")
         |> add_job_to_document(workflow_id, %{
-            "id" => third_job_id,
-            "name" => "third-job",
-            "adaptor" => "@openfn/language-common@latest",
-            "body" => "console.log('hello world');"
+          "id" => third_job_id,
+          "name" => "third-job",
+          "adaptor" => "@openfn/language-common@latest",
+          "body" => "console.log('hello world');"
         })
 
       changeset = Provisioner.parse_document(project, body)
@@ -764,7 +764,7 @@ defmodule Lightning.Projects.ProvisionerTest do
     %{
       body: body,
       project_id: project_id,
-      workflows: workflow_properties,
+      workflows: workflow_properties
     }
   end
 
@@ -853,19 +853,6 @@ defmodule Lightning.Projects.ProvisionerTest do
     end)
   end
 
-  # defp add_job_to_document(document, job_params) do
-  #   document
-  #   |> Map.update!("workflows", fn workflows ->
-  #     Enum.at(workflows, 0)
-  #     |> Map.update!("jobs", fn jobs ->
-  #       [job_params | jobs]
-  #     end)
-  #     |> then(fn workflow ->
-  #       List.replace_at(workflows, 0, workflow)
-  #     end)
-  #   end)
-  # end
-  #
   defp add_entity_to_workflow(document, workflow_id, key, params) do
     document
     |> Map.update!("workflows", fn workflows ->
