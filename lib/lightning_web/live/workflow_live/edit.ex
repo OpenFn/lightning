@@ -118,6 +118,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           >
             Switch to latest version
           </.button>
+
           <.with_changes_indicator
             :if={@snapshot_version_tag == "latest"}
             changeset={@changeset}
@@ -129,6 +130,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 class="w-5 h-5 place-self-center text-gray-300"
               />
               <div class="flex flex-row m-auto gap-2">
+                <.input
+                  id="workflow"
+                  type="toggle"
+                  name="workflow_state"
+                  value={Helpers.workflow_enabled?(@changeset)}
+                  tooltip={Helpers.workflow_state_tooltip(@changeset)}
+                  on_click="toggle_workflow_state"
+                />
                 <div>
                   <.link
                     patch={
@@ -157,7 +166,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
       </:header>
 
       <div class="relative h-full flex" id={"workflow-edit-#{@workflow.id}"}>
-        <%!-- Job Edit View --%>
         <div class="flex-none" id="job-editor-pane">
           <div
             :if={@selected_job && @selection_mode == "expand"}
@@ -443,7 +451,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
               phx-mounted={fade_in()}
               phx-remove={fade_out()}
             >
-              <!-- Show only the currently selected one -->
               <.job_form
                 on_change={&send_form_changed/1}
                 editable={
@@ -521,22 +528,35 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 end)
               }
             >
-              <div class="w-auto h-full" id={"trigger-pane-#{@workflow.id}"}>
-                <!-- Show only the currently selected one -->
-                <.trigger_form
-                  form={tf}
-                  on_change={&send_form_changed/1}
-                  disabled={
-                    !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                      @snapshot_version_tag != "latest" ||
-                      !@has_presence_edit_priority
-                  }
-                  can_write_webhook_auth_method={@can_write_webhook_auth_method}
-                  selected_trigger={@selected_trigger}
-                  action={@live_action}
-                  cancel_url={close_url(assigns, :selected_trigger, :unselect)}
-                />
-              </div>
+              <.trigger_form
+                form={tf}
+                on_change={&send_form_changed/1}
+                disabled={
+                  !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                    @snapshot_version_tag != "latest" ||
+                    !@has_presence_edit_priority
+                }
+                can_write_webhook_auth_method={@can_write_webhook_auth_method}
+                selected_trigger={@selected_trigger}
+                action={@live_action}
+                cancel_url={close_url(assigns, :selected_trigger, :unselect)}
+              />
+              <:footer>
+                <div class="flex flex-row">
+                  <div class="flex items-center">
+                    <.input
+                      type="toggle"
+                      field={tf[:enabled]}
+                      disabled={
+                        !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                          @snapshot_version_tag != "latest" ||
+                          !@has_presence_edit_priority
+                      }
+                      label="Enabled"
+                    />
+                  </div>
+                </div>
+              </:footer>
             </.panel>
           </.single_inputs_for>
           <.single_inputs_for
@@ -554,18 +574,58 @@ defmodule LightningWeb.WorkflowLive.Edit do
               phx-mounted={fade_in()}
               phx-remove={fade_out()}
             >
-              <div class="w-auto h-full" id={"edge-pane-#{@workflow.id}"}>
-                <!-- Show only the currently selected one -->
-                <.edge_form
-                  form={ef}
-                  disabled={
-                    !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                      @snapshot_version_tag != "latest" ||
-                      !@has_presence_edit_priority
-                  }
-                  cancel_url={close_url(assigns, :selected_edge, :unselect)}
-                />
-              </div>
+              <.edge_form
+                form={ef}
+                disabled={
+                  !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                    @snapshot_version_tag != "latest" ||
+                    !@has_presence_edit_priority
+                }
+                cancel_url={close_url(assigns, :selected_edge, :unselect)}
+              />
+              <:footer>
+                <div class="flex flex-row">
+                  <div class="flex items-center">
+                    <%= if ef[:source_trigger_id].value do %>
+                      <p class="text-sm text-gray-500">
+                        This path will be active if its trigger is enabled
+                      </p>
+                    <% else %>
+                      <.input
+                        type="toggle"
+                        field={ef[:enabled]}
+                        disabled={
+                          !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                            @snapshot_version_tag != "latest" ||
+                            !@has_presence_edit_priority
+                        }
+                        label="Enabled"
+                      />
+                    <% end %>
+                  </div>
+                  <div class="grow flex justify-end">
+                    <label>
+                      <%= unless ef[:source_trigger_id].value do %>
+                        <.button
+                          id="delete-edge-button"
+                          class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
+                          data-confirm="Are you sure you want to delete this path?"
+                          phx-click="delete_edge"
+                          phx-value-id={ef[:id].value}
+                          disabled={
+                            !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                              @snapshot_version_tag != "latest" ||
+                              !@has_presence_edit_priority or
+                              ef[:source_trigger_id].value
+                          }
+                        >
+                          Delete Path
+                        </.button>
+                      <% end %>
+                    </label>
+                  </div>
+                </div>
+              </:footer>
             </.panel>
           </.single_inputs_for>
         </.form>
@@ -1405,24 +1465,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("save", params, socket) do
-    # <<<<<<< HEAD
-    #     %{
-    #       current_user: current_user,
-    #       project: project,
-    #       workflow_params: initial_params,
-    #       can_edit_workflow: can_edit_workflow,
-    #       snapshot_version_tag: tag,
-    #       has_presence_edit_priority: has_presence_edit_priority
-    #     } =
-    #       socket.assigns
-    # =======
     %{
       project: project,
       workflow_params: initial_params,
       current_user: current_user
     } = socket.assigns
-
-    # >>>>>>> origin/main
 
     with :ok <- check_user_can_save_workflow(socket) do
       next_params =
@@ -1449,11 +1496,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
             |> Map.put("v", workflow.lock_version)
             |> Map.reject(fn {_key, value} -> is_nil(value) end)
 
+          flash_msg =
+            "Workflow saved successfully." <>
+              if not loaded?(changeset.data) and
+                   not Helpers.workflow_enabled?(workflow) do
+                " Remember to enable your workflow to run it automatically."
+              else
+                ""
+              end
+
           {:noreply,
            socket
            |> assign(page_title: workflow.name)
            |> assign_workflow(workflow, snapshot)
-           |> put_flash(:info, "Workflow saved")
+           |> put_flash(:info, flash_msg)
            |> push_patches_applied(initial_params)
            |> maybe_push_workflow_created(workflow)
            |> push_patch(
@@ -1653,6 +1709,21 @@ defmodule LightningWeb.WorkflowLive.Edit do
            )}
       end
     end
+  end
+
+  def handle_event("toggle_workflow_state", %{"workflow_state" => state}, socket) do
+    changeset =
+      Workflows.update_triggers_enabled_state(
+        socket.assigns.changeset,
+        state
+      )
+
+    params = WorkflowParams.to_map(changeset)
+
+    {:noreply,
+     socket
+     |> assign(:changeset, changeset)
+     |> handle_new_params(params, :workflow)}
   end
 
   def handle_event(_unhandled_event, _params, socket) do
@@ -2452,4 +2523,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
        |> push_event("push-hash", %{"hash" => "log"})}
     end
   end
+
+  defp loaded?(%Workflow{} = workflow), do: workflow.__meta__.state == :loaded
 end

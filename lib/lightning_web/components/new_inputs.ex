@@ -7,6 +7,7 @@ defmodule LightningWeb.Components.NewInputs do
 
   import LightningWeb.Components.Icons
 
+  alias Phoenix.HTML.Form
   alias Phoenix.LiveView.JS
 
   @doc """
@@ -129,7 +130,7 @@ defmodule LightningWeb.Components.NewInputs do
     default: "text",
     values:
       ~w(checkbox color date datetime-local email file hidden month number password
-               range radio search select tel text textarea time url week)
+               range radio search select tel text textarea time url week toggle)
 
   attr :field, Phoenix.HTML.FormField,
     doc:
@@ -177,6 +178,10 @@ defmodule LightningWeb.Components.NewInputs do
   attr :display_errors, :boolean, default: true
 
   attr :tooltip, :any, default: nil
+
+  attr :on_click, :string, default: nil
+
+  attr :value_key, :any, default: nil
 
   slot :inner_block
 
@@ -274,7 +279,7 @@ defmodule LightningWeb.Components.NewInputs do
           @class
         ]}
         {@rest}
-      ><%= Phoenix.HTML.Form.normalize_value("textarea", @value) %></textarea>
+      ><%= Form.normalize_value("textarea", @value) %></textarea>
       <.error :for={msg <- @errors} :if={@display_errors}><%= msg %></.error>
     </div>
     """
@@ -294,7 +299,7 @@ defmodule LightningWeb.Components.NewInputs do
           type={@type}
           name={@name}
           id={@id}
-          value={Phoenix.HTML.Form.normalize_value(@type, @value)}
+          value={Form.normalize_value(@type, @value)}
           lv-keep-type
           class={[
             "focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
@@ -356,13 +361,113 @@ defmodule LightningWeb.Components.NewInputs do
     """
   end
 
+  def input(%{type: "toggle"} = assigns) do
+    assigns =
+      assigns
+      |> assign_new(:checked, fn ->
+        Form.normalize_value("checkbox", assigns[:value]) == true
+      end)
+      |> assign_new(:disabled, fn -> false end)
+      |> assign_new(:required, fn -> false end)
+      |> assign_new(:tooltip, fn -> nil end)
+
+    ~H"""
+    <div
+      id={"toggle-container-#{@id}"}
+      class={["flex flex-col gap-1", @class]}
+      {if @tooltip, do: ["phx-hook": "Tooltip", "aria-label": @tooltip], else: []}
+    >
+      <div
+        id={"toggle-control-#{@id}"}
+        class="flex items-center gap-3"
+        {if @on_click, do: ["phx-click": JS.push(@on_click,
+          value: %{
+            _target: @name,
+            "#{@name}": !@checked,
+            value_key: to_string(@value_key)
+          }
+        )], else: []}
+      >
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="hidden" name={@name} value="false" />
+          <input
+            type="checkbox"
+            id={@id}
+            name={@name}
+            value="true"
+            class="sr-only peer"
+            checked={@checked}
+            disabled={@disabled}
+            required={@required}
+            {@rest}
+          />
+
+          <div
+            tabindex={if @disabled, do: "-1", else: "0"}
+            role="switch"
+            aria-checked={@checked}
+            class={[
+              "relative inline-flex w-11 h-6 rounded-full transition-colors duration-200 ease-in-out border-2 border-transparent",
+              "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500",
+              @checked && "bg-indigo-600",
+              !@checked && "bg-gray-200",
+              if(@disabled,
+                do: "opacity-50 cursor-not-allowed",
+                else: "cursor-pointer"
+              )
+            ]}
+          >
+            <span class={[
+              "pointer-events-none absolute h-5 w-5 inline-block transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+              @checked && "translate-x-5",
+              !@checked && "translate-x-0"
+            ]}>
+              <span
+                class={[
+                  "absolute inset-0 flex h-full w-full items-center justify-center transition-opacity duration-200 ease-in",
+                  @checked && "opacity-0",
+                  !@checked && "opacity-100"
+                ]}
+                aria-hidden="true"
+              >
+                <.icon name="hero-x-mark-micro" class="h-4 w-4 text-gray-400" />
+              </span>
+              <span
+                class={[
+                  "absolute inset-0 flex h-full w-full items-center justify-center transition-opacity duration-200 ease-in",
+                  @checked && "opacity-100",
+                  !@checked && "opacity-0"
+                ]}
+                aria-hidden="true"
+              >
+                <.icon name="hero-check-micro" class="h-4 w-4 text-indigo-600" />
+              </span>
+            </span>
+          </div>
+
+          <span
+            :if={@label}
+            class={[
+              "ml-3 text-sm font-medium select-none",
+              if(@disabled, do: "text-gray-400", else: "text-gray-900")
+            ]}
+          >
+            <%= @label %>
+            <span :if={@required} class="text-red-500 ml-1">*</span>
+          </span>
+        </label>
+      </div>
+    </div>
+    """
+  end
+
   def input(%{type: "hidden"} = assigns) do
     ~H"""
     <input
       type="hidden"
       name={@name}
       id={@id}
-      value={Phoenix.HTML.Form.normalize_value(@type, @value)}
+      value={Form.normalize_value(@type, @value)}
     />
     """
   end
@@ -380,7 +485,7 @@ defmodule LightningWeb.Components.NewInputs do
         name={@name}
         id={@id}
         class={@class}
-        value={Phoenix.HTML.Form.normalize_value(@type, @value)}
+        value={Form.normalize_value(@type, @value)}
         {@rest}
       />
       <div :if={Enum.any?(@errors) and @display_errors} class="error-space">
