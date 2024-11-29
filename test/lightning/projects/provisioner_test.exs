@@ -136,9 +136,13 @@ defmodule Lightning.Projects.ProvisionerTest do
       %{
         body: %{"workflows" => [workflow]} = body,
         project_id: project_id,
-        workflow_id: workflow_id,
-        first_job_id: first_job_id,
-        second_job_id: second_job_id
+        workflows: [
+          %{
+            id: workflow_id,
+            first_job_id: first_job_id,
+            second_job_id: second_job_id
+          }
+        ]
       } = valid_document()
 
       project_credential_id = Ecto.UUID.generate()
@@ -214,8 +218,12 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       %{
         body: %{"workflows" => [workflow]} = body,
-        workflow_id: workflow_id,
-        first_job_id: first_job_id
+        workflows: [
+          %{
+            id: workflow_id,
+            first_job_id: first_job_id
+          }
+        ]
       } = valid_document()
 
       project_credential_id = Ecto.UUID.generate()
@@ -324,7 +332,7 @@ defmodule Lightning.Projects.ProvisionerTest do
         end
       )
 
-      %{body: body, workflow_id: workflow_id} = valid_document(project.id)
+      %{body: body, workflows: [%{id: workflow_id}]} = valid_document(project.id)
 
       {:ok, _project} = Provisioner.import_document(project, user, body)
 
@@ -442,7 +450,7 @@ defmodule Lightning.Projects.ProvisionerTest do
         end
       )
 
-      %{body: body, workflow_id: workflow_id} = valid_document(project.id)
+      %{body: body, workflows: [%{id: workflow_id}]} = valid_document(project.id)
 
       {:ok, project} = Provisioner.import_document(project, user, body)
 
@@ -534,7 +542,7 @@ defmodule Lightning.Projects.ProvisionerTest do
         end
       )
 
-      %{body: body, workflow_id: workflow_id} = valid_document(project.id)
+      %{body: body, workflows: [%{id: workflow_id}]} = valid_document(project.id)
 
       %{id: other_edge_id} = Lightning.Factories.insert(:edge)
 
@@ -577,7 +585,7 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       %{
         body: body,
-        second_job_id: second_job_id
+        workflows: [%{second_job_id: second_job_id}]
       } = valid_document(project.id)
 
       {:ok, project} = Provisioner.import_document(project, user, body)
@@ -634,7 +642,7 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       %{
         body: body,
-        workflow_id: workflow_id
+        workflows: [%{id: workflow_id}]
       } = valid_document(project.id)
 
       {:ok, project} = Provisioner.import_document(project, user, body)
@@ -717,7 +725,7 @@ defmodule Lightning.Projects.ProvisionerTest do
       project: %{id: project_id} = project,
       user: user
     } do
-      %{body: body, workflow_id: workflow_id} = valid_document(project.id)
+      %{body: body, workflows: [%{id: workflow_id}]} = valid_document(project.id)
 
       Mox.stub(
         Lightning.Extensions.MockUsageLimiter,
@@ -738,8 +746,29 @@ defmodule Lightning.Projects.ProvisionerTest do
     end
   end
 
-  defp valid_document(project_id \\ nil) do
+  defp valid_document(project_id \\ nil, number_of_workflows \\ 1) do
     project_id = project_id || Ecto.UUID.generate()
+
+    [workflows, workflow_properties] =
+      1..number_of_workflows
+      |> Enum.map(&valid_workflow/1)
+      |> Enum.unzip()
+      |> Tuple.to_list()
+
+    body = %{
+      "id" => project_id,
+      "name" => "test-project",
+      "workflows" => workflows
+    }
+
+    %{
+      body: body,
+      project_id: project_id,
+      workflows: workflow_properties,
+    }
+  end
+
+  defp valid_workflow(index) do
     first_job_id = Ecto.UUID.generate()
     second_job_id = Ecto.UUID.generate()
     trigger_id = Ecto.UUID.generate()
@@ -747,60 +776,56 @@ defmodule Lightning.Projects.ProvisionerTest do
     trigger_edge_id = Ecto.UUID.generate()
     job_edge_id = Ecto.UUID.generate()
 
-    body = %{
-      "id" => project_id,
-      "name" => "test-project",
-      "workflows" => [
-        %{
-          "id" => workflow_id,
-          "name" => "default",
-          "jobs" => [
-            %{
-              "id" => first_job_id,
-              "name" => "first-job",
-              "adaptor" => "@openfn/language-common@latest",
-              "body" => "console.log('hello world');"
-            },
-            %{
-              "id" => second_job_id,
-              "name" => "second-job",
-              "adaptor" => "@openfn/language-common@latest",
-              "body" => "console.log('hello world');"
-            }
-          ],
-          "triggers" => [
-            %{
-              "id" => trigger_id,
-              "enabled" => true
-            }
-          ],
-          "edges" => [
-            %{
-              "id" => trigger_edge_id,
-              "source_trigger_id" => trigger_id,
-              "condition_label" => "Always",
-              "condition_type" => "js_expression",
-              "condition_expression" => "true"
-            },
-            %{
-              "id" => job_edge_id,
-              "source_job_id" => first_job_id,
-              "condition_type" => "on_job_success",
-              "target_job_id" => second_job_id
-            }
-          ]
-        }
-      ]
-    }
+    workflow =
+      %{
+        "id" => workflow_id,
+        "name" => "default-#{index}",
+        "jobs" => [
+          %{
+            "id" => first_job_id,
+            "name" => "first-job",
+            "adaptor" => "@openfn/language-common@latest",
+            "body" => "console.log('hello world');"
+          },
+          %{
+            "id" => second_job_id,
+            "name" => "second-job",
+            "adaptor" => "@openfn/language-common@latest",
+            "body" => "console.log('hello world');"
+          }
+        ],
+        "triggers" => [
+          %{
+            "id" => trigger_id,
+            "enabled" => true
+          }
+        ],
+        "edges" => [
+          %{
+            "id" => trigger_edge_id,
+            "source_trigger_id" => trigger_id,
+            "condition_label" => "Always",
+            "condition_type" => "js_expression",
+            "condition_expression" => "true"
+          },
+          %{
+            "id" => job_edge_id,
+            "source_job_id" => first_job_id,
+            "condition_type" => "on_job_success",
+            "target_job_id" => second_job_id
+          }
+        ]
+      }
 
-    %{
-      body: body,
-      project_id: project_id,
-      workflow_id: workflow_id,
-      first_job_id: first_job_id,
-      second_job_id: second_job_id,
-      trigger_id: trigger_id,
-      job_edge_id: job_edge_id
+    {
+      workflow,
+      %{
+        id: workflow_id,
+        first_job_id: first_job_id,
+        second_job_id: second_job_id,
+        trigger_id: trigger_id,
+        job_edge_id: job_edge_id
+      }
     }
   end
 
