@@ -1828,7 +1828,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     end
 
     @tag email: "user@openfn.org"
-    test "disclaimer ui is displayed when user has not read them", %{
+    test "disclaimer ui is displayed when user has not read it", %{
       conn: conn,
       project: project,
       user: user,
@@ -1840,7 +1840,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       end)
 
       # when disclaimer hasn't been read and no session exists
-      refute user.preferences["ai_assistant.disclaimer_read"] == true
+      refute user.preferences["ai_assistant.disclaimer_read_at"]
 
       {:ok, view, _html} =
         live(
@@ -1861,8 +1861,76 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert has_element?(view, "#ai-assistant-form")
 
       assert Lightning.Repo.reload(user).preferences[
-               "ai_assistant.disclaimer_read"
-             ] == true
+               "ai_assistant.disclaimer_read_at"
+             ]
+    end
+
+    @tag email: "user@openfn.org"
+    test "disclaimer ui is displayed when user read it more than 24 hours ago",
+         %{
+           conn: conn,
+           project: project,
+           user: user,
+           workflow: %{jobs: [job_1 | _]} = workflow
+         } do
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> "http://localhost:4001"
+        :openai_api_key -> "openai_api_key"
+      end)
+
+      date = DateTime.utc_now() |> DateTime.add(-24, :hour) |> DateTime.to_unix()
+
+      user
+      |> Ecto.Changeset.change(%{
+        preferences: %{"ai_assistant.disclaimer_read_at" => date}
+      })
+      |> Repo.update!()
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      render_async(view)
+
+      html = view |> element("#aichat-#{job_1.id}") |> render()
+      assert html =~ "Get started with the AI Assistant"
+      refute has_element?(view, "#ai-assistant-form")
+    end
+
+    @tag email: "user@openfn.org"
+    test "disclaimer ui is NOT displayed when user read it less than 24 hours ago",
+         %{
+           conn: conn,
+           project: project,
+           user: user,
+           workflow: %{jobs: [job_1 | _]} = workflow
+         } do
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> "http://localhost:4001"
+        :openai_api_key -> "openai_api_key"
+      end)
+
+      date = DateTime.utc_now() |> DateTime.add(-22, :hour) |> DateTime.to_unix()
+
+      user
+      |> Ecto.Changeset.change(%{
+        preferences: %{"ai_assistant.disclaimer_read_at" => date}
+      })
+      |> Repo.update!()
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      render_async(view)
+
+      html = view |> element("#aichat-#{job_1.id}") |> render()
+      refute html =~ "Get started with the AI Assistant"
+      assert has_element?(view, "#ai-assistant-form")
     end
 
     @tag email: "user@openfn.org"
@@ -1898,10 +1966,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       [:owner, :admin, :editor]
       |> Enum.map(fn role ->
+        timestamp = DateTime.utc_now() |> DateTime.to_unix()
+
         user =
           insert(:user,
             email: "email-#{Enum.random(1..1_000)}@openfn.org",
-            preferences: %{"ai_assistant.disclaimer_read" => true}
+            preferences: %{"ai_assistant.disclaimer_read_at" => timestamp}
           )
 
         insert(:project_user, project: project, user: user, role: role)
@@ -1944,10 +2014,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       [:viewer]
       |> Enum.map(fn role ->
+        timestamp = DateTime.utc_now() |> DateTime.to_unix()
+
         user =
           insert(:user,
             email: "email-#{Enum.random(1..1_000)}@openfn.org",
-            preferences: %{"ai_assistant.disclaimer_read" => true}
+            preferences: %{"ai_assistant.disclaimer_read_at" => timestamp}
           )
 
         insert(:project_user, project: project, user: user, role: role)
@@ -2011,9 +2083,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       )
 
       # update preferences so that the onboarding flow is not displayed
+      timestamp = DateTime.utc_now() |> DateTime.to_unix()
+
       user
       |> Ecto.Changeset.change(%{
-        preferences: %{"ai_assistant.disclaimer_read" => true}
+        preferences: %{"ai_assistant.disclaimer_read_at" => timestamp}
       })
       |> Lightning.Repo.update!()
 

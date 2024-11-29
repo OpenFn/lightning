@@ -6,6 +6,7 @@ defmodule Lightning.AiAssistant do
   import Ecto.Query
 
   alias Ecto.Multi
+  alias Lightning.Accounts
   alias Lightning.Accounts.User
   alias Lightning.AiAssistant.ChatSession
   alias Lightning.ApolloClient
@@ -144,6 +145,40 @@ defmodule Lightning.AiAssistant do
 
   def available?(user) do
     String.match?(user.email, ~r/@openfn\.org/i)
+  end
+
+  @spec user_has_read_disclaimer?(User.t()) :: boolean()
+  def user_has_read_disclaimer?(user) do
+    read_at =
+      user
+      |> Accounts.get_preference("ai_assistant.disclaimer_read_at")
+      |> case do
+        timestamp when is_binary(timestamp) ->
+          String.to_integer(timestamp)
+
+        other ->
+          other
+      end
+
+    case read_at && DateTime.from_unix(read_at) do
+      {:ok, datetime} ->
+        # you've read disclaimer only if timestamp is less than 24 hours
+        DateTime.diff(DateTime.utc_now(), datetime, :hour) < 24
+
+      _error ->
+        false
+    end
+  end
+
+  @spec mark_disclaimer_read(User.t()) :: {:ok, User.t()}
+  def mark_disclaimer_read(user) do
+    timestamp = DateTime.utc_now() |> DateTime.to_unix()
+
+    Accounts.update_user_preference(
+      user,
+      "ai_assistant.disclaimer_read_at",
+      timestamp
+    )
   end
 
   @doc """

@@ -1,13 +1,10 @@
 defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   use LightningWeb, :live_component
 
-  alias Lightning.Accounts
   alias Lightning.AiAssistant
   alias Lightning.AiAssistant.Limiter
   alias Phoenix.LiveView.AsyncResult
   alias Phoenix.LiveView.JS
-
-  @disclaimer_user_preference "ai_assistant.disclaimer_read"
 
   def mount(socket) do
     {:ok,
@@ -32,8 +29,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
      socket
      |> assign(assigns)
      |> assign(
-       has_read_disclaimer:
-         Accounts.get_preference(current_user, @disclaimer_user_preference)
+       has_read_disclaimer: AiAssistant.user_has_read_disclaimer?(current_user)
      )
      |> maybe_check_limit()
      |> apply_action(action, assigns)}
@@ -105,12 +101,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   end
 
   def handle_event("mark_disclaimer_read", _params, socket) do
-    {:ok, _} =
-      Accounts.update_user_preference(
-        socket.assigns.current_user,
-        @disclaimer_user_preference,
-        true
-      )
+    {:ok, _} = AiAssistant.mark_disclaimer_read(socket.assigns.current_user)
 
     {:noreply, assign(socket, has_read_disclaimer: true)}
   end

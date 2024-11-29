@@ -89,27 +89,6 @@ defmodule Lightning.Accounts do
     {:ok, %{users_deleted: users_to_delete}}
   end
 
-  def perform(%Oban.Job{args: %{"type" => "reset_user_preferences"}}) do
-    update_query =
-      from u in User,
-        where: not is_nil(u.preferences),
-        update: [
-          set: [
-            preferences:
-              fragment(
-                "JSONB_SET(?, ?, ?::jsonb, ?)",
-                u.preferences,
-                "{ai_assistant.disclaimer_read}",
-                "false",
-                true
-              )
-          ]
-        ]
-
-    Repo.update_all(update_query, [], returning: false)
-    :ok
-  end
-
   def create_user(attrs) do
     Repo.transact(fn ->
       AccountHook.handle_create_user(attrs)
