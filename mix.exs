@@ -123,7 +123,7 @@ defmodule Lightning.MixProject do
       {:cors_plug, "~> 3.0"},
       {:plug_cowboy, "~> 2.5"},
       {:postgrex, ">= 0.0.0"},
-      {:prom_ex, "~> 1.8.0"},
+      {:prom_ex, "~> 1.9.0"},
       {:rambo, "~> 0.3.4"},
       {:retry, "~> 0.18"},
       {:scrivener, "~> 2.7"},
