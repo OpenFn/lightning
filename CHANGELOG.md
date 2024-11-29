@@ -24,6 +24,8 @@ and this project adheres to
 
 ### Changed
 
+- Bumped dependencies
+
 ### Fixed
 
 ## [v2.10.4] - 2024-11-22
