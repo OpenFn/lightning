@@ -8,16 +8,6 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
   @dialyzer {:nowarn_function, process_ast: 2}
 
-  @assistant_messages_attributes %{
-    "a" => %{class: "text-primary-400 hover:text-primary-600", target: "_blank"},
-    "h1" => %{class: "text-2xl font-bold mb-6"},
-    "h2" => %{class: "text-xl font-semibold mb-4 mt-8"},
-    "ol" => %{class: "list-decimal pl-8 space-y-1"},
-    "ul" => %{class: "list-disc pl-8 space-y-1"},
-    "li" => %{class: "text-gray-800"},
-    "p" => %{class: "mt-1 mb-2 text-gray-800"}
-  }
-
   def mount(socket) do
     {:ok,
      socket
@@ -598,13 +588,26 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   attr :attributes, :map, default: %{}
 
   def formatted_content(assigns) do
+    assistant_messages_attributes = %{
+      "a" => %{
+        class: "text-primary-400 hover:text-primary-600",
+        target: "_blank"
+      },
+      "h1" => %{class: "text-2xl font-bold mb-6"},
+      "h2" => %{class: "text-xl font-semibold mb-4 mt-8"},
+      "ol" => %{class: "list-decimal pl-8 space-y-1"},
+      "ul" => %{class: "list-disc pl-8 space-y-1"},
+      "li" => %{class: "text-gray-800"},
+      "p" => %{class: "mt-1 mb-2 text-gray-800"}
+    }
+
     merged_attributes =
-      Map.merge(@assistant_messages_attributes, assigns.attributes)
+      Map.merge(assistant_messages_attributes, assigns.attributes)
 
     assigns =
       case Earmark.Parser.as_ast(assigns.content) do
         {:ok, ast, _} ->
-          process_ast(ast, merged_attributes)
+          process_ast(ast, merged_attributes) |> raw()
 
         _ ->
           assigns.content
@@ -612,7 +615,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
       |> then(&assign(assigns, :content, &1))
 
     ~H"""
-    <article><%= raw(@content) %></article>
+    <article><%= @content %></article>
     """
   end
 
