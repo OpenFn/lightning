@@ -278,6 +278,47 @@ defmodule Lightning.Projects.ProvisionerTest do
                }
              } = audit
     end
+
+    test "audits the creation of workflows" do
+      %{id: user_id} = user = insert(:user)
+
+      %{
+        body: body,
+        workflows: [
+          %{id: first_workflow_id},
+          %{id: second_workflow_id},
+          %{id: third_workflow_id}
+        ]
+      } = valid_document(nil, 3)
+
+      expected_workflow_ids =
+        [
+          first_workflow_id,
+          second_workflow_id,
+          third_workflow_id
+        ]
+        |> Enum.sort()
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      Provisioner.import_document(%Lightning.Projects.Project{}, user, body)
+
+      query =
+        from a in Audit,
+          where: a.event == "inserted_by_provisioner" and a.actor_id == ^user_id
+
+      workflow_ids =
+        query
+        |> Repo.all()
+        |> Enum.map(& &1.item_id)
+        |> Enum.sort()
+
+      assert workflow_ids == expected_workflow_ids
+    end
   end
 
   describe "import_document/2 with an existing project" do
@@ -320,7 +361,7 @@ defmodule Lightning.Projects.ProvisionerTest do
       refute user2.id in project_user_ids
     end
 
-    test "audit the creation of a snapshot", %{
+    test "audits the creation of a snapshot", %{
       project: %{id: project_id} = project,
       user: %{id: user_id} = user
     } do
@@ -744,6 +785,93 @@ defmodule Lightning.Projects.ProvisionerTest do
         workflow: %{id: ^workflow_id}
       }
     end
+
+    test "audits workflow events as a result of the provisioner", %{
+      user: %{id: user_id} = user
+    } do
+      %{
+        body: body,
+        workflows: [
+          %{id: first_workflow_id},
+          %{id: second_workflow_id},
+          %{id: third_workflow_id}
+        ]
+      } = valid_document(nil, 3)
+
+      {:ok, project} =
+        Provisioner.import_document(%Lightning.Projects.Project{}, user, body)
+
+      {%{"id" => new_workflow_id} = new_workflow, _properties} =
+        valid_workflow(4)
+
+      body_with_modifications =
+        body
+        |> add_job_to_document(first_workflow_id, %{
+          "id" => Ecto.UUID.generate(),
+          "name" => "third-job",
+          "adaptor" => "@openfn/language-common@latest",
+          "body" => "console.log('hello world');"
+        })
+        |> remove_workflow_from_document(third_workflow_id)
+        |> add_workflow_to_document(new_workflow)
+
+      # Clear any audit records from the initial import
+      Repo.delete_all(Audit)
+
+      assert {:ok, _project} =
+               Provisioner.import_document(
+                 project,
+                 user,
+                 body_with_modifications
+               )
+
+      inserted_query =
+        from a in Audit,
+          where: a.item_id == ^new_workflow_id,
+          where: a.event == "inserted_by_provisioner",
+          where: a.actor_id == ^user_id
+
+      assert Repo.one(inserted_query) != nil
+
+      unmodified_query =
+        from a in Audit,
+          where: a.item_id == ^second_workflow_id
+
+      assert Repo.one(unmodified_query) == nil
+
+      deleted_query =
+        from a in Audit,
+          where: a.item_id == ^third_workflow_id,
+          where: a.event == "deleted_by_provisioner",
+          where: a.actor_id == ^user_id
+
+      assert Repo.one(deleted_query) != nil
+
+      updated_query =
+        from a in Audit,
+          where: a.item_id == ^first_workflow_id,
+          where: a.event == "updated_by_provisioner",
+          where: a.actor_id == ^user_id
+
+      assert Repo.one(updated_query) != nil
+    end
+
+    test "functions correctly if there are no workflow changes", %{
+      user: user
+    } do
+      %{body: body} = valid_document(nil, 3)
+
+      {:ok, project} =
+        Provisioner.import_document(%Lightning.Projects.Project{}, user, body)
+
+      # Clear any audit records from the initial import
+      Repo.delete_all(Audit)
+
+      # Rerun without any changes to the project
+      assert {:ok, _project} = Provisioner.import_document(project, user, body)
+
+      assert Repo.all(Audit) == []
+    end
   end
 
   defp valid_document(project_id \\ nil, number_of_workflows \\ 1) do
@@ -900,6 +1028,13 @@ defmodule Lightning.Projects.ProvisionerTest do
           workflow
         end
       end)
+    end)
+  end
+
+  defp add_workflow_to_document(document, workflow) do
+    document
+    |> Map.update!("workflows", fn workflows ->
+      [workflow | workflows]
     end)
   end
 end
