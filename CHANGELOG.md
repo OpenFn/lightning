@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Add styles to AI chat messages
+  [#2484](https://github.com/OpenFn/lightning/issues/2484)
 - Auditing when enabling/disabling a workflow
   [#2697](https://github.com/OpenFn/lightning/issues/2697)
 - Ability to enable/disable a workflow from the workflow editor
