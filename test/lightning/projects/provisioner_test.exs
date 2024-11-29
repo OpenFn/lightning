@@ -363,7 +363,7 @@ defmodule Lightning.Projects.ProvisionerTest do
         end
       )
 
-      %{body: body} = valid_document(project.id)
+      %{body: body, workflows: [%{id: workflow_id}]} = valid_document(project.id)
 
       {:ok, project} = Provisioner.import_document(project, user, body)
 
@@ -392,11 +392,11 @@ defmodule Lightning.Projects.ProvisionerTest do
       body =
         body
         |> Map.put("name", "test-project-renamed")
-        |> add_job_to_document(%{
-          "id" => third_job_id,
-          "name" => "third-job",
-          "adaptor" => "@openfn/language-common@latest",
-          "body" => "console.log('hello world');"
+        |> add_job_to_document(workflow_id, %{
+            "id" => third_job_id,
+            "name" => "third-job",
+            "adaptor" => "@openfn/language-common@latest",
+            "body" => "console.log('hello world');"
         })
 
       changeset = Provisioner.parse_document(project, body)
@@ -836,19 +836,36 @@ defmodule Lightning.Projects.ProvisionerTest do
     )
   end
 
-  defp add_job_to_document(document, job_params) do
+  defp add_job_to_document(document, workflow_id, job_params) do
     document
     |> Map.update!("workflows", fn workflows ->
-      Enum.at(workflows, 0)
-      |> Map.update!("jobs", fn jobs ->
-        [job_params | jobs]
-      end)
-      |> then(fn workflow ->
-        List.replace_at(workflows, 0, workflow)
+      workflows
+      |> Enum.map(fn workflow ->
+        if workflow["id"] == workflow_id do
+          workflow
+          |> Map.update!("jobs", fn jobs ->
+            [job_params | jobs]
+          end)
+        else
+          workflow
+        end
       end)
     end)
   end
 
+  # defp add_job_to_document(document, job_params) do
+  #   document
+  #   |> Map.update!("workflows", fn workflows ->
+  #     Enum.at(workflows, 0)
+  #     |> Map.update!("jobs", fn jobs ->
+  #       [job_params | jobs]
+  #     end)
+  #     |> then(fn workflow ->
+  #       List.replace_at(workflows, 0, workflow)
+  #     end)
+  #   end)
+  # end
+  #
   defp add_entity_to_workflow(document, workflow_id, key, params) do
     document
     |> Map.update!("workflows", fn workflows ->
