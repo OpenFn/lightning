@@ -442,6 +442,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         class="block grow resize-none overflow-y-auto max-h-48 border-0 bg-transparent py-1.5 text-gray-900 placeholder:text-gray-400 placeholder:text-xs placeholder:italic focus:ring-0 text-sm"
         placeholder="Open a previous session or send a message to start a new session"
         disabled={@disabled}
+        phx-hook="TabIndent"
       ><%= Phoenix.HTML.Form.normalize_value("textarea", @form[:content].value) %></textarea>
       <div class="py-2 pl-3 pr-2">
         <div class="flex items-center space-x-5"></div>

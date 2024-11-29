@@ -18,6 +18,38 @@ export {
   TabbedPanels,
 };
 
+export const TabIndent = {
+  mounted() {
+    this.el.addEventListener('keydown', e => {
+      const indent = '\t';
+
+      if (e.key === 'Tab') {
+        e.preventDefault();
+
+        if (this.el.selectionStart !== undefined) {
+          const start = this.el.selectionStart;
+          const end = this.el.selectionEnd;
+
+          this.el.value =
+            this.el.value.substring(0, start) +
+            indent +
+            this.el.value.substring(end);
+
+          this.el.selectionStart = this.el.selectionEnd = start + indent.length;
+        } else if (this.el.isContentEditable) {
+          const selection = window.getSelection();
+          const range = selection.getRangeAt(0);
+
+          range.deleteContents();
+          range.insertNode(document.createTextNode(indent));
+
+          range.collapse(false);
+        }
+      }
+    });
+  },
+};
+
 export const Combobox = {
   mounted() {
     this.input = this.el.querySelector('input');
