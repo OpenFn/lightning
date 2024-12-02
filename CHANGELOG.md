@@ -19,12 +19,16 @@ and this project adheres to
 
 - Ctrl/Cmd + Enter to Send a Message to the AI Assistant
   [#2406](https://github.com/OpenFn/lightning/issues/2406)
+- Add styles to AI chat messages
+  [#2484](https://github.com/OpenFn/lightning/issues/2484)
 - Auditing when enabling/disabling a workflow
   [#2697](https://github.com/OpenFn/lightning/issues/2697)
 - Ability to enable/disable a workflow from the workflow editor
   [#2698](https://github.com/OpenFn/lightning/issues/2698)
 
 ### Changed
+
+- Bumped dependencies
 
 ### Fixed
 

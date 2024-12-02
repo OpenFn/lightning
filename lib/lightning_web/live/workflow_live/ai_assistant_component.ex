@@ -6,6 +6,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   alias Phoenix.LiveView.AsyncResult
   alias Phoenix.LiveView.JS
 
+  @dialyzer {:nowarn_function, process_ast: 2}
+
   def mount(socket) do
     {:ok,
      socket
@@ -534,9 +536,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             </div>
 
             <div>
-              <div>
-                <%= message.content |> Earmark.as_html!() |> raw() %>
-              </div>
+              <.formatted_content content={message.content} />
               <!-- TODO: restore this message and add a link to the docs site -->
               <%!-- <div
                 class="flex mt-1 text-xs text-gray-400 select-none"
@@ -584,6 +584,59 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
       </div>
     </div>
     """
+  end
+
+  attr :content, :string, required: true
+  attr :attributes, :map, default: %{}
+
+  def formatted_content(assigns) do
+    assistant_messages_attributes = %{
+      "a" => %{
+        class: "text-primary-400 hover:text-primary-600",
+        target: "_blank"
+      },
+      "h1" => %{class: "text-2xl font-bold mb-6"},
+      "h2" => %{class: "text-xl font-semibold mb-4 mt-8"},
+      "ol" => %{class: "list-decimal pl-8 space-y-1"},
+      "ul" => %{class: "list-disc pl-8 space-y-1"},
+      "li" => %{class: "text-gray-800"},
+      "p" => %{class: "mt-1 mb-2 text-gray-800"}
+    }
+
+    merged_attributes =
+      Map.merge(assistant_messages_attributes, assigns.attributes)
+
+    assigns =
+      case Earmark.Parser.as_ast(assigns.content) do
+        {:ok, ast, _} ->
+          process_ast(ast, merged_attributes) |> raw()
+
+        _ ->
+          assigns.content
+      end
+      |> then(&assign(assigns, :content, &1))
+
+    ~H"""
+    <article><%= @content %></article>
+    """
+  end
+
+  defp process_ast(ast, attributes) do
+    ast
+    |> Earmark.Transform.map_ast(fn
+      {element_type, _attrs, _content, _meta} = node ->
+        case Map.get(attributes, element_type) do
+          nil ->
+            node
+
+          attribute_map ->
+            Earmark.AstTools.merge_atts_in_node(node, Map.to_list(attribute_map))
+        end
+
+      other ->
+        other
+    end)
+    |> Earmark.Transform.transform()
   end
 
   attr :user, Lightning.Accounts.User, required: true
