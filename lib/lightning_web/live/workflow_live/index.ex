@@ -172,12 +172,15 @@ defmodule LightningWeb.WorkflowLive.Index do
   end
 
   def handle_event("delete_workflow", %{"id" => id}, socket) do
-    %{project: project, can_delete_workflow: can_delete_workflow?} =
-      socket.assigns
+    %{
+      project: project,
+      can_delete_workflow: can_delete_workflow?,
+      current_user: user
+    } = socket.assigns
 
     if can_delete_workflow? do
       Workflows.get_workflow!(id)
-      |> Workflows.mark_for_deletion()
+      |> Workflows.mark_for_deletion(user)
       |> case do
         {:ok, _} ->
           {

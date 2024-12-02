@@ -96,4 +96,28 @@ defmodule Lightning.Workflows.AuditTest do
       assert changes == %{}
     end
   end
+
+  describe "marked_for_deletion" do
+    test "returns a changeset for a `marked_for_deletion` event" do
+      %{id: user_id} = user = insert(:user)
+      workflow_id = Ecto.UUID.generate()
+
+      changeset = Audit.marked_for_deletion(workflow_id, user)
+
+      assert %{
+               changes: %{
+                 event: "marked_for_deletion",
+                 item_id: ^workflow_id,
+                 item_type: "workflow",
+                 actor_id: ^user_id,
+                 changes: %{
+                   changes: changes
+                 }
+               },
+               valid?: true
+             } = changeset
+
+      assert changes == %{}
+    end
+  end
 end

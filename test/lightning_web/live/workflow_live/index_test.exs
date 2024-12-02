@@ -421,5 +421,27 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
 
       refute has_workflow_card?(view, workflow)
     end
+
+    @tag role: :editor
+    test "audits when a workflow has been marked for deletion", %{
+      conn: conn,
+      project: project,
+      user: %{id: user_id},
+      workflow: %{id: workflow_id} = workflow
+    } do
+      Lightning.Repo.delete_all(Lightning.Auditing.Audit)
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      view |> click_delete_workflow(workflow)
+
+      audit = Lightning.Repo.one(Lightning.Auditing.Audit)
+
+      assert %{
+               event: "marked_for_deletion",
+               item_id: ^workflow_id,
+               actor_id: ^user_id
+             } = audit
+    end
   end
 end
