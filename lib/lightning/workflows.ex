@@ -340,14 +340,19 @@ defmodule Lightning.Workflows do
         where: t.workflow_id == ^workflow.id
       )
 
-    Repo.transaction(fn ->
+    Multi.new()
+    |> Multi.update(
+      :workflow,
       Workflow.request_deletion_changeset(workflow, %{
         "deleted_at" => DateTime.utc_now()
       })
-      |> Repo.update()
-
-      Repo.update_all(workflow_triggers_query, set: [enabled: false])
-    end)
+    )
+    |> Multi.update_all(
+      :disable_triggers,
+      workflow_triggers_query,
+      set: [enabled: false]
+    )
+    |> Repo.transaction()
     |> tap(fn result ->
       with {:ok, _} <- result do
         workflow

@@ -712,6 +712,7 @@ defmodule Lightning.WorkflowsTest do
 
       %{id: trigger_1_id} = insert(:trigger, workflow: w1, enabled: true)
       %{id: trigger_2_id} = insert(:trigger, workflow: w1, enabled: true)
+      %{id: trigger_3_id} = insert(:trigger, workflow: w2, enabled: true)
 
       # request workflow deletion (and disable all associated triggers)
       assert {:ok, _workflow} = Workflows.mark_for_deletion(w1)
@@ -724,6 +725,7 @@ defmodule Lightning.WorkflowsTest do
 
       assert Repo.get(Trigger, trigger_1_id) |> Map.get(:enabled) == false
       assert Repo.get(Trigger, trigger_2_id) |> Map.get(:enabled) == false
+      assert Repo.get(Trigger, trigger_3_id) |> Map.get(:enabled) == true
     end
 
     test "mark_for_deletion/2 publishes events for Kafka triggers", %{w1: w1} do
