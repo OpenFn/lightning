@@ -213,28 +213,12 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
     ~H"""
     <div class="h-full flex flex-col">
-      <div class="flex-1 flex flex-col items-center justify-center relative">
-        <blockquote class="text-gray-700 font-medium mb-6 w-2/3 text-center border-l-4 border-blue-500">
-          <p class="italic"><%= @ai_quote.quote %></p>
-          <p class="text-sm font-semibold">
-            -
-            <.link
-              id="ai-quote-source"
-              class="text-primary-400 hover:text-blue-600"
-              href={@ai_quote.source_link}
-              target="_blank"
-              {if(@ai_quote[:source_attribute], do: ["phx-hook": "Tooltip", "aria-label": @ai_quote.source_attribute], else: [])}
-            >
-              <%= @ai_quote.author %>
-            </.link>
-          </p>
-        </blockquote>
-        <p class="text-gray-700 font-medium mb-4 w-1/2 text-center">
-          The AI Assistant is an experimental new feature to help you write job code.
+      <div class="flex-1 flex flex-col items-center md:justify-center relative">
+        <p class="text-gray-700 font-medium mb-8 w-1/2 text-center">
+          The AI Assistant is a chat agent designed to help you write job code.
           <br />
           <br />
           Remember that you, the human in control, are responsible for how its output is used.
-          <br />
         </p>
 
         <.button
@@ -245,6 +229,23 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         >
           Get started with the AI Assistant
         </.button>
+        <blockquote class="text-gray-700 font-medium mb-6 w-2/3 text-center absolute bottom-4 sm:hidden md:block">
+          <div class="inline-block pl-4 border-l-4 border-blue-500">
+            <p class="italic"><%= @ai_quote.quote %></p>
+            <p class="text-sm font-semibold">
+              -
+              <.link
+                id="ai-quote-source"
+                class="text-primary-400 hover:text-blue-600"
+                href={@ai_quote.source_link}
+                target="_blank"
+                {if(@ai_quote[:source_attribute], do: ["phx-hook": "Tooltip", "aria-label": @ai_quote.source_attribute], else: [])}
+              >
+                <%= @ai_quote.author %>
+              </.link>
+            </p>
+          </div>
+        </blockquote>
         <.render_disclaimer />
       </div>
       <.render_ai_footer />
