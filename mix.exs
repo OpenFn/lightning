@@ -105,7 +105,7 @@ defmodule Lightning.MixProject do
       {:opentelemetry_exporter, "~> 1.6.0"},
       {:opentelemetry, "~> 1.3.1"},
       {:opentelemetry_api, "~> 1.2.2"},
-      {:opentelemetry_cowboy, "~> 0.2.1"},
+      {:opentelemetry_cowboy, "~> 0.3.0"},
       {:opentelemetry_ecto, "~> 1.1.1"},
       {:opentelemetry_liveview, "~> 1.0.0-rc.4"},
       {:opentelemetry_oban, "~> 1.0.0"},
