@@ -451,6 +451,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             type="submit"
             disabled={@disabled}
             tooltip={@tooltip}
+            phx-hook="SendMessageViaCtrlEnter"
+            form="ai-assistant-form"
           >
             Send
           </.button>
