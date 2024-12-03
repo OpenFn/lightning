@@ -132,7 +132,7 @@ defmodule Lightning.Projects.AuditTest do
     end
   end
 
-  describe "repo_connection_created/2" do
+  describe "repo_connection/3 - created" do
     test "returns a changeset including the config_path" do
       %{
         branch: branch,
@@ -147,7 +147,7 @@ defmodule Lightning.Projects.AuditTest do
       %{id: user_id} = user = insert(:user)
 
       changeset =
-        Audit.repo_connection_created(repo_connection, user)
+        Audit.repo_connection(repo_connection, :created, user)
 
       assert %{
                changes: %{
@@ -184,7 +184,7 @@ defmodule Lightning.Projects.AuditTest do
       user = insert(:user)
 
       changeset =
-        Audit.repo_connection_created(repo_connection, user)
+        Audit.repo_connection(repo_connection, :created, user)
 
       %{changes: %{changes: %{changes: audit_changes}}} = changeset
 
@@ -198,13 +198,13 @@ defmodule Lightning.Projects.AuditTest do
     end
   end
 
-  describe "./repo_connection_removed/2" do
+  describe "repo_connection/3 - :removed" do
     test "returns a changeset including the config_path" do
       %{
         branch: branch,
         config_path: config_path,
         project_id: project_id,
-        repo: repo,
+        repo: repo
       } =
         repo_connection =
         insert(:project_repo_connection, config_path: "config_path")
@@ -212,7 +212,7 @@ defmodule Lightning.Projects.AuditTest do
       %{id: user_id} = user = insert(:user)
 
       changeset =
-        Audit.repo_connection_removed(repo_connection, user)
+        Audit.repo_connection(repo_connection, :removed, user)
 
       assert %{
                changes: %{
@@ -231,7 +231,7 @@ defmodule Lightning.Projects.AuditTest do
                before: %{
                  branch: branch,
                  config_path: config_path,
-                 repo: repo,
+                 repo: repo
                }
              } == audit_changes
     end
@@ -239,7 +239,7 @@ defmodule Lightning.Projects.AuditTest do
     test "excludes the config_path if it is nil" do
       %{
         branch: branch,
-        repo: repo,
+        repo: repo
       } =
         repo_connection =
         insert(:project_repo_connection, config_path: nil)
@@ -247,7 +247,7 @@ defmodule Lightning.Projects.AuditTest do
       user = insert(:user)
 
       changeset =
-        Audit.repo_connection_removed(repo_connection, user)
+        Audit.repo_connection(repo_connection, :removed, user)
 
       assert %{
                changes: %{
@@ -261,7 +261,7 @@ defmodule Lightning.Projects.AuditTest do
       assert %{
                before: %{
                  branch: branch,
-                 repo: repo,
+                 repo: repo
                }
              } == audit_changes
     end
