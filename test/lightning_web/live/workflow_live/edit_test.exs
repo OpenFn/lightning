@@ -2228,7 +2228,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
             {:ok, %Tesla.Env{status: 200}}
 
           %{method: :post}, _opts ->
-            {:ok, %Tesla.Env{status: 400}}
+            {:ok, %Tesla.Env{status: 400, body: %{"type" => "CONNECTION_ERROR"}}}
         end
       )
 
