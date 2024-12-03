@@ -505,7 +505,7 @@ export const ScrollToBottom = {
         block: 'start',
       });
   },
-};
+} as PhoenixHook<{ scrollToLastElement: () => void }>;
 /**
  * Factory function to create a hook for listening to specific key combinations,
  * only triggering when the element or its children are focused.

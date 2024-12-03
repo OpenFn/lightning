@@ -78,17 +78,6 @@ defmodule Lightning.AiAssistant do
     end
   end
 
-  @spec project_has_any_session?(Ecto.UUID.t()) :: boolean()
-  def project_has_any_session?(project_id) do
-    query =
-      from s in ChatSession,
-        join: j in assoc(s, :job),
-        join: w in assoc(j, :workflow),
-        where: w.project_id == ^project_id
-
-    Repo.exists?(query)
-  end
-
   @doc """
   Queries the AI assistant with the given content.
 
