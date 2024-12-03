@@ -1828,18 +1828,20 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     end
 
     @tag email: "user@openfn.org"
-    test "onboarding ui is displayed when no session exists for the project", %{
+    test "disclaimer ui is displayed when user has not read it", %{
       conn: conn,
       project: project,
       user: user,
-      workflow: %{jobs: [job_1, job_2 | _]} = workflow
+      workflow: %{jobs: [job_1 | _]} = workflow
     } do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
         :openai_api_key -> "openai_api_key"
       end)
 
-      # when no session exists
+      # when disclaimer hasn't been read and no session exists
+      refute user.preferences["ai_assistant.disclaimer_read_at"]
+
       {:ok, view, _html} =
         live(
           conn,
@@ -1858,10 +1860,65 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       refute html =~ "Get started with the AI Assistant"
       assert has_element?(view, "#ai-assistant-form")
 
-      # when a session exists
-      # notice I'm using another job for the session.
-      # This is because the onboarding is shown once per project and not per job
-      insert(:chat_session, user: user, job: job_2)
+      assert Lightning.Repo.reload(user).preferences[
+               "ai_assistant.disclaimer_read_at"
+             ]
+    end
+
+    @tag email: "user@openfn.org"
+    test "disclaimer ui is displayed when user read it more than 24 hours ago",
+         %{
+           conn: conn,
+           project: project,
+           user: user,
+           workflow: %{jobs: [job_1 | _]} = workflow
+         } do
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> "http://localhost:4001"
+        :openai_api_key -> "openai_api_key"
+      end)
+
+      date = DateTime.utc_now() |> DateTime.add(-24, :hour) |> DateTime.to_unix()
+
+      user
+      |> Ecto.Changeset.change(%{
+        preferences: %{"ai_assistant.disclaimer_read_at" => date}
+      })
+      |> Repo.update!()
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      render_async(view)
+
+      html = view |> element("#aichat-#{job_1.id}") |> render()
+      assert html =~ "Get started with the AI Assistant"
+      refute has_element?(view, "#ai-assistant-form")
+    end
+
+    @tag email: "user@openfn.org"
+    test "disclaimer ui is NOT displayed when user read it less than 24 hours ago",
+         %{
+           conn: conn,
+           project: project,
+           user: user,
+           workflow: %{jobs: [job_1 | _]} = workflow
+         } do
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> "http://localhost:4001"
+        :openai_api_key -> "openai_api_key"
+      end)
+
+      date = DateTime.utc_now() |> DateTime.add(-22, :hour) |> DateTime.to_unix()
+
+      user
+      |> Ecto.Changeset.change(%{
+        preferences: %{"ai_assistant.disclaimer_read_at" => date}
+      })
+      |> Repo.update!()
 
       {:ok, view, _html} =
         live(
@@ -1873,7 +1930,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       html = view |> element("#aichat-#{job_1.id}") |> render()
       refute html =~ "Get started with the AI Assistant"
-
       assert has_element?(view, "#ai-assistant-form")
     end
 
@@ -1881,7 +1937,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     test "authorized users can send a message", %{
       conn: conn,
       project: project,
-      user: user,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
       apollo_endpoint = "http://localhost:4001"
@@ -1909,13 +1964,15 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         end
       )
 
-      # insert session so that the onboarding flow is not displayed
-      insert(:chat_session, user: user, job: job_1)
-
       [:owner, :admin, :editor]
       |> Enum.map(fn role ->
+        timestamp = DateTime.utc_now() |> DateTime.to_unix()
+
         user =
-          insert(:user, email: "email-#{Enum.random(1..1_000)}@openfn.org")
+          insert(:user,
+            email: "email-#{Enum.random(1..1_000)}@openfn.org",
+            preferences: %{"ai_assistant.disclaimer_read_at" => timestamp}
+          )
 
         insert(:project_user, project: project, user: user, role: role)
 
@@ -1957,8 +2014,13 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       [:viewer]
       |> Enum.map(fn role ->
+        timestamp = DateTime.utc_now() |> DateTime.to_unix()
+
         user =
-          insert(:user, email: "email-#{Enum.random(1..1_000)}@openfn.org")
+          insert(:user,
+            email: "email-#{Enum.random(1..1_000)}@openfn.org",
+            preferences: %{"ai_assistant.disclaimer_read_at" => timestamp}
+          )
 
         insert(:project_user, project: project, user: user, role: role)
 
@@ -2002,7 +2064,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       conn: conn,
       project: project,
       user: user,
-      workflow: %{jobs: [job_1 | _]} = workflow
+      workflow: workflow
     } do
       apollo_endpoint = "http://localhost:4001"
 
@@ -2020,8 +2082,14 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         end
       )
 
-      # insert session so that the onboarding flow is not displayed
-      insert(:chat_session, user: user, job: job_1)
+      # update preferences so that the onboarding flow is not displayed
+      timestamp = DateTime.utc_now() |> DateTime.to_unix()
+
+      user
+      |> Ecto.Changeset.change(%{
+        preferences: %{"ai_assistant.disclaimer_read_at" => timestamp}
+      })
+      |> Lightning.Repo.update!()
 
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
@@ -2183,9 +2251,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
         )
 
-      html = render_async(view)
+      refute render_async(view) =~ session.title
 
-      assert html =~ session.title
+      view |> element("#get-started-with-ai-btn") |> render_click()
+
+      assert render_async(view) =~ session.title
 
       # click the link to open the session
       view |> element("#session-#{session.id}") |> render_click()
