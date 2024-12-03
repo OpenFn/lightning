@@ -102,11 +102,14 @@ defmodule Lightning.AiAssistant do
           {:ok, ChatSession.t()}
           | {:error, Ecto.Changeset.t() | :apollo_unavailable}
   def query(session, content) do
-    case ApolloClient.query(
-           content,
-           %{expression: session.expression, adaptor: session.adaptor},
-           build_history(session)
-         ) do
+    apollo_resp =
+      ApolloClient.query(
+        content,
+        %{expression: session.expression, adaptor: session.adaptor},
+        build_history(session)
+      )
+
+    case apollo_resp do
       {:ok, %Tesla.Env{status: status, body: body}} when status in 200..299 ->
         message = body["history"] |> Enum.reverse() |> hd()
         save_message(session, message)
