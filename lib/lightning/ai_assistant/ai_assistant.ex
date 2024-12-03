@@ -106,50 +106,22 @@ defmodule Lightning.AiAssistant do
            content,
            %{expression: session.expression, adaptor: session.adaptor},
            build_history(session)
-    ) |> IO.inspect() do
+         ) do
       {:ok, %Tesla.Env{status: status, body: body}} when status in 200..299 ->
         message = body["history"] |> Enum.reverse() |> hd()
         save_message(session, message)
 
-      {:ok, %Tesla.Env{body: %{"type" => type, "message" => message}}} ->
-        error_message = humanize_error(type, message)
+      {:ok, %Tesla.Env{body: %{"message" => message}}} ->
+        {:error, message}
 
-        {:error, error_message}
+      {:error, :timeout} ->
+        {:error, "Request timed out. Please try again."}
 
-      {:error, _} ->
-        {:error,
-         "Unable to reach the AI service. Please check your connection and try again."}
-    end
-  end
+      {:error, :econnrefused} ->
+        {:error, "Unable to reach the AI service. Please try again later."}
 
-  defp humanize_error(type, message) do
-    case type do
-      "AUTH_ERROR" ->
-        "Authentication failed. Please check your credentials."
-
-      "FORBIDDEN" ->
-        "You are not authorized to perform this action."
-
-      "RATE_LIMIT" ->
-        "Rate limit exceeded. Please wait a moment before trying again."
-
-      "CONNECTION_ERROR" ->
-        "Unable to reach the AI service. Please try again."
-
-      "BAD_REQUEST" ->
-        message
-
-      "INVALID_REQUEST" ->
-        message
-
-      "NOT_FOUND" ->
-        "The requested resource was not found."
-
-      "PROVIDER_ERROR" ->
-        "The AI service encountered an error. Please try again later."
-
-      _ ->
-        message
+      {:error, _error} ->
+        {:error, "An unexpected error occurred. Please try again."}
     end
   end
 

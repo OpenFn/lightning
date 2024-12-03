@@ -2228,7 +2228,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
             {:ok, %Tesla.Env{status: 200}}
 
           %{method: :post}, _opts ->
-            {:ok, %Tesla.Env{status: 400, body: %{"type" => "CONNECTION_ERROR"}}}
+            {:ok, %Tesla.Env{status: 400}}
         end
       )
 
@@ -2256,7 +2256,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert has_element?(view, "#assistant-failed-message")
 
       assert view |> element("#assistant-failed-message") |> render() =~
-               "Oops! Could not reach the Ai Server. Please try again later."
+               "Oops! Something went wrong. Please try again."
     end
 
     @tag email: "user@openfn.org"
