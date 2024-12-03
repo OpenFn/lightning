@@ -34,7 +34,6 @@ and this project adheres to
 - Extend display of audit events to cater for deletions.
   [#2701](https://github.com/OpenFn/lightning/issues/2701)
 
-
 ### Fixed
 
 ## [v2.10.4] - 2024-11-22
