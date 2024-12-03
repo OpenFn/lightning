@@ -663,15 +663,13 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
           <div
             :if={message.role == :assistant}
             id={"message-#{message.id}"}
-            class="mr-auto p-2 rounded-lg break-words text-wrap flex flex-row gap-x-2 makeup-html"
+            class="mr-auto p-2 rounded-lg break-words text-wrap w-full gap-x-2 makeup-html"
           >
-            <div>
-              <div class="rounded-full p-2 bg-indigo-200 text-indigo-700 ring-4 ring-white">
-                <.icon name="hero-cpu-chip" class="" />
-              </div>
+            <div class="float-left rounded-full p-2 bg-indigo-200 text-indigo-700 ring-4 ring-white">
+              <.icon name="hero-cpu-chip" class="" />
             </div>
 
-            <div>
+            <div class="ml-12">
               <.formatted_content content={message.content} />
               <!-- TODO: restore this message and add a link to the docs site -->
               <%!-- <div
