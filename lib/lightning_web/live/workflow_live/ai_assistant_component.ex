@@ -246,9 +246,9 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             </p>
           </div>
         </blockquote>
-        <.render_disclaimer />
+        <.disclaimer />
       </div>
-      <.render_ai_footer />
+      <.ai_footer />
     </div>
     """
   end
@@ -358,7 +358,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     ]
   end
 
-  defp render_ai_footer(assigns) do
+  defp ai_footer(assigns) do
     ~H"""
     <div class="flex w-100">
       <p class="flex-1 text-xs mt-1 text-left ml-1">
@@ -385,7 +385,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
   attr :id, :string, default: "ai-assistant-disclaimer"
 
-  defp render_disclaimer(assigns) do
+  defp disclaimer(assigns) do
     ~H"""
     <div id={@id} class="absolute inset-0 z-50 bg-white hidden">
       <div class="h-full w-full overflow-y-auto">
@@ -527,7 +527,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         </.form>
       </.async_result>
     </div>
-    <.render_disclaimer />
+    <.disclaimer />
     """
   end
 
@@ -576,6 +576,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         class="block grow resize-none overflow-y-auto max-h-48 border-0 bg-transparent py-1.5 text-gray-900 placeholder:text-gray-400 placeholder:text-xs placeholder:italic focus:ring-0 text-sm"
         placeholder="Open a previous session or send a message to start a new session"
         disabled={@disabled}
+        phx-hook="TabIndent"
       ><%= Phoenix.HTML.Form.normalize_value("textarea", @form[:content].value) %></textarea>
       <div class="py-2 pl-3 pr-2">
         <div class="flex items-center space-x-5"></div>
@@ -585,13 +586,15 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             type="submit"
             disabled={@disabled}
             tooltip={@tooltip}
+            phx-hook="SendMessageViaCtrlEnter"
+            form="ai-assistant-form"
           >
             Send
           </.button>
         </div>
       </div>
     </div>
-    <.render_ai_footer />
+    <.ai_footer />
     """
   end
 

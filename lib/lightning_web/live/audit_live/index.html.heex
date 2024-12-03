@@ -44,15 +44,7 @@
           </.td>
         </.tr>
         <.tr>
-          <%= if audit.changes.after do %>
-            <.td colspan="4" class="font-mono text-xs break-all">
-              <.diff metadata={audit.changes} />
-            </.td>
-          <% else %>
-            <.td colspan="4" class="font-mono text-xs">
-              No changes
-            </.td>
-          <% end %>
+          <.diff metadata={audit.changes} />
         </.tr>
       <% end %>
     </.table>
