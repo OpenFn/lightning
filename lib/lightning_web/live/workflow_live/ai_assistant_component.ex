@@ -360,7 +360,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
   defp ai_footer(assigns) do
     ~H"""
-    <div class="flex w-100">
+    <div class="flex w-100 mx-1">
       <p class="flex-1 text-xs mt-1 text-left ml-1">
         <a
           href="#"
@@ -566,7 +566,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     <div class="text-xs text-center font-bold">
       Do not paste PII or sensitive business data
     </div>
-    <div class="mr-8">
+    <div class="mx-1">
       <div class="relative">
         <div class="rounded-lg outline outline-1 -outline-offset-1 outline-gray-300 ring-inset focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600">
           <label for="content" class="sr-only">
@@ -576,13 +576,13 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             id="content"
             name={@form[:content].name}
             rows="4"
-            class="block w-full resize-none px-3 py-1.5 placeholder:text-gray-400 placeholder:italic text-sm border-0 focus:ring-0"
+            class="block w-full resize-none px-3 py-1.5 pr-[50px] placeholder:text-gray-400 placeholder:italic text-sm border-0 focus:ring-0 overflow-y-scroll"
             placeholder="Open a previous session or send a message to start a new session"
             disabled={@disabled}
             phx-hook="TabIndent"
           ><%= Phoenix.HTML.Form.normalize_value("textarea", @form[:content].value) %></textarea>
         </div>
-        <div class="absolute inset-y-0 -right-10 flex items-center">
+        <div class="absolute inset-y-0 right-[18px] flex items-center">
           <.simple_button_with_tooltip
             id="ai-assistant-form-submit-btn"
             type="submit"
