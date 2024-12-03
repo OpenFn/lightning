@@ -492,22 +492,52 @@ export const BlurDataclipEditor = {
 } as PhoenixHook;
 
 /**
- * Factory function to create a hook for listening to specific key combinations.
+ * Factory function to create a hook for listening to specific key combinations,
+ * only triggering when the element or its children are focused.
  *
  * @param keyCheck - Function to check if a keyboard event matches the desired key combination.
  * @param action - Action function to be executed when the keyCheck condition is satisfied.
+ * @param isDefault - Whether this hook should fire when no other elements are focused.
  * @returns - A PhoenixHook with mounted and destroyed lifecycles.
  */
 function createKeyCombinationHook(
   keyCheck: (e: KeyboardEvent) => boolean,
-  action: (e: KeyboardEvent, el: HTMLElement) => void
+  action: (e: KeyboardEvent, el: HTMLElement) => void,
+  isDefault: boolean = false
 ): PhoenixHook {
   return {
     mounted() {
       this.callback = (e: KeyboardEvent) => {
-        if (keyCheck(e)) {
+        if (!keyCheck(e)) return;
+
+        const targetEl = e.target as HTMLElement;
+        const isFocusedWithin =
+          this.el.contains(targetEl) ||
+          (this.el.getAttribute('form') &&
+            document
+              .getElementById(this.el.getAttribute('form'))
+              ?.contains(targetEl));
+
+        if (isFocusedWithin) {
           e.preventDefault();
           action(e, this.el);
+          return;
+        }
+
+        if (isDefault) {
+          const focusedElement = document.activeElement;
+          const isHandledByOtherHook =
+            document.querySelector('[phx-hook]')?.contains(focusedElement) ||
+            Array.from(document.querySelectorAll('[phx-hook][form]')).some(el =>
+              document
+                .getElementById(el.getAttribute('form'))
+                ?.contains(focusedElement)
+            );
+
+          if (!isHandledByOtherHook) {
+            e.preventDefault();
+            action(e, this.el);
+          }
         }
       };
       window.addEventListener('keydown', this.callback);
@@ -570,16 +600,29 @@ export const SaveViaCtrlS = createKeyCombinationHook(
 );
 
 /**
- * Hook to trigger a save and run action on the job panel when the Ctrl (or Cmd on Mac) + Enter key combination is pressed.
+ * Hook to send a message to the AI Chat when the Ctrl (or Cmd on Mac) + Enter key combination is pressed
+ * while the chat form or its elements are focused.
+ */
+export const SendMessageViaCtrlEnter = createKeyCombinationHook(
+  isCtrlOrMetaEnter,
+  clickAction,
+  false
+);
+
+/**
+ * Hook to trigger a save and run action on the job panel when the Ctrl (or Cmd on Mac) + Enter key combination is pressed
+ * while the job panel or its elements are focused, or when no other specific elements are focused.
  */
 export const DefaultRunViaCtrlEnter = createKeyCombinationHook(
   isCtrlOrMetaEnter,
-  clickAction
+  clickAction,
+  true
 );
 
 export const AltRunViaCtrlShiftEnter = createKeyCombinationHook(
   isCtrlOrMetaShiftEnter,
-  clickAction
+  clickAction,
+  true
 );
 
 /**

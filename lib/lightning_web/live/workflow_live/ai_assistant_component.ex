@@ -217,14 +217,14 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         >
           Get started with the AI Assistant
         </.button>
-        <.render_disclaimer />
+        <.disclaimer />
       </div>
-      <.render_ai_footer />
+      <.ai_footer />
     </div>
     """
   end
 
-  defp render_ai_footer(assigns) do
+  defp ai_footer(assigns) do
     ~H"""
     <div class="flex w-100">
       <p class="flex-1 text-xs mt-1 text-left ml-1">
@@ -251,7 +251,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
   attr :id, :string, default: "ai-assistant-disclaimer"
 
-  defp render_disclaimer(assigns) do
+  defp disclaimer(assigns) do
     ~H"""
     <div id={@id} class="absolute inset-0 z-50 bg-white hidden">
       <div class="h-full w-full overflow-y-auto">
@@ -393,7 +393,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         </.form>
       </.async_result>
     </div>
-    <.render_disclaimer />
+    <.disclaimer />
     """
   end
 
@@ -452,13 +452,15 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             type="submit"
             disabled={@disabled}
             tooltip={@tooltip}
+            phx-hook="SendMessageViaCtrlEnter"
+            form="ai-assistant-form"
           >
             Send
           </.button>
         </div>
       </div>
     </div>
-    <.render_ai_footer />
+    <.ai_footer />
     """
   end
 
