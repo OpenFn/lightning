@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Enable Tab Key for Indenting Text in AI Assistant Input Box
+  [#2407](https://github.com/OpenFn/lightning/issues/2407)
 - Ctrl/Cmd + Enter to Send a Message to the AI Assistant
   [#2406](https://github.com/OpenFn/lightning/issues/2406)
 - Add styles to AI chat messages
@@ -31,7 +33,6 @@ and this project adheres to
 - Bumped dependencies
 - Extend display of audit events to cater for deletions.
   [#2701](https://github.com/OpenFn/lightning/issues/2701)
-
 
 ### Fixed
 

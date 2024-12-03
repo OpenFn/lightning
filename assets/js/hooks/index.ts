@@ -18,6 +18,28 @@ export {
   TabbedPanels,
 };
 
+export const TabIndent = {
+  mounted() {
+    this.el.addEventListener('keydown', e => {
+      const indent = '\t';
+
+      if (e.key === 'Tab') {
+        e.preventDefault();
+
+        const start = this.el.selectionStart;
+        const end = this.el.selectionEnd;
+
+        this.el.value =
+          this.el.value.substring(0, start) +
+          indent +
+          this.el.value.substring(end);
+
+        this.el.selectionStart = this.el.selectionEnd = start + indent.length;
+      }
+    });
+  },
+};
+
 export const Combobox = {
   mounted() {
     this.input = this.el.querySelector('input');
