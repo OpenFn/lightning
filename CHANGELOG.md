@@ -36,6 +36,8 @@ and this project adheres to
   [#2409](https://github.com/OpenFn/lightning/issues/2409)
 - AI Assistant: Set vertical scrollbar below the session title
   [#2477](https://github.com/OpenFn/lightning/issues/2477)
+- AI Assistant: Increase size of input box for easier handling of large inputs
+  [#2408](https://github.com/OpenFn/lightning/issues/2408)
 - Bumped dependencies
 - Extend display of audit events to cater for deletions.
   [#2701](https://github.com/OpenFn/lightning/issues/2701)

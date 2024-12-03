@@ -33,20 +33,35 @@ defmodule LightningWeb.Components.NewInputs do
 
   def button(assigns) do
     ~H"""
+    <.simple_button_with_tooltip
+      id={@id}
+      tooltip={@tooltip}
+      type={@type}
+      class={[
+        "inline-flex justify-center items-center py-2 px-4 border border-transparent",
+        "shadow-sm text-sm font-medium rounded-md focus:outline-none",
+        "focus:ring-2 focus:ring-offset-2",
+        "phx-submit-loading:opacity-75",
+        @color_class,
+        @class
+      ]}
+      {@rest}
+    >
+      <%= render_slot(@inner_block) %>
+    </.simple_button_with_tooltip>
+    """
+  end
+
+  attr :id, :string, default: ""
+  attr :tooltip, :any, default: nil
+  attr :rest, :global, include: ~w(disabled form name value class type)
+
+  slot :inner_block, required: true
+
+  def simple_button_with_tooltip(assigns) do
+    ~H"""
     <.tooltip_when_disabled id={@id} tooltip={@tooltip} disabled={@rest[:disabled]}>
-      <button
-        id={@id}
-        type={@type}
-        class={[
-          "inline-flex justify-center items-center py-2 px-4 border border-transparent",
-          "shadow-sm text-sm font-medium rounded-md focus:outline-none",
-          "focus:ring-2 focus:ring-offset-2",
-          "phx-submit-loading:opacity-75",
-          @color_class,
-          @class
-        ]}
-        {@rest}
-      >
+      <button id={@id} {@rest}>
         <%= render_slot(@inner_block) %>
       </button>
     </.tooltip_when_disabled>
