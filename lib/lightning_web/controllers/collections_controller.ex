@@ -59,9 +59,7 @@ defmodule LightningWeb.CollectionsController do
          :ok <- authorize(conn, collection) do
       case Collections.get(collection, key) do
         nil ->
-          conn
-          |> put_status(:no_content)
-          |> json(nil)
+          resp(conn, :no_content, "")
 
         item ->
           json(conn, item)
