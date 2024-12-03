@@ -29,6 +29,9 @@ and this project adheres to
 ### Changed
 
 - Bumped dependencies
+- Extend display of audit events to cater for deletions.
+  [#2701](https://github.com/OpenFn/lightning/issues/2701)
+
 
 ### Fixed
 
