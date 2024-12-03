@@ -13,7 +13,6 @@ defmodule Lightning.Projects.Audit do
     ]
 
   alias Ecto.Multi
-  alias Lightning.VersionControl.RepoConnection
 
   def derive_events(multi, changeset, user) do
     [:history_retention_period, :dataclip_retention_period]
@@ -51,7 +50,7 @@ defmodule Lightning.Projects.Audit do
   end
 
   @spec repo_connection(
-          RepoConnection.t(),
+          Lightning.VersionControl.ProjectRepoConnection.t(),
           :created | :removed,
           Lightning.Accounts.User.t()
           | Lightning.VersionControl.ProjectRepoConnection.t()
