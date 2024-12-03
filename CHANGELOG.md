@@ -36,6 +36,9 @@ and this project adheres to
 
 ### Fixed
 
+- Collections controller sending an invalid response body when a item doesn't
+  exist [#2733](https://github.com/OpenFn/lightning/issues/2733)
+
 ## [v2.10.4] - 2024-11-22
 
 ### Added
