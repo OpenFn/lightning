@@ -356,7 +356,7 @@ defmodule Lightning.VersionControlTest do
                changes: %{
                  before: %{
                    "repo" => ^repo,
-                   "branch" => ^branch,
+                   "branch" => ^branch
                  }
                }
              } = audit

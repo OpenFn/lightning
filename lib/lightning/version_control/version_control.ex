@@ -39,7 +39,7 @@ defmodule Lightning.VersionControl do
       with {:ok, repo_connection} <- Repo.insert(changeset),
            {:ok, _audit} <-
              repo_connection
-             |> Audit.repo_connection_created(user)
+             |> Audit.repo_connection(:created, user)
              |> Repo.insert(),
            :ok <-
              VersionControlUsageLimiter.limit_github_sync(
@@ -111,7 +111,10 @@ defmodule Lightning.VersionControl do
   def remove_github_connection(repo_connection, user) do
     Multi.new()
     |> Multi.delete(:delete_repo_connection, repo_connection)
-    |> Multi.insert(:audit, Audit.repo_connection_removed(repo_connection, user))
+    |> Multi.insert(
+      :audit,
+      Audit.repo_connection(repo_connection, :removed, user)
+    )
     |> Repo.transaction()
     |> tap(fn
       {:ok, %{delete_repo_connection: repo_connection}} ->

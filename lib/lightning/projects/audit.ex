@@ -13,6 +13,7 @@ defmodule Lightning.Projects.Audit do
     ]
 
   alias Ecto.Multi
+  alias Lightning.VersionControl.RepoConnection
 
   def derive_events(multi, changeset, user) do
     [:history_retention_period, :dataclip_retention_period]
@@ -49,34 +50,14 @@ defmodule Lightning.Projects.Audit do
     )
   end
 
-  def repo_connection_created(repo_connection, user) do
-    %{
-      branch: branch,
-      config_path: config_path,
-      project_id: project_id,
-      repo: repo,
-      sync_direction: sync_direction
-    } = repo_connection
-
-    connection_properties =
-      %{
-        branch: branch,
-        repo: repo,
-        sync_direction: sync_direction
-      }
-      |> Map.merge(
-        case config_path do
-          nil -> %{}
-          path -> %{config_path: path}
-        end
-      )
-
-    changes = %{after: connection_properties}
-
-    event("repo_connection_created", project_id, user, changes)
-  end
-
-  def repo_connection_removed(repo_connection, user) do
+  @spec repo_connection(
+          RepoConnection.t(),
+          :created | :removed,
+          Lightning.Accounts.User.t()
+          | Lightning.VersionControl.ProjectRepoConnection.t()
+          | Lightning.Workflows.Trigger.t()
+        ) :: Ecto.Changeset.t()
+  def repo_connection(repo_connection, action, actor) do
     %{
       branch: branch,
       config_path: config_path,
@@ -84,20 +65,33 @@ defmodule Lightning.Projects.Audit do
       repo: repo
     } = repo_connection
 
-    connection_properties =
+    changes =
       %{
         branch: branch,
-        repo: repo,
+        repo: repo
       }
-      |> Map.merge(
-        case config_path do
-          nil -> %{}
-          path -> %{config_path: path}
+      |> then(fn connection_properties ->
+        if config_path do
+          Map.put(connection_properties, :config_path, config_path)
+        else
+          connection_properties
         end
-      )
+      end)
+      |> then(fn connection_properties ->
+        if action == :created do
+          %{
+            after:
+              Map.put(
+                connection_properties,
+                :sync_direction,
+                repo_connection.sync_direction
+              )
+          }
+        else
+          %{before: connection_properties}
+        end
+      end)
 
-    changes = %{before: connection_properties, after: nil}
-
-    event("repo_connection_removed", project_id, user, changes)
+    event("repo_connection_#{action}", project_id, actor, changes)
   end
 end
