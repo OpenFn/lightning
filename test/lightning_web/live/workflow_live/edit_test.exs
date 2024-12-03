@@ -2357,6 +2357,60 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert has_element?(view, "#ai-assistant-error", error_message)
     end
+
+    @tag email: "user@openfn.org"
+    test "displays apollo service error messages", %{
+      conn: conn,
+      project: project,
+      workflow: %{jobs: [job_1 | _]} = workflow
+    } do
+      apollo_endpoint = "http://localhost:4001"
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> apollo_endpoint
+        :openai_api_key -> "openai_api_key"
+      end)
+
+      error_message = "Service is temporarily unavailable"
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        fn
+          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
+            {:ok, %Tesla.Env{status: 200}}
+
+          %{method: :post}, _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 503,
+               body: %{
+                 "code" => 503,
+                 "message" => error_message
+               }
+             }}
+        end
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      render_async(view)
+      view |> element("#get-started-with-ai-btn") |> render_click()
+
+      view
+      |> form("#ai-assistant-form")
+      |> render_submit(%{content: "Ping"})
+
+      assert_patch(view)
+      render_async(view)
+
+      assert view |> element("#assistant-failed-message") |> render() =~
+               error_message
+    end
   end
 
   describe "Allow low priority access users to retry steps and create workorders" do
