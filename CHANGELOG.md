@@ -29,6 +29,9 @@ and this project adheres to
 ### Changed
 
 - Bumped dependencies
+- Extend display of audit events to cater for deletions.
+  [#2701](https://github.com/OpenFn/lightning/issues/2701)
+
 
 ### Fixed
 
@@ -46,9 +49,6 @@ and this project adheres to
   [#2699](https://github.com/OpenFn/lightning/issues/2699)  
   ⚠️️ Please note that `EMAIL_ADMIN` defaults to `lightning@example.com` in
   production environments
-
-- Extend display of audit events to cater for deletions.
-  [#2701](https://github.com/OpenFn/lightning/issues/2701)
 
 ### Fixed
 
