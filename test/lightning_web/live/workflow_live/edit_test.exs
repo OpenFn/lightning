@@ -2359,7 +2359,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     end
 
     @tag email: "user@openfn.org"
-    test "displays apollo service error messages", %{
+    test "displays apollo server error messages", %{
       conn: conn,
       project: project,
       workflow: %{jobs: [job_1 | _]} = workflow
@@ -2371,7 +2371,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         :openai_api_key -> "openai_api_key"
       end)
 
-      error_message = "Service is temporarily unavailable"
+      error_message = "Server is temporarily unavailable"
 
       Mox.stub(
         Lightning.Tesla.Mock,

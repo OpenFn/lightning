@@ -100,7 +100,7 @@ defmodule Lightning.AiAssistant do
   """
   @spec query(ChatSession.t(), String.t()) ::
           {:ok, ChatSession.t()}
-          | {:error, Ecto.Changeset.t() | :apollo_unavailable}
+          | {:error, String.t() | Ecto.Changeset.t()}
   def query(session, content) do
     apollo_resp =
       ApolloClient.query(

@@ -138,19 +138,19 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     end
   end
 
-  defp error_message({:error, message}) when is_binary(message) do
+  def error_message({:error, message}) when is_binary(message) do
     message
   end
 
-  defp error_message({:error, %Ecto.Changeset{}}) do
+  def error_message({:error, %Ecto.Changeset{}}) do
     "Could not save message. Please try again."
   end
 
-  defp error_message({:error, _reason, %{text: text_message}}) do
+  def error_message({:error, _reason, %{text: text_message}}) do
     text_message
   end
 
-  defp error_message(_error) do
+  def error_message(_error) do
     "Oops! Something went wrong. Please try again."
   end
 
