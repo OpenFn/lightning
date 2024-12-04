@@ -8,6 +8,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   alias Lightning.Projects.Project
   alias Lightning.Workflows.WorkflowUsageLimiter
   alias Lightning.WorkOrders.SearchParams
+  alias LightningWeb.WorkflowLive.Helpers
   alias Timex.Format.DateTime.Formatters.Relative
 
   def workflow_list(assigns) do
@@ -146,8 +147,17 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
               </div>
             <% end %>
           </div>
-          <div class="mr-2 invisible group-hover:visible pt-2">
-            <div :if={@can_delete_workflow} class="py-0.5">
+          <div class="mr-2 pt-2">
+            <div :if={@can_delete_workflow} class="flex items-center gap-2">
+              <.input
+                id={workflow.id}
+                type="toggle"
+                name="workflow_state"
+                value={Helpers.workflow_enabled?(workflow)}
+                tooltip={Helpers.workflow_state_tooltip(workflow)}
+                on_click="toggle_workflow_state"
+                value_key={workflow.id}
+              />
               <.link
                 href="#"
                 class="table-action"

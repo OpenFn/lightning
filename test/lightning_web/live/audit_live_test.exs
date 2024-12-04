@@ -6,6 +6,7 @@ defmodule LightningWeb.AuditLiveTest do
   import Lightning.Factories
 
   alias Lightning.Repo
+  alias LightningWeb.AuditLive
   alias LightningWeb.LiveHelpers
 
   describe "Index as a regular user" do
@@ -58,6 +59,298 @@ defmodule LightningWeb.AuditLiveTest do
       assert html =~ "created"
       assert html =~ "(User deleted)"
       assert html =~ LiveHelpers.display_short_uuid(user_to_be_deleted.id)
+    end
+  end
+
+  describe ".diff/1" do
+    test "correctly lists changes with both before and after (string keys)" do
+      assigns = %{
+        metadata: %{
+          before: %{
+            "foo" => "foo_before",
+            "bar" => "bar_before"
+          },
+          after: %{
+            "foo" => "foo_after",
+            "bar" => "bar_after"
+          }
+        }
+      }
+
+      html = render_component(&AuditLive.Index.diff/1, assigns)
+
+      assert html =~ ~r"<li>foo.+foo_before.+foo_after</li>"s
+      assert html =~ ~r"<li>bar.+bar_before.+bar_after</li>"s
+    end
+
+    test "correctly lists changes with both before and after (atom keys)" do
+      assigns = %{
+        metadata: %{
+          before: %{
+            foo: "foo_before",
+            bar: "bar_before"
+          },
+          after: %{
+            foo: "foo_after",
+            bar: "bar_after"
+          }
+        }
+      }
+
+      html = render_component(&AuditLive.Index.diff/1, assigns)
+
+      assert html =~ ~r"<li>foo.+foo_before.+foo_after</li>"s
+      assert html =~ ~r"<li>bar.+bar_before.+bar_after</li>"s
+    end
+
+    test "correctly lists changes if before is nil (string keys)" do
+      assigns = %{
+        metadata: %{
+          before: nil,
+          after: %{"foo" => "foo_after", "bar" => "bar_after"}
+        }
+      }
+
+      html = render_component(&AuditLive.Index.diff/1, assigns)
+
+      assert html =~ ~r"<li>foo&nbsp;\s+<span.+foo_after</li>"s
+      assert html =~ ~r"<li>bar&nbsp;\s+<span.+bar_after</li>"s
+    end
+
+    test "correctly lists changes if before is nil (atom keys)" do
+      assigns = %{
+        metadata: %{
+          before: nil,
+          after: %{foo: "foo_after", bar: "bar_after"}
+        }
+      }
+
+      html = render_component(&AuditLive.Index.diff/1, assigns)
+
+      assert html =~ ~r"<li>foo&nbsp;\s+<span.+foo_after</li>"s
+      assert html =~ ~r"<li>bar&nbsp;\s+<span.+bar_after</li>"s
+    end
+
+    test "correctly lists changes if before is empty (string keys)" do
+      assigns = %{
+        metadata: %{
+          before: %{},
+          after: %{"foo" => "foo_after", "bar" => "bar_after"}
+        }
+      }
+
+      html = render_component(&AuditLive.Index.diff/1, assigns)
+
+      assert html =~ ~r"<li>foo&nbsp;\s+<span.+foo_after</li>"s
+      assert html =~ ~r"<li>bar&nbsp;\s+<span.+bar_after</li>"s
+    end
+
+    test "correctly lists changes if before is empty (atom keys)" do
+      assigns = %{
+        metadata: %{
+          before: %{},
+          after: %{foo: "foo_after", bar: "bar_after"}
+        }
+      }
+
+      html = render_component(&AuditLive.Index.diff/1, assigns)
+
+      assert html =~ ~r"<li>foo&nbsp;\s+<span.+foo_after</li>"s
+      assert html =~ ~r"<li>bar&nbsp;\s+<span.+bar_after</li>"s
+    end
+
+    test "correctly lists changes if after is nil (string keys)" do
+      assigns = %{
+        metadata: %{
+          before: %{"foo" => "foo_before", "bar" => "bar_before"},
+          after: nil
+        }
+      }
+
+      html = render_component(&AuditLive.Index.diff/1, assigns)
+
+      assert html =~ ~r"<li>foo.+foo_before.+?span>\s+?</li>"s
+      assert html =~ ~r"<li>bar.+bar_before.+?span>\s+?</li>"s
+    end
+
+    test "correctly lists changes if after is nil (atom keys)" do
+      assigns = %{
+        metadata: %{
+          before: %{foo: "foo_before", bar: "bar_before"},
+          after: nil
+        }
+      }
+
+      html = render_component(&AuditLive.Index.diff/1, assigns)
+
+      assert html =~ ~r"<li>foo.+foo_before.+?span>\s+?</li>"s
+      assert html =~ ~r"<li>bar.+bar_before.+?span>\s+?</li>"s
+    end
+
+    test "correctly lists changes if after is empty (string keys)" do
+      assigns = %{
+        metadata: %{
+          before: %{"foo" => "foo_before", "bar" => "bar_before"},
+          after: %{}
+        }
+      }
+
+      html = render_component(&AuditLive.Index.diff/1, assigns)
+
+      assert html =~ ~r"<li>foo.+foo_before.+?span>\s+?</li>"s
+      assert html =~ ~r"<li>bar.+bar_before.+?span>\s+?</li>"s
+    end
+
+    test "correctly lists changes if after is empty (atom keys)" do
+      assigns = %{
+        metadata: %{
+          before: %{foo: "foo_before", bar: "bar_before"},
+          after: %{}
+        }
+      }
+
+      html = render_component(&AuditLive.Index.diff/1, assigns)
+
+      assert html =~ ~r"<li>foo.+foo_before.+?span>\s+?</li>"s
+      assert html =~ ~r"<li>bar.+bar_before.+?span>\s+?</li>"s
+    end
+
+    test "includes any extra keys in the before (string keys)" do
+      assigns = %{
+        metadata: %{
+          before: %{
+            "foo" => "foo_before",
+            "bar" => "bar_before",
+            "baz" => "baz_before"
+          },
+          after: %{
+            "foo" => "foo_after",
+            "bar" => "bar_after"
+          }
+        }
+      }
+
+      html = render_component(&AuditLive.Index.diff/1, assigns)
+
+      assert html =~ ~r"<li>foo.+foo_before.+foo_after</li>"s
+      assert html =~ ~r"<li>bar.+bar_before.+bar_after</li>"s
+      assert html =~ ~r"<li>baz.+baz_before.+?</span>\s+?</li>"s
+    end
+
+    test "includes any extra keys in the before (atom keys)" do
+      assigns = %{
+        metadata: %{
+          before: %{
+            foo: "foo_before",
+            bar: "bar_before",
+            baz: "baz_before"
+          },
+          after: %{
+            foo: "foo_after",
+            bar: "bar_after"
+          }
+        }
+      }
+
+      html = render_component(&AuditLive.Index.diff/1, assigns)
+
+      assert html =~ ~r"<li>foo.+foo_before.+foo_after</li>"s
+      assert html =~ ~r"<li>bar.+bar_before.+bar_after</li>"s
+      assert html =~ ~r"<li>baz.+baz_before.+?</span>\s+?</li>"s
+    end
+
+    test "includes any extra keys in the after (string keys)" do
+      assigns = %{
+        metadata: %{
+          before: %{
+            "foo" => "foo_before",
+            "bar" => "bar_before"
+          },
+          after: %{
+            "foo" => "foo_after",
+            "bar" => "bar_after",
+            "baz" => "baz_after"
+          }
+        }
+      }
+
+      html = render_component(&AuditLive.Index.diff/1, assigns)
+
+      assert html =~ ~r"<li>foo.+foo_before.+foo_after</li>"s
+      assert html =~ ~r"<li>bar.+bar_before.+bar_after</li>"s
+      assert html =~ ~r"<li>baz&nbsp;\s+?<span.+?</span>\s+?baz_after</li>"s
+    end
+
+    test "includes any extra keys in the after (atom keys)" do
+      assigns = %{
+        metadata: %{
+          before: %{
+            foo: "foo_before",
+            bar: "bar_before"
+          },
+          after: %{
+            foo: "foo_after",
+            bar: "bar_after",
+            baz: "baz_after"
+          }
+        }
+      }
+
+      html = render_component(&AuditLive.Index.diff/1, assigns)
+
+      assert html =~ ~r"<li>foo.+foo_before.+foo_after</li>"s
+      assert html =~ ~r"<li>bar.+bar_before.+bar_after</li>"s
+      assert html =~ ~r"<li>baz&nbsp;\s+?<span.+?</span>\s+?baz_after</li>"s
+    end
+
+    test "list changes in order (string keys)" do
+      assigns = %{
+        metadata: %{
+          before: %{
+            "foo" => "foo_before",
+            "bar" => "bar_before",
+            "baz" => "baz_before"
+          },
+          after: %{
+            "foo" => "foo_after",
+            "bar" => "bar_after",
+            "baz" => "baz_after"
+          }
+        }
+      }
+
+      html = render_component(&AuditLive.Index.diff/1, assigns)
+
+      assert html =~ ~r"bar&nbsp;.+baz&nbsp;.+foo&nbsp;"s
+    end
+
+    test "list changes in order (atom keys)" do
+      assigns = %{
+        metadata: %{
+          before: %{foo: "foo_before", bar: "bar_before", baz: "baz_before"},
+          after: %{foo: "foo_after", bar: "bar_after", baz: "baz_after"}
+        }
+      }
+
+      html = render_component(&AuditLive.Index.diff/1, assigns)
+
+      assert html =~ ~r"bar&nbsp;.+baz&nbsp;.+foo&nbsp;"s
+    end
+
+    test "when both before and after are nil, return `No changes`" do
+      assigns = %{metadata: %{before: nil, after: nil}}
+
+      html = render_component(&AuditLive.Index.diff/1, assigns)
+
+      assert html =~ "No changes"
+    end
+
+    test "when both before and after are empty, return `No changes`" do
+      assigns = %{metadata: %{before: %{}, after: %{}}}
+
+      html = render_component(&AuditLive.Index.diff/1, assigns)
+
+      assert html =~ "No changes"
     end
   end
 end

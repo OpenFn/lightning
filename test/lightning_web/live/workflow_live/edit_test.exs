@@ -181,6 +181,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       view |> change_editor_text("some body")
 
+      # By default, workflows are disabled to ensure a controlled setup.
+      # Here, we enable the workflow to test the :too_many_workflows limit action
+      view
+      |> element("#toggle-control-workflow")
+      |> render_click()
+
       refute view |> save_is_disabled?()
 
       assert view |> has_pending_changes()
@@ -1478,7 +1484,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       idx = get_index_of_edge(view, edge)
 
-      assert html =~ "Disable this path"
+      assert html =~ "Enabled"
 
       assert view
              |> element("#workflow_edges_#{idx}_enabled")
@@ -1498,7 +1504,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       refute edge.enabled
 
-      assert view
+      refute view
              |> element("#workflow_edges_#{idx}_enabled[checked]")
              |> has_element?()
     end
@@ -1582,6 +1588,196 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert html =~ error_msg
     end
+
+    test "workflows are disabled by default", %{
+      conn: conn,
+      user: user
+    } do
+      project = insert(:project, project_users: [%{user: user, role: :editor}])
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/w/new?m=settings")
+
+      push_patches_to_view(view, initial_workflow_patchset(project))
+
+      fill_workflow_name(view, "My Workflow")
+
+      {job, _, _} = select_first_job(view)
+
+      fill_job_fields(view, job, %{name: "My Job"})
+
+      click_edit(view, job)
+
+      change_editor_text(view, "some body")
+
+      html = click_save(view)
+
+      assert html =~
+               "Workflow saved successfully. Remember to enable your workflow to run it automatically."
+
+      refute Workflows.get_workflows_for(project)
+             |> List.first()
+             |> Map.get(:triggers)
+             |> List.first()
+             |> Map.get(:enabled)
+    end
+
+    test "when workflow is enabled, reminder flash message is not displayed for the first save",
+         %{
+           conn: conn,
+           user: user
+         } do
+      project = insert(:project, project_users: [%{user: user, role: :editor}])
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/w/new?m=settings")
+
+      push_patches_to_view(view, initial_workflow_patchset(project))
+
+      fill_workflow_name(view, "My Workflow")
+
+      {job, _, _} = select_first_job(view)
+
+      fill_job_fields(view, job, %{name: "My Job"})
+
+      click_edit(view, job)
+
+      change_editor_text(view, "some body")
+
+      view
+      |> element("#toggle-control-workflow")
+      |> render_click()
+
+      html = click_save(view)
+
+      refute html =~
+               "Workflow saved successfully. Remember to enable your workflow to run it automatically."
+
+      assert html =~
+               "Workflow saved successfully."
+
+      assert Workflows.get_workflows_for(project)
+             |> List.first()
+             |> Map.get(:triggers)
+             |> List.first()
+             |> Map.get(:enabled)
+    end
+
+    test "clicking on the toggle disables all the triggers of a workflow", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
+        )
+
+      assert workflow.triggers |> Enum.all?(& &1.enabled)
+
+      view
+      |> element("#toggle-control-workflow")
+      |> render_click()
+
+      click_save(view)
+
+      workflow = Workflows.get_workflow(workflow.id, include: [:triggers])
+
+      refute workflow.triggers |> Enum.any?(& &1.enabled)
+    end
+
+    test "workflow can still be disabled / enabled from the trigger form", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
+        )
+
+      assert workflow.triggers |> Enum.all?(& &1.enabled)
+
+      select_trigger(view)
+
+      view
+      |> form("#workflow-form", %{
+        "workflow" => %{"triggers" => %{"0" => %{"enabled" => "false"}}}
+      })
+      |> render_change()
+
+      click_save(view)
+
+      workflow = Workflows.get_workflow(workflow.id, include: [:triggers])
+
+      refute workflow.triggers |> Enum.any?(& &1.enabled)
+    end
+
+    test "workflow state toggle tooltip messages vary by trigger type", %{
+      conn: conn,
+      user: user,
+      project: project
+    } do
+      cron_trigger = build(:trigger, type: :cron, enabled: false)
+      webhook_trigger = build(:trigger, type: :webhook, enabled: true)
+
+      job_1 = build(:job)
+      job_2 = build(:job)
+
+      cron_workflow =
+        build(:workflow)
+        |> with_job(job_1)
+        |> with_trigger(cron_trigger)
+        |> with_edge({cron_trigger, job_1})
+        |> insert()
+
+      webhook_workflow =
+        build(:workflow)
+        |> with_job(job_2)
+        |> with_trigger(webhook_trigger)
+        |> with_edge({webhook_trigger, job_2})
+        |> insert()
+
+      Lightning.Workflows.Snapshot.get_or_create_latest_for(cron_workflow, user)
+
+      Lightning.Workflows.Snapshot.get_or_create_latest_for(
+        webhook_workflow,
+        user
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{cron_workflow.id}"
+        )
+
+      assert view
+             |> has_element?(
+               "#toggle-container-workflow[aria-label='This workflow is inactive (manual runs only)']"
+             )
+
+      view
+      |> element("#toggle-control-workflow")
+      |> render_click()
+
+      assert view
+             |> has_element?(
+               "#toggle-container-workflow[aria-label='This workflow is active (cron trigger enabled)']"
+             )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{webhook_workflow.id}"
+        )
+
+      assert view
+             |> has_element?(
+               "#toggle-container-workflow[aria-label='This workflow is active (webhook trigger enabled)']"
+             )
+    end
   end
 
   describe "AI Assistant:" do
@@ -1632,18 +1828,20 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     end
 
     @tag email: "user@openfn.org"
-    test "onboarding ui is displayed when no session exists for the project", %{
+    test "disclaimer ui is displayed when user has not read it", %{
       conn: conn,
       project: project,
       user: user,
-      workflow: %{jobs: [job_1, job_2 | _]} = workflow
+      workflow: %{jobs: [job_1 | _]} = workflow
     } do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
         :openai_api_key -> "openai_api_key"
       end)
 
-      # when no session exists
+      # when disclaimer hasn't been read and no session exists
+      refute user.preferences["ai_assistant.disclaimer_read_at"]
+
       {:ok, view, _html} =
         live(
           conn,
@@ -1662,10 +1860,65 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       refute html =~ "Get started with the AI Assistant"
       assert has_element?(view, "#ai-assistant-form")
 
-      # when a session exists
-      # notice I'm using another job for the session.
-      # This is because the onboarding is shown once per project and not per job
-      insert(:chat_session, user: user, job: job_2)
+      assert Lightning.Repo.reload(user).preferences[
+               "ai_assistant.disclaimer_read_at"
+             ]
+    end
+
+    @tag email: "user@openfn.org"
+    test "disclaimer ui is displayed when user read it more than 24 hours ago",
+         %{
+           conn: conn,
+           project: project,
+           user: user,
+           workflow: %{jobs: [job_1 | _]} = workflow
+         } do
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> "http://localhost:4001"
+        :openai_api_key -> "openai_api_key"
+      end)
+
+      date = DateTime.utc_now() |> DateTime.add(-24, :hour) |> DateTime.to_unix()
+
+      user
+      |> Ecto.Changeset.change(%{
+        preferences: %{"ai_assistant.disclaimer_read_at" => date}
+      })
+      |> Repo.update!()
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      render_async(view)
+
+      html = view |> element("#aichat-#{job_1.id}") |> render()
+      assert html =~ "Get started with the AI Assistant"
+      refute has_element?(view, "#ai-assistant-form")
+    end
+
+    @tag email: "user@openfn.org"
+    test "disclaimer ui is NOT displayed when user read it less than 24 hours ago",
+         %{
+           conn: conn,
+           project: project,
+           user: user,
+           workflow: %{jobs: [job_1 | _]} = workflow
+         } do
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> "http://localhost:4001"
+        :openai_api_key -> "openai_api_key"
+      end)
+
+      date = DateTime.utc_now() |> DateTime.add(-22, :hour) |> DateTime.to_unix()
+
+      user
+      |> Ecto.Changeset.change(%{
+        preferences: %{"ai_assistant.disclaimer_read_at" => date}
+      })
+      |> Repo.update!()
 
       {:ok, view, _html} =
         live(
@@ -1677,7 +1930,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       html = view |> element("#aichat-#{job_1.id}") |> render()
       refute html =~ "Get started with the AI Assistant"
-
       assert has_element?(view, "#ai-assistant-form")
     end
 
@@ -1685,7 +1937,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     test "authorized users can send a message", %{
       conn: conn,
       project: project,
-      user: user,
       workflow: %{jobs: [job_1 | _]} = workflow
     } do
       apollo_endpoint = "http://localhost:4001"
@@ -1713,13 +1964,15 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         end
       )
 
-      # insert session so that the onboarding flow is not displayed
-      insert(:chat_session, user: user, job: job_1)
-
       [:owner, :admin, :editor]
       |> Enum.map(fn role ->
+        timestamp = DateTime.utc_now() |> DateTime.to_unix()
+
         user =
-          insert(:user, email: "email-#{Enum.random(1..1_000)}@openfn.org")
+          insert(:user,
+            email: "email-#{Enum.random(1..1_000)}@openfn.org",
+            preferences: %{"ai_assistant.disclaimer_read_at" => timestamp}
+          )
 
         insert(:project_user, project: project, user: user, role: role)
 
@@ -1761,8 +2014,13 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       [:viewer]
       |> Enum.map(fn role ->
+        timestamp = DateTime.utc_now() |> DateTime.to_unix()
+
         user =
-          insert(:user, email: "email-#{Enum.random(1..1_000)}@openfn.org")
+          insert(:user,
+            email: "email-#{Enum.random(1..1_000)}@openfn.org",
+            preferences: %{"ai_assistant.disclaimer_read_at" => timestamp}
+          )
 
         insert(:project_user, project: project, user: user, role: role)
 
@@ -1806,7 +2064,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       conn: conn,
       project: project,
       user: user,
-      workflow: %{jobs: [job_1 | _]} = workflow
+      workflow: workflow
     } do
       apollo_endpoint = "http://localhost:4001"
 
@@ -1824,8 +2082,14 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         end
       )
 
-      # insert session so that the onboarding flow is not displayed
-      insert(:chat_session, user: user, job: job_1)
+      # update preferences so that the onboarding flow is not displayed
+      timestamp = DateTime.utc_now() |> DateTime.to_unix()
+
+      user
+      |> Ecto.Changeset.change(%{
+        preferences: %{"ai_assistant.disclaimer_read_at" => timestamp}
+      })
+      |> Lightning.Repo.update!()
 
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
@@ -1987,9 +2251,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
         )
 
-      html = render_async(view)
+      refute render_async(view) =~ session.title
 
-      assert html =~ session.title
+      view |> element("#get-started-with-ai-btn") |> render_click()
+
+      assert render_async(view) =~ session.title
 
       # click the link to open the session
       view |> element("#session-#{session.id}") |> render_click()
@@ -2287,7 +2553,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       refute_eventually(
         low_priority_view
         |> has_element?("#inspector-workflow-version", "latest"),
-        10_000
+        15_000
       )
 
       assert low_priority_view

@@ -384,22 +384,6 @@ defmodule LightningWeb.WorkflowLive.Components do
           </div>
       <% end %>
     </div>
-    <div class="hidden sm:block" aria-hidden="true">
-      <div class="py-2"></div>
-    </div>
-    <hr class="h-px bg-gray-200 border-0 dark:bg-gray-700 position:absolute" />
-    <div class="hidden sm:block" aria-hidden="true">
-      <div class="py-2"></div>
-    </div>
-    <.input
-      type="checkbox"
-      field={@form[:enabled]}
-      label="Disable this trigger"
-      disabled={@disabled}
-      checked_value={false}
-      unchecked_value={true}
-      value={@trigger_enabled}
-    />
     """
   end
 
@@ -474,6 +458,7 @@ defmodule LightningWeb.WorkflowLive.Components do
           label="Label"
           field={@form[:condition_label]}
           maxlength="255"
+          disabled={@disabled}
         />
       </div>
       <div>
@@ -497,6 +482,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             phx-debounce="300"
             maxlength="255"
             placeholder="eg: !state.error"
+            disabled={@disabled}
           />
           <details class="mt-5 ml-1">
             <summary class="text-xs cursor-pointer">
@@ -523,41 +509,6 @@ defmodule LightningWeb.WorkflowLive.Components do
               </p>
             </div>
           </details>
-        </div>
-      <% end %>
-      <%= if @form[:source_trigger_id].value do %>
-        <div class="max-w-xl text-sm text-gray-500 mt-3">
-          <p>This path will be active if its trigger is enabled</p>
-        </div>
-      <% else %>
-        <div class="mt-7 border-t flex flex-col justify-between">
-          <h2 class=" flex mt-3">
-            <.input
-              type="checkbox"
-              field={@form[:enabled]}
-              disabled={@disabled}
-              label="Disable this path"
-              checked_value={false}
-              unchecked_value={true}
-              value={@edge_enabled}
-            />
-          </h2>
-        </div>
-      <% end %>
-      <%= unless @form[:source_trigger_id].value do %>
-        <div class="grow flex justify-end">
-          <label>
-            <.button
-              id="delete-edge-button"
-              class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
-              data-confirm="Are you sure you want to delete this path?"
-              phx-click="delete_edge"
-              phx-value-id={@form[:id].value}
-              disabled={@disabled or @form[:source_trigger_id].value}
-            >
-              Delete Path
-            </.button>
-          </label>
         </div>
       <% end %>
     </div>

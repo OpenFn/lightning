@@ -46,25 +46,47 @@ defmodule LightningWeb.AuditLive.Index do
     |> assign(:page, Auditing.list_all(params))
   end
 
+  def diff(%{metadata: %{before: nil, after: nil}} = assigns) do
+    no_changes(assigns)
+  end
+
+  def diff(%{metadata: %{before: lhs, after: rhs}} = assigns)
+      when map_size(lhs) == 0 and map_size(rhs) == 0 do
+    no_changes(assigns)
+  end
+
   def diff(assigns) do
-    rhs = assigns.metadata.after
+    lhs = assigns.metadata.before || %{}
+    rhs = assigns.metadata.after || %{}
 
-    lhs =
-      assigns.metadata.before ||
-        Enum.into(rhs, %{}, fn {key, _val} -> {key, nil} end)
+    changes =
+      lhs
+      |> Map.keys()
+      |> Enum.concat(Map.keys(rhs))
+      |> Enum.sort()
+      |> Enum.uniq()
+      |> Enum.map(fn key ->
+        {key, Map.get(lhs, key), Map.get(rhs, key)}
+      end)
 
-    assigns =
-      assign(assigns,
-        changes:
-          Enum.zip([lhs |> Map.keys(), lhs |> Map.values(), rhs |> Map.values()])
-      )
+    assigns = assign(assigns, changes: changes)
 
     ~H"""
-    <%= for {field, old, new} <- @changes do %>
-      <li><%= field %>&nbsp; <%= old %>
-        <Heroicons.arrow_right class="h-5 w-5 inline-block mr-2" />
-        <%= new %></li>
-    <% end %>
+    <.td colspan="4" class="font-mono text-xs break-all">
+      <%= for {field, old, new} <- @changes do %>
+        <li><%= field %>&nbsp; <%= old %>
+          <.icon name="hero-arrow-right" class="h-5 w-5 inline-block mr-2" />
+          <%= new %></li>
+      <% end %>
+    </.td>
+    """
+  end
+
+  defp no_changes(assigns) do
+    ~H"""
+    <.td colspan="4" class="font-mono text-xs">
+      No changes
+    </.td>
     """
   end
 end

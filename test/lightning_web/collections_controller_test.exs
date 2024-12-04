@@ -131,7 +131,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
         |> assign_bearer(token)
         |> get(~p"/collections/#{collection.name}/some-unexisting-key")
 
-      assert json_response(conn, 204) == nil
+      assert response(conn, 204) == ""
     end
   end
 

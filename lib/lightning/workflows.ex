@@ -37,7 +37,7 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
-  Gets a single workflow.
+  Gets a single workflow with optional preloads.
 
   Raises `Ecto.NoResultsError` if the Workflow does not exist.
 
@@ -49,10 +49,40 @@ defmodule Lightning.Workflows do
       iex> get_workflow!(456)
       ** (Ecto.NoResultsError)
 
-  """
-  def get_workflow!(id), do: Repo.get!(Workflow, id)
+      iex> get_workflow!(123, include: [:triggers])
+      %Workflow{triggers: [...]}
 
-  def get_workflow(id), do: Repo.get(Workflow, id)
+  """
+  def get_workflow!(id, opts \\ []) do
+    get_workflow_query(id, opts) |> Repo.one!()
+  end
+
+  @doc """
+  Gets a single workflow with optional preloads, returns `nil` if not found.
+
+  ## Examples
+
+      iex> get_workflow(123)
+      %Workflow{}
+
+      iex> get_workflow(456)
+      nil
+
+      iex> get_workflow(123, include: [:triggers])
+      %Workflow{triggers: [...]}
+
+  """
+  def get_workflow(id, opts \\ []) do
+    get_workflow_query(id, opts) |> Repo.one()
+  end
+
+  defp get_workflow_query(id, opts) do
+    include = Keyword.get(opts, :include, [])
+
+    Workflow
+    |> where(id: ^id)
+    |> preload(^include)
+  end
 
   @spec save_workflow(Ecto.Changeset.t(Workflow.t()) | map(), struct()) ::
           {:ok, Workflow.t()}
@@ -76,6 +106,7 @@ defmodule Lightning.Workflows do
         multi |> capture_snapshot()
       end
     end)
+    |> maybe_audit_workflow_state_changes(changeset)
     |> Repo.transaction()
     |> case do
       {:ok, %{workflow: workflow}} ->
@@ -179,11 +210,40 @@ defmodule Lightning.Workflows do
       &(Map.get(&1, :workflow) |> Snapshot.build()),
       returning: false
     )
-    |> Multi.insert(:audit, fn changes ->
+    |> Multi.insert(:audit_snapshot_creation, fn changes ->
       %{snapshot: %{id: snapshot_id}, workflow: %{id: workflow_id}} = changes
 
       Audit.snapshot_created(workflow_id, snapshot_id, changes.actor)
     end)
+  end
+
+  defp maybe_audit_workflow_state_changes(multi, changeset) do
+    changeset
+    |> Ecto.Changeset.get_change(:triggers, [])
+    |> Enum.reduce_while(nil, fn trigger_changeset, _previous ->
+      case Ecto.Changeset.get_change(trigger_changeset, :enabled) do
+        nil -> {:cont, nil}
+        changed -> {:halt, {trigger_changeset.data.enabled, changed}}
+      end
+    end)
+    |> case do
+      nil ->
+        multi
+
+      {from, to} ->
+        Ecto.Multi.insert(
+          multi,
+          :audit_workflow_state_change,
+          fn %{workflow: %{id: workflow_id}, actor: actor} ->
+            Audit.workflow_state_changed(
+              if(to, do: "enabled", else: "disabled"),
+              workflow_id,
+              actor,
+              %{before: %{enabled: from}, after: %{enabled: to}}
+            )
+          end
+        )
+    end
   end
 
   # Helper to preload associations only if they are present in the attributes
@@ -447,5 +507,62 @@ defmodule Lightning.Workflows do
   def has_newer_version?(%Workflow{lock_version: version, id: id}) do
     from(w in Workflow, where: w.lock_version > ^version and w.id == ^id)
     |> Repo.exists?()
+  end
+
+  @doc """
+  Updates the `enabled` state of triggers associated with a given workflow as a struct or as a changeset.
+
+  ## **Parameters**
+  - **`workflow_or_changeset`**:
+  - An `%Ecto.Changeset{}` containing a `:triggers` association.
+  - A `%Workflow{}` struct with a `triggers` field.
+  - **`enabled?`**:
+  - A boolean indicating whether to enable (`true`) or disable (`false`) the triggers.
+
+  ## **Returns**
+  - An updated `%Ecto.Changeset{}` with the `:triggers` association modified.
+  - An updated `%Ecto.Changeset{}` derived from the given `%Workflow{}`.
+
+  ## **Examples**
+
+  ### **Using an `Ecto.Changeset`**
+  ```elixir
+  changeset = Ecto.Changeset.change(%Workflow{}, %{triggers: [%Trigger{enabled: false}]})
+  updated_changeset = update_triggers_enabled_state(changeset, true)
+  # The triggers in the changeset will now have `enabled: true`.
+  ```
+
+  ### **Using a `Workflow` struct**
+  ```elixir
+  workflow = %Workflow{triggers: [%Trigger{enabled: false}]}
+  updated_changeset = update_triggers_enabled_state(workflow, true)
+  # The returned changeset will have triggers with `enabled: true`.
+  ```
+  """
+  def update_triggers_enabled_state(
+        %Ecto.Changeset{data: %Workflow{}} = changeset,
+        enabled?
+      ) do
+    updated_triggers =
+      changeset
+      |> Ecto.Changeset.get_field(:triggers, [])
+      |> update_triggers(enabled?)
+
+    changeset
+    |> Ecto.Changeset.put_assoc(:triggers, updated_triggers)
+  end
+
+  def update_triggers_enabled_state(%Workflow{} = workflow, enabled?) do
+    updated_triggers =
+      workflow.triggers
+      |> update_triggers(enabled?)
+
+    workflow
+    |> change_workflow()
+    |> Ecto.Changeset.put_assoc(:triggers, updated_triggers)
+  end
+
+  defp update_triggers(triggers, enabled?) do
+    Enum.map(triggers, &Ecto.Changeset.change(&1, %{enabled: enabled?}))
   end
 end

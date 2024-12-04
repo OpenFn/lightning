@@ -241,6 +241,54 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
                html
              )
     end
+
+    test "enable / disable workflows from dashboard page", %{
+      conn: conn,
+      project: project
+    } do
+      cron_trigger = build(:trigger, type: :cron, enabled: false)
+      webhook_trigger = build(:trigger, type: :webhook, enabled: false)
+
+      job_1 = build(:job)
+      job_2 = build(:job)
+
+      cron_workflow =
+        build(:workflow, project: project)
+        |> with_job(job_1)
+        |> with_trigger(cron_trigger)
+        |> with_edge({cron_trigger, job_1})
+        |> insert()
+
+      webhook_workflow =
+        build(:workflow, project: project)
+        |> with_job(job_2)
+        |> with_trigger(webhook_trigger)
+        |> with_edge({webhook_trigger, job_2})
+        |> insert()
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      [cron_workflow, webhook_workflow]
+      |> Enum.each(fn workflow ->
+        trigger_type =
+          workflow.triggers |> List.first() |> Map.get(:type) |> Atom.to_string()
+
+        assert view
+               |> has_element?(
+                 "#toggle-container-#{workflow.id}[aria-label='This workflow is inactive (manual runs only)']"
+               )
+
+        assert view
+               |> element("#toggle-control-#{workflow.id}")
+               |> render_click() =~
+                 "Workflow updated successfully!"
+
+        assert view
+               |> has_element?(
+                 "#toggle-container-#{workflow.id}[aria-label='This workflow is active (#{trigger_type} trigger enabled)']"
+               )
+      end)
+    end
   end
 
   describe "creating workflows" do

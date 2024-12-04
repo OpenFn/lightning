@@ -115,6 +115,35 @@ defmodule LightningWeb.WorkflowLive.Index do
   end
 
   @impl true
+  def handle_event(
+        "toggle_workflow_state",
+        %{"workflow_state" => state, "value_key" => workflow_id},
+        socket
+      ) do
+    %{current_user: actor, project: project_id} = socket.assigns
+
+    workflow = Workflows.get_workflow!(workflow_id, include: [:triggers])
+
+    Workflows.update_triggers_enabled_state(workflow, state)
+    |> Workflows.save_workflow(actor)
+    |> case do
+      {:ok, _workflow} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Workflow updated successfully!")
+         |> push_patch(to: ~p"/projects/#{project_id}/w")}
+
+      {:error, _changeset} ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :error,
+           "Failed to update workflow. Please try again."
+         )
+         |> push_patch(to: ~p"/projects/#{project_id}/w")}
+    end
+  end
+
   def handle_event("validate_workflow", %{"new_workflow" => params}, socket) do
     changeset =
       NewWorkflowForm.validate(params, socket.assigns.project.id)

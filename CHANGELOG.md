@@ -17,12 +17,35 @@ and this project adheres to
 
 ### Added
 
+- Enable Tab Key for Indenting Text in AI Assistant Input Box
+  [#2407](https://github.com/OpenFn/lightning/issues/2407)
+- Ctrl/Cmd + Enter to Send a Message to the AI Assistant
+  [#2406](https://github.com/OpenFn/lightning/issues/2406)
+- Add styles to AI chat messages
+  [#2484](https://github.com/OpenFn/lightning/issues/2484)
+- Auditing when enabling/disabling a workflow
+  [#2697](https://github.com/OpenFn/lightning/issues/2697)
+- Ability to enable/disable a workflow from the workflow editor
+  [#2698](https://github.com/OpenFn/lightning/issues/2698)
+
 ### Changed
 
-- Insert all on a collection with the same timestamp 
-[#2711](https://github.com/OpenFn/lightning/issues/2711)
+- Insert all on a collection with the same timestamp
+  [#2711](https://github.com/OpenFn/lightning/issues/2711)
+- AI Assistant: Show disclaimer once every day per user
+  [#2481](https://github.com/OpenFn/lightning/issues/2481)
+- AI Assistant: Scroll to new message when it arrives
+  [#2409](https://github.com/OpenFn/lightning/issues/2409)
+- AI Assistant: Set vertical scrollbar below the session title
+  [#2477](https://github.com/OpenFn/lightning/issues/2477)
+- Bumped dependencies
+- Extend display of audit events to cater for deletions.
+  [#2701](https://github.com/OpenFn/lightning/issues/2701)
 
 ### Fixed
+
+- Collections controller sending an invalid response body when a item doesn't
+  exist [#2733](https://github.com/OpenFn/lightning/issues/2733)
 
 ## [v2.10.4] - 2024-11-22
 
@@ -35,9 +58,8 @@ and this project adheres to
 - Allow filtering collection items by updated_before and updated_after.
   [#2693](https://github.com/OpenFn/lightning/issues/2693)
 - Add support for SMTP email configuration
-  [#2699](https://github.com/OpenFn/lightning/issues/2699)  
-  ⚠️️ Please note that `EMAIL_ADMIN` defaults to `lightning@example.com` in
-  production environments
+  [#2699](https://github.com/OpenFn/lightning/issues/2699) ⚠️️ Please note that
+  `EMAIL_ADMIN` defaults to `lightning@example.com` in production environments
 
 ### Fixed
 

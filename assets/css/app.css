@@ -378,7 +378,7 @@ div.line-num::before {
   }
 
   pre {
-    @apply text-wrap text-slate-200 bg-slate-700 rounded-md p-2 my-2;
+    @apply text-slate-200 bg-slate-700 rounded-md p-2 my-2 overflow-x-auto;
 
     code {
       @apply text-sm leading-3;

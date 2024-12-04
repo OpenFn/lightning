@@ -6,11 +6,14 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   alias Phoenix.LiveView.AsyncResult
   alias Phoenix.LiveView.JS
 
+  @dialyzer {:nowarn_function, process_ast: 2}
+
   def mount(socket) do
     {:ok,
      socket
      |> assign(%{
        ai_limit_result: nil,
+       has_read_disclaimer: false,
        pending_message: AsyncResult.ok(nil),
        process_message_on_show: false,
        all_sessions: AsyncResult.ok([]),
@@ -23,20 +26,22 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
      end)}
   end
 
-  def update(%{action: action} = assigns, socket) do
+  def update(%{action: action, current_user: current_user} = assigns, socket) do
     {:ok,
      socket
      |> assign(assigns)
+     |> assign(
+       has_read_disclaimer: AiAssistant.user_has_read_disclaimer?(current_user)
+     )
      |> maybe_check_limit()
      |> apply_action(action, assigns)}
   end
 
-  defp apply_action(socket, :new, %{selected_job: job} = assigns) do
+  defp apply_action(socket, :new, %{selected_job: job}) do
     socket
     |> assign_async(:all_sessions, fn ->
       {:ok, %{all_sessions: AiAssistant.list_sessions_for_job(job)}}
     end)
-    |> assign(has_read_disclaimer: assigns.project_has_chat_sessions)
   end
 
   defp apply_action(socket, :show, %{
@@ -64,7 +69,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   def render(assigns) do
     ~H"""
     <div id={@id} class="h-full relative">
-      <%= if @action == :new and !@has_read_disclaimer do %>
+      <%= if !@has_read_disclaimer do %>
         <.render_onboarding myself={@myself} can_edit_workflow={@can_edit_workflow} />
       <% else %>
         <.render_session {assigns} />
@@ -98,6 +103,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   end
 
   def handle_event("mark_disclaimer_read", _params, socket) do
+    {:ok, _} = AiAssistant.mark_disclaimer_read(socket.assigns.current_user)
+
     {:noreply, assign(socket, has_read_disclaimer: true)}
   end
 
@@ -196,15 +203,22 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   end
 
   defp render_onboarding(assigns) do
+    assigns =
+      assign(assigns,
+        ai_quote:
+          ai_quotes()
+          |> Enum.filter(fn map -> map[:enabled] end)
+          |> Enum.random()
+      )
+
     ~H"""
     <div class="h-full flex flex-col">
-      <div class="flex-1 flex flex-col items-center justify-center relative">
-        <p class="text-gray-700 font-medium mb-4 w-1/2 text-center">
-          The AI Assistant is an experimental new feature to help you write job code.
+      <div class="flex-1 flex flex-col items-center md:justify-center relative">
+        <p class="text-gray-700 font-medium mb-8 w-1/2 text-center">
+          The AI Assistant is a chat agent designed to help you write job code.
           <br />
           <br />
           Remember that you, the human in control, are responsible for how its output is used.
-          <br />
         </p>
 
         <.button
@@ -215,14 +229,136 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         >
           Get started with the AI Assistant
         </.button>
-        <.render_disclaimer />
+        <blockquote class="text-gray-700 font-medium mb-6 w-2/3 text-center absolute bottom-4 sm:hidden md:block">
+          <div class="inline-block pl-4 border-l-4 border-blue-500">
+            <p class="italic"><%= @ai_quote.quote %></p>
+            <p class="text-sm font-semibold">
+              -
+              <.link
+                id="ai-quote-source"
+                class="text-primary-400 hover:text-blue-600"
+                href={@ai_quote.source_link}
+                target="_blank"
+                {if(@ai_quote[:source_attribute], do: ["phx-hook": "Tooltip", "aria-label": @ai_quote.source_attribute], else: [])}
+              >
+                <%= @ai_quote.author %>
+              </.link>
+            </p>
+          </div>
+        </blockquote>
+        <.disclaimer />
       </div>
-      <.render_ai_footer />
+      <.ai_footer />
     </div>
     """
   end
 
-  defp render_ai_footer(assigns) do
+  defp ai_quotes do
+    [
+      %{
+        quote: "What hath God wrought?",
+        author: "Samuel Morse",
+        source_attribute: "Samuel Morse in the first telegraph message",
+        source_link: "https://www.history.com",
+        enabled: true
+      },
+      %{
+        quote: "All models are wrong, but some are useful",
+        author: "George Box",
+        source_attribute: "Wikipedia",
+        source_link: "https://en.wikipedia.org/wiki/All_models_are_wrong",
+        enabled: true
+      },
+      %{
+        quote: "AI is neither artificial nor intelligent",
+        author: "Kate Crawford",
+        source_link: "http://rfkhuamnrights.org",
+        enabled: true
+      },
+      %{
+        quote: "With big data comes big responsibilities",
+        author: "Kate Crawford",
+        source_link: "http://technologyreview.com",
+        enabled: true
+      },
+      %{
+        quote: "AI is holding the internet hostage",
+        author: "Bryan Walsh",
+        source_link:
+          "https://www.vox.com/technology/352849/openai-chatgpt-google-meta-artificial-intelligence-vox-media-chatbots",
+        enabled: true
+      },
+      %{
+        quote: "Remember the human",
+        author: "OpenFn Responsible AI Policy",
+        source_link: "https://www.openfn.org/ai",
+        enabled: true
+      },
+      %{
+        quote: "Be skeptical, but don’t be cynical",
+        author: "OpenFn Responsible AI Policy",
+        source_link: "https://www.openfn.org/ai",
+        enabled: true
+      },
+      %{
+        quote:
+          "Out of the crooked timber of humanity no straight thing was ever made",
+        author: "Emmanuel Kant",
+        source_link:
+          "https://www.goodreads.com/quotes/74482-out-of-the-crooked-timber-of-humanity-no-straight-thing"
+      },
+      %{
+        quote:
+          "The more helpful our phones get, the harder it is to be ourselves",
+        author: "Brain Chrstian",
+        source_attribute: "The most human Human",
+        source_link:
+          "https://www.goodreads.com/book/show/8884400-the-most-human-human"
+      },
+      %{
+        quote:
+          "If a machine can think, it might think more intelligently than we do, and then where should we be?",
+        author: "Alan Turing",
+        source_link:
+          "https://turingarchive.kings.cam.ac.uk/publications-lectures-and-talks-amtb/amt-b-5"
+      },
+      %{
+        quote:
+          "If you make an algorithm, and let it optimise for a certain value, then it won't care what you really want",
+        author: "Tom Chivers",
+        source_link: "http://effectivealtruism.org"
+      },
+      %{
+        quote:
+          "By far the greatest danger of Artificial Intelligence is that people conclude too early that they understand it",
+        author: "Eliezer Yudkowsky",
+        source_attribute:
+          "Artificial Intelligence as a Positive and Negative Factor in Global Risk",
+        source_link: "http://intelligence.org"
+      },
+      %{
+        quote:
+          "The AI does not hate you, nor does it love you, but you are made out of atoms which it can use for something else",
+        author: "Eliezer Yudkowsky",
+        source_attribute:
+          "Artificial Intelligence as a Positive and Negative Factor in Global Risk",
+        source_link: "http://intelligence.org"
+      },
+      %{
+        quote:
+          "World domination is such an ugly phrase. I prefer to call it world optimisation",
+        author: "Eliezer Yudkowsky",
+        source_link: "https://hpmor.com/"
+      },
+      %{
+        quote: "AI is not ultimately responsible for its output: we are",
+        author: "OpenFn Responsible AI Policy",
+        source_link: "https://www.openfn.org/ai"
+      }
+    ]
+  end
+
+  defp ai_footer(assigns) do
     ~H"""
     <div class="flex w-100">
       <p class="flex-1 text-xs mt-1 text-left ml-1">
@@ -249,7 +385,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
   attr :id, :string, default: "ai-assistant-disclaimer"
 
-  defp render_disclaimer(assigns) do
+  defp disclaimer(assigns) do
     ~H"""
     <div id={@id} class="absolute inset-0 z-50 bg-white hidden">
       <div class="h-full w-full overflow-y-auto">
@@ -330,7 +466,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
   defp render_session(assigns) do
     ~H"""
-    <div class="grid grid-cols-1 grid-rows-2 gap-4 h-full flow-root">
+    <div class="grid grid-cols-1 grid-rows-2 h-full flow-root">
       <%= case @action do %>
         <% :new -> %>
           <.render_all_sessions
@@ -391,7 +527,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         </.form>
       </.async_result>
     </div>
-    <.render_disclaimer />
+    <.disclaimer />
     """
   end
 
@@ -440,6 +576,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         class="block grow resize-none overflow-y-auto max-h-48 border-0 bg-transparent py-1.5 text-gray-900 placeholder:text-gray-400 placeholder:text-xs placeholder:italic focus:ring-0 text-sm"
         placeholder="Open a previous session or send a message to start a new session"
         disabled={@disabled}
+        phx-hook="TabIndent"
       ><%= Phoenix.HTML.Form.normalize_value("textarea", @form[:content].value) %></textarea>
       <div class="py-2 pl-3 pr-2">
         <div class="flex items-center space-x-5"></div>
@@ -449,13 +586,15 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             type="submit"
             disabled={@disabled}
             tooltip={@tooltip}
+            phx-hook="SendMessageViaCtrlEnter"
+            form="ai-assistant-form"
           >
             Send
           </.button>
         </div>
       </div>
     </div>
-    <.render_ai_footer />
+    <.ai_footer />
     """
   end
 
@@ -501,14 +640,18 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
   defp render_individual_session(assigns) do
     ~H"""
-    <div class="row-span-full overflow-y-auto">
-      <div class="sticky top-0 bg-gray-100 p-2 flex justify-between border-solid border-t-2 border-b-2">
+    <div class="row-span-full flex flex-col">
+      <div class="bg-gray-100 p-2 flex justify-between border-solid border-t-2 border-b-2">
         <span class="font-medium"><%= @session.title %></span>
         <.link patch={redirect_url(@base_url, Map.put(@query_params, "chat", nil))}>
           <.icon name="hero-x-mark" class="h-5 w-5" />
         </.link>
       </div>
-      <div class="flex flex-col gap-4 p-2 overflow-y-auto">
+      <div
+        id={"ai-session-#{@session.id}-messages"}
+        phx-hook="ScrollToBottom"
+        class="flex flex-col gap-4 p-2 overflow-y-auto w-full h-full"
+      >
         <%= for message <- @session.messages do %>
           <div
             :if={message.role == :user}
@@ -523,18 +666,14 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
           <div
             :if={message.role == :assistant}
             id={"message-#{message.id}"}
-            class="mr-auto p-2 rounded-lg break-words text-wrap flex flex-row gap-x-2 makeup-html"
+            class="mr-auto p-2 rounded-lg break-words text-wrap w-full gap-x-2 makeup-html"
           >
-            <div>
-              <div class="rounded-full p-2 bg-indigo-200 text-indigo-700 ring-4 ring-white">
-                <.icon name="hero-cpu-chip" class="" />
-              </div>
+            <div class="float-left rounded-full p-2 bg-indigo-200 text-indigo-700 ring-4 ring-white">
+              <.icon name="hero-cpu-chip" class="" />
             </div>
 
-            <div>
-              <div>
-                <%= message.content |> Earmark.as_html!() |> raw() %>
-              </div>
+            <div class="ml-12">
+              <.formatted_content content={message.content} />
               <!-- TODO: restore this message and add a link to the docs site -->
               <%!-- <div
                 class="flex mt-1 text-xs text-gray-400 select-none"
@@ -582,6 +721,59 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
       </div>
     </div>
     """
+  end
+
+  attr :content, :string, required: true
+  attr :attributes, :map, default: %{}
+
+  def formatted_content(assigns) do
+    assistant_messages_attributes = %{
+      "a" => %{
+        class: "text-primary-400 hover:text-primary-600",
+        target: "_blank"
+      },
+      "h1" => %{class: "text-2xl font-bold mb-6"},
+      "h2" => %{class: "text-xl font-semibold mb-4 mt-8"},
+      "ol" => %{class: "list-decimal pl-8 space-y-1"},
+      "ul" => %{class: "list-disc pl-8 space-y-1"},
+      "li" => %{class: "text-gray-800"},
+      "p" => %{class: "mt-1 mb-2 text-gray-800"}
+    }
+
+    merged_attributes =
+      Map.merge(assistant_messages_attributes, assigns.attributes)
+
+    assigns =
+      case Earmark.Parser.as_ast(assigns.content) do
+        {:ok, ast, _} ->
+          process_ast(ast, merged_attributes) |> raw()
+
+        _ ->
+          assigns.content
+      end
+      |> then(&assign(assigns, :content, &1))
+
+    ~H"""
+    <article><%= @content %></article>
+    """
+  end
+
+  defp process_ast(ast, attributes) do
+    ast
+    |> Earmark.Transform.map_ast(fn
+      {element_type, _attrs, _content, _meta} = node ->
+        case Map.get(attributes, element_type) do
+          nil ->
+            node
+
+          attribute_map ->
+            Earmark.AstTools.merge_atts_in_node(node, Map.to_list(attribute_map))
+        end
+
+      other ->
+        other
+    end)
+    |> Earmark.Transform.transform()
   end
 
   attr :user, Lightning.Accounts.User, required: true
