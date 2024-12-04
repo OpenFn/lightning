@@ -34,7 +34,7 @@ jobs:
       elixir_version:
         description: Elixir version
         type: string
-        default: "1.16.2-otp-26"
+        default: "1.17.3-otp-27"
       nodejs_version:
         description: NodeJS version
         type: string

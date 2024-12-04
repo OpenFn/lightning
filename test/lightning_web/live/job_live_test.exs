@@ -31,8 +31,8 @@ defmodule LightningWeb.JobLiveTest do
     end
   end
 
-  @tag skip: true
   describe "Show tooltip" do
+    @describetag skip: true
     def tooltip_text(element) do
       element
       |> render()
