@@ -360,7 +360,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
   defp ai_footer(assigns) do
     ~H"""
-    <div class="flex w-100">
+    <div class="flex w-100 mx-1">
       <p class="flex-1 text-xs mt-1 text-left ml-1">
         <a
           href="#"
@@ -566,31 +566,34 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     <div class="text-xs text-center font-bold">
       Do not paste PII or sensitive business data
     </div>
-    <div class="w-full max-h-72 flex flex-row rounded-lg shadow-sm ring-1 ring-inset ring-gray-300 focus-within:ring-2 focus-within:ring-indigo-600">
-      <label for={@form[:content].name} class="sr-only">
-        Describe your request
-      </label>
-      <textarea
-        id="content"
-        name={@form[:content].name}
-        class="block grow resize-none overflow-y-auto max-h-48 border-0 bg-transparent py-1.5 text-gray-900 placeholder:text-gray-400 placeholder:text-xs placeholder:italic focus:ring-0 text-sm"
-        placeholder="Open a previous session or send a message to start a new session"
-        disabled={@disabled}
-        phx-hook="TabIndent"
-      ><%= Phoenix.HTML.Form.normalize_value("textarea", @form[:content].value) %></textarea>
-      <div class="py-2 pl-3 pr-2">
-        <div class="flex items-center space-x-5"></div>
-        <div class="flex-shrink-0">
-          <.button
+    <div class="mx-1">
+      <div class="relative">
+        <div class="rounded-lg outline outline-1 -outline-offset-1 outline-gray-300 ring-inset focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600">
+          <label for="content" class="sr-only">
+            Describe your request
+          </label>
+          <textarea
+            id="content"
+            name={@form[:content].name}
+            rows="4"
+            class="block w-full resize-none px-3 py-1.5 pr-[50px] placeholder:text-gray-400 placeholder:italic text-sm border-0 focus:ring-0 overflow-y-scroll"
+            placeholder="Open a previous session or send a message to start a new session"
+            disabled={@disabled}
+            phx-hook="TabIndent"
+          ><%= Phoenix.HTML.Form.normalize_value("textarea", @form[:content].value) %></textarea>
+        </div>
+        <div class="absolute inset-y-0 right-[18px] flex items-center">
+          <.simple_button_with_tooltip
             id="ai-assistant-form-submit-btn"
             type="submit"
             disabled={@disabled}
             tooltip={@tooltip}
             phx-hook="SendMessageViaCtrlEnter"
             form="ai-assistant-form"
+            class="rounded-full bg-indigo-600 p-2 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
           >
-            Send
-          </.button>
+            <.icon name="hero-paper-airplane-solid" />
+          </.simple_button_with_tooltip>
         </div>
       </div>
     </div>
