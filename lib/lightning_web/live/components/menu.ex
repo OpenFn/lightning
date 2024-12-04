@@ -29,59 +29,53 @@ defmodule LightningWeb.Components.Menu do
       <Icon.settings class="h-5 w-5 inline-block mr-2" />
       <span class="inline-block align-middle">Settings</span>
     </.menu_item>
-    <!-- # Commented out until new dataclips/globals list is fully functional. -->
-    <!--
-      <.menu_item
-        to={Routes.project_dataclip_index_path(@socket, :index, @project.id)}
-        active={@active_menu_item == :dataclips}>
-        <Icon.dataclips class="h-5 w-5 inline-block mr-2" />
-        <span class="inline-block align-middle">Dataclips</span>
-      </.menu_item>
-    -->
     """
   end
 
   def profile_items(assigns) do
     ~H"""
     <.menu_item to={~p"/projects"} active={@active_menu_item == :projects}>
-      <Heroicons.folder class="h-5 w-5 inline-block mr-2" /> Projects
+      <.icon name="hero-folder" class="h-5 w-5 inline-block mr-2" /> Projects
     </.menu_item>
     <.menu_item to={~p"/profile"} active={@active_menu_item == :profile}>
-      <Heroicons.user_circle class="h-5 w-5 inline-block mr-2" /> User Profile
+      <.icon name="hero-user-circle" class="h-5 w-5 inline-block mr-2" />
+      User Profile
     </.menu_item>
     <.menu_item to={~p"/credentials"} active={@active_menu_item == :credentials}>
-      <Heroicons.key class="h-5 w-5 inline-block mr-2" /> Credentials
+      <.icon name="hero-key" class="h-5 w-5 inline-block mr-2" /> Credentials
     </.menu_item>
     <.menu_item to={~p"/profile/tokens"} active={@active_menu_item == :tokens}>
-      <Heroicons.command_line class="h-5 w-5 inline-block mr-2" /> API Tokens
+      <.icon name="hero-command-line" class="h-5 w-5 inline-block mr-2" /> API Tokens
     </.menu_item>
     """
   end
 
   def menu_item(assigns) do
-    base_classes =
-      ~w[menu-item px-3 py-2 rounded-md text-sm font-medium rounded-md block]
+    # base_classes =
+    #   [
+    #     "menu-item px-3 py-2 rounded-md text-sm font-medium rounded-md block",
+    #     "data-[active]:text-[--primary-text-lighter]",
+    #     "data-[active]:bg-[--primary-bg-dark]",
+    #     "[&:not([data-active])]:text-[--primary-text-light]",
+    #     "[&:not([data-active])]:hover:bg-[--primary-bg-dark]"
+    #   ]
 
-    active_classes = ~w[menu-item-active] ++ base_classes
+    # active_classes = ~w[menu-item-active] ++ base_classes
 
-    inactive_classes = ~w[menu-item-inactive] ++ base_classes
+    # inactive_classes = ~w[menu-item-inactive] ++ base_classes
 
     assigns =
       assigns
-      |> assign(
-        class:
-          if assigns[:active] do
-            active_classes
-          else
-            inactive_classes
-          end
-      )
       |> assign_new(:target, fn -> "_blank" end)
 
     ~H"""
     <div class="h-12 mx-2">
       <%= if assigns[:href] do %>
-        <.link href={@href} target={@target} class={@class}>
+        <.link
+          href={@href}
+          target={@target}
+          class={"menu-item px-3 py-2 rounded-md text-sm font-medium rounded-md block text-[--primary-text-light] hover:bg-[--primary-bg-dark]"}
+        >
           <%= if assigns[:inner_block] do %>
             <%= render_slot(@inner_block) %>
           <% else %>
@@ -89,7 +83,17 @@ defmodule LightningWeb.Components.Menu do
           <% end %>
         </.link>
       <% else %>
-        <.link navigate={@to} class={@class}>
+        <.link
+          navigate={@to}
+          data-active={@active}
+          class={[
+            "menu-item px-3 py-2 rounded-md text-sm font-medium rounded-md block",
+            "data-[active]:text-[--primary-text-lighter]",
+            "data-[active]:bg-[--primary-bg-dark]",
+            "[&:not([data-active])]:text-[--primary-text-light]",
+            "[&:not([data-active])]:hover:bg-[--primary-bg-dark]"
+          ]}
+        >
           <%= if assigns[:inner_block] do %>
             <%= render_slot(@inner_block) %>
           <% else %>

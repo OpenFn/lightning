@@ -6,7 +6,7 @@
       style="width: 192px"
     >
       <div class="flex flex-col h-full">
-        <div class="w-full h-20 flex items-center justify-center">
+        <section class="w-full h-20 flex items-center justify-center">
           <.link navigate={Routes.dashboard_index_path(@socket, :index)}>
             <img
               class="h-10 w-10"
@@ -16,7 +16,7 @@
               alt="OpenFn"
             />
           </.link>
-        </div>
+        </section>
         <%= unless assigns[:is_first_setup] do %>
           <LayoutComponents.menu_items {assigns} />
           <div class="grow"></div>
