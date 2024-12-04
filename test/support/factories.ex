@@ -327,9 +327,10 @@ defmodule Lightning.Factories do
 
   def collection_item_factory do
     %Lightning.Collections.Item{
-      collection: build(:collection),
+      id: sequence(:id, & &1),
       key: sequence(:key, &"key-#{&1}"),
       value: sequence(:value, &"value-#{&1}"),
+      collection: build(:collection),
       inserted_at:
         sequence(
           :inserted_at,

@@ -30,6 +30,8 @@ and this project adheres to
 
 ### Changed
 
+- Insert all on a collection with the same timestamp
+  [#2711](https://github.com/OpenFn/lightning/issues/2711)
 - AI Assistant: Show disclaimer once every day per user
   [#2481](https://github.com/OpenFn/lightning/issues/2481)
 - AI Assistant: Scroll to new message when it arrives
@@ -56,9 +58,8 @@ and this project adheres to
 - Allow filtering collection items by updated_before and updated_after.
   [#2693](https://github.com/OpenFn/lightning/issues/2693)
 - Add support for SMTP email configuration
-  [#2699](https://github.com/OpenFn/lightning/issues/2699)
-  ⚠️️ Please note that `EMAIL_ADMIN` defaults to `lightning@example.com` in
-  production environments
+  [#2699](https://github.com/OpenFn/lightning/issues/2699) ⚠️️ Please note that
+  `EMAIL_ADMIN` defaults to `lightning@example.com` in production environments
 
 ### Fixed
 

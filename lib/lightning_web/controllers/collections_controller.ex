@@ -126,7 +126,7 @@ defmodule LightningWeb.CollectionsController do
 
       case Collections.get_all(collection, filters, key_pattern) do
         [] -> nil
-        list -> {list, List.last(list).inserted_at}
+        list -> {list, List.last(list).id}
       end
     end)
     |> Stream.flat_map(& &1)
@@ -191,8 +191,8 @@ defmodule LightningWeb.CollectionsController do
 
   defp validate_cursor(cursor) do
     with {:ok, decoded} <- Base.decode64(cursor),
-         {:ok, datetime, _off} <- DateTime.from_iso8601(decoded) do
-      {:ok, datetime}
+         {id, ""} <- Integer.parse(decoded) do
+      {:ok, id}
     end
   end
 
@@ -226,7 +226,7 @@ defmodule LightningWeb.CollectionsController do
   defp finish_chunking(%ChunkAcc{conn: conn, cursor_data: cursor_data}) do
     cursor =
       if cursor_data do
-        cursor_data |> DateTime.to_iso8601() |> Base.encode64()
+        Base.encode64(to_string(cursor_data))
       end
 
     Plug.Conn.chunk(conn, ~S(], "cursor":) <> Jason.encode!(cursor) <> "}")
@@ -247,7 +247,7 @@ defmodule LightningWeb.CollectionsController do
          %ChunkAcc{count: sent_count, last: last, limit: limit} = acc
        )
        when sent_count == limit do
-    {:halt, %ChunkAcc{acc | cursor_data: last.inserted_at}}
+    {:halt, %ChunkAcc{acc | cursor_data: last.id}}
   end
 
   defp send_chunk({chunk_items, _i}, acc) do
@@ -271,7 +271,7 @@ defmodule LightningWeb.CollectionsController do
 
     cursor_data =
       if taken_count > 0 and length(chunk_items) > taken_count do
-        last.inserted_at
+        last.id
       end
 
     acc =
