@@ -88,7 +88,8 @@ defmodule LightningWeb.RunChannel do
   def handle_in("fetch:credential", %{"id" => id}, socket) do
     %{run: run, scrubber: scrubber} = socket.assigns
 
-    with credential <- Runs.get_credential(run, id) || :not_found,
+    with credential when is_map(credential) <-
+           Runs.get_credential(run, id) || :not_found,
          {:ok, credential} <- Credentials.maybe_refresh_token(credential),
          credential <- maybe_merge_oauth(credential),
          samples <- Credentials.sensitive_values_for(credential),
