@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.10.5] - 2024-12-04
+
+### Added
+
 - Enable Tab Key for Indenting Text in AI Assistant Input Box
   [#2407](https://github.com/OpenFn/lightning/issues/2407)
 - Ctrl/Cmd + Enter to Send a Message to the AI Assistant
