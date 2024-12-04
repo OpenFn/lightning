@@ -21,6 +21,8 @@ const useDocs = (specifier: string) => {
           setDocs(result);
         })
         .catch(err => {
+          console.error('Error loading adaptor docs!');
+          console.error(err);
           cache[specifier] = false;
           setDocs(false);
         });

@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed an issue where sometimes adaptor docs won't load in the Inspector
+  [#2749](https://github.com/OpenFn/lightning/pull/2749)
+
 ## [v2.10.5] - 2024-12-04
 
 ### Added
