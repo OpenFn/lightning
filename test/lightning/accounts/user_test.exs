@@ -65,4 +65,17 @@ defmodule Lightning.Accounts.UserTest do
                :superuser
     end
   end
+
+  describe "cancel_scheduled_deletion_changeset/1" do
+    test "returns a valid changeset" do
+      user =
+        insert(:user, disabled: true, scheduled_deletion: DateTime.utc_now())
+
+      changeset = User.cancel_scheduled_deletion_changeset(user)
+
+      assert changeset.valid?
+      assert get_change(changeset, :disabled) == false
+      assert get_change(changeset, :scheduled_deletion, "not nil") == nil
+    end
+  end
 end

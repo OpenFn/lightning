@@ -199,13 +199,17 @@ defmodule LightningWeb.UserLiveTest do
       conn: conn
     } do
       user =
-        user_fixture(scheduled_deletion: Timex.now() |> Timex.shift(days: 7))
+        user_fixture(scheduled_deletion: DateTime.utc_now())
 
       {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
 
       assert index_live
              |> element("#user-#{user.id} a", "Cancel deletion")
              |> render_click() =~ "User deletion canceled"
+
+      assert %{scheduled_deletion: nil} = Repo.reload!(user)
+
+      refute has_element?(index_live, "#user-#{user.id}", "Cancel deletion")
     end
 
     test "allows a superuser to perform delete now action on users", %{
