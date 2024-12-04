@@ -13,6 +13,8 @@ defmodule Lightning.AiAssistant do
   alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows.Job
 
+  require Logger
+
   @spec put_expression_and_adaptor(ChatSession.t(), String.t(), String.t()) ::
           ChatSession.t()
   def put_expression_and_adaptor(session, expression, adaptor) do
@@ -123,8 +125,12 @@ defmodule Lightning.AiAssistant do
       {:error, :econnrefused} ->
         {:error, "Unable to reach the AI server. Please try again later."}
 
-      {:error, _error} ->
-        {:error, "An unexpected error occurred. Please try again."}
+      unexpected_error ->
+        Logger.warning(
+          "Received an unexpected error: #{inspect(unexpected_error)}"
+        )
+
+        {:error, "Oops! Something went wrong. Please try again."}
     end
   end
 

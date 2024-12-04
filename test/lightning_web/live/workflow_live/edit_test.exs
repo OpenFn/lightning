@@ -2544,7 +2544,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       render_async(view)
 
       assert view |> element("#assistant-failed-message") |> render() =~
-               "An unexpected error occurred. Please try again."
+               "Oops! Something went wrong. Please try again."
     end
   end
 
