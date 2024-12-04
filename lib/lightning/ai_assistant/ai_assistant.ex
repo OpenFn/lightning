@@ -121,7 +121,7 @@ defmodule Lightning.AiAssistant do
         {:error, "Request timed out. Please try again."}
 
       {:error, :econnrefused} ->
-        {:error, "Unable to reach the AI service. Please try again later."}
+        {:error, "Unable to reach the AI server. Please try again later."}
 
       {:error, _error} ->
         {:error, "An unexpected error occurred. Please try again."}
