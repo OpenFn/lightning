@@ -164,11 +164,10 @@ defmodule Lightning.Collections do
   @spec put_all(Collection.t(), [{String.t(), String.t()}]) ::
           {:ok, non_neg_integer()}
   def put_all(%{id: collection_id}, kv_list) do
-    item_list =
-      Enum.with_index(kv_list, fn %{"key" => key, "value" => value},
-                                  unique_index ->
-        now = DateTime.add(DateTime.utc_now(), unique_index, :microsecond)
+    now = DateTime.utc_now()
 
+    item_list =
+      Enum.map(kv_list, fn %{"key" => key, "value" => value} ->
         %{
           collection_id: collection_id,
           key: key,
@@ -214,12 +213,12 @@ defmodule Lightning.Collections do
   defp all_query(collection_id, cursor, limit) do
     Item
     |> where([i], i.collection_id == ^collection_id)
-    |> order_by([i], asc: i.inserted_at)
+    |> order_by([i], asc: i.id)
     |> limit(^limit)
     |> then(fn query ->
       case cursor do
         nil -> query
-        ts_cursor -> where(query, [i], i.inserted_at > ^ts_cursor)
+        ts_cursor -> where(query, [i], i.id > ^ts_cursor)
       end
     end)
   end

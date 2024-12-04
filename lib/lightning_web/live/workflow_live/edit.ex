@@ -250,7 +250,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           module={LightningWeb.WorkflowLive.AiAssistantComponent}
                           can_edit_workflow={@can_edit_workflow}
                           project_id={@project.id}
-                          project_has_chat_sessions={@project_has_chat_sessions}
                           current_user={@current_user}
                           selected_job={@selected_job}
                           chat_session_id={@chat_session_id}
@@ -1099,7 +1098,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
        active_menu_item: :overview,
        expanded_job: nil,
        ai_assistant_enabled: AiAssistant.enabled?(),
-       project_has_chat_sessions: nil,
        chat_session_id: nil,
        follow_run: nil,
        step: nil,
@@ -1194,10 +1192,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
           |> push_navigate(to: ~p"/projects/#{socket.assigns.project}/w")
         end
     end
-    |> assign(
-      project_has_chat_sessions:
-        AiAssistant.project_has_any_session?(socket.assigns.project.id)
-    )
   end
 
   defp track_user_presence(socket) do

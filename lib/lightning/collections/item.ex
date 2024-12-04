@@ -16,8 +16,10 @@ defmodule Lightning.Collections.Item do
 
   @primary_key false
   schema "collection_items" do
+    field :id, :integer, primary_key: true
     belongs_to :collection, Lightning.Collections.Collection, primary_key: true
-    field :key, :string, primary_key: true
+
+    field :key, :string
     field :value, :string
 
     timestamps(type: :utc_datetime_usec)

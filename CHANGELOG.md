@@ -19,6 +19,15 @@ and this project adheres to
 
 - Handle errors from the AI Assistant more gracefully
   [#2741](https://github.com/OpenFn/lightning/issues/2741)
+  
+### Changed
+
+### Fixed
+
+## [v2.10.5] - 2024-12-04
+
+### Added
+
 - Enable Tab Key for Indenting Text in AI Assistant Input Box
   [#2407](https://github.com/OpenFn/lightning/issues/2407)
 - Ctrl/Cmd + Enter to Send a Message to the AI Assistant
@@ -32,6 +41,16 @@ and this project adheres to
 
 ### Changed
 
+- Insert all on a collection with the same timestamp
+  [#2711](https://github.com/OpenFn/lightning/issues/2711)
+- AI Assistant: Show disclaimer once every day per user
+  [#2481](https://github.com/OpenFn/lightning/issues/2481)
+- AI Assistant: Scroll to new message when it arrives
+  [#2409](https://github.com/OpenFn/lightning/issues/2409)
+- AI Assistant: Set vertical scrollbar below the session title
+  [#2477](https://github.com/OpenFn/lightning/issues/2477)
+- AI Assistant: Increase size of input box for easier handling of large inputs
+  [#2408](https://github.com/OpenFn/lightning/issues/2408)
 - Bumped dependencies
 - Extend display of audit events to cater for deletions.
   [#2701](https://github.com/OpenFn/lightning/issues/2701)
@@ -52,9 +71,8 @@ and this project adheres to
 - Allow filtering collection items by updated_before and updated_after.
   [#2693](https://github.com/OpenFn/lightning/issues/2693)
 - Add support for SMTP email configuration
-  [#2699](https://github.com/OpenFn/lightning/issues/2699)  
-  ⚠️️ Please note that `EMAIL_ADMIN` defaults to `lightning@example.com` in
-  production environments
+  [#2699](https://github.com/OpenFn/lightning/issues/2699) ⚠️️ Please note that
+  `EMAIL_ADMIN` defaults to `lightning@example.com` in production environments
 
 ### Fixed
 
