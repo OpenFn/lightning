@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Audit the creation and removal of Github repo connections.
+  [#2668](https://github.com/OpenFn/lightning/issues/2668)
+
 ### Changed
 
 ### Fixed
@@ -35,8 +38,6 @@ and this project adheres to
   [#2697](https://github.com/OpenFn/lightning/issues/2697)
 - Ability to enable/disable a workflow from the workflow editor
   [#2698](https://github.com/OpenFn/lightning/issues/2698)
-- Audit the creation and removal of Github repo connections.
-  [#2668](https://github.com/OpenFn/lightning/issues/2668)
 
 ### Changed
 
