@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Handle errors from the AI Assistant more gracefully
+  [#2741](https://github.com/OpenFn/lightning/issues/2741)
+  
 ### Changed
 
 ### Fixed

@@ -143,19 +143,19 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     end
   end
 
-  defp error_message({:error, %Ecto.Changeset{}}) do
-    "Oops! Could not save message. Please try again."
+  def error_message({:error, message}) when is_binary(message) do
+    message
   end
 
-  defp error_message({:error, :apollo_unavailable}) do
-    "Oops! Could not reach the Ai Server. Please try again later."
+  def error_message({:error, %Ecto.Changeset{}}) do
+    "Could not save message. Please try again."
   end
 
-  defp error_message({:error, _reason, %{text: text_message}}) do
+  def error_message({:error, _reason, %{text: text_message}}) do
     text_message
   end
 
-  defp error_message(_error) do
+  def error_message(_error) do
     "Oops! Something went wrong. Please try again."
   end
 
@@ -706,17 +706,17 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
               id="assistant-failed-message"
               class="mr-auto p-2 rounded-lg break-words text-wrap flex flex-row gap-x-2"
             >
-              <div class="">
+              <div class="flex-shrink-0">
                 <div class="rounded-full p-2 bg-indigo-200 text-indigo-700 ring-4 ring-white">
-                  <.icon name="hero-sparkles" class="" />
+                  <.icon name="hero-sparkles" />
                 </div>
               </div>
-              <div class="flex gap-2">
+              <div class="flex-1 flex items-center gap-2 bg-red-50 p-3 rounded-lg">
                 <.icon
                   name="hero-exclamation-triangle"
-                  class="text-amber-400 h-8 w-8"
+                  class="h-5 w-5 flex-shrink-0 text-red-400"
                 />
-                <span><%= error_message(failure) %></span>
+                <span class="text-red-700"><%= error_message(failure) %></span>
               </div>
             </div>
           </:failed>

@@ -1,168 +1,202 @@
 defmodule LightningWeb.WorkflowLive.AiAssistantComponentTest do
-  alias LightningWeb.WorkflowLive.AiAssistantComponent
   use ExUnit.Case, async: true
+
   import Phoenix.LiveViewTest
 
-  test "renders assistant messages with properly styled links" do
-    content = """
-    Here are some links:
-    - [Apollo Repo](https://github.com/OpenFn/apollo)
-    - Plain text
-    - [Lightning Repo](https://github.com/OpenFn/lightning)
-    """
+  alias LightningWeb.WorkflowLive.AiAssistantComponent
 
-    html =
-      render_component(&AiAssistantComponent.formatted_content/1,
-        content: content
-      )
+  describe "formatted_content/1" do
+    test "renders assistant messages with properly styled links" do
+      content = """
+      Here are some links:
+      - [Apollo Repo](https://github.com/OpenFn/apollo)
+      - Plain text
+      - [Lightning Repo](https://github.com/OpenFn/lightning)
+      """
 
-    parsed_html = Floki.parse_document!(html)
+      html =
+        render_component(&AiAssistantComponent.formatted_content/1,
+          content: content
+        )
 
-    links = Floki.find(parsed_html, "a")
+      parsed_html = Floki.parse_document!(html)
+      links = Floki.find(parsed_html, "a")
 
-    openfn_link =
-      Enum.find(
-        links,
-        &(Floki.attribute(&1, "href") == ["https://github.com/OpenFn/apollo"])
-      )
+      apollo_link =
+        Enum.find(
+          links,
+          &(Floki.attribute(&1, "href") == ["https://github.com/OpenFn/apollo"])
+        )
 
-    assert openfn_link != nil
+      assert apollo_link != nil
 
-    assert Floki.attribute(openfn_link, "class") == [
-             "text-primary-400 hover:text-primary-600"
-           ]
+      assert Floki.attribute(apollo_link, "class") == [
+               "text-primary-400 hover:text-primary-600"
+             ]
 
-    assert Floki.attribute(openfn_link, "target") == ["_blank"]
+      assert Floki.attribute(apollo_link, "target") == ["_blank"]
 
-    docs_link =
-      Enum.find(
-        links,
-        &(Floki.attribute(&1, "href") == [
-            "https://github.com/OpenFn/lightning"
-          ])
-      )
+      lightning_link =
+        Enum.find(
+          links,
+          &(Floki.attribute(&1, "href") == [
+              "https://github.com/OpenFn/lightning"
+            ])
+        )
 
-    assert docs_link != nil
+      assert lightning_link != nil
 
-    assert Floki.attribute(docs_link, "class") == [
-             "text-primary-400 hover:text-primary-600"
-           ]
+      assert Floki.attribute(lightning_link, "class") == [
+               "text-primary-400 hover:text-primary-600"
+             ]
 
-    assert Floki.attribute(docs_link, "target") == ["_blank"]
+      assert Floki.attribute(lightning_link, "target") == ["_blank"]
 
-    list_items = Floki.find(parsed_html, "li")
+      list_items = Floki.find(parsed_html, "li")
 
-    assert Enum.any?(list_items, fn li ->
-             Floki.text(li) |> String.trim() == "Plain text"
-           end)
+      assert Enum.any?(list_items, fn li ->
+               Floki.text(li) |> String.trim() == "Plain text"
+             end)
+    end
+
+    test "handles content with invalid markdown links" do
+      content = """
+      Broken [link(test.com
+      [Another](working.com)
+      """
+
+      html =
+        render_component(&AiAssistantComponent.formatted_content/1,
+          content: content
+        )
+
+      parsed_html = Floki.parse_document!(html)
+      assert Floki.text(parsed_html) =~ "Broken [link(test.com"
+
+      working_link =
+        Floki.find(parsed_html, "a")
+        |> Enum.find(&(Floki.attribute(&1, "href") == ["working.com"]))
+
+      assert working_link != nil
+
+      assert Floki.attribute(working_link, "class") == [
+               "text-primary-400 hover:text-primary-600"
+             ]
+
+      assert Floki.attribute(working_link, "target") == ["_blank"]
+    end
+
+    test "elements without defined styles remain unchanged" do
+      content = """
+      <weirdo>Some code</weirdo>
+      <pierdo>Preformatted text</pierdo>
+      [A link](https://weirdopierdo.com)
+      """
+
+      html =
+        render_component(&AiAssistantComponent.formatted_content/1,
+          content: content
+        )
+
+      parsed_html = Floki.parse_document!(html)
+
+      code = Floki.find(parsed_html, "weirdo")
+      pre = Floki.find(parsed_html, "pierdo")
+      assert Floki.attribute(code, "class") == []
+      assert Floki.attribute(pre, "class") == []
+
+      link =
+        Floki.find(parsed_html, "a")
+        |> Enum.find(
+          &(Floki.attribute(&1, "href") == ["https://weirdopierdo.com"])
+        )
+
+      assert link != nil
+
+      assert Floki.attribute(link, "class") == [
+               "text-primary-400 hover:text-primary-600"
+             ]
+
+      assert Floki.attribute(link, "target") == ["_blank"]
+    end
+
+    test "handles content that cannot be parsed as AST" do
+      content = """
+      <div>Unclosed div
+      <span>Unclosed span
+      Some text
+      """
+
+      html =
+        render_component(&AiAssistantComponent.formatted_content/1,
+          content: content
+        )
+
+      parsed_html = Floki.parse_document!(html)
+
+      assert Floki.text(parsed_html) =~ "Unclosed div"
+      assert Floki.text(parsed_html) =~ "Unclosed span"
+      assert Floki.text(parsed_html) =~ "Some text"
+    end
+
+    test "applies styles to elements not defined in the default styles" do
+      content = """
+      <custom-tag>Custom styled content</custom-tag>
+      """
+
+      custom_attributes = %{
+        "custom-tag" => %{class: "custom-class text-green-700"}
+      }
+
+      html =
+        render_component(&AiAssistantComponent.formatted_content/1, %{
+          content: content,
+          attributes: custom_attributes
+        })
+
+      parsed_html = Floki.parse_document!(html)
+      custom_tag = Floki.find(parsed_html, "custom-tag") |> hd()
+
+      assert custom_tag != nil
+
+      assert Floki.attribute(custom_tag, "class") == [
+               "custom-class text-green-700"
+             ]
+    end
   end
 
-  test "handles content with invalid markdown links" do
-    content = """
-    Broken [link(test.com
-    [Another](working.com)
-    """
+  describe "error_message/1" do
+    test "renders string error message" do
+      assert AiAssistantComponent.error_message({:error, "Something went wrong"}) ==
+               "Something went wrong"
+    end
 
-    html =
-      render_component(&AiAssistantComponent.formatted_content/1,
-        content: content
-      )
+    test "renders changeset error message" do
+      changeset = %Ecto.Changeset{
+        valid?: false,
+        errors: [content: {"is invalid", []}],
+        data: %Lightning.AiAssistant.ChatSession{}
+      }
 
-    parsed_html = Floki.parse_document!(html)
+      assert AiAssistantComponent.error_message({:error, changeset}) ==
+               "Could not save message. Please try again."
+    end
 
-    assert Floki.text(parsed_html) =~ "Broken [link(test.com"
+    test "renders text message from map" do
+      error_data = %{text: "Specific error message"}
 
-    working_link =
-      Floki.find(parsed_html, "a")
-      |> Enum.find(&(Floki.attribute(&1, "href") == ["working.com"]))
+      assert AiAssistantComponent.error_message(
+               {:error, :custom_reason, error_data}
+             ) ==
+               "Specific error message"
+    end
 
-    assert working_link != nil
+    test "renders default error message for unhandled cases" do
+      assert AiAssistantComponent.error_message({:error, :unknown_reason}) ==
+               "Oops! Something went wrong. Please try again."
 
-    assert Floki.attribute(working_link, "class") == [
-             "text-primary-400 hover:text-primary-600"
-           ]
-
-    assert Floki.attribute(working_link, "target") == ["_blank"]
-  end
-
-  test "elements without defined styles remain unchanged" do
-    content = """
-    <weirdo>Some code</weirdo>
-    <pierdo>Preformatted text</pierdo>
-    [A link](https://weirdopierdo.com)
-    """
-
-    html =
-      render_component(&AiAssistantComponent.formatted_content/1,
-        content: content
-      )
-
-    parsed_html = Floki.parse_document!(html)
-
-    code = Floki.find(parsed_html, "weirdo")
-    pre = Floki.find(parsed_html, "pierdo")
-
-    assert Floki.attribute(code, "class") == []
-    assert Floki.attribute(pre, "class") == []
-
-    link =
-      Floki.find(parsed_html, "a")
-      |> Enum.find(
-        &(Floki.attribute(&1, "href") == ["https://weirdopierdo.com"])
-      )
-
-    assert link != nil
-
-    assert Floki.attribute(link, "class") == [
-             "text-primary-400 hover:text-primary-600"
-           ]
-
-    assert Floki.attribute(link, "target") == ["_blank"]
-  end
-
-  test "handles content that cannot be parsed as AST" do
-    content = """
-    <div>Unclosed div
-    <span>Unclosed span
-    Some text
-    """
-
-    html =
-      render_component(&AiAssistantComponent.formatted_content/1,
-        content: content
-      )
-
-    parsed_html = Floki.parse_document!(html)
-
-    text = Floki.text(parsed_html)
-    assert text =~ "Unclosed div"
-    assert text =~ "Unclosed span"
-    assert text =~ "Some text"
-  end
-
-  test "applies styles to elements not defined in the default styles" do
-    content = """
-    <custom-tag>Custom styled content</custom-tag>
-    """
-
-    custom_attributes = %{
-      "custom-tag" => %{class: "custom-class text-green-700"}
-    }
-
-    html =
-      render_component(&AiAssistantComponent.formatted_content/1, %{
-        content: content,
-        attributes: custom_attributes
-      })
-
-    parsed_html = Floki.parse_document!(html)
-
-    custom_tag = Floki.find(parsed_html, "custom-tag") |> hd()
-
-    assert custom_tag != nil
-
-    assert Floki.attribute(custom_tag, "class") == [
-             "custom-class text-green-700"
-           ]
+      assert AiAssistantComponent.error_message(:unexpected_error) ==
+               "Oops! Something went wrong. Please try again."
+    end
   end
 end
