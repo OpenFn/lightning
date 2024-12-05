@@ -51,6 +51,14 @@ defmodule LightningWeb.CollectionsController do
          :ok <- authorize(conn, collection),
          {:ok, count} <- Collections.put_all(collection, items) do
       json(conn, %{upserted: count, error: nil})
+    else
+      {:error, :duplicate_key} ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> json(%{upserted: 0, error: "Duplicate key found"})
+
+      other ->
+        other
     end
   end
 

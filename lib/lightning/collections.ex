@@ -162,7 +162,7 @@ defmodule Lightning.Collections do
   end
 
   @spec put_all(Collection.t(), [{String.t(), String.t()}]) ::
-          {:ok, non_neg_integer()}
+          {:ok, non_neg_integer()} | {:error, :duplicate_key}
   def put_all(%{id: collection_id}, kv_list) do
     now = DateTime.utc_now()
 
@@ -183,6 +183,13 @@ defmodule Lightning.Collections do
              on_conflict: {:replace, [:value, :updated_at]}
            ),
          do: {:ok, count}
+  rescue
+    e in Postgrex.Error ->
+      if e.postgres.code == :cardinality_violation do
+        {:error, :duplicate_key}
+      else
+        raise e
+      end
   end
 
   @spec delete(Collection.t(), String.t()) :: :ok | {:error, :not_found}
