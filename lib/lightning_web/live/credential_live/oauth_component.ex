@@ -267,7 +267,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
       token: AsyncResult.ok(token),
       update_body: update_body,
       adapter: adapter,
-      provider: adapter.provider_name,
+      provider: adapter.provider_name(),
       action: action,
       scopes_changed: scopes_changed,
       sandbox_changed: sandbox_changed,
@@ -291,7 +291,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
     |> assign_new(:authorize_url, fn %{client: client} ->
       if client do
         %{optional: _optional_scopes, mandatory: mandatory_scopes} =
-          socket.assigns.adapter.scopes
+          socket.assigns.adapter.scopes()
 
         state = build_state(socket.id, __MODULE__, socket.assigns.id)
 

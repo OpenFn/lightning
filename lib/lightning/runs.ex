@@ -155,6 +155,7 @@ defmodule Lightning.Runs do
     end)
   end
 
+  @spec get_credential(Run.t(), Ecto.UUID.t()) :: Lightning.Credentials.Credential.t() | nil
   def get_credential(%Run{} = run, id) do
     from(c in Ecto.assoc(run, [:workflow, :jobs, :credential]),
       where: c.id == ^id

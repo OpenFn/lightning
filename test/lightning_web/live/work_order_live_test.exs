@@ -1839,7 +1839,6 @@ defmodule LightningWeb.WorkOrderLiveTest do
     end
   end
 
-  @tag role: :editor
   describe "rerun" do
     setup %{project: project} do
       workflow = insert(:workflow, project: project)

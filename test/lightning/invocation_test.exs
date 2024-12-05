@@ -166,7 +166,7 @@ defmodule Lightning.InvocationTest do
       },
       SearchParams.new(status),
       %{"page" => 1, "page_size" => 10}
-    ).entries()
+    ).entries
   end
 
   defp create_work_order(project, snapshot, workflow, job, trigger, now, seconds) do
@@ -210,7 +210,7 @@ defmodule Lightning.InvocationTest do
       },
       filter,
       page
-    ).entries()
+    ).entries
   end
 
   describe "search_workorders_for_retry/2" do
@@ -297,13 +297,13 @@ defmodule Lightning.InvocationTest do
           id: workflow.project_id
         })
 
-      assert found_workorders.page_number() == 1
-      assert found_workorders.total_pages() == 1
+      assert found_workorders.page_number == 1
+      assert found_workorders.total_pages == 1
 
       assert workorders
              |> Enum.reverse()
              |> Enum.map(fn workorder -> workorder.id end) ==
-               found_workorders.entries()
+               found_workorders.entries
                |> Enum.map(fn workorder -> workorder.id end)
     end
   end

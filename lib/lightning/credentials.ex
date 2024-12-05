@@ -520,6 +520,7 @@ defmodule Lightning.Credentials do
     end
   end
 
+  @spec basic_auth_for(Credential.t() | nil) :: [String.t()]
   def basic_auth_for(%Credential{body: body}) when is_map(body) do
     usernames =
       body
