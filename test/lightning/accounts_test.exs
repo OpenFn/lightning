@@ -1538,6 +1538,31 @@ defmodule Lightning.AccountsTest do
     end
   end
 
+  describe "cancel_schedule_deletion" do
+    test "cancels the scheduled deletion" do
+      user =
+        insert(:user, disabled: true, scheduled_deletion: DateTime.utc_now())
+
+      Accounts.cancel_scheduled_deletion(user.id)
+
+      assert %{
+               disabled: false,
+               scheduled_deletion: nil
+             } = Repo.reload!(user)
+    end
+
+    test "returns the result of the cancellation" do
+      user =
+        insert(:user, disabled: true, scheduled_deletion: DateTime.utc_now())
+
+      response = Accounts.cancel_scheduled_deletion(user.id)
+
+      user = Repo.reload!(user)
+
+      assert {:ok, ^user} = response
+    end
+  end
+
   defp count_project_credentials_for_user(user) do
     from(pc in Ecto.assoc(user, [:credentials, :project_credentials]))
     |> Repo.aggregate(:count, :id)

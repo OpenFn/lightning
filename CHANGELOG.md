@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix User deletion cancellation behaviour.
+  [#2747](https://github.com/OpenFn/lightning/issues/2747)
+
 ## [v2.10.5] - 2024-12-04
 
 ### Added

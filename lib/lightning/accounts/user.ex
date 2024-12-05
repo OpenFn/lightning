@@ -118,6 +118,10 @@ defmodule Lightning.Accounts.User do
     end)
   end
 
+  def cancel_scheduled_deletion_changeset(user) do
+    change(user, disabled: false, scheduled_deletion: nil)
+  end
+
   @spec superuser_registration_changeset(
           :invalid
           | %{optional(:__struct__) => none, optional(atom | binary) => any},

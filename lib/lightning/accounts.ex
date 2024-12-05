@@ -448,12 +448,13 @@ defmodule Lightning.Accounts do
     User.scheduled_deletion_changeset(user, attrs)
   end
 
+  @spec cancel_scheduled_deletion(user_id :: binary()) ::
+          {:ok, User.t()} | {:error, Ecto.Changeset.t()}
   def cancel_scheduled_deletion(user_id) do
-    get_user!(user_id)
-    |> update_user_details(%{
-      scheduled_deletion: nil,
-      disabled: false
-    })
+    user_id
+    |> get_user!()
+    |> User.cancel_scheduled_deletion_changeset()
+    |> Repo.update()
   end
 
   @doc """
