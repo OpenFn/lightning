@@ -85,7 +85,7 @@ defmodule LightningWeb.Components.UserDeletionModal do
   def render(%{delete_now?: true, has_activity_in_projects?: true} = assigns) do
     ~H"""
     <div>
-      <.modal id={"user-#{@id}"} width="max-w-md" show={true}>
+      <.modal id={"user-#{@id}-delete-modal"} width="max-w-md" show={true}>
         <:title>
           <div class="flex justify-between">
             <span class="font-bold">
@@ -129,7 +129,7 @@ defmodule LightningWeb.Components.UserDeletionModal do
   def render(assigns) do
     ~H"""
     <div>
-      <.modal id={"user-#{@id}"} show={true} width="max-w-md">
+      <.modal id={"user-#{@id}-delete-modal"} show={true} width="max-w-md">
         <:title>
           <div class="flex justify-between">
             <span class="font-bold">
