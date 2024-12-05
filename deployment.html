@@ -262,7 +262,7 @@ to ensure that Lightning does not flood the recipients with email. The length of
 the embargo is controlled by the <code class="inline">KAFKA_NOTIFICATION_EMBARGO_SECONDS</code> ENV
 variable.</p><h4>Persisting Failed Messages</h4><p><strong>PLEASE NOTE: If alternate file storage is not enabled, messages that fail to
 be persisted will not be retained by Lightning ans this can result in data loss,
-if the Kafka cluster can not make these messages available again.</strong></p><p>If a Kafka message files to be persisted as a WorkOrder, Run and Dataclip, the
+if the Kafka cluster can not make these messages available again.</strong></p><p>If a Kafka message fails to be persisted as a WorkOrder, Run and Dataclip, the
 option exists to write the failed message to a location on the local file
 system. If this option is enabled by setting <code class="inline">KAFKA_ALTERNATE_STORAGE_ENABLED</code>,
 then the <code class="inline">KAFKA_ALTERNATE_STORAGE_PATH</code> ENV variable must be set to the path
@@ -276,9 +276,9 @@ headers and data as received by the Kafka pipeline and write this to a file
 within the subdirectory. The file will be named based on the pattern
 <code class="inline">&lt;trigger_id&gt;_&lt;message_topic&gt;_&lt;message_partition&gt;_&lt;message_offset&gt;.json</code>.</p><p>To recover the persisted messages, it is suggested that the affected triggers be
 disabled before commencing. Once this is done, the following code needs to be
-run from an IEx console on each node that is running Lightning:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.KafkaTriggers.MessageRecovery</span><span class="o">.</span><span class="n">recover_messages</span><span class="p" data-group-id="3719072333-1">(</span><span class="w">
-  </span><span class="nc">Lightning.Config</span><span class="o">.</span><span class="n">kafka_alternate_storage_file_path</span><span class="p" data-group-id="3719072333-2">(</span><span class="p" data-group-id="3719072333-2">)</span><span class="w">
-</span><span class="p" data-group-id="3719072333-1">)</span></code></pre><p>Further details regarding the behaviour of <code class="inline">MessageRecovery.recover_messages/1</code>
+run from an IEx console on each node that is running Lightning:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.KafkaTriggers.MessageRecovery</span><span class="o">.</span><span class="n">recover_messages</span><span class="p" data-group-id="7632257546-1">(</span><span class="w">
+  </span><span class="nc">Lightning.Config</span><span class="o">.</span><span class="n">kafka_alternate_storage_file_path</span><span class="p" data-group-id="7632257546-2">(</span><span class="p" data-group-id="7632257546-2">)</span><span class="w">
+</span><span class="p" data-group-id="7632257546-1">)</span></code></pre><p>Further details regarding the behaviour of <code class="inline">MessageRecovery.recover_messages/1</code>
 can be found in the module documentation of <code class="inline">MessageRecovery</code>. Recovered
 messages will have the <code class="inline">.json</code> extension modified to <code class="inline">.json.recovered</code> but they
 will be left in place. Future recovery runs will not process files that have
