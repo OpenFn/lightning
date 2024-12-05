@@ -30,6 +30,13 @@ defmodule LightningWeb.UserLive.FormComponent do
     save_user(socket, socket.assigns.action, user_params)
   end
 
+  def user_options do
+    Accounts.User.RolesEnum.__valid_values__() 
+    |> Enum.filter(& is_binary(&1))
+    |> Enum.sort()
+    |> Enum.map(fn role -> {String.capitalize(role), role} end)
+  end
+
   defp save_user(socket, :edit, user_params) do
     case Accounts.update_user_details(socket.assigns.user, user_params) do
       {:ok, _user} ->
