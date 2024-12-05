@@ -59,7 +59,6 @@ defmodule Lightning.Workflows.Scheduler do
           # %{id: uuid, type: :global, body: %{arbitrary: true}}
 
           WorkOrders.create_for(trigger,
-            actor: trigger,
             dataclip: %{
               type: :global,
               body: %{},
@@ -76,7 +75,6 @@ defmodule Lightning.Workflows.Scheduler do
           end)
 
           WorkOrders.create_for(trigger,
-            actor: trigger,
             dataclip: dataclip,
             workflow: job.workflow
           )
