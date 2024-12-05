@@ -1,6 +1,7 @@
 defmodule LightningWeb.UserLiveTest do
   use LightningWeb.ConnCase, async: true
 
+  alias Lightning.Accounts.User
   alias Lightning.AccountsFixtures
 
   import Lightning.AccountsFixtures
@@ -12,7 +13,8 @@ defmodule LightningWeb.UserLiveTest do
     email: "test@example.com",
     first_name: "some first_name",
     last_name: "some last_name",
-    password: "some password"
+    password: "some password",
+    role: "user"
   }
   @update_attrs %{
     email: "test-updated@example.com",
@@ -38,6 +40,8 @@ defmodule LightningWeb.UserLiveTest do
     end
 
     test "saves new user", %{conn: conn} do
+      %{first_name: first_name, last_name: last_name} = @create_attrs
+
       {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
 
       {:ok, edit_live, _html} =
@@ -61,6 +65,44 @@ defmodule LightningWeb.UserLiveTest do
 
       assert html =~ "User created successfully"
       assert html =~ "test@example.com"
+
+      assert %{
+        first_name: ^first_name,
+        last_name: ^last_name,
+        role: :user
+      } = Repo.get_by(User, email: @create_attrs.email)
+    end
+
+    test "allows creation of a super user", %{conn: conn} do
+      %{first_name: first_name, last_name: last_name} = @create_attrs
+
+      superuser_attrs = @create_attrs |> Map.put(:role, "superuser")
+
+      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+
+      {:ok, edit_live, _html} =
+        index_live
+        |> element("a", "New User")
+        |> render_click()
+        |> follow_redirect(
+          conn,
+          Routes.user_edit_path(conn, :new)
+        )
+
+      {:ok, _, html} =
+        edit_live
+        |> form("#user-form", user: superuser_attrs)
+        |> render_submit()
+        |> follow_redirect(conn, Routes.user_index_path(conn, :index))
+
+      assert html =~ "User created successfully"
+      assert html =~ "test@example.com"
+
+      assert %{
+        first_name: ^first_name,
+        last_name: ^last_name,
+        role: :superuser
+      } = Repo.get_by(User, email: @create_attrs.email)
     end
 
     test "updates user in listing", %{conn: conn, user: user} do

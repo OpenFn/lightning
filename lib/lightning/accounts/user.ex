@@ -56,7 +56,8 @@ defmodule Lightning.Accounts.User do
       :last_name,
       :email,
       :password,
-      :contact_preference
+      :contact_preference,
+      :role
     ])
     |> validate_name()
     |> trim_name()

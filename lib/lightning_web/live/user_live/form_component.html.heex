@@ -51,6 +51,21 @@
       <div class="py-2"></div>
     </div>
 
+    <div class="grid grid-cols-6 gap-6">
+      <div class="col-span-3">
+        <.input
+        type="select"
+        field={f[:role]}
+        label="Role"
+        options={user_options()}
+        />
+      </div>
+    </div>
+
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-2"></div>
+    </div>
+
     <%= if @action in [:edit] do %>
       <div class="grid grid-cols-6 gap-6">
         <div class="col-span-3">
