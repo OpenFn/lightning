@@ -84,7 +84,10 @@ defmodule LightningWeb.LayoutComponents do
 
     ~H"""
     <LightningWeb.Components.Common.banner
-      :if={@current_user && !@current_user.confirmed_at}
+      :if={
+        Lightning.Config.check_flag?(:require_email_verification) && @current_user &&
+          !@current_user.confirmed_at
+      }
       id="account-confirmation-alert"
       type="danger"
       centered
