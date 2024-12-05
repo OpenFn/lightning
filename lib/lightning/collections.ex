@@ -188,7 +188,7 @@ defmodule Lightning.Collections do
       if e.postgres.code == :cardinality_violation do
         {:error, :duplicate_key}
       else
-        raise e
+        reraise e, __STACKTRACE__
       end
   end
 
