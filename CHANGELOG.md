@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Return a 422 when a duplicate key is sent to the collections post/put_all API
+  [#2752](https://github.com/OpenFn/lightning/issues/2752)
+
 ## [v2.10.5] - 2024-12-04
 
 ### Added
