@@ -2123,6 +2123,50 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     end
 
     @tag email: "user@openfn.org"
+    test "form accepts phx-change", %{
+      conn: conn,
+      project: project,
+      workflow: %{jobs: [job_1 | _]} = workflow
+    } do
+      apollo_endpoint = "http://localhost:4001"
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> apollo_endpoint
+        :openai_api_key -> "openai_api_key"
+      end)
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        fn
+          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
+            {:ok, %Tesla.Env{status: 200}}
+        end
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      render_async(view)
+
+      # click the get started button
+      view |> element("#get-started-with-ai-btn") |> render_click()
+
+      # change form
+      random_text = "Ping12345678"
+
+      html =
+        view
+        |> form("#ai-assistant-form")
+        |> render_change(%{content: random_text})
+
+      assert html =~ random_text
+    end
+
+    @tag email: "user@openfn.org"
     test "users can start a new session", %{
       conn: conn,
       project: project,
