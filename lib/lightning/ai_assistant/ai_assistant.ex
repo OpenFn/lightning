@@ -26,12 +26,13 @@ defmodule Lightning.AiAssistant do
     }
   end
 
-  @spec list_sessions_for_job(Job.t()) :: [ChatSession.t(), ...] | []
-  def list_sessions_for_job(job) do
+  @spec list_sessions_for_job(Job.t(), :asc | :desc) ::
+          [ChatSession.t(), ...] | []
+  def list_sessions_for_job(job, sort_direction \\ :desc) do
     Repo.all(
       from s in ChatSession,
         where: s.job_id == ^job.id,
-        order_by: [desc: :updated_at],
+        order_by: [{^sort_direction, :updated_at}],
         preload: [:user]
     )
   end
@@ -48,11 +49,31 @@ defmodule Lightning.AiAssistant do
       id: Ecto.UUID.generate(),
       job_id: job.id,
       user_id: user.id,
-      title: String.slice(content, 0, 40),
+      title: create_title(content),
       messages: []
     }
     |> put_expression_and_adaptor(job.body, job.adaptor)
     |> save_message(%{role: :user, content: content, user: user})
+  end
+
+  def create_title(content) do
+    case String.contains?(content, " ") do
+      true ->
+        content
+        |> String.split(" ")
+        |> Enum.reduce_while("", fn word, acc ->
+          if String.length(acc <> " " <> word) > 40,
+            do: {:halt, acc},
+            else: {:cont, acc <> " " <> word}
+        end)
+        |> String.trim()
+        |> String.replace(~r/[.!?,;:]$/, "")
+
+      false ->
+        content
+        |> String.slice(0, 40)
+        |> String.replace(~r/[.!?,;:]$/, "")
+    end
   end
 
   @spec save_message(ChatSession.t(), %{any() => any()}) ::

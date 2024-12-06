@@ -195,6 +195,15 @@
   animation: 0.2s ease-out 0s normal forwards 1 fade-out-keys;
 }
 
+@keyframes dot {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.animate-dot {
+  animation: dot 1s infinite;
+}
+
 div[id^='tippy-'] {
   @apply rounded-md p-2 z-[9999]
          text-xs text-center text-primary-50
