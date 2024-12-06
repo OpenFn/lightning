@@ -2514,6 +2514,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         )
 
       render_async(view)
+
       view |> element("#get-started-with-ai-btn") |> render_click()
 
       view
@@ -2615,6 +2616,129 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert view |> element("#assistant-failed-message") |> render() =~
                "Oops! Something went wrong. Please try again."
+    end
+
+    @tag email: "user@openfn.org"
+    test "users can sort chat sessions", %{
+      conn: conn,
+      project: project,
+      user: user,
+      workflow: %{jobs: [job_1 | _]} = workflow
+    } do
+      apollo_endpoint = "http://localhost:4001"
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> apollo_endpoint
+        :openai_api_key -> "openai_api_key"
+      end)
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        fn
+          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
+            {:ok, %Tesla.Env{status: 200}}
+        end
+      )
+
+      older_session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          updated_at: ~N[2024-01-01 10:00:00],
+          title: "January Session",
+          messages: [
+            %{role: :user, content: "First message", user: user},
+            %{role: :assistant, content: "First response"}
+          ]
+        )
+
+      newer_session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          updated_at: ~N[2024-02-01 10:00:00],
+          title: "February Session",
+          messages: [
+            %{role: :user, content: "Second message", user: user},
+            %{role: :assistant, content: "Second response"}
+          ]
+        )
+
+      timestamp = DateTime.utc_now() |> DateTime.to_unix()
+
+      Ecto.Changeset.change(user, %{
+        preferences: %{"ai_assistant.disclaimer_read_at" => timestamp}
+      })
+      |> Lightning.Repo.update!()
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      render_async(view)
+
+      html = render(view)
+      assert html =~ "Sort by date"
+
+      links =
+        Floki.find(
+          Floki.parse_document!(html),
+          "a[id^='session-']"
+        )
+
+      assert length(links) == 2
+      [first_link, second_link] = links
+
+      assert first_link |> Floki.attribute("id") == [
+               "session-#{newer_session.id}"
+             ]
+
+      assert second_link |> Floki.attribute("id") == [
+               "session-#{older_session.id}"
+             ]
+
+      view |> element("button[phx-click='toggle_sort']") |> render_click()
+      html = render(view)
+
+      links =
+        Floki.find(
+          Floki.parse_document!(html),
+          "a[id^='session-']"
+        )
+
+      assert length(links) == 2
+      [first_link, second_link] = links
+
+      assert first_link |> Floki.attribute("id") == [
+               "session-#{older_session.id}"
+             ]
+
+      assert second_link |> Floki.attribute("id") == [
+               "session-#{newer_session.id}"
+             ]
+
+      view |> element("button[phx-click='toggle_sort']") |> render_click()
+      html = render(view)
+
+      links =
+        Floki.find(
+          Floki.parse_document!(html),
+          "a[id^='session-']"
+        )
+
+      assert length(links) == 2
+      [first_link, second_link] = links
+
+      assert first_link |> Floki.attribute("id") == [
+               "session-#{newer_session.id}"
+             ]
+
+      assert second_link |> Floki.attribute("id") == [
+               "session-#{older_session.id}"
+             ]
     end
   end
 
