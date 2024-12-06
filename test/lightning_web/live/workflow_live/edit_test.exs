@@ -2451,7 +2451,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         end
       )
 
-      # Create test sessions
       older_session =
         insert(:chat_session,
           user: user,
@@ -2491,11 +2490,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       render_async(view)
 
-      # Initial sort is descending (newest first)
       html = render(view)
       assert html =~ "Sort by date"
 
-      # Check initial session order (descending)
       links =
         Floki.find(
           Floki.parse_document!(html),
@@ -2513,11 +2510,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                "session-#{older_session.id}"
              ]
 
-      # Click sort button to change to ascending
       view |> element("button[phx-click='toggle_sort']") |> render_click()
       html = render(view)
 
-      # Check session order after toggle (ascending)
       links =
         Floki.find(
           Floki.parse_document!(html),
@@ -2535,11 +2530,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                "session-#{newer_session.id}"
              ]
 
-      # Click again to toggle back to descending
       view |> element("button[phx-click='toggle_sort']") |> render_click()
       html = render(view)
 
-      # Check final session order (back to descending)
       links =
         Floki.find(
           Floki.parse_document!(html),
