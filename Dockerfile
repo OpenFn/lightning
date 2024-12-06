@@ -15,6 +15,8 @@
 ARG ELIXIR_VERSION=1.16.2
 ARG OTP_VERSION=26.2.5
 ARG DEBIAN_VERSION=bookworm-20240513
+# Note, the nodesource repo referenced below is for node 18
+# See: https://github.com/nodesource/distributions#debian-versions
 ARG NODE_VERSION=18.17.1
 
 ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
@@ -25,10 +27,11 @@ ARG NODE_VERSION
 
 # install build and dev dependencies
 RUN apt-get update -y && apt-get install -y \
-    build-essential curl git inotify-tools libsodium-dev
+  build-essential curl git inotify-tools libsodium-dev
 
-COPY bin/install_node bin/install_node
-RUN bin/install_node ${NODE_VERSION}
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash
+
+RUN apt install -y nodejs=${NODE_VERSION}-1nodesource1
 
 RUN apt-get clean && rm -f /var/lib/apt/lists/*_*
 
@@ -56,6 +59,16 @@ RUN mix deps.compile
 COPY priv priv
 COPY lib lib
 
+# Install Rust for arm64 architecture
+RUN [ "$(uname -m)" = "aarch64" ] && \
+  curl https://sh.rustup.rs -sSf | sh -s -- -y || \
+  echo "Skipping Rust installation for non-arm64 architecture"
+
+# Only call this for arm64 environments
+RUN [ "$(uname -m)" = "aarch64" ] && \
+  . ~/.cargo/env && mix compile.rambo || \
+  echo "Skipping mix compile.rambo for non-arm64 architecture"
+
 RUN mix lightning.install_runtime
 
 RUN mix lightning.install_adaptor_icons
@@ -67,7 +80,6 @@ RUN npm install --prefix assets
 
 # compile assets
 RUN mix assets.deploy
-
 
 # Compile the release
 RUN mix compile
@@ -93,6 +105,10 @@ LABEL commit=${COMMIT}
 RUN apt-get update -y && apt-get install -y libstdc++6 openssl libncurses5 \
   locales curl gpg libsodium-dev
 
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash
+
+RUN apt install -y nodejs=${NODE_VERSION}-1nodesource1
+
 RUN apt-get clean && rm -f /var/lib/apt/lists/*_**
 
 # Set the locale
@@ -101,9 +117,6 @@ RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
 ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
-
-COPY bin/install_node tmp/install_node
-RUN tmp/install_node ${NODE_VERSION}
 
 WORKDIR "/app"
 
@@ -127,4 +140,4 @@ ENV COMMIT=${COMMIT}
 ENV BRANCH=${BRANCH}
 ENV IMAGE_TAG=${IMAGE_TAG}
 
-CMD /app/bin/server
+CMD ["/app/bin/server"]

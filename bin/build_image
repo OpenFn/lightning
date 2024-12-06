@@ -1,0 +1,14 @@
+#! /usr/bin/env bash
+
+set -e
+
+echo "Building image..."
+
+echo "The image will be built for the platform: $(uname -m)"
+
+docker buildx build \
+  --output type=docker,compression=zstd,force-compression=true \
+  --progress=plain \
+  $@ \
+  -t openfn/lightning:latest \
+  .
