@@ -156,6 +156,56 @@ defmodule Lightning.AiAssistantTest do
                session.messages
              )
     end
+
+    test "truncates long session titles", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      long_content =
+        "This is a very long content that should be truncated because it exceeds forty characters by quite a bit"
+
+      assert {:ok, session} =
+               AiAssistant.create_session(job_1, user, long_content)
+
+      assert session.title == "This is a very long content that should"
+    end
+
+    test "handles single-word session titles", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      single_word =
+        "ThisIsOneVeryLongWordThatShouldDefinitelyBeTruncatedAtSomePoint"
+
+      assert {:ok, session} =
+               AiAssistant.create_session(job_1, user, single_word)
+
+      assert session.title == "ThisIsOneVeryLongWordThatShouldDefinitel"
+    end
+
+    test "removes trailing punctuation from session titles", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      content_with_punctuation = "How does this work?"
+
+      assert {:ok, session} =
+               AiAssistant.create_session(job_1, user, content_with_punctuation)
+
+      assert session.title == "How does this work"
+    end
+
+    test "preserves short content as session title", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      short_content = "Quick question"
+
+      assert {:ok, session} =
+               AiAssistant.create_session(job_1, user, short_content)
+
+      assert session.title == "Quick question"
+    end
   end
 
   describe "save_message/2" do

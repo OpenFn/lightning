@@ -56,7 +56,7 @@ defmodule Lightning.AiAssistant do
     |> save_message(%{role: :user, content: content, user: user})
   end
 
-  def create_title(content) do
+  defp create_title(content) do
     case String.contains?(content, " ") do
       true ->
         content
