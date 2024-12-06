@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Added Claude integration in job chat
+- OPENAI_API_KEY renamed to AI_ASSISTANT_API_KEY
+
 ### Fixed
 
 - Return a 422 when a duplicate key is sent to the collections post/put_all API
