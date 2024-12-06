@@ -3,6 +3,109 @@ defmodule Lightning.Accounts.UserTest do
 
   alias Lightning.Accounts.User
 
+  describe "changeset/2" do
+    setup do
+      attrs = %{
+        "email" => "john@test.com",
+        "first_name" => "John",
+        "last_name" => "Doe",
+        "password" => "abc123456789"
+      }
+
+      %{attrs: attrs}
+    end
+
+    test "validates password if the struct is a new record", %{attrs: attrs} do
+      attrs_sans_password = Map.delete(attrs, "password")
+
+      %{valid?: valid?, errors: errors} =
+        User.changeset(%User{}, attrs_sans_password)
+
+      refute valid?
+      assert {:password, {"can't be blank", [validation: :required]}} in errors
+    end
+
+    test "does not require password to be present if user has an id", %{
+      attrs: attrs
+    } do
+      attrs_sans_password = Map.delete(attrs, "password")
+
+      assert %{valid?: true} =
+               User.changeset(
+                 %User{id: Ecto.UUID.generate()},
+                 attrs_sans_password
+               )
+    end
+
+    test "does validate password for an existing user if provided", %{
+      attrs: attrs
+    } do
+      attrs_password_too_short = Map.put(attrs, "password", "abc123")
+
+      %{valid?: valid?, errors: errors} =
+        User.changeset(%User{id: Ecto.UUID.generate()}, attrs_password_too_short)
+
+      refute valid?
+
+      assert {:password,
+              {"should be at least %{count} character(s)",
+               [count: 12, validation: :length, kind: :min, type: :string]}} in errors
+    end
+  end
+
+  describe "details_changeset/2" do
+    setup do
+      attrs = %{
+        "email" => "john@test.com",
+        "first_name" => "John",
+        "last_name" => "Doe",
+        "password" => "abc123456789"
+      }
+
+      %{attrs: attrs}
+    end
+
+    test "validates password if the struct is a new record", %{attrs: attrs} do
+      attrs_sans_password = Map.delete(attrs, "password")
+
+      %{valid?: valid?, errors: errors} =
+        User.details_changeset(%User{}, attrs_sans_password)
+
+      refute valid?
+      assert {:password, {"can't be blank", [validation: :required]}} in errors
+    end
+
+    test "does not require password to be present if user has an id", %{
+      attrs: attrs
+    } do
+      attrs_sans_password = Map.delete(attrs, "password")
+
+      assert %{valid?: true} =
+               User.details_changeset(
+                 %User{id: Ecto.UUID.generate()},
+                 attrs_sans_password
+               )
+    end
+
+    test "does validate password for an existing user if provided", %{
+      attrs: attrs
+    } do
+      attrs_password_too_short = Map.put(attrs, "password", "abc123")
+
+      %{valid?: valid?, errors: errors} =
+        User.details_changeset(
+          %User{id: Ecto.UUID.generate()},
+          attrs_password_too_short
+        )
+
+      refute valid?
+
+      assert {:password,
+              {"should be at least %{count} character(s)",
+               [count: 12, validation: :length, kind: :min, type: :string]}} in errors
+    end
+  end
+
   describe "password validation" do
     test "it allows passwords between 12 and 72 characters" do
       changeset =

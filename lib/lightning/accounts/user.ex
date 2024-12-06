@@ -61,7 +61,20 @@ defmodule Lightning.Accounts.User do
     |> validate_name()
     |> trim_name()
     |> validate_email()
-    |> validate_password([])
+    |> maybe_validate_password([])
+  end
+
+  defp maybe_validate_password(%{data: %{id: user_id}} = changeset, opts)
+       when not is_nil(user_id) do
+    if get_change(changeset, :password) do
+      validate_password(changeset, opts)
+    else
+      changeset
+    end
+  end
+
+  defp maybe_validate_password(changeset, opts) do
+    validate_password(changeset, opts)
   end
 
   @common_registration_attrs %{
@@ -218,7 +231,7 @@ defmodule Lightning.Accounts.User do
       :scheduled_deletion
     ])
     |> validate_email()
-    |> validate_password([])
+    |> maybe_validate_password([])
     |> validate_name()
     |> trim_name()
     |> validate_role()
