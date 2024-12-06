@@ -20,7 +20,7 @@ ARG NODE_VERSION=18.17.1
 ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
 ARG RUNNER_IMAGE="debian:${DEBIAN_VERSION}"
 
-FROM ${BUILDER_IMAGE} as builder
+FROM ${BUILDER_IMAGE} AS builder
 ARG NODE_VERSION
 
 # install build and dev dependencies
@@ -98,9 +98,9 @@ RUN apt-get clean && rm -f /var/lib/apt/lists/*_**
 # Set the locale
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
 
-ENV LANG en_US.UTF-8
-ENV LANGUAGE en_US:en
-ENV LC_ALL en_US.UTF-8
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
 
 COPY bin/install_node tmp/install_node
 RUN tmp/install_node ${NODE_VERSION}
@@ -112,7 +112,7 @@ RUN chown lightning /app
 
 # set runner ENV
 ENV MIX_ENV="prod"
-ENV ADAPTORS_PATH /app/priv/openfn
+ENV ADAPTORS_PATH=/app/priv/openfn
 
 # Only copy the final release and the adaptor directory from the build stage
 COPY --from=builder --chown=lightning:root /app/_build/${MIX_ENV}/rel/lightning ./
