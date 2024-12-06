@@ -10,6 +10,7 @@ defmodule LightningWeb.UserRegistrationControllerTest do
     Mox.stub(Lightning.MockConfig, :check_flag?, fn
       :allow_signup -> true
       :init_project_for_new_user -> false
+      :require_email_verification -> true
     end)
 
     :ok
@@ -64,6 +65,7 @@ defmodule LightningWeb.UserRegistrationControllerTest do
       Lightning.MockConfig
       |> expect(:check_flag?, fn :allow_signup -> true end)
       |> expect(:check_flag?, fn :init_project_for_new_user -> true end)
+      |> expect(:check_flag?, fn :require_email_verification -> true end)
 
       conn =
         conn

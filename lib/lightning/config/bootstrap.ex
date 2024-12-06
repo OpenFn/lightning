@@ -253,6 +253,10 @@ defmodule Lightning.Config.Bootstrap do
            :init_project_for_new_user,
            env!("INIT_PROJECT_FOR_NEW_USER", &Utils.ensure_boolean/1, false)
 
+    config :lightning,
+           :require_email_verification,
+           env!("REQUIRE_EMAIL_VERIFICATION", &Utils.ensure_boolean/1, false)
+
     # To actually send emails you need to configure the mailer to use a real
     # adapter. You may configure the swoosh api client of your choice.
     # See # https://hexdocs.pm/swoosh/Swoosh.html#module-installation for more details.
