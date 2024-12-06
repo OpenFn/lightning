@@ -23,6 +23,8 @@ and this project adheres to
 
 - Return a 422 when a duplicate key is sent to the collections post/put_all API
   [#2752](https://github.com/OpenFn/lightning/issues/2752)
+- Do not require the user's password when a superuser updates a user.
+  [#2757](https://github.com/OpenFn/lightning/issues/2757)
 
 ## [v2.10.5] - 2024-12-04
 
