@@ -6,6 +6,11 @@
 @import '../../deps/petal_components/assets/default.css';
 /* This file is for your main application CSS */
 
+@keyframes dot {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
 :root {
   --primary-bg: theme('colors.primary.800');
   --primary-text: theme('colors.white');
@@ -191,13 +196,9 @@
 .fade-in {
   animation: 0.2s ease-out 0s normal forwards 1 fade-in-keys;
 }
+
 .fade-out {
   animation: 0.2s ease-out 0s normal forwards 1 fade-out-keys;
-}
-
-@keyframes dot {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
 }
 
 .animate-dot {
