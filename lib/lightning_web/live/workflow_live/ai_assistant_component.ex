@@ -705,7 +705,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             class="flex flex-row-reverse items-end gap-x-3 mr-3"
           >
             <.user_avatar user={message.user} size_class="min-w-10 h-10 w-10" />
-            <div class="bg-blue-300 bg-opacity-50 p-2 rounded-lg break-words max-w-[80%]">
+            <div class="bg-blue-300 bg-opacity-50 p-2 mb-0.5 rounded-lg break-words max-w-[80%]">
               <%= message.content %>
             </div>
           </div>
@@ -714,7 +714,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             id={"message-#{message.id}"}
             class="mr-auto flex items-start gap-x-3 w-full"
           >
-            <div class="rounded-full bg-indigo-200 text-indigo-700 w-10 h-10 flex items-center justify-center">
+            <div class="mt-1 rounded-full bg-indigo-200 text-indigo-700 w-10 h-10 flex items-center justify-center">
               <.icon name="hero-cpu-chip" class="h-8 w-8" />
             </div>
             <div class="break-words max-w-[80%]">
@@ -782,7 +782,13 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
       "ol" => %{class: "list-decimal pl-8 space-y-1"},
       "ul" => %{class: "list-disc pl-8 space-y-1"},
       "li" => %{class: "text-gray-800"},
-      "p" => %{class: "mt-1 mb-2 text-gray-800"}
+      "p" => %{class: "mt-1 mb-2 text-gray-800"},
+      "pre" => %{
+        class: "text-sm rounded my-4 overflow-x-auto border border-gray-200"
+      },
+      "code" => %{
+        class: "font-mono leading-relaxed language-javascript"
+      }
     }
 
     merged_attributes =

@@ -18,6 +18,28 @@ export {
   TabbedPanels,
 };
 
+export const SyntaxHighlighter = {
+  mounted() {
+    this.highlight();
+  },
+
+  updated() {
+    const hasCodeBlock = this.el.querySelector('pre code');
+    if (hasCodeBlock) {
+      this.highlight();
+    }
+  },
+
+  highlight() {
+    const codeBlocks = this.el.querySelectorAll('pre code:not(.hljs)');
+    console.log('Found code blocks:', codeBlocks.length);
+
+    codeBlocks.forEach((block) => {
+      hljs.highlightElement(block);
+    });
+  }
+};
+
 export const TabIndent = {
   mounted() {
     this.el.addEventListener('keydown', e => {
