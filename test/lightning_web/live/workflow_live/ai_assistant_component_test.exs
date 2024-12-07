@@ -13,6 +13,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponentTest do
 
     html =
       render_component(&AiAssistantComponent.formatted_content/1,
+        id: "formatted-content",
         content: content
       )
 
@@ -65,6 +66,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponentTest do
 
     html =
       render_component(&AiAssistantComponent.formatted_content/1,
+        id: "formatted-content",
         content: content
       )
 
@@ -94,6 +96,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponentTest do
 
     html =
       render_component(&AiAssistantComponent.formatted_content/1,
+        id: "formatted-content",
         content: content
       )
 
@@ -129,6 +132,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponentTest do
 
     html =
       render_component(&AiAssistantComponent.formatted_content/1,
+        id: "formatted-content",
         content: content
       )
 
@@ -151,6 +155,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponentTest do
 
     html =
       render_component(&AiAssistantComponent.formatted_content/1, %{
+        id: "formatted-content",
         content: content,
         attributes: custom_attributes
       })
