@@ -21,6 +21,7 @@ defmodule LightningWeb.UserLiveTest do
     first_name: "some updated first_name",
     last_name: "some updated last_name",
     password: "some updated password",
+    role: :user,
     disabled: true
   }
   @invalid_attrs %{email: nil, first_name: nil, last_name: nil, password: nil}

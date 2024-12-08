@@ -3,6 +3,60 @@ defmodule Lightning.Accounts.UserTest do
 
   alias Lightning.Accounts.User
 
+  describe "details_changeset/2" do
+    setup do
+      attrs = %{
+        first_name: "John",
+        last_name: "Doe",
+        email: "johndoe@test.com",
+        password: "123456789abc",
+        role: :superuser,
+        disabled: true,
+        scheduled_deletion: "2024-12-29 01:02:03"
+      }
+
+      %{attrs: attrs}
+    end
+
+    test "is valid if the attributes are valid", %{attrs: attrs} do
+      changeset = User.details_changeset(%User{}, attrs)
+
+      assert %{
+        changes: %{
+          first_name: "John",
+          last_name: "Doe",
+          email: "johndoe@test.com",
+          password: "123456789abc",
+          role: :superuser,
+          disabled: true,
+          scheduled_deletion: ~U[2024-12-29 01:02:03Z],
+        },
+        valid?: true
+      } = changeset
+    end
+
+    test "is invalid if the email is blank", %{attrs: attrs} do
+      attrs = Map.put(attrs, :email, "")
+
+      changeset = User.details_changeset(%User{}, attrs)
+
+      refute changeset.valid?
+      assert errors_on(changeset).email == ["can't be blank"]
+    end
+
+    test "is invalid if the email does not contain an `@`", %{attrs: attrs} do
+      attrs = Map.put(attrs, :email, "johndoetest.com")
+
+      changeset = User.details_changeset(%User{}, attrs)
+
+      refute changeset.valid?
+      assert errors_on(changeset).email == ["can't be blank"]
+    end
+    # test "is invalid if the  email does not contain an @", %{attrs: attrs} do
+    #
+    # end
+  end
+
   describe "password validation" do
     test "it allows passwords between 12 and 72 characters" do
       changeset =

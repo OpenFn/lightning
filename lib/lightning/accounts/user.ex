@@ -4,10 +4,10 @@ defmodule Lightning.Accounts.User do
   """
   use Lightning.Schema
 
-  import Ecto.Query
+  # import Ecto.Query
   import EctoEnum
 
-  alias __MODULE__
+  # alias __MODULE__
 
   @type t :: %__MODULE__{
           id: Ecto.UUID.t() | nil
@@ -154,18 +154,18 @@ defmodule Lightning.Accounts.User do
   def validate_email(changeset) do
     changeset
     |> validate_required(:email, message: "can't be blank")
-    |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/,
-      message: "must have the @ sign and no spaces"
-    )
-    |> validate_length(:email, max: 160)
-    |> update_change(:email, &String.downcase/1)
-    |> validate_change(:email, fn :email, email ->
-      if Lightning.Repo.exists?(User |> where(email: ^email)) do
-        [email: "has already been taken"]
-      else
-        []
-      end
-    end)
+    # |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/,
+    #   message: "must have the @ sign and no spaces"
+    # )
+    # |> validate_length(:email, max: 160)
+    # |> update_change(:email, &String.downcase/1)
+    # |> validate_change(:email, fn :email, email ->
+    #   if Lightning.Repo.exists?(User |> where(email: ^email)) do
+    #     [email: "has already been taken"]
+    #   else
+    #     []
+    #   end
+    # end)
   end
 
   defp validate_password(changeset, opts) do
@@ -180,10 +180,10 @@ defmodule Lightning.Accounts.User do
     |> validate_required([:first_name, :last_name], message: "can't be blank")
   end
 
-  defp validate_role(changeset) do
-    changeset
-    |> validate_inclusion(:role, RolesEnum)
-  end
+  # defp validate_role(changeset) do
+  #   changeset
+  #   |> validate_inclusion(:role, RolesEnum)
+  # end
 
   defp maybe_hash_password(changeset, opts) do
     hash_password? = Keyword.get(opts, :hash_password, true)
@@ -219,10 +219,10 @@ defmodule Lightning.Accounts.User do
       :scheduled_deletion
     ])
     |> validate_email()
-    |> validate_password([])
-    |> validate_name()
-    |> trim_name()
-    |> validate_role()
+    # |> validate_password([])
+    # |> validate_name()
+    # |> trim_name()
+    # |> validate_role()
   end
 
   @doc """
