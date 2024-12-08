@@ -193,11 +193,6 @@ defmodule Lightning.Accounts.User do
     |> validate_required([:first_name, :last_name], message: "can't be blank")
   end
 
-  defp validate_role(changeset) do
-    changeset
-    |> validate_inclusion(:role, RolesEnum)
-  end
-
   defp maybe_hash_password(changeset, opts) do
     hash_password? = Keyword.get(opts, :hash_password, true)
     password = get_change(changeset, :password)
@@ -235,7 +230,6 @@ defmodule Lightning.Accounts.User do
     |> maybe_validate_password([])
     |> validate_name()
     |> trim_name()
-    |> validate_role()
   end
 
   @doc """

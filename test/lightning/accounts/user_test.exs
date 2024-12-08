@@ -56,10 +56,13 @@ defmodule Lightning.Accounts.UserTest do
   describe "details_changeset/2" do
     setup do
       attrs = %{
-        "email" => "john@test.com",
-        "first_name" => "John",
-        "last_name" => "Doe",
-        "password" => "abc123456789"
+        first_name: "John",
+        last_name: "Doe",
+        email: "johndoe@test.com",
+        password: "123456789abc",
+        role: :superuser,
+        disabled: true,
+        scheduled_deletion: "2024-12-29 01:02:03"
       }
 
       %{attrs: attrs}
@@ -103,6 +106,212 @@ defmodule Lightning.Accounts.UserTest do
       assert {:password,
               {"should be at least %{count} character(s)",
                [count: 12, validation: :length, kind: :min, type: :string]}} in errors
+    end
+
+    test "is valid if the attributes are valid", %{attrs: attrs} do
+      changeset = User.details_changeset(%User{}, attrs)
+
+      assert %{
+               changes: %{
+                 first_name: "John",
+                 last_name: "Doe",
+                 email: "johndoe@test.com",
+                 role: :superuser,
+                 disabled: true,
+                 scheduled_deletion: ~U[2024-12-29 01:02:03Z]
+               },
+               valid?: true
+             } = changeset
+    end
+
+    test "hashes and removes the plain text password", %{attrs: attrs} do
+      %{changes: %{hashed_password: hashed_password} = changes} =
+        User.details_changeset(%User{}, attrs)
+
+      assert Bcrypt.verify_pass("123456789abc", hashed_password)
+
+      refute Map.values(changes) |> Enum.member?(attrs.password)
+    end
+
+    test "is invalid if the email is blank", %{attrs: attrs} do
+      attrs = Map.put(attrs, :email, "")
+
+      changeset = User.details_changeset(%User{}, attrs)
+
+      refute changeset.valid?
+      assert errors_on(changeset).email == ["can't be blank"]
+    end
+
+    test "is invalid if the email does not contain an `@`", %{attrs: attrs} do
+      attrs = Map.put(attrs, :email, "johndoetest.com")
+
+      changeset = User.details_changeset(%User{}, attrs)
+
+      refute changeset.valid?
+      assert errors_on(changeset).email == ["must have the @ sign and no spaces"]
+    end
+
+    test "is invalid if the email contains whitespace", %{attrs: attrs} do
+      attrs = Map.put(attrs, :email, "johndoe@ test.com")
+
+      changeset = User.details_changeset(%User{}, attrs)
+
+      refute changeset.valid?
+      assert errors_on(changeset).email == ["must have the @ sign and no spaces"]
+    end
+
+    test "is invalid if the length of the email exceeds 160 characters", %{
+      attrs: attrs
+    } do
+      attrs = Map.put(attrs, :email, String.duplicate("@", 160))
+
+      changeset = User.details_changeset(%User{}, attrs)
+
+      assert changeset.valid?
+
+      attrs = Map.put(attrs, :email, String.duplicate("@", 161))
+
+      changeset = User.details_changeset(%User{}, attrs)
+
+      refute changeset.valid?
+      assert errors_on(changeset).email == ["should be at most 160 character(s)"]
+    end
+
+    test "downcases the email", %{attrs: attrs} do
+      attrs = Map.put(attrs, :email, "joHnDoE@teSt.cOm")
+
+      assert %{
+               changes: %{
+                 email: "johndoe@test.com"
+               },
+               valid?: true
+             } =
+               User.details_changeset(%User{}, attrs)
+    end
+
+    test "is invalid if a user with the given email address already exists", %{
+      attrs: attrs
+    } do
+      _other_user_1 = insert(:user, email: "not" <> attrs.email)
+
+      assert %{valid?: true} = User.details_changeset(%User{}, attrs)
+
+      _other_user_2 = insert(:user, email: attrs.email)
+
+      changeset = User.details_changeset(%User{}, attrs)
+
+      refute changeset.valid?
+      assert errors_on(changeset).email == ["has already been taken"]
+    end
+
+    test "is invalid if the password is not provided", %{attrs: attrs} do
+      attrs = Map.put(attrs, :password, "")
+
+      changeset = User.details_changeset(%User{}, attrs)
+
+      refute changeset.valid?
+      assert errors_on(changeset).password == ["can't be blank"]
+    end
+
+    test "is invalid if the password is less than 12 or more than 72 chars", %{
+      attrs: attrs
+    } do
+      attrs = Map.put(attrs, :password, String.duplicate("a", 11))
+
+      changeset = User.details_changeset(%User{}, attrs)
+
+      refute changeset.valid?
+
+      assert errors_on(changeset).password ==
+               ["should be at least 12 character(s)"]
+
+      attrs = Map.put(attrs, :password, String.duplicate("a", 12))
+
+      assert %{valid?: true} = User.details_changeset(%User{}, attrs)
+
+      attrs = Map.put(attrs, :password, String.duplicate("a", 72))
+
+      assert %{valid?: true} = User.details_changeset(%User{}, attrs)
+
+      attrs = Map.put(attrs, :password, String.duplicate("a", 73))
+
+      changeset = User.details_changeset(%User{}, attrs)
+
+      refute changeset.valid?
+
+      assert errors_on(changeset).password ==
+               ["should be at most 72 character(s)"]
+    end
+
+    test "is invalid if password is more than 72 bytes in length", %{
+      attrs: attrs
+    } do
+      attrs =
+        Map.put(attrs, :password, String.duplicate("a", 71) <> "°")
+
+      changeset = User.details_changeset(%User{}, attrs)
+
+      refute changeset.valid?
+      assert errors_on(changeset).password == ["should be at most 72 byte(s)"]
+    end
+
+    test "is invalid if the first name is blank", %{attrs: attrs} do
+      attrs = Map.put(attrs, :first_name, "")
+
+      changeset = User.details_changeset(%User{}, attrs)
+
+      refute changeset.valid?
+      assert errors_on(changeset).first_name == ["can't be blank"]
+    end
+
+    test "trims whitespace from the first name", %{attrs: attrs} do
+      attrs = Map.put(attrs, :first_name, " John ")
+
+      assert %{
+               changes: %{
+                 first_name: "John"
+               },
+               valid?: true
+             } = User.details_changeset(%User{}, attrs)
+    end
+
+    test "is invalid if the last name is blank", %{attrs: attrs} do
+      attrs = Map.put(attrs, :last_name, "")
+
+      changeset = User.details_changeset(%User{}, attrs)
+
+      refute changeset.valid?
+      assert errors_on(changeset).last_name == ["can't be blank"]
+    end
+
+    test "trims whitespace from the last name", %{attrs: attrs} do
+      attrs = Map.put(attrs, :last_name, " Doe ")
+
+      assert %{
+               changes: %{
+                 last_name: "Doe"
+               },
+               valid?: true
+             } = User.details_changeset(%User{}, attrs)
+    end
+
+    test "is invalid if the role is not amongst the allowed roles", %{
+      attrs: attrs
+    } do
+      attrs = Map.put(attrs, :role, :user)
+
+      assert %{valid?: true} = User.details_changeset(%User{}, attrs)
+
+      attrs = Map.put(attrs, :role, :superuser)
+
+      assert %{valid?: true} = User.details_changeset(%User{}, attrs)
+
+      attrs = Map.put(attrs, :role, :invalid_role)
+
+      changeset = User.details_changeset(%User{}, attrs)
+
+      refute changeset.valid?
+      assert errors_on(changeset).role == ["is invalid"]
     end
   end
 

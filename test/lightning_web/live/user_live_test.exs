@@ -21,6 +21,7 @@ defmodule LightningWeb.UserLiveTest do
     first_name: "some updated first_name",
     last_name: "some updated last_name",
     password: "some updated password",
+    role: :superuser,
     disabled: true
   }
   @invalid_attrs %{email: nil, first_name: nil, last_name: nil, password: nil}
@@ -105,7 +106,9 @@ defmodule LightningWeb.UserLiveTest do
       } = Repo.get_by(User, email: @create_attrs.email)
     end
 
-    test "updates user in listing", %{conn: conn, user: user} do
+    test "updates user in listing", %{conn: conn} do
+      user = user_fixture()
+
       {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
 
       {:ok, form_live, _} =
