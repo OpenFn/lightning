@@ -23,6 +23,8 @@ and this project adheres to
 ### Changed
 
 - Updated the About the AI Assistant help text
+- Make user email verification optional. Defaults to `false`
+  [#2755](https://github.com/OpenFn/lightning/issues/2755)
 
 ### Fixed
 
