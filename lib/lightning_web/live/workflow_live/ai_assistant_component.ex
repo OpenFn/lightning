@@ -594,9 +594,9 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
           phx-hook="TabIndent"
         ><%= Phoenix.HTML.Form.normalize_value("textarea", @form[:content].value) %></textarea>
 
-        <div class="flex items-center justify-between px-4 py-1 mt-1 border-t border-gray-200 bg-gray-100 rounded-none rounded-b-lg">
-          <span class="text-xs text-gray-500">
-            <strong>Do not paste PII or sensitive business data</strong>
+        <div class="flex items-center justify-end px-2 py-1 mt-1 border-t border-gray-200 bg-gray-100 rounded-none rounded-b-lg">
+          <span class="text-xs text-gray-500 mr-2 select-none font-bold">
+            Do not paste PII or sensitive business data
           </span>
           <.simple_button_with_tooltip
             id="ai-assistant-form-submit-btn"
@@ -668,7 +668,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
                   <%= session.title %><%= "..." %>
                 </span>
               </div>
-              <span class="text-xs text-gray-500 group-hover:text-gray-700">
+              <span class="text-xs text-gray-500 group-hover:text-gray-700 whitespace-nowrap">
                 <%= time_ago(session.inserted_at) %>
               </span>
             </.link>
