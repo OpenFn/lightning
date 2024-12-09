@@ -41,8 +41,7 @@ defmodule Lightning.KafkaTriggers.MessageHandling do
                type: :kafka,
                project_id: workflow.project_id
              },
-             without_run: without_run?,
-             actor: trigger
+             without_run: without_run?
            ) do
       {:ok, work_order}
     else
