@@ -784,10 +784,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
       "li" => %{class: "text-gray-800"},
       "p" => %{class: "mt-1 mb-2 text-gray-800"},
       "pre" => %{
-        class: "text-sm rounded my-4 overflow-x-auto border border-gray-200"
-      },
-      "code" => %{
-        class: "font-mono leading-relaxed language-javascript"
+        class: "text-sm rounded my-4 p-2 overflow-x-auto border border-gray-200"
       }
     }
 
