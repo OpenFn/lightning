@@ -55,21 +55,31 @@ defmodule Lightning.Accounts.UserTest do
 
   describe "details_changeset/2" do
     setup do
+      scheduled_deletion = ~U[2024-12-29 01:02:03Z]
+
+      scheduled_deletion_string =
+        scheduled_deletion
+        |> DateTime.to_naive()
+        |> NaiveDateTime.to_string()
+
       attrs = %{
         first_name: "John",
         last_name: "Doe",
         email: "johndoe@test.com",
         password: "123456789abc",
-        role: :superuser,
+        role: :user,
         disabled: true,
-        scheduled_deletion: "2024-12-29 01:02:03"
+        scheduled_deletion: scheduled_deletion_string
       }
 
-      %{attrs: attrs}
+      %{
+        attrs: attrs,
+        scheduled_deletion: scheduled_deletion
+      }
     end
 
     test "validates password if the struct is a new record", %{attrs: attrs} do
-      attrs_sans_password = Map.delete(attrs, "password")
+      attrs_sans_password = Map.delete(attrs, :password)
 
       %{valid?: valid?, errors: errors} =
         User.details_changeset(%User{}, attrs_sans_password)
@@ -81,7 +91,7 @@ defmodule Lightning.Accounts.UserTest do
     test "does not require password to be present if user has an id", %{
       attrs: attrs
     } do
-      attrs_sans_password = Map.delete(attrs, "password")
+      attrs_sans_password = Map.delete(attrs, :password)
 
       assert %{valid?: true} =
                User.details_changeset(
@@ -93,7 +103,7 @@ defmodule Lightning.Accounts.UserTest do
     test "does validate password for an existing user if provided", %{
       attrs: attrs
     } do
-      attrs_password_too_short = Map.put(attrs, "password", "abc123")
+      attrs_password_too_short = Map.put(attrs, :password, "abc123")
 
       %{valid?: valid?, errors: errors} =
         User.details_changeset(
@@ -108,7 +118,10 @@ defmodule Lightning.Accounts.UserTest do
                [count: 12, validation: :length, kind: :min, type: :string]}} in errors
     end
 
-    test "is valid if the attributes are valid", %{attrs: attrs} do
+    test "is valid if the attributes are valid", %{
+      attrs: attrs,
+      scheduled_deletion: scheduled_deletion
+    } do
       changeset = User.details_changeset(%User{}, attrs)
 
       assert %{
@@ -116,9 +129,8 @@ defmodule Lightning.Accounts.UserTest do
                  first_name: "John",
                  last_name: "Doe",
                  email: "johndoe@test.com",
-                 role: :superuser,
                  disabled: true,
-                 scheduled_deletion: ~U[2024-12-29 01:02:03Z]
+                 scheduled_deletion: ^scheduled_deletion
                },
                valid?: true
              } = changeset
@@ -312,6 +324,80 @@ defmodule Lightning.Accounts.UserTest do
 
       refute changeset.valid?
       assert errors_on(changeset).role == ["is invalid"]
+    end
+
+    test "sets nil scheduled_deletion value if user role is superuser", %{
+      attrs: attrs,
+      scheduled_deletion: scheduled_deletion
+    } do
+      attrs = Map.delete(attrs, :role)
+
+      user =
+        build(
+          :user,
+          role: :superuser,
+          scheduled_deletion: DateTime.add(scheduled_deletion, -100)
+        )
+
+      changeset = User.details_changeset(user, attrs)
+
+      assert %{
+               changes: %{
+                 scheduled_deletion: nil
+               },
+               valid?: true
+             } = changeset
+    end
+
+    test "sets nil scheduled_deletion when role is changing to superuser", %{
+      attrs: attrs,
+      scheduled_deletion: scheduled_deletion
+    } do
+      user =
+        build(
+          :user,
+          role: :user,
+          scheduled_deletion: DateTime.add(scheduled_deletion, -100)
+        )
+
+      attrs = Map.put(attrs, :role, :superuser)
+
+      changeset = User.details_changeset(user, attrs)
+
+      assert %{
+               changes: %{
+                 scheduled_deletion: nil
+               },
+               valid?: true
+             } = changeset
+    end
+
+    test "does not set nil scheduled_deletion value if role is user", %{
+      attrs: attrs,
+      scheduled_deletion: scheduled_deletion
+    } do
+      changeset = User.details_changeset(%User{role: :user}, attrs)
+
+      assert %{
+               changes: %{
+                 scheduled_deletion: ^scheduled_deletion
+               },
+               valid?: true
+             } = changeset
+    end
+
+    test "does not set nil scheduled_deletion when role is changing to user", %{
+      attrs: attrs,
+      scheduled_deletion: scheduled_deletion
+    } do
+      changeset = User.details_changeset(%User{role: :superuser}, attrs)
+
+      assert %{
+               changes: %{
+                 scheduled_deletion: ^scheduled_deletion
+               },
+               valid?: true
+             } = changeset
     end
   end
 

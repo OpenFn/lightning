@@ -10,9 +10,12 @@ defmodule LightningWeb.UserLive.FormComponent do
   def update(%{user: user} = assigns, socket) do
     changeset = Accounts.change_user(user, %{})
 
+    {_source, role} = Ecto.Changeset.fetch_field(changeset, :role)
+
     {:ok,
      socket
      |> assign(assigns)
+     |> assign(:role, role)
      |> assign(:changeset, changeset)}
   end
 
@@ -23,7 +26,12 @@ defmodule LightningWeb.UserLive.FormComponent do
       |> Accounts.change_user(user_params)
       |> Map.put(:action, :validate)
 
-    {:noreply, assign(socket, :changeset, changeset)}
+    {_source, role} = Ecto.Changeset.fetch_field(changeset, :role)
+
+    {:noreply,
+     socket
+     |> assign(:role, role)
+     |> assign(:changeset, changeset)}
   end
 
   def handle_event("save", %{"user" => user_params}, socket) do
@@ -31,8 +39,8 @@ defmodule LightningWeb.UserLive.FormComponent do
   end
 
   def user_options do
-    Accounts.User.RolesEnum.__valid_values__() 
-    |> Enum.filter(& is_binary(&1))
+    Accounts.User.RolesEnum.__valid_values__()
+    |> Enum.filter(&is_binary(&1))
     |> Enum.sort()
     |> Enum.map(fn role -> {String.capitalize(role), role} end)
   end

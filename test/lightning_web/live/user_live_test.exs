@@ -68,10 +68,10 @@ defmodule LightningWeb.UserLiveTest do
       assert html =~ "test@example.com"
 
       assert %{
-        first_name: ^first_name,
-        last_name: ^last_name,
-        role: :user
-      } = Repo.get_by(User, email: @create_attrs.email)
+               first_name: ^first_name,
+               last_name: ^last_name,
+               role: :user
+             } = Repo.get_by(User, email: @create_attrs.email)
     end
 
     test "allows creation of a super user", %{conn: conn} do
@@ -100,10 +100,10 @@ defmodule LightningWeb.UserLiveTest do
       assert html =~ "test@example.com"
 
       assert %{
-        first_name: ^first_name,
-        last_name: ^last_name,
-        role: :superuser
-      } = Repo.get_by(User, email: @create_attrs.email)
+               first_name: ^first_name,
+               last_name: ^last_name,
+               role: :superuser
+             } = Repo.get_by(User, email: @create_attrs.email)
     end
 
     test "updates user in listing", %{conn: conn} do
@@ -132,6 +132,88 @@ defmodule LightningWeb.UserLiveTest do
       assert html =~ "User updated successfully"
 
       assert Repo.reload!(user) |> user_attrs_match?(@update_attrs)
+    end
+
+    test "provides `Scheduled Deletion` when editing a normal user", %{
+      conn: conn
+    } do
+      user = user_fixture()
+
+      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+
+      {:ok, form_live, _} =
+        index_live
+        |> element("#user-#{user.id} a", "Edit")
+        |> render_click()
+        |> follow_redirect(conn, Routes.user_edit_path(conn, :edit, user))
+
+      assert(
+        form_live
+        |> has_element?("input[name=\"user[scheduled_deletion]\"]")
+      )
+    end
+
+    test "hides `Scheduled Deletion` when changing to a superuser", %{
+      conn: conn
+    } do
+      user = user_fixture()
+
+      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+
+      {:ok, form_live, _} =
+        index_live
+        |> element("#user-#{user.id} a", "Edit")
+        |> render_click()
+        |> follow_redirect(conn, Routes.user_edit_path(conn, :edit, user))
+
+      form_live
+      |> element("#user-form")
+      |> render_change(%{"user" => %{"role" => "superuser"}})
+
+      refute(
+        form_live
+        |> has_element?("input[name=\"user[scheduled_deletion]\"]")
+      )
+    end
+
+    test "does not show `Scheduled Deletion` field when editing superuser", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+
+      {:ok, form_live, _} =
+        index_live
+        |> element("#user-#{user.id} a", "Edit")
+        |> render_click()
+        |> follow_redirect(conn, Routes.user_edit_path(conn, :edit, user))
+
+      refute(
+        form_live
+        |> has_element?("input[name=\"user[scheduled_deletion]\"]")
+      )
+    end
+
+    test "shows `Scheduled Deletion` field when changing to user", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+
+      {:ok, form_live, _} =
+        index_live
+        |> element("#user-#{user.id} a", "Edit")
+        |> render_click()
+        |> follow_redirect(conn, Routes.user_edit_path(conn, :edit, user))
+
+      form_live
+      |> element("#user-form")
+      |> render_change(%{"user" => %{"role" => "user"}})
+
+      assert(
+        form_live
+        |> has_element?("input[name=\"user[scheduled_deletion]\"]")
+      )
     end
 
     test "allows a superuser to schedule users for deletion in the users list",
@@ -187,7 +269,6 @@ defmodule LightningWeb.UserLiveTest do
     } do
       {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
 
-
       assert(
         index_live
         |> has_element?(
@@ -205,7 +286,7 @@ defmodule LightningWeb.UserLiveTest do
     test "allows superuser to click cancel for closing user deletion modal", %{
       conn: conn
     } do
-      user= user_fixture()
+      user = user_fixture()
 
       {:ok, index_live, html} = live(conn, Routes.user_index_path(conn, :index))
 
@@ -253,10 +334,10 @@ defmodule LightningWeb.UserLiveTest do
       {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
 
       assert index_live
-      |> has_element?(
-        "a#cancel-deletion-#{user.id}.table-action",
-        "Cancel deletion"
-      )
+             |> has_element?(
+               "a#cancel-deletion-#{user.id}.table-action",
+               "Cancel deletion"
+             )
     end
 
     test "allows a superuser to perform delete now action on users", %{
