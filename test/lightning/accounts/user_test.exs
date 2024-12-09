@@ -368,6 +368,21 @@ defmodule Lightning.Accounts.UserTest do
 
       assert errors[:scheduled_deletion_email] == nil
     end
+
+    test "user being deleted is a superuser" do
+      user = %User{email: "real@email.com", role: :superuser}
+
+      errors =
+        User.scheduled_deletion_changeset(user, %{
+          "id" => "86201fff-a699-4eca-bb53-8736228ff187",
+          "scheduled_deletion_email" => "real@email.com"
+        })
+        |> errors_on()
+
+      assert errors[:scheduled_deletion_email] == [
+               "You can't delete a superuser account."
+             ]
+    end
   end
 
   describe "superuser_registration_changeset/1" do
