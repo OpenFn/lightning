@@ -22,16 +22,16 @@ defmodule Lightning.Accounts.UserTest do
       changeset = User.details_changeset(%User{}, attrs)
 
       assert %{
-        changes: %{
-          first_name: "John",
-          last_name: "Doe",
-          email: "johndoe@test.com",
-          role: :superuser,
-          disabled: true,
-          scheduled_deletion: ~U[2024-12-29 01:02:03Z],
-        },
-        valid?: true
-      } = changeset
+               changes: %{
+                 first_name: "John",
+                 last_name: "Doe",
+                 email: "johndoe@test.com",
+                 role: :superuser,
+                 disabled: true,
+                 scheduled_deletion: ~U[2024-12-29 01:02:03Z]
+               },
+               valid?: true
+             } = changeset
     end
 
     test "hashes and removes the plain text password", %{attrs: attrs} do
@@ -91,12 +91,12 @@ defmodule Lightning.Accounts.UserTest do
       attrs = Map.put(attrs, :email, "joHnDoE@teSt.cOm")
 
       assert %{
-        changes: %{
-          email: "johndoe@test.com"
-        },
-        valid?: true
-      } = 
-        User.details_changeset(%User{}, attrs)
+               changes: %{
+                 email: "johndoe@test.com"
+               },
+               valid?: true
+             } =
+               User.details_changeset(%User{}, attrs)
     end
 
     test "is invalid if a user with the given email address already exists", %{
@@ -131,8 +131,9 @@ defmodule Lightning.Accounts.UserTest do
       changeset = User.details_changeset(%User{}, attrs)
 
       refute changeset.valid?
+
       assert errors_on(changeset).password ==
-        ["should be at least 12 character(s)"]
+               ["should be at least 12 character(s)"]
 
       attrs = Map.put(attrs, :password, String.duplicate("a", 12))
 
@@ -147,8 +148,9 @@ defmodule Lightning.Accounts.UserTest do
       changeset = User.details_changeset(%User{}, attrs)
 
       refute changeset.valid?
+
       assert errors_on(changeset).password ==
-        ["should be at most 72 character(s)"]
+               ["should be at most 72 character(s)"]
     end
 
     test "is invalid if password is more than 72 bytes in length", %{
@@ -176,11 +178,11 @@ defmodule Lightning.Accounts.UserTest do
       attrs = Map.put(attrs, :first_name, " John ")
 
       assert %{
-        changes: %{
-          first_name: "John"
-        },
-        valid?: true
-      } = User.details_changeset(%User{}, attrs)
+               changes: %{
+                 first_name: "John"
+               },
+               valid?: true
+             } = User.details_changeset(%User{}, attrs)
     end
 
     test "is invalid if the last name is blank", %{attrs: attrs} do
@@ -196,11 +198,11 @@ defmodule Lightning.Accounts.UserTest do
       attrs = Map.put(attrs, :last_name, " Doe ")
 
       assert %{
-        changes: %{
-          last_name: "Doe"
-        },
-        valid?: true
-      } = User.details_changeset(%User{}, attrs)
+               changes: %{
+                 last_name: "Doe"
+               },
+               valid?: true
+             } = User.details_changeset(%User{}, attrs)
     end
 
     test "is invalid if the role is not amongst the allowed roles", %{
