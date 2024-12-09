@@ -134,39 +134,6 @@ defmodule LightningWeb.UserLiveTest do
       assert Repo.reload!(user) |> user_attrs_match?(@update_attrs)
     end
 
-    test "stops a superuser from deleting themselves", %{
-      conn: conn,
-      user: user
-    } do
-      {:ok, index_live, html} = live(conn, Routes.user_index_path(conn, :index))
-
-      assert html =~ "Users"
-
-      {:ok, form_live, _} =
-        index_live
-        |> element("#user-#{user.id} a", "Delete")
-        |> render_click()
-        |> follow_redirect(conn, Routes.user_index_path(conn, :delete, user))
-
-      assert form_live
-             |> form("#scheduled_deletion_form",
-               user: @invalid_schedule_deletion_attrs
-             )
-             |> render_change() =~
-               "This email doesn&#39;t match your current email"
-
-      assert form_live
-             |> form("#scheduled_deletion_form",
-               user: %{
-                 scheduled_deletion_email: user.email
-               }
-             )
-             |> render_submit() =~
-               "You can&#39;t delete a superuser account."
-
-      refute_redirected(form_live, Routes.user_index_path(conn, :index))
-    end
-
     test "allows a superuser to schedule users for deletion in the users list",
          %{
            conn: conn
@@ -214,10 +181,32 @@ defmodule LightningWeb.UserLiveTest do
                "#{DateTime.utc_now() |> Timex.shift(days: 7) |> Map.fetch!(:year)}"
     end
 
-    test "allows superuser to click cancel for closing user deletion modal", %{
+    test "disables the delete link for listed superusers", %{
       conn: conn,
       user: user
     } do
+      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+
+
+      assert(
+        index_live
+        |> has_element?(
+          "span#delete-#{user.id}.table-action-disabled",
+          "Delete"
+        )
+      )
+
+      refute(
+        index_live
+        |> has_element?("a#delete-#{user.id}.table-action", "Delete")
+      )
+    end
+
+    test "allows superuser to click cancel for closing user deletion modal", %{
+      conn: conn
+    } do
+      user= user_fixture()
+
       {:ok, index_live, html} = live(conn, Routes.user_index_path(conn, :index))
 
       assert html =~ "Users"
