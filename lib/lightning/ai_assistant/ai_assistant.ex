@@ -14,6 +14,8 @@ defmodule Lightning.AiAssistant do
   alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows.Job
 
+  require Logger
+
   @spec put_expression_and_adaptor(ChatSession.t(), String.t(), String.t()) ::
           ChatSession.t()
   def put_expression_and_adaptor(session, expression, adaptor) do
@@ -90,7 +92,7 @@ defmodule Lightning.AiAssistant do
   """
   @spec query(ChatSession.t(), String.t()) ::
           {:ok, ChatSession.t()}
-          | {:error, Ecto.Changeset.t() | :apollo_unavailable}
+          | {:error, String.t() | Ecto.Changeset.t()}
   def query(session, content) do
     apollo_resp =
       ApolloClient.query(
@@ -104,8 +106,21 @@ defmodule Lightning.AiAssistant do
         message = body["history"] |> Enum.reverse() |> hd()
         save_message(session, message)
 
-      _ ->
-        {:error, :apollo_unavailable}
+      {:ok, %Tesla.Env{body: %{"message" => message}}} ->
+        {:error, message}
+
+      {:error, :timeout} ->
+        {:error, "Request timed out. Please try again."}
+
+      {:error, :econnrefused} ->
+        {:error, "Unable to reach the AI server. Please try again later."}
+
+      unexpected_error ->
+        Logger.warning(
+          "Received an unexpected error: #{inspect(unexpected_error)}"
+        )
+
+        {:error, "Oops! Something went wrong. Please try again."}
     end
   end
 

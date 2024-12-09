@@ -2326,7 +2326,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert has_element?(view, "#assistant-failed-message")
 
       assert view |> element("#assistant-failed-message") |> render() =~
-               "Oops! Could not reach the Ai Server. Please try again later."
+               "Oops! Something went wrong. Please try again."
     end
 
     @tag email: "user@openfn.org"
@@ -2426,6 +2426,195 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       |> render_submit(%{content: "Ping"})
 
       assert has_element?(view, "#ai-assistant-error", error_message)
+    end
+
+    @tag email: "user@openfn.org"
+    test "displays apollo server error messages", %{
+      conn: conn,
+      project: project,
+      workflow: %{jobs: [job_1 | _]} = workflow
+    } do
+      apollo_endpoint = "http://localhost:4001"
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> apollo_endpoint
+        :openai_api_key -> "openai_api_key"
+      end)
+
+      error_message = "Server is temporarily unavailable"
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        fn
+          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
+            {:ok, %Tesla.Env{status: 200}}
+
+          %{method: :post}, _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 503,
+               body: %{
+                 "code" => 503,
+                 "message" => error_message
+               }
+             }}
+        end
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      render_async(view)
+      view |> element("#get-started-with-ai-btn") |> render_click()
+
+      view
+      |> form("#ai-assistant-form")
+      |> render_submit(%{content: "Ping"})
+
+      assert_patch(view)
+      render_async(view)
+
+      assert view |> element("#assistant-failed-message") |> render() =~
+               error_message
+    end
+
+    @tag email: "user@openfn.org"
+    test "handles timeout errors from Apollo", %{
+      conn: conn,
+      project: project,
+      workflow: %{jobs: [job_1 | _]} = workflow
+    } do
+      apollo_endpoint = "http://localhost:4001"
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> apollo_endpoint
+        :openai_api_key -> "openai_api_key"
+      end)
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        fn
+          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
+            {:ok, %Tesla.Env{status: 200}}
+
+          %{method: :post}, _opts ->
+            {:error, :timeout}
+        end
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      render_async(view)
+      view |> element("#get-started-with-ai-btn") |> render_click()
+
+      view
+      |> form("#ai-assistant-form")
+      |> render_submit(%{content: "Ping"})
+
+      assert_patch(view)
+      render_async(view)
+
+      assert view |> element("#assistant-failed-message") |> render() =~
+               "Request timed out. Please try again."
+    end
+
+    @tag email: "user@openfn.org"
+    test "handles connection refused errors from Apollo", %{
+      conn: conn,
+      project: project,
+      workflow: %{jobs: [job_1 | _]} = workflow
+    } do
+      apollo_endpoint = "http://localhost:4001"
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> apollo_endpoint
+        :openai_api_key -> "openai_api_key"
+      end)
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        fn
+          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
+            {:ok, %Tesla.Env{status: 200}}
+
+          %{method: :post}, _opts ->
+            {:error, :econnrefused}
+        end
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      render_async(view)
+      view |> element("#get-started-with-ai-btn") |> render_click()
+
+      view
+      |> form("#ai-assistant-form")
+      |> render_submit(%{content: "Ping"})
+
+      assert_patch(view)
+      render_async(view)
+
+      assert view |> element("#assistant-failed-message") |> render() =~
+               "Unable to reach the AI server. Please try again later."
+    end
+
+    @tag email: "user@openfn.org"
+    test "handles unexpected errors from Apollo", %{
+      conn: conn,
+      project: project,
+      workflow: %{jobs: [job_1 | _]} = workflow
+    } do
+      apollo_endpoint = "http://localhost:4001"
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> apollo_endpoint
+        :openai_api_key -> "openai_api_key"
+      end)
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        fn
+          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
+            {:ok, %Tesla.Env{status: 200}}
+
+          %{method: :post}, _opts ->
+            {:error, :unknown_error}
+        end
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      render_async(view)
+      view |> element("#get-started-with-ai-btn") |> render_click()
+
+      view
+      |> form("#ai-assistant-form")
+      |> render_submit(%{content: "Ping"})
+
+      assert_patch(view)
+      render_async(view)
+
+      assert view |> element("#assistant-failed-message") |> render() =~
+               "Oops! Something went wrong. Please try again."
     end
   end
 
