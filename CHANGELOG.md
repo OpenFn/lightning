@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Audit the creation and removal of Github repo connections.
+  [#2668](https://github.com/OpenFn/lightning/issues/2668)
+
 ### Changed
 
 ### Fixed
