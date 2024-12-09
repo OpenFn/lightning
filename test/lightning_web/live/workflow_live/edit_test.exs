@@ -2681,7 +2681,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       render_async(view)
 
       html = render(view)
-      assert html =~ "Sort by date"
+      assert html =~ "Latest"
 
       links =
         Floki.find(
