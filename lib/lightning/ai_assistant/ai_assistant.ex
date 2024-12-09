@@ -16,6 +16,10 @@ defmodule Lightning.AiAssistant do
 
   require Logger
 
+  @title_max_length 40
+
+  def title_max_length, do: @title_max_length
+
   @spec put_expression_and_adaptor(ChatSession.t(), String.t(), String.t()) ::
           ChatSession.t()
   def put_expression_and_adaptor(session, expression, adaptor) do
@@ -62,7 +66,7 @@ defmodule Lightning.AiAssistant do
         content
         |> String.split(" ")
         |> Enum.reduce_while("", fn word, acc ->
-          if String.length(acc <> " " <> word) > 40,
+          if String.length(acc <> " " <> word) > @title_max_length,
             do: {:halt, acc},
             else: {:cont, acc <> " " <> word}
         end)
@@ -71,7 +75,7 @@ defmodule Lightning.AiAssistant do
 
       false ->
         content
-        |> String.slice(0, 40)
+        |> String.slice(0, @title_max_length)
         |> String.replace(~r/[.!?,;:]$/, "")
     end
   end

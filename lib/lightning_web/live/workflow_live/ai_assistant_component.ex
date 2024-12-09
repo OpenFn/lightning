@@ -645,7 +645,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             phx-target={@target}
             class="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
           >
-            Sort by date
+            <%= if @sort_direction == :desc, do: "Latest", else: "Oldest" %>
             <%= if @sort_direction == :desc do %>
               <.icon name="hero-chevron-up" class="size-5" />
             <% else %>
@@ -665,11 +665,11 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
               <div class="flex items-center space-x-3 min-w-0">
                 <.user_avatar user={session.user} />
                 <span class="text-sm truncate">
-                  <%= session.title %><%= "..." %>
+                  <%= maybe_show_ellipsis(session.title) %>
                 </span>
               </div>
               <span class="text-xs text-gray-500 group-hover:text-gray-700 whitespace-nowrap">
-                <%= time_ago(session.inserted_at) %>
+                <%= time_ago(session.updated_at) %>
               </span>
             </.link>
           <% end %>
@@ -687,16 +687,21 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   defp render_individual_session(assigns) do
     ~H"""
     <div class="row-span-full flex flex-col">
-      <div class="bg-gray-100 p-2 flex justify-between border-solid border-t-2 border-b-2">
-        <span class="font-medium"><%= @session.title %></span>
-        <.link patch={redirect_url(@base_url, Map.put(@query_params, "chat", nil))}>
+      <div class="bg-white border-b border-gray-200 px-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+        <span class="font-medium text-gray-900 px-1 truncate max-w-[300px]">
+          <%= maybe_show_ellipsis(@session.title) %>
+        </span>
+        <.link
+          patch={redirect_url(@base_url, Map.put(@query_params, "chat", nil))}
+          class="p-2 pr-0 text-gray-400 hover:text-gray-600 rounded-full transition-colors"
+        >
           <.icon name="hero-x-mark" class="h-5 w-5" />
         </.link>
       </div>
       <div
         id={"ai-session-#{@session.id}-messages"}
         phx-hook="ScrollToBottom"
-        class="flex flex-col gap-4 p-2 overflow-y-auto w-full h-full"
+        class="flex flex-col gap-4 p-4 overflow-y-auto w-full h-full"
       >
         <%= for message <- @session.messages do %>
           <div
@@ -714,7 +719,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             id={"message-#{message.id}"}
             class="mr-auto flex items-start gap-x-3 w-full"
           >
-            <div class="mt-1 rounded-full bg-indigo-200 text-indigo-700 w-10 h-10 flex items-center justify-center">
+            <div class="rounded-full bg-indigo-200 text-indigo-700 w-10 h-10 flex items-center justify-center">
               <.icon name="hero-cpu-chip" class="h-8 w-8" />
             </div>
             <div class="break-words max-w-[80%]">
@@ -784,7 +789,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
       "li" => %{class: "text-gray-800"},
       "p" => %{class: "mt-1 mb-2 text-gray-800"},
       "pre" => %{
-        class: "text-sm rounded my-4 p-2 overflow-x-auto border border-gray-200"
+        class:
+          "rounded-md font-mono bg-slate-100 border-2 border-slate-200 text-slate-800 my-4 p-2 overflow-x-auto"
       }
     }
 
@@ -855,5 +861,13 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     limit = Limiter.validate_quota(project_id)
     error_message = if limit != :ok, do: error_message(limit)
     assign(socket, ai_limit_result: limit, error_message: error_message)
+  end
+
+  defp maybe_show_ellipsis(title) when is_binary(title) do
+    if String.length(title) >= AiAssistant.title_max_length() do
+      "#{title}..."
+    else
+      title
+    end
   end
 end
