@@ -217,6 +217,7 @@ defmodule Lightning.Accounts.User do
     |> validate_password([])
     |> validate_name()
     |> trim_name()
+    # |> maybe_clear_scheduled_deletion()
   end
 
   @doc """

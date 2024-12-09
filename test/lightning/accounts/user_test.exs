@@ -10,7 +10,7 @@ defmodule Lightning.Accounts.UserTest do
         last_name: "Doe",
         email: "johndoe@test.com",
         password: "123456789abc",
-        role: :superuser,
+        role: :user,
         disabled: true,
         scheduled_deletion: "2024-12-29 01:02:03"
       }
@@ -26,7 +26,6 @@ defmodule Lightning.Accounts.UserTest do
                  first_name: "John",
                  last_name: "Doe",
                  email: "johndoe@test.com",
-                 role: :superuser,
                  disabled: true,
                  scheduled_deletion: ~U[2024-12-29 01:02:03Z]
                },
@@ -222,6 +221,36 @@ defmodule Lightning.Accounts.UserTest do
 
       refute changeset.valid?
       assert errors_on(changeset).role == ["is invalid"]
+    end
+
+    test "sets nil scheduled_deletion value if user role is superuser", %{
+      attrs: attrs
+    } do
+      attrs = Map.delete(attrs, :role)
+
+      changeset = User.details_changeset(%User{role: :superuser}, attrs)
+
+      assert %{
+               changes: %{
+                 scheduled_deletion: nil
+               },
+               valid?: true
+             } = changeset
+    end
+
+    test "sets nil scheduled_deletion when role is changing to superuser", %{
+      attrs: attrs
+    } do
+      attrs = Map.put(attrs, :role, :superuser)
+
+      changeset = User.details_changeset(%User{role: :user}, attrs)
+
+      assert %{
+               changes: %{
+                 scheduled_deletion: nil
+               },
+               valid?: true
+             } = changeset
     end
   end
 
