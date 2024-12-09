@@ -66,17 +66,7 @@ defmodule LightningWeb.UserLive.Index do
   def delete_action(%{user: %{role: :user}} = assigns) do
     if assigns.user.scheduled_deletion do
       ~H"""
-      <span>
-        <.link
-          id={"cancel-deletion-#{@user.id}"}
-          href="#"
-          phx-click="cancel_deletion"
-          phx-value-id={@user.id}
-          class="table-action"
-        >
-          Cancel deletion
-        </.link>
-      </span>
+      <.cancel_deletion user={@user} />
       |
       <span>
         <.link
@@ -106,6 +96,23 @@ defmodule LightningWeb.UserLive.Index do
   def delete_action(%{user: %{role: :superuser}} = assigns) do
     if assigns.user.scheduled_deletion do
       ~H"""
+      <.cancel_deletion user={@user} />
+      |
+      <span id={"delete-now-#{@user.id}"} class="table-action-disabled">
+        Delete now
+      </span>
+      """
+    else
+      ~H"""
+      <span id={"delete-#{@user.id}"} class="table-action-disabled">
+        Delete
+      </span>
+      """
+    end
+  end
+
+  defp cancel_deletion(assigns) do
+    ~H"""
       <span>
         <.link
           id={"cancel-deletion-#{@user.id}"}
@@ -117,23 +124,6 @@ defmodule LightningWeb.UserLive.Index do
           Cancel deletion
         </.link>
       </span>
-      |
-      <span>
-        <.link
-          id={"delete-now-#{@user.id}"}
-          class="table-action"
-          navigate={Routes.user_index_path(@socket, :delete, @user)}
-        >
-          Delete now
-        </.link>
-      </span>
-      """
-    else
-      ~H"""
-      <span id={"delete-#{@user.id}"} class="table-action-disabled">
-        Delete
-      </span>
-      """
-    end
+    """
   end
 end

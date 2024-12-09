@@ -242,6 +242,23 @@ defmodule LightningWeb.UserLiveTest do
              |> render_click() =~ "User deletion canceled"
     end
 
+    test "retains a cancel deletion button for superusers pending deletion", %{
+      conn: conn,
+      user: user
+    } do
+      user
+      |> Ecto.Changeset.change(%{scheduled_deletion: ~U[2024-12-28 01:02:03Z]})
+      |> Repo.update!()
+
+      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+
+      assert index_live
+      |> has_element?(
+        "a#cancel-deletion-#{user.id}.table-action",
+        "Cancel deletion"
+      )
+    end
+
     test "allows a superuser to perform delete now action on users", %{
       conn: conn
     } do
@@ -269,6 +286,33 @@ defmodule LightningWeb.UserLiveTest do
       assert html =~ "User deleted"
 
       refute index_live |> element("user-#{user.id}") |> has_element?()
+    end
+
+    test "does not enable the `Delete now` button for a superuser", %{
+      conn: conn,
+      user: user
+    } do
+      user
+      |> Ecto.Changeset.change(%{scheduled_deletion: ~U[2024-12-28 01:02:03Z]})
+      |> Repo.update!()
+
+      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+
+      assert(
+        index_live
+        |> has_element?(
+          "span#delete-now-#{user.id}.table-action-disabled",
+          "Delete now"
+        )
+      )
+
+      refute(
+        index_live
+        |> has_element?(
+          "a#delete-now-#{user.id}.table-action",
+          "Delete now"
+        )
+      )
     end
 
     test "cannot delete user that has activities in other projects", %{
