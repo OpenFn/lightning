@@ -1021,7 +1021,8 @@ defmodule Lightning.Accounts do
   end
 
   def confirmation_required?(%User{confirmed_at: nil, inserted_at: inserted_at}) do
-    DateTime.diff(DateTime.utc_now(), inserted_at, :hour) >= 48
+    Lightning.Config.check_flag?(:require_email_verification) &&
+      DateTime.diff(DateTime.utc_now(), inserted_at, :hour) >= 48
   end
 
   def confirmation_required?(_user), do: false

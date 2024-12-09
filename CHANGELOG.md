@@ -22,6 +22,9 @@ and this project adheres to
   
 ### Changed
 
+- Make user email verification optional. Defaults to `false`
+  [#2755](https://github.com/OpenFn/lightning/issues/2755)
+
 ### Fixed
 
 - Return a 422 when a duplicate key is sent to the collections post/put_all API
