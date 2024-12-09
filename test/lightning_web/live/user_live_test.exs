@@ -134,6 +134,41 @@ defmodule LightningWeb.UserLiveTest do
       assert Repo.reload!(user) |> user_attrs_match?(@update_attrs)
     end
 
+    test "provides `Scheduled Deletion` when editing a normal user", %{
+      conn: conn
+    } do
+      user = user_fixture()
+
+      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+
+      {:ok, form_live, _} =
+        index_live
+        |> element("#user-#{user.id} a", "Edit")
+        |> render_click()
+        |> follow_redirect(conn, Routes.user_edit_path(conn, :edit, user))
+
+      assert(
+        form_live |> has_element?("input[name=\"user[scheduled_deletion]\"]")
+      )
+    end
+
+    test "does not provide`Scheduled Deletion` field when editing superuser", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+
+      {:ok, form_live, _} =
+        index_live
+        |> element("#user-#{user.id} a", "Edit")
+        |> render_click()
+        |> follow_redirect(conn, Routes.user_edit_path(conn, :edit, user))
+
+      refute(
+        form_live |> has_element?("input[name=\"user[scheduled_deletion]\"]")
+      )
+    end
+
     test "allows a superuser to schedule users for deletion in the users list",
          %{
            conn: conn
