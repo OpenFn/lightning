@@ -418,14 +418,23 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         <div class="p-2 pt-4 text-sm flex flex-col gap-4">
           <p>
             The OpenFn AI Assistant provides a chat interface with an AI Model to help you build workflows. It can:
-            <ul class="list-disc list-inside pl-4">
-              <li>Draft job code for you</li>
-              <li>Explain adaptor functions and how they are used</li>
-              <li>Proofread and debug your job code</li>
-              <li>Help understand why you are seeing an error</li>
-            </ul>
           </p>
-
+          <ul class="list-disc list-inside pl-4">
+            <li>Draft job code for you</li>
+            <li>Explain adaptor functions and how they are used</li>
+            <li>Proofread and debug your job code</li>
+            <li>Help understand why you are seeing an error</li>
+          </ul>
+          <h2 class="font-bold">
+            Usage Tips
+          </h2>
+          <ul class="list-disc list-inside pl-4">
+            <li>All chats are saved to the Project and can be viewed at any time</li>
+            <li>Press <code>CTRL + ENTER</code> to send a message</li>
+            <li>
+              The Assistant can see your code and knows about OpenFn - just ask a question and don't worry too much about giving it context
+            </li>
+          </ul>
           <h2 class="font-bold">
             Using The Assistant Safely
           </h2>
@@ -463,7 +472,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
           <p>
             We include your step code in all queries sent to Claude, including some basic documentation,
             ensuring the model is well informed and can see what you can see.
-            Note that we do not send input data or logs to Anthropic.
+            We do not send your input data, output data or logs to Anthropic.
           </p>
           <h2 class="font-bold">Responsible AI Policy</h2>
           <p>
