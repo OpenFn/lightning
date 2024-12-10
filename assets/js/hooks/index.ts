@@ -506,6 +506,7 @@ export const ScrollToBottom = {
       });
   },
 } as PhoenixHook<{ scrollToLastElement: () => void }>;
+
 /**
  * Factory function to create a hook for listening to specific key combinations,
  * only triggering when the element or its children are focused.
@@ -518,7 +519,7 @@ export const ScrollToBottom = {
 function createKeyCombinationHook(
   keyCheck: (e: KeyboardEvent) => boolean,
   action: (e: KeyboardEvent, el: HTMLElement) => void,
-  isDefault: boolean = false
+  isDefault: boolean = true
 ): PhoenixHook {
   return {
     mounted() {
@@ -630,14 +631,12 @@ export const SendMessageViaCtrlEnter = createKeyCombinationHook(
  */
 export const DefaultRunViaCtrlEnter = createKeyCombinationHook(
   isCtrlOrMetaEnter,
-  clickAction,
-  true
+  clickAction
 );
 
 export const AltRunViaCtrlShiftEnter = createKeyCombinationHook(
   isCtrlOrMetaShiftEnter,
-  clickAction,
-  true
+  clickAction
 );
 
 /**
