@@ -231,8 +231,8 @@ defmodule LightningWeb.Components.Common do
       <% end %>
       <code
         class={[
-          "px-2 py-1 flex-grow opacity-20 bg-gray-100 rounded-md",
-          "break-keep font-mono text-indigo-500",
+          "px-2 py-1 flex-grow opacity-20 rounded-md",
+          "break-keep font-mono text-gray-100",
           "inline-block align-middle text-center"
         ]}
         title={"OpenFn/Lightning #{@display}"}
