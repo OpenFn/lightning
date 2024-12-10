@@ -658,9 +658,16 @@ export const AltRunViaCtrlShiftEnter = createKeyCombinationHook(
   clickAction
 );
 
-export const ClosePanelViaEscape = createKeyCombinationHook(
+export const CloseInspectorPanelViaEscape = createKeyCombinationHook(
   isEscape,
-  closeAction
+  closeAction,
+  PRIORITY.HIGH
+);
+
+export const CloseNodePanelViaEscape = createKeyCombinationHook(
+  isEscape,
+  closeAction,
+  PRIORITY.NORMAL
 );
 
 export const Copy = {
