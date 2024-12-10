@@ -17,12 +17,24 @@ and this project adheres to
 
 ### Added
 
+- Handle errors from the AI Assistant more gracefully
+  [#2741](https://github.com/OpenFn/lightning/issues/2741)
+
 ### Changed
+
+- Make user email verification optional. Defaults to `false`
+  [#2755](https://github.com/OpenFn/lightning/issues/2755)
+- Enhance AI assistant panel UI
+  [#2497](https://github.com/OpenFn/lightning/issues/2497)
 
 ### Fixed
 
 - Fixed an issue where sometimes adaptor docs won't load in the Inspector
   [#2749](https://github.com/OpenFn/lightning/pull/2749)
+- Return a 422 when a duplicate key is sent to the collections post/put_all API
+  [#2752](https://github.com/OpenFn/lightning/issues/2752)
+- Do not require the user's password when a superuser updates a user.
+  [#2757](https://github.com/OpenFn/lightning/issues/2757)
 
 ## [v2.10.5] - 2024-12-04
 
@@ -54,6 +66,8 @@ and this project adheres to
 - Bumped dependencies
 - Extend display of audit events to cater for deletions.
   [#2701](https://github.com/OpenFn/lightning/issues/2701)
+- Kafka documentation housekeeping.
+  [#2414](https://github.com/OpenFn/lightning/issues/2414)
 
 ### Fixed
 

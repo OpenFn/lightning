@@ -196,6 +196,7 @@ For SMTP, the following environment variables are required:
 | `USAGE_TRACKING_RESUBMISSION_BATCH_SIZE` | The number of failed reports that will be submitted on each resubmission run (defaults to 10)                                                                                                                                          |
 | `USAGE_TRACKING_RUN_CHUNK_SIZE`          | The size of each batch of runs that is streamed from the database when generating UsageTracking reports (default 100). Decreasing this may decrease memory consumption when generating reports.                                        |
 | `USAGE_TRACKING_UUIDS`                   | Indicates whether submissions should include cleartext UUIDs or not. Options are `cleartext` or `hashed_only`, with the default being `hashed_only`.                                                                                   |
+| `REQUIRE_EMAIL_VERIFICATION`             | Indicates whether user email addresses should be verified. Defaults to `false`.                                                                                                                                                        |
 
 ### AI Chat
 
@@ -285,7 +286,7 @@ variable.
 be persisted will not be retained by Lightning ans this can result in data loss,
 if the Kafka cluster can not make these messages available again.**
 
-If a Kafka message files to be persisted as a WorkOrder, Run and Dataclip, the
+If a Kafka message fails to be persisted as a WorkOrder, Run and Dataclip, the
 option exists to write the failed message to a location on the local file
 system. If this option is enabled by setting `KAFKA_ALTERNATE_STORAGE_ENABLED`,
 then the `KAFKA_ALTERNATE_STORAGE_PATH` ENV variable must be set to the path

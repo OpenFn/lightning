@@ -19,7 +19,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
        all_sessions: AsyncResult.ok([]),
        session: nil,
        form: to_form(%{"content" => nil}),
-       error_message: nil
+       error_message: nil,
+       sort_direction: :desc
      })
      |> assign_async(:endpoint_available?, fn ->
        {:ok, %{endpoint_available?: AiAssistant.endpoint_available?()}}
@@ -38,9 +39,12 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   end
 
   defp apply_action(socket, :new, %{selected_job: job}) do
+    sort_direction = socket.assigns.sort_direction
+
     socket
     |> assign_async(:all_sessions, fn ->
-      {:ok, %{all_sessions: AiAssistant.list_sessions_for_job(job)}}
+      {:ok,
+       %{all_sessions: AiAssistant.list_sessions_for_job(job, sort_direction)}}
     end)
   end
 
@@ -108,6 +112,16 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     {:noreply, assign(socket, has_read_disclaimer: true)}
   end
 
+  def handle_event("toggle_sort", _params, socket) do
+    new_direction =
+      if socket.assigns.sort_direction == :desc, do: :asc, else: :desc
+
+    socket
+    |> assign(:sort_direction, new_direction)
+    |> apply_action(:new, %{selected_job: socket.assigns.selected_job})
+    |> then(fn socket -> {:noreply, socket} end)
+  end
+
   defp save_message(%{assigns: assigns} = socket, :new, content) do
     case AiAssistant.create_session(
            assigns.selected_job,
@@ -143,19 +157,19 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     end
   end
 
-  defp error_message({:error, %Ecto.Changeset{}}) do
-    "Oops! Could not save message. Please try again."
+  def error_message({:error, message}) when is_binary(message) do
+    message
   end
 
-  defp error_message({:error, :apollo_unavailable}) do
-    "Oops! Could not reach the Ai Server. Please try again later."
+  def error_message({:error, %Ecto.Changeset{}}) do
+    "Could not save message. Please try again."
   end
 
-  defp error_message({:error, _reason, %{text: text_message}}) do
+  def error_message({:error, _reason, %{text: text_message}}) do
     text_message
   end
 
-  defp error_message(_error) do
+  def error_message(_error) do
     "Oops! Something went wrong. Please try again."
   end
 
@@ -473,6 +487,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             all_sessions={@all_sessions}
             query_params={@query_params}
             base_url={@base_url}
+            sort_direction={@sort_direction}
+            target={@myself}
           />
         <% :show -> %>
           <.render_individual_session
@@ -563,26 +579,25 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
   defp chat_input(assigns) do
     ~H"""
-    <div class="text-xs text-center font-bold">
-      Do not paste PII or sensitive business data
-    </div>
-    <div class="mx-1">
-      <div class="relative">
-        <div class="rounded-lg outline outline-1 -outline-offset-1 outline-gray-300 ring-inset focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600">
-          <label for="content" class="sr-only">
-            Describe your request
-          </label>
-          <textarea
-            id="content"
-            name={@form[:content].name}
-            rows="4"
-            class="block w-full resize-none px-3 py-1.5 pr-[50px] placeholder:text-gray-400 placeholder:italic text-sm border-0 focus:ring-0 overflow-y-scroll"
-            placeholder="Open a previous session or send a message to start a new session"
-            disabled={@disabled}
-            phx-hook="TabIndent"
-          ><%= Phoenix.HTML.Form.normalize_value("textarea", @form[:content].value) %></textarea>
-        </div>
-        <div class="absolute inset-y-0 right-[18px] flex items-center">
+    <div class="mx-2 mb-2 mt-6">
+      <div class="relative flex flex-col bg-white rounded-lg ring-1 ring-gray-200 focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-1 transition-shadow">
+        <label for="content" class="sr-only">
+          Describe your request
+        </label>
+        <textarea
+          id="content"
+          name={@form[:content].name}
+          rows="6"
+          class="block w-full px-4 py-2 text-sm text-gray-800 bg-transparent border-0 resize-none rounded-lg placeholder:text-gray-500 focus:outline-none focus:ring-0"
+          placeholder="Open a previous session or send a message to start a new one"
+          disabled={@disabled}
+          phx-hook="TabIndent"
+        ><%= Phoenix.HTML.Form.normalize_value("textarea", @form[:content].value) %></textarea>
+
+        <div class="flex items-center justify-end px-2 py-1 mt-1 border-t border-gray-200 bg-gray-100 rounded-none rounded-b-lg">
+          <span class="text-xs text-gray-500 mr-2 select-none font-bold">
+            Do not paste PII or sensitive business data
+          </span>
           <.simple_button_with_tooltip
             id="ai-assistant-form-submit-btn"
             type="submit"
@@ -590,47 +605,75 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             tooltip={@tooltip}
             phx-hook="SendMessageViaCtrlEnter"
             form="ai-assistant-form"
-            class="rounded-full bg-indigo-600 p-2 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+            class="p-2 text-white bg-indigo-600 rounded-full hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
           >
             <.icon name="hero-paper-airplane-solid" />
           </.simple_button_with_tooltip>
         </div>
       </div>
+      <div class="mt-2">
+        <.ai_footer />
+      </div>
     </div>
-    <.ai_footer />
     """
   end
 
   attr :all_sessions, AsyncResult, required: true
   attr :query_params, :map, required: true
   attr :base_url, :string, required: true
+  attr :sort_direction, :atom, required: true
+  attr :target, :string, required: true
 
   defp render_all_sessions(assigns) do
     ~H"""
-    <div class="row-span-full flex flex-col gap-4 p-2 overflow-y-auto">
+    <div class="row-span-full px-4 py-4 mb-2 overflow-y-auto">
       <.async_result :let={all_sessions} assign={@all_sessions}>
         <:loading>
-          <div class="row-span-full flex items-center justify-center">
+          <div class="flex items-center justify-center">
             <div class="rounded-full p-2 bg-indigo-200 text-indigo-700 ring-4 ring-white">
               <.icon name="hero-sparkles" class="animate-pulse" />
             </div>
           </div>
         </:loading>
-        <%= for session <- all_sessions do %>
-          <.link
-            id={"session-#{session.id}"}
-            patch={
-              redirect_url(@base_url, Map.put(@query_params, "chat", session.id))
-            }
-            class="p-2 rounded-lg border border-gray-900 hover:bg-gray-100 flex items-center justify-between"
+        <div
+          :if={length(all_sessions) > 0}
+          class="mb-4 flex items-center justify-between"
+        >
+          <h2 class="text-lg font-semibold text-gray-900">Chat History</h2>
+          <button
+            phx-click="toggle_sort"
+            phx-target={@target}
+            class="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
           >
-            <span>
-              <.user_avatar user={session.user} />
-              <%= session.title %>
-            </span>
-            <%= time_ago(session.updated_at) %>
-          </.link>
-        <% end %>
+            <%= if @sort_direction == :desc, do: "Latest", else: "Oldest" %>
+            <%= if @sort_direction == :desc do %>
+              <.icon name="hero-chevron-up" class="size-5" />
+            <% else %>
+              <.icon name="hero-chevron-down" class="size-5" />
+            <% end %>
+          </button>
+        </div>
+        <div class="space-y-2">
+          <%= for session <- all_sessions do %>
+            <.link
+              id={"session-#{session.id}"}
+              patch={
+                redirect_url(@base_url, Map.put(@query_params, "chat", session.id))
+              }
+              class="p-3 rounded-lg border border-gray-200 hover:bg-gray-50 flex items-center justify-between group"
+            >
+              <div class="flex items-center space-x-3 min-w-0">
+                <.user_avatar user={session.user} />
+                <span class="text-sm truncate">
+                  <%= maybe_show_ellipsis(session.title) %>
+                </span>
+              </div>
+              <span class="text-xs text-gray-500 group-hover:text-gray-700 whitespace-nowrap">
+                <%= time_ago(session.updated_at) %>
+              </span>
+            </.link>
+          <% end %>
+        </div>
       </.async_result>
     </div>
     """
@@ -644,61 +687,65 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   defp render_individual_session(assigns) do
     ~H"""
     <div class="row-span-full flex flex-col">
-      <div class="bg-gray-100 p-2 flex justify-between border-solid border-t-2 border-b-2">
-        <span class="font-medium"><%= @session.title %></span>
-        <.link patch={redirect_url(@base_url, Map.put(@query_params, "chat", nil))}>
+      <div class="bg-white border-b border-gray-200 px-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+        <span class="font-medium text-gray-900 px-1 truncate max-w-[300px]">
+          <%= maybe_show_ellipsis(@session.title) %>
+        </span>
+        <.link
+          patch={redirect_url(@base_url, Map.put(@query_params, "chat", nil))}
+          class="p-2 pr-0 text-gray-400 hover:text-gray-600 rounded-full transition-colors"
+        >
           <.icon name="hero-x-mark" class="h-5 w-5" />
         </.link>
       </div>
       <div
         id={"ai-session-#{@session.id}-messages"}
         phx-hook="ScrollToBottom"
-        class="flex flex-col gap-4 p-2 overflow-y-auto w-full h-full"
+        class="flex flex-col gap-4 p-4 overflow-y-auto w-full h-full"
       >
         <%= for message <- @session.messages do %>
           <div
             :if={message.role == :user}
             id={"message-#{message.id}"}
-            class="ml-auto flex items-end gap-x-2"
+            class="flex flex-row-reverse items-end gap-x-3 mr-3"
           >
-            <div class="bg-blue-300 bg-opacity-50 p-2 rounded-lg text-right break-words text-gray">
+            <.user_avatar user={message.user} size_class="min-w-10 h-10 w-10" />
+            <div class="bg-blue-300 bg-opacity-50 p-2 mb-0.5 rounded-lg break-words max-w-[80%]">
               <%= message.content %>
             </div>
-            <.user_avatar user={message.user} size_class="min-w-7 h-7 w-7" />
           </div>
           <div
             :if={message.role == :assistant}
             id={"message-#{message.id}"}
-            class="mr-auto p-2 rounded-lg break-words text-wrap w-full gap-x-2 makeup-html"
+            class="mr-auto flex items-start gap-x-3 w-full"
           >
-            <div class="float-left rounded-full p-2 bg-indigo-200 text-indigo-700 ring-4 ring-white">
-              <.icon name="hero-cpu-chip" class="" />
+            <div class="rounded-full bg-indigo-200 text-indigo-700 w-10 h-10 flex items-center justify-center">
+              <.icon name="hero-cpu-chip" class="h-8 w-8" />
             </div>
-
-            <div class="ml-12">
+            <div class="break-words max-w-[80%]">
               <.formatted_content content={message.content} />
-              <!-- TODO: restore this message and add a link to the docs site -->
-              <%!-- <div
-                class="flex mt-1 text-xs text-gray-400 select-none"
-                title="This message was generated using Claude, an LLM by Anthropic, and has not been verified by human experts"
-              >
-                Read, review and verify
-              </div> --%>
             </div>
           </div>
         <% end %>
         <.async_result assign={@pending_message}>
           <:loading>
-            <div
-              id="assistant-pending-message"
-              class="mr-auto p-2 rounded-lg break-words text-wrap flex flex-row gap-x-2 animate-pulse"
-            >
-              <div class="">
-                <div class="rounded-full p-2 bg-indigo-200 text-indigo-700 ring-4 ring-white">
-                  <.icon name="hero-sparkles" class="" />
+            <div id="assistant-pending-message" class="mr-auto flex gap-x-3">
+              <div class="rounded-full p-2 bg-indigo-200 text-indigo-700 ring-4 ring-white w-11 h-11 flex items-center justify-center">
+                <div class="flex gap-1">
+                  <div class="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-dot">
+                  </div>
+                  <div
+                    class="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-dot"
+                    style="animation-delay: 0.2s"
+                  >
+                  </div>
+                  <div
+                    class="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-dot"
+                    style="animation-delay: 0.4s"
+                  >
+                  </div>
                 </div>
               </div>
-              <div class="h-2 bg-slate-700 rounded"></div>
             </div>
           </:loading>
           <:failed :let={failure}>
@@ -706,17 +753,17 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
               id="assistant-failed-message"
               class="mr-auto p-2 rounded-lg break-words text-wrap flex flex-row gap-x-2"
             >
-              <div class="">
+              <div class="flex-shrink-0">
                 <div class="rounded-full p-2 bg-indigo-200 text-indigo-700 ring-4 ring-white">
-                  <.icon name="hero-sparkles" class="" />
+                  <.icon name="hero-sparkles" />
                 </div>
               </div>
-              <div class="flex gap-2">
+              <div class="flex-1 flex items-center gap-2 bg-red-50 p-3 rounded-lg">
                 <.icon
                   name="hero-exclamation-triangle"
-                  class="text-amber-400 h-8 w-8"
+                  class="h-5 w-5 flex-shrink-0 text-red-400"
                 />
-                <span><%= error_message(failure) %></span>
+                <span class="text-red-700"><%= error_message(failure) %></span>
               </div>
             </div>
           </:failed>
@@ -740,7 +787,11 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
       "ol" => %{class: "list-decimal pl-8 space-y-1"},
       "ul" => %{class: "list-disc pl-8 space-y-1"},
       "li" => %{class: "text-gray-800"},
-      "p" => %{class: "mt-1 mb-2 text-gray-800"}
+      "p" => %{class: "mt-1 mb-2 text-gray-800"},
+      "pre" => %{
+        class:
+          "rounded-md font-mono bg-slate-100 border-2 border-slate-200 text-slate-800 my-4 p-2 overflow-x-auto"
+      }
     }
 
     merged_attributes =
@@ -786,7 +837,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     ~H"""
     <span class={"inline-flex #{@size_class} items-center justify-center rounded-full bg-gray-100 "}>
       <span
-        class="text-xs leading-none text-black uppercase select-none"
+        class="text-sm leading-none text-black uppercase select-none"
         title={"#{@user.first_name} #{@user.last_name}"}
       >
         <%= String.first(@user.first_name) %><%= String.first(@user.last_name) %>
@@ -795,39 +846,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     """
   end
 
-  # obtained from: https://medium.com/@obutemoses5/how-to-calculate-time-duration-in-elixir-33192bcfb62b
   defp time_ago(datetime) do
-    minute = 60
-    hour = minute * 60
-    day = hour * 24
-    week = day * 7
-    month = day * 30
-    year = day * 365
-
-    diff = DateTime.utc_now() |> DateTime.diff(datetime)
-
-    cond do
-      diff >= year ->
-        "#{Integer.floor_div(diff, year)} yr"
-
-      diff >= month ->
-        "#{Integer.floor_div(diff, month)} mo"
-
-      diff >= week ->
-        "#{Integer.floor_div(diff, week)} wk"
-
-      diff >= day ->
-        "#{Integer.floor_div(diff, day)} dy"
-
-      diff >= hour ->
-        "#{Integer.floor_div(diff, hour)} hr"
-
-      diff >= minute ->
-        "#{Integer.floor_div(diff, minute)} min"
-
-      true ->
-        "#{diff} sec"
-    end
+    Timex.from_now(datetime)
   end
 
   defp maybe_check_limit(%{assigns: %{ai_limit_result: nil}} = socket) do
@@ -841,5 +861,13 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     limit = Limiter.validate_quota(project_id)
     error_message = if limit != :ok, do: error_message(limit)
     assign(socket, ai_limit_result: limit, error_message: error_message)
+  end
+
+  defp maybe_show_ellipsis(title) when is_binary(title) do
+    if String.length(title) >= AiAssistant.title_max_length() do
+      "#{title}..."
+    else
+      title
+    end
   end
 end

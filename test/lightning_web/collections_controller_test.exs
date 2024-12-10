@@ -260,6 +260,33 @@ defmodule LightningWeb.API.CollectionsControllerTest do
              }
     end
 
+    test "returns a 422 when a key is referenced twice", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      collection =
+        insert(:collection,
+          project: project,
+          items: Enum.map(1..3, &%{key: "foo#{&1}", value: "bar#{&1}"})
+        )
+
+      token = Lightning.Accounts.generate_api_token(user)
+
+      conn =
+        conn
+        |> assign_bearer(token)
+        |> post(~p"/collections/#{collection.name}", %{
+          items: [%{key: "foo1", value: "bar1"}, %{key: "foo1", value: "bar1"}]
+        })
+
+      assert json_response(conn, 422) == %{
+               "upserted" => 0,
+               "error" => "Duplicate key found"
+             }
+    end
+
     test "returns 404 when the collection doesn't exist", %{conn: conn} do
       user = insert(:user)
 

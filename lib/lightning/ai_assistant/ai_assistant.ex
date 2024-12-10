@@ -14,6 +14,12 @@ defmodule Lightning.AiAssistant do
   alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows.Job
 
+  require Logger
+
+  @title_max_length 40
+
+  def title_max_length, do: @title_max_length
+
   @spec put_expression_and_adaptor(ChatSession.t(), String.t(), String.t()) ::
           ChatSession.t()
   def put_expression_and_adaptor(session, expression, adaptor) do
@@ -24,12 +30,13 @@ defmodule Lightning.AiAssistant do
     }
   end
 
-  @spec list_sessions_for_job(Job.t()) :: [ChatSession.t(), ...] | []
-  def list_sessions_for_job(job) do
+  @spec list_sessions_for_job(Job.t(), :asc | :desc) ::
+          [ChatSession.t(), ...] | []
+  def list_sessions_for_job(job, sort_direction \\ :desc) do
     Repo.all(
       from s in ChatSession,
         where: s.job_id == ^job.id,
-        order_by: [desc: :updated_at],
+        order_by: [{^sort_direction, :updated_at}],
         preload: [:user]
     )
   end
@@ -46,11 +53,31 @@ defmodule Lightning.AiAssistant do
       id: Ecto.UUID.generate(),
       job_id: job.id,
       user_id: user.id,
-      title: String.slice(content, 0, 40),
+      title: create_title(content),
       messages: []
     }
     |> put_expression_and_adaptor(job.body, job.adaptor)
     |> save_message(%{role: :user, content: content, user: user})
+  end
+
+  defp create_title(content) do
+    case String.contains?(content, " ") do
+      true ->
+        content
+        |> String.split(" ")
+        |> Enum.reduce_while("", fn word, acc ->
+          if String.length(acc <> " " <> word) > @title_max_length,
+            do: {:halt, acc},
+            else: {:cont, acc <> " " <> word}
+        end)
+        |> String.trim()
+        |> String.replace(~r/[.!?,;:]$/, "")
+
+      false ->
+        content
+        |> String.slice(0, @title_max_length)
+        |> String.replace(~r/[.!?,;:]$/, "")
+    end
   end
 
   @spec save_message(ChatSession.t(), %{any() => any()}) ::
@@ -90,7 +117,7 @@ defmodule Lightning.AiAssistant do
   """
   @spec query(ChatSession.t(), String.t()) ::
           {:ok, ChatSession.t()}
-          | {:error, Ecto.Changeset.t() | :apollo_unavailable}
+          | {:error, String.t() | Ecto.Changeset.t()}
   def query(session, content) do
     apollo_resp =
       ApolloClient.query(
@@ -104,8 +131,21 @@ defmodule Lightning.AiAssistant do
         message = body["history"] |> Enum.reverse() |> hd()
         save_message(session, message)
 
-      _ ->
-        {:error, :apollo_unavailable}
+      {:ok, %Tesla.Env{body: %{"message" => message}}} ->
+        {:error, message}
+
+      {:error, :timeout} ->
+        {:error, "Request timed out. Please try again."}
+
+      {:error, :econnrefused} ->
+        {:error, "Unable to reach the AI server. Please try again later."}
+
+      unexpected_error ->
+        Logger.warning(
+          "Received an unexpected error: #{inspect(unexpected_error)}"
+        )
+
+        {:error, "Oops! Something went wrong. Please try again."}
     end
   end
 
