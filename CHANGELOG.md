@@ -71,6 +71,8 @@ and this project adheres to
 
 - Collections controller sending an invalid response body when a item doesn't
   exist [#2733](https://github.com/OpenFn/lightning/issues/2733)
+- AI Assistant: Text in the form gets cleared when you change the editor content
+  [#2739](https://github.com/OpenFn/lightning/issues/2739)
 
 ## [v2.10.4] - 2024-11-22
 

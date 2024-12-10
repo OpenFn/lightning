@@ -82,6 +82,10 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     """
   end
 
+  def handle_event("validate", params, socket) do
+    {:noreply, assign(socket, form: to_form(params))}
+  end
+
   def handle_event("send_message", %{"content" => content}, socket) do
     if socket.assigns.can_edit_workflow do
       %{action: action} = socket.assigns
@@ -510,6 +514,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         <.form
           for={@form}
           phx-submit="send_message"
+          phx-change="validate"
           class="row-span-1 pl-2 pr-2 pb-1"
           phx-target={@myself}
           id="ai-assistant-form"
