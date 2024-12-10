@@ -465,6 +465,9 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             <li>Proofread and debug your job code</li>
             <li>Help understand why you are seeing an error</li>
           </ul>
+          <p>
+            Messages are saved unencrypted to the OpenFn database and may be monitored for quality control.
+          </p>
           <h2 class="font-bold">
             Usage Tips
           </h2>
