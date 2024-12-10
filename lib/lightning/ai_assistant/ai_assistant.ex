@@ -16,6 +16,10 @@ defmodule Lightning.AiAssistant do
 
   require Logger
 
+  @title_max_length 40
+
+  def title_max_length, do: @title_max_length
+
   @spec put_expression_and_adaptor(ChatSession.t(), String.t(), String.t()) ::
           ChatSession.t()
   def put_expression_and_adaptor(session, expression, adaptor) do
@@ -26,12 +30,13 @@ defmodule Lightning.AiAssistant do
     }
   end
 
-  @spec list_sessions_for_job(Job.t()) :: [ChatSession.t(), ...] | []
-  def list_sessions_for_job(job) do
+  @spec list_sessions_for_job(Job.t(), :asc | :desc) ::
+          [ChatSession.t(), ...] | []
+  def list_sessions_for_job(job, sort_direction \\ :desc) do
     Repo.all(
       from s in ChatSession,
         where: s.job_id == ^job.id,
-        order_by: [desc: :updated_at],
+        order_by: [{^sort_direction, :updated_at}],
         preload: [:user]
     )
   end
@@ -48,11 +53,31 @@ defmodule Lightning.AiAssistant do
       id: Ecto.UUID.generate(),
       job_id: job.id,
       user_id: user.id,
-      title: String.slice(content, 0, 40),
+      title: create_title(content),
       messages: []
     }
     |> put_expression_and_adaptor(job.body, job.adaptor)
     |> save_message(%{role: :user, content: content, user: user})
+  end
+
+  defp create_title(content) do
+    case String.contains?(content, " ") do
+      true ->
+        content
+        |> String.split(" ")
+        |> Enum.reduce_while("", fn word, acc ->
+          if String.length(acc <> " " <> word) > @title_max_length,
+            do: {:halt, acc},
+            else: {:cont, acc <> " " <> word}
+        end)
+        |> String.trim()
+        |> String.replace(~r/[.!?,;:]$/, "")
+
+      false ->
+        content
+        |> String.slice(0, @title_max_length)
+        |> String.replace(~r/[.!?,;:]$/, "")
+    end
   end
 
   @spec save_message(ChatSession.t(), %{any() => any()}) ::
