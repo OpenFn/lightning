@@ -19,7 +19,7 @@ and this project adheres to
 
 - Handle errors from the AI Assistant more gracefully
   [#2741](https://github.com/OpenFn/lightning/issues/2741)
-  
+
 ### Changed
 
 - Make user email verification optional. Defaults to `false`
@@ -29,6 +29,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed an issue where sometimes adaptor docs won't load in the Inspector
+  [#2749](https://github.com/OpenFn/lightning/pull/2749)
 - Return a 422 when a duplicate key is sent to the collections post/put_all API
   [#2752](https://github.com/OpenFn/lightning/issues/2752)
 - Do not require the user's password when a superuser updates a user.
