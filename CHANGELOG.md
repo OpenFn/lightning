@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Remove snapshot creation from WorkOrders, no longer necessary post-migration.
+  [#2703](https://github.com/OpenFn/lightning/issues/2703)
+
 ### Fixed
 
 ## [v2.10.6] - 2024-12-10
