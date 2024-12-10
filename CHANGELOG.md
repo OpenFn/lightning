@@ -29,6 +29,8 @@ and this project adheres to
   > `REQUIRE_EMAIL_VERIFICATION` to `true` to revert to the old behaviour.
 - Enhance AI assistant panel UI
   [#2497](https://github.com/OpenFn/lightning/issues/2497)
+- Allow superusers to be created via the user UI.
+  [#2719](https://github.com/OpenFn/lightning/issues/2719)
 
 ### Fixed
 
