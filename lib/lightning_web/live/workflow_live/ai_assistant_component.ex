@@ -526,6 +526,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
           phx-change="validate"
           class="row-span-1 pl-2 pr-2 pb-1"
           phx-target={@myself}
+          phx-hook="SendMessageViaCtrlEnter"
+          data-keybinding-scope="chat"
           id="ai-assistant-form"
         >
           <div
@@ -617,7 +619,6 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             type="submit"
             disabled={@disabled}
             tooltip={@tooltip}
-            phx-hook="SendMessageViaCtrlEnter"
             form="ai-assistant-form"
             class="p-2 text-white bg-indigo-600 rounded-full hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
           >
