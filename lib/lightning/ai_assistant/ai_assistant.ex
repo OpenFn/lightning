@@ -13,6 +13,7 @@ defmodule Lightning.AiAssistant do
   alias Lightning.Repo
   alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows.Job
+  alias Lightning.AiAssistant.ChatMessage
 
   require Logger
 
@@ -43,7 +44,15 @@ defmodule Lightning.AiAssistant do
 
   @spec get_session!(Ecto.UUID.t()) :: ChatSession.t()
   def get_session!(id) do
-    ChatSession |> Repo.get!(id) |> Repo.preload(messages: :user)
+    ChatSession
+    |> Repo.get!(id)
+    |> Repo.preload(
+      messages:
+        {from(m in ChatMessage,
+           where: m.status != :cancelled,
+           order_by: [asc: :inserted_at]
+         ), :user}
+    )
   end
 
   @spec create_session(Job.t(), User.t(), String.t()) ::
@@ -236,4 +245,30 @@ defmodule Lightning.AiAssistant do
        do: UsageLimiter.increment_ai_queries(session)
 
   defp maybe_increment_msgs_counter(_user_role), do: Multi.new()
+
+  def update_message_status(session, message_id, status) do
+    message = Enum.find(session.messages, &(&1.id == message_id))
+
+    Multi.new()
+    |> Multi.update(:message, ChatMessage.changeset(message, %{status: status}))
+    |> Multi.run(:session, fn _repo, _changes ->
+      {:ok, get_session!(session.id)}
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{session: session}} -> {:ok, session}
+      {:error, _, changeset, _} -> {:error, changeset}
+    end
+  end
+
+  def retry_message(session, message_id) do
+    with message when not is_nil(message) <-
+           Enum.find(session.messages, &(&1.id == message_id)),
+         {:ok, session} <- update_message_status(session, message_id, :success) do
+      query(session, message.content)
+    else
+      nil -> {:error, "Message not found"}
+      error -> error
+    end
+  end
 end
