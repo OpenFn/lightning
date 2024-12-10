@@ -527,6 +527,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
           class="row-span-1 pl-2 pr-2 pb-1"
           phx-target={@myself}
           phx-hook="SendMessageViaCtrlEnter"
+          data-keybinding-scope="chat"
           id="ai-assistant-form"
         >
           <div

@@ -508,94 +508,101 @@ export const ScrollToBottom = {
 } as PhoenixHook<{ scrollToLastElement: () => void }>;
 
 /**
- * Factory function to create a hook for listening to specific key combinations,
- * only triggering when the element or its children are focused.
+ * Priority levels for key handlers.
+ * Use these constants instead of raw numbers for better readability.
+ */
+enum PRIORITY {
+  HIGH = 1,
+  NORMAL = 0
+}
+
+type PriorityLevel = PRIORITY;
+
+/**
+ * Global registry to track all active key handlers.
+ * Each handler consists of:
+ * - `hook`: The PhoenixHook instance where the handler is defined.
+ * - `keyCheck`: A function to determine if the key combination matches.
+ * - `action`: A function to execute when the key combination matches.
+ * - `priority`: An integer used to resolve conflicts between handlers.
+ * - `bindingScope`: (Optional) A string representing the scope in which the handler applies.
+ */
+const keyHandlers = new Set<{
+  hook: any;
+  keyCheck: (e: KeyboardEvent) => boolean;
+  action: (e: KeyboardEvent, el: HTMLElement) => void;
+  priority: PriorityLevel;
+  bindingScope?: string;
+}>();
+
+/**
+ * Creates a PhoenixHook to listen for specific key combinations.
  *
- * @param keyCheck - Function to check if a keyboard event matches the desired key combination.
- * @param action - Action function to be executed when the keyCheck condition is satisfied.
- * @param isDefault - Whether this hook should fire when no other elements are focused.
- * @returns - A PhoenixHook with mounted and destroyed lifecycles.
+ * @param keyCheck - Function that checks whether the current key combination matches.
+ * @param action - Function to execute when the key combination is triggered.
+ * @param priority - (Optional) Priority of the handler. Higher priority handlers are executed first. Default is PRIORITY.NORMAL.
+ * @param bindingScope - (Optional) The scope (via `data-keybinding-scope` attribute) where this handler should apply.
+ * @returns A PhoenixHook object.
  */
 function createKeyCombinationHook(
   keyCheck: (e: KeyboardEvent) => boolean,
   action: (e: KeyboardEvent, el: HTMLElement) => void,
-  isDefault: boolean = true
+  priority: PriorityLevel = PRIORITY.NORMAL,
+  bindingScope?: string
 ): PhoenixHook {
   return {
     mounted() {
+      const handler = { hook: this, keyCheck, action, priority, bindingScope };
+      keyHandlers.add(handler);
+
       this.callback = (e: KeyboardEvent) => {
         if (!keyCheck(e)) return;
 
-        const targetEl = e.target as HTMLElement;
-        const isFocusedWithin =
-          this.el.contains(targetEl) ||
-          (this.el.getAttribute('form') &&
-            document
-              .getElementById(this.el.getAttribute('form'))
-              ?.contains(targetEl));
+        e.preventDefault();
 
-        if (isFocusedWithin) {
-          e.preventDefault();
-          action(e, this.el);
-          return;
-        }
+        const target = e.target as HTMLElement;
+        const focusedScope =
+          target?.closest('[data-keybinding-scope]')?.getAttribute('data-keybinding-scope') || null;
 
-        if (isDefault) {
-          const focusedElement = document.activeElement;
-          const isHandledByOtherHook =
-            document.querySelector('[phx-hook]')?.contains(focusedElement) ||
-            Array.from(document.querySelectorAll('[phx-hook][form]')).some(el =>
-              document
-                .getElementById(el.getAttribute('form'))
-                ?.contains(focusedElement)
-            );
+        const keyMatchingHandlers = Array.from(keyHandlers).filter(h => h.keyCheck(e));
 
-          if (!isHandledByOtherHook) {
-            e.preventDefault();
-            action(e, this.el);
-          }
+        const hasScopedHandlers = keyMatchingHandlers.some(h => h.bindingScope === focusedScope);
+
+        const matchingHandlers = keyMatchingHandlers
+          .filter(h => {
+            if (h.bindingScope) {
+              return h.bindingScope === focusedScope;
+            } else {
+              return !hasScopedHandlers;
+            }
+          })
+          .sort((a, b) => b.priority - a.priority);
+
+        const topHandler = matchingHandlers[0];
+        if (topHandler?.hook === this) {
+          topHandler.action(e, this.el);
         }
       };
+
       window.addEventListener('keydown', this.callback);
     },
+
     destroyed() {
+      keyHandlers.forEach(handler => {
+        if (handler.hook === this) {
+          keyHandlers.delete(handler);
+        }
+      });
       window.removeEventListener('keydown', this.callback);
-    },
+    }
   } as PhoenixHook<{
     callback: (e: KeyboardEvent) => void;
   }>;
 }
 
 /**
- * Function to dispatch a click event on the provided element.
- *
- * @param e - The keyboard event triggering the action.
- * @param el - The HTML element to which the action will be applied.
+ * Key check functions determine if a specific key combination was pressed.
  */
-function clickAction(e: KeyboardEvent, el: HTMLElement) {
-  initiateSaveAndRun(el);
-}
-
-/**
- * Function to dispatch a submit event on the provided element.
- *
- * @param e - The keyboard event triggering the action.
- * @param el - The HTML element to which the action will be applied.
- */
-function submitAction(e: KeyboardEvent, el: HTMLElement) {
-  el.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-}
-
-/**
- * Function to simulate a click event on the provided element.
- *
- * @param e - The keyboard event triggering the action.
- * @param el - The HTML element to which the action will be applied.
- */
-function closeAction(e: KeyboardEvent, el: HTMLElement) {
-  el.click();
-}
-
 const isCtrlOrMetaS = (e: KeyboardEvent) =>
   (e.ctrlKey || e.metaKey) && e.key === 's';
 
@@ -608,27 +615,39 @@ const isCtrlOrMetaShiftEnter = (e: KeyboardEvent) =>
 const isEscape = (e: KeyboardEvent) => e.key === 'Escape';
 
 /**
- * Hook to trigger a save action on the job panel when the Ctrl (or Cmd on Mac) + 's' key combination is pressed.
+ * Action functions define what happens when a key combination is triggered.
+ *
+ * @param e - The KeyboardEvent that triggered the action.
+ * @param el - The DOM element associated with the PhoenixHook.
+ */
+function clickAction(e: KeyboardEvent, el: HTMLElement) {
+  initiateSaveAndRun(el);
+}
+
+function submitAction(e: KeyboardEvent, el: HTMLElement) {
+  el.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+}
+
+function closeAction(e: KeyboardEvent, el: HTMLElement) {
+  el.click();
+}
+
+/**
+ * Hook definitions for specific key combinations.
+ * Each hook listens for a particular combination and performs an associated action.
  */
 export const SaveViaCtrlS = createKeyCombinationHook(
   isCtrlOrMetaS,
   submitAction
 );
 
-/**
- * Hook to send a message to the AI Chat when the Ctrl (or Cmd on Mac) + Enter key combination is pressed
- * while the chat form or its elements are focused.
- */
 export const SendMessageViaCtrlEnter = createKeyCombinationHook(
   isCtrlOrMetaEnter,
-  clickAction,
-  false
+  submitAction,
+  PRIORITY.HIGH,
+  'chat'
 );
 
-/**
- * Hook to trigger a save and run action on the job panel when the Ctrl (or Cmd on Mac) + Enter key combination is pressed
- * while the job panel or its elements are focused, or when no other specific elements are focused.
- */
 export const DefaultRunViaCtrlEnter = createKeyCombinationHook(
   isCtrlOrMetaEnter,
   clickAction
@@ -639,9 +658,6 @@ export const AltRunViaCtrlShiftEnter = createKeyCombinationHook(
   clickAction
 );
 
-/**
- * Hook to trigger a close action on the job panel when the Escape key is pressed.
- */
 export const ClosePanelViaEscape = createKeyCombinationHook(
   isEscape,
   closeAction
