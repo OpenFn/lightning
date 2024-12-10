@@ -13,57 +13,11 @@
     </LayoutComponents.header>
   </:header>
   <LayoutComponents.centered>
-    <%= if @live_action == :delete do %>
-      <.live_component
-        module={LightningWeb.Components.UserDeletionModal}
-        id={@user.id}
-        user={@user}
-        logout={false}
-        return_to={Routes.user_index_path(@socket, :index)}
-      />
-    <% end %>
-    <.table id="users">
-      <.tr>
-        <.th>First name</.th>
-        <.th>Last name</.th>
-        <.th>Email</.th>
-        <.th>Role*</.th>
-        <.th>Enabled?</.th>
-        <.th>Scheduled Deletion</.th>
-        <.th>Actions</.th>
-      </.tr>
-      <%= for user <- @users do %>
-        <.tr id={"user-#{user.id}"}>
-          <.td><%= user.first_name %></.td>
-          <.td><%= user.last_name %></.td>
-          <.td><%= user.email %></.td>
-          <.td><%= user.role %></.td>
-          <.td>
-            <%= if !user.disabled do %>
-              <Heroicons.check_circle solid class="w-6 h-6 text-gray-500" />
-            <% end %>
-          </.td>
-          <.td><%= user.scheduled_deletion %></.td>
-          <.td class="py-0.5">
-            <span>
-              <.link
-                class="table-action"
-                navigate={Routes.user_edit_path(@socket, :edit, user)}
-              >
-                Edit
-              </.link>
-            </span>
-            <.delete_action socket={@socket} user={user} />
-          </.td>
-        </.tr>
-      <% end %>
-    </.table>
-    <br />
-    <.p>
-      *Note that a <code>superuser</code> can access <em>everything</em> in a
-      Lightning installation across all projects, including this page. Most
-      day-to-day user management (adding and removing collaborators) will be
-      done by project "admins" via the project settings page.
-    </.p>
+    <.users_table
+      socket={@socket}
+      live_action={@live_action}
+      delete_user={assigns[:delete_user]}
+      users={@users}
+    />
   </LayoutComponents.centered>
 </LayoutComponents.page_content>

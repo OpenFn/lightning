@@ -446,10 +446,15 @@ defmodule Lightning.Accounts.UserTest do
 
     test "email does match current users email" do
       errors =
-        User.scheduled_deletion_changeset(%User{email: "real@email.com"}, %{
-          "id" => "86201fff-a699-4eca-bb53-8736228ff187",
-          "scheduled_deletion_email" => "real@email.com"
-        })
+        User.scheduled_deletion_changeset(
+          %User{
+            id: "86201fff-a699-4eca-bb53-8736228ff187",
+            email: "real@email.com"
+          },
+          %{
+            "scheduled_deletion_email" => "real@email.com"
+          }
+        )
         |> errors_on()
 
       assert errors[:scheduled_deletion_email] == nil
