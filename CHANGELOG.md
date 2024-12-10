@@ -24,6 +24,8 @@ and this project adheres to
 
 - Make user email verification optional. Defaults to `false`
   [#2755](https://github.com/OpenFn/lightning/issues/2755)
+  > ⚠️ The default was behaviour was to always require email verification. Set
+  > `REQUIRE_EMAIL_VERIFICATION` to `true` to revert to the old behaviour.
 - Enhance AI assistant panel UI
   [#2497](https://github.com/OpenFn/lightning/issues/2497)
 
