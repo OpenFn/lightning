@@ -467,4 +467,11 @@ div.line-num::before {
     disabled:opacity-30
     disabled:hover:bg-white;
   }
+
+  .table-action-disabled {
+    @apply table-action
+    cursor-not-allowed
+    opacity-30
+    hover:bg-white;
+  }
 }

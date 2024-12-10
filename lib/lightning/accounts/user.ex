@@ -56,7 +56,8 @@ defmodule Lightning.Accounts.User do
       :last_name,
       :email,
       :password,
-      :contact_preference
+      :contact_preference,
+      :role
     ])
     |> validate_name()
     |> trim_name()
@@ -192,11 +193,6 @@ defmodule Lightning.Accounts.User do
     |> validate_required([:first_name, :last_name], message: "can't be blank")
   end
 
-  defp validate_role(changeset) do
-    changeset
-    |> validate_inclusion(:role, RolesEnum)
-  end
-
   defp maybe_hash_password(changeset, opts) do
     hash_password? = Keyword.get(opts, :hash_password, true)
     password = get_change(changeset, :password)
@@ -234,7 +230,7 @@ defmodule Lightning.Accounts.User do
     |> maybe_validate_password([])
     |> validate_name()
     |> trim_name()
-    |> validate_role()
+    |> maybe_clear_scheduled_deletion()
   end
 
   @doc """
@@ -377,5 +373,12 @@ defmodule Lightning.Accounts.User do
     changeset
     |> update_change(:first_name, &String.trim/1)
     |> update_change(:last_name, &String.trim/1)
+  end
+
+  defp maybe_clear_scheduled_deletion(changeset) do
+    case fetch_field(changeset, :role) do
+      {_source, :superuser} -> put_change(changeset, :scheduled_deletion, nil)
+      _anything_else -> changeset
+    end
   end
 end
