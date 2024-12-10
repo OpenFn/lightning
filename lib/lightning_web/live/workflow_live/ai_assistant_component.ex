@@ -128,6 +128,42 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     |> then(fn socket -> {:noreply, socket} end)
   end
 
+  def handle_event("retry_message", %{"message-id" => message_id}, socket) do
+    message = Enum.find(socket.assigns.session.messages, &(&1.id == message_id))
+
+    case AiAssistant.update_message_status(
+           socket.assigns.session,
+           message_id,
+           :success
+         ) do
+      {:ok, session} ->
+        {:noreply,
+         socket
+         |> assign(:session, session)
+         |> assign(:pending_message, AsyncResult.loading())
+         |> start_async(:process_message, fn ->
+           AiAssistant.query(session, message.content)
+         end)}
+
+      {:error, reason} ->
+        {:noreply, assign(socket, error_message: error_message(reason))}
+    end
+  end
+
+  def handle_event("cancel_message", %{"message-id" => message_id}, socket) do
+    case AiAssistant.update_message_status(
+           socket.assigns.session,
+           message_id,
+           :cancelled
+         ) do
+      {:ok, session} ->
+        {:noreply, assign(socket, :session, session)}
+
+      {:error, reason} ->
+        {:noreply, assign(socket, error_message: error_message(reason))}
+    end
+  end
+
   defp save_message(%{assigns: assigns} = socket, :new, content) do
     case AiAssistant.create_session(
            assigns.selected_job,
@@ -206,17 +242,34 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
      |> assign(:pending_message, AsyncResult.ok(nil))}
   end
 
-  def handle_async(:process_message, {:ok, error}, socket) do
+  def handle_async(:process_message, {:ok, {:error, error}}, socket) do
+    # Update the last user message status to error
+    {:ok, updated_session} =
+      AiAssistant.update_message_status(
+        socket.assigns.session,
+        List.last(socket.assigns.session.messages).id,
+        :error
+      )
+
     {:noreply,
      socket
+     |> assign(:session, updated_session)
      |> update(:pending_message, fn async_result ->
-       AsyncResult.failed(async_result, error)
+       AsyncResult.failed(async_result, {:exit, error})
      end)}
   end
 
   def handle_async(:process_message, {:exit, error}, socket) do
+    {:ok, updated_session} =
+      AiAssistant.update_message_status(
+        socket.assigns.session,
+        List.last(socket.assigns.session.messages).id,
+        :error
+      )
+
     {:noreply,
      socket
+     |> assign(:session, updated_session)
      |> update(:pending_message, fn async_result ->
        AsyncResult.failed(async_result, {:exit, error})
      end)}
@@ -315,7 +368,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         enabled: true
       },
       %{
-        quote: "Be skeptical, but don’t be cynical",
+        quote: "Be skeptical, but don't be cynical",
         author: "OpenFn Responsible AI Policy",
         source_link: "https://www.openfn.org/ai",
         enabled: true
@@ -511,6 +564,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             pending_message={@pending_message}
             query_params={@query_params}
             base_url={@base_url}
+            target={@myself}
           />
       <% end %>
 
@@ -700,6 +754,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   attr :pending_message, AsyncResult, required: true
   attr :query_params, :map, required: true
   attr :base_url, :string, required: true
+  attr :target, :any, required: true
 
   defp render_individual_session(assigns) do
     ~H"""
@@ -729,6 +784,33 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             <.user_avatar user={message.user} size_class="min-w-10 h-10 w-10" />
             <div class="bg-blue-300 bg-opacity-50 p-2 mb-0.5 rounded-lg break-words max-w-[80%]">
               <%= message.content %>
+            </div>
+            <div
+              :if={message.role == :user and message.status == :error}
+              class="flex items-center gap-2 mt-1"
+            >
+              <button
+                id={"retry-message-#{message.id}"}
+                phx-click="retry_message"
+                phx-value-message-id={message.id}
+                phx-target={@target}
+                class="text-indigo-600 hover:text-indigo-800"
+                phx-hook="Tooltip"
+                aria-label="Retry this message"
+              >
+                <.icon name="hero-arrow-path-mini" class="h-4 w-4" />
+              </button>
+              <button
+                id={"cancel-message-#{message.id}"}
+                phx-click="cancel_message"
+                phx-value-message-id={message.id}
+                phx-target={@target}
+                class="text-gray-400 hover:text-gray-600"
+                phx-hook="Tooltip"
+                aria-label="Cancel this message"
+              >
+                <.icon name="hero-x-mark-mini" class="h-4 w-4" />
+              </button>
             </div>
           </div>
           <div
