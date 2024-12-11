@@ -131,11 +131,12 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   def handle_event("retry_message", %{"message-id" => message_id}, socket) do
     message = Enum.find(socket.assigns.session.messages, &(&1.id == message_id))
 
-    case AiAssistant.update_message_status(
-           socket.assigns.session,
-           message_id,
-           :success
-         ) do
+    AiAssistant.update_message_status(
+      socket.assigns.session,
+      message_id,
+      :success
+    )
+    |> case do
       {:ok, session} ->
         {:noreply,
          socket
@@ -782,7 +783,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             class="flex flex-row-reverse items-end gap-x-3 mr-3"
           >
             <.user_avatar user={message.user} size_class="min-w-10 h-10 w-10" />
-            <div class="bg-blue-300 bg-opacity-50 p-2 mb-0.5 rounded-lg break-words max-w-[80%]">
+            <div class="bg-blue-300 bg-opacity-50 p-2 mb-0.5 rounded-lg break-words max-w-[70%]">
               <%= message.content %>
             </div>
             <div
@@ -794,22 +795,23 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
                 phx-click="retry_message"
                 phx-value-message-id={message.id}
                 phx-target={@target}
-                class="text-indigo-600 hover:text-indigo-800"
+                class="flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition duration-200"
                 phx-hook="Tooltip"
                 aria-label="Retry this message"
               >
                 <.icon name="hero-arrow-path-mini" class="h-4 w-4" />
               </button>
               <button
+                :if={length(@session.messages) > 1}
                 id={"cancel-message-#{message.id}"}
                 phx-click="cancel_message"
                 phx-value-message-id={message.id}
                 phx-target={@target}
-                class="text-gray-400 hover:text-gray-600"
+                class="flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition duration-200"
                 phx-hook="Tooltip"
                 aria-label="Cancel this message"
               >
-                <.icon name="hero-x-mark-mini" class="h-4 w-4" />
+                <.icon name="hero-x-mark" class="h-4 w-4" />
               </button>
             </div>
           </div>
