@@ -19,7 +19,7 @@ defmodule LightningWeb.UserLive.Components do
       module={@user_deletion_modal}
       id={@delete_user.id}
       user={@delete_user}
-      is_superuser_menu={true}
+      is_current_user={false}
       logout={false}
       return_to={Routes.user_index_path(@socket, :index)}
     />

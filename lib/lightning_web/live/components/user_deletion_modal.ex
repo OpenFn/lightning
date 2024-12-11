@@ -14,8 +14,8 @@ defmodule LightningWeb.Components.UserDeletionModal do
      |> assign(
        delete_now?: !is_nil(user.scheduled_deletion),
        has_activity_in_projects?: Accounts.has_activity_in_projects?(user),
-       scheduled_deletion_changeset: Accounts.change_scheduled_deletion(user),
-       is_superuser_menu: Map.get(assigns, :is_superuser_menu, false)
+       is_current_user: Map.get(assigns, :is_current_user, true),
+       scheduled_deletion_changeset: Accounts.change_scheduled_deletion(user)
      )
      |> assign(assigns)}
   end
@@ -107,7 +107,7 @@ defmodule LightningWeb.Components.UserDeletionModal do
         </:title>
         <div class="">
           <p class="text-sm text-gray-500">
-            <%= if @is_superuser_menu, do: "This user", else: "Your account" %> cannot be deleted until their auditable activities have also been purged.
+            <%= if @is_current_user, do: "Your account", else: "This user" %> cannot be deleted until their auditable activities have also been purged.
             <br /><br />Audit trails are removed on a project-basis and may be controlled by the project owner or a superuser.
           </p>
         </div>
@@ -159,12 +159,12 @@ defmodule LightningWeb.Components.UserDeletionModal do
         >
           <div class="">
             <p class="">
-              <%= if @is_superuser_menu, do: "This user's", else: "Your" %> account and credential data will be deleted. Please make sure none of these credentials are used in production workflows.
+              <%= if @is_current_user, do: "Your", else: "This user's" %> account and credential data will be deleted. Please make sure none of these credentials are used in production workflows.
             </p>
             <p :if={@has_activity_in_projects?} class="mt-2">
-              *Note that <%= if @is_superuser_menu,
-                do: "this user still has",
-                else: "you still have" %> activity related to active projects. We may not be able to delete them entirely from the app until those projects are deleted.
+              *Note that <%= if @is_current_user,
+                do: "you still have",
+                else: "this user still has" %> activity related to active projects. We may not be able to delete them entirely from the app until those projects are deleted.
             </p>
             <br />
             <.input
