@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Allow different rules and action for delete user.
+  [#2500](https://github.com/OpenFn/lightning/issues/2500)
+
 ### Changed
 
 ### Fixed

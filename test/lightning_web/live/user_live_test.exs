@@ -27,7 +27,7 @@ defmodule LightningWeb.UserLiveTest do
   @invalid_attrs %{email: nil, first_name: nil, last_name: nil, password: nil}
 
   @invalid_schedule_deletion_attrs %{
-    scheduled_deletion_email: "invalid@email.com"
+    "scheduled_deletion_email" => "invalid@email.com"
   }
 
   describe "Index for super user" do
@@ -246,7 +246,7 @@ defmodule LightningWeb.UserLiveTest do
         form_live
         |> form("#scheduled_deletion_form",
           user: %{
-            scheduled_deletion_email: user.email
+            "scheduled_deletion_email" => user.email
           }
         )
         |> render_submit()
@@ -320,7 +320,11 @@ defmodule LightningWeb.UserLiveTest do
 
       assert index_live
              |> element("#user-#{user.id} a", "Cancel deletion")
-             |> render_click() =~ "User deletion canceled"
+             |> render_click()
+
+      flash = assert_redirected(index_live, ~p"/settings/users")
+
+      assert flash["info"] == "User deletion canceled"
     end
 
     test "retains a cancel deletion button for superusers pending deletion", %{
@@ -358,7 +362,7 @@ defmodule LightningWeb.UserLiveTest do
         form_live
         |> form("#scheduled_deletion_form",
           user: %{
-            scheduled_deletion_email: user.email
+            "scheduled_deletion_email" => user.email
           }
         )
         |> render_submit()
