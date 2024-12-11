@@ -260,15 +260,4 @@ defmodule Lightning.AiAssistant do
       {:error, _, changeset, _} -> {:error, changeset}
     end
   end
-
-  def retry_message(session, message_id) do
-    with message when not is_nil(message) <-
-           Enum.find(session.messages, &(&1.id == message_id)),
-         {:ok, session} <- update_message_status(session, message_id, :success) do
-      query(session, message.content)
-    else
-      nil -> {:error, "Message not found"}
-      error -> error
-    end
-  end
 end
