@@ -8,6 +8,7 @@ defmodule Lightning.AiAssistant do
   alias Ecto.Multi
   alias Lightning.Accounts
   alias Lightning.Accounts.User
+  alias Lightning.AiAssistant.ChatMessage
   alias Lightning.AiAssistant.ChatSession
   alias Lightning.ApolloClient
   alias Lightning.Repo
@@ -43,7 +44,15 @@ defmodule Lightning.AiAssistant do
 
   @spec get_session!(Ecto.UUID.t()) :: ChatSession.t()
   def get_session!(id) do
-    ChatSession |> Repo.get!(id) |> Repo.preload(messages: :user)
+    ChatSession
+    |> Repo.get!(id)
+    |> Repo.preload(
+      messages:
+        {from(m in ChatMessage,
+           where: m.status != :cancelled,
+           order_by: [asc: :inserted_at]
+         ), :user}
+    )
   end
 
   @spec create_session(Job.t(), User.t(), String.t()) ::
@@ -236,4 +245,19 @@ defmodule Lightning.AiAssistant do
        do: UsageLimiter.increment_ai_queries(session)
 
   defp maybe_increment_msgs_counter(_user_role), do: Multi.new()
+
+  def update_message_status(session, message_id, status) do
+    message = Enum.find(session.messages, &(&1.id == message_id))
+
+    Multi.new()
+    |> Multi.update(:message, ChatMessage.changeset(message, %{status: status}))
+    |> Multi.run(:session, fn _repo, _changes ->
+      {:ok, get_session!(session.id)}
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{session: session}} -> {:ok, session}
+      {:error, _, changeset, _} -> {:error, changeset}
+    end
+  end
 end

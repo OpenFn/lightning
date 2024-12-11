@@ -6,10 +6,13 @@ defmodule Lightning.AiAssistant.ChatMessage do
   import Lightning.Validators, only: [validate_required_assoc: 2]
 
   @type role() :: :user | :assistant
+  @type status() :: :success | :error | :cancelled
+
   @type t() :: %__MODULE__{
           id: Ecto.UUID.t(),
           content: String.t() | nil,
           role: role(),
+          status: status(),
           is_deleted: boolean(),
           is_public: boolean()
         }
@@ -17,6 +20,11 @@ defmodule Lightning.AiAssistant.ChatMessage do
   schema "ai_chat_messages" do
     field :content, :string
     field :role, Ecto.Enum, values: [:user, :assistant]
+
+    field :status, Ecto.Enum,
+      values: [:success, :error, :cancelled],
+      default: :success
+
     field :is_deleted, :boolean, default: false
     field :is_public, :boolean, default: true
 
@@ -31,6 +39,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
     |> cast(attrs, [
       :content,
       :role,
+      :status,
       :is_deleted,
       :is_public,
       :chat_session_id
