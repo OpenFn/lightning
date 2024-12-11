@@ -509,23 +509,84 @@ export const ScrollToBottom = {
 
 /**
  * Priority levels for key handlers.
- * Use these constants instead of raw numbers for better readability.
+ *
+ * This enumeration defines priority levels for keybinding handlers, allowing the application
+ * to resolve conflicts when multiple handlers match the same key combination. Handlers with
+ * a higher priority value will take precedence over those with lower priority values.
+ *
+ * ### Values:
+ * - `HIGH` (1): Indicates that the handler has a high priority. Handlers with this priority
+ *   will take precedence over those with `NORMAL` priority in cases of conflict.
+ * - `NORMAL` (0): Indicates that the handler has a normal priority. This is the default
+ *   priority for handlers unless specified otherwise.
+ *
+ * ### Why Priority Levels Are Important:
+ * 1. **Conflict Resolution:**
+ *    When multiple handlers match the same key combination, the system uses the `priority`
+ *    value to determine which handler should execute. This ensures predictable behavior
+ *    in cases where keybindings overlap.
+ *
+ * 2. **Fine-Grained Control:**
+ *    Developers can assign priority levels to handlers to explicitly control their
+ *    execution order. For example, a high-priority handler can override global handlers
+ *    within a specific context.
+ *
+ * 3. **Readability and Maintainability:**
+ *    Using named constants (`HIGH`, `NORMAL`) instead of raw numbers improves code
+ *    readability and reduces the likelihood of errors.
+ *
+ * ### Example Usage:
+ * ```typescript
+ * const handler1 = createKeyCombinationHook(
+ *   isCtrlOrMetaS,
+ *   submitAction,
+ *   PRIORITY.HIGH // High priority, overrides normal handlers
+ * );
+ *
+ * const handler2 = createKeyCombinationHook(
+ *   isEscape,
+ *   closeAction,
+ *   PRIORITY.NORMAL // Normal priority, default level
+ * );
+ * ```
  */
 enum PRIORITY {
   HIGH = 1,
   NORMAL = 0
 }
 
+/**
+ * Alias type for priority levels, ensuring strict typing and consistency.
+ *
+ * This type ensures that only valid priority values defined in the `PRIORITY` enum
+ * can be used in keybinding handlers, preventing accidental use of unsupported values.
+ */
 type PriorityLevel = PRIORITY;
 
 /**
  * Global registry to track all active key handlers.
- * Each handler consists of:
- * - `hook`: The PhoenixHook instance where the handler is defined.
- * - `keyCheck`: A function to determine if the key combination matches.
- * - `action`: A function to execute when the key combination matches.
- * - `priority`: An integer used to resolve conflicts between handlers.
- * - `bindingScope`: (Optional) A string representing the scope in which the handler applies.
+ *
+ * This `Set` serves as the core mechanism for managing all keybinding handlers in a given page of the app.
+ * It ensures that keybinding logic is centralized, making it easier to manage, resolve conflicts, and maintain consistency.
+ *
+ * ### Structure of a Handler:
+ * Each handler is an object with the following properties:
+ * - `hook`: The `PhoenixHook` instance where the handler is defined. This provides context for lifecycle management and ensures handlers are correctly removed when hooks are unmounted.
+ * - `keyCheck`: A function that determines whether a given `KeyboardEvent` matches the key combination for the handler. This allows flexible and precise matching of keybindings.
+ * - `action`: A function that executes when the key combination matches. It receives the `KeyboardEvent` and the associated DOM element (`el`) from the `hook`.
+ * - `priority`: A `PriorityLevel` value (e.g., `PRIORITY.HIGH` or `PRIORITY.NORMAL`) used to resolve conflicts when multiple handlers match the same key combination. Handlers with higher priority take precedence.
+ * - `bindingScope`: (Optional) A string representing the scope (defined via the `data-keybinding-scope` attribute in the DOM) where the handler should apply. This ensures that keybindings can be context-aware and prevents unintended execution in irrelevant parts of the application.
+ *
+ * ### Example Usage:
+ * ```typescript
+ * keyHandlers.add({
+ *   hook: this,
+ *   keyCheck: (e) => e.ctrlKey && e.key === 's',
+ *   action: (e, el) => console.log("Ctrl+S pressed"),
+ *   priority: PRIORITY.NORMAL,
+ *   bindingScope: 'editor'
+ * });
+ * ```
  */
 const keyHandlers = new Set<{
   hook: any;
@@ -536,13 +597,32 @@ const keyHandlers = new Set<{
 }>();
 
 /**
- * Creates a PhoenixHook to listen for specific key combinations.
+ * Creates a PhoenixHook to listen for specific key combinations and trigger defined actions.
  *
- * @param keyCheck - Function that checks whether the current key combination matches.
- * @param action - Function to execute when the key combination is triggered.
- * @param priority - (Optional) Priority of the handler. Higher priority handlers are executed first. Default is PRIORITY.NORMAL.
- * @param bindingScope - (Optional) The scope (via `data-keybinding-scope` attribute) where this handler should apply.
- * @returns A PhoenixHook object.
+ * This function is used to bind a key combination to a specific action with optional priority and scope.
+ * It supports scoped key bindings using the `data-keybinding-scope` attribute and resolves conflicts
+ * between overlapping handlers by priority.
+ *
+ * Example:
+ * ```typescript
+ * const hook = createKeyCombinationHook(
+ *   (e) => e.ctrlKey && e.key === "s",
+ *   (e, el) => console.log("Ctrl+S pressed!", el),
+ *   PRIORITY.HIGH,
+ *   "example-scope"
+ * );
+ * ```
+ *
+ * @param keyCheck - A function that determines whether the current key combination matches.
+ *                   It should return `true` for matching key events and `false` otherwise.
+ * @param action - A function to execute when the key combination is triggered.
+ *                 This function receives the `KeyboardEvent` and the hook's associated DOM element (`el`).
+ * @param priority - (Optional) The priority of the handler. Higher-priority handlers are executed first.
+ *                   Defaults to `PRIORITY.NORMAL`.
+ * @param bindingScope - (Optional) A string representing the scope of the handler.
+ *                       Handlers with a `bindingScope` only execute within elements with a matching `data-keybinding-scope`.
+ *                       Defaults to `undefined`, making the handler global.
+ * @returns A PhoenixHook object that manages the keybinding lifecycle.
  */
 function createKeyCombinationHook(
   keyCheck: (e: KeyboardEvent) => boolean,
@@ -601,46 +681,92 @@ function createKeyCombinationHook(
 }
 
 /**
- * Key check functions determine if a specific key combination was pressed.
+ * Determines if the key combination for "Ctrl+S" (or "Cmd+S" on macOS) is pressed.
+ *
+ * @param e - The keyboard event to evaluate.
+ * @returns `true` if "Ctrl+S" or "Cmd+S" is pressed, otherwise `false`.
  */
 const isCtrlOrMetaS = (e: KeyboardEvent) =>
   (e.ctrlKey || e.metaKey) && e.key === 's';
 
+/**
+ * Determines if the key combination for "Ctrl+Enter" (or "Cmd+Enter" on macOS) is pressed.
+ *
+ * @param e - The keyboard event to evaluate.
+ * @returns `true` if "Ctrl+Enter" or "Cmd+Enter" is pressed, otherwise `false`.
+ */
 const isCtrlOrMetaEnter = (e: KeyboardEvent) =>
   (e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'Enter';
 
+/**
+ * Determines if the key combination for "Ctrl+Shift+Enter" (or "Cmd+Shift+Enter" on macOS) is pressed.
+ *
+ * @param e - The keyboard event to evaluate.
+ * @returns `true` if "Ctrl+Shift+Enter" or "Cmd+Shift+Enter" is pressed, otherwise `false`.
+ */
 const isCtrlOrMetaShiftEnter = (e: KeyboardEvent) =>
   (e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Enter';
 
+/**
+ * Determines if the "Escape" key is pressed.
+ *
+ * @param e - The keyboard event to evaluate.
+ * @returns `true` if the "Escape" key is pressed, otherwise `false`.
+ */
 const isEscape = (e: KeyboardEvent) => e.key === 'Escape';
 
 /**
- * Action functions define what happens when a key combination is triggered.
+ * Simulates a "click" action, used to trigger save and run functionality.
  *
- * @param e - The KeyboardEvent that triggered the action.
- * @param el - The DOM element associated with the PhoenixHook.
+ * @param e - The keyboard event that triggered the action.
+ * @param el - The DOM element associated with the hook.
  */
 function clickAction(e: KeyboardEvent, el: HTMLElement) {
   initiateSaveAndRun(el);
 }
 
+/**
+ * Simulates a form submission action.
+ *
+ * @param e - The keyboard event that triggered the action.
+ * @param el - The DOM element associated with the hook.
+ */
 function submitAction(e: KeyboardEvent, el: HTMLElement) {
   el.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 }
 
+/**
+ * Simulates a "close" action, used to close modals, panels, or other UI components.
+ *
+ * @param e - The keyboard event that triggered the action.
+ * @param el - The DOM element associated with the hook.
+ */
 function closeAction(e: KeyboardEvent, el: HTMLElement) {
   el.click();
 }
 
 /**
- * Hook definitions for specific key combinations.
- * Each hook listens for a particular combination and performs an associated action.
+ * Hook to trigger a form submission when "Ctrl+S" (or "Cmd+S" on macOS) is pressed.
+ *
+ * This hook listens globally and executes the `submitAction`, which simulates form submission.
+ * It is commonly used to save a workflow by just using the keybindng CTRL/CMD + S.
+ *
+ * Priority: `PRIORITY.NORMAL` (default), meaning it can be overridden by higher-priority handlers.
  */
 export const SaveViaCtrlS = createKeyCombinationHook(
   isCtrlOrMetaS,
   submitAction
 );
 
+/**
+ * Hook to send a chat message when "Ctrl+Enter" (or "Cmd+Enter" on macOS) is pressed.
+ *
+ * This hook is scoped to elements with `data-keybinding-scope="chat"`. It executes the
+ * `submitAction`, which simulates a form submission for chat input fields.
+ *
+ * Priority: `PRIORITY.HIGH`, ensuring it takes precedence over other handlers for "Ctrl+Enter".
+ * Scope: `"chat"`, meaning this hook is active only within the chat UI.
+ */
 export const SendMessageViaCtrlEnter = createKeyCombinationHook(
   isCtrlOrMetaEnter,
   submitAction,
@@ -648,22 +774,57 @@ export const SendMessageViaCtrlEnter = createKeyCombinationHook(
   'chat'
 );
 
+/**
+ * Hook to trigger the default "Run" action when "Ctrl+Enter" (or "Cmd+Enter" on macOS) is pressed.
+ *
+ * This hook listens globally and executes the `clickAction`, typically used to trigger
+ * "Run" for a step in a workflow.
+ *
+ * Priority: `PRIORITY.NORMAL`, meaning it can be overridden by higher-priority handlers.
+ */
 export const DefaultRunViaCtrlEnter = createKeyCombinationHook(
   isCtrlOrMetaEnter,
   clickAction
 );
 
+/**
+ * Hook to trigger an alternative "Run" action when "Ctrl+Shift+Enter" (or "Cmd+Shift+Enter" on macOS) is pressed.
+ *
+ * This hook listens globally and executes the `clickAction`, which can trigger a
+ * secondary or alternative execution flow. It is used to create a workorder for an already ran step in a 
+ * worklflow instead of running it.
+ *
+ * Priority: `PRIORITY.NORMAL`, meaning it can be overridden by higher-priority handlers.
+ */
 export const AltRunViaCtrlShiftEnter = createKeyCombinationHook(
   isCtrlOrMetaShiftEnter,
   clickAction
 );
 
+/**
+ * Hook to close the inspector panel when the "Escape" key is pressed.
+ *
+ * This hook listens globally and executes the `closeAction`, which simulates a click
+ * to close the inspector panel UI. It is assigned a higher priority to ensure it
+ * overrides other handlers for the "Escape" key.
+ *
+ * Priority: `PRIORITY.HIGH`, ensuring it takes precedence over other "Escape" handlers.
+ */
 export const CloseInspectorPanelViaEscape = createKeyCombinationHook(
   isEscape,
   closeAction,
   PRIORITY.HIGH
 );
 
+/**
+ * Hook to close a node panel when the "Escape" key is pressed.
+ *
+ * This hook listens globally and executes the `closeAction`, which simulates a click
+ * to close a node panel in the workflow canvas. It has a lower priority, ensuring it does
+ * not interfere with higher-priority handlers for the "Escape" key (e.g., `CloseInspectorPanelViaEscape`).
+ *
+ * Priority: `PRIORITY.NORMAL`, meaning it will yield to higher-priority handlers for the "Escape" key.
+ */
 export const CloseNodePanelViaEscape = createKeyCombinationHook(
   isEscape,
   closeAction,
