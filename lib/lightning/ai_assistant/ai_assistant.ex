@@ -8,12 +8,12 @@ defmodule Lightning.AiAssistant do
   alias Ecto.Multi
   alias Lightning.Accounts
   alias Lightning.Accounts.User
+  alias Lightning.AiAssistant.ChatMessage
   alias Lightning.AiAssistant.ChatSession
   alias Lightning.ApolloClient
   alias Lightning.Repo
   alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows.Job
-  alias Lightning.AiAssistant.ChatMessage
 
   require Logger
 
