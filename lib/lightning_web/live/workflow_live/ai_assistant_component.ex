@@ -131,54 +131,46 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   end
 
   def handle_event("retry_message", %{"message-id" => message_id}, socket) do
-    case Enum.find(socket.assigns.session.messages, &(&1.id == message_id)) do
-      nil ->
-        {:noreply, assign(socket, :error_message, "Message not found.")}
+    message = Enum.find(socket.assigns.session.messages, &(&1.id == message_id))
 
-      message ->
-        case AiAssistant.update_message_status(
-               socket.assigns.session,
-               message,
-               :success
-             ) do
-          {:ok, session} ->
-            {:noreply,
-             socket
-             |> assign(:session, session)
-             |> assign(:pending_message, AsyncResult.loading())
-             |> start_async(:process_message, fn ->
-               AiAssistant.query(session, message.content)
-             end)}
+    case AiAssistant.update_message_status(
+           socket.assigns.session,
+           message,
+           :success
+         ) do
+      {:ok, session} ->
+        {:noreply,
+         socket
+         |> assign(:session, session)
+         |> assign(:pending_message, AsyncResult.loading())
+         |> start_async(:process_message, fn ->
+           AiAssistant.query(session, message.content)
+         end)}
 
-          {:error, changeset} ->
-            Logger.error("Failed to retry message: #{inspect(changeset)}")
+      {:error, changeset} ->
+        Logger.error("Failed to retry message: #{inspect(changeset)}")
 
-            {:noreply,
-             assign(socket, :error_message, error_message({:error, changeset}))}
-        end
+        {:noreply,
+         assign(socket, :error_message, error_message({:error, changeset}))}
     end
   end
 
   def handle_event("cancel_message", %{"message-id" => message_id}, socket) do
-    case Enum.find(socket.assigns.session.messages, &(&1.id == message_id)) do
-      nil ->
-        {:noreply, assign(socket, :error_message, "Message not found.")}
+    message = Enum.find(socket.assigns.session.messages, &(&1.id == message_id))
 
-      message ->
-        case AiAssistant.update_message_status(
-               socket.assigns.session,
-               message,
-               :cancelled
-             ) do
-          {:ok, session} ->
-            {:noreply, assign(socket, :session, session)}
+    case AiAssistant.update_message_status(
+           socket.assigns.session,
+           message,
+           :cancelled
+         ) do
+      {:ok, session} ->
+        {:noreply, assign(socket, :session, session)}
 
-          {:error, changeset} ->
-            Logger.error("Failed to cancel message: #{inspect(changeset)}")
+      {:error, changeset} ->
+        Logger.error("Failed to cancel message: #{inspect(changeset)}")
 
-            {:noreply,
-             assign(socket, :error_message, error_message({:error, changeset}))}
-        end
+        {:noreply,
+         assign(socket, :error_message, error_message({:error, changeset}))}
     end
   end
 
