@@ -8,6 +8,7 @@ defmodule LightningWeb.WorkflowLive.Index do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Workflows
+  alias Lightning.Workflows.WorkflowUsageLimiter
   alias LightningWeb.LiveHelpers
   alias LightningWeb.WorkflowLive.DashboardComponents
   alias LightningWeb.WorkflowLive.Helpers
@@ -55,6 +56,7 @@ defmodule LightningWeb.WorkflowLive.Index do
           period={@dashboard_period}
           can_create_workflow={@can_create_workflow}
           can_delete_workflow={@can_delete_workflow}
+          limit_error={assigns[:limit_error]}
           workflows_stats={@workflows_stats}
           project={@project}
         />
@@ -131,6 +133,7 @@ defmodule LightningWeb.WorkflowLive.Index do
       {:ok, _workflow} ->
         {:noreply,
          socket
+         |> assign(limit_error: limit_workflow_creation_error(project_id))
          |> put_flash(:info, "Workflow updated successfully!")
          |> push_patch(to: ~p"/projects/#{project_id}/w")}
 
@@ -199,5 +202,15 @@ defmodule LightningWeb.WorkflowLive.Index do
 
   defp assign_workflow_form(socket, changeset) do
     socket |> assign(form: to_form(changeset, as: :new_workflow))
+  end
+
+  defp limit_workflow_creation_error(project) do
+    case WorkflowUsageLimiter.limit_workflow_creation(project) do
+      :ok ->
+        nil
+
+      {:error, _reason, %{text: error_msg}} ->
+        error_msg
+    end
   end
 end
