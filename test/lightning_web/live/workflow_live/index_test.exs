@@ -1,5 +1,7 @@
 defmodule LightningWeb.WorkflowLive.IndexTest do
   use LightningWeb.ConnCase, async: true
+
+  import Mox
   import Phoenix.LiveViewTest
 
   import Lightning.Factories
@@ -10,6 +12,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
   setup :create_project_for_current_user
   setup :create_workflow
   setup :stub_usage_limiter_ok
+  setup :verify_on_exit!
 
   describe "index" do
     test "renders an empty list of workflows", %{conn: conn, project: project} do
@@ -244,7 +247,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
 
     test "enable / disable workflows from dashboard page", %{
       conn: conn,
-      project: project
+      project: %{id: project_id} = project
     } do
       cron_trigger = build(:trigger, type: :cron, enabled: false)
       webhook_trigger = build(:trigger, type: :webhook, enabled: false)
@@ -268,6 +271,31 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
 
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
 
+      counter = :counters.new(1, [:atomics])
+
+      Mox.stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn %{
+                                                                          type:
+                                                                            :activate_workflow
+                                                                        },
+                                                                        %{
+                                                                          project_id:
+                                                                            ^project_id
+                                                                        } ->
+        :counters.add(counter, 1, 1)
+
+        case :counters.get(counter, 1) do
+          # create workflow button is enabled before the workflow activations but disabled after
+          # 1 for limit action of first toggle
+          # 1 for push_patch rerender
+          # 1 for limit action of second toggle
+          n when n <= 3 ->
+            :ok
+
+          _error ->
+            {:error, :too_many_workflows, %{text: "Error after 2nd activation"}}
+        end
+      end)
+
       [cron_workflow, webhook_workflow]
       |> Enum.each(fn workflow ->
         trigger_type =
@@ -288,6 +316,8 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
                  "#toggle-container-#{workflow.id}[aria-label='This workflow is active (#{trigger_type} trigger enabled)']"
                )
       end)
+
+      assert view |> has_element?("#open-modal-button[type=button][disabled]")
     end
   end
 
