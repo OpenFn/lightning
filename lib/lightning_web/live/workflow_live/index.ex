@@ -210,8 +210,8 @@ defmodule LightningWeb.WorkflowLive.Index do
     |> LiveHelpers.check_limits(project_id)
   end
 
-  defp limit_workflow_creation_error(project) do
-    case WorkflowUsageLimiter.limit_workflow_creation(project) do
+  defp limit_workflow_creation_error(project_id) do
+    case WorkflowUsageLimiter.limit_workflow_creation(project_id) do
       :ok ->
         nil
 
