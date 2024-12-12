@@ -132,7 +132,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
               }
               phx-connected={Phoenix.LiveView.JS.remove_attribute("data-confirm")}
               patch={@close_url}
-              phx-hook="ClosePanelViaEscape"
+              phx-hook="CloseInspectorPanelViaEscape"
             >
               <Heroicons.x_mark class="w-6 h-6 text-gray-500 hover:text-gray-700
                 hover:cursor-pointer" />

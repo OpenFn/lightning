@@ -48,6 +48,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix Priority and Scope Issues in Inspector Key Bindings  
+  [#2770](https://github.com/OpenFn/lightning/issues/2770)
 - Fixed an issue where sometimes adaptor docs won't load in the Inspector
   [#2749](https://github.com/OpenFn/lightning/pull/2749)
 - Return a 422 when a duplicate key is sent to the collections post/put_all API
