@@ -45,15 +45,15 @@ defmodule Lightning.AiAssistant do
 
   @spec get_session!(Ecto.UUID.t()) :: ChatSession.t()
   def get_session!(id) do
+    message_query =
+      from(m in ChatMessage,
+        where: m.status != :cancelled,
+        order_by: [asc: :inserted_at]
+      )
+
     ChatSession
     |> Repo.get!(id)
-    |> Repo.preload(
-      messages:
-        {from(m in ChatMessage,
-           where: m.status != :cancelled,
-           order_by: [asc: :inserted_at]
-         ), :user}
-    )
+    |> Repo.preload(messages: {message_query, :user})
   end
 
   @spec create_session(Job.t(), User.t(), String.t()) ::
