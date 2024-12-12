@@ -259,35 +259,26 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     do: handle_failed_async({:exit, error}, socket)
 
   defp handle_failed_async(error, socket) do
-    case socket.assigns.session.messages |> List.last() do
-      nil ->
-        Logger.error("No message found to update status")
+    message = List.last(socket.assigns.session.messages)
+
+    case AiAssistant.update_message_status(
+           socket.assigns.session,
+           message,
+           :error
+         ) do
+      {:ok, updated_session} ->
+        {:noreply,
+         socket
+         |> assign(:session, updated_session)
+         |> update(:pending_message, fn async_result ->
+           AsyncResult.failed(async_result, error)
+         end)}
+
+      {:error, changeset} ->
+        Logger.error("Failed to update message status: #{inspect(changeset)}")
 
         {:noreply,
-         assign(socket, :error_message, "Could not update message status.")}
-
-      message ->
-        case AiAssistant.update_message_status(
-               socket.assigns.session,
-               message,
-               :error
-             ) do
-          {:ok, updated_session} ->
-            {:noreply,
-             socket
-             |> assign(:session, updated_session)
-             |> update(:pending_message, fn async_result ->
-               AsyncResult.failed(async_result, error)
-             end)}
-
-          {:error, changeset} ->
-            Logger.error(
-              "Failed to update message status: #{inspect(changeset)}"
-            )
-
-            {:noreply,
-             assign(socket, :error_message, error_message({:error, changeset}))}
-        end
+         assign(socket, :error_message, error_message({:error, changeset}))}
     end
   end
 
