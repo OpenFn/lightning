@@ -130,48 +130,36 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     |> then(fn socket -> {:noreply, socket} end)
   end
 
-  def handle_event("retry_message", %{"message-id" => message_id}, socket) do
-    message = Enum.find(socket.assigns.session.messages, &(&1.id == message_id))
-
-    case AiAssistant.update_message_status(
-           socket.assigns.session,
-           message,
-           :success
-         ) do
-      {:ok, session} ->
-        {:noreply,
-         socket
-         |> assign(:session, session)
-         |> assign(:pending_message, AsyncResult.loading())
-         |> start_async(:process_message, fn ->
-           AiAssistant.query(session, message.content)
-         end)}
-
-      {:error, changeset} ->
-        Logger.error("Failed to retry message: #{inspect(changeset)}")
-
-        {:noreply,
-         assign(socket, :error_message, error_message({:error, changeset}))}
-    end
-  end
-
   def handle_event("cancel_message", %{"message-id" => message_id}, socket) do
     message = Enum.find(socket.assigns.session.messages, &(&1.id == message_id))
 
-    case AiAssistant.update_message_status(
-           socket.assigns.session,
-           message,
-           :cancelled
-         ) do
-      {:ok, session} ->
-        {:noreply, assign(socket, :session, session)}
+    {:ok, session} =
+      AiAssistant.update_message_status(
+        socket.assigns.session,
+        message,
+        :cancelled
+      )
 
-      {:error, changeset} ->
-        Logger.error("Failed to cancel message: #{inspect(changeset)}")
+    {:noreply, assign(socket, :session, session)}
+  end
 
-        {:noreply,
-         assign(socket, :error_message, error_message({:error, changeset}))}
-    end
+  def handle_event("retry_message", %{"message-id" => message_id}, socket) do
+    message = Enum.find(socket.assigns.session.messages, &(&1.id == message_id))
+
+    {:ok, session} =
+      AiAssistant.update_message_status(
+        socket.assigns.session,
+        message,
+        :success
+      )
+
+    {:noreply,
+     socket
+     |> assign(:session, session)
+     |> assign(:pending_message, AsyncResult.loading())
+     |> start_async(:process_message, fn ->
+       AiAssistant.query(session, message.content)
+     end)}
   end
 
   defp save_message(%{assigns: assigns} = socket, :new, content) do
@@ -261,25 +249,15 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   defp handle_failed_async(error, socket) do
     message = List.last(socket.assigns.session.messages)
 
-    case AiAssistant.update_message_status(
-           socket.assigns.session,
-           message,
-           :error
-         ) do
-      {:ok, updated_session} ->
-        {:noreply,
-         socket
-         |> assign(:session, updated_session)
-         |> update(:pending_message, fn async_result ->
-           AsyncResult.failed(async_result, error)
-         end)}
+    {:ok, updated_session} =
+      AiAssistant.update_message_status(socket.assigns.session, message, :error)
 
-      {:error, changeset} ->
-        Logger.error("Failed to update message status: #{inspect(changeset)}")
-
-        {:noreply,
-         assign(socket, :error_message, error_message({:error, changeset}))}
-    end
+    {:noreply,
+     socket
+     |> assign(:session, updated_session)
+     |> update(:pending_message, fn async_result ->
+       AsyncResult.failed(async_result, error)
+     end)}
   end
 
   defp render_onboarding(assigns) do
