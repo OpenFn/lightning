@@ -6,7 +6,6 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
 
   alias Lightning.DashboardStats.ProjectMetrics
   alias Lightning.Projects.Project
-  alias Lightning.Workflows.WorkflowUsageLimiter
   alias Lightning.WorkOrders.SearchParams
   alias LightningWeb.WorkflowLive.Helpers
   alias Timex.Format.DateTime.Formatters.Relative
@@ -22,7 +21,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
           </span>
         </h3>
         <.create_workflow_card
-          limit_error={limit_workflow_creation_error(@project)}
+          limit_error={@workflow_creation_limit_error}
           can_create_workflow={@can_create_workflow}
         />
       </div>
@@ -255,16 +254,6 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       </.button>
     </div>
     """
-  end
-
-  defp limit_workflow_creation_error(project) do
-    case WorkflowUsageLimiter.limit_workflow_creation(project) do
-      :ok ->
-        nil
-
-      {:error, _reason, %{text: error_msg}} ->
-        error_msg
-    end
   end
 
   attr :metrics, ProjectMetrics, required: true
