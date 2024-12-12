@@ -10,6 +10,7 @@ defmodule LightningWeb.WorkflowLive.Index do
   alias Lightning.Workflows
   alias LightningWeb.LiveHelpers
   alias LightningWeb.WorkflowLive.DashboardComponents
+  alias LightningWeb.WorkflowLive.Helpers
   alias LightningWeb.WorkflowLive.NewWorkflowForm
 
   alias Phoenix.LiveView.TagEngine
@@ -122,10 +123,10 @@ defmodule LightningWeb.WorkflowLive.Index do
       ) do
     %{current_user: actor, project: project_id} = socket.assigns
 
-    workflow = Workflows.get_workflow!(workflow_id, include: [:triggers])
-
-    Workflows.update_triggers_enabled_state(workflow, state)
-    |> Workflows.save_workflow(actor)
+    workflow_id
+    |> Workflows.get_workflow!(include: [:triggers])
+    |> Workflows.update_triggers_enabled_state(state)
+    |> Helpers.save_workflow(actor)
     |> case do
       {:ok, _workflow} ->
         {:noreply,

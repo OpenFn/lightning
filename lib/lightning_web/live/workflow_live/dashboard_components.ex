@@ -22,7 +22,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
           </span>
         </h3>
         <.create_workflow_card
-          project={@project}
+          limit_error={limit_workflow_creation_error(@project)}
           can_create_workflow={@can_create_workflow}
         />
       </div>
@@ -229,18 +229,16 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   end
 
   attr :can_create_workflow, :boolean, required: true
-  attr :project, :map, required: true
+  attr :limit_error, :string
 
   def create_workflow_card(assigns) do
-    limit_error = limit_workflow_creation_error(assigns.project)
-
     assigns =
       assigns
       |> assign_new(:disabled, fn ->
-        !assigns.can_create_workflow || is_binary(limit_error)
+        !assigns.can_create_workflow || assigns.limit_error
       end)
       |> assign_new(:tooltip, fn ->
-        limit_error || "You are not authorized to perform this action."
+        assigns.limit_error || "You are not authorized to perform this action."
       end)
 
     ~H"""
