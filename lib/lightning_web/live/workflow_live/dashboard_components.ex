@@ -234,7 +234,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
     assigns =
       assigns
       |> assign_new(:disabled, fn ->
-        !assigns.can_create_workflow || assigns.limit_error
+        !assigns.can_create_workflow or is_binary(assigns.limit_error)
       end)
       |> assign_new(:tooltip, fn ->
         assigns.limit_error || "You are not authorized to perform this action."
