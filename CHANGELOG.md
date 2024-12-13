@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Clear AI assistant's chat input after a message is sent 
+  [#2781](https://github.com/OpenFn/lightning/issues/2781)
 - Allow different rules and action for delete user.
   [#2500](https://github.com/OpenFn/lightning/issues/2500)
 

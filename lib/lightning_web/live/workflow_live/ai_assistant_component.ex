@@ -89,13 +89,15 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   def handle_event("send_message", %{"content" => content}, socket) do
     if socket.assigns.can_edit_workflow do
       %{action: action} = socket.assigns
-      # clear error
+
       socket
       |> assign(error_message: nil)
       |> check_limit()
       |> then(fn socket ->
         if socket.assigns.ai_limit_result == :ok do
-          {:noreply, save_message(socket, action, content)}
+          {:noreply,
+           save_message(socket, action, content)
+           |> assign(:form, to_form(%{"content" => nil}))}
         else
           {:noreply, socket}
         end
