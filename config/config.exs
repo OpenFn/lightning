@@ -95,7 +95,9 @@ config :esbuild,
          js/editor/Editor.tsx
          fonts/inter.css
          fonts/fira-code.css
+         node_modules/monaco-editor/esm/vs/editor/editor.worker.js
          --loader:.woff2=file
+         --loader:.ttf=file
          --format=esm --splitting --bundle
          --target=es2020
          --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
