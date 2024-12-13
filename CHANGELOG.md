@@ -22,6 +22,9 @@ and this project adheres to
 
 ### Changed
 
+- Made the AdaptorRegistry cache path configurable
+  [#2780](https://github.com/OpenFn/lightning/issues/2780)
+
 ### Fixed
 
 - Delete user modal no longer uses the same id as the underlying user record.
@@ -48,7 +51,7 @@ and this project adheres to
 
 ### Fixed
 
-- Fix Priority and Scope Issues in Inspector Key Bindings  
+- Fix Priority and Scope Issues in Inspector Key Bindings
   [#2770](https://github.com/OpenFn/lightning/issues/2770)
 - Fixed an issue where sometimes adaptor docs won't load in the Inspector
   [#2749](https://github.com/OpenFn/lightning/pull/2749)

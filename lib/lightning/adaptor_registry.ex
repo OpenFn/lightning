@@ -102,9 +102,18 @@ defmodule Lightning.AdaptorRegistry do
   def handle_continue(opts, _state) do
     cache_path =
       case opts[:use_cache] do
-        true -> "tmp/adaptor_registry_cache.json"
-        path when is_binary(path) -> path
-        _ -> nil
+        true ->
+          Path.join([
+            System.tmp_dir!(),
+            "lightning",
+            "adaptor_registry_cache.json"
+          ])
+
+        path when is_binary(path) ->
+          path
+
+        _ ->
+          nil
       end
 
     if cache_path do
@@ -124,7 +133,7 @@ defmodule Lightning.AdaptorRegistry do
   # false positive, it's a file from init
   # sobelow_skip ["Traversal.FileModule"]
   defp write_to_cache(path, adaptors) when is_binary(path) do
-    File.mkdir("tmp")
+    Logger.debug("Writing Adapter Registry to #{path}")
     cache_file = File.open!(path, [:write])
     IO.binwrite(cache_file, Jason.encode_to_iodata!(adaptors))
     File.close(cache_file)
@@ -137,8 +146,12 @@ defmodule Lightning.AdaptorRegistry do
   defp read_from_cache(path) when is_binary(path) do
     File.read(path)
     |> case do
-      {:ok, file} -> Jason.decode!(file, keys: :atoms!)
-      {:error, _} -> nil
+      {:ok, file} ->
+        Logger.debug("Found Adapter Registry from #{path}")
+        Jason.decode!(file, keys: :atoms!)
+
+      {:error, _} ->
+        nil
     end
   end
 
@@ -320,13 +333,12 @@ defmodule Lightning.AdaptorRegistry do
   end
 
   def resolve_adaptor(adaptor) do
-    __MODULE__.resolve_package_name(adaptor)
-    |> case do
+    case resolve_package_name(adaptor) do
       {nil, nil} ->
         ""
 
       {adaptor_name, "latest"} ->
-        "#{adaptor_name}@#{__MODULE__.latest_for(adaptor_name)}"
+        "#{adaptor_name}@#{latest_for(adaptor_name)}"
 
       _ ->
         adaptor
