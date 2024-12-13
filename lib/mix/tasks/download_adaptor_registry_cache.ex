@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.Lightning.InstallAdaptorRegistry do
+defmodule Mix.Tasks.Lightning.DownloadAdaptorRegistryCache do
   @shortdoc "Downloads the adaptor registry json cache"
 
   @moduledoc """

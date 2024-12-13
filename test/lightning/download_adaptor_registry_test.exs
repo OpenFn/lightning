@@ -1,10 +1,10 @@
-defmodule Lightning.InstallAdaptorRegistryTest do
+defmodule Lightning.DownloadAdaptorRegistryCacheTest do
   use ExUnit.Case, async: false
   use Mimic
 
-  alias Mix.Tasks.Lightning.InstallAdaptorRegistry
+  alias Mix.Tasks.Lightning.DownloadAdaptorRegistryCache
 
-  describe "install_adaptor_registry mix task" do
+  describe "download_adaptor_registry_cache mix task" do
     @describetag :tmp_dir
     setup do
       stub(:hackney)
@@ -25,7 +25,7 @@ defmodule Lightning.InstallAdaptorRegistryTest do
       file_path = Path.join([tmp_dir, "cache.json"])
       refute File.exists?(file_path)
 
-      InstallAdaptorRegistry.run(["--path", file_path])
+      DownloadAdaptorRegistryCache.run(["--path", file_path])
 
       refute File.exists?(file_path)
     end
@@ -60,7 +60,7 @@ defmodule Lightning.InstallAdaptorRegistryTest do
       file_path = Path.join([tmp_dir, "cache.json"])
       refute File.exists?(file_path)
 
-      InstallAdaptorRegistry.run(["--path", file_path])
+      DownloadAdaptorRegistryCache.run(["--path", file_path])
 
       assert File.exists?(file_path)
     end
