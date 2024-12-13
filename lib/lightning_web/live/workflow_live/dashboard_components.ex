@@ -6,7 +6,6 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
 
   alias Lightning.DashboardStats.ProjectMetrics
   alias Lightning.Projects.Project
-  alias Lightning.Workflows.WorkflowUsageLimiter
   alias Lightning.WorkOrders.SearchParams
   alias LightningWeb.WorkflowLive.Helpers
   alias Timex.Format.DateTime.Formatters.Relative
@@ -22,7 +21,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
           </span>
         </h3>
         <.create_workflow_card
-          project={@project}
+          limit_error={@workflow_creation_limit_error}
           can_create_workflow={@can_create_workflow}
         />
       </div>
@@ -229,18 +228,16 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   end
 
   attr :can_create_workflow, :boolean, required: true
-  attr :project, :map, required: true
+  attr :limit_error, :string
 
   def create_workflow_card(assigns) do
-    limit_error = limit_workflow_creation_error(assigns.project)
-
     assigns =
       assigns
       |> assign_new(:disabled, fn ->
-        !assigns.can_create_workflow || is_binary(limit_error)
+        !assigns.can_create_workflow or is_binary(assigns.limit_error)
       end)
       |> assign_new(:tooltip, fn ->
-        limit_error || "You are not authorized to perform this action."
+        assigns.limit_error || "You are not authorized to perform this action."
       end)
 
     ~H"""
@@ -257,16 +254,6 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       </.button>
     </div>
     """
-  end
-
-  defp limit_workflow_creation_error(project) do
-    case WorkflowUsageLimiter.limit_workflow_creation(project) do
-      :ok ->
-        nil
-
-      {:error, _reason, %{text: error_msg}} ->
-        error_msg
-    end
   end
 
   attr :metrics, ProjectMetrics, required: true
