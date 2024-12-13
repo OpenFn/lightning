@@ -17,21 +17,28 @@ and this project adheres to
 
 ### Added
 
-- Clear AI assistant's chat input after a message is sent 
+### Changed
+
+### Fixed
+
+## [v2.10.7]
+
+### Added
+
+- Clear AI assistant's chat input after a message is sent
   [#2781](https://github.com/OpenFn/lightning/issues/2781)
 - Allow different rules and action for delete user.
   [#2500](https://github.com/OpenFn/lightning/issues/2500)
 
 ### Changed
 
-- Made the AdaptorRegistry cache path configurable
+- Make the AdaptorRegistry cache path configurable
   [#2780](https://github.com/OpenFn/lightning/issues/2780)
 
 ### Fixed
 
 - Delete user modal no longer uses the same id as the underlying user record.
   [#2751](https://github.com/OpenFn/lightning/issues/2751)
-
 - Use workflow activation limiter on index toggle.
   [#2777](https://github.com/OpenFn/lightning/issues/2777)
 
