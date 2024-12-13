@@ -1880,11 +1880,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       date = DateTime.utc_now() |> DateTime.add(-24, :hour) |> DateTime.to_unix()
 
-      user
-      |> Ecto.Changeset.change(%{
-        preferences: %{"ai_assistant.disclaimer_read_at" => date}
-      })
-      |> Repo.update!()
+      skip_disclaimer(user, date)
 
       {:ok, view, _html} =
         live(
@@ -1912,13 +1908,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         :openai_api_key -> "openai_api_key"
       end)
 
-      date = DateTime.utc_now() |> DateTime.add(-22, :hour) |> DateTime.to_unix()
-
-      user
-      |> Ecto.Changeset.change(%{
-        preferences: %{"ai_assistant.disclaimer_read_at" => date}
-      })
-      |> Repo.update!()
+      skip_disclaimer(user)
 
       {:ok, view, _html} =
         live(
@@ -2082,14 +2072,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         end
       )
 
-      # update preferences so that the onboarding flow is not displayed
-      timestamp = DateTime.utc_now() |> DateTime.to_unix()
-
-      user
-      |> Ecto.Changeset.change(%{
-        preferences: %{"ai_assistant.disclaimer_read_at" => timestamp}
-      })
-      |> Lightning.Repo.update!()
+      skip_disclaimer(user)
 
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
@@ -2709,12 +2692,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           ]
         )
 
-      timestamp = DateTime.utc_now() |> DateTime.to_unix()
-
-      Ecto.Changeset.change(user, %{
-        preferences: %{"ai_assistant.disclaimer_read_at" => timestamp}
-      })
-      |> Lightning.Repo.update!()
+      skip_disclaimer(user)
 
       {:ok, view, _html} =
         live(
@@ -2783,6 +2761,69 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert second_link |> Floki.attribute("id") == [
                "session-#{older_session.id}"
              ]
+    end
+
+    @tag email: "user@openfn.org"
+    test "input field is cleared after sending a message", %{
+      conn: conn,
+      project: project,
+      user: user,
+      workflow: %{jobs: [job_1 | _]} = workflow
+    } do
+      apollo_endpoint = "http://localhost:4001"
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> apollo_endpoint
+        :openai_api_key -> "openai_api_key"
+      end)
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        fn
+          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
+            {:ok, %Tesla.Env{status: 200}}
+
+          %{method: :post}, _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{
+                 "history" => [
+                   %{"role" => "assistant", "content" => "Response!"}
+                 ]
+               }
+             }}
+        end
+      )
+
+      skip_disclaimer(user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      render_async(view)
+
+      assert view
+             |> form("#ai-assistant-form")
+             |> has_element?()
+
+      input_element = element(view, "#ai-assistant-form textarea")
+
+      assert has_element?(input_element)
+
+      message = "Hello, AI Assistant!"
+
+      view
+      |> form("#ai-assistant-form")
+      |> render_submit(%{content: message})
+
+      render_async(view)
+
+      refute render(input_element) =~ message
     end
   end
 
@@ -2950,5 +2991,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       )
 
     {high_priority_view, low_priority_view}
+  end
+
+  defp skip_disclaimer(user, read_at \\ DateTime.utc_now() |> DateTime.to_unix()) do
+    Ecto.Changeset.change(user, %{
+      preferences: %{"ai_assistant.disclaimer_read_at" => read_at}
+    })
+    |> Lightning.Repo.update!()
   end
 end
