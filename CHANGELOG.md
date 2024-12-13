@@ -21,7 +21,7 @@ and this project adheres to
 
 ### Fixed
 
-## [v2.10.7]
+## [v2.10.7] - 2024-12-13 🎂 ❤️ Happy Birthday, Mom!
 
 ### Added
 
