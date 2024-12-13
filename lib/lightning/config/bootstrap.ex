@@ -154,6 +154,14 @@ defmodule Lightning.Config.Bootstrap do
     config :lightning, :adaptor_service,
       adaptors_path: env!("ADAPTORS_PATH", :string, "./priv/openfn")
 
+    config :lightning, Lightning.AdaptorRegistry,
+      use_cache:
+        env!(
+          "ADAPTORS_REGISTRY_JSON_PATH",
+          :string,
+          Utils.get_env([:lightning, Lightning.AdaptorRegistry, :use_cache])
+        )
+
     config :lightning, :oauth_clients,
       google: [
         client_id: env!("GOOGLE_CLIENT_ID", :string, nil),
