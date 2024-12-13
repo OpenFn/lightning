@@ -27,6 +27,9 @@ and this project adheres to
 - Delete user modal no longer uses the same id as the underlying user record.
   [#2751](https://github.com/OpenFn/lightning/issues/2751)
 
+- Use workflow activation limiter on index toggle.
+  [#2777](https://github.com/OpenFn/lightning/issues/2777)
+
 ## [v2.10.6] - 2024-12-10
 
 ### Added
