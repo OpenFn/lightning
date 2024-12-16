@@ -17,8 +17,8 @@ defmodule Lightning.Services.UsageLimiter do
   end
 
   @impl true
-  def increment_ai_usage(session, message) do
-    adapter().increment_ai_usage(session, message)
+  def increment_ai_usage(session, usage) do
+    adapter().increment_ai_usage(session, usage)
   end
 
   @impl true

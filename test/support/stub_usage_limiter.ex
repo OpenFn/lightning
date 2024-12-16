@@ -33,7 +33,7 @@ defmodule Lightning.Extensions.StubUsageLimiter do
   end
 
   @impl true
-  def increment_ai_usage(session, _message), do: session
+  def increment_ai_usage(session, _usage), do: session
 
   @impl true
   def get_run_options(_context),

@@ -92,10 +92,11 @@ defmodule Lightning.AiAssistant do
 
   @spec save_message(ChatSession.t(), %{any() => any()}) ::
           {:ok, ChatSession.t()} | {:error, Ecto.Changeset.t()}
-  def save_message(session, message) do
+  def save_message(session, message, usage \\ %{}) do
     messages = Enum.map(session.messages, &Map.take(&1, [:id]))
 
     Multi.new()
+    |> Multi.put(:usage, usage)
     |> Multi.put(:message, message)
     |> Multi.insert_or_update(
       :upsert,
@@ -140,13 +141,8 @@ defmodule Lightning.AiAssistant do
          session
        )
        when status in 200..299 do
-    case List.last(history) do
-      nil ->
-        {:error, "No message history received"}
-
-      message ->
-        save_message(session, message)
-    end
+    message = body["history"] |> Enum.reverse() |> hd()
+    save_message(session, message, body["usage"])
   end
 
   defp handle_apollo_resp(
@@ -259,20 +255,29 @@ defmodule Lightning.AiAssistant do
     end
   end
 
-  @spec maybe_increment_ai_usage(%{upsert: ChatSession.t(), message: map()}) ::
-          Ecto.Multi.t()
+  @spec maybe_increment_ai_usage(%{
+          upsert: ChatSession.t(),
+          message: map(),
+          usage: map()
+        }) :: Ecto.Multi.t()
   defp maybe_increment_ai_usage(%{
          upsert: session,
-         message: %{"role" => "assistant"}
+         message: %{"role" => "assistant"},
+         usage: usage
        }) do
-    maybe_increment_ai_usage(%{upsert: session, message: %{role: :assistant}})
+    maybe_increment_ai_usage(%{
+      upsert: session,
+      message: %{role: :assistant},
+      usage: usage
+    })
   end
 
   defp maybe_increment_ai_usage(%{
          upsert: session,
-         message: %{role: :assistant} = message
+         message: %{role: :assistant},
+         usage: usage
        }) do
-    UsageLimiter.increment_ai_usage(session, message)
+    UsageLimiter.increment_ai_usage(session, usage)
   end
 
   defp maybe_increment_ai_usage(_user_role) do
