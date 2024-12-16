@@ -16,7 +16,7 @@ defmodule Lightning.Extensions.UsageLimiting do
             type:
               :new_run
               | :activate_workflow
-              | :ai_query
+              | :ai_usage
               | :alert_failure
               | :github_sync
               | :new_user

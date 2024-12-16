@@ -13,7 +13,7 @@ defmodule Lightning.AiAssistant.LimiterTest do
 
       stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn %{
                                                                       type:
-                                                                        :ai_query
+                                                                        :ai_usage
                                                                     },
                                                                     %{
                                                                       project_id:
@@ -34,7 +34,7 @@ defmodule Lightning.AiAssistant.LimiterTest do
 
       stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn %{
                                                                       type:
-                                                                        :ai_query
+                                                                        :ai_usage
                                                                     },
                                                                     %{
                                                                       project_id:

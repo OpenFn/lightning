@@ -13,7 +13,7 @@ defmodule Lightning.AiAssistant.Limiter do
   """
   @spec validate_quota(Ecto.UUID.t()) :: :ok | UsageLimiting.error()
   def validate_quota(project_id) do
-    UsageLimiter.limit_action(%Action{type: :ai_query}, %Context{
+    UsageLimiter.limit_action(%Action{type: :ai_usage}, %Context{
       project_id: project_id
     })
   end

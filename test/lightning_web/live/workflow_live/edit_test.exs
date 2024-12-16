@@ -2423,7 +2423,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn %{
                                                                           type:
-                                                                            :ai_query
+                                                                            :ai_usage
                                                                         },
                                                                         %{
                                                                           project_id:
