@@ -251,9 +251,9 @@ defmodule Lightning.AiAssistantTest do
 
       Mox.expect(
         Lightning.Extensions.MockUsageLimiter,
-        :increment_ai_queries,
+        :increment_ai_usage,
         1,
-        fn %{job_id: ^job_id} -> Ecto.Multi.new() end
+        fn %{job_id: ^job_id}, _message -> Ecto.Multi.new() end
       )
 
       content1 = """
@@ -275,9 +275,9 @@ defmodule Lightning.AiAssistantTest do
 
       Mox.expect(
         Lightning.Extensions.MockUsageLimiter,
-        :increment_ai_queries,
+        :increment_ai_usage,
         0,
-        fn %{job_id: ^job_id} -> Ecto.Multi.new() end
+        fn %{job_id: ^job_id}, _message -> Ecto.Multi.new() end
       )
 
       AiAssistant.save_message(session, %{

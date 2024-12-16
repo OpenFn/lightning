@@ -93,8 +93,6 @@ defmodule Lightning.AiAssistant do
   @spec save_message(ChatSession.t(), %{any() => any()}) ::
           {:ok, ChatSession.t()} | {:error, Ecto.Changeset.t()}
   def save_message(session, message) do
-    # we can call the limiter at this point
-    # note: we should only increment the counter when role is `:assistant`
     messages = Enum.map(session.messages, &Map.take(&1, [:id]))
 
     Multi.new()
@@ -104,7 +102,7 @@ defmodule Lightning.AiAssistant do
       session
       |> ChatSession.changeset(%{messages: messages ++ [message]})
     )
-    |> Multi.merge(&maybe_increment_msgs_counter/1)
+    |> Multi.merge(&maybe_increment_ai_usage/1)
     |> Repo.transaction()
     |> case do
       {:ok, %{upsert: session}} ->
@@ -247,25 +245,6 @@ defmodule Lightning.AiAssistant do
     ApolloClient.test() == :ok
   end
 
-  # assistant role sent via async as string
-  defp maybe_increment_msgs_counter(%{
-         upsert: session,
-         message: %{"role" => "assistant"}
-       }),
-       do:
-         maybe_increment_msgs_counter(%{
-           upsert: session,
-           message: %{role: :assistant}
-         })
-
-  defp maybe_increment_msgs_counter(%{
-         upsert: session,
-         message: %{role: :assistant}
-       }),
-       do: UsageLimiter.increment_ai_queries(session)
-
-  defp maybe_increment_msgs_counter(_user_role), do: Multi.new()
-
   @doc """
   Updates the status of a specific message within a chat session.
 
@@ -278,5 +257,25 @@ defmodule Lightning.AiAssistant do
       {:ok, _updated_message} -> {:ok, get_session!(session.id)}
       {:error, changeset} -> {:error, changeset}
     end
+  end
+
+  @spec maybe_increment_ai_usage(%{upsert: ChatSession.t(), message: map()}) ::
+          Ecto.Multi.t()
+  defp maybe_increment_ai_usage(%{
+         upsert: session,
+         message: %{"role" => "assistant"}
+       }) do
+    maybe_increment_ai_usage(%{upsert: session, message: %{role: :assistant}})
+  end
+
+  defp maybe_increment_ai_usage(%{
+         upsert: session,
+         message: %{role: :assistant} = message
+       }) do
+    UsageLimiter.increment_ai_usage(session, message)
+  end
+
+  defp maybe_increment_ai_usage(_user_role) do
+    Multi.new()
   end
 end

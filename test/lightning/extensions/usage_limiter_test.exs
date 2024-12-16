@@ -33,10 +33,10 @@ defmodule Lightning.Extensions.UsageLimiterTest do
     end
   end
 
-  describe "increment_ai_queries/2" do
+  describe "increment_ai_usage/2" do
     test "returns no change" do
       assert Ecto.Multi.new() ==
-               UsageLimiter.increment_ai_queries(build(:chat_session))
+               UsageLimiter.increment_ai_usage(build(:chat_session), %{})
     end
   end
 end
