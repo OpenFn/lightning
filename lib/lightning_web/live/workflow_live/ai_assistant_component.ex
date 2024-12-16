@@ -945,7 +945,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   defp maybe_check_limit(socket), do: socket
 
   defp check_limit(socket) do
-    limit = Limiter.validate_quota(socket.assigns.project_id)
+    %{project_id: project_id} = socket.assigns
+    limit = Limiter.validate_quota(project_id)
     error_message = if limit != :ok, do: error_message(limit)
     assign(socket, ai_limit_result: limit, error_message: error_message)
   end
