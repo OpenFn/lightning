@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Git-ignore files from mix assets.deploy
+  [#2788](https://github.com/OpenFn/lightning/issues/2788)
+
 ## [v2.10.7] - 2024-12-13 🎂 ❤️ Happy Birthday, Mom!
 
 ### Added
