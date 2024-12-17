@@ -35,6 +35,13 @@ defmodule LightningWeb.FallbackController do
     |> render(:"403")
   end
 
+  def call(conn, {:error, :conflict}) do
+    conn
+    |> put_status(:conflict)
+    |> put_view(LightningWeb.ErrorView)
+    |> render(:"409")
+  end
+
   def call(conn, {:error, %Ecto.Changeset{} = changeset}) do
     conn
     |> put_status(:unprocessable_entity)

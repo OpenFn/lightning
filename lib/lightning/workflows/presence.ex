@@ -10,6 +10,8 @@ defmodule Lightning.Workflows.Presence do
     pubsub_server: Lightning.PubSub
 
   alias LightningWeb.Endpoint
+  alias Lightning.Accounts.User
+  alias Lightning.Workflows.Workflow
 
   defstruct user: nil, joined_at: nil, active_sessions: 0
 
@@ -41,22 +43,23 @@ defmodule Lightning.Workflows.Presence do
   end
 
   @doc """
-  Tracks the presence of a user on a given topic.
+  Tracks the presence of a user on editing a workflow.
 
   ## Parameters
 
     - `user`: The user to be tracked.
-    - `topic`: The topic to track the user on.
+    - `workflow`: The workflow to track the user on.
     - `pid`: The process identifier for the user's session.
 
   ## Examples
 
-      iex> Lightning.Workflows.Presence.track_user_presence(%User{id: 1}, "room:lobby", self())
+      iex> Lightning.Workflows.Presence.track_user_presence(%User{id: user_id}, %Workflow{id: workflow_id}, self())
       :ok
 
   """
-  def track_user_presence(user, topic, pid) do
+  def track_user_presence(user, %Workflow{id: workflow_id}, pid) do
     joined_at = System.system_time(:microsecond)
+    topic = workflow_topic(workflow_id)
 
     track(pid, topic, user.id, %{
       user: user,
@@ -67,23 +70,57 @@ defmodule Lightning.Workflows.Presence do
   end
 
   @doc """
-  Lists all presences for a given topic.
+  Untracks the presence of a user on editing a workflow.
 
   ## Parameters
 
-    - `topic`: The topic to list the presences for.
+    - `user`: The user to be tracked.
+    - `workflow`: The workflow to track the user on.
+    - `pid`: The process identifier for the user's session.
 
   ## Examples
 
-      iex> Lightning.Workflows.Presence.list_presences("workflow:canvas")
+      iex> Lightning.Workflows.Presence.untrack_user_presence(%User{id: user_id}, %Workflow{id: workflow_id}, self())
+      :ok
+
+  """
+  def untrack_user_presence(%User{id: user_id}, %Workflow{id: workflow_id}, pid) do
+    untrack(
+      pid,
+      workflow_topic(workflow_id),
+      user_id
+    )
+  end
+
+  @doc """
+  Lists all presences for a given workflow.
+
+  ## Parameters
+
+    - `workflow`: The workflow to list the presences for.
+
+  ## Examples
+
+      iex> Lightning.Workflows.Presence.list_presences_for(%Workflow{id: xpto})
       [%Lightning.Workflows.Presence{user: %User{id: 1}, ...}, ...]
 
   """
-  def list_presences(topic) do
-    topic
+  def list_presences_for(%Workflow{id: workflow_id}) do
+    workflow_id
+    |> workflow_topic()
     |> list_presences_by_topic()
     |> group_presences_by_user()
     |> extract_presences()
+  end
+
+  @doc """
+  Informs if there is someone editing a workflow.
+  """
+  def has_any_presence?(%Workflow{id: workflow_id}) do
+    workflow_id
+    |> workflow_topic()
+    |> list()
+    |> Enum.any?()
   end
 
   @doc """
@@ -191,4 +228,6 @@ defmodule Lightning.Workflows.Presence do
       )
     end)
   end
+
+  defp workflow_topic(workflow_id), do: "workflow-#{workflow_id}:presence"
 end

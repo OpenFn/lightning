@@ -30,6 +30,18 @@ defmodule Lightning.Workflows.Edge do
         }
 
   @conditions [:on_job_success, :on_job_failure, :always, :js_expression]
+
+  @derive {Jason.Encoder,
+           only: [
+             :id,
+             :condition_type,
+             :enabled,
+             :source_job_id,
+             :source_trigger_id,
+             :target_job_id,
+             :inserted_at,
+             :updated_at
+           ]}
   schema "workflow_edges" do
     belongs_to :workflow, Workflow
     belongs_to :source_job, Job

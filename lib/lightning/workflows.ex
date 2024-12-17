@@ -37,6 +37,26 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
+  Returns the list of workflows for a project.
+
+  ## Examples
+
+      iex> list_project_workflows(project_id)
+      [%Workflow{}, ...]
+
+  """
+  def list_project_workflows(project_id, opts \\ []) do
+    include = Keyword.get(opts, :include, [])
+
+    from(w in Workflow,
+      where: w.project_id == ^project_id,
+      preload: ^include,
+      order_by: :name
+    )
+    |> Repo.all()
+  end
+
+  @doc """
   Gets a single workflow with optional preloads.
 
   Raises `Ecto.NoResultsError` if the Workflow does not exist.
