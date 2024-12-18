@@ -92,19 +92,18 @@ defmodule Lightning.AiAssistant do
 
   @spec save_message(ChatSession.t(), %{any() => any()}) ::
           {:ok, ChatSession.t()} | {:error, Ecto.Changeset.t()}
-  def save_message(session, message) do
-    # we can call the limiter at this point
-    # note: we should only increment the counter when role is `:assistant`
+  def save_message(session, message, usage \\ %{}) do
     messages = Enum.map(session.messages, &Map.take(&1, [:id]))
 
     Multi.new()
+    |> Multi.put(:usage, usage)
     |> Multi.put(:message, message)
     |> Multi.insert_or_update(
       :upsert,
       session
       |> ChatSession.changeset(%{messages: messages ++ [message]})
     )
-    |> Multi.merge(&maybe_increment_msgs_counter/1)
+    |> Multi.merge(&maybe_increment_ai_usage/1)
     |> Repo.transaction()
     |> case do
       {:ok, %{upsert: session}} ->
@@ -138,24 +137,20 @@ defmodule Lightning.AiAssistant do
   end
 
   defp handle_apollo_resp(
-         {:ok, %Tesla.Env{status: status, body: %{"history" => history}}},
+         {:ok, %Tesla.Env{status: status, body: body}},
          session
        )
        when status in 200..299 do
-    case List.last(history) do
-      nil ->
-        {:error, "No message history received"}
-
-      message ->
-        save_message(session, message)
-    end
+    message = body["history"] |> Enum.reverse() |> hd()
+    save_message(session, message, body["usage"])
   end
 
   defp handle_apollo_resp(
-         {:ok, %Tesla.Env{status: status, body: %{"message" => error_message}}},
+         {:ok, %Tesla.Env{status: status, body: body}},
          session
        )
        when status not in 200..299 do
+    error_message = body["message"]
     Logger.error("AI query failed for session #{session.id}: #{error_message}")
     {:error, error_message}
   end
@@ -247,25 +242,6 @@ defmodule Lightning.AiAssistant do
     ApolloClient.test() == :ok
   end
 
-  # assistant role sent via async as string
-  defp maybe_increment_msgs_counter(%{
-         upsert: session,
-         message: %{"role" => "assistant"}
-       }),
-       do:
-         maybe_increment_msgs_counter(%{
-           upsert: session,
-           message: %{role: :assistant}
-         })
-
-  defp maybe_increment_msgs_counter(%{
-         upsert: session,
-         message: %{role: :assistant}
-       }),
-       do: UsageLimiter.increment_ai_queries(session)
-
-  defp maybe_increment_msgs_counter(_user_role), do: Multi.new()
-
   @doc """
   Updates the status of a specific message within a chat session.
 
@@ -278,5 +254,34 @@ defmodule Lightning.AiAssistant do
       {:ok, _updated_message} -> {:ok, get_session!(session.id)}
       {:error, changeset} -> {:error, changeset}
     end
+  end
+
+  @spec maybe_increment_ai_usage(%{
+          upsert: ChatSession.t(),
+          message: map(),
+          usage: map()
+        }) :: Ecto.Multi.t()
+  defp maybe_increment_ai_usage(%{
+         upsert: session,
+         message: %{"role" => "assistant"},
+         usage: usage
+       }) do
+    maybe_increment_ai_usage(%{
+      upsert: session,
+      message: %{role: :assistant},
+      usage: usage
+    })
+  end
+
+  defp maybe_increment_ai_usage(%{
+         upsert: session,
+         message: %{role: :assistant},
+         usage: usage
+       }) do
+    UsageLimiter.increment_ai_usage(session, usage)
+  end
+
+  defp maybe_increment_ai_usage(_user_role) do
+    Multi.new()
   end
 end

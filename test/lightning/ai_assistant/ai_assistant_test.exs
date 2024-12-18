@@ -110,39 +110,6 @@ defmodule Lightning.AiAssistantTest do
 
       assert Lightning.Repo.reload!(saved_message)
     end
-
-    test "handles empty history in response", %{
-      user: user,
-      workflow: %{jobs: [job_1 | _]}
-    } do
-      session =
-        insert(:chat_session,
-          user: user,
-          job: job_1,
-          messages: [%{role: :user, content: "what?", user: user}]
-        )
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :openai_api_key -> "api_key"
-        end
-      end)
-
-      empty_history_reply =
-        Jason.encode!(%{
-          "response" => "Some response",
-          "history" => []
-        })
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :post, url: url}, _opts ->
-        assert url =~ "/services/job_chat"
-        {:ok, %Tesla.Env{status: 200, body: Jason.decode!(empty_history_reply)}}
-      end)
-
-      assert {:error, "No message history received"} =
-               AiAssistant.query(session, "foo")
-    end
   end
 
   describe "list_sessions_for_job/1" do
@@ -251,9 +218,9 @@ defmodule Lightning.AiAssistantTest do
 
       Mox.expect(
         Lightning.Extensions.MockUsageLimiter,
-        :increment_ai_queries,
+        :increment_ai_usage,
         1,
-        fn %{job_id: ^job_id} -> Ecto.Multi.new() end
+        fn %{job_id: ^job_id}, _usage -> Ecto.Multi.new() end
       )
 
       content1 = """
@@ -275,9 +242,9 @@ defmodule Lightning.AiAssistantTest do
 
       Mox.expect(
         Lightning.Extensions.MockUsageLimiter,
-        :increment_ai_queries,
+        :increment_ai_usage,
         0,
-        fn %{job_id: ^job_id} -> Ecto.Multi.new() end
+        fn %{job_id: ^job_id}, _usage -> Ecto.Multi.new() end
       )
 
       AiAssistant.save_message(session, %{

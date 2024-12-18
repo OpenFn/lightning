@@ -16,7 +16,7 @@ defmodule Lightning.Extensions.UsageLimiting do
             type:
               :new_run
               | :activate_workflow
-              | :ai_query
+              | :ai_usage
               | :alert_failure
               | :github_sync
               | :new_user
@@ -72,7 +72,7 @@ defmodule Lightning.Extensions.UsageLimiting do
 
     - An Ecto.Multi struct representing the transaction to increment AI queries.
   """
-  @callback increment_ai_queries(Lightning.AiAssistant.ChatSession.t()) ::
+  @callback increment_ai_usage(Lightning.AiAssistant.ChatSession.t(), map()) ::
               Ecto.Multi.t()
 
   @doc """
