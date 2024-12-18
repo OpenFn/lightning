@@ -5,9 +5,11 @@ defmodule Lightning.AiAssistant do
 
   import Ecto.Query
 
+  alias Ecto.Changeset
   alias Ecto.Multi
   alias Lightning.Accounts
   alias Lightning.Accounts.User
+  alias Lightning.AiAssistant.ChatMessage
   alias Lightning.AiAssistant.ChatSession
   alias Lightning.ApolloClient
   alias Lightning.Repo
@@ -43,7 +45,15 @@ defmodule Lightning.AiAssistant do
 
   @spec get_session!(Ecto.UUID.t()) :: ChatSession.t()
   def get_session!(id) do
-    ChatSession |> Repo.get!(id) |> Repo.preload(messages: :user)
+    message_query =
+      from(m in ChatMessage,
+        where: m.status != :cancelled,
+        order_by: [asc: :inserted_at]
+      )
+
+    ChatSession
+    |> Repo.get!(id)
+    |> Repo.preload(messages: {message_query, :user})
   end
 
   @spec create_session(Job.t(), User.t(), String.t()) ::
@@ -108,7 +118,7 @@ defmodule Lightning.AiAssistant do
   @doc """
   Queries the AI assistant with the given content.
 
-  Returns `{:ok, session}` if the query was successful, otherwise `:error`.
+  Returns `{:ok, session}` if the query was successful, otherwise `{:error, reason}`.
 
   **Example**
 
@@ -119,34 +129,53 @@ defmodule Lightning.AiAssistant do
           {:ok, ChatSession.t()}
           | {:error, String.t() | Ecto.Changeset.t()}
   def query(session, content) do
-    apollo_resp =
-      ApolloClient.query(
-        content,
-        %{expression: session.expression, adaptor: session.adaptor},
-        build_history(session)
-      )
+    ApolloClient.query(
+      content,
+      %{expression: session.expression, adaptor: session.adaptor},
+      build_history(session)
+    )
+    |> handle_apollo_resp(session)
+  end
 
-    case apollo_resp do
-      {:ok, %Tesla.Env{status: status, body: body}} when status in 200..299 ->
-        message = body["history"] |> Enum.reverse() |> hd()
+  defp handle_apollo_resp(
+         {:ok, %Tesla.Env{status: status, body: %{"history" => history}}},
+         session
+       )
+       when status in 200..299 do
+    case List.last(history) do
+      nil ->
+        {:error, "No message history received"}
+
+      message ->
         save_message(session, message)
-
-      {:ok, %Tesla.Env{body: %{"message" => message}}} ->
-        {:error, message}
-
-      {:error, :timeout} ->
-        {:error, "Request timed out. Please try again."}
-
-      {:error, :econnrefused} ->
-        {:error, "Unable to reach the AI server. Please try again later."}
-
-      unexpected_error ->
-        Logger.warning(
-          "Received an unexpected error: #{inspect(unexpected_error)}"
-        )
-
-        {:error, "Oops! Something went wrong. Please try again."}
     end
+  end
+
+  defp handle_apollo_resp(
+         {:ok, %Tesla.Env{status: status, body: %{"message" => error_message}}},
+         session
+       )
+       when status not in 200..299 do
+    Logger.error("AI query failed for session #{session.id}: #{error_message}")
+    {:error, error_message}
+  end
+
+  defp handle_apollo_resp({:error, :timeout}, session) do
+    Logger.error("AI query timed out for session #{session.id}")
+    {:error, "Request timed out. Please try again."}
+  end
+
+  defp handle_apollo_resp({:error, :econnrefused}, session) do
+    Logger.error("Connection to AI server refused for session #{session.id}")
+    {:error, "Unable to reach the AI server. Please try again later."}
+  end
+
+  defp handle_apollo_resp(unexpected_error, session) do
+    Logger.error(
+      "Received an unexpected error for session #{session.id}: #{inspect(unexpected_error)}"
+    )
+
+    {:error, "Oops! Something went wrong. Please try again."}
   end
 
   defp build_history(session) do
@@ -236,4 +265,18 @@ defmodule Lightning.AiAssistant do
        do: UsageLimiter.increment_ai_queries(session)
 
   defp maybe_increment_msgs_counter(_user_role), do: Multi.new()
+
+  @doc """
+  Updates the status of a specific message within a chat session.
+
+  Returns `{:ok, session}` if the update is successful, otherwise `{:error, changeset}`.
+  """
+  @spec update_message_status(ChatSession.t(), ChatMessage.t(), atom()) ::
+          {:ok, ChatSession.t()} | {:error, Changeset.t()}
+  def update_message_status(session, message, status) do
+    case Repo.update(ChatMessage.changeset(message, %{status: status})) do
+      {:ok, _updated_message} -> {:ok, get_session!(session.id)}
+      {:error, changeset} -> {:error, changeset}
+    end
+  end
 end

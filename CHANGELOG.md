@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Add ability to retry or cancel AI Assistant error responses for user messages
+  [#2704](https://github.com/OpenFn/lightning/issues/2704)
+
 ### Changed
 
 ### Fixed
@@ -29,6 +32,8 @@ and this project adheres to
   [#2781](https://github.com/OpenFn/lightning/issues/2781)
 - Allow different rules and action for delete user.
   [#2500](https://github.com/OpenFn/lightning/issues/2500)
+- Handle errors from the AI Assistant more gracefully
+  [#2741](https://github.com/OpenFn/lightning/issues/2741)
 
 ### Changed
 
