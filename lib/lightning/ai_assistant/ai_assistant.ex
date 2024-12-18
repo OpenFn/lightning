@@ -137,7 +137,7 @@ defmodule Lightning.AiAssistant do
   end
 
   defp handle_apollo_resp(
-         {:ok, %Tesla.Env{status: status, body: %{"history" => history}}},
+         {:ok, %Tesla.Env{status: status, body: body}},
          session
        )
        when status in 200..299 do
@@ -146,10 +146,11 @@ defmodule Lightning.AiAssistant do
   end
 
   defp handle_apollo_resp(
-         {:ok, %Tesla.Env{status: status, body: %{"message" => error_message}}},
+         {:ok, %Tesla.Env{status: status, body: body}},
          session
        )
        when status not in 200..299 do
+    error_message = body["message"]
     Logger.error("AI query failed for session #{session.id}: #{error_message}")
     {:error, error_message}
   end
