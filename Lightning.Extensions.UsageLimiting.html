@@ -14,7 +14,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-6727F19A.js"></script>
+    <script src="dist/sidebar_items-BBA22575.js"></script>
     <script src="docs_config.js"></script>
     <script async src="dist/html-YIPIRHGU.js"></script>
 
@@ -225,7 +225,7 @@ a timeout value and a flag for saving dataclips.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:increment_ai_queries/1" data-no-tooltip translate="no">increment_ai_queries(t)</a>
+        <a href="#c:increment_ai_usage/2" data-no-tooltip translate="no">increment_ai_usage(t, map)</a>
 
       </div>
 
@@ -489,14 +489,14 @@ a timeout value and a flag for saving dataclips.</p><p>Requires a <code class="i
 <ul><li>A keyword list of run options including:<ul><li><code class="inline">:run_timeout_ms</code>: The run timeout in milliseconds.</li><li><code class="inline">:save_dataclips</code>: A boolean indicating whether to save dataclips.</li></ul></li></ul>
   </section>
 </section>
-<section class="detail" id="c:increment_ai_queries/1">
+<section class="detail" id="c:increment_ai_usage/2">
 
   <div class="detail-header">
-    <a href="#c:increment_ai_queries/1" class="detail-link" data-no-tooltip title="Link to this callback">
+    <a href="#c:increment_ai_usage/2" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
-    <h1 class="signature" translate="no">increment_ai_queries(t)</h1>
+    <h1 class="signature" translate="no">increment_ai_usage(t, map)</h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/usage_limiting.ex#L75" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
@@ -510,12 +510,13 @@ a timeout value and a flag for saving dataclips.</p><p>Requires a <code class="i
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@callback</span> increment_ai_queries(Lightning.AiAssistant.ChatSession.t()) :: <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Multi.html#t:t/0">Ecto.Multi.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@callback</span> increment_ai_usage(Lightning.AiAssistant.ChatSession.t(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) ::
+  <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Multi.html#t:t/0">Ecto.Multi.t</a>()</pre>
 
       </div>
 
-<p>Increments the AI query count for a given chat session.</p><p>Requires a <code class="inline">Lightning.AiAssistant.ChatSession</code> struct.</p><h2 id="c:increment_ai_queries/1-returns" class="section-heading">
-  <a href="#c:increment_ai_queries/1-returns" class="hover-link">
+<p>Increments the AI query count for a given chat session.</p><p>Requires a <code class="inline">Lightning.AiAssistant.ChatSession</code> struct.</p><h2 id="c:increment_ai_usage/2-returns" class="section-heading">
+  <a href="#c:increment_ai_usage/2-returns" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Returns</span>
