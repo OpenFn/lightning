@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Add workflows API to create, update, get and list.
+  [#1887](https://github.com/OpenFn/lightning/issues/1887)
+
 ### Changed
 
 ### Fixed

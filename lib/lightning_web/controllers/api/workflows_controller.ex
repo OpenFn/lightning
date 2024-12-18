@@ -32,28 +32,7 @@ defmodule LightningWeb.API.WorkflowsController do
            save_workflow(params, conn.assigns.current_resource) do
       json(conn, %{id: workflow_id, error: nil})
     end
-    |> then(fn result ->
-      case result do
-        {:error, :too_many_workflows} ->
-          conn
-          |> put_status(:unprocessable_entity)
-          |> json(%{
-            id: nil,
-            error: "Your plan has reached the limit of active workflows."
-          })
-
-        {:error, :too_many_active_triggers} ->
-          conn
-          |> put_status(:unprocessable_entity)
-          |> json(%{
-            id: nil,
-            error: "A workflow can have only one trigger enabled at a time."
-          })
-
-        result ->
-          result
-      end
-    end)
+    |> then(&maybe_handle_error(conn, &1))
   end
 
   def show(conn, %{"project_id" => project_id, "id" => workflow_id}) do
@@ -71,36 +50,7 @@ defmodule LightningWeb.API.WorkflowsController do
            save_workflow(workflow, params, conn.assigns.current_resource) do
       json(conn, %{id: workflow_id, error: nil})
     end
-    |> then(fn result ->
-      case result do
-        {:error, :cannot_replace_trigger} ->
-          conn
-          |> put_status(:unprocessable_entity)
-          |> json(%{
-            id: workflow_id,
-            error: "The triggers cannot be replaced, only edited or added."
-          })
-
-        {:error, :too_many_workflows} ->
-          conn
-          |> put_status(:unprocessable_entity)
-          |> json(%{
-            id: workflow_id,
-            error: "Your plan has reached the limit of active workflows."
-          })
-
-        {:error, :too_many_active_triggers} ->
-          conn
-          |> put_status(:unprocessable_entity)
-          |> json(%{
-            id: workflow_id,
-            error: "A workflow can have only one trigger enabled at a time."
-          })
-
-        result ->
-          result
-      end
-    end)
+    |> then(&maybe_handle_error(conn, &1, workflow_id))
   end
 
   defp save_workflow(%{"project_id" => project_id} = params, user) do
@@ -145,7 +95,7 @@ defmodule LightningWeb.API.WorkflowsController do
 
   defp save_workflow(params_or_changeset, active?, project_id, user)
        when is_boolean(active?) do
-    if active? == false or
+    if not active? or
          :ok ==
            UsageLimiter.limit_action(
              %Action{type: :activate_workflow},
@@ -190,5 +140,39 @@ defmodule LightningWeb.API.WorkflowsController do
       conn.assigns.current_resource,
       project
     )
+  end
+
+  defp maybe_handle_error(conn, result, workflow_id \\ nil) do
+    case result do
+      {:error, :cannot_replace_trigger} ->
+        reply_422(
+          conn,
+          workflow_id,
+          "The triggers cannot be replaced, only edited or added."
+        )
+
+      {:error, :too_many_workflows} ->
+        reply_422(
+          conn,
+          workflow_id,
+          "Your plan has reached the limit of active workflows."
+        )
+
+      {:error, :too_many_active_triggers} ->
+        reply_422(
+          conn,
+          workflow_id,
+          "A workflow can have only one trigger enabled at a time."
+        )
+
+      result ->
+        result
+    end
+  end
+
+  defp reply_422(conn, workflow_id, msg) do
+    conn
+    |> put_status(:unprocessable_entity)
+    |> json(%{id: workflow_id, error: msg})
   end
 end
