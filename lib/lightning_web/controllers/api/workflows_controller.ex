@@ -3,8 +3,8 @@ defmodule LightningWeb.API.WorkflowsController do
 
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
-  alias Lightning.Projects.Project
   alias Lightning.Policies.Permissions
+  alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows
