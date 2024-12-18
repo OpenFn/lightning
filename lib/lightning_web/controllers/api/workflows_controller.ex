@@ -32,6 +32,22 @@ defmodule LightningWeb.API.WorkflowsController do
            save_workflow(params, conn.assigns.current_resource) do
       json(conn, %{id: workflow_id, error: nil})
     end
+    |> then(fn result ->
+      case result do
+        {:error, :too_many_workflows} ->
+          conn
+          |> put_status(:unprocessable_entity)
+          |> json(%{id: nil, error: "Your plan has reached the limit of active workflows."})
+
+        {:error, :too_many_active_triggers} ->
+          conn
+          |> put_status(:unprocessable_entity)
+          |> json(%{id: nil, error: "Only one trigger can be enabled at a time."})
+
+        result ->
+          result
+      end
+    end)
   end
 
   def show(conn, %{"project_id" => project_id, "id" => workflow_id}) do
@@ -60,11 +76,6 @@ defmodule LightningWeb.API.WorkflowsController do
           conn
           |> put_status(:unprocessable_entity)
           |> json(%{id: workflow_id, error: "Only one trigger can be enabled at a time."})
-
-        {:error, :too_many_workflows} ->
-          conn
-          |> put_status(:unprocessable_entity)
-          |> json(%{id: workflow_id, error: "Your plan has reached the limit of active workflows."})
 
         result ->
           result

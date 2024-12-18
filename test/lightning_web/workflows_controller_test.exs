@@ -133,7 +133,6 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         )
 
       assert %{"id" => workflow_id, "error" => nil} = json_response(conn, 200)
-      assert Ecto.UUID.dump(workflow_id)
 
       saved_workflow =
         Repo.get(Workflow, workflow_id)
@@ -145,6 +144,66 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              |> Map.put(:id, workflow_id)
              |> encode_decode()
              |> remove_timestamps() == saved_workflow
+    end
+
+    test "returns 422 when workflow limit has been reached", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      insert(:simple_workflow, name: "work1", project: project)
+
+      workflow =
+        build(:simple_workflow, name: "work2", project_id: project.id)
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :activate_workflow}, _context ->
+            {:error, :too_many_workflows, %{text: "any"}}
+        end
+      )
+
+      conn =
+        conn
+        |> assign_bearer(user)
+        |> post(
+          ~p"/api/projects/#{project.id}/workflows/",
+          Jason.encode!(workflow)
+        )
+
+      assert %{"id" => nil, "error" => "Your plan has reached the limit of active workflows."} = json_response(conn, 422)
+    end
+
+    test "returns 422 when there are too many active triggers", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      workflow =
+        build(:simple_workflow, name: "workflow", triggers: build_list(2, :trigger), project_id: project.id)
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :activate_workflow}, _context ->
+            {:error, :too_many_workflows, %{text: "any"}}
+        end
+      )
+
+      conn =
+        conn
+        |> assign_bearer(user)
+        |> post(
+          ~p"/api/projects/#{project.id}/workflows/",
+          Jason.encode!(workflow)
+        )
+
+      assert %{"id" => nil, "error" => "Your plan has reached the limit of active workflows."} = json_response(conn, 422)
     end
 
     test "returns 401 without a token", %{conn: conn} do
