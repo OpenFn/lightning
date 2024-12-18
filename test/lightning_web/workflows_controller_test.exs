@@ -161,26 +161,29 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
     end
   end
 
-  describe "PUT /workflows/:workflow_id" do
+  describe "PATCH /workflows/:workflow_id" do
     test "updates a workflow", %{conn: conn} do
       user = insert(:user)
 
       project =
         insert(:project, project_users: [%{user: user}])
 
-      workflow =
-        insert(:simple_workflow, name: "work1", project: project)
+      %{triggers: [trigger]} =
+        workflow =
+        insert(:simple_workflow, name: "work1.0", project: project)
         |> Repo.reload()
         |> Repo.preload([:edges, :jobs, :triggers])
 
-      workflow = %{workflow | name: "work2"}
+      patch =
+        build(:trigger, type: :cron, cron_expression: "0 0 * * *", enabled: true)
+        |> then(&%{name: "work1.1", triggers: [%{trigger | enabled: false}, &1]})
 
       conn =
         conn
         |> assign_bearer(user)
-        |> put(
-          ~p"/api/projects/#{project.id}/workflows//#{workflow.id}",
-          Jason.encode!(workflow)
+        |> patch(
+          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          Jason.encode!(patch)
         )
 
       assert %{"id" => workflow_id, "error" => nil} = json_response(conn, 200)
@@ -193,9 +196,81 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         |> remove_timestamps()
 
       assert workflow
-             |> Map.put(:id, workflow_id)
+             |> Map.merge(patch)
              |> encode_decode()
              |> remove_timestamps() == saved_workflow
+    end
+
+    test "returns 422 when trying to replace the triggers", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      workflow =
+        insert(:simple_workflow, name: "work1", project: project)
+        |> Repo.reload()
+        |> Repo.preload([:edges, :jobs, :triggers])
+
+      patch =
+        %{
+          triggers: [
+            build(:trigger,
+              type: :cron,
+              cron_expression: "0 0 * * *",
+              enabled: true
+            )
+          ]
+        }
+
+      conn =
+        conn
+        |> assign_bearer(user)
+        |> patch(
+          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          Jason.encode!(patch)
+        )
+
+      assert json_response(conn, 422) == %{
+               "id" => workflow.id,
+               "error" => "The triggers cannot be replaced, only edited or added."
+             }
+    end
+
+    test "returns 422 when there are too many enabled triggers", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      workflow =
+        insert(:simple_workflow, name: "work1", project: project)
+        |> Repo.reload()
+        |> Repo.preload([:edges, :jobs, :triggers])
+
+      patch =
+        %{
+          triggers: [
+            build(:trigger,
+              type: :cron,
+              cron_expression: "0 0 * * *",
+              enabled: true
+            ) | workflow.triggers
+          ]
+        }
+
+      conn =
+        conn
+        |> assign_bearer(user)
+        |> patch(
+          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          Jason.encode!(patch)
+        )
+
+      assert json_response(conn, 422) == %{
+               "id" => workflow.id,
+               "error" => "Only one trigger can be enabled at a time."
+             }
     end
 
     test "returns 401 without a token", %{conn: conn} do
@@ -204,9 +279,131 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       project =
         insert(:project, project_users: [%{user: user}])
 
-      build(:simple_workflow, name: "work1", project: project)
+      workflow = insert(:simple_workflow, name: "work1", project: project)
 
-      conn = post(conn, ~p"/api/projects/#{project.id}/workflows/")
+      conn =
+        patch(conn, ~p"/api/projects/#{project.id}/workflows/#{workflow.id}", %{
+          name: "work-2"
+        })
+
+      assert %{"error" => "Unauthorized"} == json_response(conn, 401)
+    end
+  end
+
+  describe "PUT /workflows/:workflow_id" do
+    test "updates completely a workflow", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      %{triggers: [trigger]} =
+        workflow =
+        insert(:simple_workflow, name: "work1.0", project: project)
+        |> Repo.reload()
+        |> Repo.preload([:edges, :jobs, :triggers])
+
+      complete_update =
+        build(:simple_workflow, name: "work1.1", project: project)
+        |> then(fn %{
+                     edges: [new_edge | other_new_edges],
+                     jobs: [new_job1 | _other_jobs] = new_jobs,
+                     triggers: [new_trigger]
+                   } ->
+          Map.merge(workflow, %{
+            edges: [
+              %{
+                new_edge
+                | source_trigger_id: new_trigger.id,
+                  target_job_id: new_job1.id
+              }
+              | other_new_edges
+            ],
+            jobs: new_jobs,
+            triggers: [%{trigger | enabled: false}, new_trigger]
+          })
+        end)
+
+      conn =
+        conn
+        |> assign_bearer(user)
+        |> put(
+          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          Jason.encode!(complete_update)
+        )
+
+      assert json_response(conn, 200) == %{"id" => workflow.id, "error" => nil}
+
+      saved_workflow =
+        Repo.get(Workflow, workflow.id)
+        |> Repo.preload([:edges, :jobs, :triggers])
+        |> encode_decode()
+        |> remove_timestamps()
+
+      assert workflow
+             |> Map.merge(complete_update)
+             |> encode_decode()
+             |> remove_timestamps() == saved_workflow
+    end
+
+    test "returns 422 when trying to replace the triggers", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      workflow =
+          insert(:simple_workflow, name: "work1.0", project: project)
+          |> Repo.reload()
+          |> Repo.preload([:edges, :jobs, :triggers])
+
+        invalid_update =
+          build(:simple_workflow, name: "work1.1", project: project)
+          |> then(fn %{
+                       edges: [new_edge | other_new_edges],
+                       jobs: [new_job1 | _other_jobs] = new_jobs,
+                       triggers: [new_trigger]
+                     } ->
+            Map.merge(workflow, %{
+              edges: [
+                %{
+                  new_edge
+                  | source_trigger_id: new_trigger.id,
+                    target_job_id: new_job1.id
+                }
+                | other_new_edges
+              ],
+              jobs: new_jobs,
+              triggers: [new_trigger]
+            })
+          end)
+
+      conn =
+        conn
+        |> assign_bearer(user)
+        |> put(
+          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          Jason.encode!(invalid_update)
+        )
+
+      assert json_response(conn, 422) == %{
+               "id" => workflow.id,
+               "error" => "The triggers cannot be replaced, only edited or added."
+             }
+    end
+
+    test "returns 401 without a token", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      workflow = insert(:simple_workflow, name: "work1", project: project)
+
+      conn =
+        patch(conn, ~p"/api/projects/#{project.id}/workflows/#{workflow.id}", %{
+          name: "work-2"
+        })
 
       assert %{"error" => "Unauthorized"} == json_response(conn, 401)
     end
