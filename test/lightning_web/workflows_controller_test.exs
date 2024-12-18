@@ -174,7 +174,10 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
           Jason.encode!(workflow)
         )
 
-      assert %{"id" => nil, "error" => "Your plan has reached the limit of active workflows."} = json_response(conn, 422)
+      assert %{
+               "id" => nil,
+               "error" => "Your plan has reached the limit of active workflows."
+             } = json_response(conn, 422)
     end
 
     test "returns 422 when there are too many active triggers", %{conn: conn} do
@@ -184,7 +187,11 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         insert(:project, project_users: [%{user: user}])
 
       workflow =
-        build(:simple_workflow, name: "workflow", triggers: build_list(2, :trigger), project_id: project.id)
+        build(:simple_workflow,
+          name: "workflow",
+          triggers: build_list(2, :trigger),
+          project_id: project.id
+        )
 
       Mox.stub(
         Lightning.Extensions.MockUsageLimiter,
@@ -203,7 +210,11 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
           Jason.encode!(workflow)
         )
 
-      assert %{"id" => nil, "error" => "Your plan has reached the limit of active workflows."} = json_response(conn, 422)
+      assert %{
+               "id" => nil,
+               "error" =>
+                 "A workflow can have only one trigger enabled at a time."
+             } = json_response(conn, 422)
     end
 
     test "returns 401 without a token", %{conn: conn} do
@@ -292,8 +303,48 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       assert json_response(conn, 422) == %{
                "id" => workflow.id,
-               "error" => "The triggers cannot be replaced, only edited or added."
+               "error" =>
+                 "The triggers cannot be replaced, only edited or added."
              }
+    end
+
+    test "returns 422 when workflow limit has been reached", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      insert(:simple_workflow, name: "work1", project: project)
+
+      trigger = build(:trigger, enabled: false)
+
+      workflow =
+        insert(:simple_workflow, name: "work2", project: project)
+        |> with_trigger(trigger)
+
+      patch = %{triggers: [%{(workflow.triggers |> hd()) | enabled: true}]}
+
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :activate_workflow}, _context ->
+            {:error, :too_many_workflows, %{text: "any"}}
+        end
+      )
+
+      conn =
+        conn
+        |> assign_bearer(user)
+        |> patch(
+          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          Jason.encode!(patch)
+        )
+
+      assert %{
+               "id" => workflow.id,
+               "error" => "Your plan has reached the limit of active workflows."
+             } == json_response(conn, 422)
     end
 
     test "returns 422 when there are too many enabled triggers", %{conn: conn} do
@@ -314,7 +365,8 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
               type: :cron,
               cron_expression: "0 0 * * *",
               enabled: true
-            ) | workflow.triggers
+            )
+            | workflow.triggers
           ]
         }
 
@@ -328,7 +380,8 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       assert json_response(conn, 422) == %{
                "id" => workflow.id,
-               "error" => "Only one trigger can be enabled at a time."
+               "error" =>
+                 "A workflow can have only one trigger enabled at a time."
              }
     end
 
@@ -412,30 +465,30 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         insert(:project, project_users: [%{user: user}])
 
       workflow =
-          insert(:simple_workflow, name: "work1.0", project: project)
-          |> Repo.reload()
-          |> Repo.preload([:edges, :jobs, :triggers])
+        insert(:simple_workflow, name: "work1.0", project: project)
+        |> Repo.reload()
+        |> Repo.preload([:edges, :jobs, :triggers])
 
-        invalid_update =
-          build(:simple_workflow, name: "work1.1", project: project)
-          |> then(fn %{
-                       edges: [new_edge | other_new_edges],
-                       jobs: [new_job1 | _other_jobs] = new_jobs,
-                       triggers: [new_trigger]
-                     } ->
-            Map.merge(workflow, %{
-              edges: [
-                %{
-                  new_edge
-                  | source_trigger_id: new_trigger.id,
-                    target_job_id: new_job1.id
-                }
-                | other_new_edges
-              ],
-              jobs: new_jobs,
-              triggers: [new_trigger]
-            })
-          end)
+      invalid_update =
+        build(:simple_workflow, name: "work1.1", project: project)
+        |> then(fn %{
+                     edges: [new_edge | other_new_edges],
+                     jobs: [new_job1 | _other_jobs] = new_jobs,
+                     triggers: [new_trigger]
+                   } ->
+          Map.merge(workflow, %{
+            edges: [
+              %{
+                new_edge
+                | source_trigger_id: new_trigger.id,
+                  target_job_id: new_job1.id
+              }
+              | other_new_edges
+            ],
+            jobs: new_jobs,
+            triggers: [new_trigger]
+          })
+        end)
 
       conn =
         conn
@@ -447,7 +500,8 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       assert json_response(conn, 422) == %{
                "id" => workflow.id,
-               "error" => "The triggers cannot be replaced, only edited or added."
+               "error" =>
+                 "The triggers cannot be replaced, only edited or added."
              }
     end
 

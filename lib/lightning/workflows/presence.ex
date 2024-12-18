@@ -9,9 +9,9 @@ defmodule Lightning.Workflows.Presence do
     otp_app: :lightning,
     pubsub_server: Lightning.PubSub
 
-  alias LightningWeb.Endpoint
   alias Lightning.Accounts.User
   alias Lightning.Workflows.Workflow
+  alias LightningWeb.Endpoint
 
   defstruct user: nil, joined_at: nil, active_sessions: 0
 

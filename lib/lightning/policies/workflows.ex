@@ -9,7 +9,7 @@ defmodule Lightning.Policies.Workflows do
   alias Lightning.Run
 
   @type actions :: :access_write | :access_read
-  @spec authorize(actions(), User.t() | Runt.t(), Project.t()) ::
+  @spec authorize(actions(), User.t() | Run.t(), Project.t()) ::
           :ok | {:error, :unauthorized}
   def authorize(access, %User{} = user, project)
       when access in [:access_write, :access_read] do

@@ -4,12 +4,12 @@ defmodule LightningWeb.API.WorkflowsController do
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Projects.Project
+  alias Lightning.Policies.Permissions
   alias Lightning.Repo
+  alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows
   alias Lightning.Workflows.Presence
   alias Lightning.Workflows.Workflow
-  alias Lightning.Policies.Permissions
-  alias Lightning.Services.UsageLimiter
 
   action_fallback LightningWeb.FallbackController
 
@@ -37,12 +37,18 @@ defmodule LightningWeb.API.WorkflowsController do
         {:error, :too_many_workflows} ->
           conn
           |> put_status(:unprocessable_entity)
-          |> json(%{id: nil, error: "Your plan has reached the limit of active workflows."})
+          |> json(%{
+            id: nil,
+            error: "Your plan has reached the limit of active workflows."
+          })
 
         {:error, :too_many_active_triggers} ->
           conn
           |> put_status(:unprocessable_entity)
-          |> json(%{id: nil, error: "Only one trigger can be enabled at a time."})
+          |> json(%{
+            id: nil,
+            error: "A workflow can have only one trigger enabled at a time."
+          })
 
         result ->
           result
@@ -70,12 +76,26 @@ defmodule LightningWeb.API.WorkflowsController do
         {:error, :cannot_replace_trigger} ->
           conn
           |> put_status(:unprocessable_entity)
-          |> json(%{id: workflow_id, error: "The triggers cannot be replaced, only edited or added."})
+          |> json(%{
+            id: workflow_id,
+            error: "The triggers cannot be replaced, only edited or added."
+          })
+
+        {:error, :too_many_workflows} ->
+          conn
+          |> put_status(:unprocessable_entity)
+          |> json(%{
+            id: workflow_id,
+            error: "Your plan has reached the limit of active workflows."
+          })
 
         {:error, :too_many_active_triggers} ->
           conn
           |> put_status(:unprocessable_entity)
-          |> json(%{id: workflow_id, error: "Only one trigger can be enabled at a time."})
+          |> json(%{
+            id: workflow_id,
+            error: "A workflow can have only one trigger enabled at a time."
+          })
 
         result ->
           result
@@ -83,8 +103,20 @@ defmodule LightningWeb.API.WorkflowsController do
     end)
   end
 
-  defp save_workflow(%{"project_id" => project_id} = params, user), do:
-    save_workflow(params, project_id, user)
+  defp save_workflow(%{"project_id" => project_id} = params, user) do
+    active_triggers_count =
+      params
+      |> Map.get("triggers", [])
+      |> Enum.count(& &1["enabled"])
+
+    cond do
+      active_triggers_count > 1 ->
+        {:error, :too_many_active_triggers}
+
+      :else ->
+        save_workflow(params, active_triggers_count > 0, project_id, user)
+    end
+  end
 
   defp save_workflow(%{triggers: triggers} = workflow, params, user) do
     triggers_ids =
@@ -95,11 +127,10 @@ defmodule LightningWeb.API.WorkflowsController do
     active_triggers_count =
       params
       |> Map.get("triggers", [])
-      |> Enum.filter(& &1["enabled"])
-      |> Enum.count()
+      |> Enum.count(& &1["enabled"])
 
     cond do
-      Enum.any?(triggers, & &1.id not in triggers_ids) ->
+      Enum.any?(triggers, &(&1.id not in triggers_ids)) ->
         {:error, :cannot_replace_trigger}
 
       active_triggers_count > 1 ->
@@ -108,17 +139,21 @@ defmodule LightningWeb.API.WorkflowsController do
       :else ->
         workflow
         |> Workflows.change_workflow(params)
-        |> save_workflow(workflow.project_id, user)
+        |> save_workflow(active_triggers_count > 0, workflow.project_id, user)
     end
   end
 
-  defp save_workflow(params_or_changeset, project_id, user) do
-    case UsageLimiter.limit_action(
-      %Action{type: :activate_workflow},
-      %Context{project_id: project_id}
-    ) do
-      :ok -> Workflows.save_workflow(params_or_changeset, user)
-      _error -> {:error, :too_many_workflows}
+  defp save_workflow(params_or_changeset, active?, project_id, user)
+       when is_boolean(active?) do
+    if active? == false or
+         :ok ==
+           UsageLimiter.limit_action(
+             %Action{type: :activate_workflow},
+             %Context{project_id: project_id}
+           ) do
+      Workflows.save_workflow(params_or_changeset, user)
+    else
+      {:error, :too_many_workflows}
     end
   end
 
