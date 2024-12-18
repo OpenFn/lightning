@@ -22,6 +22,8 @@ and this project adheres to
 
 ### Changed
 
+- Adjusted AI Assistant documentation to note that messages may be monitored
+
 ### Fixed
 
 ## [v2.10.7] - 2024-12-13 🎂 ❤️ Happy Birthday, Mom!
