@@ -786,7 +786,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
                 <.icon name="hero-arrow-path-mini" class="h-4 w-4" />
               </button>
               <button
-                :if={display_cancel_message_btn(@session)}
+                :if={display_cancel_message_btn?(@session)}
                 id={"cancel-message-#{message.id}"}
                 phx-click="cancel_message"
                 phx-value-message-id={message.id}
@@ -956,7 +956,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     end
   end
 
-  defp display_cancel_message_btn(session) do
+  defp display_cancel_message_btn?(session) do
     user_messages = Enum.filter(session.messages, &(&1.role == :user))
     length(user_messages) > 1
   end

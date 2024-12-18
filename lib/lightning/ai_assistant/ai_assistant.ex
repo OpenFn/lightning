@@ -274,18 +274,9 @@ defmodule Lightning.AiAssistant do
   @spec update_message_status(ChatSession.t(), ChatMessage.t(), atom()) ::
           {:ok, ChatSession.t()} | {:error, Changeset.t()}
   def update_message_status(session, message, status) do
-    Multi.new()
-    |> Multi.update(
-      :message,
-      ChatMessage.changeset(message, %{status: status})
-    )
-    |> Multi.run(:session, fn _repo, _changes ->
-      {:ok, get_session!(session.id)}
-    end)
-    |> Repo.transaction()
-    |> case do
-      {:ok, %{session: updated_session}} -> {:ok, updated_session}
-      {:error, _, changeset, _} -> {:error, changeset}
+    case Repo.update(ChatMessage.changeset(message, %{status: status})) do
+      {:ok, _updated_message} -> {:ok, get_session!(session.id)}
+      {:error, changeset} -> {:error, changeset}
     end
   end
 end
