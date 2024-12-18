@@ -17,14 +17,20 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.10.8] - 2024-12-18
+
+### Added
+
 - Add ability to retry or cancel AI Assistant error responses for user messages
   [#2704](https://github.com/OpenFn/lightning/issues/2704)
 
 ### Changed
 
 - Adjusted AI Assistant documentation to note that messages may be monitored
-
-### Fixed
 
 ## [v2.10.7] - 2024-12-13 🎂 ❤️ Happy Birthday, Mom!
 
