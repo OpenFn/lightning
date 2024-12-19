@@ -31,6 +31,15 @@ defmodule Lightning.Workflows.Job do
           workflow: nil | Workflow.t() | Ecto.Association.NotLoaded.t()
         }
 
+  @derive {Jason.Encoder,
+           only: [
+             :id,
+             :body,
+             :name,
+             :adaptor,
+             :inserted_at,
+             :updated_at
+           ]}
   schema "jobs" do
     field :body, :string
 
