@@ -20,7 +20,9 @@ and this project adheres to
 ### Changed
 
 - Added Claude integration in job chat
+  [#2403](https://github.com/OpenFn/lightning/pull/2403)
 - OPENAI_API_KEY renamed to AI_ASSISTANT_API_KEY
+  [#2403](https://github.com/OpenFn/lightning/pull/2403)
 
 ### Fixed
 
