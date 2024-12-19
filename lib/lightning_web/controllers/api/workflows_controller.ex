@@ -69,6 +69,8 @@ defmodule LightningWeb.API.WorkflowsController do
   end
 
   defp save_workflow(%{triggers: triggers} = workflow, params, user) do
+    changes_triggers? = Map.has_key?(params, "triggers")
+
     triggers_ids =
       params
       |> Map.get("triggers", [])
@@ -80,7 +82,7 @@ defmodule LightningWeb.API.WorkflowsController do
       |> Enum.count(& &1["enabled"])
 
     cond do
-      Enum.any?(triggers, &(&1.id not in triggers_ids)) ->
+      changes_triggers? and Enum.any?(triggers, &(&1.id not in triggers_ids)) ->
         {:error, :cannot_replace_trigger}
 
       active_triggers_count > 1 ->

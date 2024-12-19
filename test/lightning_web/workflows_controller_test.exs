@@ -232,13 +232,13 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
   end
 
   describe "PATCH /workflows/:workflow_id" do
-    test "updates a workflow", %{conn: conn} do
+    test "updates a workflow trigger", %{conn: conn} do
       user = insert(:user)
 
       project =
         insert(:project, project_users: [%{user: user}])
 
-      %{triggers: [trigger]} =
+      %{edges: [edge1 | other_edges], triggers: [trigger]} =
         workflow =
         insert(:simple_workflow, name: "work1.0", project: project)
         |> Repo.reload()
@@ -246,7 +246,54 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       patch =
         build(:trigger, type: :cron, cron_expression: "0 0 * * *", enabled: true)
-        |> then(&%{name: "work1.1", triggers: [%{trigger | enabled: false}, &1]})
+        |> then(&%{name: "work1.1",
+          edges: [%{edge1 | source_trigger_id: &1.id} | other_edges],
+          triggers: [%{trigger | enabled: false}, &1]})
+
+      conn =
+        conn
+        |> assign_bearer(user)
+        |> patch(
+          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          Jason.encode!(patch)
+        )
+
+      assert %{"id" => workflow_id, "error" => nil} = json_response(conn, 200)
+      assert Ecto.UUID.dump(workflow_id)
+
+      saved_workflow =
+        Repo.get(Workflow, workflow_id)
+        |> Repo.preload([:edges, :jobs, :triggers])
+        |> encode_decode()
+        |> remove_timestamps()
+
+      assert workflow
+             |> Map.merge(patch)
+             |> encode_decode()
+             |> remove_timestamps() == saved_workflow
+    end
+
+    test "adds some jobs to a workflow", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      %{edges: edges, jobs: jobs} =
+        workflow =
+        insert(:simple_workflow, name: "work1.0", project: project)
+        |> Repo.reload()
+        |> Repo.preload([:edges, :jobs, :triggers])
+
+      patch =
+        build(:job)
+        |> then(fn job ->
+          %{
+            name: "work1.1",
+            edges: edges ++ [build(:edge, source_job_id: List.last(jobs).id, condition_type: :on_job_success)],
+            jobs: jobs ++ [job]
+          }
+        end)
 
       conn =
         conn
