@@ -1793,7 +1793,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # when not configured properly
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> nil
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       {:ok, view, _html} =
@@ -1811,7 +1811,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # when configured properly
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       {:ok, view, _html} =
@@ -1836,7 +1836,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     } do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       # when disclaimer hasn't been read and no session exists
@@ -1933,7 +1933,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2160,7 +2160,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2233,7 +2233,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       expected_question = "Can you help me with this?"
@@ -2314,7 +2314,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2366,7 +2366,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2416,7 +2416,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     } do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001/health_check"
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       error_message = "You have reached your quota of AI queries"
