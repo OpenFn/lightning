@@ -220,7 +220,8 @@ address that will be used as the sender for system emails.</p><h4>Mailgun</h4><p
   <span class="text">AI Chat</span>
 </h3>
 <p>🧪 <strong>Experimental</strong></p><p>Lightning can be configured to use an AI chatbot for user interactions.</p><p>See <a href="https://github.com/OpenFn/apollo">openfn/apollo</a> for more information on
-the Apollo AI service.</p><p>The following environment variables are required:</p><ul><li><code class="inline">OPENAI_API_KEY</code> - your OpenAI API key.</li><li><code class="inline">APOLLO_ENDPOINT</code> - the endpoint for the OpenFn Apollo AI service.</li></ul><h3 id="kafka-triggers" class="section-heading">
+the Apollo AI service.</p><p>The following environment variables are required:</p><ul><li><code class="inline">AI_ASSISTANT_API_KEY</code> - API key to use the assistant. This currently requires
+an Anthropic key.</li><li><code class="inline">APOLLO_ENDPOINT</code> - the endpoint for the OpenFn Apollo AI service.</li></ul><h3 id="kafka-triggers" class="section-heading">
   <a href="#kafka-triggers" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -276,9 +277,9 @@ headers and data as received by the Kafka pipeline and write this to a file
 within the subdirectory. The file will be named based on the pattern
 <code class="inline">&lt;trigger_id&gt;_&lt;message_topic&gt;_&lt;message_partition&gt;_&lt;message_offset&gt;.json</code>.</p><p>To recover the persisted messages, it is suggested that the affected triggers be
 disabled before commencing. Once this is done, the following code needs to be
-run from an IEx console on each node that is running Lightning:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.KafkaTriggers.MessageRecovery</span><span class="o">.</span><span class="n">recover_messages</span><span class="p" data-group-id="8759614897-1">(</span><span class="w">
-  </span><span class="nc">Lightning.Config</span><span class="o">.</span><span class="n">kafka_alternate_storage_file_path</span><span class="p" data-group-id="8759614897-2">(</span><span class="p" data-group-id="8759614897-2">)</span><span class="w">
-</span><span class="p" data-group-id="8759614897-1">)</span></code></pre><p>Further details regarding the behaviour of <code class="inline">MessageRecovery.recover_messages/1</code>
+run from an IEx console on each node that is running Lightning:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.KafkaTriggers.MessageRecovery</span><span class="o">.</span><span class="n">recover_messages</span><span class="p" data-group-id="6164287873-1">(</span><span class="w">
+  </span><span class="nc">Lightning.Config</span><span class="o">.</span><span class="n">kafka_alternate_storage_file_path</span><span class="p" data-group-id="6164287873-2">(</span><span class="p" data-group-id="6164287873-2">)</span><span class="w">
+</span><span class="p" data-group-id="6164287873-1">)</span></code></pre><p>Further details regarding the behaviour of <code class="inline">MessageRecovery.recover_messages/1</code>
 can be found in the module documentation of <code class="inline">MessageRecovery</code>. Recovered
 messages will have the <code class="inline">.json</code> extension modified to <code class="inline">.json.recovered</code> but they
 will be left in place. Future recovery runs will not process files that have
