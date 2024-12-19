@@ -275,20 +275,20 @@ by <code class="inline">actor</code>.</p></div>
           <pre translate="no"><span class="attribute">@spec</span> event(
   <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
   <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
-  <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
+  <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
   <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>()
   | <a href="Lightning.VersionControl.ProjectRepoConnection.html#t:t/0">Lightning.VersionControl.ProjectRepoConnection.t</a>()
   | <a href="Lightning.Workflows.Trigger.html#t:t/0">Lightning.Workflows.Trigger.t</a>(),
-  <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>() | nil,
+  <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>() | nil,
   <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(),
   update_changes_fun :: (<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>() -&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>())
-) :: :no_changes | <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()</pre>
+) :: :no_changes | <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()</pre>
 
       </div>
 
 <p>Creates a <code class="inline">changeset</code> for the <code class="inline">event</code> identified by <code class="inline">item_id</code> and caused
-by <code class="inline">actor</code>.</p><p>The given <code class="inline">changes</code> can be either <code class="inline">nil</code>, <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html"><code class="inline">Ecto.Changeset</code></a>, struct or map.</p><p>It returns <code class="inline">:no_changes</code> in case of an <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html"><code class="inline">Ecto.Changeset</code></a> changes that changed nothing
-or an <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html"><code class="inline">Ecto.Changeset</code></a> with the event ready to be inserted.</p>
+by <code class="inline">actor</code>.</p><p>The given <code class="inline">changes</code> can be either <code class="inline">nil</code>, <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.Changeset.html"><code class="inline">Ecto.Changeset</code></a>, struct or map.</p><p>It returns <code class="inline">:no_changes</code> in case of an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.Changeset.html"><code class="inline">Ecto.Changeset</code></a> changes that changed nothing
+or an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.Changeset.html"><code class="inline">Ecto.Changeset</code></a> with the event ready to be inserted.</p>
   </section>
 </section>
 <section class="detail" id="save/2">
@@ -312,8 +312,8 @@ or an <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html"><code class="
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> save(<a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>() | :no_changes, <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Repo.html#t:t/0">Ecto.Repo.t</a>()) ::
-  {:ok, :no_changes} | {:ok, <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Schema.html#t:t/0">Ecto.Schema.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.12.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
+          <pre translate="no"><span class="attribute">@spec</span> save(<a href="https://hexdocs.pm/ecto/3.12.5/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>() | :no_changes, <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.Repo.html#t:t/0">Ecto.Repo.t</a>()) ::
+  {:ok, :no_changes} | {:ok, <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.Schema.html#t:t/0">Ecto.Schema.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
 
       </div>
 
