@@ -1875,7 +1875,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
          } do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       date = DateTime.utc_now() |> DateTime.add(-24, :hour) |> DateTime.to_unix()
@@ -1905,7 +1905,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
          } do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       skip_disclaimer(user)
@@ -2060,7 +2060,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2115,7 +2115,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2465,7 +2465,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       error_message = "Server is temporarily unavailable"
@@ -2519,7 +2519,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2565,7 +2565,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2610,7 +2610,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2656,7 +2656,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2774,7 +2774,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2837,7 +2837,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2922,7 +2922,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
