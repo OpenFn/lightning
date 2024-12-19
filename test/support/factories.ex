@@ -606,4 +606,8 @@ defmodule Lightning.Factories do
         Enum.concat(left, List.wrap(right))
     end
   end
+
+  def with_snapshot(workflow) do
+    workflow |> tap(&Lightning.Workflows.Snapshot.create/1)
+  end
 end
