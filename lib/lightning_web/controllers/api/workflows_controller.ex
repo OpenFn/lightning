@@ -1,13 +1,18 @@
 defmodule LightningWeb.API.WorkflowsController do
   use LightningWeb, :controller
 
+  alias Ecto.Changeset
+
+  alias Lightning.Extensions.Message
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
+  alias Lightning.Graph
   alias Lightning.Policies.Permissions
   alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows
+  alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Presence
   alias Lightning.Workflows.Workflow
 
@@ -53,11 +58,11 @@ defmodule LightningWeb.API.WorkflowsController do
     |> then(&maybe_handle_error(conn, &1, workflow_id))
   end
 
+  defp count_enabled_triggers(params),
+    do: params |> Map.get("triggers", []) |> Enum.count(& &1["enabled"])
+
   defp save_workflow(%{"project_id" => project_id} = params, user) do
-    active_triggers_count =
-      params
-      |> Map.get("triggers", [])
-      |> Enum.count(& &1["enabled"])
+    active_triggers_count = count_enabled_triggers(params)
 
     cond do
       active_triggers_count > 1 ->
@@ -76,10 +81,7 @@ defmodule LightningWeb.API.WorkflowsController do
       |> Map.get("triggers", [])
       |> Enum.map(& &1["id"])
 
-    active_triggers_count =
-      params
-      |> Map.get("triggers", [])
-      |> Enum.count(& &1["enabled"])
+    active_triggers_count = count_enabled_triggers(params)
 
     cond do
       changes_triggers? and Enum.any?(triggers, &(&1.id not in triggers_ids)) ->
@@ -95,17 +97,59 @@ defmodule LightningWeb.API.WorkflowsController do
     end
   end
 
-  defp save_workflow(params_or_changeset, active?, project_id, user)
-       when is_boolean(active?) do
-    if not active? or
-         :ok ==
-           UsageLimiter.limit_action(
-             %Action{type: :activate_workflow},
-             %Context{project_id: project_id}
-           ) do
+  defp save_workflow(params_or_changeset, activate?, project_id, user) do
+    with :ok <- check_limit(activate?, project_id),
+         :ok <- validate_workflow(params_or_changeset) do
       Workflows.save_workflow(params_or_changeset, user)
-    else
-      {:error, :too_many_workflows}
+    end
+  end
+
+  defp check_limit(false = _activate?, _project_id), do: :ok
+
+  defp check_limit(true = _activate?, project_id),
+    do:
+      UsageLimiter.limit_action(
+        %Action{type: :activate_workflow},
+        %Context{project_id: project_id}
+      )
+
+  defp validate_workflow(%Changeset{} = changeset) do
+    edges = Changeset.get_field(changeset, :edges)
+    jobs = Changeset.get_field(changeset, :jobs)
+    triggers = Changeset.get_field(changeset, :triggers)
+
+    validate_workflow(edges, jobs, triggers)
+  end
+
+  defp validate_workflow(%{"edges" => edges, "jobs" => jobs, "triggers" => triggers}),
+    do: validate_workflow(edges, jobs, triggers)
+
+  defp validate_workflow(edges, jobs, triggers) do
+    nodes_from_edges =
+      edges
+      |> Enum.reduce(Graph.new(), fn
+        %Edge{} = edge, graph ->
+          Graph.add_edge(graph, edge)
+
+        edge, graph ->
+          edge
+          |> Map.take(["source_trigger_id", "source_job_id", "target_job_id"])
+          |> Map.new(fn {key, value} -> {String.to_existing_atom(key), value} end)
+          |> then(&Graph.add_edge(graph, &1))
+      end)
+      |> Graph.nodes(as: MapSet.new())
+
+    triggers_ids =
+      Enum.map(triggers, &(Map.get(&1, :id) || Map.get(&1, "id")))
+
+    jobs
+    |> MapSet.new(&(Map.get(&1, :id) || Map.get(&1, "id")))
+    |> MapSet.symmetric_difference(nodes_from_edges)
+    |> Enum.reject(& &1 in triggers_ids)
+    |> Enum.reject(&is_nil/1)
+    |> case do
+      [] -> :ok
+      invalid_jobs_ids -> {:error, :invalid_jobs_ids, invalid_jobs_ids}
     end
   end
 
@@ -117,9 +161,9 @@ defmodule LightningWeb.API.WorkflowsController do
     end
   end
 
-  defp authorize_write(_conn, %Workflow{} = workflow) do
+  defp authorize_write(_conn, %Workflow{name: name} = workflow) do
     if Presence.has_any_presence?(workflow) do
-      {:error, :conflict}
+      {:error, :conflict, name}
     else
       :ok
     end
@@ -146,24 +190,43 @@ defmodule LightningWeb.API.WorkflowsController do
 
   defp maybe_handle_error(conn, result, workflow_id \\ nil) do
     case result do
+      {:error, :conflict, name} ->
+        conn
+        |> put_status(:conflict)
+        |> json(%{
+          id: workflow_id,
+          errors: %{id: ["Cannot save a workflow (#{name}) while it is being edited on the App UI"]}
+        })
+
+      {:error, :invalid_jobs_ids, job_ids} ->
+        reply_422(
+          conn,
+          workflow_id,
+          :jobs,
+          "These jobs #{inspect job_ids} should be in the jobs and also be present in an edge."
+        )
+
       {:error, :cannot_replace_trigger} ->
         reply_422(
           conn,
           workflow_id,
-          "The triggers cannot be replaced, only edited or added."
+          :trigger_id,
+          "Cannot be replaced, only edited or added."
         )
 
-      {:error, :too_many_workflows} ->
+      {:error, :too_many_workflows, %Message{text: error_msg}} ->
         reply_422(
           conn,
           workflow_id,
-          "Your plan has reached the limit of active workflows."
+          :project_id,
+          error_msg
         )
 
       {:error, :too_many_active_triggers} ->
         reply_422(
           conn,
           workflow_id,
+          :trigger_id,
           "A workflow can have only one trigger enabled at a time."
         )
 
@@ -172,9 +235,9 @@ defmodule LightningWeb.API.WorkflowsController do
     end
   end
 
-  defp reply_422(conn, workflow_id, msg) do
+  defp reply_422(conn, workflow_id, field, msg) do
     conn
     |> put_status(:unprocessable_entity)
-    |> json(%{id: workflow_id, error: msg})
+    |> json(%{id: workflow_id, errors: %{field => [msg]}})
   end
 end

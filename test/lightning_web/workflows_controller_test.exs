@@ -3,6 +3,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
   import Lightning.Factories
 
+  alias Lightning.Extensions.Message
   alias Lightning.Workflows.Workflow
 
   setup %{conn: conn} do
@@ -162,7 +163,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         :limit_action,
         fn
           %{type: :activate_workflow}, _context ->
-            {:error, :too_many_workflows, %{text: "any"}}
+            {:error, :too_many_workflows, %Message{text: "some limit error msg"}}
         end
       )
 
@@ -176,7 +177,9 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       assert %{
                "id" => nil,
-               "error" => "Your plan has reached the limit of active workflows."
+               "errors" => %{
+                 "project_id" => ["some limit error msg"]
+               }
              } = json_response(conn, 422)
     end
 
@@ -212,8 +215,11 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       assert %{
                "id" => nil,
-               "error" =>
-                 "A workflow can have only one trigger enabled at a time."
+               "errors" => %{
+                 "trigger_id" => [
+                   "A workflow can have only one trigger enabled at a time."
+                 ]
+               }
              } = json_response(conn, 422)
     end
 
@@ -246,9 +252,13 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       patch =
         build(:trigger, type: :cron, cron_expression: "0 0 * * *", enabled: true)
-        |> then(&%{name: "work1.1",
-          edges: [%{edge1 | source_trigger_id: &1.id} | other_edges],
-          triggers: [%{trigger | enabled: false}, &1]})
+        |> then(
+          &%{
+            name: "work1.1",
+            edges: [%{edge1 | source_trigger_id: &1.id} | other_edges],
+            triggers: [%{trigger | enabled: false}, &1]
+          }
+        )
 
       conn =
         conn
@@ -290,7 +300,15 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         |> then(fn job ->
           %{
             name: "work1.1",
-            edges: edges ++ [build(:edge, source_job_id: List.last(jobs).id, condition_type: :on_job_success)],
+            edges:
+              edges ++
+                [
+                  build(:edge,
+                    source_job_id: List.last(jobs).id,
+                    target_job_id: job.id,
+                    condition_type: :on_job_success
+                  )
+                ],
             jobs: jobs ++ [job]
           }
         end)
@@ -316,6 +334,51 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              |> Map.merge(patch)
              |> encode_decode()
              |> remove_timestamps() == saved_workflow
+    end
+
+    test "returns 422 for dangling job", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      %{edges: edges, jobs: jobs} =
+        workflow =
+        insert(:simple_workflow, name: "work1.0", project: project)
+        |> Repo.reload()
+        |> Repo.preload([:edges, :jobs, :triggers])
+
+      job = build(:job)
+
+      patch =
+        %{
+          name: "work1.1",
+          edges:
+            edges ++
+              [
+                build(:edge,
+                  source_job_id: List.last(jobs).id,
+                  condition_type: :on_job_success
+                )
+              ],
+          jobs: jobs ++ [job]
+        }
+
+      conn =
+        conn
+        |> assign_bearer(user)
+        |> patch(
+          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          Jason.encode!(patch)
+        )
+
+      assert json_response(conn, 422) == %{
+               "id" => workflow.id,
+               "errors" => %{
+                 "jobs" =>
+                   ["These jobs [\"#{job.id}\"] should be in the jobs and also be present in an edge."]
+               }
+             }
     end
 
     test "returns 422 when trying to replace the triggers", %{conn: conn} do
@@ -350,8 +413,11 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       assert json_response(conn, 422) == %{
                "id" => workflow.id,
-               "error" =>
-                 "The triggers cannot be replaced, only edited or added."
+               "errors" => %{
+                 "trigger_id" => [
+                   "Cannot be replaced, only edited or added."
+                 ]
+               }
              }
     end
 
@@ -376,7 +442,8 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         :limit_action,
         fn
           %{type: :activate_workflow}, _context ->
-            {:error, :too_many_workflows, %{text: "any"}}
+            {:error, :too_many_workflows,
+             %Message{text: "some limit error message"}}
         end
       )
 
@@ -390,7 +457,9 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       assert %{
                "id" => workflow.id,
-               "error" => "Your plan has reached the limit of active workflows."
+               "errors" => %{
+                 "project_id" => ["some limit error message"]
+               }
              } == json_response(conn, 422)
     end
 
@@ -427,8 +496,11 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       assert json_response(conn, 422) == %{
                "id" => workflow.id,
-               "error" =>
-                 "A workflow can have only one trigger enabled at a time."
+               "errors" => %{
+                 "trigger_id" => [
+                   "A workflow can have only one trigger enabled at a time."
+                 ]
+               }
              }
     end
 
@@ -547,8 +619,11 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       assert json_response(conn, 422) == %{
                "id" => workflow.id,
-               "error" =>
-                 "The triggers cannot be replaced, only edited or added."
+               "errors" => %{
+                 "trigger_id" => [
+                   "Cannot be replaced, only edited or added."
+                 ]
+               }
              }
     end
 

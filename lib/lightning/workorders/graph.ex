@@ -8,8 +8,15 @@ defmodule Lightning.Graph do
   @spec new() :: t()
   def new, do: %__MODULE__{nodes: MapSet.new(), edges: MapSet.new()}
 
-  @spec add_edge(t(), atom, atom) :: t()
-  def add_edge(graph, from, to) do
+  @spec add_edge(t(), Lightning.Workflows.Edge.t()) :: t()
+  def add_edge(graph, %{
+        source_trigger_id: source_trigger_id,
+        source_job_id: source_job_id,
+        target_job_id: target_job_id
+      }) do
+    from = source_trigger_id || source_job_id
+    to = target_job_id
+
     %__MODULE__{
       nodes: MapSet.union(graph.nodes, MapSet.new([from, to])),
       edges: MapSet.put(graph.edges, {from, to})
