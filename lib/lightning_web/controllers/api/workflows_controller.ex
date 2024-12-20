@@ -48,7 +48,8 @@ defmodule LightningWeb.API.WorkflowsController do
   end
 
   def update(conn, %{"project_id" => project_id, "id" => workflow_id} = params) do
-    with :ok <- authorize_write(conn, project_id),
+    with :ok <- validate_project_id(conn.body_params, project_id),
+         :ok <- authorize_write(conn, project_id),
          {:ok, workflow} <- get_workflow(workflow_id, project_id),
          :ok <- authorize_write(conn, workflow),
          {:ok, %{id: workflow_id}} <-
@@ -121,8 +122,12 @@ defmodule LightningWeb.API.WorkflowsController do
     validate_workflow(edges, jobs, triggers)
   end
 
-  defp validate_workflow(%{"edges" => edges, "jobs" => jobs, "triggers" => triggers}),
-    do: validate_workflow(edges, jobs, triggers)
+  defp validate_workflow(%{
+         "edges" => edges,
+         "jobs" => jobs,
+         "triggers" => triggers
+       }),
+       do: validate_workflow(edges, jobs, triggers)
 
   defp validate_workflow(edges, jobs, triggers) do
     nodes_from_edges =
@@ -145,7 +150,7 @@ defmodule LightningWeb.API.WorkflowsController do
     jobs
     |> MapSet.new(&(Map.get(&1, :id) || Map.get(&1, "id")))
     |> MapSet.symmetric_difference(nodes_from_edges)
-    |> Enum.reject(& &1 in triggers_ids)
+    |> Enum.reject(&(&1 in triggers_ids))
     |> Enum.reject(&is_nil/1)
     |> case do
       [] -> :ok
@@ -160,6 +165,13 @@ defmodule LightningWeb.API.WorkflowsController do
       _project_mismatch -> {:error, :bad_request}
     end
   end
+
+  defp validate_project_id(%{"project_id" => project_id}, project_id), do: :ok
+
+  defp validate_project_id(%{"project_id" => _project_id1}, _project_id2),
+    do: {:error, :invalid_project_id}
+
+  defp validate_project_id(_patch, _project_id), do: :ok
 
   defp authorize_write(_conn, %Workflow{name: name} = workflow) do
     if Presence.has_any_presence?(workflow) do
@@ -195,7 +207,11 @@ defmodule LightningWeb.API.WorkflowsController do
         |> put_status(:conflict)
         |> json(%{
           id: workflow_id,
-          errors: %{id: ["Cannot save a workflow (#{name}) while it is being edited on the App UI"]}
+          errors: %{
+            id: [
+              "Cannot save a workflow (#{name}) while it is being edited on the App UI"
+            ]
+          }
         })
 
       {:error, :invalid_jobs_ids, job_ids} ->
@@ -203,7 +219,7 @@ defmodule LightningWeb.API.WorkflowsController do
           conn,
           workflow_id,
           :jobs,
-          "These jobs #{inspect job_ids} should be in the jobs and also be present in an edge."
+          "These jobs #{inspect(job_ids)} should be in the jobs and also be present in an edge."
         )
 
       {:error, :cannot_replace_trigger} ->
@@ -212,6 +228,14 @@ defmodule LightningWeb.API.WorkflowsController do
           workflow_id,
           :trigger_id,
           "Cannot be replaced, only edited or added."
+        )
+
+      {:error, :invalid_project_id} ->
+        reply_422(
+          conn,
+          workflow_id,
+          :project_id,
+          "The project_id of the body does not match one one the path."
         )
 
       {:error, :too_many_workflows, %Message{text: error_msg}} ->

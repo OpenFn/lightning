@@ -375,8 +375,40 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       assert json_response(conn, 422) == %{
                "id" => workflow.id,
                "errors" => %{
-                 "jobs" =>
-                   ["These jobs [\"#{job.id}\"] should be in the jobs and also be present in an edge."]
+                 "jobs" => [
+                   "These jobs [\"#{job.id}\"] should be in the jobs and also be present in an edge."
+                 ]
+               }
+             }
+    end
+
+    test "returns 422 on project id mismatch", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      workflow =
+        insert(:simple_workflow, name: "work1", project: project)
+        |> Repo.reload()
+        |> Repo.preload([:edges, :jobs, :triggers])
+
+      patch = %{project_id: Ecto.UUID.generate()}
+
+      conn =
+        conn
+        |> assign_bearer(user)
+        |> patch(
+          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          Jason.encode!(patch)
+        )
+
+      assert json_response(conn, 422) == %{
+               "id" => workflow.id,
+               "errors" => %{
+                 "project_id" => [
+                   "The project_id of the body does not match one one the path."
+                 ]
                }
              }
     end
