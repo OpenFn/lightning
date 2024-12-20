@@ -46,7 +46,7 @@ and this project adheres to
 - Allow different rules and action for delete user.
   [#2500](https://github.com/OpenFn/lightning/issues/2500)
 - Handle errors from the AI Assistant more gracefully
-  [#2741](https://github.com/OpenFn/lightning/issues/2741)
+  [#2474](https://github.com/OpenFn/lightning/issues/2474)
 
 ### Changed
 
