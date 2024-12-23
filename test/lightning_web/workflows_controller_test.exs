@@ -291,6 +291,63 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              }
     end
 
+    test "returns 422 when trigger or job doesn't have a UUID", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      trigger =
+        build(:trigger, type: :webhook, enabled: true)
+
+      job =
+        build(:job,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      trigger_foo = Map.put(trigger, :id, "foo")
+
+      workflow1 =
+        build(:workflow, name: "workflow 1", project_id: project.id)
+        |> with_trigger(trigger_foo)
+        |> with_job(job)
+        |> with_edge({trigger, job}, [])
+
+      job_bar = Map.put(job, :id, "bar")
+
+      workflow2 =
+        build(:workflow, name: "workflow 2", project_id: project.id)
+        |> with_trigger(trigger)
+        |> with_job(job_bar)
+        |> with_edge({trigger, job}, [])
+
+      conn = assign_bearer(conn, user)
+
+      assert conn
+             |> post(
+               ~p"/api/projects/#{project.id}/workflows",
+               Jason.encode!(workflow1)
+             )
+             |> json_response(422) == %{
+               "id" => workflow1.id,
+               "errors" => %{
+                 "workflow" => ["Id foo should be a UUID."]
+               }
+             }
+
+      assert conn
+             |> post(
+               ~p"/api/projects/#{project.id}/workflows",
+               Jason.encode!(workflow2)
+             )
+             |> json_response(422) == %{
+               "id" => workflow2.id,
+               "errors" => %{
+                 "workflow" => ["Id bar should be a UUID."]
+               }
+             }
+    end
+
     test "returns 422 when edges misses a source trigger", %{conn: conn} do
       user = insert(:user)
 

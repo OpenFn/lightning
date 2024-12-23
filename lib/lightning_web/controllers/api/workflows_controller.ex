@@ -131,16 +131,31 @@ defmodule LightningWeb.API.WorkflowsController do
        do: validate_workflow(edges, jobs, triggers)
 
   defp validate_workflow(edges, jobs, triggers) do
-    triggers_ids =
-      triggers
-      |> Enum.map(&(Map.get(&1, :id) || Map.get(&1, "id")))
-      |> Enum.reject(&is_nil/1)
-
-    with {:ok, source_trigger_id} <- get_initial_node(edges, triggers_ids),
+    with {:ok, triggers_ids} <- validate_ids(triggers),
+         {:ok, _jobs} <- validate_ids(jobs),
+         {:ok, source_trigger_id} <- get_initial_node(edges, triggers_ids),
          graph <- make_graph(edges),
          :ok <- validate_jobs(graph, jobs, triggers_ids) do
       Graph.traverse(graph, source_trigger_id)
     end
+  end
+
+  defp validate_ids(list) do
+    Enum.reduce_while(list, [], fn item, acc ->
+      case Map.get(item, :id) || Map.get(item, "id") do
+        nil ->
+          {:halt, {:error, :missing_id}}
+
+        id ->
+          case Ecto.UUID.dump(id) do
+            {:ok, _bin} -> {:cont, [id | acc]}
+            :error -> {:halt, {:error, :invalid_id, id}}
+          end
+      end
+    end)
+    |> then(fn result ->
+      with ids_list when is_list(ids_list) <- result, do: {:ok, ids_list}
+    end)
   end
 
   defp get_initial_node(edges, triggers_ids) do
@@ -240,6 +255,24 @@ defmodule LightningWeb.API.WorkflowsController do
         }
       })
 
+  defp maybe_handle_error(conn, {:error, :invalid_id, id}, workflow_id),
+    do:
+      reply_422(
+        conn,
+        workflow_id,
+        :workflow,
+        "Id #{id} should be a UUID."
+      )
+
+  defp maybe_handle_error(conn, {:error, :missing_id}, workflow_id),
+    do:
+      reply_422(
+        conn,
+        workflow_id,
+        :workflow,
+        "All jobs and triggers should have an id (UUID)."
+      )
+
   defp maybe_handle_error(conn, result, workflow_id)
        when is_tuple(result) do
     case result do
@@ -284,6 +317,14 @@ defmodule LightningWeb.API.WorkflowsController do
           "Cannot be replaced, only edited or added."
         )
 
+      {:error, :too_many_active_triggers} ->
+        reply_422(
+          conn,
+          workflow_id,
+          :trigger_id,
+          "A workflow can have only one trigger enabled at a time."
+        )
+
       {:error, :invalid_project_id} ->
         reply_422(
           conn,
@@ -298,14 +339,6 @@ defmodule LightningWeb.API.WorkflowsController do
           workflow_id,
           :project_id,
           error_msg
-        )
-
-      {:error, :too_many_active_triggers} ->
-        reply_422(
-          conn,
-          workflow_id,
-          :trigger_id,
-          "A workflow can have only one trigger enabled at a time."
         )
     end
   end
