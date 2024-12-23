@@ -32,7 +32,8 @@ defmodule LightningWeb.API.WorkflowsController do
   end
 
   def create(conn, %{"project_id" => project_id} = params) do
-    with :ok <- authorize_write(conn, project_id),
+    with :ok <- validate_project_id(conn.body_params, project_id),
+        :ok <- authorize_write(conn, project_id),
          {:ok, %{id: workflow_id}} <-
            save_workflow(params, conn.assigns.current_resource) do
       json(conn, %{id: workflow_id, error: nil})

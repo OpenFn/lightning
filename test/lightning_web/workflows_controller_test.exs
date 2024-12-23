@@ -223,6 +223,36 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              } = json_response(conn, 422)
     end
 
+    test "returns 422 on project id mismatch", %{conn: conn} do
+      user = insert(:user)
+
+      project1 =
+        insert(:project, project_users: [%{user: user}])
+
+      project2 =
+        insert(:project, project_users: [%{user: user}])
+
+      workflow =
+        build(:simple_workflow, name: "work1", project_id: project1.id)
+
+      conn =
+        conn
+        |> assign_bearer(user)
+        |> post(
+          ~p"/api/projects/#{project2.id}/workflows",
+          Jason.encode!(workflow)
+        )
+
+      assert json_response(conn, 422) == %{
+               "id" => workflow.id,
+               "errors" => %{
+                 "project_id" => [
+                   "The project_id of the body does not match one one the path."
+                 ]
+               }
+             }
+    end
+
     test "returns 401 without a token", %{conn: conn} do
       user = insert(:user)
 
