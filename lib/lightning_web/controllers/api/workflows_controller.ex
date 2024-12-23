@@ -33,7 +33,7 @@ defmodule LightningWeb.API.WorkflowsController do
 
   def create(conn, %{"project_id" => project_id} = params) do
     with :ok <- validate_project_id(conn.body_params, project_id),
-        :ok <- authorize_write(conn, project_id),
+         :ok <- authorize_write(conn, project_id),
          {:ok, %{id: workflow_id}} <-
            save_workflow(params, conn.assigns.current_resource) do
       json(conn, %{id: workflow_id, error: nil})
@@ -131,28 +131,49 @@ defmodule LightningWeb.API.WorkflowsController do
        do: validate_workflow(edges, jobs, triggers)
 
   defp validate_workflow(edges, jobs, triggers) do
-    nodes_from_edges =
-      edges
-      |> Enum.reduce(Graph.new(), fn
-        %Edge{} = edge, graph ->
-          Graph.add_edge(graph, edge)
-
-        edge, graph ->
-          edge
-          |> Map.take(["source_trigger_id", "source_job_id", "target_job_id"])
-          |> Map.new(fn {key, value} -> {String.to_existing_atom(key), value} end)
-          |> then(&Graph.add_edge(graph, &1))
-      end)
-      |> Graph.nodes(as: MapSet.new())
-
     triggers_ids =
-      Enum.map(triggers, &(Map.get(&1, :id) || Map.get(&1, "id")))
+      triggers
+      |> Enum.map(&(Map.get(&1, :id) || Map.get(&1, "id")))
+      |> Enum.reject(&is_nil/1)
 
+    with {:ok, source_trigger_id} <- get_initial_node(edges, triggers_ids),
+         graph <- make_graph(edges),
+         :ok <- validate_jobs(graph, jobs, triggers_ids) do
+      Graph.traverse(graph, source_trigger_id)
+    end
+  end
+
+  defp get_initial_node(edges, triggers_ids) do
+    edges
+    |> Enum.map(
+      &(Map.get(&1, :source_trigger_id) || Map.get(&1, "source_trigger_id"))
+    )
+    |> Enum.filter(&(&1 in triggers_ids))
+    |> case do
+      [] -> {:error, :edges_misses_a_trigger}
+      [source_trigger_id] -> {:ok, source_trigger_id}
+      list -> {:error, :edges_has_many_triggers, list}
+    end
+  end
+
+  defp make_graph(edges) do
+    Enum.reduce(edges, Graph.new(), fn
+      %Edge{} = edge, graph ->
+        Graph.add_edge(graph, edge)
+
+      edge, graph ->
+        edge
+        |> Map.take(["source_trigger_id", "source_job_id", "target_job_id"])
+        |> Map.new(fn {key, value} -> {String.to_existing_atom(key), value} end)
+        |> then(&Graph.add_edge(graph, struct(Edge, &1)))
+    end)
+  end
+
+  defp validate_jobs(graph, jobs, triggers_ids) do
     jobs
     |> MapSet.new(&(Map.get(&1, :id) || Map.get(&1, "id")))
-    |> MapSet.symmetric_difference(nodes_from_edges)
-    |> Enum.reject(&(&1 in triggers_ids))
-    |> Enum.reject(&is_nil/1)
+    |> MapSet.symmetric_difference(Graph.nodes(graph, as: MapSet.new()))
+    |> Enum.reject(&(&1 in triggers_ids or is_nil(&1)))
     |> case do
       [] -> :ok
       invalid_jobs_ids -> {:error, :invalid_jobs_ids, invalid_jobs_ids}
@@ -201,26 +222,58 @@ defmodule LightningWeb.API.WorkflowsController do
     )
   end
 
-  defp maybe_handle_error(conn, result, workflow_id \\ nil) do
-    case result do
-      {:error, :conflict, name} ->
-        conn
-        |> put_status(:conflict)
-        |> json(%{
-          id: workflow_id,
-          errors: %{
-            id: [
-              "Cannot save a workflow (#{name}) while it is being edited on the App UI"
-            ]
-          }
-        })
+  defp maybe_handle_error(conn, result, workflow_id \\ nil)
 
+  defp maybe_handle_error(_conn, result, _workflow_id) when is_map(result),
+    do: result
+
+  defp maybe_handle_error(conn, {:error, :conflict, name}, workflow_id),
+    do:
+      conn
+      |> put_status(:conflict)
+      |> json(%{
+        id: workflow_id,
+        errors: %{
+          id: [
+            "Cannot save a workflow (#{name}) while it is being edited on the App UI"
+          ]
+        }
+      })
+
+  defp maybe_handle_error(conn, result, workflow_id)
+       when is_tuple(result) do
+    case result do
       {:error, :invalid_jobs_ids, job_ids} ->
         reply_422(
           conn,
           workflow_id,
           :jobs,
-          "These jobs #{inspect(job_ids)} should be in the jobs and also be present in an edge."
+          "The jobs #{inspect(job_ids)} should be present both in the jobs and on an edge."
+        )
+
+      {:error, :edges_misses_a_trigger} ->
+        reply_422(
+          conn,
+          workflow_id,
+          :edges,
+          "Missing edge with source_trigger_id."
+        )
+
+      # TBD
+      # {:error, :multiple_targets_for_trigger, trigger_id} ->
+      #   reply_422(
+      #     conn,
+      #     workflow_id,
+      #     :edges,
+      #     "Has multiple targets for trigger #{trigger_id}."
+      #   )
+
+      {:error, :graph_has_a_cycle, node_id} ->
+        reply_422(
+          conn,
+          workflow_id,
+          :edges,
+          "Cycle detected on job #{node_id}."
         )
 
       {:error, :cannot_replace_trigger} ->
@@ -254,9 +307,6 @@ defmodule LightningWeb.API.WorkflowsController do
           :trigger_id,
           "A workflow can have only one trigger enabled at a time."
         )
-
-      result ->
-        result
     end
   end
 

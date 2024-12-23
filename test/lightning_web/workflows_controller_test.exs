@@ -253,6 +253,132 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              }
     end
 
+    test "returns 422 when graph has a cycle", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      workflow =
+        build(:complex_workflow, name: "work1", project_id: project.id)
+        |> then(fn %{jobs: jobs, edges: edges} = workflow ->
+          job0 = Enum.at(jobs, 0)
+          job3 = Enum.at(jobs, 3)
+
+          %{
+            workflow
+            | edges:
+                edges ++
+                  [build(:edge, source_job_id: job3.id, target_job_id: job0.id)]
+          }
+        end)
+
+      conn =
+        conn
+        |> assign_bearer(user)
+        |> post(
+          ~p"/api/projects/#{project.id}/workflows",
+          Jason.encode!(workflow)
+        )
+
+      job0 = Enum.at(workflow.jobs, 0)
+
+      assert json_response(conn, 422) == %{
+               "id" => workflow.id,
+               "errors" => %{
+                 "edges" => ["Cycle detected on job #{job0.id}."]
+               }
+             }
+    end
+
+    test "returns 422 when edges misses a source trigger", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      trigger =
+        build(:trigger, type: :webhook, enabled: true)
+
+      workflow =
+        build(:workflow, name: "workflow 1", project_id: project.id)
+        |> with_trigger(trigger)
+        |> then(fn workflow ->
+          job1 = build(:job)
+          job2 = build(:job)
+
+          %{
+            workflow
+            | jobs: [job1, job2],
+              edges: [
+                build(:edge, source_job_id: job1.id, target_job_id: job2.id)
+              ]
+          }
+        end)
+
+      conn =
+        conn
+        |> assign_bearer(user)
+        |> post(
+          ~p"/api/projects/#{project.id}/workflows",
+          Jason.encode!(workflow)
+        )
+
+      assert json_response(conn, 422) == %{
+               "id" => workflow.id,
+               "errors" => %{
+                 "edges" => ["Missing edge with source_trigger_id."]
+               }
+             }
+    end
+
+    @tag :skip
+    test "returns 422 when edges has multiple source triggers", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      trigger =
+        build(:trigger, type: :webhook, enabled: true)
+
+      workflow =
+        build(:workflow, name: "workflow 1", project_id: project.id)
+        |> with_trigger(trigger)
+        |> then(fn %{triggers: [trigger]} = workflow ->
+          job1 = build(:job)
+          job2 = build(:job)
+
+          %{
+            workflow
+            | jobs: [job1, job2],
+              edges: [
+                build(:edge,
+                  source_trigger_id: trigger.id,
+                  target_job_id: job1.id
+                ),
+                build(:edge, source_job_id: job1.id, target_job_id: job2.id),
+                build(:edge, source_job_id: trigger.id, target_job_id: job2.id)
+              ]
+          }
+        end)
+
+      conn =
+        conn
+        |> assign_bearer(user)
+        |> post(
+          ~p"/api/projects/#{project.id}/workflows",
+          Jason.encode!(workflow)
+        )
+
+      assert json_response(conn, 422) == %{
+               "id" => workflow.id,
+               "errors" => %{
+                 "edges" => ["Has multiple targets for trigger #{trigger.id}."]
+               }
+             }
+    end
+
     test "returns 401 without a token", %{conn: conn} do
       user = insert(:user)
 
@@ -406,7 +532,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
                "id" => workflow.id,
                "errors" => %{
                  "jobs" => [
-                   "These jobs [\"#{job.id}\"] should be in the jobs and also be present in an edge."
+                   "The jobs [\"#{job.id}\"] should be present both in the jobs and on an edge."
                  ]
                }
              }

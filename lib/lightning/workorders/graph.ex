@@ -56,4 +56,43 @@ defmodule Lightning.Graph do
   def nodes(graph, opts \\ [as: []]) do
     graph.nodes |> Enum.into(opts[:as])
   end
+
+  def traverse(%{edges: edges}, trigger_id) do
+    edges
+    |> Enum.reduce(Map.new(), fn {from, to}, dag_edges ->
+      Map.update(dag_edges, from, [to], &[to | &1])
+    end)
+    |> then(fn dag_edges ->
+      case Map.get(dag_edges, trigger_id) do
+        nil ->
+          {:error, :no_target_for_trigger}
+
+        [initial_job_id] ->
+          traverse(initial_job_id, dag_edges, MapSet.new())
+
+          # TBD
+          # targets ->
+          #   {:error, :multiple_targets_for_trigger, trigger_id}
+      end
+    end)
+  end
+
+  defp traverse(node_id, dag_edges, visited_nodes) do
+    cond do
+      not Map.has_key?(dag_edges, node_id) ->
+        :ok
+
+      MapSet.member?(visited_nodes, node_id) ->
+        {:error, :graph_has_a_cycle, node_id}
+
+      :else ->
+        visited_nodes = MapSet.put(visited_nodes, node_id)
+
+        dag_edges
+        |> Map.get(node_id)
+        |> Enum.find_value(:ok, fn dest_node_id ->
+          with :ok <- traverse(dest_node_id, dag_edges, visited_nodes), do: nil
+        end)
+    end
+  end
 end
