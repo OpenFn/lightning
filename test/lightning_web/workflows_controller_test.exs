@@ -196,15 +196,6 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
           project_id: project.id
         )
 
-      Mox.stub(
-        Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        fn
-          %{type: :activate_workflow}, _context ->
-            {:error, :too_many_workflows, %{text: "any"}}
-        end
-      )
-
       conn =
         conn
         |> assign_bearer(user)
@@ -346,6 +337,41 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
                  "workflow" => ["Id bar should be a UUID."]
                }
              }
+    end
+
+    test "returns 422 when there is a duplicated id", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      %{id: edge_id} = insert(:edge)
+
+      workflow =
+        build(:simple_workflow,
+          name: "workflow",
+          project_id: project.id
+        )
+        |> then(fn %{edges: [edge]} = workflow ->
+          %{workflow | edges: [Map.put(edge, :id, edge_id)]}
+        end)
+
+      conn =
+        conn
+        |> assign_bearer(user)
+        |> post(
+          ~p"/api/projects/#{project.id}/workflows/",
+          Jason.encode!(workflow)
+        )
+
+      assert %{
+               "id" => nil,
+               "errors" => %{
+                 "workflow" => [
+                   "These ids [#{inspect(edge_id)}] should be unique for all workflows."
+                 ]
+               }
+             } == json_response(conn, 422)
     end
 
     test "returns 422 when edges misses a source trigger", %{conn: conn} do

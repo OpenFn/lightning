@@ -82,6 +82,7 @@ defmodule Lightning.Workflows.Job do
       name: "jobs_name_workflow_id_index",
       message: "job name has already been taken"
     )
+    |> unique_constraint(:id, name: "jobs_pkey")
   end
 
   def validate(changeset) do

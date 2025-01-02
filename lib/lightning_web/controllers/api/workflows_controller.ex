@@ -101,8 +101,44 @@ defmodule LightningWeb.API.WorkflowsController do
 
   defp save_workflow(params_or_changeset, activate?, project_id, user) do
     with :ok <- check_limit(activate?, project_id),
-         :ok <- validate_workflow(params_or_changeset) do
-      Workflows.save_workflow(params_or_changeset, user)
+         :ok <- validate_workflow(params_or_changeset),
+         {:error, %{changes: changes} = _changeset} <-
+           Workflows.save_workflow(params_or_changeset, user) do
+      triggers_with_errors = Enum.filter(changes.triggers, &(&1.errors != []))
+      jobs_with_errors = Enum.filter(changes.jobs, &(&1.errors != []))
+      edges_with_errors = Enum.filter(changes.edges, &(&1.errors != []))
+
+      duplicated_ids =
+        [triggers_with_errors, jobs_with_errors, edges_with_errors]
+        |> Enum.concat()
+        |> Enum.filter(fn %{errors: errors} ->
+          Enum.any?(errors, fn {field, _value} -> field == :id end)
+        end)
+        |> Enum.map(&Ecto.Changeset.fetch_field!(&1, :id))
+
+      cond do
+        Enum.any?(duplicated_ids) ->
+          {:error, {:duplicated_ids, duplicated_ids}}
+
+        Enum.any?(triggers_with_errors) ->
+          ids =
+            Enum.map(triggers_with_errors, &Ecto.Changeset.fetch_field!(&1, :id))
+
+          {:error, {:invalid_triggers, ids}}
+
+        Enum.any?(jobs_with_errors) ->
+          ids = Enum.map(jobs_with_errors, &Ecto.Changeset.fetch_field!(&1, :id))
+          {:error, {:invalid_jobs, ids}}
+
+        Enum.any?(edges_with_errors) ->
+          ids =
+            Enum.map(edges_with_errors, &Ecto.Changeset.fetch_field!(&1, :id))
+
+          {:error, {:invalid_edges, ids}}
+
+        :else ->
+          {:error, :invalid_workflow}
+      end
     end
   end
 
@@ -131,8 +167,9 @@ defmodule LightningWeb.API.WorkflowsController do
        do: validate_workflow(edges, jobs, triggers)
 
   defp validate_workflow(edges, jobs, triggers) do
+    # {:ok, _ids} <- validate_ids(edges),
     with {:ok, triggers_ids} <- validate_ids(triggers),
-         {:ok, _jobs} <- validate_ids(jobs),
+         {:ok, _ids} <- validate_ids(jobs),
          {:ok, source_trigger_id} <- get_initial_node(edges, triggers_ids),
          graph <- make_graph(edges),
          :ok <- validate_jobs(graph, jobs, triggers_ids) do
@@ -271,6 +308,15 @@ defmodule LightningWeb.API.WorkflowsController do
         workflow_id,
         :workflow,
         "All jobs and triggers should have an id (UUID)."
+      )
+
+  defp maybe_handle_error(conn, {:error, {:duplicated_ids, ids}}, workflow_id),
+    do:
+      reply_422(
+        conn,
+        workflow_id,
+        :workflow,
+        "These ids #{inspect(ids)} should be unique for all workflows."
       )
 
   defp maybe_handle_error(conn, result, workflow_id)
