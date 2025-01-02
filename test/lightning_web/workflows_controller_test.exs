@@ -282,7 +282,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              }
     end
 
-    test "returns 422 when trigger or job doesn't have a UUID", %{conn: conn} do
+    test "returns 422 when trigger or job id is not a UUID", %{conn: conn} do
       user = insert(:user)
 
       project =
@@ -335,6 +335,63 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
                "id" => workflow2.id,
                "errors" => %{
                  "workflow" => ["Id bar should be a UUID."]
+               }
+             }
+    end
+
+    test "returns 422 when trigger or job doesn't have an id", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      trigger =
+        build(:trigger, type: :webhook, enabled: true)
+
+      job =
+        build(:job,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      workflow1 =
+        build(:workflow, name: "workflow 1", project_id: project.id)
+        |> with_job(job)
+        |> with_edge({trigger, job}, [])
+        |> then(&with_trigger(&1, Map.put(trigger, :id, nil)))
+
+      workflow2 =
+        build(:workflow, name: "workflow 2", project_id: project.id)
+        |> with_trigger(trigger)
+        |> with_edge({trigger, job}, [])
+        |> then(&with_job(&1, Map.put(job, :id, nil)))
+
+      conn = assign_bearer(conn, user)
+
+      assert conn
+             |> post(
+               ~p"/api/projects/#{project.id}/workflows",
+               Jason.encode!(workflow1)
+             )
+             |> json_response(422) == %{
+               "id" => workflow1.id,
+               "errors" => %{
+                 "workflow" => [
+                   "All jobs and triggers should have an id (UUID)."
+                 ]
+               }
+             }
+
+      assert conn
+             |> post(
+               ~p"/api/projects/#{project.id}/workflows",
+               Jason.encode!(workflow2)
+             )
+             |> json_response(422) == %{
+               "id" => workflow2.id,
+               "errors" => %{
+                 "workflow" => [
+                   "All jobs and triggers should have an id (UUID)."
+                 ]
                }
              }
     end
@@ -846,6 +903,123 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              |> Map.merge(complete_update)
              |> encode_decode()
              |> remove_timestamps() == saved_workflow
+    end
+
+    test "returns 422 on reference to another workflow", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      %{triggers: [trigger]} =
+        workflow =
+        insert(:simple_workflow, name: "work1.0", project: project)
+        |> Repo.reload()
+        |> Repo.preload([:edges, :jobs, :triggers])
+
+      %{id: other_workflow_id} = insert(:simple_workflow)
+
+      complete_update_external_ref =
+        build(:simple_workflow, name: "work1.1", project: project)
+        |> then(fn %{
+                     edges: [new_edge | other_new_edges],
+                     jobs: [new_job | other_jobs],
+                     triggers: [new_trigger]
+                   } ->
+          Map.merge(workflow, %{
+            edges: [
+              Map.merge(new_edge, %{
+                source_trigger_id: new_trigger.id,
+                target_job_id: new_job.id,
+                workflow_id: other_workflow_id
+              })
+              | other_new_edges
+            ],
+            jobs: [
+              %{new_job | workflow_id: other_workflow_id}
+              | other_jobs
+            ],
+            triggers: [
+              %{trigger | enabled: false},
+              %{new_trigger | workflow_id: other_workflow_id}
+            ]
+          })
+        end)
+
+      conn =
+        conn
+        |> assign_bearer(user)
+        |> put(
+          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          Jason.encode!(complete_update_external_ref)
+        )
+
+      assert json_response(conn, 422) == %{
+               "id" => workflow.id,
+               "errors" => %{
+                 "workflow" => [
+                   "Edges, jobs and triggers cannot reference another workflow!"
+                 ]
+               }
+             }
+    end
+
+    test "returns 422 when one id belongs to another workflow", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      %{triggers: [trigger]} =
+        workflow =
+        insert(:simple_workflow, name: "work1.0", project: project)
+        |> Repo.reload()
+        |> Repo.preload([:edges, :jobs, :triggers])
+
+      %{jobs: [external_job | _jobs]} = insert(:simple_workflow)
+
+      complete_update_external_id =
+        build(:simple_workflow, name: "work1.1", project: project)
+        |> then(fn %{
+                     edges: [new_edge | other_new_edges],
+                     jobs: [new_job | other_jobs],
+                     triggers: [new_trigger]
+                   } ->
+          Map.merge(workflow, %{
+            edges: [
+              %{
+                new_edge
+                | source_trigger_id: new_trigger.id,
+                  target_job_id: external_job.id
+              }
+              | other_new_edges
+            ],
+            jobs: [
+              %{new_job | id: external_job.id} | other_jobs
+            ],
+            triggers: [
+              %{trigger | enabled: false},
+              new_trigger
+            ]
+          })
+        end)
+
+      conn =
+        conn
+        |> assign_bearer(user)
+        |> put(
+          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          Jason.encode!(complete_update_external_id)
+        )
+
+      assert json_response(conn, 422) == %{
+               "id" => workflow.id,
+               "errors" => %{
+                 "workflow" => [
+                   "These ids [#{inspect(external_job.id)}] should be unique for all workflows."
+                 ]
+               }
+             }
     end
 
     test "returns 422 when trying to replace the triggers", %{conn: conn} do

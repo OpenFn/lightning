@@ -75,7 +75,11 @@ defmodule LightningWeb.API.WorkflowsController do
     end
   end
 
-  defp save_workflow(%{triggers: triggers} = workflow, params, user) do
+  defp save_workflow(
+         %{id: workflow_id, triggers: triggers} = workflow,
+         params,
+         user
+       ) do
     changes_triggers? = Map.has_key?(params, "triggers")
 
     triggers_ids =
@@ -85,12 +89,17 @@ defmodule LightningWeb.API.WorkflowsController do
 
     active_triggers_count = count_enabled_triggers(params)
 
+    has_external_reference? = has_external_reference?(params, workflow_id)
+
     cond do
       changes_triggers? and Enum.any?(triggers, &(&1.id not in triggers_ids)) ->
         {:error, :cannot_replace_trigger}
 
       active_triggers_count > 1 ->
         {:error, :too_many_active_triggers}
+
+      has_external_reference? ->
+        {:error, :invalid_workflow_id}
 
       :else ->
         workflow
@@ -141,6 +150,18 @@ defmodule LightningWeb.API.WorkflowsController do
       end
     end
   end
+
+  defp has_external_reference?(params, workflow_id) when is_map(params) do
+    has_external_reference?(params["edges"], workflow_id) or
+      has_external_reference?(params["jobs"], workflow_id) or
+      has_external_reference?(params["triggers"], workflow_id)
+  end
+
+  defp has_external_reference?(list, workflow_id) when is_list(list) do
+    Enum.any?(list, &(&1["workflow_id"] && &1["workflow_id"] != workflow_id))
+  end
+
+  defp has_external_reference?(_other, _workflow_id), do: false
 
   defp check_limit(false = _activate?, _project_id), do: :ok
 
@@ -299,6 +320,15 @@ defmodule LightningWeb.API.WorkflowsController do
         workflow_id,
         :workflow,
         "Id #{id} should be a UUID."
+      )
+
+  defp maybe_handle_error(conn, {:error, :invalid_workflow_id}, workflow_id),
+    do:
+      reply_422(
+        conn,
+        workflow_id,
+        :workflow,
+        "Edges, jobs and triggers cannot reference another workflow!"
       )
 
   defp maybe_handle_error(conn, {:error, :missing_id}, workflow_id),
