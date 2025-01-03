@@ -133,7 +133,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
           Jason.encode!(workflow)
         )
 
-      assert %{"id" => workflow_id, "error" => nil} = json_response(conn, 200)
+      assert %{"id" => workflow_id, "error" => nil} = json_response(conn, 201)
 
       saved_workflow =
         Repo.get(Workflow, workflow_id)
@@ -472,7 +472,6 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              }
     end
 
-    @tag :skip
     test "returns 422 when edges has multiple source triggers", %{conn: conn} do
       user = insert(:user)
 
@@ -673,6 +672,112 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
                "errors" => %{
                  "jobs" => [
                    "The jobs [\"#{job.id}\"] should be present both in the jobs and on an edge."
+                 ]
+               }
+             }
+    end
+
+    test "returns 422 for invalid triggers patch", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      %{triggers: [trigger]} =
+        workflow =
+        insert(:simple_workflow, name: "work1.0", project: project)
+        |> Repo.reload()
+        |> Repo.preload([:edges, :jobs, :triggers])
+
+      patch =
+        %{
+          name: "work1.1",
+          triggers: [%{trigger | custom_path: ["invalid path in list"]}]
+        }
+
+      conn =
+        conn
+        |> assign_bearer(user)
+        |> patch(
+          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          Jason.encode!(patch)
+        )
+
+      assert json_response(conn, 422) == %{
+               "id" => workflow.id,
+               "errors" => %{
+                 "triggers" => [
+                   "Trigger #{trigger.id} has the errors: [custom_path is invalid]"
+                 ]
+               }
+             }
+    end
+
+    test "returns 422 for invalid jobs patch", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      %{jobs: [job | other_jobs]} =
+        workflow =
+        insert(:simple_workflow, name: "work1.0", project: project)
+        |> Repo.reload()
+        |> Repo.preload([:edges, :jobs, :triggers])
+
+      patch =
+        %{
+          name: "work1.1",
+          jobs: [%{job | body: ["invalid body in list"]} | other_jobs]
+        }
+
+      conn =
+        conn
+        |> assign_bearer(user)
+        |> patch(
+          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          Jason.encode!(patch)
+        )
+
+      assert json_response(conn, 422) == %{
+               "id" => workflow.id,
+               "errors" => %{
+                 "jobs" => ["Job #{job.id} has the errors: [body is invalid]"]
+               }
+             }
+    end
+
+    test "returns 422 for invalid edges patch", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      %{edges: [edge]} =
+        workflow =
+        insert(:simple_workflow, name: "work1.0", project: project)
+        |> Repo.reload()
+        |> Repo.preload([:edges, :jobs, :edges])
+
+      patch =
+        %{
+          name: "work1.1",
+          edges: [%{edge | condition_type: "on_faillllure"}]
+        }
+
+      conn =
+        conn
+        |> assign_bearer(user)
+        |> patch(
+          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          Jason.encode!(patch)
+        )
+
+      assert json_response(conn, 422) == %{
+               "id" => workflow.id,
+               "errors" => %{
+                 "edges" => [
+                   "Edge #{edge.id} has the errors: [condition_type is invalid]"
                  ]
                }
              }

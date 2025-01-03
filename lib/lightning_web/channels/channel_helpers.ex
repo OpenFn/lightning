@@ -13,7 +13,7 @@ defmodule LightningWeb.ChannelHelpers do
   end
 
   defp error_to_map(%Ecto.Changeset{} = error) do
-    LightningWeb.ChangesetJSON.error(error)
+    LightningWeb.ChangesetJSON.errors(error)
   end
 
   defp error_to_map(error), do: error

@@ -70,9 +70,8 @@ defmodule Lightning.Graph do
         [initial_job_id] ->
           traverse(initial_job_id, dag_edges, MapSet.new())
 
-          # TBD
-          # targets ->
-          #   {:error, :multiple_targets_for_trigger, trigger_id}
+        _multiple ->
+          {:error, :multiple_targets_for_trigger, trigger_id}
       end
     end)
   end

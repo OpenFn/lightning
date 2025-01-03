@@ -15,6 +15,7 @@ defmodule LightningWeb.API.WorkflowsController do
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Presence
   alias Lightning.Workflows.Workflow
+  alias LightningWeb.ChangesetJSON
 
   action_fallback LightningWeb.FallbackController
 
@@ -36,7 +37,9 @@ defmodule LightningWeb.API.WorkflowsController do
          :ok <- authorize_write(conn, project_id),
          {:ok, %{id: workflow_id}} <-
            save_workflow(params, conn.assigns.current_resource) do
-      json(conn, %{id: workflow_id, error: nil})
+      conn
+      |> put_status(:created)
+      |> json(%{id: workflow_id, error: nil})
     end
     |> then(&maybe_handle_error(conn, &1))
   end
@@ -113,42 +116,41 @@ defmodule LightningWeb.API.WorkflowsController do
          :ok <- validate_workflow(params_or_changeset),
          {:error, %{changes: changes} = _changeset} <-
            Workflows.save_workflow(params_or_changeset, user) do
-      triggers_with_errors = Enum.filter(changes.triggers, &(&1.errors != []))
-      jobs_with_errors = Enum.filter(changes.jobs, &(&1.errors != []))
-      edges_with_errors = Enum.filter(changes.edges, &(&1.errors != []))
+      triggers_with_errors = map_errors_to_ids(changes[:triggers])
+      jobs_with_errors = map_errors_to_ids(changes[:jobs])
+      edges_with_errors = map_errors_to_ids(changes[:edges])
 
       duplicated_ids =
         [triggers_with_errors, jobs_with_errors, edges_with_errors]
         |> Enum.concat()
-        |> Enum.filter(fn %{errors: errors} ->
-          Enum.any?(errors, fn {field, _value} -> field == :id end)
-        end)
-        |> Enum.map(&Ecto.Changeset.fetch_field!(&1, :id))
+        |> Enum.filter(fn {_id, errors} -> Map.has_key?(errors, :id) end)
 
       cond do
         Enum.any?(duplicated_ids) ->
-          {:error, {:duplicated_ids, duplicated_ids}}
+          {:error, {:duplicated_ids, Enum.map(duplicated_ids, &elem(&1, 0))}}
 
         Enum.any?(triggers_with_errors) ->
-          ids =
-            Enum.map(triggers_with_errors, &Ecto.Changeset.fetch_field!(&1, :id))
-
-          {:error, {:invalid_triggers, ids}}
+          {:error, {:invalid_triggers, triggers_with_errors}}
 
         Enum.any?(jobs_with_errors) ->
-          ids = Enum.map(jobs_with_errors, &Ecto.Changeset.fetch_field!(&1, :id))
-          {:error, {:invalid_jobs, ids}}
+          {:error, {:invalid_jobs, jobs_with_errors}}
 
         Enum.any?(edges_with_errors) ->
-          ids =
-            Enum.map(edges_with_errors, &Ecto.Changeset.fetch_field!(&1, :id))
-
-          {:error, {:invalid_edges, ids}}
+          {:error, {:invalid_edges, edges_with_errors}}
 
         :else ->
           {:error, :invalid_workflow}
       end
     end
+  end
+
+  # list of edges, jobs or triggers
+  defp map_errors_to_ids(nil), do: Map.new()
+
+  defp map_errors_to_ids(list) do
+    list
+    |> Enum.filter(&Enum.any?(&1.errors))
+    |> Map.new(&{Ecto.Changeset.fetch_field!(&1, :id), ChangesetJSON.errors(&1)})
   end
 
   defp has_external_reference?(params, workflow_id) when is_map(params) do
@@ -349,6 +351,39 @@ defmodule LightningWeb.API.WorkflowsController do
         "These ids #{inspect(ids)} should be unique for all workflows."
       )
 
+  @reason_entity_field %{
+    invalid_triggers: {"Trigger", :triggers},
+    invalid_jobs: {"Job", :jobs},
+    invalid_edges: {"Edge", :edges}
+  }
+  defp maybe_handle_error(
+         conn,
+         {:error, {reason, id_to_errors_map}},
+         workflow_id
+       )
+       when reason in [:invalid_triggers, :invalid_jobs, :invalid_edges] do
+    {entity, workflow_field} = Map.get(@reason_entity_field, reason)
+
+    error_msg =
+      id_to_errors_map
+      |> Enum.map_join("; ", fn {id, errors} ->
+        errors =
+          Enum.map(errors, fn
+            {field, [error]} -> "#{field} #{error}"
+            {field, errors} -> "#{field} #{inspect(errors)}"
+          end)
+
+        "#{entity} #{id} has the errors: [#{errors}]"
+      end)
+
+    reply_422(
+      conn,
+      workflow_id,
+      workflow_field,
+      error_msg
+    )
+  end
+
   defp maybe_handle_error(conn, result, workflow_id)
        when is_tuple(result) do
     case result do
@@ -368,14 +403,13 @@ defmodule LightningWeb.API.WorkflowsController do
           "Missing edge with source_trigger_id."
         )
 
-      # TBD
-      # {:error, :multiple_targets_for_trigger, trigger_id} ->
-      #   reply_422(
-      #     conn,
-      #     workflow_id,
-      #     :edges,
-      #     "Has multiple targets for trigger #{trigger_id}."
-      #   )
+      {:error, :multiple_targets_for_trigger, trigger_id} ->
+        reply_422(
+          conn,
+          workflow_id,
+          :edges,
+          "Has multiple targets for trigger #{trigger_id}."
+        )
 
       {:error, :graph_has_a_cycle, node_id} ->
         reply_422(

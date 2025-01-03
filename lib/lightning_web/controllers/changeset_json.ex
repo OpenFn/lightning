@@ -5,14 +5,14 @@ defmodule LightningWeb.ChangesetJSON do
 
   import LightningWeb.CoreComponents, only: [translate_error: 1]
 
-  def error(%Ecto.Changeset{} = changeset) do
+  def errors(%Ecto.Changeset{} = changeset) do
     Ecto.Changeset.traverse_errors(
       changeset,
       &translate_error/1
     )
   end
 
-  def error(%{changeset: %Ecto.Changeset{} = changeset}) do
-    %{errors: error(changeset)}
+  def errors(%{changeset: %Ecto.Changeset{} = changeset}) do
+    %{errors: errors(changeset)}
   end
 end
