@@ -331,7 +331,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert Presence.has_any_presence?(workflow)
     end
 
-
     test "Switching trigger types doesn't erase webhook URL input content", %{
       conn: conn,
       project: project,
