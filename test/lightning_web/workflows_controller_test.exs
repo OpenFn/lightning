@@ -2,8 +2,11 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
   use LightningWeb.ConnCase, async: true
 
   import Lightning.Factories
+  import Lightning.WorkflowsFixtures
+  import Phoenix.LiveViewTest
 
   alias Lightning.Extensions.Message
+  alias Lightning.Workflows.Presence
   alias Lightning.Workflows.Workflow
 
   setup %{conn: conn} do
@@ -629,6 +632,38 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              |> Map.merge(patch)
              |> encode_decode()
              |> remove_timestamps() == saved_workflow
+    end
+
+    test "returns 409 when the workflow is being edited on the UI" do
+      %{conn: conn, user: user} = register_and_log_in_user(%{conn: Phoenix.ConnTest.build_conn()})
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      workflow = workflow_fixture(name: "work1.0", project_id: project.id)
+
+      refute Presence.has_any_presence?(workflow)
+
+      {:ok, _view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      patch = %{name: "work1.1"}
+
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> assign_bearer(user)
+        |> patch(
+          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          Jason.encode!(patch)
+        )
+
+        assert json_response(conn, 409) == %{
+          "id" => workflow.id,
+          "errors" => %{"id" => ["Cannot save a workflow (work1.0) while it is being edited on the App UI"]}
+        }
+
+      assert Presence.has_any_presence?(workflow)
     end
 
     test "returns 422 for dangling job", %{conn: conn} do
