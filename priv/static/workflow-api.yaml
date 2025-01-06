@@ -1,0 +1,355 @@
+openapi: 3.0.3
+info:
+  title: Workflows API
+  description: API for managing workflows in a project
+  version: "1.0.0"
+servers:
+  - url: https://app.openfn.org/api/v1/
+    description: Production server
+
+paths:
+  /projects/{project_id}/workflows:
+    get:
+      summary: List all workflows for a project
+      operationId: listWorkflows
+      parameters:
+        - name: project_id
+          in: path
+          description: UUID of the project
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A list of workflows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Workflow"
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      summary: Create a new workflow in a project
+      operationId: createWorkflow
+      parameters:
+        - name: project_id
+          in: path
+          description: UUID of the project
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Workflow"
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workflow"
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /projects/{project_id}/workflows/{id}:
+    get:
+      summary: Retrieve a specific workflow by its ID
+      operationId: getWorkflow
+      parameters:
+        - name: project_id
+          in: path
+          description: UUID of the project
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          description: UUID of the workflow
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A single workflow
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workflow"
+        '404':
+          description: Not found
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      summary: Partially update a workflow
+      operationId: patchWorkflow
+      parameters:
+        - name: project_id
+          in: path
+          description: UUID of the project
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          description: UUID of the workflow
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Workflow"
+      responses:
+        '200':
+          description: Updated workflow
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workflow"
+        '404':
+          description: Not found
+        '409':
+          description: Conflicts on editing with the UI 
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    put:
+      summary: Replace a workflow
+      operationId: replaceWorkflow
+      parameters:
+        - name: project_id
+          in: path
+          description: UUID of the project
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          description: UUID of the workflow
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Workflow"
+      responses:
+        '200':
+          description: Updated (or replaced) workflow
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workflow"
+        '404':
+          description: Not found
+        '409':
+          description: Conflicts on editing with the UI 
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"  
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  schemas:
+    Workflow:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        project_id:
+          type: string
+        edges:
+          type: array
+          items:
+            $ref: "#/components/schemas/Edge"
+        jobs:
+          type: array
+          items:
+            $ref: "#/components/schemas/Job"
+        triggers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Trigger"
+        inserted_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - name
+        - project_id
+
+    Job:
+      type: object
+      properties:
+        id:
+          type: string
+        body:
+          type: string
+        name:
+          type: string
+        adaptor:
+          type: string
+          examples: 
+            versioned: @openfn/language-asana@v4.0.4
+            latest: @openfn/language-http@latest
+      required:
+        - name
+        - adaptor
+
+    Trigger:
+      type: object
+      properties:
+        id:
+          type: string
+        comment:
+          type: string
+        custom_path:
+          type: string
+        cron_expression:
+          type: string
+        type:
+          type: string
+        enabled:
+          type: boolean
+      required:
+        - type
+        - enabled
+      
+    Edge:
+      type: object
+      properties:
+        id:
+          type: string
+        condition_type:
+          type: string
+          enum:
+            - on_job_success
+            - on_job_failure
+            - always
+            - js_expression
+        enabled:
+          type: boolean
+        source_job_id:
+          type: string
+        source_trigger_id:
+          type: string
+        target_job_id:
+          type: string
+
+    ConflictError:
+      type: object
+      properties:
+        workflow:
+          type: array
+          items:
+            type: string
+            example: Cannot save a workflow (my-openhie) while it is being edited on the App UI
+
+    Error:
+      type: object
+      properties:
+        id:
+          type: string
+          description: "Workflow UUID"
+          nullable: true
+        errors:
+          type: object
+          description: The key is a workflow field or the string workflow for general errors
+          schema:
+            oneOf:
+              - $ref: "#/components/schemas/WorkflowError"
+              - $ref: "#/components/schemas/EdgesError"
+              - $ref: "#/components/schemas/JobsError"
+              - $ref: "#/components/schemas/TriggersError"
+              - $ref: "#/components/schemas/ProjectIdError"
+    
+    WorkflowError:
+      type: object
+      properties:
+        workflow:
+          type: array
+          items:
+            type: string
+            examples: 
+              idFormat: 
+                value: Id edge-1 should be a UUID.
+              invalidScope:
+                value: Edges, jobs and triggers cannot reference another workflow!
+              missingId:
+                value: All jobs and triggers should have an id (UUID).
+              duplicatedIds:
+                value: The ids ["f040e918-b5b8-40f3-8490-1503efad02fb", "ff26b193-d8f5-49e4-91fc-9cc470fe4fc4"] should be unique for all workflows.
+
+    JobsError:
+      type: object
+      properties:
+        jobs:
+          type: array
+          items:
+            type: string
+            example: Job 22ff48d4-a864-43fa-9765-35db1755057a has the errors: [body is invalid]
+    
+    EdgesError:
+      type: object
+      properties:
+        edges:
+          type: array
+          items:
+            type: string
+            example: Edge deb9dd34-e3b7-4146-8530-23025d31c50b has the errors: [condition_type is invalid]
+
+    TriggersError:
+      type: object
+      properties:
+        triggers:
+          type: array
+          items:
+            type: string
+            example: Trigger 22ff48d4-a864-43fa-9765-35db1755057a has the errors: [enabled is invalid]
+            
+    ProjectIdError:
+      type: object
+      properties:
+        project_id:
+          type: array
+          items:
+            type: string
+            example: The project_id of the body does not match the one on the path.
