@@ -35,7 +35,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         |> get(~p"/api/projects/#{project.id}/workflows/")
 
       assert json_response(conn, 200) == %{
-               "error" => nil,
+               "errors" => [],
                "workflows" => [
                  encode_decode(workflow1),
                  encode_decode(workflow2)
@@ -104,7 +104,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         |> get(~p"/api/projects/#{project_id}/workflows/#{workflow.id}")
 
       assert json_response(conn, 200) == %{
-               "error" => nil,
+               "errors" => [],
                "workflow" => encode_decode(workflow)
              }
     end
@@ -136,7 +136,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
           Jason.encode!(workflow)
         )
 
-      assert %{"id" => workflow_id, "error" => nil} = json_response(conn, 201)
+      assert %{"id" => workflow_id, "errors" => []} = json_response(conn, 201)
 
       saved_workflow =
         Repo.get(Workflow, workflow_id)
@@ -148,6 +148,109 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              |> Map.put(:id, workflow_id)
              |> encode_decode()
              |> remove_timestamps() == saved_workflow
+    end
+
+    test "returns 422 when an edge has invalid condition_type", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      %{edges: [edge | _edges]} =
+        workflow =
+        build(:simple_workflow, name: "work1", project_id: project.id)
+        |> then(fn %{edges: [edge | edges]} = workflow ->
+          %{workflow | edges: [%{edge | condition_type: "on_failures"} | edges]}
+        end)
+
+      conn =
+        conn
+        |> assign_bearer(user)
+        |> post(
+          ~p"/api/projects/#{project.id}/workflows/",
+          Jason.encode!(workflow)
+        )
+
+      assert json_response(conn, 422) == %{
+               "id" => nil,
+               "errors" => %{
+                 "edges" => [
+                   "Edge #{edge.id} has the errors: [condition_type is invalid]"
+                 ]
+               }
+             }
+    end
+
+    test "returns 422 when a job has invalid value", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      %{jobs: [job1, job2 | _jobs]} =
+        workflow =
+        build(:complex_workflow, name: "work1", project_id: project.id)
+        |> then(fn %{jobs: [job1, job2 | jobs]} = workflow ->
+          %{
+            workflow
+            | jobs: [
+                %{job1 | body: ["mistake as list"]},
+                %{job2 | adaptor: ["mistake as list"]} | jobs
+              ]
+          }
+        end)
+
+      conn =
+        conn
+        |> assign_bearer(user)
+        |> post(
+          ~p"/api/projects/#{project.id}/workflows/",
+          Jason.encode!(workflow)
+        )
+
+      assert %{
+               "id" => nil,
+               "errors" => %{
+                 "jobs" => jobs_errors
+               }
+             } = json_response(conn, 422)
+
+      assert Enum.sort(jobs_errors) ==
+               Enum.sort([
+                 "Job #{job1.id} has the errors: [body is invalid]",
+                 "Job #{job2.id} has the errors: [adaptor is invalid]"
+               ])
+    end
+
+    test "returns 422 when a trigger has invalid value", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      %{triggers: [trigger]} =
+        workflow =
+        build(:complex_workflow, name: "work1", project_id: project.id)
+        |> then(fn %{triggers: [trigger]} = workflow ->
+          %{workflow | triggers: [%{trigger | enabled: "always"}]}
+        end)
+
+      conn =
+        conn
+        |> assign_bearer(user)
+        |> post(
+          ~p"/api/projects/#{project.id}/workflows/",
+          Jason.encode!(workflow)
+        )
+
+      assert %{
+               "id" => nil,
+               "errors" => %{
+                 "triggers" => [
+                   "Trigger #{trigger.id} has the errors: [enabled is invalid]"
+                 ]
+               }
+             } == json_response(conn, 422)
     end
 
     test "returns 422 when workflow limit has been reached", %{conn: conn} do
@@ -241,7 +344,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
                "id" => workflow.id,
                "errors" => %{
                  "project_id" => [
-                   "The project_id of the body does not match one one the path."
+                   "The project_id of the body does not match the one the path."
                  ]
                }
              }
@@ -428,7 +531,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
                "id" => nil,
                "errors" => %{
                  "workflow" => [
-                   "These ids [#{inspect(edge_id)}] should be unique for all workflows."
+                   "The ids [#{inspect(edge_id)}] should be unique for all workflows."
                  ]
                }
              } == json_response(conn, 422)
@@ -566,7 +669,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
           Jason.encode!(patch)
         )
 
-      assert %{"id" => workflow_id, "error" => nil} = json_response(conn, 200)
+      assert %{"id" => workflow_id, "errors" => []} = json_response(conn, 200)
       assert Ecto.UUID.dump(workflow_id)
 
       saved_workflow =
@@ -619,7 +722,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
           Jason.encode!(patch)
         )
 
-      assert %{"id" => workflow_id, "error" => nil} = json_response(conn, 200)
+      assert %{"id" => workflow_id, "errors" => []} = json_response(conn, 200)
       assert Ecto.UUID.dump(workflow_id)
 
       saved_workflow =
@@ -635,7 +738,8 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
     end
 
     test "returns 409 when the workflow is being edited on the UI" do
-      %{conn: conn, user: user} = register_and_log_in_user(%{conn: Phoenix.ConnTest.build_conn()})
+      %{conn: conn, user: user} =
+        register_and_log_in_user(%{conn: Phoenix.ConnTest.build_conn()})
 
       project =
         insert(:project, project_users: [%{user: user}])
@@ -847,7 +951,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
                "id" => workflow.id,
                "errors" => %{
                  "project_id" => [
-                   "The project_id of the body does not match one one the path."
+                   "The project_id of the body does not match the one the path."
                  ]
                }
              }
@@ -1035,7 +1139,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
           Jason.encode!(complete_update)
         )
 
-      assert json_response(conn, 200) == %{"id" => workflow.id, "error" => nil}
+      assert json_response(conn, 200) == %{"id" => workflow.id, "errors" => []}
 
       saved_workflow =
         Repo.get(Workflow, workflow.id)
@@ -1160,7 +1264,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
                "id" => workflow.id,
                "errors" => %{
                  "workflow" => [
-                   "These ids [#{inspect(external_job.id)}] should be unique for all workflows."
+                   "The ids [#{inspect(external_job.id)}] should be unique for all workflows."
                  ]
                }
              }

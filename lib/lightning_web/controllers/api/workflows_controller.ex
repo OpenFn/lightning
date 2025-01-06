@@ -28,7 +28,7 @@ defmodule LightningWeb.API.WorkflowsController do
           include: [:edges, :jobs, :triggers]
         )
 
-      json(conn, %{workflows: list, error: nil})
+      json(conn, %{workflows: list, errors: []})
     end
   end
 
@@ -39,7 +39,7 @@ defmodule LightningWeb.API.WorkflowsController do
            save_workflow(params, conn.assigns.current_resource) do
       conn
       |> put_status(:created)
-      |> json(%{id: workflow_id, error: nil})
+      |> json(%{id: workflow_id, errors: []})
     end
     |> then(&maybe_handle_error(conn, &1))
   end
@@ -47,7 +47,7 @@ defmodule LightningWeb.API.WorkflowsController do
   def show(conn, %{"project_id" => project_id, "id" => workflow_id}) do
     with :ok <- authorize_read(conn, project_id),
          {:ok, workflow} <- get_workflow(workflow_id, project_id) do
-      json(conn, %{workflow: workflow, error: nil})
+      json(conn, %{workflow: workflow, errors: []})
     end
   end
 
@@ -58,7 +58,7 @@ defmodule LightningWeb.API.WorkflowsController do
          :ok <- authorize_write(conn, workflow),
          {:ok, %{id: workflow_id}} <-
            save_workflow(workflow, params, conn.assigns.current_resource) do
-      json(conn, %{id: workflow_id, error: nil})
+      json(conn, %{id: workflow_id, errors: []})
     end
     |> then(&maybe_handle_error(conn, &1, workflow_id))
   end
@@ -348,7 +348,7 @@ defmodule LightningWeb.API.WorkflowsController do
         conn,
         workflow_id,
         :workflow,
-        "These ids #{inspect(ids)} should be unique for all workflows."
+        "The ids #{inspect(ids)} should be unique for all workflows."
       )
 
   @reason_entity_field %{
@@ -440,7 +440,7 @@ defmodule LightningWeb.API.WorkflowsController do
           conn,
           workflow_id,
           :project_id,
-          "The project_id of the body does not match one one the path."
+          "The project_id of the body does not match the one the path."
         )
 
       {:error, :too_many_workflows, %Message{text: error_msg}} ->
