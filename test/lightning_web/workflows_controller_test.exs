@@ -212,7 +212,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       assert %{
                "id" => nil,
                "errors" => %{
-                 "trigger_id" => [
+                 "triggers" => [
                    "A workflow can have only one trigger enabled at a time."
                  ]
                }
@@ -664,7 +664,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       assert json_response(conn, 409) == %{
                "id" => workflow.id,
                "errors" => %{
-                 "id" => [
+                 "workflow" => [
                    "Cannot save a workflow (work1.0) while it is being edited on the App UI"
                  ]
                }
@@ -889,8 +889,8 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       assert json_response(conn, 422) == %{
                "id" => workflow.id,
                "errors" => %{
-                 "trigger_id" => [
-                   "Cannot be replaced, only edited or added."
+                 "triggers" => [
+                   "A trigger cannot be replaced, only edited or added."
                  ]
                }
              }
@@ -972,7 +972,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       assert json_response(conn, 422) == %{
                "id" => workflow.id,
                "errors" => %{
-                 "trigger_id" => [
+                 "triggers" => [
                    "A workflow can have only one trigger enabled at a time."
                  ]
                }
@@ -1216,8 +1216,8 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       assert json_response(conn, 422) == %{
                "id" => workflow.id,
                "errors" => %{
-                 "trigger_id" => [
-                   "Cannot be replaced, only edited or added."
+                 "triggers" => [
+                   "A trigger cannot be replaced, only edited or added."
                  ]
                }
              }

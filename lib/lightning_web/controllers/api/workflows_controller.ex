@@ -309,7 +309,7 @@ defmodule LightningWeb.API.WorkflowsController do
       |> json(%{
         id: workflow_id,
         errors: %{
-          id: [
+          workflow: [
             "Cannot save a workflow (#{name}) while it is being edited on the App UI"
           ]
         }
@@ -364,9 +364,9 @@ defmodule LightningWeb.API.WorkflowsController do
        when reason in [:invalid_triggers, :invalid_jobs, :invalid_edges] do
     {entity, workflow_field} = Map.get(@reason_entity_field, reason)
 
-    error_msg =
+    error_msgs =
       id_to_errors_map
-      |> Enum.map_join("; ", fn {id, errors} ->
+      |> Enum.map(fn {id, errors} ->
         errors =
           Enum.map(errors, fn
             {field, [error]} -> "#{field} #{error}"
@@ -380,7 +380,7 @@ defmodule LightningWeb.API.WorkflowsController do
       conn,
       workflow_id,
       workflow_field,
-      error_msg
+      error_msgs
     )
   end
 
@@ -423,15 +423,15 @@ defmodule LightningWeb.API.WorkflowsController do
         reply_422(
           conn,
           workflow_id,
-          :trigger_id,
-          "Cannot be replaced, only edited or added."
+          :triggers,
+          "A trigger cannot be replaced, only edited or added."
         )
 
       {:error, :too_many_active_triggers} ->
         reply_422(
           conn,
           workflow_id,
-          :trigger_id,
+          :triggers,
           "A workflow can have only one trigger enabled at a time."
         )
 
@@ -453,9 +453,9 @@ defmodule LightningWeb.API.WorkflowsController do
     end
   end
 
-  defp reply_422(conn, workflow_id, field, msg) do
+  defp reply_422(conn, workflow_id, field, msgs) do
     conn
     |> put_status(:unprocessable_entity)
-    |> json(%{id: workflow_id, errors: %{field => [msg]}})
+    |> json(%{id: workflow_id, errors: %{field => List.wrap(msgs)}})
   end
 end
