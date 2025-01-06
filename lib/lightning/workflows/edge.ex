@@ -38,9 +38,7 @@ defmodule Lightning.Workflows.Edge do
              :enabled,
              :source_job_id,
              :source_trigger_id,
-             :target_job_id,
-             :inserted_at,
-             :updated_at
+             :target_job_id
            ]}
   schema "workflow_edges" do
     belongs_to :workflow, Workflow
