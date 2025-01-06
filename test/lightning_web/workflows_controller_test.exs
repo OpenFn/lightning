@@ -32,7 +32,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       conn =
         conn
         |> assign_bearer(user)
-        |> get(~p"/api/projects/#{project.id}/workflows/")
+        |> get(~p"/api/v1/projects/#{project.id}/workflows/")
 
       assert json_response(conn, 200) == %{
                "error" => nil,
@@ -46,7 +46,8 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
     test "returns 401 without a token", %{conn: conn} do
       %{id: workflow_id, project_id: project_id} = insert(:simple_workflow)
 
-      conn = get(conn, ~p"/api/projects/#{project_id}/workflows/#{workflow_id}")
+      conn =
+        get(conn, ~p"/api/v1/projects/#{project_id}/workflows/#{workflow_id}")
 
       assert %{"error" => "Unauthorized"} == json_response(conn, 401)
     end
@@ -69,7 +70,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       conn =
         conn
         |> assign_bearer(token)
-        |> get(~p"/api/projects/#{project_id}/workflows/#{workflow_id}")
+        |> get(~p"/api/v1/projects/#{project_id}/workflows/#{workflow_id}")
 
       assert json_response(conn, 401) == %{"error" => "Unauthorized"}
     end
@@ -82,7 +83,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       conn =
         conn
         |> assign_bearer(user)
-        |> get(~p"/api/projects/#{project_id}/workflows/#{workflow_id}")
+        |> get(~p"/api/v1/projects/#{project_id}/workflows/#{workflow_id}")
 
       assert json_response(conn, 401) == %{"error" => "Unauthorized"}
     end
@@ -101,7 +102,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       conn =
         conn
         |> assign_bearer(user)
-        |> get(~p"/api/projects/#{project_id}/workflows/#{workflow.id}")
+        |> get(~p"/api/v1/projects/#{project_id}/workflows/#{workflow.id}")
 
       assert json_response(conn, 200) == %{
                "error" => nil,
@@ -112,7 +113,8 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
     test "returns 401 without a token", %{conn: conn} do
       %{id: workflow_id, project_id: project_id} = insert(:simple_workflow)
 
-      conn = get(conn, ~p"/api/projects/#{project_id}/workflows/#{workflow_id}")
+      conn =
+        get(conn, ~p"/api/v1/projects/#{project_id}/workflows/#{workflow_id}")
 
       assert %{"error" => "Unauthorized"} == json_response(conn, 401)
     end
@@ -132,7 +134,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         conn
         |> assign_bearer(user)
         |> post(
-          ~p"/api/projects/#{project.id}/workflows/",
+          ~p"/api/v1/projects/#{project.id}/workflows/",
           Jason.encode!(workflow)
         )
 
@@ -174,7 +176,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         conn
         |> assign_bearer(user)
         |> post(
-          ~p"/api/projects/#{project.id}/workflows/",
+          ~p"/api/v1/projects/#{project.id}/workflows/",
           Jason.encode!(workflow)
         )
 
@@ -203,7 +205,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         conn
         |> assign_bearer(user)
         |> post(
-          ~p"/api/projects/#{project.id}/workflows/",
+          ~p"/api/v1/projects/#{project.id}/workflows/",
           Jason.encode!(workflow)
         )
 
@@ -233,7 +235,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         conn
         |> assign_bearer(user)
         |> post(
-          ~p"/api/projects/#{project2.id}/workflows",
+          ~p"/api/v1/projects/#{project2.id}/workflows",
           Jason.encode!(workflow)
         )
 
@@ -271,7 +273,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         conn
         |> assign_bearer(user)
         |> post(
-          ~p"/api/projects/#{project.id}/workflows",
+          ~p"/api/v1/projects/#{project.id}/workflows",
           Jason.encode!(workflow)
         )
 
@@ -319,7 +321,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       assert conn
              |> post(
-               ~p"/api/projects/#{project.id}/workflows",
+               ~p"/api/v1/projects/#{project.id}/workflows",
                Jason.encode!(workflow1)
              )
              |> json_response(422) == %{
@@ -331,7 +333,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       assert conn
              |> post(
-               ~p"/api/projects/#{project.id}/workflows",
+               ~p"/api/v1/projects/#{project.id}/workflows",
                Jason.encode!(workflow2)
              )
              |> json_response(422) == %{
@@ -372,7 +374,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       assert conn
              |> post(
-               ~p"/api/projects/#{project.id}/workflows",
+               ~p"/api/v1/projects/#{project.id}/workflows",
                Jason.encode!(workflow1)
              )
              |> json_response(422) == %{
@@ -386,7 +388,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       assert conn
              |> post(
-               ~p"/api/projects/#{project.id}/workflows",
+               ~p"/api/v1/projects/#{project.id}/workflows",
                Jason.encode!(workflow2)
              )
              |> json_response(422) == %{
@@ -420,7 +422,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         conn
         |> assign_bearer(user)
         |> post(
-          ~p"/api/projects/#{project.id}/workflows/",
+          ~p"/api/v1/projects/#{project.id}/workflows/",
           Jason.encode!(workflow)
         )
 
@@ -463,7 +465,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         conn
         |> assign_bearer(user)
         |> post(
-          ~p"/api/projects/#{project.id}/workflows",
+          ~p"/api/v1/projects/#{project.id}/workflows",
           Jason.encode!(workflow)
         )
 
@@ -509,7 +511,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         conn
         |> assign_bearer(user)
         |> post(
-          ~p"/api/projects/#{project.id}/workflows",
+          ~p"/api/v1/projects/#{project.id}/workflows",
           Jason.encode!(workflow)
         )
 
@@ -529,7 +531,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       build(:simple_workflow, name: "work1", project: project)
 
-      conn = post(conn, ~p"/api/projects/#{project.id}/workflows/")
+      conn = post(conn, ~p"/api/v1/projects/#{project.id}/workflows/")
 
       assert %{"error" => "Unauthorized"} == json_response(conn, 401)
     end
@@ -562,7 +564,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         conn
         |> assign_bearer(user)
         |> patch(
-          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          ~p"/api/v1/projects/#{project.id}/workflows/#{workflow.id}",
           Jason.encode!(patch)
         )
 
@@ -615,7 +617,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         conn
         |> assign_bearer(user)
         |> patch(
-          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          ~p"/api/v1/projects/#{project.id}/workflows/#{workflow.id}",
           Jason.encode!(patch)
         )
 
@@ -635,7 +637,8 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
     end
 
     test "returns 409 when the workflow is being edited on the UI" do
-      %{conn: conn, user: user} = register_and_log_in_user(%{conn: Phoenix.ConnTest.build_conn()})
+      %{conn: conn, user: user} =
+        register_and_log_in_user(%{conn: Phoenix.ConnTest.build_conn()})
 
       project =
         insert(:project, project_users: [%{user: user}])
@@ -654,14 +657,18 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         |> put_req_header("content-type", "application/json")
         |> assign_bearer(user)
         |> patch(
-          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          ~p"/api/v1/projects/#{project.id}/workflows/#{workflow.id}",
           Jason.encode!(patch)
         )
 
-        assert json_response(conn, 409) == %{
-          "id" => workflow.id,
-          "errors" => %{"id" => ["Cannot save a workflow (work1.0) while it is being edited on the App UI"]}
-        }
+      assert json_response(conn, 409) == %{
+               "id" => workflow.id,
+               "errors" => %{
+                 "id" => [
+                   "Cannot save a workflow (work1.0) while it is being edited on the App UI"
+                 ]
+               }
+             }
 
       assert Presence.has_any_presence?(workflow)
     end
@@ -698,7 +705,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         conn
         |> assign_bearer(user)
         |> patch(
-          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          ~p"/api/v1/projects/#{project.id}/workflows/#{workflow.id}",
           Jason.encode!(patch)
         )
 
@@ -734,7 +741,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         conn
         |> assign_bearer(user)
         |> patch(
-          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          ~p"/api/v1/projects/#{project.id}/workflows/#{workflow.id}",
           Jason.encode!(patch)
         )
 
@@ -770,7 +777,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         conn
         |> assign_bearer(user)
         |> patch(
-          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          ~p"/api/v1/projects/#{project.id}/workflows/#{workflow.id}",
           Jason.encode!(patch)
         )
 
@@ -804,7 +811,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         conn
         |> assign_bearer(user)
         |> patch(
-          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          ~p"/api/v1/projects/#{project.id}/workflows/#{workflow.id}",
           Jason.encode!(patch)
         )
 
@@ -835,7 +842,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         conn
         |> assign_bearer(user)
         |> patch(
-          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          ~p"/api/v1/projects/#{project.id}/workflows/#{workflow.id}",
           Jason.encode!(patch)
         )
 
@@ -875,7 +882,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         conn
         |> assign_bearer(user)
         |> patch(
-          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          ~p"/api/v1/projects/#{project.id}/workflows/#{workflow.id}",
           Jason.encode!(patch)
         )
 
@@ -919,7 +926,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         conn
         |> assign_bearer(user)
         |> patch(
-          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          ~p"/api/v1/projects/#{project.id}/workflows/#{workflow.id}",
           Jason.encode!(patch)
         )
 
@@ -958,7 +965,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         conn
         |> assign_bearer(user)
         |> patch(
-          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          ~p"/api/v1/projects/#{project.id}/workflows/#{workflow.id}",
           Jason.encode!(patch)
         )
 
@@ -981,9 +988,13 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       workflow = insert(:simple_workflow, name: "work1", project: project)
 
       conn =
-        patch(conn, ~p"/api/projects/#{project.id}/workflows/#{workflow.id}", %{
-          name: "work-2"
-        })
+        patch(
+          conn,
+          ~p"/api/v1/projects/#{project.id}/workflows/#{workflow.id}",
+          %{
+            name: "work-2"
+          }
+        )
 
       assert %{"error" => "Unauthorized"} == json_response(conn, 401)
     end
@@ -1027,7 +1038,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         conn
         |> assign_bearer(user)
         |> put(
-          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          ~p"/api/v1/projects/#{project.id}/workflows/#{workflow.id}",
           Jason.encode!(complete_update)
         )
 
@@ -1090,7 +1101,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         conn
         |> assign_bearer(user)
         |> put(
-          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          ~p"/api/v1/projects/#{project.id}/workflows/#{workflow.id}",
           Jason.encode!(complete_update_external_ref)
         )
 
@@ -1148,7 +1159,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         conn
         |> assign_bearer(user)
         |> put(
-          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          ~p"/api/v1/projects/#{project.id}/workflows/#{workflow.id}",
           Jason.encode!(complete_update_external_id)
         )
 
@@ -1198,7 +1209,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
         conn
         |> assign_bearer(user)
         |> put(
-          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          ~p"/api/v1/projects/#{project.id}/workflows/#{workflow.id}",
           Jason.encode!(invalid_update)
         )
 
@@ -1221,9 +1232,13 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       workflow = insert(:simple_workflow, name: "work1", project: project)
 
       conn =
-        patch(conn, ~p"/api/projects/#{project.id}/workflows/#{workflow.id}", %{
-          name: "work-2"
-        })
+        patch(
+          conn,
+          ~p"/api/v1/projects/#{project.id}/workflows/#{workflow.id}",
+          %{
+            name: "work-2"
+          }
+        )
 
       assert %{"error" => "Unauthorized"} == json_response(conn, 401)
     end
