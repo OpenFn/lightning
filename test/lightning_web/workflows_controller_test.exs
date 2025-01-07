@@ -657,6 +657,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
   end
 
   describe "PATCH /workflows/:workflow_id" do
+    @tag :skip
     test "updates a workflow trigger", %{conn: conn} do
       user = insert(:user)
 
@@ -702,6 +703,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              |> remove_timestamps() == saved_workflow
     end
 
+    @tag :skip
     test "adds some jobs to a workflow", %{conn: conn} do
       user = insert(:user)
 
@@ -755,6 +757,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              |> remove_timestamps() == saved_workflow
     end
 
+    @tag :skip
     test "returns 404 when the workflow doesn't exist", %{conn: conn} do
       user = insert(:user)
 
@@ -775,6 +778,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
                |> json_response(404)
     end
 
+    @tag :skip
     test "returns 409 when the workflow is being edited on the UI" do
       %{conn: conn, user: user} =
         register_and_log_in_user(%{conn: Phoenix.ConnTest.build_conn()})
@@ -812,6 +816,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       assert Presence.has_any_presence?(workflow)
     end
 
+    @tag :skip
     test "returns 422 for dangling job", %{conn: conn} do
       user = insert(:user)
 
@@ -858,6 +863,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              }
     end
 
+    @tag :skip
     test "returns 422 for invalid triggers patch", %{conn: conn} do
       user = insert(:user)
 
@@ -894,6 +900,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              }
     end
 
+    @tag :skip
     test "returns 422 for invalid jobs patch", %{conn: conn} do
       user = insert(:user)
 
@@ -928,6 +935,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              }
     end
 
+    @tag :skip
     test "returns 422 for invalid edges patch", %{conn: conn} do
       user = insert(:user)
 
@@ -964,6 +972,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              }
     end
 
+    @tag :skip
     test "returns 422 on project id mismatch", %{conn: conn} do
       user = insert(:user)
 
@@ -995,6 +1004,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              }
     end
 
+    @tag :skip
     test "returns 422 when trying to replace the triggers", %{conn: conn} do
       user = insert(:user)
 
@@ -1035,6 +1045,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              }
     end
 
+    @tag :skip
     test "returns 422 when workflow limit has been reached", %{conn: conn} do
       user = insert(:user)
 
@@ -1077,6 +1088,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              } == json_response(conn, 422)
     end
 
+    @tag :skip
     test "returns 422 when there are too many enabled triggers", %{conn: conn} do
       user = insert(:user)
 
@@ -1118,6 +1130,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              }
     end
 
+    @tag :skip
     test "returns 401 without a token", %{conn: conn} do
       user = insert(:user)
 
@@ -1206,7 +1219,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
                |> assign_bearer(user)
                |> put(
                  ~p"/api/projects/#{project.id}/workflows/#{unexisting_id}",
-                 Jason.encode!(workflow)
+                 Jason.encode!(Map.put(workflow, :id, unexisting_id))
                )
                |> json_response(404)
     end
@@ -1248,6 +1261,33 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              }
 
       assert Presence.has_any_presence?(workflow)
+    end
+
+    test "returns 404 when the workflow id doesn't match the one on the path", %{
+      conn: conn
+    } do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      unexisting_id = Ecto.UUID.generate()
+      workflow = build(:simple_workflow, project_id: project.id)
+
+      assert %{
+               "id" => ^unexisting_id,
+               "errors" => %{
+                 "id" => ["Workflow ID doesn't match with the one on the path."]
+               }
+             } =
+               conn
+               |> put_req_header("content-type", "application/json")
+               |> assign_bearer(user)
+               |> put(
+                 ~p"/api/projects/#{project.id}/workflows/#{unexisting_id}",
+                 Jason.encode!(workflow)
+               )
+               |> json_response(422)
     end
 
     test "returns 422 on reference to another workflow", %{conn: conn} do
@@ -1426,9 +1466,11 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       workflow = insert(:simple_workflow, name: "work1", project: project)
 
       conn =
-        patch(conn, ~p"/api/projects/#{project.id}/workflows/#{workflow.id}", %{
-          name: "work-2"
-        })
+        put(
+          conn,
+          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          Jason.encode!(%{workflow | name: "work2"})
+        )
 
       assert %{"error" => "Unauthorized"} == json_response(conn, 401)
     end

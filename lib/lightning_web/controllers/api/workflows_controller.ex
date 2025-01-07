@@ -56,7 +56,7 @@ defmodule LightningWeb.API.WorkflowsController do
 
   def update(conn, %{"project_id" => project_id, "id" => workflow_id} = params) do
     with :ok <- validate_project_id(conn.body_params, project_id),
-         :ok <- validate_uuid(workflow_id),
+         :ok <- validate_workflow_id(conn.body_params, workflow_id),
          :ok <- authorize_write(conn, project_id),
          {:ok, workflow} <- get_workflow(workflow_id, project_id),
          :ok <- authorize_write(conn, workflow),
@@ -265,6 +265,14 @@ defmodule LightningWeb.API.WorkflowsController do
     end
   end
 
+  defp validate_workflow_id(%{"id" => workflow_id}, workflow_id),
+    do: validate_uuid(workflow_id)
+
+  defp validate_workflow_id(%{"id" => _workflow_id1}, _workflow_id2),
+    do: {:error, :invalid_path_workflow_id}
+
+  defp validate_workflow_id(_no_body_id, _workflow_id2), do: :ok
+
   defp validate_project_id(%{"project_id" => project_id}, project_id),
     do: validate_uuid(project_id)
 
@@ -333,6 +341,19 @@ defmodule LightningWeb.API.WorkflowsController do
         :workflow,
         "Id #{id} should be a UUID."
       )
+
+  defp maybe_handle_error(
+         conn,
+         {:error, :invalid_path_workflow_id},
+         workflow_id
+       ),
+       do:
+         reply_422(
+           conn,
+           workflow_id,
+           :id,
+           "Workflow ID doesn't match with the one on the path."
+         )
 
   defp maybe_handle_error(conn, {:error, :invalid_workflow_id}, workflow_id),
     do:
