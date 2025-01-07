@@ -1,7 +1,8 @@
 defmodule LightningWeb.API.WorkflowsController do
   use LightningWeb, :controller
 
-  import Lightning.Workflows.WorkflowUsageLimiter, only: [limit_workflow_activation: 2]
+  import Lightning.Workflows.WorkflowUsageLimiter,
+    only: [limit_workflow_activation: 2]
 
   alias Ecto.Changeset
 
@@ -288,6 +289,12 @@ defmodule LightningWeb.API.WorkflowsController do
   end
 
   defp maybe_handle_error(conn, result, workflow_id \\ nil)
+
+  defp maybe_handle_error(conn, {:error, :not_found}, workflow_id) do
+    conn
+    |> put_status(:not_found)
+    |> json(%{id: workflow_id, errors: ["Not Found"]})
+  end
 
   defp maybe_handle_error(_conn, result, _workflow_id) when is_map(result),
     do: result

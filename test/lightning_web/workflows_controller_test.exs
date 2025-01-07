@@ -737,6 +737,26 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              |> remove_timestamps() == saved_workflow
     end
 
+    test "returns 404 when the workflow doesn't exist", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      unexisting_id = Ecto.UUID.generate()
+      patch = %{name: "work1.1"}
+
+      assert %{"id" => ^unexisting_id, "errors" => ["Not Found"]} =
+               conn
+               |> put_req_header("content-type", "application/json")
+               |> assign_bearer(user)
+               |> patch(
+                 ~p"/api/projects/#{project.id}/workflows/#{unexisting_id}",
+                 Jason.encode!(patch)
+               )
+               |> json_response(404)
+    end
+
     test "returns 409 when the workflow is being edited on the UI" do
       %{conn: conn, user: user} =
         register_and_log_in_user(%{conn: Phoenix.ConnTest.build_conn()})
@@ -1151,6 +1171,65 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              |> Map.merge(complete_update)
              |> encode_decode()
              |> remove_timestamps() == saved_workflow
+    end
+
+    test "returns 404 when the workflow doesn't exist", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      unexisting_id = Ecto.UUID.generate()
+      workflow = build(:simple_workflow, project_id: project.id)
+
+      assert %{"id" => ^unexisting_id, "errors" => ["Not Found"]} =
+               conn
+               |> put_req_header("content-type", "application/json")
+               |> assign_bearer(user)
+               |> put(
+                 ~p"/api/projects/#{project.id}/workflows/#{unexisting_id}",
+                 Jason.encode!(workflow)
+               )
+               |> json_response(404)
+    end
+
+    test "returns 409 when the workflow is being edited on the UI" do
+      %{conn: conn, user: user} =
+        register_and_log_in_user(%{conn: Phoenix.ConnTest.build_conn()})
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      workflow =
+        workflow_fixture(name: "work1.0", project_id: project.id)
+        |> Repo.preload([:edges, :jobs, :triggers])
+
+      refute Presence.has_any_presence?(workflow)
+
+      {:ok, _view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      workflow_update = %{workflow | name: "work1.1"}
+
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> assign_bearer(user)
+        |> put(
+          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          Jason.encode!(workflow_update)
+        )
+
+      assert json_response(conn, 409) == %{
+               "id" => workflow.id,
+               "errors" => %{
+                 "workflow" => [
+                   "Cannot save a workflow (work1.0) while it is being edited on the App UI"
+                 ]
+               }
+             }
+
+      assert Presence.has_any_presence?(workflow)
     end
 
     test "returns 422 on reference to another workflow", %{conn: conn} do
