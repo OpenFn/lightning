@@ -45,14 +45,18 @@ defmodule LightningWeb.API.WorkflowsController do
   end
 
   def show(conn, %{"project_id" => project_id, "id" => workflow_id}) do
-    with :ok <- authorize_read(conn, project_id),
+    with :ok <- validate_uuid(project_id),
+         :ok <- validate_uuid(workflow_id),
+         :ok <- authorize_read(conn, project_id),
          {:ok, workflow} <- get_workflow(workflow_id, project_id) do
       json(conn, %{workflow: workflow, errors: []})
     end
+    |> then(&maybe_handle_error(conn, &1))
   end
 
   def update(conn, %{"project_id" => project_id, "id" => workflow_id} = params) do
     with :ok <- validate_project_id(conn.body_params, project_id),
+         :ok <- validate_uuid(workflow_id),
          :ok <- authorize_write(conn, project_id),
          {:ok, workflow} <- get_workflow(workflow_id, project_id),
          :ok <- authorize_write(conn, workflow),
@@ -254,12 +258,21 @@ defmodule LightningWeb.API.WorkflowsController do
     end
   end
 
-  defp validate_project_id(%{"project_id" => project_id}, project_id), do: :ok
+  defp validate_uuid(project_id) do
+    case Ecto.UUID.dump(to_string(project_id)) do
+      {:ok, _bin} -> :ok
+      :error -> {:error, :invalid_id, project_id}
+    end
+  end
+
+  defp validate_project_id(%{"project_id" => project_id}, project_id),
+    do: validate_uuid(project_id)
 
   defp validate_project_id(%{"project_id" => _project_id1}, _project_id2),
     do: {:error, :invalid_project_id}
 
-  defp validate_project_id(_patch, _project_id), do: :ok
+  defp validate_project_id(_patch, project_id),
+    do: validate_uuid(project_id)
 
   defp authorize_write(_conn, %Workflow{name: name} = workflow) do
     if Presence.has_any_presence?(workflow) do
@@ -381,6 +394,25 @@ defmodule LightningWeb.API.WorkflowsController do
     )
   end
 
+  defp maybe_handle_error(conn, {:error, reason}, workflow_id)
+       when reason in [:invalid_project_id, :invalid_project_id_format] do
+    case reason do
+      :invalid_project_id ->
+        "The project_id of the body does not match the one the path."
+
+      :invalid_project_id_format ->
+        "The project_id is not a UUID."
+    end
+    |> then(
+      &reply_422(
+        conn,
+        workflow_id,
+        :project_id,
+        &1
+      )
+    )
+  end
+
   defp maybe_handle_error(conn, result, workflow_id)
        when is_tuple(result) do
     case result do
@@ -432,14 +464,6 @@ defmodule LightningWeb.API.WorkflowsController do
           "A workflow can have only one trigger enabled at a time."
         )
 
-      {:error, :invalid_project_id} ->
-        reply_422(
-          conn,
-          workflow_id,
-          :project_id,
-          "The project_id of the body does not match the one the path."
-        )
-
       {:error, :too_many_workflows, %Message{text: error_msg}} ->
         reply_422(
           conn,
@@ -447,6 +471,9 @@ defmodule LightningWeb.API.WorkflowsController do
           :project_id,
           error_msg
         )
+
+      result ->
+        result
     end
   end
 

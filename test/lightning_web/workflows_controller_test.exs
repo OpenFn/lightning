@@ -116,6 +116,24 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       assert %{"error" => "Unauthorized"} == json_response(conn, 401)
     end
+
+    test "returns 422 for invalid project_id", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      workflow = insert(:simple_workflow, project: project)
+
+      assert %{
+               "errors" => %{"workflow" => ["Id foo should be a UUID."]},
+               "id" => nil
+             } ==
+               conn
+               |> assign_bearer(user)
+               |> get(~p"/api/projects/foo/workflows/#{workflow.id}")
+               |> json_response(422)
+    end
   end
 
   describe "POST /workflows/:project_id" do
