@@ -35,6 +35,12 @@ defmodule Lightning.Workflows.WorkflowUsageLimiter do
     end
   end
 
+  @spec limit_workflow_activation(boolean(), Ecto.UUID.t()) :: :ok | UsageLimiting.error()
+  def limit_workflow_activation(false = _activate?, _project_id), do: :ok
+
+  def limit_workflow_activation(true = _activate?, project_id),
+    do: limit_action(project_id)
+
   @spec limit_workflow_creation(Ecto.UUID.t()) :: :ok | UsageLimiting.error()
   def limit_workflow_creation(project_id) do
     %Workflow{project_id: project_id}

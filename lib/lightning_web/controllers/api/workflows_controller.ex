@@ -1,16 +1,15 @@
 defmodule LightningWeb.API.WorkflowsController do
   use LightningWeb, :controller
 
+  import Lightning.Workflows.WorkflowUsageLimiter, only: [limit_workflow_activation: 2]
+
   alias Ecto.Changeset
 
   alias Lightning.Extensions.Message
-  alias Lightning.Extensions.UsageLimiting.Action
-  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Graph
   alias Lightning.Policies.Permissions
   alias Lightning.Projects.Project
   alias Lightning.Repo
-  alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Presence
@@ -112,7 +111,7 @@ defmodule LightningWeb.API.WorkflowsController do
   end
 
   defp save_workflow(params_or_changeset, activate?, project_id, user) do
-    with :ok <- check_limit(activate?, project_id),
+    with :ok <- limit_workflow_activation(activate?, project_id),
          :ok <- validate_workflow(params_or_changeset),
          {:error, %{changes: changes} = _changeset} <-
            Workflows.save_workflow(params_or_changeset, user) do
@@ -164,15 +163,6 @@ defmodule LightningWeb.API.WorkflowsController do
   end
 
   defp has_external_reference?(_other, _workflow_id), do: false
-
-  defp check_limit(false = _activate?, _project_id), do: :ok
-
-  defp check_limit(true = _activate?, project_id),
-    do:
-      UsageLimiter.limit_action(
-        %Action{type: :activate_workflow},
-        %Context{project_id: project_id}
-      )
 
   defp validate_workflow(%Changeset{} = changeset) do
     edges = Changeset.get_field(changeset, :edges)
