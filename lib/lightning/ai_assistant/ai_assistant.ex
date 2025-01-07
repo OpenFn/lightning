@@ -5,9 +5,11 @@ defmodule Lightning.AiAssistant do
 
   import Ecto.Query
 
+  alias Ecto.Changeset
   alias Ecto.Multi
   alias Lightning.Accounts
   alias Lightning.Accounts.User
+  alias Lightning.AiAssistant.ChatMessage
   alias Lightning.AiAssistant.ChatSession
   alias Lightning.ApolloClient
   alias Lightning.Repo
@@ -43,7 +45,15 @@ defmodule Lightning.AiAssistant do
 
   @spec get_session!(Ecto.UUID.t()) :: ChatSession.t()
   def get_session!(id) do
-    ChatSession |> Repo.get!(id) |> Repo.preload(messages: :user)
+    message_query =
+      from(m in ChatMessage,
+        where: m.status != :cancelled,
+        order_by: [asc: :inserted_at]
+      )
+
+    ChatSession
+    |> Repo.get!(id)
+    |> Repo.preload(messages: {message_query, :user})
   end
 
   @spec create_session(Job.t(), User.t(), String.t()) ::
@@ -82,19 +92,18 @@ defmodule Lightning.AiAssistant do
 
   @spec save_message(ChatSession.t(), %{any() => any()}) ::
           {:ok, ChatSession.t()} | {:error, Ecto.Changeset.t()}
-  def save_message(session, message) do
-    # we can call the limiter at this point
-    # note: we should only increment the counter when role is `:assistant`
+  def save_message(session, message, usage \\ %{}) do
     messages = Enum.map(session.messages, &Map.take(&1, [:id]))
 
     Multi.new()
+    |> Multi.put(:usage, usage)
     |> Multi.put(:message, message)
     |> Multi.insert_or_update(
       :upsert,
       session
       |> ChatSession.changeset(%{messages: messages ++ [message]})
     )
-    |> Multi.merge(&maybe_increment_msgs_counter/1)
+    |> Multi.merge(&maybe_increment_ai_usage/1)
     |> Repo.transaction()
     |> case do
       {:ok, %{upsert: session}} ->
@@ -108,7 +117,7 @@ defmodule Lightning.AiAssistant do
   @doc """
   Queries the AI assistant with the given content.
 
-  Returns `{:ok, session}` if the query was successful, otherwise `:error`.
+  Returns `{:ok, session}` if the query was successful, otherwise `{:error, reason}`.
 
   **Example**
 
@@ -119,34 +128,49 @@ defmodule Lightning.AiAssistant do
           {:ok, ChatSession.t()}
           | {:error, String.t() | Ecto.Changeset.t()}
   def query(session, content) do
-    apollo_resp =
-      ApolloClient.query(
-        content,
-        %{expression: session.expression, adaptor: session.adaptor},
-        build_history(session)
-      )
+    ApolloClient.query(
+      content,
+      %{expression: session.expression, adaptor: session.adaptor},
+      build_history(session)
+    )
+    |> handle_apollo_resp(session)
+  end
 
-    case apollo_resp do
-      {:ok, %Tesla.Env{status: status, body: body}} when status in 200..299 ->
-        message = body["history"] |> Enum.reverse() |> hd()
-        save_message(session, message)
+  defp handle_apollo_resp(
+         {:ok, %Tesla.Env{status: status, body: body}},
+         session
+       )
+       when status in 200..299 do
+    message = body["history"] |> Enum.reverse() |> hd()
+    save_message(session, message, body["usage"])
+  end
 
-      {:ok, %Tesla.Env{body: %{"message" => message}}} ->
-        {:error, message}
+  defp handle_apollo_resp(
+         {:ok, %Tesla.Env{status: status, body: body}},
+         session
+       )
+       when status not in 200..299 do
+    error_message = body["message"]
+    Logger.error("AI query failed for session #{session.id}: #{error_message}")
+    {:error, error_message}
+  end
 
-      {:error, :timeout} ->
-        {:error, "Request timed out. Please try again."}
+  defp handle_apollo_resp({:error, :timeout}, session) do
+    Logger.error("AI query timed out for session #{session.id}")
+    {:error, "Request timed out. Please try again."}
+  end
 
-      {:error, :econnrefused} ->
-        {:error, "Unable to reach the AI server. Please try again later."}
+  defp handle_apollo_resp({:error, :econnrefused}, session) do
+    Logger.error("Connection to AI server refused for session #{session.id}")
+    {:error, "Unable to reach the AI server. Please try again later."}
+  end
 
-      unexpected_error ->
-        Logger.warning(
-          "Received an unexpected error: #{inspect(unexpected_error)}"
-        )
+  defp handle_apollo_resp(unexpected_error, session) do
+    Logger.error(
+      "Received an unexpected error for session #{session.id}: #{inspect(unexpected_error)}"
+    )
 
-        {:error, "Oops! Something went wrong. Please try again."}
-    end
+    {:error, "Oops! Something went wrong. Please try again."}
   end
 
   defp build_history(session) do
@@ -167,7 +191,7 @@ defmodule Lightning.AiAssistant do
   @spec enabled?() :: boolean()
   def enabled? do
     endpoint = Lightning.Config.apollo(:endpoint)
-    api_key = Lightning.Config.apollo(:openai_api_key)
+    api_key = Lightning.Config.apollo(:ai_assistant_api_key)
 
     is_binary(endpoint) && is_binary(api_key)
   end
@@ -218,22 +242,46 @@ defmodule Lightning.AiAssistant do
     ApolloClient.test() == :ok
   end
 
-  # assistant role sent via async as string
-  defp maybe_increment_msgs_counter(%{
-         upsert: session,
-         message: %{"role" => "assistant"}
-       }),
-       do:
-         maybe_increment_msgs_counter(%{
-           upsert: session,
-           message: %{role: :assistant}
-         })
+  @doc """
+  Updates the status of a specific message within a chat session.
 
-  defp maybe_increment_msgs_counter(%{
-         upsert: session,
-         message: %{role: :assistant}
-       }),
-       do: UsageLimiter.increment_ai_queries(session)
+  Returns `{:ok, session}` if the update is successful, otherwise `{:error, changeset}`.
+  """
+  @spec update_message_status(ChatSession.t(), ChatMessage.t(), atom()) ::
+          {:ok, ChatSession.t()} | {:error, Changeset.t()}
+  def update_message_status(session, message, status) do
+    case Repo.update(ChatMessage.changeset(message, %{status: status})) do
+      {:ok, _updated_message} -> {:ok, get_session!(session.id)}
+      {:error, changeset} -> {:error, changeset}
+    end
+  end
 
-  defp maybe_increment_msgs_counter(_user_role), do: Multi.new()
+  @spec maybe_increment_ai_usage(%{
+          upsert: ChatSession.t(),
+          message: map(),
+          usage: map()
+        }) :: Ecto.Multi.t()
+  defp maybe_increment_ai_usage(%{
+         upsert: session,
+         message: %{"role" => "assistant"},
+         usage: usage
+       }) do
+    maybe_increment_ai_usage(%{
+      upsert: session,
+      message: %{role: :assistant},
+      usage: usage
+    })
+  end
+
+  defp maybe_increment_ai_usage(%{
+         upsert: session,
+         message: %{role: :assistant},
+         usage: usage
+       }) do
+    UsageLimiter.increment_ai_usage(session, usage)
+  end
+
+  defp maybe_increment_ai_usage(_user_role) do
+    Multi.new()
+  end
 end

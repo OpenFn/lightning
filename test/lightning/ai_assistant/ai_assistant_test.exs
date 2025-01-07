@@ -28,7 +28,7 @@ defmodule Lightning.AiAssistantTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn key ->
         case key do
           :endpoint -> "http://localhost:3000"
-          :openai_api_key -> "api_key"
+          :ai_assistant_api_key -> "api_key"
         end
       end)
 
@@ -73,7 +73,7 @@ defmodule Lightning.AiAssistantTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn key ->
         case key do
           :endpoint -> "http://localhost:3000"
-          :openai_api_key -> "api_key"
+          :ai_assistant_api_key -> "api_key"
         end
       end)
 
@@ -218,9 +218,9 @@ defmodule Lightning.AiAssistantTest do
 
       Mox.expect(
         Lightning.Extensions.MockUsageLimiter,
-        :increment_ai_queries,
+        :increment_ai_usage,
         1,
-        fn %{job_id: ^job_id} -> Ecto.Multi.new() end
+        fn %{job_id: ^job_id}, _usage -> Ecto.Multi.new() end
       )
 
       content1 = """
@@ -242,9 +242,9 @@ defmodule Lightning.AiAssistantTest do
 
       Mox.expect(
         Lightning.Extensions.MockUsageLimiter,
-        :increment_ai_queries,
+        :increment_ai_usage,
         0,
-        fn %{job_id: ^job_id} -> Ecto.Multi.new() end
+        fn %{job_id: ^job_id}, _usage -> Ecto.Multi.new() end
       )
 
       AiAssistant.save_message(session, %{
@@ -252,6 +252,141 @@ defmodule Lightning.AiAssistantTest do
         content: "What if I want to deduplicate the headers?",
         user: user
       })
+    end
+  end
+
+  describe "update_message_status/3" do
+    test "successfully updates message status to success", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      message =
+        insert(:chat_message,
+          content: "test",
+          role: :user,
+          user: user,
+          status: :error
+        )
+
+      session =
+        insert(:chat_session, user: user, job: job_1, messages: [message])
+
+      assert {:ok, updated_session} =
+               AiAssistant.update_message_status(session, message, :success)
+
+      updated_message = List.first(updated_session.messages)
+      assert updated_message.status == :success
+    end
+
+    test "successfully updates message status to error", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      message =
+        insert(:chat_message,
+          content: "test",
+          role: :user,
+          user: user,
+          status: :success
+        )
+
+      session =
+        insert(:chat_session, user: user, job: job_1, messages: [message])
+
+      assert {:ok, updated_session} =
+               AiAssistant.update_message_status(session, message, :error)
+
+      updated_message = List.first(updated_session.messages)
+      assert updated_message.status == :error
+    end
+
+    test "successfully updates message status to cancelled", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      message =
+        insert(:chat_message,
+          content: "test",
+          role: :user,
+          user: user,
+          status: :success
+        )
+
+      session =
+        insert(:chat_session, user: user, job: job_1, messages: [message])
+
+      assert {:ok, updated_session} =
+               AiAssistant.update_message_status(session, message, :cancelled)
+
+      # Note: Since get_session! filters out cancelled messages, we should not see it in updated_session
+      assert updated_session.messages == []
+    end
+
+    test "returns error changeset when status update fails", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      message = insert(:chat_message, content: "test", role: :user, user: user)
+
+      session =
+        insert(:chat_session, user: user, job: job_1, messages: [message])
+
+      assert {:error, changeset} =
+               AiAssistant.update_message_status(
+                 session,
+                 message,
+                 :invalid_status
+               )
+
+      assert %Ecto.Changeset{} = changeset
+      assert "is invalid" in errors_on(changeset).status
+    end
+
+    test "handles non-existent session", %{
+      user: user
+    } do
+      message = insert(:chat_message, content: "test", role: :user, user: user)
+      # Session doesn't exist in DB
+      session = build(:chat_session, id: Ecto.UUID.generate())
+
+      assert_raise Ecto.NoResultsError, fn ->
+        AiAssistant.update_message_status(session, message, :success)
+      end
+    end
+
+    test "updates message status for session with multiple messages", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      message1 =
+        insert(:chat_message,
+          content: "test1",
+          role: :user,
+          user: user,
+          status: :error
+        )
+
+      message2 =
+        insert(:chat_message,
+          content: "test2",
+          role: :assistant,
+          user: user,
+          status: :error
+        )
+
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          messages: [message1, message2]
+        )
+
+      assert {:ok, updated_session} =
+               AiAssistant.update_message_status(session, message1, :success)
+
+      [updated_message2, updated_message1] = updated_session.messages
+      assert updated_message1.status == :success
+      assert updated_message2.status == :error
     end
   end
 end

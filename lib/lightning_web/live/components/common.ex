@@ -215,7 +215,7 @@ defmodule LightningWeb.Components.Common do
       )
 
     ~H"""
-    <div class="px-3 pb-3 text-xs block flex gap-1">
+    <div class="px-3 pb-3 text-xs block flex gap-1 justify-center">
       <%= case @type do %>
         <% :release -> %>
           <.icon name="hero-check-badge" class={@icon_classes} title={@message} />
@@ -231,7 +231,7 @@ defmodule LightningWeb.Components.Common do
       <% end %>
       <code
         class={[
-          "px-2 py-1 flex-grow opacity-20 rounded-md",
+          "py-1 opacity-20 rounded-md",
           "break-keep font-mono text-gray-100",
           "inline-block align-middle text-center"
         ]}

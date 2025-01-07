@@ -19,10 +19,23 @@ and this project adheres to
 
 ### Changed
 
-### Fixed
-
 - Git-ignore files from mix assets.deploy
   [#2788](https://github.com/OpenFn/lightning/issues/2788)
+- Added Claude integration in job chat
+  [#2403](https://github.com/OpenFn/lightning/pull/2403)
+- OPENAI_API_KEY renamed to AI_ASSISTANT_API_KEY
+  [#2403](https://github.com/OpenFn/lightning/pull/2403)
+
+### Fixed
+
+## [v2.10.8] - 2024-12-18
+
+### Added
+
+- Add ability to retry or cancel AI Assistant error responses for user messages
+  [#2704](https://github.com/OpenFn/lightning/issues/2704)
+
+### Changed
 
 ## [v2.10.7] - 2024-12-13 🎂 ❤️ Happy Birthday, Mom!
 
@@ -32,6 +45,8 @@ and this project adheres to
   [#2781](https://github.com/OpenFn/lightning/issues/2781)
 - Allow different rules and action for delete user.
   [#2500](https://github.com/OpenFn/lightning/issues/2500)
+- Handle errors from the AI Assistant more gracefully
+  [#2741](https://github.com/OpenFn/lightning/issues/2741)
 
 ### Changed
 
