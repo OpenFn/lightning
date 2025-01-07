@@ -208,7 +208,7 @@ const isCtrlOrMetaShiftEnter = (e: KeyboardEvent) =>
   (e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Enter';
 
 /**
- * Determines if the key combination for "Ctrl+Shift+Enter" (or "Cmd+Shift+Enter" on macOS) is pressed.
+ * Determines if the key combination for "Ctrl+Shift+S" (or "Cmd+Shift+S" on macOS) is pressed.
  *
  * @param e - The keyboard event to evaluate.
  * @returns `true` if "Ctrl+Shift+S" or "Cmd+Shift+S" is pressed, otherwise `false`.
