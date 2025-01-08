@@ -59,10 +59,10 @@ Note that for secure deployments, it's recommended to use a combination of
   JSON plug and may (in future) limit the size of dataclips that can be stored
   as run_results via the websocket connection from a worker.
 
-### Github
+### GitHub
 
-Lightning enables connection to github via Github Apps. The following github
-permissions are needed for the github app:
+Lightning enables connection to GitHub via GitHub Apps. The following GitHub
+repository permissions are needed for the GitHub app:
 
 | **Resource** | **Access**     |
 | ------------ | -------------- |
