@@ -106,7 +106,7 @@ defmodule Lightning.Config.Bootstrap do
           :string,
           Utils.get_env([:lightning, :apollo, :endpoint])
         ),
-      openai_api_key: env!("OPENAI_API_KEY", :string, nil)
+      ai_assistant_api_key: env!("AI_ASSISTANT_API_KEY", :string, nil)
 
     config :lightning, Lightning.Runtime.RuntimeManager,
       start:
@@ -153,6 +153,14 @@ defmodule Lightning.Config.Bootstrap do
 
     config :lightning, :adaptor_service,
       adaptors_path: env!("ADAPTORS_PATH", :string, "./priv/openfn")
+
+    config :lightning, Lightning.AdaptorRegistry,
+      use_cache:
+        env!(
+          "ADAPTORS_REGISTRY_JSON_PATH",
+          :string,
+          Utils.get_env([:lightning, Lightning.AdaptorRegistry, :use_cache])
+        )
 
     config :lightning, :oauth_clients,
       google: [

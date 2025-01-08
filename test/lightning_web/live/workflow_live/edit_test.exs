@@ -1793,7 +1793,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # when not configured properly
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> nil
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       {:ok, view, _html} =
@@ -1811,7 +1811,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # when configured properly
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       {:ok, view, _html} =
@@ -1836,7 +1836,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     } do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       # when disclaimer hasn't been read and no session exists
@@ -1875,16 +1875,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
          } do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       date = DateTime.utc_now() |> DateTime.add(-24, :hour) |> DateTime.to_unix()
 
-      user
-      |> Ecto.Changeset.change(%{
-        preferences: %{"ai_assistant.disclaimer_read_at" => date}
-      })
-      |> Repo.update!()
+      skip_disclaimer(user, date)
 
       {:ok, view, _html} =
         live(
@@ -1909,16 +1905,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
          } do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
-      date = DateTime.utc_now() |> DateTime.add(-22, :hour) |> DateTime.to_unix()
-
-      user
-      |> Ecto.Changeset.change(%{
-        preferences: %{"ai_assistant.disclaimer_read_at" => date}
-      })
-      |> Repo.update!()
+      skip_disclaimer(user)
 
       {:ok, view, _html} =
         live(
@@ -1943,7 +1933,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2070,7 +2060,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2082,14 +2072,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         end
       )
 
-      # update preferences so that the onboarding flow is not displayed
-      timestamp = DateTime.utc_now() |> DateTime.to_unix()
-
-      user
-      |> Ecto.Changeset.change(%{
-        preferences: %{"ai_assistant.disclaimer_read_at" => timestamp}
-      })
-      |> Lightning.Repo.update!()
+      skip_disclaimer(user)
 
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
@@ -2132,7 +2115,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2177,7 +2160,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2250,7 +2233,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       expected_question = "Can you help me with this?"
@@ -2331,7 +2314,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2383,7 +2366,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2433,14 +2416,14 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     } do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001/health_check"
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       error_message = "You have reached your quota of AI queries"
 
       Mox.stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn %{
                                                                           type:
-                                                                            :ai_query
+                                                                            :ai_usage
                                                                         },
                                                                         %{
                                                                           project_id:
@@ -2482,7 +2465,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       error_message = "Server is temporarily unavailable"
@@ -2536,7 +2519,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2582,7 +2565,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2627,7 +2610,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2673,7 +2656,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2709,12 +2692,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           ]
         )
 
-      timestamp = DateTime.utc_now() |> DateTime.to_unix()
-
-      Ecto.Changeset.change(user, %{
-        preferences: %{"ai_assistant.disclaimer_read_at" => timestamp}
-      })
-      |> Lightning.Repo.update!()
+      skip_disclaimer(user)
 
       {:ok, view, _html} =
         live(
@@ -2783,6 +2761,277 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert second_link |> Floki.attribute("id") == [
                "session-#{older_session.id}"
              ]
+    end
+
+    @tag email: "user@openfn.org"
+    test "input field is cleared after sending a message", %{
+      conn: conn,
+      project: project,
+      user: user,
+      workflow: %{jobs: [job_1 | _]} = workflow
+    } do
+      apollo_endpoint = "http://localhost:4001"
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> apollo_endpoint
+        :ai_assistant_api_key -> "ai_assistant_api_key"
+      end)
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        fn
+          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
+            {:ok, %Tesla.Env{status: 200}}
+
+          %{method: :post}, _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{
+                 "history" => [
+                   %{"role" => "assistant", "content" => "Response!"}
+                 ]
+               }
+             }}
+        end
+      )
+
+      skip_disclaimer(user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      render_async(view)
+
+      assert view
+             |> form("#ai-assistant-form")
+             |> has_element?()
+
+      input_element = element(view, "#ai-assistant-form textarea")
+
+      assert has_element?(input_element)
+
+      message = "Hello, AI Assistant!"
+
+      view
+      |> form("#ai-assistant-form")
+      |> render_submit(%{content: message})
+
+      render_async(view)
+
+      refute render(input_element) =~ message
+    end
+
+    @tag email: "user@openfn.org"
+    test "users can retry failed messages", %{
+      conn: conn,
+      project: project,
+      user: user,
+      workflow: %{jobs: [job_1 | _]} = workflow
+    } do
+      apollo_endpoint = "http://localhost:4001"
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> apollo_endpoint
+        :ai_assistant_api_key -> "ai_assistant_api_key"
+      end)
+
+      Mox.stub(Lightning.Tesla.Mock, :call, fn
+        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
+          {:ok, %Tesla.Env{status: 200}}
+
+        %{method: :post}, _opts ->
+          {:ok, %Tesla.Env{status: 500}}
+      end)
+
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          messages: [
+            %{role: :user, content: "Hello", status: :error, user: user}
+          ]
+        )
+
+      timestamp = DateTime.utc_now() |> DateTime.to_unix()
+
+      Ecto.Changeset.change(user, %{
+        preferences: %{"ai_assistant.disclaimer_read_at" => timestamp}
+      })
+      |> Lightning.Repo.update!()
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand", chat: session.id]}"
+        )
+
+      render_async(view)
+
+      assert has_element?(
+               view,
+               "#retry-message-#{List.first(session.messages).id}"
+             )
+
+      # can't cancel first message of session
+      refute has_element?(
+               view,
+               "#cancel-message-#{List.first(session.messages).id}"
+             )
+
+      Mox.stub(Lightning.Tesla.Mock, :call, fn
+        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
+          {:ok, %Tesla.Env{status: 200}}
+
+        %{method: :post}, _opts ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: %{
+               "history" => [
+                 %{"role" => "user", "content" => "Hello"},
+                 %{"role" => "assistant", "content" => "Hi there!"}
+               ]
+             }
+           }}
+      end)
+
+      view
+      |> element("#retry-message-#{List.first(session.messages).id}")
+      |> render_click()
+
+      html = render_async(view)
+
+      assert html =~ "Hi there!"
+
+      refute has_element?(view, "#assistant-failed-message")
+    end
+
+    @tag email: "user@openfn.org"
+    test "cancel buttons are available until only one message remains", %{
+      conn: conn,
+      project: project,
+      user: user,
+      workflow: %{jobs: [job_1 | _]} = workflow
+    } do
+      apollo_endpoint = "http://localhost:4001"
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> apollo_endpoint
+        :ai_assistant_api_key -> "ai_assistant_api_key"
+      end)
+
+      Mox.stub(Lightning.Tesla.Mock, :call, fn
+        %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
+          {:ok, %Tesla.Env{status: 200}}
+      end)
+
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          messages: [
+            %{role: :user, content: "First message", status: :error, user: user},
+            %{role: :assistant, content: "First response"},
+            %{
+              role: :user,
+              content: "Second message",
+              status: :error,
+              user: user
+            },
+            %{role: :assistant, content: "Second response"},
+            %{role: :user, content: "Third message", status: :error, user: user}
+          ]
+        )
+
+      timestamp = DateTime.utc_now() |> DateTime.to_unix()
+
+      Ecto.Changeset.change(user, %{
+        preferences: %{"ai_assistant.disclaimer_read_at" => timestamp}
+      })
+      |> Lightning.Repo.update!()
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand", chat: session.id]}"
+        )
+
+      render_async(view)
+
+      failed_messages = Enum.filter(session.messages, &(&1.status == :error))
+
+      # Initially, all failed messages should have both retry and cancel buttons
+      Enum.each(failed_messages, fn message ->
+        assert has_element?(view, "#retry-message-#{message.id}")
+        assert has_element?(view, "#cancel-message-#{message.id}")
+      end)
+
+      # Cancel messages one by one until only one remains
+      Enum.take(failed_messages, length(failed_messages) - 1)
+      |> Enum.each(fn message ->
+        view
+        |> element("#cancel-message-#{message.id}")
+        |> render_click()
+
+        refute has_element?(view, "#retry-message-#{message.id}")
+        refute has_element?(view, "#cancel-message-#{message.id}")
+
+        updated_session = Lightning.AiAssistant.get_session!(session.id)
+
+        refute Enum.any?(updated_session.messages, &(&1.id == message.id))
+      end)
+
+      # After cancelling all messages except one, get the current session state
+      updated_session = Lightning.AiAssistant.get_session!(session.id)
+
+      # Verify total remaining messages
+      user_messages = Enum.filter(updated_session.messages, &(&1.role == :user))
+      assert length(user_messages) == 1
+
+      # Get the remaining failed message
+      current_failed_messages =
+        Enum.filter(updated_session.messages, &(&1.status == :error))
+
+      assert length(current_failed_messages) == 1
+
+      last_remaining_message = List.first(user_messages)
+
+      assert has_element?(view, "#retry-message-#{last_remaining_message.id}")
+      refute has_element?(view, "#cancel-message-#{last_remaining_message.id}")
+
+      # Compare with single message session behavior
+      single_message_session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          messages: [
+            %{role: :user, content: "Hello", status: :error, user: user}
+          ]
+        )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand", chat: single_message_session.id]}"
+        )
+
+      render_async(view)
+
+      # Verify single message session only shows retry button
+      assert has_element?(
+               view,
+               "#retry-message-#{List.first(single_message_session.messages).id}"
+             )
+
+      refute has_element?(
+               view,
+               "#cancel-message-#{List.first(single_message_session.messages).id}"
+             )
     end
   end
 
@@ -2950,5 +3199,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       )
 
     {high_priority_view, low_priority_view}
+  end
+
+  defp skip_disclaimer(user, read_at \\ DateTime.utc_now() |> DateTime.to_unix()) do
+    Ecto.Changeset.change(user, %{
+      preferences: %{"ai_assistant.disclaimer_read_at" => read_at}
+    })
+    |> Lightning.Repo.update!()
   end
 end

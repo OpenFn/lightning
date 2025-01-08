@@ -22,8 +22,19 @@ erl_crash.dump
 # Ignore package tarball (built via "mix hex.build").
 lightning-*.tar
 
+# Ignore adaptor registry cache
+adaptor_registry_cache.json
+
 # Ignore assets that are produced by build tools.
 /priv/static/images/adaptors/
+/priv/static/images/*-*.png
+/priv/static/images/*-*.svg
+/priv/static/browserconfig-*.xml
+/priv/static/favicon-*.ico
+/priv/static/manifest-*.json
+/priv/static/robots-*.txt
+/priv/static/*-*.png
+/priv/static/*-*.svg
 /priv/static/assets/
 /priv/static/**/*.gz
 

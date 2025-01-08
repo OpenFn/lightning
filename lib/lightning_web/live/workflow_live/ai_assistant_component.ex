@@ -6,6 +6,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   alias Phoenix.LiveView.AsyncResult
   alias Phoenix.LiveView.JS
 
+  require Logger
+
   @dialyzer {:nowarn_function, process_ast: 2}
 
   def mount(socket) do
@@ -89,13 +91,15 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   def handle_event("send_message", %{"content" => content}, socket) do
     if socket.assigns.can_edit_workflow do
       %{action: action} = socket.assigns
-      # clear error
+
       socket
       |> assign(error_message: nil)
       |> check_limit()
       |> then(fn socket ->
         if socket.assigns.ai_limit_result == :ok do
-          {:noreply, save_message(socket, action, content)}
+          {:noreply,
+           save_message(socket, action, content)
+           |> assign(:form, to_form(%{"content" => nil}))}
         else
           {:noreply, socket}
         end
@@ -124,6 +128,38 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     |> assign(:sort_direction, new_direction)
     |> apply_action(:new, %{selected_job: socket.assigns.selected_job})
     |> then(fn socket -> {:noreply, socket} end)
+  end
+
+  def handle_event("cancel_message", %{"message-id" => message_id}, socket) do
+    message = Enum.find(socket.assigns.session.messages, &(&1.id == message_id))
+
+    {:ok, session} =
+      AiAssistant.update_message_status(
+        socket.assigns.session,
+        message,
+        :cancelled
+      )
+
+    {:noreply, assign(socket, :session, session)}
+  end
+
+  def handle_event("retry_message", %{"message-id" => message_id}, socket) do
+    message = Enum.find(socket.assigns.session.messages, &(&1.id == message_id))
+
+    {:ok, session} =
+      AiAssistant.update_message_status(
+        socket.assigns.session,
+        message,
+        :success
+      )
+
+    {:noreply,
+     socket
+     |> assign(:session, session)
+     |> assign(:pending_message, AsyncResult.loading())
+     |> start_async(:process_message, fn ->
+       AiAssistant.query(session, message.content)
+     end)}
   end
 
   defp save_message(%{assigns: assigns} = socket, :new, content) do
@@ -204,19 +240,23 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
      |> assign(:pending_message, AsyncResult.ok(nil))}
   end
 
-  def handle_async(:process_message, {:ok, error}, socket) do
+  def handle_async(:process_message, {:ok, {:error, error}}, socket),
+    do: handle_failed_async({:error, error}, socket)
+
+  def handle_async(:process_message, {:exit, error}, socket),
+    do: handle_failed_async({:exit, error}, socket)
+
+  defp handle_failed_async(error, socket) do
+    message = List.last(socket.assigns.session.messages)
+
+    {:ok, updated_session} =
+      AiAssistant.update_message_status(socket.assigns.session, message, :error)
+
     {:noreply,
      socket
+     |> assign(:session, updated_session)
      |> update(:pending_message, fn async_result ->
        AsyncResult.failed(async_result, error)
-     end)}
-  end
-
-  def handle_async(:process_message, {:exit, error}, socket) do
-    {:noreply,
-     socket
-     |> update(:pending_message, fn async_result ->
-       AsyncResult.failed(async_result, {:exit, error})
      end)}
   end
 
@@ -313,7 +353,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         enabled: true
       },
       %{
-        quote: "Be skeptical, but don’t be cynical",
+        quote: "Be skeptical, but don't be cynical",
         author: "OpenFn Responsible AI Policy",
         source_link: "https://www.openfn.org/ai",
         enabled: true
@@ -425,6 +465,9 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             <li>Proofread and debug your job code</li>
             <li>Help understand why you are seeing an error</li>
           </ul>
+          <p>
+            Messages are saved unencrypted to the OpenFn database and may be monitored for quality control.
+          </p>
           <h2 class="font-bold">
             Usage Tips
           </h2>
@@ -509,6 +552,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             pending_message={@pending_message}
             query_params={@query_params}
             base_url={@base_url}
+            target={@myself}
           />
       <% end %>
 
@@ -698,6 +742,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   attr :pending_message, AsyncResult, required: true
   attr :query_params, :map, required: true
   attr :base_url, :string, required: true
+  attr :target, :any, required: true
 
   defp render_individual_session(assigns) do
     ~H"""
@@ -725,8 +770,36 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             class="flex flex-row-reverse items-end gap-x-3 mr-3"
           >
             <.user_avatar user={message.user} size_class="min-w-10 h-10 w-10" />
-            <div class="bg-blue-300 bg-opacity-50 p-2 mb-0.5 rounded-lg break-words max-w-[80%]">
+            <div class="bg-blue-300 bg-opacity-50 p-2 mb-0.5 rounded-lg break-words max-w-[70%]">
               <%= message.content %>
+            </div>
+            <div
+              :if={message.role == :user and message.status == :error}
+              class="flex items-center gap-2 mt-1"
+            >
+              <button
+                id={"retry-message-#{message.id}"}
+                phx-click="retry_message"
+                phx-value-message-id={message.id}
+                phx-target={@target}
+                class="flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition duration-200"
+                phx-hook="Tooltip"
+                aria-label="Retry this message"
+              >
+                <.icon name="hero-arrow-path-mini" class="h-4 w-4" />
+              </button>
+              <button
+                :if={display_cancel_message_btn?(@session)}
+                id={"cancel-message-#{message.id}"}
+                phx-click="cancel_message"
+                phx-value-message-id={message.id}
+                phx-target={@target}
+                class="flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition duration-200"
+                phx-hook="Tooltip"
+                aria-label="Cancel this message"
+              >
+                <.icon name="hero-x-mark" class="h-4 w-4" />
+              </button>
             </div>
           </div>
           <div
@@ -872,8 +945,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   defp maybe_check_limit(socket), do: socket
 
   defp check_limit(socket) do
-    %{project_id: project_id} = socket.assigns
-    limit = Limiter.validate_quota(project_id)
+    limit = Limiter.validate_quota(socket.assigns.project_id)
     error_message = if limit != :ok, do: error_message(limit)
     assign(socket, ai_limit_result: limit, error_message: error_message)
   end
@@ -884,5 +956,10 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
     else
       title
     end
+  end
+
+  defp display_cancel_message_btn?(session) do
+    user_messages = Enum.filter(session.messages, &(&1.role == :user))
+    length(user_messages) > 1
   end
 end

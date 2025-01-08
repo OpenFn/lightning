@@ -17,15 +17,48 @@ and this project adheres to
 
 ### Added
 
-- Allow different rules and action for delete user.
-  [#2500](https://github.com/OpenFn/lightning/issues/2500)
+### Changed
+
+- Git-ignore files from mix assets.deploy
+  [#2788](https://github.com/OpenFn/lightning/issues/2788)
+- Added Claude integration in job chat
+  [#2403](https://github.com/OpenFn/lightning/pull/2403)
+- OPENAI_API_KEY renamed to AI_ASSISTANT_API_KEY
+  [#2403](https://github.com/OpenFn/lightning/pull/2403)
+
+### Fixed
+
+## [v2.10.8] - 2024-12-18
+
+### Added
+
+- Add ability to retry or cancel AI Assistant error responses for user messages
+  [#2704](https://github.com/OpenFn/lightning/issues/2704)
 
 ### Changed
+
+## [v2.10.7] - 2024-12-13 🎂 ❤️ Happy Birthday, Mom!
+
+### Added
+
+- Clear AI assistant's chat input after a message is sent
+  [#2781](https://github.com/OpenFn/lightning/issues/2781)
+- Allow different rules and action for delete user.
+  [#2500](https://github.com/OpenFn/lightning/issues/2500)
+- Handle errors from the AI Assistant more gracefully
+  [#2474](https://github.com/OpenFn/lightning/issues/2474)
+
+### Changed
+
+- Make the AdaptorRegistry cache path configurable
+  [#2780](https://github.com/OpenFn/lightning/issues/2780)
 
 ### Fixed
 
 - Delete user modal no longer uses the same id as the underlying user record.
   [#2751](https://github.com/OpenFn/lightning/issues/2751)
+- Use workflow activation limiter on index toggle.
+  [#2777](https://github.com/OpenFn/lightning/issues/2777)
 
 ## [v2.10.6] - 2024-12-10
 
@@ -48,7 +81,7 @@ and this project adheres to
 
 ### Fixed
 
-- Fix Priority and Scope Issues in Inspector Key Bindings  
+- Fix Priority and Scope Issues in Inspector Key Bindings
   [#2770](https://github.com/OpenFn/lightning/issues/2770)
 - Fixed an issue where sometimes adaptor docs won't load in the Inspector
   [#2749](https://github.com/OpenFn/lightning/pull/2749)

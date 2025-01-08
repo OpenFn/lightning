@@ -8,8 +8,10 @@ defmodule LightningWeb.WorkflowLive.Index do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Workflows
+  alias Lightning.Workflows.WorkflowUsageLimiter
   alias LightningWeb.LiveHelpers
   alias LightningWeb.WorkflowLive.DashboardComponents
+  alias LightningWeb.WorkflowLive.Helpers
   alias LightningWeb.WorkflowLive.NewWorkflowForm
 
   alias Phoenix.LiveView.TagEngine
@@ -28,8 +30,7 @@ defmodule LightningWeb.WorkflowLive.Index do
 
   @impl true
   def render(%{project: %{id: project_id}} = assigns) do
-    assigns =
-      LiveHelpers.check_limits(assigns, project_id)
+    assigns = check_workflow_and_run_limits(assigns, project_id)
 
     ~H"""
     <LayoutComponents.page_content>
@@ -54,6 +55,7 @@ defmodule LightningWeb.WorkflowLive.Index do
           period={@dashboard_period}
           can_create_workflow={@can_create_workflow}
           can_delete_workflow={@can_delete_workflow}
+          workflow_creation_limit_error={@workflow_creation_limit_error}
           workflows_stats={@workflows_stats}
           project={@project}
         />
@@ -122,10 +124,10 @@ defmodule LightningWeb.WorkflowLive.Index do
       ) do
     %{current_user: actor, project: project_id} = socket.assigns
 
-    workflow = Workflows.get_workflow!(workflow_id, include: [:triggers])
-
-    Workflows.update_triggers_enabled_state(workflow, state)
-    |> Workflows.save_workflow(actor)
+    workflow_id
+    |> Workflows.get_workflow!(include: [:triggers])
+    |> Workflows.update_triggers_enabled_state(state)
+    |> Helpers.save_workflow(actor)
     |> case do
       {:ok, _workflow} ->
         {:noreply,
@@ -198,5 +200,23 @@ defmodule LightningWeb.WorkflowLive.Index do
 
   defp assign_workflow_form(socket, changeset) do
     socket |> assign(form: to_form(changeset, as: :new_workflow))
+  end
+
+  defp check_workflow_and_run_limits(assigns, project_id) do
+    assigns
+    |> assign(
+      workflow_creation_limit_error: limit_workflow_creation_error(project_id)
+    )
+    |> LiveHelpers.check_limits(project_id)
+  end
+
+  defp limit_workflow_creation_error(project_id) do
+    case WorkflowUsageLimiter.limit_workflow_creation(project_id) do
+      :ok ->
+        nil
+
+      {:error, _reason, %{text: error_msg}} ->
+        error_msg
+    end
   end
 end

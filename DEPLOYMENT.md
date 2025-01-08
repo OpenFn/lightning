@@ -185,6 +185,7 @@ For SMTP, the following environment variables are required:
 | `PRIMARY_ENCRYPTION_KEY`                 | A base64 encoded 32 character long string.<br>See [Encryption](#encryption).                                                                                                                                                           |
 | `QUEUE_RESULT_RETENTION_PERIOD_SECONDS`  | The number of seconds to keep completed (successful) `ObanJobs` in the queue (not to be confused with runs and/or history)                                                                                                             |
 | `SCHEMAS_PATH`                           | Path to the credential schemas that provide forms for different adaptors                                                                                                                                                               |
+| `ADAPTORS_REGISTRY_JSON_PATH`            | Path to adaptor registry file. When provided, the app will attempt to read from it then later fallback to the internet                                                                                                                 |
 | `SECRET_KEY_BASE`                        | A secret key used as a base to generate secrets for encrypting and signing data.                                                                                                                                                       |
 | `SENTRY_DSN`                             | If using Sentry for error monitoring, your DSN                                                                                                                                                                                         |
 | `URL_HOST`                               | The host used for writing URLs (e.g., `demo.openfn.org`)                                                                                                                                                                               |
@@ -209,7 +210,8 @@ the Apollo AI service.
 
 The following environment variables are required:
 
-- `OPENAI_API_KEY` - your OpenAI API key.
+- `AI_ASSISTANT_API_KEY` - API key to use the assistant. This currently requires
+  an Anthropic key.
 - `APOLLO_ENDPOINT` - the endpoint for the OpenFn Apollo AI service.
 
 ### Kafka Triggers
