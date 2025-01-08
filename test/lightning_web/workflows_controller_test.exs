@@ -1339,6 +1339,28 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
           Jason.encode!(complete_update_external_ref)
         )
 
+    saved_workflow = Repo.get(Workflow, workflow.id)
+             |> Repo.preload([:triggers, :jobs, :edges])
+
+    updated_triggers_workflow_id =
+      saved_workflow
+      |> Map.get(:triggers)
+      |> Enum.any?(&(&1.workflow_id == other_workflow_id))
+
+    updated_jobs_workflow_id =
+      saved_workflow
+      |> Map.get(:jobs)
+      |> Enum.any?(&(&1.workflow_id == other_workflow_id))
+
+    updated_edges_workflow_id =
+      saved_workflow
+      |> Map.get(:edges)
+      |> Enum.any?(&(&1.workflow_id == other_workflow_id))
+
+    IO.inspect(updated_triggers_workflow_id, label: :updated_triggers_workflow_id)
+    IO.inspect(updated_jobs_workflow_id, label: :updated_jobs_workflow_id)
+    IO.inspect(updated_edges_workflow_id, label: :updated_edges_workflow_id)
+
       assert json_response(conn, 422) == %{
                "id" => workflow.id,
                "errors" => %{

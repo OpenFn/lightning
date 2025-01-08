@@ -96,7 +96,12 @@ defmodule LightningWeb.API.WorkflowsController do
 
     active_triggers_count = count_enabled_triggers(params)
 
+    IO.inspect(workflow_id)
     has_external_reference? = has_external_reference?(params, workflow_id)
+
+    IO.inspect(has_external_reference?,
+      label: :has_external_reference?
+    )
 
     cond do
       changes_triggers? and Enum.any?(triggers, &(&1.id not in triggers_ids)) ->
@@ -105,10 +110,11 @@ defmodule LightningWeb.API.WorkflowsController do
       active_triggers_count > 1 ->
         {:error, :too_many_active_triggers}
 
-      has_external_reference? ->
-        {:error, :invalid_workflow_id}
+      # has_external_reference? ->
+      #   {:error, :invalid_workflow_id}
 
       :else ->
+        IO.inspect params
         workflow
         |> Workflows.change_workflow(params)
         |> save_workflow(active_triggers_count > 0, workflow.project_id, user)
@@ -116,6 +122,7 @@ defmodule LightningWeb.API.WorkflowsController do
   end
 
   defp save_workflow(params_or_changeset, activate?, project_id, user) do
+    IO.inspect params_or_changeset.changes
     with :ok <- limit_workflow_activation(activate?, project_id),
          :ok <- validate_workflow(params_or_changeset),
          {:error, %{changes: changes} = _changeset} <-

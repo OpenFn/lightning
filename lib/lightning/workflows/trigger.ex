@@ -32,7 +32,8 @@ defmodule Lightning.Workflows.Trigger do
              :custom_path,
              :cron_expression,
              :type,
-             :enabled
+             :enabled,
+             :workflow_id
            ]}
   schema "triggers" do
     field :comment, :string

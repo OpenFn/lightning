@@ -36,7 +36,8 @@ defmodule Lightning.Workflows.Job do
              :id,
              :body,
              :name,
-             :adaptor
+             :adaptor,
+             :workflow_id
            ]}
   schema "jobs" do
     field :body, :string
