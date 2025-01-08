@@ -87,7 +87,7 @@ config :lightning, :oauth_clients,
 
 # Configure esbuild (the version is required)
 config :esbuild,
-  version: "0.17.18",
+  version: "0.24.2",
   default: [
     args:
       ~w(js/app.js
@@ -95,12 +95,18 @@ config :esbuild,
          js/editor/Editor.tsx
          fonts/inter.css
          fonts/fira-code.css
-         node_modules/monaco-editor/esm/vs/editor/editor.worker.js
          --loader:.woff2=file
-         --loader:.ttf=file
          --format=esm --splitting --bundle
          --target=es2020
          --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
+    cd: Path.expand("../assets", __DIR__),
+    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+  ],
+  monaco: [
+    args: ~w(
+         node_modules/monaco-editor/min/vs/**
+         --loader:.ttf=file
+         --outdir=../priv/static/assets/monaco-editor/vs ),
     cd: Path.expand("../assets", __DIR__),
     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
   ]

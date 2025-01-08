@@ -1,46 +1,9 @@
 import React, { useRef, useCallback } from 'react';
 import ResizeObserver from 'rc-resize-observer';
-import Editor, { Monaco } from '@monaco-editor/react';
+import Editor, { Monaco, loader } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 
-// import * as jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker';
-// import * as cssWorker from 'monaco-editor/esm/vs/language/css/css.worker';
-// import * as htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker';
-// import * as tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker';
-// 'monaco-editor/esm/vs/editor/editor.worker'
-
-const editorWorker = new Worker(
-  new URL(
-    'node_modules/monaco-editor/esm/vs/editor/editor.worker.js',
-    import.meta.url
-  ),
-  { type: 'module' }
-);
-
-self.MonacoEnvironment = {
-  getWorker(_, label) {
-    console.log(label);
-
-    // if (label === 'json') {
-    //   return new jsonWorker();
-    // }
-    // if (label === 'css' || label === 'scss' || label === 'less') {
-    //   return new cssWorker();
-    // }
-    // if (label === 'html' || label === 'handlebars' || label === 'razor') {
-    //   return new htmlWorker();
-    // }
-    // if (label === 'typescript' || label === 'javascript') {
-    //   return new tsWorker();
-    // }
-    // return new Worker(new URL('monaco-editor/esm/vs/editor/editor.worker', import.meta.url));
-
-    return editorWorker;
-  },
-};
-import * as monaco from 'monaco-editor';
-import { loader } from '@monaco-editor/react';
-loader.config({ monaco });
+loader.config({ paths: { vs: '/assets/monaco-editor/vs' } });
 
 export function setTheme(monaco: Monaco) {
   monaco.editor.defineTheme('default', {
