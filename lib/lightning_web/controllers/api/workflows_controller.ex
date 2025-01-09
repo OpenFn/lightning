@@ -83,7 +83,7 @@ defmodule LightningWeb.API.WorkflowsController do
   end
 
   defp save_workflow(
-         %{id: workflow_id, triggers: triggers} = workflow,
+         %{triggers: triggers} = workflow,
          params,
          user
        ) do
@@ -96,17 +96,12 @@ defmodule LightningWeb.API.WorkflowsController do
 
     active_triggers_count = count_enabled_triggers(params)
 
-    has_external_reference? = has_external_reference?(params, workflow_id)
-
     cond do
       changes_triggers? and Enum.any?(triggers, &(&1.id not in triggers_ids)) ->
         {:error, :cannot_replace_trigger}
 
       active_triggers_count > 1 ->
         {:error, :too_many_active_triggers}
-
-      has_external_reference? ->
-        {:error, :invalid_workflow_id}
 
       :else ->
         workflow
@@ -124,15 +119,7 @@ defmodule LightningWeb.API.WorkflowsController do
       jobs_with_errors = map_errors_to_ids(changes[:jobs])
       edges_with_errors = map_errors_to_ids(changes[:edges])
 
-      duplicated_ids =
-        [triggers_with_errors, jobs_with_errors, edges_with_errors]
-        |> Enum.concat()
-        |> Enum.filter(fn {_id, errors} -> Map.has_key?(errors, :id) end)
-
       cond do
-        Enum.any?(duplicated_ids) ->
-          {:error, {:duplicated_ids, Enum.map(duplicated_ids, &elem(&1, 0))}}
-
         Enum.any?(triggers_with_errors) ->
           {:error, {:invalid_triggers, triggers_with_errors}}
 
@@ -157,18 +144,6 @@ defmodule LightningWeb.API.WorkflowsController do
     |> Map.new(&{Ecto.Changeset.fetch_field!(&1, :id), ChangesetJSON.errors(&1)})
   end
 
-  defp has_external_reference?(params, workflow_id) when is_map(params) do
-    has_external_reference?(params["edges"], workflow_id) or
-      has_external_reference?(params["jobs"], workflow_id) or
-      has_external_reference?(params["triggers"], workflow_id)
-  end
-
-  defp has_external_reference?(list, workflow_id) when is_list(list) do
-    Enum.any?(list, &(&1["workflow_id"] && &1["workflow_id"] != workflow_id))
-  end
-
-  defp has_external_reference?(_other, _workflow_id), do: false
-
   defp validate_workflow(%Changeset{} = changeset) do
     edges = Changeset.get_field(changeset, :edges)
     jobs = Changeset.get_field(changeset, :jobs)
@@ -188,10 +163,10 @@ defmodule LightningWeb.API.WorkflowsController do
     # {:ok, _ids} <- validate_ids(edges),
     with {:ok, triggers_ids} <- validate_ids(triggers),
          {:ok, _ids} <- validate_ids(jobs),
-         {:ok, source_trigger_id} <- get_initial_node(edges, triggers_ids),
-         graph <- make_graph(edges),
-         :ok <- validate_jobs(graph, jobs, triggers_ids) do
-      Graph.traverse(graph, source_trigger_id)
+         {:ok, source_trigger_id} <- get_initial_node(edges, triggers_ids) do
+      edges
+      |> make_graph()
+      |> Graph.traverse(source_trigger_id)
     end
   end
 
@@ -237,17 +212,6 @@ defmodule LightningWeb.API.WorkflowsController do
         |> Map.new(fn {key, value} -> {String.to_existing_atom(key), value} end)
         |> then(&Graph.add_edge(graph, struct(Edge, &1)))
     end)
-  end
-
-  defp validate_jobs(graph, jobs, triggers_ids) do
-    jobs
-    |> MapSet.new(&(Map.get(&1, :id) || Map.get(&1, "id")))
-    |> MapSet.symmetric_difference(Graph.nodes(graph, as: MapSet.new()))
-    |> Enum.reject(&(&1 in triggers_ids or is_nil(&1)))
-    |> case do
-      [] -> :ok
-      invalid_jobs_ids -> {:error, :invalid_jobs_ids, invalid_jobs_ids}
-    end
   end
 
   defp get_workflow(workflow_id, project_id) do

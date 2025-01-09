@@ -156,16 +156,66 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       assert %{"id" => workflow_id, "errors" => []} = json_response(conn, 201)
 
-      saved_workflow =
-        Repo.get(Workflow, workflow_id)
-        |> Repo.preload([:edges, :jobs, :triggers])
+      assert %{
+               edges: [_edge | _edges],
+               jobs: [_job | _jobs],
+               triggers: [_trigger | _triggers]
+             } =
+               saved_workflow =
+               Repo.get(Workflow, workflow_id)
+               |> Repo.preload([:edges, :jobs, :triggers])
+
+      encoded_saved_workflow =
+        saved_workflow
         |> encode_decode()
         |> remove_timestamps()
 
       assert workflow
              |> Map.put(:id, workflow_id)
              |> encode_decode()
-             |> remove_timestamps() == saved_workflow
+             |> remove_timestamps() == encoded_saved_workflow
+    end
+
+    test "inserts a workflow with disconnected job", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      workflow =
+        build(:simple_workflow, name: "work1", project_id: project.id)
+        |> then(fn %{jobs: jobs} = workflow ->
+          %{workflow | jobs: [build(:job) | jobs]}
+        end)
+
+      conn =
+        conn
+        |> assign_bearer(user)
+        |> post(
+          ~p"/api/projects/#{project.id}/workflows/",
+          Jason.encode!(workflow)
+        )
+
+      assert %{"id" => workflow_id, "errors" => []} = json_response(conn, 201)
+
+      assert %{
+               edges: [_edge | _edges],
+               jobs: [_job | _jobs],
+               triggers: [_trigger | _triggers]
+             } =
+               saved_workflow =
+               Repo.get(Workflow, workflow_id)
+               |> Repo.preload([:edges, :jobs, :triggers])
+
+      encoded_saved_workflow =
+        saved_workflow
+        |> encode_decode()
+        |> remove_timestamps()
+
+      assert workflow
+             |> Map.put(:id, workflow_id)
+             |> encode_decode()
+             |> remove_timestamps() == encoded_saved_workflow
     end
 
     test "returns 422 when an edge has invalid condition_type", %{conn: conn} do
@@ -1204,6 +1254,111 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              |> remove_timestamps() == saved_workflow
     end
 
+    test "updates completely a workflow with disconnected job", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      %{triggers: [trigger]} =
+        workflow =
+        insert(:simple_workflow, name: "work1.0", project: project)
+        |> Repo.reload()
+        |> Repo.preload([:edges, :jobs, :triggers])
+
+      complete_update =
+        build(:simple_workflow, name: "work1.1", project: project)
+        |> then(fn %{
+                     edges: [new_edge | other_new_edges],
+                     jobs: [new_job1 | _other_jobs],
+                     triggers: [new_trigger]
+                   } ->
+          Map.merge(workflow, %{
+            edges: [
+              %{
+                new_edge
+                | source_trigger_id: new_trigger.id,
+                  target_job_id: new_job1.id
+              }
+              | other_new_edges
+            ],
+            jobs: [build(:job), new_job1 | workflow.jobs],
+            triggers: [%{trigger | enabled: false}, new_trigger]
+          })
+        end)
+
+      conn =
+        conn
+        |> assign_bearer(user)
+        |> put(
+          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          Jason.encode!(complete_update)
+        )
+
+      assert json_response(conn, 200) == %{"id" => workflow.id, "errors" => []}
+
+      %{jobs: jobs} =
+        Repo.get(Workflow, workflow.id)
+        |> Repo.preload([:edges, :jobs, :triggers])
+
+      previous_workflow_jobs_ids = Enum.map(workflow.jobs, & &1.id)
+
+      assert Enum.filter(jobs, &(&1.id not in previous_workflow_jobs_ids))
+             |> Enum.count() == 2
+    end
+
+    test "updates workflow ignoring workflow_id", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      %{triggers: [trigger]} =
+        workflow =
+        insert(:simple_workflow, name: "work1.0", project: project)
+        |> Repo.reload()
+        |> Repo.preload([:edges, :jobs, :triggers])
+
+      %{id: other_workflow_id} = insert(:simple_workflow)
+
+      complete_update_external_ref =
+        build(:simple_workflow, name: "work1.1", project: project)
+        |> then(fn %{
+                     edges: [new_edge | other_new_edges],
+                     jobs: [new_job | other_jobs],
+                     triggers: [new_trigger]
+                   } ->
+          Map.merge(workflow, %{
+            edges: [
+              Map.merge(new_edge, %{
+                source_trigger_id: new_trigger.id,
+                target_job_id: new_job.id,
+                workflow_id: other_workflow_id
+              })
+              | other_new_edges
+            ],
+            jobs: [
+              %{new_job | workflow_id: other_workflow_id}
+              | other_jobs
+            ],
+            triggers: [
+              %{trigger | enabled: false},
+              %{new_trigger | workflow_id: other_workflow_id}
+            ]
+          })
+        end)
+
+      conn =
+        conn
+        |> assign_bearer(user)
+        |> put(
+          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          Jason.encode!(complete_update_external_ref)
+        )
+
+      assert json_response(conn, 200) == %{"id" => workflow.id, "errors" => []}
+    end
+
     test "returns 404 when the workflow doesn't exist", %{conn: conn} do
       user = insert(:user)
 
@@ -1288,65 +1443,6 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
                  Jason.encode!(workflow)
                )
                |> json_response(422)
-    end
-
-    test "returns 422 on reference to another workflow", %{conn: conn} do
-      user = insert(:user)
-
-      project =
-        insert(:project, project_users: [%{user: user}])
-
-      %{triggers: [trigger]} =
-        workflow =
-        insert(:simple_workflow, name: "work1.0", project: project)
-        |> Repo.reload()
-        |> Repo.preload([:edges, :jobs, :triggers])
-
-      %{id: other_workflow_id} = insert(:simple_workflow)
-
-      complete_update_external_ref =
-        build(:simple_workflow, name: "work1.1", project: project)
-        |> then(fn %{
-                     edges: [new_edge | other_new_edges],
-                     jobs: [new_job | other_jobs],
-                     triggers: [new_trigger]
-                   } ->
-          Map.merge(workflow, %{
-            edges: [
-              Map.merge(new_edge, %{
-                source_trigger_id: new_trigger.id,
-                target_job_id: new_job.id,
-                workflow_id: other_workflow_id
-              })
-              | other_new_edges
-            ],
-            jobs: [
-              %{new_job | workflow_id: other_workflow_id}
-              | other_jobs
-            ],
-            triggers: [
-              %{trigger | enabled: false},
-              %{new_trigger | workflow_id: other_workflow_id}
-            ]
-          })
-        end)
-
-      conn =
-        conn
-        |> assign_bearer(user)
-        |> put(
-          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
-          Jason.encode!(complete_update_external_ref)
-        )
-
-      assert json_response(conn, 422) == %{
-               "id" => workflow.id,
-               "errors" => %{
-                 "workflow" => [
-                   "Edges, jobs and triggers cannot reference another workflow!"
-                 ]
-               }
-             }
     end
 
     test "returns 422 when one id belongs to another workflow", %{conn: conn} do
