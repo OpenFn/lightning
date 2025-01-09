@@ -319,15 +319,6 @@ defmodule LightningWeb.API.WorkflowsController do
            "Workflow ID doesn't match with the one on the path."
          )
 
-  defp maybe_handle_error(conn, {:error, :invalid_workflow_id}, workflow_id),
-    do:
-      reply_422(
-        conn,
-        workflow_id,
-        :workflow,
-        "Edges, jobs and triggers cannot reference another workflow!"
-      )
-
   defp maybe_handle_error(conn, {:error, :missing_id}, workflow_id),
     do:
       reply_422(
@@ -335,15 +326,6 @@ defmodule LightningWeb.API.WorkflowsController do
         workflow_id,
         :workflow,
         "All jobs and triggers should have an id (UUID)."
-      )
-
-  defp maybe_handle_error(conn, {:error, {:duplicated_ids, ids}}, workflow_id),
-    do:
-      reply_422(
-        conn,
-        workflow_id,
-        :workflow,
-        "The ids #{inspect(ids)} should be unique for all workflows."
       )
 
   @reason_entity_field %{

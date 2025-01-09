@@ -1496,7 +1496,9 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       assert json_response(conn, 422) == %{
                "id" => workflow.id,
                "errors" => %{
-                 "jobs" => ["Job #{external_job.id} has the errors: [id: This value should be unique.]"]
+                 "jobs" => [
+                   "Job #{external_job.id} has the errors: [id: This value should be unique.]"
+                 ]
                }
              }
     end
