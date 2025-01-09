@@ -36,7 +36,7 @@ defmodule LightningWeb.WorkflowLive.GithubSyncModal do
         <:title>
           <div class="flex justify-between">
             <span class="font-bold">
-              Sync changes to Github
+              Save and Sync changes to GitHub
             </span>
 
             <button
@@ -115,7 +115,7 @@ defmodule LightningWeb.WorkflowLive.GithubSyncModal do
             </div>
           </.async_result>
         </div>
-        <div class="flex flex-col gap-2 text-black">
+        <div class="flex flex-col gap-2">
           <span>
             Repository:
             <.link
@@ -135,15 +135,27 @@ defmodule LightningWeb.WorkflowLive.GithubSyncModal do
           </span>
         </div>
         <div class="mt-2">
+          Not the right repository or branch?
+          <.link
+            class="link"
+            navigate={
+              ~p"/projects/#{@project_repo_connection.project_id}/settings#vcs"
+            }
+          >
+            Modify connection
+          </.link>
+        </div>
+        <div class="mt-6">
           <.input
-            type="text"
+            type="textarea"
+            rows="2"
             label="Commit message"
-            class="w-full"
+            class="w-full resize-none"
             name="github_sync[commit_message]"
             value={"#{@current_user.email} initiated a sync from Lightning"}
           />
         </div>
-        <.modal_footer class="mt-6 mx-6">
+        <:footer class="mt-2 mx-6">
           <div class="sm:flex sm:flex-row-reverse gap-2">
             <.button
               id={"submit-btn-#{@id}"}
@@ -161,7 +173,7 @@ defmodule LightningWeb.WorkflowLive.GithubSyncModal do
               Cancel
             </button>
           </div>
-        </.modal_footer>
+        </:footer>
       </.modal>
     </div>
     """
