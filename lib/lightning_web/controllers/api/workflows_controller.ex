@@ -112,6 +112,8 @@ defmodule LightningWeb.API.WorkflowsController do
 
   defp save_workflow(params_or_changeset, activate?, project_id, user) do
     with :ok <- limit_workflow_activation(activate?, project_id),
+         {params_or_changeset, ids_map} <-
+           remap_arbitrary_ids(params_or_changeset),
          :ok <- validate_workflow(params_or_changeset),
          {:error, %{changes: changes} = _changeset} <-
            Workflows.save_workflow(params_or_changeset, user) do
@@ -121,13 +123,13 @@ defmodule LightningWeb.API.WorkflowsController do
 
       cond do
         Enum.any?(triggers_with_errors) ->
-          {:error, {:invalid_triggers, triggers_with_errors}}
+          {:error, {:invalid_triggers, triggers_with_errors, ids_map}}
 
         Enum.any?(jobs_with_errors) ->
-          {:error, {:invalid_jobs, jobs_with_errors}}
+          {:error, {:invalid_jobs, jobs_with_errors, ids_map}}
 
         Enum.any?(edges_with_errors) ->
-          {:error, {:invalid_edges, edges_with_errors}}
+          {:error, {:invalid_edges, edges_with_errors, ids_map}}
 
         :else ->
           {:error, :invalid_workflow}
@@ -188,16 +190,27 @@ defmodule LightningWeb.API.WorkflowsController do
     end)
   end
 
-  defp get_initial_node(edges, triggers_ids) do
+  defp get_initial_node(edges, triggers_ids, all_enabled \\ false) do
     edges
     |> Enum.map(
       &(Map.get(&1, :source_trigger_id) || Map.get(&1, "source_trigger_id"))
     )
     |> Enum.filter(&(&1 in triggers_ids))
     |> case do
-      [] -> {:error, :edges_misses_a_trigger}
-      [source_trigger_id] -> {:ok, source_trigger_id}
-      list -> {:error, :edges_has_many_triggers, list}
+      [] ->
+        {:error, :edges_misses_a_trigger}
+
+      [source_trigger_id] ->
+        {:ok, source_trigger_id}
+
+      _list ->
+        if all_enabled do
+          {:error, :edges_has_many_triggers}
+        else
+          edges
+          |> Enum.filter(&(Map.get(&1, :enabled) || Map.get(&1, "enabled")))
+          |> get_initial_node(triggers_ids, true)
+        end
     end
   end
 
@@ -335,11 +348,13 @@ defmodule LightningWeb.API.WorkflowsController do
   }
   defp maybe_handle_error(
          conn,
-         {:error, {reason, id_to_errors_map}},
+         {:error, {reason, id_to_errors_map, ids_map}},
          workflow_id
        )
        when reason in [:invalid_triggers, :invalid_jobs, :invalid_edges] do
     {entity, workflow_field} = Map.get(@reason_entity_field, reason)
+
+    client_ids = Map.new(ids_map, fn {k, v} -> {v, k} end)
 
     error_msgs =
       id_to_errors_map
@@ -350,7 +365,7 @@ defmodule LightningWeb.API.WorkflowsController do
             {field, errors} -> "#{field}: #{inspect(errors)}"
           end)
 
-        "#{entity} #{id} has the errors: [#{errors}]"
+        "#{entity} #{Map.get(client_ids, id, id)} has the errors: [#{errors}]"
       end)
 
     reply_422(
@@ -399,12 +414,20 @@ defmodule LightningWeb.API.WorkflowsController do
           "Missing edge with source_trigger_id."
         )
 
-      {:error, :multiple_targets_for_trigger, trigger_id} ->
+      {:error, :multiple_targets_for_trigger} ->
         reply_422(
           conn,
           workflow_id,
           :edges,
-          "Has multiple targets for trigger #{trigger_id}."
+          "source_trigger_id must have a single target."
+        )
+
+      {:error, :edges_has_many_triggers} ->
+        reply_422(
+          conn,
+          workflow_id,
+          :edges,
+          "There should be only one enabled edge with source_trigger_id."
         )
 
       {:error, :graph_has_a_cycle, node_id} ->
@@ -448,5 +471,45 @@ defmodule LightningWeb.API.WorkflowsController do
     conn
     |> put_status(:unprocessable_entity)
     |> json(%{id: workflow_id, errors: %{field => List.wrap(msgs)}})
+  end
+
+  defp remap_arbitrary_ids(
+         %{"jobs" => jobs, "edges" => edges, "triggers" => triggers} = workflow
+       ) do
+    {jobs, ids_map} =
+      Enum.map_reduce(jobs, Map.new(), fn %{"id" => client_id} = job, ids ->
+        insert_uuid = Ecto.UUID.generate()
+        {Map.put(job, "id", insert_uuid), Map.put(ids, client_id, insert_uuid)}
+      end)
+
+    {triggers, ids_map} =
+      Enum.map_reduce(triggers, ids_map, fn %{"id" => client_id} = trigger,
+                                            ids ->
+        insert_uuid = Ecto.UUID.generate()
+
+        {Map.put(trigger, "id", insert_uuid),
+         Map.put(ids, client_id, insert_uuid)}
+      end)
+
+    edges =
+      Enum.map(edges, fn edge ->
+        edge
+        |> Map.update("source_job_id", nil, &Map.get(ids_map, &1))
+        |> Map.update("source_trigger_id", nil, &Map.get(ids_map, &1))
+        |> Map.update("target_job_id", nil, &Map.get(ids_map, &1))
+      end)
+
+    {
+      Map.merge(workflow, %{
+        "jobs" => jobs,
+        "edges" => edges,
+        "triggers" => triggers
+      }),
+      ids_map
+    }
+  end
+
+  defp remap_arbitrary_ids(changeset) do
+    {changeset, Map.new()}
   end
 end

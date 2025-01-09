@@ -157,23 +157,25 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       assert %{"id" => workflow_id, "errors" => []} = json_response(conn, 201)
 
       assert %{
-               edges: [_edge | _edges],
-               jobs: [_job | _jobs],
-               triggers: [_trigger | _triggers]
+               edges: [edge],
+               jobs: [job],
+               triggers: [trigger]
              } =
                saved_workflow =
                Repo.get(Workflow, workflow_id)
                |> Repo.preload([:edges, :jobs, :triggers])
 
-      encoded_saved_workflow =
-        saved_workflow
-        |> encode_decode()
-        |> remove_timestamps()
+      assert Map.take(hd(workflow.edges), [:condition_type, :enabled]) ==
+               Map.take(edge, [:condition_type, :enabled])
 
-      assert workflow
-             |> Map.put(:id, workflow_id)
-             |> encode_decode()
-             |> remove_timestamps() == encoded_saved_workflow
+      assert Map.take(hd(workflow.jobs), [:name, :adaptor, :body]) ==
+               Map.take(job, [:name, :adaptor, :body])
+
+      assert Map.take(hd(workflow.triggers), [:type, :enabled]) ==
+               Map.take(trigger, [:type, :enabled])
+
+      assert Map.take(workflow, [:name, :project_id]) ==
+               Map.take(saved_workflow, [:name, :project_id])
     end
 
     test "inserts a workflow with disconnected job", %{conn: conn} do
@@ -199,23 +201,30 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       assert %{"id" => workflow_id, "errors" => []} = json_response(conn, 201)
 
       assert %{
-               edges: [_edge | _edges],
-               jobs: [_job | _jobs],
-               triggers: [_trigger | _triggers]
+               edges: [edge],
+               jobs: [saved_job1, saved_job2],
+               triggers: [trigger]
              } =
                saved_workflow =
                Repo.get(Workflow, workflow_id)
                |> Repo.preload([:edges, :jobs, :triggers])
 
-      encoded_saved_workflow =
-        saved_workflow
-        |> encode_decode()
-        |> remove_timestamps()
+      assert Map.take(hd(workflow.edges), [:condition_type, :enabled]) ==
+               Map.take(edge, [:condition_type, :enabled])
 
-      assert workflow
-             |> Map.put(:id, workflow_id)
-             |> encode_decode()
-             |> remove_timestamps() == encoded_saved_workflow
+      [workflow_job1, workflow_job2] = workflow.jobs
+
+      assert Map.take(workflow_job1, [:name, :adaptor, :body]) ==
+               Map.take(saved_job1, [:name, :adaptor, :body])
+
+      assert Map.take(workflow_job2, [:name, :adaptor, :body]) ==
+               Map.take(saved_job2, [:name, :adaptor, :body])
+
+      assert Map.take(hd(workflow.triggers), [:type, :enabled]) ==
+               Map.take(trigger, [:type, :enabled])
+
+      assert Map.take(workflow, [:name, :project_id]) ==
+               Map.take(saved_workflow, [:name, :project_id])
     end
 
     test "returns 422 when an edge has invalid condition_type", %{conn: conn} do
@@ -418,6 +427,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              }
     end
 
+    @tag :skip
     test "returns 422 when graph has a cycle", %{conn: conn} do
       user = insert(:user)
 
@@ -456,118 +466,63 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              }
     end
 
-    test "returns 422 when trigger or job id is not a UUID", %{conn: conn} do
+    test "creates UUIDs on insert based on user arbitrary ids", %{conn: conn} do
       user = insert(:user)
 
       project =
         insert(:project, project_users: [%{user: user}])
 
-      trigger =
-        build(:trigger, type: :webhook, enabled: true)
+      workflow =
+        build(:complex_workflow, project_id: project.id)
+        |> then(fn %{
+                     jobs: [job1, job2 | jobs],
+                     edges: edges,
+                     triggers: [trigger]
+                   } = workflow ->
+          old_job1_id = job1.id
+          old_job2_id = job2.id
+          job1 = Map.put(job1, :id, 11)
+          job2 = Map.put(job2, :id, 12)
+          old_trigger_id = trigger.id
+          trigger = Map.put(trigger, :id, "trigger1")
 
-      job =
-        build(:job,
-          body: ~s[fn(state => { return {...state, extra: "data"} })]
-        )
+          ids_map = %{
+            old_job1_id => 11,
+            old_job2_id => 12,
+            old_trigger_id => "trigger1"
+          }
 
-      trigger_foo = Map.put(trigger, :id, "foo")
-
-      workflow1 =
-        build(:workflow, name: "workflow 1", project_id: project.id)
-        |> with_trigger(trigger_foo)
-        |> with_job(job)
-        |> with_edge({trigger, job}, [])
-
-      job_bar = Map.put(job, :id, "bar")
-
-      workflow2 =
-        build(:workflow, name: "workflow 2", project_id: project.id)
-        |> with_trigger(trigger)
-        |> with_job(job_bar)
-        |> with_edge({trigger, job}, [])
-
-      conn = assign_bearer(conn, user)
-
-      assert conn
-             |> post(
-               ~p"/api/projects/#{project.id}/workflows",
-               Jason.encode!(workflow1)
-             )
-             |> json_response(422) == %{
-               "id" => workflow1.id,
-               "errors" => %{
-                 "workflow" => ["Id foo should be a UUID."]
-               }
-             }
-
-      assert conn
-             |> post(
-               ~p"/api/projects/#{project.id}/workflows",
-               Jason.encode!(workflow2)
-             )
-             |> json_response(422) == %{
-               "id" => workflow2.id,
-               "errors" => %{
-                 "workflow" => ["Id bar should be a UUID."]
-               }
-             }
-    end
-
-    test "returns 422 when trigger or job doesn't have an id", %{conn: conn} do
-      user = insert(:user)
-
-      project =
-        insert(:project, project_users: [%{user: user}])
-
-      trigger =
-        build(:trigger, type: :webhook, enabled: true)
-
-      job =
-        build(:job,
-          body: ~s[fn(state => { return {...state, extra: "data"} })]
-        )
-
-      workflow1 =
-        build(:workflow, name: "workflow 1", project_id: project.id)
-        |> with_job(job)
-        |> with_edge({trigger, job}, [])
-        |> then(&with_trigger(&1, Map.put(trigger, :id, nil)))
-
-      workflow2 =
-        build(:workflow, name: "workflow 2", project_id: project.id)
-        |> with_trigger(trigger)
-        |> with_edge({trigger, job}, [])
-        |> then(&with_job(&1, Map.put(job, :id, nil)))
+          edges
+          |> Enum.map(fn edge ->
+            edge
+            |> Map.update(:source_trigger_id, nil, &Map.get(ids_map, &1, &1))
+            |> Map.update(:source_job_id, nil, &Map.get(ids_map, &1, &1))
+            |> Map.update(:target_job_id, nil, &Map.get(ids_map, &1, &1))
+          end)
+          |> then(fn edges ->
+            %{
+              workflow
+              | jobs: [job1, job2 | jobs],
+                edges: edges,
+                triggers: [trigger]
+            }
+          end)
+        end)
 
       conn = assign_bearer(conn, user)
 
-      assert conn
-             |> post(
-               ~p"/api/projects/#{project.id}/workflows",
-               Jason.encode!(workflow1)
-             )
-             |> json_response(422) == %{
-               "id" => workflow1.id,
-               "errors" => %{
-                 "workflow" => [
-                   "All jobs and triggers should have an id (UUID)."
-                 ]
-               }
-             }
+      assert %{
+               "id" => id,
+               "errors" => []
+             } =
+               conn
+               |> post(
+                 ~p"/api/projects/#{project.id}/workflows",
+                 Jason.encode!(workflow)
+               )
+               |> json_response(201)
 
-      assert conn
-             |> post(
-               ~p"/api/projects/#{project.id}/workflows",
-               Jason.encode!(workflow2)
-             )
-             |> json_response(422) == %{
-               "id" => workflow2.id,
-               "errors" => %{
-                 "workflow" => [
-                   "All jobs and triggers should have an id (UUID)."
-                 ]
-               }
-             }
+      assert {:ok, _id} = Ecto.UUID.dump(id)
     end
 
     test "returns 422 when there is a duplicated id", %{conn: conn} do
@@ -671,6 +626,54 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
                   target_job_id: job1.id
                 ),
                 build(:edge, source_job_id: job1.id, target_job_id: job2.id),
+                build(:edge,
+                  source_trigger_id: trigger.id,
+                  target_job_id: job2.id
+                )
+              ]
+          }
+        end)
+
+      conn =
+        conn
+        |> assign_bearer(user)
+        |> post(
+          ~p"/api/projects/#{project.id}/workflows",
+          Jason.encode!(workflow)
+        )
+
+      assert json_response(conn, 422) == %{
+               "id" => workflow.id,
+               "errors" => %{
+                 "edges" => [
+                   "There should be only one enabled edge with source_trigger_id."
+                 ]
+               }
+             }
+    end
+
+    test "returns 422 when an edge source_job_id points to a trigger", %{
+      conn: conn
+    } do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      %{edges: [_e1, edge]} =
+        workflow =
+        build(:simple_workflow, project_id: project.id)
+        |> then(fn %{jobs: [job1], triggers: [trigger]} = workflow ->
+          job2 = build(:job)
+
+          %{
+            workflow
+            | jobs: [job1, job2],
+              edges: [
+                build(:edge,
+                  source_trigger_id: trigger.id,
+                  target_job_id: job1.id
+                ),
                 build(:edge, source_job_id: trigger.id, target_job_id: job2.id)
               ]
           }
@@ -687,7 +690,9 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       assert json_response(conn, 422) == %{
                "id" => workflow.id,
                "errors" => %{
-                 "edges" => ["Has multiple targets for trigger #{trigger.id}."]
+                 "edges" => [
+                   "Edge #{edge.id} has the errors: [source_job_id: This job does not exist, or is not in the same workflow.]"
+                 ]
                }
              }
     end

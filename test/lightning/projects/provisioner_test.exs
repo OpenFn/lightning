@@ -435,7 +435,7 @@ defmodule Lightning.Projects.ProvisionerTest do
                workflows: [
                  %{
                    jobs: [
-                     %{id: ["This email address already exists."]},
+                     %{id: ["This value should be unique."]},
                      %{},
                      %{}
                    ]
