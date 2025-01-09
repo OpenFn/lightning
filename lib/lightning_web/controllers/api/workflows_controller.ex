@@ -364,8 +364,8 @@ defmodule LightningWeb.API.WorkflowsController do
       |> Enum.map(fn {id, errors} ->
         errors =
           Enum.map(errors, fn
-            {field, [error]} -> "#{field} #{error}"
-            {field, errors} -> "#{field} #{inspect(errors)}"
+            {field, [error]} -> "#{field}: #{error}"
+            {field, errors} -> "#{field}: #{inspect(errors)}"
           end)
 
         "#{entity} #{id} has the errors: [#{errors}]"

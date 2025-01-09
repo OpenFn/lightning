@@ -243,7 +243,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
                "id" => nil,
                "errors" => %{
                  "edges" => [
-                   "Edge #{edge.id} has the errors: [condition_type is invalid]"
+                   "Edge #{edge.id} has the errors: [condition_type: is invalid]"
                  ]
                }
              }
@@ -285,8 +285,8 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       assert Enum.sort(jobs_errors) ==
                Enum.sort([
-                 "Job #{job1.id} has the errors: [body is invalid]",
-                 "Job #{job2.id} has the errors: [adaptor is invalid]"
+                 "Job #{job1.id} has the errors: [body: is invalid]",
+                 "Job #{job2.id} has the errors: [adaptor: is invalid]"
                ])
     end
 
@@ -315,7 +315,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
                "id" => nil,
                "errors" => %{
                  "triggers" => [
-                   "Trigger #{trigger.id} has the errors: [enabled is invalid]"
+                   "Trigger #{trigger.id} has the errors: [enabled: is invalid]"
                  ]
                }
              } == json_response(conn, 422)
@@ -598,8 +598,8 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       assert %{
                "id" => nil,
                "errors" => %{
-                 "workflow" => [
-                   "The ids [#{inspect(edge_id)}] should be unique for all workflows."
+                 "edges" => [
+                   "Edge #{edge_id} has the errors: [id: This value should be unique.]"
                  ]
                }
              } == json_response(conn, 422)
@@ -944,7 +944,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
                "id" => workflow.id,
                "errors" => %{
                  "triggers" => [
-                   "Trigger #{trigger.id} has the errors: [custom_path is invalid]"
+                   "Trigger #{trigger.id} has the errors: [custom_path: is invalid]"
                  ]
                }
              }
@@ -1496,9 +1496,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       assert json_response(conn, 422) == %{
                "id" => workflow.id,
                "errors" => %{
-                 "workflow" => [
-                   "The ids [#{inspect(external_job.id)}] should be unique for all workflows."
-                 ]
+                 "jobs" => ["Job #{external_job.id} has the errors: [id: This value should be unique.]"]
                }
              }
     end
