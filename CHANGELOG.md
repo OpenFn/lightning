@@ -25,6 +25,8 @@ and this project adheres to
 
 ### Added
 
+- Audit the creation and removal of Github repo connections.
+  [#2668](https://github.com/OpenFn/lightning/issues/2668)
 - Add save and sync option in the workflow edit page
   [#2707](https://github.com/OpenFn/lightning/issues/2707)
 
@@ -77,8 +79,6 @@ and this project adheres to
 
 - Handle errors from the AI Assistant more gracefully
   [#2741](https://github.com/OpenFn/lightning/issues/2741)
-- Audit the creation and removal of Github repo connections.
-  [#2668](https://github.com/OpenFn/lightning/issues/2668)
 
 ### Changed
 
