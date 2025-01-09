@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.10.9] - 2025-01-09
+
+### Added
+
 - Add save and sync option in the workflow edit page
   [#2707](https://github.com/OpenFn/lightning/issues/2707)
 
