@@ -25,6 +25,8 @@ and this project adheres to
   [#2403](https://github.com/OpenFn/lightning/pull/2403)
 - OPENAI_API_KEY renamed to AI_ASSISTANT_API_KEY
   [#2403](https://github.com/OpenFn/lightning/pull/2403)
+- Configure Monaco to load files from lightning instead of cdn
+  [#2786](https://github.com/OpenFn/lightning/issues/2786)
 
 ### Fixed
 
