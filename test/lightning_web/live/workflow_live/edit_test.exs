@@ -2041,6 +2041,62 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # modal is still present
       assert has_element?(view, "#github-sync-modal")
     end
+
+    test "save and sync button on the modal is disabled when verification is still going on",
+         %{
+           conn: conn,
+           project: project,
+           workflow: workflow
+         } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+        )
+
+      assert view |> page_title() =~ workflow.name
+
+      job_2 = workflow.jobs |> Enum.at(1)
+
+      view |> select_node(job_2, workflow.lock_version)
+
+      new_job_name = "My Other Job"
+
+      assert view |> fill_job_fields(job_2, %{name: new_job_name}) =~
+               new_job_name
+
+      refute view |> save_is_disabled?()
+
+      # let return ok with the limitter
+      stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context ->
+          :ok
+        end
+      )
+
+      stub(Lightning.Tesla.Mock, :call, fn
+        %{url: "https://api.github.com/app/installations" <> _rest}, _opts ->
+          # sleep to block the async task
+          Process.sleep(5000)
+
+          {:ok,
+           %Tesla.Env{
+             status: 201,
+             body: %{"token" => "some-token"}
+           }}
+      end)
+
+      # click to open the github sync modal
+      refute has_element?(view, "#github-sync-modal")
+      render_click(view, "toggle_github_sync_modal")
+      assert has_element?(view, "#github-sync-modal")
+
+      assert view
+             |> element("button#submit-btn-github-sync-modal")
+             |> render() =~ "disabled=\"disabled\""
+    end
   end
 
   describe "AI Assistant:" do
