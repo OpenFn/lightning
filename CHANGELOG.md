@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Add save and sync option in the workflow edit page
+  [#2707](https://github.com/OpenFn/lightning/issues/2707)
+
 ### Changed
 
 - Git-ignore files from mix assets.deploy

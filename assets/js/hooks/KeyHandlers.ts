@@ -208,6 +208,15 @@ const isCtrlOrMetaShiftEnter = (e: KeyboardEvent) =>
   (e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Enter';
 
 /**
+ * Determines if the key combination for "Ctrl+Shift+S" (or "Cmd+Shift+S" on macOS) is pressed.
+ *
+ * @param e - The keyboard event to evaluate.
+ * @returns `true` if "Ctrl+Shift+S" or "Cmd+Shift+S" is pressed, otherwise `false`.
+ */
+const isCtrlOrMetaShiftS = (e: KeyboardEvent) =>
+  (e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 's';
+
+/**
  * Determines if the "Escape" key is pressed.
  *
  * @param e - The keyboard event to evaluate.
@@ -252,6 +261,18 @@ const closeAction = (e: KeyboardEvent, el: HTMLElement) => el.click();
 export const SaveViaCtrlS = createKeyCombinationHook(
   isCtrlOrMetaS,
   submitAction
+);
+
+/**
+ * Hook to open the Github Sync modal when "Ctrl+Shift+S" (or "Cmd+Shift+S" on macOS) is pressed.
+ *
+ * This hook listens globally and executes the `clickAction`, which sends a click event.
+ *
+ * Priority: `PRIORITY.NORMAL` (default), meaning it can be overridden by higher-priority handlers.
+ */
+export const OpenSyncModalViaCtrlShiftS = createKeyCombinationHook(
+  isCtrlOrMetaShiftS,
+  clickAction
 );
 
 /**
