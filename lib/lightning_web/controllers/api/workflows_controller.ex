@@ -131,14 +131,14 @@ defmodule LightningWeb.API.WorkflowsController do
       jobs_with_errors = map_errors_to_ids(changes[:jobs])
       edges_with_errors = map_errors_to_ids(changes[:edges])
 
-      duplicated_ids =
-        [triggers_with_errors, jobs_with_errors, edges_with_errors]
-        |> Enum.concat()
-        |> Enum.filter(fn {_id, errors} -> Map.has_key?(errors, :id) end)
+      # duplicated_ids =
+      #   [triggers_with_errors, jobs_with_errors, edges_with_errors]
+      #   |> Enum.concat()
+      #   |> Enum.filter(fn {_id, errors} -> Map.has_key?(errors, :id) end)
 
       cond do
-        Enum.any?(duplicated_ids) ->
-          {:error, {:duplicated_ids, Enum.map(duplicated_ids, &elem(&1, 0))}}
+        # Enum.any?(duplicated_ids) ->
+        #   {:error, {:duplicated_ids, Enum.map(duplicated_ids, &elem(&1, 0))}}
 
         Enum.any?(triggers_with_errors) ->
           {:error, {:invalid_triggers, triggers_with_errors}}
@@ -196,8 +196,8 @@ defmodule LightningWeb.API.WorkflowsController do
     with {:ok, triggers_ids} <- validate_ids(triggers),
          {:ok, _ids} <- validate_ids(jobs),
          {:ok, source_trigger_id} <- get_initial_node(edges, triggers_ids),
-         graph <- make_graph(edges),
-         :ok <- validate_jobs(graph, jobs, triggers_ids) do
+         graph <- make_graph(edges) do
+        #  :ok <- validate_jobs(graph, jobs, triggers_ids) do
       Graph.traverse(graph, source_trigger_id)
     end
   end
@@ -246,16 +246,16 @@ defmodule LightningWeb.API.WorkflowsController do
     end)
   end
 
-  defp validate_jobs(graph, jobs, triggers_ids) do
-    jobs
-    |> MapSet.new(&(Map.get(&1, :id) || Map.get(&1, "id")))
-    |> MapSet.symmetric_difference(Graph.nodes(graph, as: MapSet.new()))
-    |> Enum.reject(&(&1 in triggers_ids or is_nil(&1)))
-    |> case do
-      [] -> :ok
-      invalid_jobs_ids -> {:error, :invalid_jobs_ids, invalid_jobs_ids}
-    end
-  end
+  # defp validate_jobs(graph, jobs, triggers_ids) do
+  #   jobs
+  #   |> MapSet.new(&(Map.get(&1, :id) || Map.get(&1, "id")))
+  #   |> MapSet.symmetric_difference(Graph.nodes(graph, as: MapSet.new()))
+  #   |> Enum.reject(&(&1 in triggers_ids or is_nil(&1)))
+  #   |> case do
+  #     [] -> :ok
+  #     invalid_jobs_ids -> {:error, :invalid_jobs_ids, invalid_jobs_ids}
+  #   end
+  # end
 
   defp get_workflow(workflow_id, project_id) do
     case Workflows.get_workflow(workflow_id, include: [:edges, :jobs, :triggers]) do

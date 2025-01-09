@@ -2,7 +2,7 @@ msgid "can't be blank"
 msgstr "This field can't be blank."
 
 msgid "has already been taken"
-msgstr "This email address already exists."
+msgstr "This field should have unique value."
 
 msgid "job name has already been taken"
 msgstr "Job name should be distinct."

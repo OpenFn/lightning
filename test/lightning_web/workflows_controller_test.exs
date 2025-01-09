@@ -1296,38 +1296,35 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       project =
         insert(:project, project_users: [%{user: user}])
 
-      %{triggers: [trigger]} =
+      # %{triggers: [trigger]} =
+      # %{triggers: [trigger]} =
         workflow =
         insert(:simple_workflow, name: "work1.0", project: project)
         |> Repo.reload()
         |> Repo.preload([:edges, :jobs, :triggers])
 
-      %{id: other_workflow_id} = insert(:simple_workflow)
-
+      workflow2 = insert(:complex_workflow, name: "work1.1", project: project)
       complete_update_external_ref =
-        build(:simple_workflow, name: "work1.1", project: project)
-        |> then(fn %{
-                     edges: [new_edge | other_new_edges],
-                     jobs: [new_job | other_jobs],
-                     triggers: [new_trigger]
+        workflow2 |> then(fn %{
+                    edges: [new_edge | _],
+                    jobs: [new_job1, new_job2 | _],
+                    #  triggers: [new_trigger]
                    } ->
+          IO.inspect new_job1, label: :new_job
+          IO.inspect new_edge, label: :new_edge
+
           Map.merge(workflow, %{
             edges: [
               Map.merge(new_edge, %{
-                source_trigger_id: new_trigger.id,
-                target_job_id: new_job.id,
-                workflow_id: other_workflow_id
+                id: Ecto.UUID.generate(),
+                source_trigger_id: nil,
+                source_job_id: new_job1.id,
+                target_job_id: new_job2.id,
               })
-              | other_new_edges
+              | workflow.edges
             ],
-            jobs: [
-              %{new_job | workflow_id: other_workflow_id}
-              | other_jobs
-            ],
-            triggers: [
-              %{trigger | enabled: false},
-              %{new_trigger | workflow_id: other_workflow_id}
-            ]
+            # jobs: [new_job1, new_job2 | workflow.jobs],
+            # triggers: [%{trigger | enabled: false}]
           })
         end)
 
@@ -1345,17 +1342,17 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
     updated_triggers_workflow_id =
       saved_workflow
       |> Map.get(:triggers)
-      |> Enum.any?(&(&1.workflow_id == other_workflow_id))
+      |> Enum.any?(&(&1.workflow_id == workflow2.id))
 
     updated_jobs_workflow_id =
       saved_workflow
       |> Map.get(:jobs)
-      |> Enum.any?(&(&1.workflow_id == other_workflow_id))
+      |> Enum.any?(&(&1.workflow_id == workflow2.id))
 
     updated_edges_workflow_id =
       saved_workflow
       |> Map.get(:edges)
-      |> Enum.any?(&(&1.workflow_id == other_workflow_id))
+      |> Enum.any?(&(&1.workflow_id == workflow2.id))
 
     IO.inspect(updated_triggers_workflow_id, label: :updated_triggers_workflow_id)
     IO.inspect(updated_jobs_workflow_id, label: :updated_jobs_workflow_id)

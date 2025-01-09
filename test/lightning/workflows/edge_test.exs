@@ -139,15 +139,37 @@ defmodule Lightning.Workflows.EdgeTest do
                 ]}
              } in changeset.errors
 
+      w2 = insert(:simple_workflow)
+      changeset =
+        Edge.changeset(%Edge{}, %{
+          workflow_id: w2.id,
+          condition_type: :on_job_success,
+          source_job_id: insert(:job, workflow: w2).id,
+          target_job_id: insert(:job, workflow: w2).id,
+        })
+
+      IO.inspect match?({:ok, _}, Repo.insert(changeset)), label: :inserted?
+
       changeset =
         Edge.changeset(%Edge{}, %{
           workflow_id: workflow.id,
           condition_type: :on_job_success,
           source_job_id: insert(:job, workflow: workflow).id,
-          target_job_id: job.id
+          target_job_id: insert(:job, workflow: workflow).id,
         })
 
-      {:error, changeset} = Repo.insert(changeset)
+      IO.inspect({:ok, edge} = Repo.insert(changeset), label: :before_update)
+
+      w2 = insert(:simple_workflow)
+      changeset =
+        Edge.changeset(edge, %{
+          workflow_id: w2.id,
+          condition_type: :on_job_success,
+          source_job_id: insert(:job, workflow: w2).id,
+          target_job_id: insert(:job, workflow: w2).id,
+        })
+
+      IO.inspect Repo.update(changeset), label: :after_update
 
       refute changeset.valid?
 
