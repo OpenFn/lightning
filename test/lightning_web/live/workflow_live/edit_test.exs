@@ -1941,7 +1941,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       refute has_element?(view, "#github-sync-modal")
       render_click(view, "toggle_github_sync_modal")
       assert has_element?(view, "#github-sync-modal")
-      assert render_async(view) =~ "Save and Sync changes to GitHub"
+      assert render_async(view) =~ "Save and sync changes to GitHub"
 
       expect_create_installation_token(repo_connection.github_installation_id)
       expect_get_repo(repo_connection.repo)

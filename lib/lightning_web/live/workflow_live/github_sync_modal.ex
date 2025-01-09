@@ -36,7 +36,7 @@ defmodule LightningWeb.WorkflowLive.GithubSyncModal do
         <:title>
           <div class="flex justify-between">
             <span class="font-bold">
-              Save and Sync changes to GitHub
+              Save and sync changes to GitHub
             </span>
 
             <button
@@ -134,7 +134,7 @@ defmodule LightningWeb.WorkflowLive.GithubSyncModal do
             </span>
           </span>
         </div>
-        <div class="mt-2">
+        <div class="mt-2 text-sm">
           Not the right repository or branch?
           <.link
             class="link"
@@ -155,7 +155,7 @@ defmodule LightningWeb.WorkflowLive.GithubSyncModal do
             value={"#{@current_user.email} initiated a sync from Lightning"}
           />
         </div>
-        <:footer class="mt-2 mx-6">
+        <:footer class="mt-4 mx-6">
           <div class="sm:flex sm:flex-row-reverse gap-2">
             <.button
               id={"submit-btn-#{@id}"}
@@ -163,7 +163,7 @@ defmodule LightningWeb.WorkflowLive.GithubSyncModal do
               form="workflow-form"
               disabled={!@verify_connection.ok?}
             >
-              Save and Sync
+              Save and sync
             </.button>
             <button
               type="button"
