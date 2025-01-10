@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Show email address of credential owner on project credentials page
+  [#2210](https://github.com/OpenFn/lightning/issues/2210)
+
 ### Changed
 
 ### Fixed
