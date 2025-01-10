@@ -377,8 +377,8 @@ defmodule LightningWeb.Components.Credentials do
         <.table id={"#{@id}-table"}>
           <.tr>
             <.th>Name</.th>
-            <.th :if={@show_owner}>Type</.th>
-            <.th>Owner</.th>
+            <.th>Type</.th>
+            <.th :if={@show_owner}>Owner</.th>
             <.th>Projects with access</.th>
             <.th>Production</.th>
             <.th>
