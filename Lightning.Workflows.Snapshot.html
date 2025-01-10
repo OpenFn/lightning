@@ -14,7 +14,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-3C3BE2BB.js"></script>
+    <script src="dist/sidebar_items-C16FD9BC.js"></script>
     <script src="docs_config.js"></script>
     <script async src="dist/html-YIPIRHGU.js"></script>
 
@@ -232,6 +232,14 @@ Pages
     <div class="summary-row">
       <div class="summary-signature">
         <a href="#get_or_create_latest_for/4" data-no-tooltip translate="no">get_or_create_latest_for(multi, name \\ :snapshot, workflow, actor)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#include_latest_snapshot/3" data-no-tooltip translate="no">include_latest_snapshot(multi, name \\ :snapshot, workflow)</a>
 
       </div>
 
@@ -569,6 +577,41 @@ workflow has been updated elsewhere.</p>
   <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>(),
   <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">struct</a>()
 ) :: <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.Multi.html#t:t/0">Ecto.Multi.t</a>()</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="include_latest_snapshot/3">
+
+    <span id="include_latest_snapshot/2"></span>
+
+  <div class="detail-header">
+    <a href="#include_latest_snapshot/3" class="detail-link" data-no-tooltip title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">include_latest_snapshot(multi, name \\ :snapshot, workflow)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L266" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> include_latest_snapshot(
+  <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.Multi.html#t:t/0">Ecto.Multi.t</a>(),
+  <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>() | :snapshot,
+  <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>()
+) ::
+  <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.Multi.html#t:t/0">Ecto.Multi.t</a>()</pre>
 
       </div>
 
