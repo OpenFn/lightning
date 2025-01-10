@@ -15,7 +15,7 @@ defmodule LightningWeb.RunLive.ShowTest do
 
     test "with exit error", %{conn: conn, project: project} do
       %{triggers: [%{id: webhook_trigger_id}]} =
-        insert(:simple_workflow, project: project)
+        insert(:simple_workflow, project: project) |> with_snapshot()
 
       # Post to webhook
       assert post(conn, "/i/#{webhook_trigger_id}", %{"x" => 1})
@@ -35,7 +35,7 @@ defmodule LightningWeb.RunLive.ShowTest do
 
     test "lifecycle of a run", %{conn: conn, project: project} do
       %{triggers: [%{id: webhook_trigger_id}], jobs: [job_a, job_b | _rest]} =
-        insert(:complex_workflow, project: project)
+        insert(:complex_workflow, project: project) |> with_snapshot()
 
       # Post to webhook
       assert %{"work_order_id" => wo_id} =
