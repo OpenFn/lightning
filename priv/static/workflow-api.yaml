@@ -28,6 +28,12 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Workflow"
+        '401':
+          description: User not allowed to access the project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthorizationError"
         '422':
           description: Unprocessable Entity
           content:
@@ -57,6 +63,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Workflow"
+        '401':
+          description: User not allowed to access the project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthorizationError"
         '422':
           description: Unprocessable Entity
           content:
@@ -88,6 +100,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Workflow"
+        '401':
+          description: User not allowed to access the project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthorizationError"        
         '404':
           description: Not found
         '422':
@@ -125,6 +143,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Workflow"
+        '401':
+          description: User not allowed to access the project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthorizationError" 
         '404':
           description: Not found
         '409':
@@ -168,6 +192,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Workflow"
+        '401':
+          description: User not allowed to access the project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthorizationError" 
         '404':
           description: Not found
         '409':
@@ -282,6 +312,13 @@ components:
           items:
             type: string
             example: Cannot save a workflow (my-openhie) while it is being edited on the App UI
+
+    AuthorizationError:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Unauthorized
 
     Error:
       type: object

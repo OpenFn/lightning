@@ -23,7 +23,7 @@ defmodule LightningWeb.API.WorkflowsController do
 
   def index(conn, %{"project_id" => project_id}) do
     with :ok <- validate_project_id(%{"project_id" => project_id}, project_id),
-      :ok <- authorize_read(conn, project_id) do
+         :ok <- authorize_read(conn, project_id) do
       list =
         Workflows.list_project_workflows(project_id,
           include: [:edges, :jobs, :triggers]
