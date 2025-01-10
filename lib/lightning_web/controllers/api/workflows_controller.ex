@@ -22,7 +22,8 @@ defmodule LightningWeb.API.WorkflowsController do
   require Logger
 
   def index(conn, %{"project_id" => project_id}) do
-    with :ok <- authorize_read(conn, project_id) do
+    with :ok <- validate_project_id(%{"project_id" => project_id}, project_id),
+      :ok <- authorize_read(conn, project_id) do
       list =
         Workflows.list_project_workflows(project_id,
           include: [:edges, :jobs, :triggers]
@@ -30,6 +31,7 @@ defmodule LightningWeb.API.WorkflowsController do
 
       json(conn, %{workflows: list, errors: []})
     end
+    |> then(&maybe_handle_error(conn, &1))
   end
 
   def create(conn, %{"project_id" => project_id} = params) do
