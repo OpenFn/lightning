@@ -378,6 +378,19 @@ defmodule LightningWeb.API.WorkflowsController do
     )
   end
 
+  defp maybe_handle_error(
+         conn,
+         {:error, :too_many_workflows, %Message{text: error_msg}},
+         workflow_id
+       ) do
+    reply_422(
+      conn,
+      workflow_id,
+      :project_id,
+      error_msg
+    )
+  end
+
   defp maybe_handle_error(conn, {:error, reason}, workflow_id)
        when reason in [:invalid_project_id, :invalid_project_id_format] do
     case reason do
@@ -454,14 +467,6 @@ defmodule LightningWeb.API.WorkflowsController do
           workflow_id,
           :triggers,
           "A workflow can have only one trigger enabled at a time."
-        )
-
-      {:error, :too_many_workflows, %Message{text: error_msg}} ->
-        reply_422(
-          conn,
-          workflow_id,
-          :project_id,
-          error_msg
         )
 
       result ->

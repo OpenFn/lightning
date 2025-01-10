@@ -458,7 +458,7 @@ defmodule Lightning.Projects.ProvisionerTest do
       assert flatten_errors(changeset) == %{
                workflows: [
                  %{
-                   triggers: [%{id: ["This email address already exists."]}, %{}]
+                   triggers: [%{id: ["This value should be unique."]}, %{}]
                  }
                ]
              }
