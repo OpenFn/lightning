@@ -2463,7 +2463,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     <div class="relative">
       <div
         :if={@changeset.changes |> Enum.any?()}
-        class="absolute -m-1 rounded-full bg-danger-500 w-3 h-3 top-0 right-0"
+        class="absolute -m-1 rounded-full bg-danger-500 w-3 h-3 top-0 right-0 z-50"
         data-is-dirty="true"
       >
       </div>
@@ -2516,7 +2516,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       )
 
     ~H"""
-    <div class="inline-flex rounded-md shadow-sm">
+    <div class="inline-flex rounded-md shadow-sm z-5">
       <.button
         id={@id}
         phx-disable-with="Saving..."
