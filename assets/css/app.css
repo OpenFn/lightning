@@ -48,6 +48,10 @@
   background-color: var(--primary-bg);
   color: var(--primary-text);
 
+  .app-logo-container {
+      background-color: var(--primary-bg-dark);
+  }
+
   .menu-item-active {
     color: var(--primary-text-lighter);
     background-color: var(--primary-bg-dark);
