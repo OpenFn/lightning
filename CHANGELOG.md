@@ -49,6 +49,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed aggressive CSS rule in app.css that was impacting the stylization of menu items
+  [#2807](https://github.com/OpenFn/lightning/pull/2807)
+
 ## [v2.10.8] - 2024-12-18
 
 ### Added
