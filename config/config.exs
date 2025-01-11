@@ -87,7 +87,7 @@ config :lightning, :oauth_clients,
 
 # Configure esbuild (the version is required)
 config :esbuild,
-  version: "0.24.2",
+  version: "0.17.18",
   default: [
     args:
       ~w(js/app.js
@@ -104,10 +104,9 @@ config :esbuild,
   ],
   monaco: [
     args: ~w(
-         node_modules/monaco-editor/min/vs/**
+         #{Path.expand("../assets/node_modules/monaco-editor/min/vs/**/*.*", __DIR__) |> Path.wildcard() |> Enum.join(" ")}
          --loader:.ttf=file
          --outdir=../priv/static/assets/monaco-editor/vs ),
-    cd: Path.expand("../assets", __DIR__),
     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
   ]
 
