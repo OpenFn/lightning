@@ -17,7 +17,7 @@ following credentials to authenticate:
 - `PASSWORD`: `postgres`
 - `DATABASE`: `lightning_dev`
 
-This can however be overriden by specifying a `DATABASE_URL` env var. e.g.
+This can however be overridden by specifying a `DATABASE_URL` env var. e.g.
 `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/lightning_dev`
 
 We recommend that you use docker for running postgres as you'll get an exact
@@ -120,7 +120,7 @@ There 2 docker files in the root, `Dockerfile` builds the app in `prod` mode
 while `Dockerfile-dev` runs it in `dev` mode. It is important to note that
 `mix commands` do not work in the `prod` images.
 
-For exmaple, to run migrations in `dev` mode you run:
+For example, to run migrations in `dev` mode you run:
 
 ```sh
 docker compose run --rm web mix ecto.migrate
