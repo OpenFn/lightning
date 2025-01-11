@@ -8,17 +8,20 @@ installing dependencies on your machine or using Docker.
 ### Setup
 
 #### Postgres
-Requires `postgres 15`.
-When running in `dev` mode, the app will use the following credentials to authenticate:
+
+Requires `postgres 15`. When running in `dev` mode, the app will use the
+following credentials to authenticate:
+
 - `PORT`: `5432`
 - `USER`: `postgres`
 - `PASSWORD`: `postgres`
 - `DATABASE`: `lightning_dev`
 
-This can however be overriden by specifying a `DATABASE_URL` env var.
-e.g. `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/lightning_dev`
+This can however be overriden by specifying a `DATABASE_URL` env var. e.g.
+`DATABASE_URL=postgresql://postgres:postgres@localhost:5432/lightning_dev`
 
-We recommend that you use docker for running postgres as you'll get an exact version that we use:
+We recommend that you use docker for running postgres as you'll get an exact
+version that we use:
 
 ```sh
 docker volume create lightning-postgres-data
@@ -34,16 +37,18 @@ docker start lightning-postgres
 ```
 
 #### Elixir, NodeJS
+
 We use [asdf](https://github.com/asdf-vm/asdf) to configure our local
 environments. Included in the repo is a `.tool-versions` file that is read by
-asdf in order to dynamically make the specified versions of Elixir, Erlang and NodeJs
-available. You'll need asdf plugins for
+asdf in order to dynamically make the specified versions of Elixir, Erlang and
+NodeJs available. You'll need asdf plugins for
 [Erlang](https://github.com/asdf-vm/asdf-erlang),
 [NodeJs](https://github.com/asdf-vm/asdf-nodejs)
 [Elixir](https://github.com/asdf-vm/asdf-elixir) and
 [k6](https://github.com/grimoh/asdf-k6).
 
 #### Libsodium
+
 We use [libsodium](https://doc.libsodium.org/) for encoding values as required
 by the
 [Github API](https://docs.github.com/en/rest/guides/encrypting-secrets-for-the-rest-api).
@@ -81,10 +86,11 @@ mix ecto.migrate
 npm install --prefix assets
 ```
 
-In case you encounter errors running any of these commands, see the [troubleshooting guide](README.md#troubleshooting) for
-known errors.
+In case you encounter errors running any of these commands, see the
+[troubleshooting guide](README.md#troubleshooting) for known errors.
 
 ### Running the App
+
 To start the lightning server:
 
 ```sh
@@ -94,8 +100,8 @@ mix phx.server
 Once the server has started, head to [`localhost:4000`](http://localhost:4000)
 in your browser.
 
-By default, the `worker` is started when run `mix phx.server` in `dev` mode. In case you
-don't want to have your worker started in `dev`, set `RTM=false`:
+By default, the `worker` is started when run `mix phx.server` in `dev` mode. In
+case you don't want to have your worker started in `dev`, set `RTM=false`:
 
 ```sh
 RTM=false mix phx.server
@@ -103,15 +109,16 @@ RTM=false mix phx.server
 
 ## Using Docker
 
-There is an existing `docker-compose.yaml` file in the project's root which has all the
-services required. To start your services:
+There is an existing `docker-compose.yaml` file in the project's root which has
+all the services required. To start your services:
 
 ```sh
 docker compose up
 ```
 
-There 2 docker files in the root, `Dockerfile` builds the app in `prod` mode while `Dockerfile-dev`
-runs it in `dev` mode. It is important to note that `mix commands` do not work in the `prod` images.
+There 2 docker files in the root, `Dockerfile` builds the app in `prod` mode
+while `Dockerfile-dev` runs it in `dev` mode. It is important to note that
+`mix commands` do not work in the `prod` images.
 
 For exmaple, to run migrations in `dev` mode you run:
 
@@ -127,14 +134,16 @@ docker compose run --rm web /app/bin/lightning eval "Lightning.Release.migrate()
 
 ### Configuring the Worker
 
-By default, lightning starts the `worker` when running in `dev`. This can also be configured using
-`RTM` env var. In case you don't want the hassle of configuring the worker in `dev`, you can just
-remove/comment out the `worker` service from the `docker-compose.yaml` file because lightning will
-start it for you.
+By default, lightning starts the `worker` when running in `dev`. This can also
+be configured using `RTM` env var. In case you don't want the hassle of
+configuring the worker in `dev`, you can just remove/comment out the `worker`
+service from the `docker-compose.yaml` file because lightning will start it for
+you.
 
 [Learn more about configuring workers](WORKERS.md)
 
 ### Problems with Apple Silicon
 
-You might run into some errors when running the docker containers on Apple Silicon.
+You might run into some errors when running the docker containers on Apple
+Silicon.
 [We have documented the known ones here](README.md#problems-with-docker)
