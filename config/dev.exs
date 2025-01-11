@@ -33,7 +33,7 @@ config :lightning, LightningWeb.Endpoint,
     # Start the esbuild watcher by calling Esbuild.install_and_run(:default, args)
     esbuild:
       {Esbuild, :install_and_run, [:default, ~w(--sourcemap=inline --watch)]},
-    esbuild_monaco: {Esbuild, :install_and_run, [:monaco, ~w(--minify --watch)]},
+    esbuild_monaco: {Esbuild, :install_and_run, [:monaco, ~w(--watch)]},
     tailwind: {Tailwind, :install_and_run, [:default, ~w(--watch)]},
     storybook_tailwind: {Tailwind, :install_and_run, [:storybook, ~w(--watch)]}
   ]
