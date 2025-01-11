@@ -17,6 +17,28 @@ and this project adheres to
 
 ### Added
 
+- Show email address of credential owner on project credentials page
+  [#2210](https://github.com/OpenFn/lightning/issues/2210)
+
+### Changed
+
+- Configure Monaco to load files from lightning instead of cdn
+  [#2786](https://github.com/OpenFn/lightning/issues/2786)
+
+### Fixed
+
+- `z-index` broken on unsaved dot on workflow edit page
+  [#2809](https://github.com/OpenFn/lightning/issues/2809)
+
+## [v2.10.9] - 2025-01-09
+
+### Added
+
+- Audit the creation and removal of Github repo connections.
+  [#2668](https://github.com/OpenFn/lightning/issues/2668)
+- Add save and sync option in the workflow edit page
+  [#2707](https://github.com/OpenFn/lightning/issues/2707)
+
 ### Changed
 
 - Git-ignore files from mix assets.deploy
@@ -25,8 +47,8 @@ and this project adheres to
   [#2403](https://github.com/OpenFn/lightning/pull/2403)
 - OPENAI_API_KEY renamed to AI_ASSISTANT_API_KEY
   [#2403](https://github.com/OpenFn/lightning/pull/2403)
-- Configure Monaco to load files from lightning instead of cdn
-  [#2786](https://github.com/OpenFn/lightning/issues/2786)
+- Remove snapshot creation from WorkOrders, no longer necessary post-migration.
+  [#2703](https://github.com/OpenFn/lightning/issues/2703)
 
 ### Fixed
 
