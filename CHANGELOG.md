@@ -29,6 +29,8 @@ and this project adheres to
 
 - `z-index` broken on unsaved dot on workflow edit page
   [#2809](https://github.com/OpenFn/lightning/issues/2809)
+- Fixed an issue in the editor where the Loading Types message displays forever
+  while running offline
 
 ## [v2.10.9] - 2025-01-09
 
