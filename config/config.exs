@@ -105,7 +105,7 @@ config :esbuild,
   monaco: [
     args: ~w(
          #{Path.expand("../assets/node_modules/monaco-editor/min/vs/**/*.*", __DIR__) |> Path.wildcard() |> Enum.join(" ")}
-         --loader:.ttf=file
+         --loader:.ttf=copy
          --outdir=../priv/static/assets/monaco-editor/vs ),
     cd: Path.expand("../assets", __DIR__),
     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
