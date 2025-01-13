@@ -116,7 +116,7 @@ defmodule LightningWeb.API.WorkflowsController do
     with :ok <- limit_workflow_activation(activate?, project_id),
          {params_or_changeset, ids_map} <-
            remap_arbitrary_ids(params_or_changeset),
-         :ok <- validate_workflow(params_or_changeset),
+         :ok <- validate_workflow(params_or_changeset, ids_map),
          {:error, %{changes: changes} = _changeset} <-
            Workflows.save_workflow(params_or_changeset, user) do
       triggers_with_errors = map_errors_to_ids(changes[:triggers])
@@ -148,22 +148,22 @@ defmodule LightningWeb.API.WorkflowsController do
     |> Map.new(&{Ecto.Changeset.fetch_field!(&1, :id), ChangesetJSON.errors(&1)})
   end
 
-  defp validate_workflow(%Changeset{} = changeset) do
+  defp validate_workflow(%Changeset{} = changeset, ids_map) do
     edges = Changeset.get_field(changeset, :edges)
     jobs = Changeset.get_field(changeset, :jobs)
     triggers = Changeset.get_field(changeset, :triggers)
 
-    validate_workflow(edges, jobs, triggers)
+    validate_workflow(edges, jobs, triggers, ids_map)
   end
 
   defp validate_workflow(%{
          "edges" => edges,
          "jobs" => jobs,
          "triggers" => triggers
-       }),
-       do: validate_workflow(edges, jobs, triggers)
+       }, ids_map),
+       do: validate_workflow(edges, jobs, triggers, ids_map)
 
-  defp validate_workflow(edges, jobs, triggers) do
+  defp validate_workflow(edges, jobs, triggers, ids_map) do
     # {:ok, _ids} <- validate_ids(edges),
     with {:ok, triggers_ids} <- validate_ids(triggers),
          {:ok, _ids} <- validate_ids(jobs),
@@ -171,6 +171,12 @@ defmodule LightningWeb.API.WorkflowsController do
       edges
       |> make_graph()
       |> Graph.traverse(source_trigger_id)
+      |> case do
+        {:error, :graph_has_a_cycle, node_id} ->
+          client_id = Enum.find_value(ids_map, fn {client_id, id} -> if id == node_id, do: client_id end)
+          {:error, :graph_has_a_cycle, client_id}
+        result -> result
+      end
     end
   end
 

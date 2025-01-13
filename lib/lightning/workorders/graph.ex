@@ -60,7 +60,7 @@ defmodule Lightning.Graph do
   def traverse(%{edges: edges}, trigger_id) do
     edges
     |> Enum.reduce(Map.new(), fn {from, to}, dag_edges ->
-      Map.update(dag_edges, from, [], &[to | &1])
+      Map.update(dag_edges, from, [to], &[to | &1])
     end)
     |> then(fn dag_edges ->
       case Map.get(dag_edges, trigger_id) do

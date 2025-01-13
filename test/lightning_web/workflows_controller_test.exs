@@ -458,7 +458,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       job0 = Enum.at(workflow.jobs, 0)
 
       assert json_response(conn, 422) == %{
-               "id" => workflow.id,
+               "id" => nil,
                "errors" => %{
                  "edges" => ["Cycle detected on job #{job0.id}."]
                }
