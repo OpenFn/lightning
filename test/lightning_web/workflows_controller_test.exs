@@ -427,7 +427,6 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              }
     end
 
-    @tag :skip
     test "returns 422 when graph has a cycle", %{conn: conn} do
       user = insert(:user)
 
@@ -712,7 +711,6 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
   end
 
   describe "PATCH /workflows/:workflow_id" do
-    @tag :skip
     test "updates a workflow trigger", %{conn: conn} do
       user = insert(:user)
 
@@ -758,7 +756,6 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              |> remove_timestamps() == saved_workflow
     end
 
-    @tag :skip
     test "adds some jobs to a workflow", %{conn: conn} do
       user = insert(:user)
 
@@ -812,7 +809,6 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              |> remove_timestamps() == saved_workflow
     end
 
-    @tag :skip
     test "returns 404 when the workflow doesn't exist", %{conn: conn} do
       user = insert(:user)
 
@@ -833,7 +829,6 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
                |> json_response(404)
     end
 
-    @tag :skip
     test "returns 409 when the workflow is being edited on the UI" do
       %{conn: conn, user: user} =
         register_and_log_in_user(%{conn: Phoenix.ConnTest.build_conn()})
@@ -871,32 +866,22 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       assert Presence.has_any_presence?(workflow)
     end
 
-    @tag :skip
-    test "returns 422 for dangling job", %{conn: conn} do
+    test "Adds a disconnected/orphan job", %{conn: conn} do
       user = insert(:user)
 
       project =
         insert(:project, project_users: [%{user: user}])
 
-      %{edges: edges, jobs: jobs} =
+      %{jobs: jobs} =
         workflow =
         insert(:simple_workflow, name: "work1.0", project: project)
-        |> Repo.reload()
-        |> Repo.preload([:edges, :jobs, :triggers])
+        |> Repo.preload([:jobs])
 
       job = build(:job)
 
       patch =
         %{
           name: "work1.1",
-          edges:
-            edges ++
-              [
-                build(:edge,
-                  source_job_id: List.last(jobs).id,
-                  condition_type: :on_job_success
-                )
-              ],
           jobs: jobs ++ [job]
         }
 
@@ -908,17 +893,12 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
           Jason.encode!(patch)
         )
 
-      assert json_response(conn, 422) == %{
+      assert json_response(conn, 200) == %{
                "id" => workflow.id,
-               "errors" => %{
-                 "jobs" => [
-                   "The jobs [\"#{job.id}\"] should be present both in the jobs and on an edge."
-                 ]
-               }
+               "errors" => []
              }
     end
 
-    @tag :skip
     test "returns 422 for invalid triggers patch", %{conn: conn} do
       user = insert(:user)
 
@@ -955,7 +935,6 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              }
     end
 
-    @tag :skip
     test "returns 422 for invalid jobs patch", %{conn: conn} do
       user = insert(:user)
 
@@ -985,12 +964,11 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       assert json_response(conn, 422) == %{
                "id" => workflow.id,
                "errors" => %{
-                 "jobs" => ["Job #{job.id} has the errors: [body is invalid]"]
+                 "jobs" => ["Job #{job.id} has the errors: [body: is invalid]"]
                }
              }
     end
 
-    @tag :skip
     test "returns 422 for invalid edges patch", %{conn: conn} do
       user = insert(:user)
 
@@ -1021,13 +999,12 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
                "id" => workflow.id,
                "errors" => %{
                  "edges" => [
-                   "Edge #{edge.id} has the errors: [condition_type is invalid]"
+                   "Edge #{edge.id} has the errors: [condition_type: is invalid]"
                  ]
                }
              }
     end
 
-    @tag :skip
     test "returns 422 on project id mismatch", %{conn: conn} do
       user = insert(:user)
 
@@ -1059,7 +1036,6 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              }
     end
 
-    @tag :skip
     test "returns 422 when trying to replace the triggers", %{conn: conn} do
       user = insert(:user)
 
@@ -1100,7 +1076,6 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              }
     end
 
-    @tag :skip
     test "returns 422 when workflow limit has been reached", %{conn: conn} do
       user = insert(:user)
 
@@ -1143,7 +1118,6 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              } == json_response(conn, 422)
     end
 
-    @tag :skip
     test "returns 422 when there are too many enabled triggers", %{conn: conn} do
       user = insert(:user)
 
@@ -1185,7 +1159,6 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              }
     end
 
-    @tag :skip
     test "returns 401 without a token", %{conn: conn} do
       user = insert(:user)
 

@@ -82,8 +82,7 @@ defmodule LightningWeb.Router do
 
     resources "/projects", API.ProjectController, only: [:index, :show] do
       resources "/jobs", API.JobController, only: [:index, :show]
-      resources "/workflows", API.WorkflowsController, except: [:delete, :update]
-      put "/workflows/:id", API.WorkflowsController, :update
+      resources "/workflows", API.WorkflowsController, except: [:delete]
       # resources "/runs", API.RunController, only: [:index, :show]
     end
 
