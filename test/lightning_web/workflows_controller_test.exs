@@ -1312,6 +1312,54 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              |> Enum.count() == 2
     end
 
+    test "updates completely a workflow removing a job", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      workflow =
+        insert(:complex_workflow, name: "work1.0", project: project)
+        |> Repo.reload()
+        |> Repo.preload([:edges, :jobs, :triggers])
+
+      complete_update =
+        workflow
+        |> then(fn %{
+                     edges: edges,
+                     jobs: jobs
+                   } ->
+          last_job = List.last(jobs)
+          last_edge = List.last(edges)
+
+          Map.merge(workflow, %{
+            name: "work1.1",
+            edges: List.delete(edges, last_edge),
+            jobs: List.delete(jobs, last_job)
+          })
+        end)
+
+      conn =
+        conn
+        |> assign_bearer(user)
+        |> put(
+          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          Jason.encode!(complete_update)
+        )
+
+      assert json_response(conn, 200) == %{"id" => workflow.id, "errors" => []}
+
+      updated_workflow =
+        Repo.get(Workflow, workflow.id)
+        |> Repo.preload([:edges, :jobs, :triggers])
+
+      refute MapSet.equal?(MapSet.new(complete_update.jobs, & &1.id), MapSet.new(workflow.jobs, & &1.id))
+      refute MapSet.equal?(MapSet.new(complete_update.edges, & &1.id), MapSet.new(workflow.edges, & &1.id))
+
+      assert MapSet.equal?(MapSet.new(complete_update.jobs, & &1.id), MapSet.new(updated_workflow.jobs, & &1.id))
+      assert MapSet.equal?(MapSet.new(complete_update.edges, & &1.id), MapSet.new(updated_workflow.edges, & &1.id))
+    end
+
     test "updates workflow ignoring workflow_id", %{conn: conn} do
       user = insert(:user)
 
