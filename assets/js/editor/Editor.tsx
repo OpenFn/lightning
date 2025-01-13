@@ -343,10 +343,13 @@ export default function Editor({
     if (adaptor) {
       setLoading(true);
       setLib([]); // instantly clear intelligence
-      loadDTS(adaptor).then(l => {
-        setLib(l);
-        setLoading(false);
-      });
+      loadDTS(adaptor)
+        .then(l => {
+          setLib(l);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     }
   }, [adaptor]);
 
