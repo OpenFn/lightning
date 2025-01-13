@@ -13,6 +13,8 @@ defmodule LightningWeb.PromExPlugAuthorization do
 
     filter_logger(conn, "ip: #{Enum.join(Tuple.to_list(conn.remote_ip), ".")}")
     filter_logger(conn, "token: #{Plug.Conn.get_req_header(conn, "authorization")}")
+    filter_logger(conn, "path: #{conn.request_path}")
+    filter_logger(conn, "headers: #{inspect(conn.req_headers)}")
     filter_logger(conn, "scheme: #{conn.scheme}")
     if config[:metrics_endpoint_authorization_required] do
       valid_token?(
