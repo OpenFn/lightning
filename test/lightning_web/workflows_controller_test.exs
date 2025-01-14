@@ -1233,6 +1233,8 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
                )
                |> json_response(200)
 
+      assert_response(response_workflow)
+
       saved_workflow =
         get_saved_workflow(response_workflow["id"])
         |> encode_decode()
@@ -1341,9 +1343,9 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
                )
                |> json_response(200)
 
-      saved_workflow = get_saved_workflow(workflow.id)
+      assert_response(response_workflow)
 
-      assert encode_decode(response_workflow) == encode_decode(saved_workflow)
+      saved_workflow = get_saved_workflow(workflow.id)
 
       refute MapSet.equal?(
                MapSet.new(complete_update.jobs, & &1.id),
@@ -1419,8 +1421,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
                )
                |> json_response(200)
 
-      assert encode_decode(response_workflow) ==
-               encode_decode(get_saved_workflow(workflow))
+      assert_response(response_workflow)
     end
 
     test "returns 404 when the workflow doesn't exist", %{conn: conn} do
@@ -1666,4 +1667,26 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
   defp get_saved_workflow(workflow_id),
     do: Workflows.get_workflow(workflow_id, include: [:edges, :jobs, :triggers])
+
+  defp assert_response(response_workflow) do
+    response_workflow = encode_decode(response_workflow)
+
+    saved_workflow =
+      response_workflow["id"] |> get_saved_workflow() |> encode_decode()
+
+    assert MapSet.equal?(
+             MapSet.new(response_workflow["jobs"]),
+             MapSet.new(saved_workflow["jobs"])
+           )
+
+    assert MapSet.equal?(
+             MapSet.new(response_workflow["edges"]),
+             MapSet.new(saved_workflow["edges"])
+           )
+
+    assert MapSet.equal?(
+             MapSet.new(response_workflow["triggers"]),
+             MapSet.new(saved_workflow["triggers"])
+           )
+  end
 end

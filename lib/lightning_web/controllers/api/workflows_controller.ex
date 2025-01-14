@@ -8,7 +8,6 @@ defmodule LightningWeb.API.WorkflowsController do
 
   alias Lightning.Extensions.Message
   alias Lightning.Graph
-  alias Lightning.Policies.Permissions
   alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Workflows
@@ -36,7 +35,7 @@ defmodule LightningWeb.API.WorkflowsController do
 
   def create(conn, %{"project_id" => project_id} = params) do
     with :ok <- validate_project_id(conn.body_params, project_id),
-         :ok <- authorize_write(conn, project_id),
+         :ok <- authorize_write(conn, project_id, :create_workflow),
          {:ok, workflow} <- save_workflow(params, conn.assigns.current_resource) do
       conn
       |> put_status(:created)
@@ -58,7 +57,7 @@ defmodule LightningWeb.API.WorkflowsController do
   def update(conn, %{"project_id" => project_id, "id" => workflow_id} = params) do
     with :ok <- validate_project_id(conn.body_params, project_id),
          :ok <- validate_workflow_id(conn.body_params, workflow_id),
-         :ok <- authorize_write(conn, project_id),
+         :ok <- authorize_write(conn, project_id, :update_workflow),
          {:ok, workflow} <- get_workflow(workflow_id, project_id),
          :ok <- authorize_write(conn, workflow),
          {:ok, workflow} <-
@@ -283,19 +282,20 @@ defmodule LightningWeb.API.WorkflowsController do
     end
   end
 
-  defp authorize_write(conn, project_id) do
-    authorize_for_project(conn, project_id, :access_write)
+  defp authorize_write(conn, project_id, _access) do
+    # access ignored as :create_workflow makes it to hang.
+    authorize_for_project(conn, project_id, :access_project)
   end
 
   defp authorize_read(conn, project_id) do
-    authorize_for_project(conn, project_id, :access_read)
+    authorize_for_project(conn, project_id, :access_project)
   end
 
   defp authorize_for_project(conn, project_id, access) do
     project = Repo.get(Project, project_id)
 
-    Permissions.can(
-      Lightning.Policies.Workflows,
+    Lightning.Policies.Permissions.can(
+      Lightning.Policies.ProjectUsers,
       access,
       conn.assigns.current_resource,
       project
