@@ -1,7 +1,9 @@
 import React, { useRef, useCallback } from 'react';
 import ResizeObserver from 'rc-resize-observer';
-import Editor, { Monaco } from '@monaco-editor/react';
+import Editor, { Monaco, loader } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
+
+loader.config({ paths: { vs: '/assets/monaco-editor/vs' } });
 
 export function setTheme(monaco: Monaco) {
   monaco.editor.defineTheme('default', {

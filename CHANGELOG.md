@@ -22,6 +22,9 @@ and this project adheres to
 
 ### Changed
 
+- Configure Monaco to load files from lightning instead of cdn
+  [#2786](https://github.com/OpenFn/lightning/issues/2786)
+
 ### Fixed
 
 - `z-index` broken on unsaved dot on workflow edit page
