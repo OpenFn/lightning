@@ -27,6 +27,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed Save and Run to always execute jobs with latest changes
+  [#2804](https://github.com/OpenFn/lightning/issues/2804)
 - Fixed aggressive CSS rule in app.css that made it hard to style menu items
   [#2807](https://github.com/OpenFn/lightning/pull/2807)
 - `z-index` broken on unsaved dot on workflow edit page
