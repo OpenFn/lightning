@@ -27,6 +27,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed aggressive CSS rule in app.css that made it hard to style menu items
+  [#2807](https://github.com/OpenFn/lightning/pull/2807)
 - `z-index` broken on unsaved dot on workflow edit page
   [#2809](https://github.com/OpenFn/lightning/issues/2809)
 
@@ -49,8 +51,6 @@ and this project adheres to
   [#2403](https://github.com/OpenFn/lightning/pull/2403)
 - Remove snapshot creation from WorkOrders, no longer necessary post-migration.
   [#2703](https://github.com/OpenFn/lightning/issues/2703)
-
-### Fixed
 
 ## [v2.10.8] - 2024-12-18
 
