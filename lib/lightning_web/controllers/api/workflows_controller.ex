@@ -29,7 +29,7 @@ defmodule LightningWeb.API.WorkflowsController do
           include: [:edges, :jobs, :triggers]
         )
 
-      json(conn, %{workflows: list, errors: []})
+      json(conn, %{workflows: list, errors: %{}})
     end
     |> then(&maybe_handle_error(conn, &1))
   end
@@ -37,11 +37,10 @@ defmodule LightningWeb.API.WorkflowsController do
   def create(conn, %{"project_id" => project_id} = params) do
     with :ok <- validate_project_id(conn.body_params, project_id),
          :ok <- authorize_write(conn, project_id),
-         {:ok, %{id: workflow_id}} <-
-           save_workflow(params, conn.assigns.current_resource) do
+         {:ok, workflow} <- save_workflow(params, conn.assigns.current_resource) do
       conn
       |> put_status(:created)
-      |> json(%{id: workflow_id, errors: []})
+      |> json(%{workflow: workflow, errors: %{}})
     end
     |> then(&maybe_handle_error(conn, &1))
   end
@@ -51,7 +50,7 @@ defmodule LightningWeb.API.WorkflowsController do
          :ok <- validate_uuid(workflow_id),
          :ok <- authorize_read(conn, project_id),
          {:ok, workflow} <- get_workflow(workflow_id, project_id) do
-      json(conn, %{workflow: workflow, errors: []})
+      json(conn, %{workflow: workflow, errors: %{}})
     end
     |> then(&maybe_handle_error(conn, &1))
   end
@@ -62,9 +61,9 @@ defmodule LightningWeb.API.WorkflowsController do
          :ok <- authorize_write(conn, project_id),
          {:ok, workflow} <- get_workflow(workflow_id, project_id),
          :ok <- authorize_write(conn, workflow),
-         {:ok, %{id: workflow_id}} <-
+         {:ok, workflow} <-
            save_workflow(workflow, params, conn.assigns.current_resource) do
-      json(conn, %{id: workflow_id, errors: []})
+      json(conn, %{workflow: workflow, errors: %{}})
     end
     |> then(&maybe_handle_error(conn, &1, workflow_id))
   end
@@ -156,11 +155,14 @@ defmodule LightningWeb.API.WorkflowsController do
     validate_workflow(edges, jobs, triggers, ids_map)
   end
 
-  defp validate_workflow(%{
-         "edges" => edges,
-         "jobs" => jobs,
-         "triggers" => triggers
-       }, ids_map),
+  defp validate_workflow(
+         %{
+           "edges" => edges,
+           "jobs" => jobs,
+           "triggers" => triggers
+         },
+         ids_map
+       ),
        do: validate_workflow(edges, jobs, triggers, ids_map)
 
   defp validate_workflow(edges, jobs, triggers, ids_map) do
@@ -173,9 +175,15 @@ defmodule LightningWeb.API.WorkflowsController do
       |> Graph.traverse(source_trigger_id)
       |> case do
         {:error, :graph_has_a_cycle, node_id} ->
-          client_id = Enum.find_value(ids_map, fn {client_id, id} -> if id == node_id, do: client_id end)
+          client_id =
+            Enum.find_value(ids_map, fn {client_id, id} ->
+              if id == node_id, do: client_id
+            end)
+
           {:error, :graph_has_a_cycle, client_id}
-        result -> result
+
+        result ->
+          result
       end
     end
   end
