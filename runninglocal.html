@@ -148,9 +148,10 @@ installing dependencies on your machine or using Docker.</p><h2 id="by-installin
   </a>
   <span class="text">Setup</span>
 </h3>
-<h4>Postgres</h4><p>Requires <code class="inline">postgres 15</code>.
-When running in <code class="inline">dev</code> mode, the app will use the following credentials to authenticate:</p><ul><li><code class="inline">PORT</code>: <code class="inline">5432</code></li><li><code class="inline">USER</code>: <code class="inline">postgres</code></li><li><code class="inline">PASSWORD</code>: <code class="inline">postgres</code></li><li><code class="inline">DATABASE</code>: <code class="inline">lightning_dev</code></li></ul><p>This can however be overriden by specifying a <code class="inline">DATABASE_URL</code> env var.
-e.g. <code class="inline">DATABASE_URL=postgresql://postgres:postgres@localhost:5432/lightning_dev</code></p><p>We recommend that you use docker for running postgres as you'll get an exact version that we use:</p><pre><code class="makeup sh" translate="no"><span class="">docker volume create lightning-postgres-data
+<h4>Postgres</h4><p>Requires <code class="inline">postgres 15</code>. When running in <code class="inline">dev</code> mode, the app will use the
+following credentials to authenticate:</p><ul><li><code class="inline">PORT</code>: <code class="inline">5432</code></li><li><code class="inline">USER</code>: <code class="inline">postgres</code></li><li><code class="inline">PASSWORD</code>: <code class="inline">postgres</code></li><li><code class="inline">DATABASE</code>: <code class="inline">lightning_dev</code></li></ul><p>This can however be overridden by specifying a <code class="inline">DATABASE_URL</code> env var. e.g.
+<code class="inline">DATABASE_URL=postgresql://postgres:postgres@localhost:5432/lightning_dev</code></p><p>We recommend that you use docker for running postgres as you'll get an exact
+version that we use:</p><pre><code class="makeup sh" translate="no"><span class="">docker volume create lightning-postgres-data
 </span><span class="">
 </span><span class="">docker create \
 </span><span class="">  --name lightning-postgres \
@@ -162,8 +163,8 @@ e.g. <code class="inline">DATABASE_URL=postgresql://postgres:postgres@localhost:
 </span><span class="">docker start lightning-postgres
 </span></code></pre><h4>Elixir, NodeJS</h4><p>We use <a href="https://github.com/asdf-vm/asdf">asdf</a> to configure our local
 environments. Included in the repo is a <code class="inline">.tool-versions</code> file that is read by
-asdf in order to dynamically make the specified versions of Elixir, Erlang and NodeJs
-available. You'll need asdf plugins for
+asdf in order to dynamically make the specified versions of Elixir, Erlang and
+NodeJs available. You'll need asdf plugins for
 <a href="https://github.com/asdf-vm/asdf-erlang">Erlang</a>,
 <a href="https://github.com/asdf-vm/asdf-nodejs">NodeJs</a>
 <a href="https://github.com/asdf-vm/asdf-elixir">Elixir</a> and
@@ -185,8 +186,8 @@ You'll need to install <code class="inline">libsodium</code> in order for the ap
 </span><span class="">mix ecto.create
 </span><span class="">mix ecto.migrate
 </span><span class="">npm install --prefix assets
-</span></code></pre><p>In case you encounter errors running any of these commands, see the <a href="benchmarking.md.html#troubleshooting">troubleshooting guide</a> for
-known errors.</p><h3 id="running-the-app" class="section-heading">
+</span></code></pre><p>In case you encounter errors running any of these commands, see the
+<a href="benchmarking.md.html#troubleshooting">troubleshooting guide</a> for known errors.</p><h3 id="running-the-app" class="section-heading">
   <a href="#running-the-app" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -194,18 +195,19 @@ known errors.</p><h3 id="running-the-app" class="section-heading">
 </h3>
 <p>To start the lightning server:</p><pre><code class="makeup sh" translate="no"><span class="">mix phx.server
 </span></code></pre><p>Once the server has started, head to <a href="http://localhost:4000"><code class="inline">localhost:4000</code></a>
-in your browser.</p><p>By default, the <code class="inline">worker</code> is started when run <a href="https://hexdocs.pm/phoenix/1.7.18/Mix.Tasks.Phx.Server.html"><code class="inline">mix phx.server</code></a> in <code class="inline">dev</code> mode. In case you
-don't want to have your worker started in <code class="inline">dev</code>, set <code class="inline">RTM=false</code>:</p><pre><code class="makeup sh" translate="no"><span class="">RTM=false mix phx.server
+in your browser.</p><p>By default, the <code class="inline">worker</code> is started when run <a href="https://hexdocs.pm/phoenix/1.7.18/Mix.Tasks.Phx.Server.html"><code class="inline">mix phx.server</code></a> in <code class="inline">dev</code> mode. In
+case you don't want to have your worker started in <code class="inline">dev</code>, set <code class="inline">RTM=false</code>:</p><pre><code class="makeup sh" translate="no"><span class="">RTM=false mix phx.server
 </span></code></pre><h2 id="using-docker" class="section-heading">
   <a href="#using-docker" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Using Docker</span>
 </h2>
-<p>There is an existing <code class="inline">docker-compose.yaml</code> file in the project's root which has all the
-services required. To start your services:</p><pre><code class="makeup sh" translate="no"><span class="">docker compose up
-</span></code></pre><p>There 2 docker files in the root, <code class="inline">Dockerfile</code> builds the app in <code class="inline">prod</code> mode while <code class="inline">Dockerfile-dev</code>
-runs it in <code class="inline">dev</code> mode. It is important to note that <code class="inline">mix commands</code> do not work in the <code class="inline">prod</code> images.</p><p>For exmaple, to run migrations in <code class="inline">dev</code> mode you run:</p><pre><code class="makeup sh" translate="no"><span class="">docker compose run --rm web mix ecto.migrate
+<p>There is an existing <code class="inline">docker-compose.yaml</code> file in the project's root which has
+all the services required. To start your services:</p><pre><code class="makeup sh" translate="no"><span class="">docker compose up
+</span></code></pre><p>There 2 docker files in the root, <code class="inline">Dockerfile</code> builds the app in <code class="inline">prod</code> mode
+while <code class="inline">Dockerfile-dev</code> runs it in <code class="inline">dev</code> mode. It is important to note that
+<code class="inline">mix commands</code> do not work in the <code class="inline">prod</code> images.</p><p>For example, to run migrations in <code class="inline">dev</code> mode you run:</p><pre><code class="makeup sh" translate="no"><span class="">docker compose run --rm web mix ecto.migrate
 </span></code></pre><p>While in <code class="inline">prod</code> mode:</p><pre><code class="makeup sh" translate="no"><span class="">docker compose run --rm web /app/bin/lightning eval &quot;Lightning.Release.migrate()&quot;
 </span></code></pre><h3 id="configuring-the-worker" class="section-heading">
   <a href="#configuring-the-worker" class="hover-link">
@@ -213,16 +215,18 @@ runs it in <code class="inline">dev</code> mode. It is important to note that <c
   </a>
   <span class="text">Configuring the Worker</span>
 </h3>
-<p>By default, lightning starts the <code class="inline">worker</code> when running in <code class="inline">dev</code>. This can also be configured using
-<code class="inline">RTM</code> env var. In case you don't want the hassle of configuring the worker in <code class="inline">dev</code>, you can just
-remove/comment out the <code class="inline">worker</code> service from the <code class="inline">docker-compose.yaml</code> file because lightning will
-start it for you.</p><p><a href="workers.html">Learn more about configuring workers</a></p><h3 id="problems-with-apple-silicon" class="section-heading">
+<p>By default, lightning starts the <code class="inline">worker</code> when running in <code class="inline">dev</code>. This can also
+be configured using <code class="inline">RTM</code> env var. In case you don't want the hassle of
+configuring the worker in <code class="inline">dev</code>, you can just remove/comment out the <code class="inline">worker</code>
+service from the <code class="inline">docker-compose.yaml</code> file because lightning will start it for
+you.</p><p><a href="workers.html">Learn more about configuring workers</a></p><h3 id="problems-with-apple-silicon" class="section-heading">
   <a href="#problems-with-apple-silicon" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Problems with Apple Silicon</span>
 </h3>
-<p>You might run into some errors when running the docker containers on Apple Silicon.
+<p>You might run into some errors when running the docker containers on Apple
+Silicon.
 <a href="benchmarking.md.html#problems-with-docker">We have documented the known ones here</a></p>
 </div>
 
