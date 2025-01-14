@@ -42,7 +42,7 @@ type AttributeMutationRecord = MutationRecord & {
 
 let JobEditorComponent: typeof JobEditor | undefined;
 
-const EDITOR_DEBOUNCE_MS = 300;
+const EDITOR_DEBOUNCE_MS = 100;
 
 export default {
   findWorkflowEditorStore() {
