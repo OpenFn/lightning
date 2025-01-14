@@ -19,6 +19,8 @@ and this project adheres to
 
 - Show email address of credential owner on project credentials page
   [#2210](https://github.com/OpenFn/lightning/issues/2210)
+- Audit the provisioning of projects via the API
+  [#2718](https://github.com/OpenFn/lightning/issues/2718)
 
 ### Changed
 
