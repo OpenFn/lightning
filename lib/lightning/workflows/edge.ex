@@ -35,6 +35,8 @@ defmodule Lightning.Workflows.Edge do
            only: [
              :id,
              :condition_type,
+             :condition_expression,
+             :condition_label,
              :enabled,
              :source_job_id,
              :source_trigger_id,

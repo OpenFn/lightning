@@ -1212,11 +1212,12 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
                    } ->
           Map.merge(workflow, %{
             edges: [
-              %{
-                new_edge
-                | source_trigger_id: new_trigger.id,
-                  target_job_id: new_job1.id
-              }
+              Map.merge(new_edge, %{
+                source_trigger_id: new_trigger.id,
+                target_job_id: new_job1.id,
+                condition_expression: "state.age > 18",
+                condition_label: "adult_age"
+              })
               | other_new_edges
             ],
             jobs: new_jobs,
