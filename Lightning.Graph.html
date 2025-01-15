@@ -14,7 +14,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-C16FD9BC.js"></script>
+    <script src="dist/sidebar_items-EEA918E6.js"></script>
     <script src="docs_config.js"></script>
     <script async src="dist/html-YIPIRHGU.js"></script>
 
@@ -171,7 +171,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#add_edge/3" data-no-tooltip translate="no">add_edge(graph, from, to)</a>
+        <a href="#add_edge/2" data-no-tooltip translate="no">add_edge(graph, map)</a>
 
       </div>
 
@@ -204,6 +204,14 @@ Pages
     <div class="summary-row">
       <div class="summary-signature">
         <a href="#remove_edges/2" data-no-tooltip translate="no">remove_edges(graph, edges)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#traverse/2" data-no-tooltip translate="no">traverse(map, trigger_id)</a>
 
       </div>
 
@@ -262,14 +270,14 @@ Pages
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="add_edge/3">
+<section class="detail" id="add_edge/2">
 
   <div class="detail-header">
-    <a href="#add_edge/3" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#add_edge/2" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">add_edge(graph, from, to)</h1>
+    <h1 class="signature" translate="no">add_edge(graph, map)</h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workorders/graph.ex#L12" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
@@ -283,7 +291,7 @@ Pages
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> add_edge(<a href="#t:t/0">t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()) :: <a href="#t:t/0">t</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> add_edge(<a href="#t:t/0">t</a>(), <a href="Lightning.Workflows.Edge.html#t:t/0">Lightning.Workflows.Edge.t</a>()) :: <a href="#t:t/0">t</a>()</pre>
 
       </div>
 
@@ -329,7 +337,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">nodes(graph, opts \\ [as: []])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workorders/graph.ex#L49" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workorders/graph.ex#L56" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -351,7 +359,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">prune(graph, node)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workorders/graph.ex#L32" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workorders/graph.ex#L39" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -379,7 +387,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">remove_edges(graph, edges)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workorders/graph.ex#L20" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workorders/graph.ex#L27" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -394,6 +402,28 @@ Pages
           <pre translate="no"><span class="attribute">@spec</span> remove_edges(<a href="#t:t/0">t</a>(), [{<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}]) :: <a href="#t:t/0">t</a>()</pre>
 
       </div>
+
+
+  </section>
+</section>
+<section class="detail" id="traverse/2">
+
+  <div class="detail-header">
+    <a href="#traverse/2" class="detail-link" data-no-tooltip title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">traverse(map, trigger_id)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workorders/graph.ex#L60" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
 
 
   </section>

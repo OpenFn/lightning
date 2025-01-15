@@ -95,6 +95,7 @@ Lightning.Policies.Permissions.html
 Lightning.Policies.ProjectUsers.html
 Lightning.Policies.Provisioning.html
 Lightning.Policies.Users.html
+Lightning.Policies.Workflows.html
 Lightning.Projects.Audit.html
 Lightning.Projects.Events.html
 Lightning.Projects.File.html
@@ -210,6 +211,7 @@ LightningWeb.API.JobController.html
 LightningWeb.API.ProjectController.html
 LightningWeb.API.ProvisioningController.html
 LightningWeb.API.RegistrationController.html
+LightningWeb.API.WorkflowsController.html
 LightningWeb.AccountConfirmationModal.html
 LightningWeb.AuditLive.Index.html
 LightningWeb.AuthProvidersLive.FormComponent.html
@@ -351,8 +353,8 @@ dist/lato-latin-ext-300-normal-VPGGJKJL.woff2
 dist/lato-latin-ext-400-normal-N27NCBWW.woff2
 dist/lato-latin-ext-700-normal-Q2L5DVMW.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-AF3C3CEB.js
-dist/sidebar_items-C16FD9BC.js
+dist/search_data-CC723261.js
+dist/sidebar_items-EEA918E6.js
 index.html
 provisioning.html
 readme.html
