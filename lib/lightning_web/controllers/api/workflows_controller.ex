@@ -74,12 +74,10 @@ defmodule LightningWeb.API.WorkflowsController do
   defp save_workflow(%{"project_id" => project_id} = params, user) do
     active_triggers_count = count_enabled_triggers(params)
 
-    cond do
-      active_triggers_count > 1 ->
-        {:error, :too_many_active_triggers}
-
-      :else ->
-        save_workflow(params, active_triggers_count > 0, project_id, user)
+    if active_triggers_count > 1 do
+      {:error, :too_many_active_triggers}
+    else
+      save_workflow(params, active_triggers_count > 0, project_id, user)
     end
   end
 
