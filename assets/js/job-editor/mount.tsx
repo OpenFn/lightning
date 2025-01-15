@@ -8,6 +8,7 @@ import pRetry from 'p-retry';
 import pDebounce from 'p-debounce';
 import { WorkflowStore } from '../workflow-editor/store';
 import { Lightning } from '../workflow-diagram/types';
+import { EDITOR_DEBOUNCE_MS } from '../common';
 
 type JobEditorEntrypoint = PhoenixHook<
   {
@@ -41,8 +42,6 @@ type AttributeMutationRecord = MutationRecord & {
 };
 
 let JobEditorComponent: typeof JobEditor | undefined;
-
-const EDITOR_DEBOUNCE_MS = 300;
 
 export default {
   findWorkflowEditorStore() {
