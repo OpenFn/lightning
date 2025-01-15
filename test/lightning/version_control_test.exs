@@ -1,6 +1,7 @@
 defmodule Lightning.VersionControlTest do
   use Lightning.DataCase, async: true
 
+  alias Lightning.Auditing.Audit
   alias Lightning.Extensions.MockUsageLimiter
   alias Lightning.Extensions.Message
   alias Lightning.Extensions.UsageLimiting.Action
@@ -8,7 +9,7 @@ defmodule Lightning.VersionControlTest do
   alias Lightning.Repo
   alias Lightning.VersionControl
   alias Lightning.VersionControl.ProjectRepoConnection
-  # alias Lightning.Workflows.Snapshot
+  alias Lightning.Workflows.Snapshot
 
   import Lightning.Factories
 

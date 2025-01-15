@@ -18,7 +18,6 @@ defmodule Lightning.VersionControl do
   alias Lightning.VersionControl.GithubError
   alias Lightning.VersionControl.ProjectRepoConnection
   alias Lightning.VersionControl.VersionControlUsageLimiter
-  # alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Workflow
 
   require Logger
