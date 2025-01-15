@@ -48,10 +48,8 @@
   background-color: var(--primary-bg);
   color: var(--primary-text);
 
-  div > div {
-    &:first-child {
+  .app-logo-container {
       background-color: var(--primary-bg-dark);
-    }
   }
 
   .menu-item-active {

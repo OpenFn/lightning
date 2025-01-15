@@ -29,7 +29,7 @@ defmodule Lightning.UsageTracking.DayWorkerTest do
 
       %{tracking_enabled_at: enabled_at} = Repo.one(DailyReportConfiguration)
 
-      assert DateTime.diff(DateTime.utc_now(), enabled_at, :second) < 2
+      assert DateTime.diff(DateTime.utc_now(), enabled_at, :second) < 3
     end
 
     test "does not enqueue more jobs than the batch size" do

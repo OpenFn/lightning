@@ -28,7 +28,7 @@ defmodule Lightning.AiAssistantTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn key ->
         case key do
           :endpoint -> "http://localhost:3000"
-          :openai_api_key -> "api_key"
+          :ai_assistant_api_key -> "api_key"
         end
       end)
 
@@ -73,7 +73,7 @@ defmodule Lightning.AiAssistantTest do
       Mox.stub(Lightning.MockConfig, :apollo, fn key ->
         case key do
           :endpoint -> "http://localhost:3000"
-          :openai_api_key -> "api_key"
+          :ai_assistant_api_key -> "api_key"
         end
       end)
 

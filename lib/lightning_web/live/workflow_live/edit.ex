@@ -19,6 +19,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Lightning.Runs.Events.RunUpdated
   alias Lightning.Runs.Events.StepCompleted
   alias Lightning.Services.UsageLimiter
+  alias Lightning.VersionControl
   alias Lightning.Workflows
   alias Lightning.Workflows.Events.WorkflowUpdated
   alias Lightning.Workflows.Job
@@ -159,6 +160,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 can_edit_workflow={@can_edit_workflow}
                 snapshot_version_tag={@snapshot_version_tag}
                 has_presence_priority={@has_presence_edit_priority}
+                project_repo_connection={@project_repo_connection}
+                dropdown_position={:bottom}
               />
             </div>
           </.with_changes_indicator>
@@ -335,6 +338,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       can_edit_workflow={@can_edit_workflow}
                       snapshot_version_tag={@snapshot_version_tag}
                       has_presence_priority={@has_presence_edit_priority}
+                      project_repo_connection={@project_repo_connection}
+                      dropdown_position={:top}
                     />
                   </.with_changes_indicator>
                 </div>
@@ -417,6 +422,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
           phx-hook="SaveViaCtrlS"
           phx-change="validate"
         >
+          <.live_component
+            :if={@project_repo_connection && @show_github_sync_modal}
+            id="github-sync-modal"
+            module={LightningWeb.WorkflowLive.GithubSyncModal}
+            current_user={@current_user}
+            project_repo_connection={@project_repo_connection}
+          />
           <input type="hidden" name="_ignore_me" />
           <.panel
             :if={@selection_mode == "settings"}
@@ -1124,7 +1136,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
        selected_credential_type: nil,
        oauth_clients: OauthClients.list_clients(assigns.project),
        show_missing_dataclip_selector: false,
-       admin_contacts: Projects.list_project_admin_emails(assigns.project.id)
+       admin_contacts: Projects.list_project_admin_emails(assigns.project.id),
+       show_github_sync_modal: false,
+       project_repo_connection:
+         VersionControl.get_repo_connection_for_project(assigns.project.id)
      )
      |> assign(initial_presence_summary(socket.assigns.current_user))}
   end
@@ -1464,7 +1479,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, socket}
   end
 
-  def handle_event("save", params, socket) do
+  def handle_event("save", submitted_params, socket) do
     %{
       project: project,
       workflow_params: initial_params,
@@ -1473,7 +1488,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     with :ok <- check_user_can_save_workflow(socket) do
       next_params =
-        case params do
+        case submitted_params do
           %{"workflow" => params} ->
             WorkflowParams.apply_form_params(
               initial_params,
@@ -1512,6 +1527,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
            |> put_flash(:info, flash_msg)
            |> push_patches_applied(initial_params)
            |> maybe_push_workflow_created(workflow)
+           |> maybe_sync_to_github(submitted_params)
            |> push_patch(
              to: ~p"/projects/#{project.id}/w/#{workflow.id}?#{query_params}",
              replace: true
@@ -1537,6 +1553,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
            |> push_patches_applied(initial_params)}
       end
     end
+  end
+
+  def handle_event("toggle_github_sync_modal", _params, socket) do
+    {:noreply,
+     assign(socket,
+       show_github_sync_modal: !socket.assigns.show_github_sync_modal
+     )}
   end
 
   def handle_event("push-change", %{"patches" => patches}, socket) do
@@ -1877,6 +1900,29 @@ defmodule LightningWeb.WorkflowLive.Edit do
          )}
     end
   end
+
+  defp maybe_sync_to_github(socket, %{
+         "github_sync" => %{"commit_message" => commit_message}
+       }) do
+    case VersionControl.initiate_sync(
+           socket.assigns.project_repo_connection,
+           commit_message
+         ) do
+      :ok ->
+        socket
+        |> assign(show_github_sync_modal: false)
+        |> put_flash(:info, "Workflow saved and synced to GitHub successfully.")
+
+      {:error, _github_error} ->
+        put_flash(
+          socket,
+          :error,
+          "Workflow saved but not synced to GitHub. Check the project GitHub connection settings"
+        )
+    end
+  end
+
+  defp maybe_sync_to_github(socket, _params), do: socket
 
   defp maybe_disable_canvas(socket) do
     %{
@@ -2417,7 +2463,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     <div class="relative">
       <div
         :if={@changeset.changes |> Enum.any?()}
-        class="absolute -m-1 rounded-full bg-danger-500 w-3 h-3 top-0 right-0"
+        class="absolute -m-1 rounded-full bg-danger-500 w-3 h-3 top-0 right-0 z-50"
         data-is-dirty="true"
       >
       </div>
@@ -2431,6 +2477,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
   attr :changeset, Ecto.Changeset, required: true
   attr :snapshot_version_tag, :string, required: true
   attr :has_presence_priority, :boolean, required: true
+  attr :project_repo_connection, :map, required: true
+  attr :dropdown_position, :atom, values: [:top, :bottom], required: true
 
   defp save_workflow_button(assigns) do
     {disabled, tooltip} =
@@ -2468,20 +2516,65 @@ defmodule LightningWeb.WorkflowLive.Edit do
       )
 
     ~H"""
-    <.button
-      id={@id}
-      phx-disable-with="Saving..."
-      disabled={@disabled}
-      type="submit"
-      form="workflow-form"
-      phx-disconnected={JS.set_attribute({"disabled", ""})}
-      tooltip={@tooltip}
-      phx-connected={
-        !@disabled && !@has_presence_priority && JS.remove_attribute("disabled")
-      }
-    >
-      Save
-    </.button>
+    <div class="inline-flex rounded-md shadow-sm z-5">
+      <.button
+        id={@id}
+        phx-disable-with="Saving..."
+        disabled={@disabled}
+        type="submit"
+        form="workflow-form"
+        phx-disconnected={JS.set_attribute({"disabled", ""})}
+        tooltip={@tooltip}
+        class={if @project_repo_connection, do: "rounded-r-none"}
+        phx-connected={
+          !@disabled && !@has_presence_priority && JS.remove_attribute("disabled")
+        }
+      >
+        Save
+      </.button>
+      <div :if={@project_repo_connection} class="relative -ml-px block">
+        <.button
+          type="button"
+          class="h-full rounded-l-none pr-1 pl-1 focus:ring-inset"
+          id={"#{@id}-save-and-sync-option-menu-button"}
+          aria-expanded="true"
+          aria-haspopup="true"
+          disabled={@disabled}
+          phx-click={show_dropdown("#{@id}-save-and-sync")}
+          phx-disconnected={JS.set_attribute({"disabled", ""})}
+          phx-connected={
+            !@disabled && !@has_presence_priority && JS.remove_attribute("disabled")
+          }
+        >
+          <span class="sr-only">Open options</span>
+          <.icon name="hero-chevron-down" class="w-4 h-4" />
+        </.button>
+        <div
+          role="menu"
+          aria-orientation="vertical"
+          aria-labelledby={"#{@id}-save-and-sync-option-menu-button"}
+          tabindex="-1"
+        >
+          <button
+            phx-click-away={hide_dropdown("#{@id}-save-and-sync")}
+            id={"#{@id}-save-and-sync"}
+            type="button"
+            phx-click="toggle_github_sync_modal"
+            class={[
+              "hidden absolute right-0 z-10 w-max",
+              if(@dropdown_position == :top, do: "bottom-9 mb-2"),
+              if(@dropdown_position == :bottom, do: "top-9 mt-2"),
+              "rounded-md bg-white px-4 py-2 text-sm font-semibold",
+              "text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+            ]}
+            disabled={@disabled}
+            phx-hook="OpenSyncModalViaCtrlShiftS"
+          >
+            Save & Sync
+          </button>
+        </div>
+      </div>
+    </div>
     """
   end
 

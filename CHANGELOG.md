@@ -19,10 +19,44 @@ and this project adheres to
 
 - Add workflows API to create, update, get and list.
   [#1887](https://github.com/OpenFn/lightning/issues/1887)
+- Show email address of credential owner on project credentials page
+  [#2210](https://github.com/OpenFn/lightning/issues/2210)
 
 ### Changed
 
+- Configure Monaco to load files from lightning instead of cdn
+  [#2786](https://github.com/OpenFn/lightning/issues/2786)
+
 ### Fixed
+
+- Fixed aggressive CSS rule in app.css that made it hard to style menu items
+  [#2807](https://github.com/OpenFn/lightning/pull/2807)
+- `z-index` broken on unsaved dot on workflow edit page
+  [#2809](https://github.com/OpenFn/lightning/issues/2809)
+- Fixed an issue in the editor where the Loading Types message displays forever
+  while running offline [#2813](https://github.com/OpenFn/lightning/issues/2813)
+- Fixed an a small layout issue in the Docs panel when loading the editor
+  offline [#2813](https://github.com/OpenFn/lightning/issues/2813)
+
+## [v2.10.9] - 2025-01-09
+
+### Added
+
+- Audit the creation and removal of Github repo connections.
+  [#2668](https://github.com/OpenFn/lightning/issues/2668)
+- Add save and sync option in the workflow edit page
+  [#2707](https://github.com/OpenFn/lightning/issues/2707)
+
+### Changed
+
+- Git-ignore files from mix assets.deploy
+  [#2788](https://github.com/OpenFn/lightning/issues/2788)
+- Added Claude integration in job chat
+  [#2403](https://github.com/OpenFn/lightning/pull/2403)
+- OPENAI_API_KEY renamed to AI_ASSISTANT_API_KEY
+  [#2403](https://github.com/OpenFn/lightning/pull/2403)
+- Remove snapshot creation from WorkOrders, no longer necessary post-migration.
+  [#2703](https://github.com/OpenFn/lightning/issues/2703)
 
 ## [v2.10.8] - 2024-12-18
 
@@ -33,8 +67,6 @@ and this project adheres to
 
 ### Changed
 
-- Adjusted AI Assistant documentation to note that messages may be monitored
-
 ## [v2.10.7] - 2024-12-13 🎂 ❤️ Happy Birthday, Mom!
 
 ### Added
@@ -44,7 +76,7 @@ and this project adheres to
 - Allow different rules and action for delete user.
   [#2500](https://github.com/OpenFn/lightning/issues/2500)
 - Handle errors from the AI Assistant more gracefully
-  [#2741](https://github.com/OpenFn/lightning/issues/2741)
+  [#2474](https://github.com/OpenFn/lightning/issues/2474)
 
 ### Changed
 

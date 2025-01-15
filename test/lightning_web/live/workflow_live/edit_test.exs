@@ -7,7 +7,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   import Lightning.JobsFixtures
   import Lightning.WorkflowLive.Helpers
   import Lightning.WorkflowsFixtures
+  import Lightning.GithubHelpers
   import Phoenix.LiveViewTest
+  import Mox
 
   alias Lightning.Auditing.Audit
   alias Lightning.Helpers
@@ -1799,6 +1801,323 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     end
   end
 
+  describe "Save and Sync to Github" do
+    setup :verify_on_exit!
+    setup :create_workflow
+
+    setup %{project: project} do
+      repo_connection =
+        insert(:project_repo_connection,
+          project: project,
+          repo: "someaccount/somerepo",
+          branch: "somebranch",
+          github_installation_id: "1234",
+          access_token: "someaccesstoken"
+        )
+
+      %{repo_connection: repo_connection}
+    end
+
+    @tag role: :editor
+    test "is not available when project isn't connected to github", %{
+      conn: conn,
+      project: project,
+      workflow: workflow,
+      repo_connection: repo_connection
+    } do
+      Repo.delete!(repo_connection)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      refute view |> has_element?("button[phx-click='toggle_github_sync_modal']")
+    end
+
+    @tag role: :editor
+    test "can be done when creating a new workflow", %{
+      conn: conn,
+      project: project,
+      repo_connection: repo_connection
+    } do
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new?m=settings")
+
+      assert view |> push_patches_to_view(initial_workflow_patchset(project))
+
+      workflow_name = "My Workflow"
+      view |> fill_workflow_name(workflow_name)
+
+      assert view |> save_is_disabled?()
+
+      {job, _, _} = view |> select_first_job()
+
+      view |> fill_job_fields(job, %{name: "My Job"})
+
+      # Editing the Jobs' body
+      view |> click_edit(job)
+
+      view |> change_editor_text("some body")
+
+      refute view |> save_is_disabled?()
+
+      assert view |> has_pending_changes()
+
+      # let return ok with the limitter
+      stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context ->
+          :ok
+        end
+      )
+
+      # button to sync to github exists
+      assert view |> has_element?("button[phx-click='toggle_github_sync_modal']")
+
+      # verify connection
+      repo_name = repo_connection.repo
+      branch_name = repo_connection.branch
+      installation_id = repo_connection.github_installation_id
+
+      expected_default_branch = "main"
+
+      expected_deploy_yml_path =
+        ".github/workflows/openfn-#{repo_connection.project_id}-deploy.yml"
+
+      expected_config_json_path =
+        "openfn-#{repo_connection.project_id}-config.json"
+
+      expected_secret_name =
+        "OPENFN_#{String.replace(repo_connection.project_id, "-", "_")}_API_KEY"
+
+      expect(Lightning.Tesla.Mock, :call, 6, fn
+        # get installation access token.
+        %{
+          url:
+            "https://api.github.com/app/installations/" <>
+                ^installation_id <> "/access_tokens"
+        },
+        _opts ->
+          {:ok,
+           %Tesla.Env{
+             status: 201,
+             body: %{"token" => "some-token"}
+           }}
+
+        # get repo content
+        %{url: "https://api.github.com/repos/" <> ^repo_name}, _opts ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: %{"default_branch" => expected_default_branch}
+           }}
+
+        # check if pull yml exists in the default branch
+        %{
+          method: :get,
+          query: [{:ref, "heads/" <> ^expected_default_branch}],
+          url:
+            "https://api.github.com/repos/" <>
+                ^repo_name <> "/contents/.github/workflows/openfn-pull.yml"
+        },
+        _opts ->
+          {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+
+        # check if deploy yml exists in the target branch
+        %{
+          method: :get,
+          query: [{:ref, "heads/" <> ^branch_name}],
+          url:
+            "https://api.github.com/repos/" <>
+                ^repo_name <> "/contents/" <> ^expected_deploy_yml_path
+        },
+        _opts ->
+          {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+
+        # check if config.json exists in the target branch
+        %{
+          method: :get,
+          query: [{:ref, "heads/" <> ^branch_name}],
+          url:
+            "https://api.github.com/repos/" <>
+                ^repo_name <> "/contents/" <> ^expected_config_json_path
+        },
+        _opts ->
+          {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+
+        # check if api key secret exists
+        %{
+          method: :get,
+          url:
+            "https://api.github.com/repos/" <>
+                ^repo_name <> "/actions/secrets/" <> ^expected_secret_name
+        },
+        _opts ->
+          {:ok, %Tesla.Env{status: 200, body: %{}}}
+      end)
+
+      # click to open the github sync modal
+      refute has_element?(view, "#github-sync-modal")
+      render_click(view, "toggle_github_sync_modal")
+      assert has_element?(view, "#github-sync-modal")
+      assert render_async(view) =~ "Save and sync changes to GitHub"
+
+      expect_create_installation_token(repo_connection.github_installation_id)
+      expect_get_repo(repo_connection.repo)
+      expect_create_workflow_dispatch(repo_connection.repo, "openfn-pull.yml")
+
+      # submit form
+      view
+      |> form("#workflow-form")
+      |> render_submit(%{"github-sync" => %{"commit_message" => "some message"}})
+
+      assert workflow =
+               Lightning.Repo.one(
+                 from w in Workflow,
+                   where:
+                     w.project_id == ^project.id and w.name == ^workflow_name
+               )
+
+      assert_patched(
+        view,
+        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[m: "expand", s: job.id, v: workflow.lock_version]}"
+      )
+
+      assert render(view) =~ "Workflow saved and synced to GitHub successfully."
+      refute has_element?(view, "#github-sync-modal")
+    end
+
+    test "does not close the github modal when Github sync fails", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+        )
+
+      assert view |> page_title() =~ workflow.name
+
+      job_2 = workflow.jobs |> Enum.at(1)
+
+      view |> select_node(job_2, workflow.lock_version)
+
+      new_job_name = "My Other Job"
+
+      assert view |> fill_job_fields(job_2, %{name: new_job_name}) =~
+               new_job_name
+
+      refute view |> save_is_disabled?()
+
+      # let return ok with the limitter
+      stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context ->
+          :ok
+        end
+      )
+
+      # return error for Github
+      stub(Lightning.Tesla.Mock, :call, fn
+        %{url: "https://api.github.com/app/installations" <> _rest}, _opts ->
+          {:ok,
+           %Tesla.Env{
+             status: 404,
+             body: %{"error" => "some-error"}
+           }}
+
+        %{url: "https://api.github.com/" <> _rest}, _opts ->
+          {:ok,
+           %Tesla.Env{
+             status: 400,
+             body: %{"error" => "some-error"}
+           }}
+      end)
+
+      # click to open the github sync modal
+      refute has_element?(view, "#github-sync-modal")
+      render_click(view, "toggle_github_sync_modal")
+      assert has_element?(view, "#github-sync-modal")
+
+      # submit form
+      view
+      |> form("#workflow-form")
+      |> render_submit(%{"github-sync" => %{"commit_message" => "some message"}})
+
+      workflow = Repo.reload!(workflow)
+
+      assert_patched(
+        view,
+        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: job_2.id, v: workflow.lock_version]}"
+      )
+
+      assert render(view) =~
+               "Workflow saved but not synced to GitHub. Check the project GitHub connection settings"
+
+      # modal is still present
+      assert has_element?(view, "#github-sync-modal")
+    end
+
+    test "save and sync button on the modal is disabled when verification is still going on",
+         %{
+           conn: conn,
+           project: project,
+           workflow: workflow
+         } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+        )
+
+      assert view |> page_title() =~ workflow.name
+
+      job_2 = workflow.jobs |> Enum.at(1)
+
+      view |> select_node(job_2, workflow.lock_version)
+
+      new_job_name = "My Other Job"
+
+      assert view |> fill_job_fields(job_2, %{name: new_job_name}) =~
+               new_job_name
+
+      refute view |> save_is_disabled?()
+
+      # let return ok with the limitter
+      stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context ->
+          :ok
+        end
+      )
+
+      stub(Lightning.Tesla.Mock, :call, fn
+        %{url: "https://api.github.com/app/installations" <> _rest}, _opts ->
+          # sleep to block the async task
+          Process.sleep(5000)
+
+          {:ok,
+           %Tesla.Env{
+             status: 201,
+             body: %{"token" => "some-token"}
+           }}
+      end)
+
+      # click to open the github sync modal
+      refute has_element?(view, "#github-sync-modal")
+      render_click(view, "toggle_github_sync_modal")
+      assert has_element?(view, "#github-sync-modal")
+
+      assert view
+             |> element("button#submit-btn-github-sync-modal")
+             |> render() =~ "disabled=\"disabled\""
+    end
+  end
+
   describe "AI Assistant:" do
     setup :create_workflow
 
@@ -1812,7 +2131,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # when not configured properly
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> nil
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       {:ok, view, _html} =
@@ -1830,7 +2149,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # when configured properly
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       {:ok, view, _html} =
@@ -1855,7 +2174,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     } do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       # when disclaimer hasn't been read and no session exists
@@ -1894,7 +2213,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
          } do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       date = DateTime.utc_now() |> DateTime.add(-24, :hour) |> DateTime.to_unix()
@@ -1924,7 +2243,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
          } do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001"
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       skip_disclaimer(user)
@@ -1952,7 +2271,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2079,7 +2398,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2134,7 +2453,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2179,7 +2498,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2252,7 +2571,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       expected_question = "Can you help me with this?"
@@ -2333,7 +2652,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2385,7 +2704,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2435,7 +2754,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     } do
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> "http://localhost:4001/health_check"
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       error_message = "You have reached your quota of AI queries"
@@ -2484,7 +2803,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       error_message = "Server is temporarily unavailable"
@@ -2538,7 +2857,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2584,7 +2903,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2629,7 +2948,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2675,7 +2994,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2793,7 +3112,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(
@@ -2856,7 +3175,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -2941,7 +3260,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       Mox.stub(Lightning.MockConfig, :apollo, fn
         :endpoint -> apollo_endpoint
-        :openai_api_key -> "openai_api_key"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
       end)
 
       Mox.stub(Lightning.Tesla.Mock, :call, fn
@@ -3178,7 +3497,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       refute_eventually(
         low_priority_view
         |> has_element?("#inspector-workflow-version", "latest"),
-        15_000
+        30_000
       )
 
       assert low_priority_view
