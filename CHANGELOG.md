@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.10.10] - 2025-01-15
+
+### Added
+
 - Add workflows API to create, update, get and list.
   [#1887](https://github.com/OpenFn/lightning/issues/1887)
 - Show email address of credential owner on project credentials page
