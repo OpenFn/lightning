@@ -31,6 +31,13 @@ defmodule Lightning.Workflows.Job do
           workflow: nil | Workflow.t() | Ecto.Association.NotLoaded.t()
         }
 
+  @derive {Jason.Encoder,
+           only: [
+             :id,
+             :body,
+             :name,
+             :adaptor
+           ]}
   schema "jobs" do
     field :body, :string
 
@@ -73,6 +80,7 @@ defmodule Lightning.Workflows.Job do
       name: "jobs_name_workflow_id_index",
       message: "job name has already been taken"
     )
+    |> unique_constraint(:id, name: "jobs_pkey")
   end
 
   def validate(changeset) do

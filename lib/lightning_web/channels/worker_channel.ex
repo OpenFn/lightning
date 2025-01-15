@@ -39,7 +39,7 @@ defmodule LightningWeb.WorkerChannel do
         {:reply, {:ok, %{runs: runs}}, socket}
 
       {:error, changeset} ->
-        {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
+        {:reply, {:error, LightningWeb.ChangesetJSON.errors(changeset)}, socket}
     end
   end
 

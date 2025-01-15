@@ -30,6 +30,18 @@ defmodule Lightning.Workflows.Edge do
         }
 
   @conditions [:on_job_success, :on_job_failure, :always, :js_expression]
+
+  @derive {Jason.Encoder,
+           only: [
+             :id,
+             :condition_type,
+             :condition_expression,
+             :condition_label,
+             :enabled,
+             :source_job_id,
+             :source_trigger_id,
+             :target_job_id
+           ]}
   schema "workflow_edges" do
     belongs_to :workflow, Workflow
     belongs_to :source_job, Job
@@ -85,6 +97,7 @@ defmodule Lightning.Workflows.Edge do
     |> validate_source_condition()
     |> validate_js_condition()
     |> validate_different_nodes()
+    |> unique_constraint(:id, name: "workflow_edges_pkey")
   end
 
   defp validate_has_source(changeset) do

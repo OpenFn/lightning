@@ -388,12 +388,8 @@ defmodule Lightning.WorkOrders do
          }
        }) do
     edges
-    |> Enum.reduce(Graph.new(), fn edge, graph ->
-      graph
-      |> Graph.add_edge(
-        edge.source_trigger_id || edge.source_job_id,
-        edge.target_job_id
-      )
+    |> Enum.reduce(Graph.new(), fn item, graph ->
+      Graph.add_edge(graph, item)
     end)
     |> Graph.prune(step_job_id)
     |> Graph.nodes()

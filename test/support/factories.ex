@@ -480,8 +480,10 @@ defmodule Lightning.Factories do
             Enum.into(extra, %{
               id: Ecto.UUID.generate(),
               source_trigger_id: trigger.id,
+              source_job_id: nil,
               target_job_id: job.id,
-              condition_type: :always
+              condition_type: :always,
+              enabled: true
             })
           )
     }

@@ -15,6 +15,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   alias Lightning.Helpers
   alias Lightning.Repo
   alias Lightning.Workflows
+  alias Lightning.Workflows.Presence
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Workflow
   alias LightningWeb.CredentialLiveHelpers
@@ -313,6 +314,24 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
   describe "edit" do
     setup :create_workflow
+
+    test "Editing tracks user presence", %{
+      conn: conn,
+      project: project,
+      workflow: workflow,
+      user: user
+    } do
+      assert [] = Presence.list_presences_for(workflow)
+      refute Presence.has_any_presence?(workflow)
+
+      {:ok, _view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      user = Map.put(user, :password, nil)
+
+      assert [%Presence{user: ^user}] = Presence.list_presences_for(workflow)
+      assert Presence.has_any_presence?(workflow)
+    end
 
     test "Switching trigger types doesn't erase webhook URL input content", %{
       conn: conn,

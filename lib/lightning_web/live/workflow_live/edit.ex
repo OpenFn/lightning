@@ -1213,7 +1213,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     if connected?(socket) && socket.assigns.snapshot_version_tag == "latest" do
       Presence.track_user_presence(
         socket.assigns.current_user,
-        "workflow-#{socket.assigns.workflow.id}:presence",
+        socket.assigns.workflow,
         self()
       )
     end
@@ -1273,10 +1273,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
       url = ~p"/projects/#{project.id}/w/#{workflow.id}?#{query_params}"
 
       if version != "latest" do
-        Presence.untrack(
-          self(),
-          "workflow-#{socket.assigns.workflow.id}:presence",
-          socket.assigns.current_user.id
+        Presence.untrack_user_presence(
+          socket.assigns.current_user,
+          socket.assigns.workflow,
+          self()
         )
       end
 
@@ -1828,8 +1828,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   def handle_info(%{event: "presence_diff", payload: _diff}, socket) do
     summary =
-      "workflow-#{socket.assigns.workflow.id}:presence"
-      |> Presence.list_presences()
+      socket.assigns.workflow
+      |> Presence.list_presences_for()
       |> Presence.build_presences_summary(socket.assigns)
 
     {:noreply,
