@@ -436,7 +436,7 @@ defmodule Lightning.Config do
   end
 
   def promex_metrics_endpoint_authorization_required?  do
-    impl().promex_authorization_required?()
+    impl().promex_metrics_endpoint_authorization_required?()
   end
 
   def promex_metrics_endpoint_scheme do
