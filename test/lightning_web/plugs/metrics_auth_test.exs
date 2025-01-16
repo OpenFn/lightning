@@ -11,6 +11,7 @@ defmodule LightningWeb.Plugs.MetricsAuthTest do
     Mox.stub(Lightning.MockConfig, :promex_metrics_endpoint_token, fn ->
       token
     end)
+
     Mox.stub(Lightning.MockConfig, :promex_metrics_endpoint_scheme, fn ->
       "http"
     end)
@@ -41,7 +42,7 @@ defmodule LightningWeb.Plugs.MetricsAuthTest do
     end
 
     test "is unauthorized if no authorization header", %{conn: conn} do
-      conn = 
+      conn =
         conn
         |> MetricsAuth.call([])
 
@@ -49,7 +50,7 @@ defmodule LightningWeb.Plugs.MetricsAuthTest do
     end
 
     test "is unauthorized if no bearer token", %{conn: conn, token: token} do
-      conn = 
+      conn =
         conn
         |> put_req_header("authorization", "Basic #{token}")
         |> MetricsAuth.call([])
@@ -61,7 +62,7 @@ defmodule LightningWeb.Plugs.MetricsAuthTest do
       conn: conn,
       token: token
     } do
-      conn = 
+      conn =
         conn
         |> put_req_header("authorization", "Bearer not-#{token}")
         |> MetricsAuth.call([])
@@ -70,12 +71,12 @@ defmodule LightningWeb.Plugs.MetricsAuthTest do
     end
 
     test "is unauthorised if the scheme does not match",
-      %{conn: conn, token: token} do
+         %{conn: conn, token: token} do
       Mox.stub(Lightning.MockConfig, :promex_metrics_endpoint_scheme, fn ->
         "https"
       end)
-    
-      conn = 
+
+      conn =
         conn
         |> put_req_header("authorization", "Bearer #{token}")
         |> MetricsAuth.call([])

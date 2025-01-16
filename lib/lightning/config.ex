@@ -235,12 +235,12 @@ defmodule Lightning.Config do
 
     @impl true
     def promex_metrics_endpoint_scheme do
-      promex_config() |> Keyword.get(:metrics_endpoint_endpoint_scheme)
+      promex_config() |> Keyword.get(:metrics_endpoint_scheme)
     end
 
     @impl true
     def promex_metrics_endpoint_token do
-      promex_config() |> Keyword.get(:metrics_endpoint_endpoint_token)
+      promex_config() |> Keyword.get(:metrics_endpoint_token)
     end
 
     defp promex_config do
@@ -435,7 +435,7 @@ defmodule Lightning.Config do
     impl().kafka_number_of_processors()
   end
 
-  def promex_metrics_endpoint_authorization_required?  do
+  def promex_metrics_endpoint_authorization_required? do
     impl().promex_metrics_endpoint_authorization_required?()
   end
 
