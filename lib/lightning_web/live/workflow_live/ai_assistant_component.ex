@@ -745,10 +745,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   attr :target, :any, required: true
 
   defp render_individual_session(assigns) do
-    assigns =
-      assign(assigns,
-        ai_feedback: Application.get_env(:lightning, :ai_feedback)
-      )
+    assigns = assign(assigns, ai_feedback: ai_feedback())
 
     ~H"""
     <div class="row-span-full flex flex-col">
@@ -973,5 +970,9 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   defp display_cancel_message_btn?(session) do
     user_messages = Enum.filter(session.messages, &(&1.role == :user))
     length(user_messages) > 1
+  end
+
+  defp ai_feedback do
+    Application.get_env(:lightning, :ai_feedback)
   end
 end
