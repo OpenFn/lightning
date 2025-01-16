@@ -817,7 +817,11 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
               <div :if={@ai_feedback} class="flex justify-start mt-4">
                 <%= Phoenix.LiveView.TagEngine.component(
                   @ai_feedback.component,
-                  %{session_id: @session.id, message_id: message.id},
+                  %{
+                    session_id: @session.id,
+                    message_id: message.id,
+                    myself: @target
+                  },
                   {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
                 ) %>
               </div>
