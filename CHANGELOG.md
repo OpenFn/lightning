@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Add component injection for AI responses feedback
+  [#2495](https://github.com/OpenFn/lightning/issues/2495)
+
 ### Changed
 
 ### Fixed
