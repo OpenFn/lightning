@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Audit the provisioning of projects via the API
+  [#2718](https://github.com/OpenFn/lightning/issues/2718)
+
 ### Changed
 
 - PromEx metrics endpoint returns 401 on unauthorized requests.
@@ -44,8 +47,6 @@ and this project adheres to
   [#1887](https://github.com/OpenFn/lightning/issues/1887)
 - Show email address of credential owner on project credentials page
   [#2210](https://github.com/OpenFn/lightning/issues/2210)
-- Audit the provisioning of projects via the API
-  [#2718](https://github.com/OpenFn/lightning/issues/2718)
 
 ### Changed
 
