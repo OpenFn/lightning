@@ -19,22 +19,23 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
         <Form.label_field
           form={:adaptor_picker}
           field={:adaptor_name}
-          title="Adaptor"
+          title={"Adaptor" <> if @local_adaptors_enabled?, do: " (local)", else: ""}
           for="adaptor-name"
           tooltip="Choose an adaptor to perform operations (via helper functions) in a specific application. Pick ‘http’ for generic REST APIs or the 'common' adaptor if this job only performs data manipulation."
         />
         <Form.select_field
           form={:adaptor_picker}
           name={:adaptor_name}
-          selected={@adaptor_name}
+          selected={dbg(@adaptor_name)}
           id="adaptor-name"
-          values={@adaptors}
+          values={dbg(@adaptors)}
           phx-change="adaptor_name_change"
           phx-target={@myself}
           disabled={@disabled}
+          {if display_name_for_adaptor(@adaptor_name) in @adaptors, do: [], else: [prompt: "---"]}
         />
       </div>
-      <div class="col-span-4 @md:col-span-2">
+      <div :if={!@local_adaptors_enabled?} class="col-span-4 @md:col-span-2">
         <Form.label_field
           form={@form}
           field={:adaptor_version}
@@ -49,6 +50,27 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
           values={@versions}
           disabled={@disabled}
         />
+      </div>
+      <div
+        :if={display_name_for_adaptor(@adaptor_name) not in @adaptors}
+        class="col-span-4 @md:col-span-2"
+      >
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <.icon name="hero-exclamation-triangle" class="h-5 w-5 text-yellow-400" />
+          </div>
+          <div class="ml-2">
+            <span class="text-xs">
+              The current adaptor
+              <code>
+                (<%= @adaptor_name |> display_name_for_adaptor() |> elem(0) %>)
+              </code>
+              is not available <%= if @local_adaptors_enabled?,
+                do: "locally",
+                else: "in NPM" %>
+            </span>
+          </div>
+        </div>
       </div>
     </div>
     """
@@ -67,7 +89,11 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
      |> assign(:versions, versions)
      |> assign(:on_change, Map.get(params, :on_change))
      |> assign(:form, form)
-     |> assign(:disabled, Map.get(params, :disabled, false))}
+     |> assign(:disabled, Map.get(params, :disabled, false))
+     |> assign(
+       :local_adaptors_enabled?,
+       Lightning.AdaptorRegistry.local_adaptors_enabled?()
+     )}
   end
 
   @doc """
