@@ -86,20 +86,24 @@ defmodule Lightning.Projects.Provisioner do
     |> Enum.reduce(
       Multi.new(),
       fn workflow_changeset, multi ->
-        additional_multi =
-          classify_audit(workflow_changeset)
-          |> case do
-            {:no_action, _nil} ->
-              Multi.new()
-
-            {action, workflow_id} ->
-              audit_workflow_multi(action, workflow_id, user_or_repo_connection)
-          end
-
-        Multi.append(multi, additional_multi)
+        append_audit_multi(workflow_changeset, multi, user_or_repo_connection)
       end
     )
     |> Repo.transaction()
+  end
+
+  defp append_audit_multi(workflow_changeset, multi, user_or_repo_connection) do
+    additional_multi =
+      classify_audit(workflow_changeset)
+      |> case do
+        {:no_action, _nil} ->
+          Multi.new()
+
+        {action, workflow_id} ->
+          audit_workflow_multi(action, workflow_id, user_or_repo_connection)
+      end
+
+    Multi.append(multi, additional_multi)
   end
 
   defp classify_audit(%{action: :insert, changes: %{id: workflow_id}}) do
