@@ -137,7 +137,6 @@ defmodule Lightning.MixProject do
       {:telemetry_poller, "~> 1.0"},
       {:tesla, "~> 1.13"},
       {:timex, "~> 3.7"},
-      {:unplug, "~> 1.0"},
       {:replug, "~> 0.1.0"},
       {:phoenix_swoosh, "~> 1.2.1"},
       {:hammer_backend_mnesia, "~> 0.6"},
