@@ -142,6 +142,22 @@ you.
 
 [Learn more about configuring workers](WORKERS.md)
 
+### Using Local Adaptors
+
+To use local adaptors, you need to set up the following environment variables:
+
+- `LOCAL_ADAPTORS`: Used to enable or disable the local adaptors mode. Set it to `true` to enable.
+- `OPENFN_ADAPTORS_REPO`: This should point to the repository directory which must contain a `packages` subdirectory.
+
+Example configuration:
+
+```sh
+export LOCAL_ADAPTORS=true
+export OPENFN_ADAPTORS_REPO=/path/to/repo/
+```
+
+Ensure that the `OPENFN_ADAPTORS_REPO` directory is correctly set up with the necessary `packages` subdirectory, otherwise the app wont start
+
 ### Problems with Apple Silicon
 
 You might run into some errors when running the docker containers on Apple
