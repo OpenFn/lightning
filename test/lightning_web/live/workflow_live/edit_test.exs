@@ -1066,6 +1066,67 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert view |> save_is_disabled?()
     end
 
+    test "renders the job form correctly when local_adaptors_repo is NOT set", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+        )
+
+      job_1 = hd(workflow.jobs)
+
+      view |> select_node(job_1, workflow.lock_version)
+
+      adaptor_name_label =
+        view |> element("label[for='adaptor-name']") |> render()
+
+      assert adaptor_name_label =~ "Adaptor"
+      refute adaptor_name_label =~ "Adaptor (local)"
+
+      # adapter version picker is available
+      assert has_element?(view, "#adaptor-version")
+    end
+
+    @tag :tmp_dir
+    test "renders the job form correctly when local_adaptors_repo is set", %{
+      conn: conn,
+      project: project,
+      workflow: workflow,
+      tmp_dir: tmp_dir
+    } do
+      Mox.stub(Lightning.MockConfig, :adaptor_registry, fn ->
+        [local_adaptors_repo: tmp_dir]
+      end)
+
+      expected_adaptors = ["foo", "bar", "baz"]
+
+      Enum.each(expected_adaptors, fn adaptor ->
+        [tmp_dir, "packages", adaptor] |> Path.join() |> File.mkdir_p!()
+      end)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+        )
+
+      job_1 = hd(workflow.jobs)
+
+      view |> select_node(job_1, workflow.lock_version)
+
+      adaptor_name_label =
+        view |> element("label[for='adaptor-name']") |> render()
+
+      assert adaptor_name_label =~ "Adaptor (local)"
+
+      # version picker is not present
+      refute has_element?(view, "#adaptor-version")
+    end
+
     test "Save button is disabled when workflow is deleted", %{
       conn: conn,
       project: project,

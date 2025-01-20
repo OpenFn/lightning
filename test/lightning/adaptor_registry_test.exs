@@ -1,5 +1,6 @@
 defmodule Lightning.AdaptorRegistryTest do
-  use ExUnit.Case, async: false
+  use Lightning.DataCase, async: false
+
   use Mimic
 
   alias Lightning.AdaptorRegistry
@@ -122,6 +123,35 @@ defmodule Lightning.AdaptorRegistryTest do
              ) ==
                nil
     end
+
+    @tag :tmp_dir
+    test "lists directory names of the when local_adaptors_repo is set", %{
+      tmp_dir: tmp_dir,
+      test: test
+    } do
+      expected_adaptors = ["foo", "bar", "baz"]
+
+      Enum.each(expected_adaptors, fn adaptor ->
+        [tmp_dir, "packages", adaptor] |> Path.join() |> File.mkdir_p!()
+      end)
+
+      start_supervised!(
+        {AdaptorRegistry, [name: test, local_adaptors_repo: tmp_dir]}
+      )
+
+      results = AdaptorRegistry.all(test)
+
+      for adaptor <- expected_adaptors do
+        expected_result = %{
+          name: "@openfn/language-#{adaptor}",
+          repo: "file://" <> Path.join([tmp_dir, "packages", adaptor]),
+          latest: "local",
+          versions: []
+        }
+
+        assert expected_result in results
+      end
+    end
   end
 
   describe "resolve_package_name/1" do
@@ -136,6 +166,23 @@ defmodule Lightning.AdaptorRegistryTest do
 
       assert AdaptorRegistry.resolve_package_name("@openfn/language-foo") ==
                {"@openfn/language-foo", nil}
+
+      assert AdaptorRegistry.resolve_package_name("") ==
+               {nil, nil}
+    end
+
+    @tag :tmp_dir
+    test "returns local as the version when local_adaptors_repo config is set",
+         %{tmp_dir: tmp_dir} do
+      Mox.stub(Lightning.MockConfig, :adaptor_registry, fn ->
+        [local_adaptors_repo: tmp_dir]
+      end)
+
+      assert AdaptorRegistry.resolve_package_name("@openfn/language-foo@1.2.3") ==
+               {"@openfn/language-foo", "local"}
+
+      assert AdaptorRegistry.resolve_package_name("@openfn/language-foo") ==
+               {"@openfn/language-foo", "local"}
 
       assert AdaptorRegistry.resolve_package_name("") ==
                {nil, nil}

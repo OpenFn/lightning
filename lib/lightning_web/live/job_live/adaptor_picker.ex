@@ -26,9 +26,9 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
         <Form.select_field
           form={:adaptor_picker}
           name={:adaptor_name}
-          selected={dbg(@adaptor_name)}
+          selected={@adaptor_name}
           id="adaptor-name"
-          values={dbg(@adaptors)}
+          values={@adaptors}
           phx-change="adaptor_name_change"
           phx-target={@myself}
           disabled={@disabled}
@@ -53,6 +53,7 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
       </div>
       <div
         :if={display_name_for_adaptor(@adaptor_name) not in @adaptors}
+        id="adaptor-not-available-warning"
         class="col-span-4 @md:col-span-2"
       >
         <div class="flex items-center">

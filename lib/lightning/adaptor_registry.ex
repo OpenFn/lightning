@@ -290,7 +290,7 @@ defmodule Lightning.AdaptorRegistry do
     |> Enum.map(fn package ->
       %{
         name: "@openfn/language-" <> package,
-        repo: "",
+        repo: "file://" <> Path.join([repo_path, "packages", package]),
         latest: "local",
         versions: []
       }
@@ -370,7 +370,7 @@ defmodule Lightning.AdaptorRegistry do
   end
 
   def local_adaptors_enabled? do
-    config = Application.get_env(:lightning, __MODULE__, [])
+    config = Lightning.Config.adaptor_registry()
 
     if config[:local_adaptors_repo], do: true, else: false
   end
