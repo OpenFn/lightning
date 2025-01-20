@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix `z-index` for unsaved workflow dot on workflow edit page
+  [#2809](https://github.com/OpenFn/lightning/issues/2809)
+
 ## [v2.10.10] - 2025-01-15
 
 ### Added

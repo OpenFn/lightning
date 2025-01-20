@@ -2463,7 +2463,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     <div class="relative">
       <div
         :if={@changeset.changes |> Enum.any?()}
-        class="absolute -m-1 rounded-full bg-danger-500 w-3 h-3 top-0 right-0 z-50"
+        class="absolute -m-1 rounded-full bg-danger-500 w-3 h-3 top-0 right-0 z-10"
         data-is-dirty="true"
       >
       </div>
