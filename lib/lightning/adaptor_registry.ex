@@ -361,6 +361,9 @@ defmodule Lightning.AdaptorRegistry do
       {nil, nil} ->
         ""
 
+      {adaptor_name, "local"} ->
+        "#{adaptor_name}@local"
+
       {adaptor_name, "latest"} ->
         "#{adaptor_name}@#{latest_for(adaptor_name)}"
 
