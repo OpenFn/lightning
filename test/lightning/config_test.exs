@@ -10,6 +10,7 @@ defmodule Lightning.Configtest do
           Lightning.PromEx,
           :metrics_endpoint_authorization_required
         )
+
       actual = API.promex_metrics_endpoint_authorization_required?()
 
       assert expected == actual
@@ -18,6 +19,7 @@ defmodule Lightning.Configtest do
     test "returns the appropriate Promex endpoint token" do
       expected =
         extract_from_config(Lightning.PromEx, :metrics_endpoint_token)
+
       actual = API.promex_metrics_endpoint_token()
 
       assert expected == actual
@@ -26,6 +28,7 @@ defmodule Lightning.Configtest do
     test "returns the appropriate PromEx endpoint scheme" do
       expected =
         extract_from_config(Lightning.PromEx, :metrics_endpoint_scheme)
+
       actual = API.promex_metrics_endpoint_scheme()
 
       assert expected == actual
