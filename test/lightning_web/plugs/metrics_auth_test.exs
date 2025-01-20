@@ -19,6 +19,12 @@ defmodule LightningWeb.Plugs.MetricsAuthTest do
     %{token: token}
   end
 
+  describe "init" do
+    test "returns the provided options as they are" do
+      assert MetricsAuth.init(a: 1, b: 2) == [a: 1, b: 2]
+    end
+  end
+
   describe "metrics request and authorization required" do
     setup do
       Mox.stub(
