@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- Add support for local adaptors. This can be enabled via `LOCAL_ADAPTORS=true`
+  and path specified via `OPENFN_ADAPTORS_REPO=./path/to/repo/`
+  [#905](https://github.com/OpenFn/lightning/issues/905)
+
 ### Changed
 
 ### Fixed
