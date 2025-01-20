@@ -22,6 +22,9 @@ and this project adheres to
 
 ### Changed
 
+- PromEx metrics endpoint returns 401 on unauthorized requests.
+  [#2823](https://github.com/OpenFn/lightning/issues/2823)
+
 ### Fixed
 
 ## [v2.10.10] - 2025-01-15
