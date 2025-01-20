@@ -570,12 +570,11 @@ defmodule Lightning.VersionControlTest do
       other_workflow = insert(:simple_workflow, project: project)
       {:ok, other_snapshot} = Snapshot.create(other_workflow)
 
-      user = user_with_valid_github_oauth()
       repo_connection = insert(:project_repo_connection, project: project)
 
       [
+        commit_message: "my little commit message",
         project: project,
-        user: user,
         repo_connection: repo_connection,
         snapshots: [snapshot, other_snapshot],
         workflow: workflow
@@ -583,9 +582,9 @@ defmodule Lightning.VersionControlTest do
     end
 
     test "checks if github sync is rate limited", %{
+      commit_message: commit_message,
       project: %{id: project_id},
-      repo_connection: repo_connection,
-      user: %{email: user_email}
+      repo_connection: repo_connection
     } do
       action = %Action{type: :github_sync}
       context = %Context{project_id: project_id}
@@ -594,13 +593,13 @@ defmodule Lightning.VersionControlTest do
         :ok
       end)
 
-      VersionControl.initiate_sync(repo_connection, user_email)
+      VersionControl.initiate_sync(repo_connection, commit_message)
     end
 
     test "returns error if github sync is rate limited", %{
+      commit_message: commit_message,
       project: %{id: project_id},
-      repo_connection: repo_connection,
-      user: %{email: user_email}
+      repo_connection: repo_connection
     } do
       action = %Action{type: :github_sync}
       context = %Context{project_id: project_id}
@@ -612,16 +611,14 @@ defmodule Lightning.VersionControlTest do
       end)
 
       assert {:error, ^message} =
-               VersionControl.initiate_sync(repo_connection, user_email)
+               VersionControl.initiate_sync(repo_connection, commit_message)
     end
 
     test "creates GH workflow dispatch event", %{
+      commit_message: commit_message,
       repo_connection: repo_connection,
-      snapshots: [snapshot, other_snapshot],
-      user: %{email: user_email}
+      snapshots: [snapshot, other_snapshot]
     } do
-      commit_message = "user #{user_email} initiated a sync from Lightning"
-
       expect_create_installation_token(repo_connection.github_installation_id)
       expect_get_repo(repo_connection.repo)
 
@@ -641,7 +638,7 @@ defmodule Lightning.VersionControlTest do
         }
       )
 
-      assert :ok = VersionControl.initiate_sync(repo_connection, user_email)
+      assert :ok = VersionControl.initiate_sync(repo_connection, commit_message)
     end
 
     defp api_secret_name(%{project_id: project_id}) do
