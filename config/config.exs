@@ -159,6 +159,21 @@ config :lightning, LightningWeb.CollectionsController,
   default_stream_limit: 1_000,
   max_database_limit: 500
 
+# Configuration for injecting a custom feedback mechanism or component collection
+# for the AI Assistant. This can include interactive elements such as a button
+# that triggers a modal with a survey form, or a PostHog component to capture
+# user feedback on AI Assistant messages.
+
+# Example:
+# To enable feedback using a custom component, you can configure it as follows:
+#
+# config :lightning, :ai_feedback, %{
+#   component: &LightningWeb.Components.open_feedback_modal/1
+# }
+#
+# To disable the feedback mechanism, set the value to `false` as shown below:
+config :lightning, :ai_feedback, false
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

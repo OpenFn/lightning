@@ -8,6 +8,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   import Lightning.WorkflowLive.Helpers
   import Lightning.WorkflowsFixtures
   import Lightning.GithubHelpers
+  import Phoenix.Component
   import Phoenix.LiveViewTest
   import Mox
 
@@ -3431,6 +3432,78 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                view,
                "#cancel-message-#{List.first(single_message_session.messages).id}"
              )
+    end
+
+    @tag email: "user@openfn.org"
+    test "AI Assistant renders custom component for collecting feedback", %{
+      conn: conn,
+      project: project,
+      user: user,
+      workflow: %{jobs: [job_1 | _]} = workflow
+    } do
+      on_exit(fn -> Application.delete_env(:lightning, :ai_feedback) end)
+
+      Application.put_env(:lightning, :ai_feedback, %{
+        component: fn assigns ->
+          ~H"""
+          <div id="ai-feedback">Hello from AI Feedback</div>
+          """
+        end
+      })
+
+      apollo_endpoint = "http://localhost:4001"
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> apollo_endpoint
+        :ai_assistant_api_key -> "ai_assistant_api_key"
+      end)
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        fn
+          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
+            {:ok, %Tesla.Env{status: 200}}
+
+          %{method: :post}, _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{
+                 "history" => [
+                   %{"role" => "assistant", "content" => "Hello, World!"}
+                 ]
+               }
+             }}
+        end
+      )
+
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          messages: [
+            %{role: :assistant, content: "Hello, World!"}
+          ]
+        )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      view |> element("#get-started-with-ai-btn") |> render_click()
+
+      view |> element("#session-#{session.id}") |> render_click()
+
+      assert_patch(view)
+
+      feedback_el = element(view, "#ai-feedback")
+
+      assert has_element?(feedback_el)
+
+      assert render(feedback_el) =~ "Hello from AI Feedback"
     end
   end
 
