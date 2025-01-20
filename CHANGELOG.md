@@ -19,6 +19,10 @@ and this project adheres to
 
 ### Changed
 
+- Remove snapshot creation when performing the Github sync - no longer needed
+  post-migration.
+  [#2703](https://github.com/OpenFn/lightning/issues/2703)
+
 ### Fixed
 
 ## [v2.10.12] - 2025-01-21
