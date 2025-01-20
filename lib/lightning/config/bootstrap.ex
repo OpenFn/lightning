@@ -168,7 +168,7 @@ defmodule Lightning.Config.Bootstrap do
     use_local_adaptors_repo? =
       env!("LOCAL_ADAPTORS", &Utils.ensure_boolean/1, false)
       |> tap(fn v ->
-        if v && is_nil(local_adaptors_repo) do
+        if v && !is_binary(local_adaptors_repo) do
           raise """
           LOCAL_ADAPTORS is set to true, but OPENFN_ADAPTORS_REPO is not set.
           """
