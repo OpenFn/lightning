@@ -145,7 +145,7 @@ defmodule Lightning.VersionControl do
              repo_connection.project_id
            ),
          snapshots <-
-           list_or_create_snapshots_for_project(repo_connection),
+           list_snapshots_for_project(repo_connection),
          {:ok, client} <-
            GithubClient.build_installation_client(
              repo_connection.github_installation_id
@@ -174,7 +174,7 @@ defmodule Lightning.VersionControl do
     end
   end
 
-  defp list_or_create_snapshots_for_project(%{project_id: project_id}) do
+  defp list_snapshots_for_project(%{project_id: project_id}) do
     current_query =
       from w in Workflow,
         join: s in assoc(w, :snapshots),
