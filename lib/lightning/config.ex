@@ -8,7 +8,7 @@ defmodule Lightning.Config do
     alias Lightning.Services.AdapterHelper
 
     @impl true
-    def adaptor_registry() do
+    def adaptor_registry do
       Application.get_env(:lightning, Lightning.AdaptorRegistry, [])
     end
 
