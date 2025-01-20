@@ -745,6 +745,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   attr :target, :any, required: true
 
   defp render_individual_session(assigns) do
+    assigns = assign(assigns, ai_feedback: ai_feedback())
+
     ~H"""
     <div class="row-span-full flex flex-col">
       <div class="bg-white border-b border-gray-200 px-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
@@ -812,6 +814,13 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             </div>
             <div class="break-words max-w-[80%]">
               <.formatted_content content={message.content} />
+              <div :if={@ai_feedback} class="flex justify-start mt-4">
+                <%= Phoenix.LiveView.TagEngine.component(
+                  @ai_feedback.component,
+                  %{session_id: @session.id, message_id: message.id},
+                  {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
+                ) %>
+              </div>
             </div>
           </div>
         <% end %>
@@ -961,5 +970,9 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   defp display_cancel_message_btn?(session) do
     user_messages = Enum.filter(session.messages, &(&1.role == :user))
     length(user_messages) > 1
+  end
+
+  defp ai_feedback do
+    Application.get_env(:lightning, :ai_feedback)
   end
 end
