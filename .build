@@ -273,6 +273,8 @@ LightningWeb.PlugConfigs.html
 LightningWeb.Plugs.ApiAuth.html
 LightningWeb.Plugs.BlockRoutes.html
 LightningWeb.Plugs.FirstSetup.html
+LightningWeb.Plugs.MetricsAuth.html
+LightningWeb.Plugs.PromexWrapper.html
 LightningWeb.Plugs.Redirect.html
 LightningWeb.Plugs.WebhookAuth.html
 LightningWeb.ProfileLive.Components.html
@@ -288,7 +290,6 @@ LightningWeb.ProjectLive.InvitedCollaborators.InvitedCollaborator.html
 LightningWeb.ProjectLive.InvitedCollaborators.html
 LightningWeb.ProjectLive.MFARequired.html
 LightningWeb.ProjectLive.Settings.html
-LightningWeb.PromExPlugAuthorization.html
 LightningWeb.ReAuthenticateLive.New.html
 LightningWeb.RouteHelpers.html
 LightningWeb.Router.html
@@ -353,8 +354,8 @@ dist/lato-latin-ext-300-normal-VPGGJKJL.woff2
 dist/lato-latin-ext-400-normal-N27NCBWW.woff2
 dist/lato-latin-ext-700-normal-Q2L5DVMW.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-91BC04CF.js
-dist/sidebar_items-6BCB010E.js
+dist/search_data-C7D100D9.js
+dist/sidebar_items-CDAC09A6.js
 index.html
 provisioning.html
 readme.html

@@ -8,13 +8,13 @@
     <meta name="project" content="Lightning v2.10.11">
 
 
-    <title>LightningWeb.PromExPlugAuthorization — Lightning v2.10.11</title>
+    <title>LightningWeb.Plugs.MetricsAuth — Lightning v2.10.11</title>
     <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-6BCB010E.js"></script>
+    <script src="dist/sidebar_items-CDAC09A6.js"></script>
     <script src="docs_config.js"></script>
     <script async src="dist/html-YIPIRHGU.js"></script>
 
@@ -126,24 +126,112 @@ Pages
 <div id="top-content">
   <h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/prom_ex_plug_authorization.ex#L1" title="View Source" class="icon-action" rel="help">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/plugs/metrics_auth.ex#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
 
-    <span translate="no">LightningWeb.PromExPlugAuthorization</span> 
+    <span translate="no">LightningWeb.Plugs.MetricsAuth</span> 
     <small class="app-vsn" translate="no">(Lightning v2.10.11)</small>
 
   </h1>
 
 
     <section id="moduledoc">
-<p>Implement custom authorization for PromEx metrics endpoint as per
-<a href="https://hexdocs.pm/prom_ex/1.1.1/PromEx.Plug.html">https://hexdocs.pm/prom_ex/1.1.1/PromEx.Plug.html</a></p>
+<p>Implements Bearer token authorization for /metrics endpoint that is managed by
+PromEx.</p>
     </section>
 
 </div>
 
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#call/2" data-no-tooltip translate="no">call(conn, opts)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#init/1" data-no-tooltip translate="no">init(opts)</a>
+
+      </div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+    <div class="functions-list">
+<section class="detail" id="call/2">
+
+  <div class="detail-header">
+    <a href="#call/2" class="detail-link" data-no-tooltip title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">call(conn, opts)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/plugs/metrics_auth.ex#L10" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="init/1">
+
+  <div class="detail-header">
+    <a href="#init/1" class="detail-link" data-no-tooltip title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">init(opts)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/plugs/metrics_auth.ex#L8" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
 
     <footer class="footer">
       <p>
