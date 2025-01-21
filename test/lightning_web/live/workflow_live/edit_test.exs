@@ -2122,6 +2122,32 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   describe "AI Assistant:" do
     setup :create_workflow
 
+    test "non openfn.org users can access the AI Assistant", %{
+      conn: conn,
+      project: project,
+      user: user,
+      workflow: %{jobs: [job_1 | _]} = workflow
+    } do
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> "http://localhost:4001"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
+      end)
+
+      # user's email is not from @openfn.org
+      refute String.match?(user.email, ~r/@openfn\.org/i)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      render_async(view)
+
+      html = view |> element("#aichat-#{job_1.id}") |> render()
+      assert html =~ "Get started with the AI Assistant"
+    end
+
     @tag email: "user@openfn.org"
     test "correct information is displayed when the assistant is not configured",
          %{
@@ -2299,7 +2325,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
         user =
           insert(:user,
-            email: "email-#{Enum.random(1..1_000)}@openfn.org",
+            email: "email-#{Enum.random(1..1_000)}@testemail.org",
             preferences: %{"ai_assistant.disclaimer_read_at" => timestamp}
           )
 
