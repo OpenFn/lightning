@@ -110,7 +110,7 @@ defmodule Lightning.MixProject do
       {:opentelemetry_liveview, "~> 1.0.0-rc.4"},
       {:opentelemetry_oban, "~> 1.0.0"},
       {:opentelemetry_phoenix, "~> 1.1.1"},
-      {:opentelemetry_tesla, "~> 2.2.0"},
+      {:opentelemetry_tesla, "~> 2.3.0"},
       {:petal_components, "~> 2.5"},
       {:phoenix, "~> 1.7.11"},
       {:phoenix_ecto, "~> 4.6"},
