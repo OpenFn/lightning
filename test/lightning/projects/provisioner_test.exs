@@ -831,13 +831,13 @@ defmodule Lightning.Projects.ProvisionerTest do
           where: a.event == "inserted_by_provisioner",
           where: a.actor_id == ^user_id
 
-      assert Repo.one(inserted_query) != nil
+      assert Repo.exists?(inserted_query)
 
       unmodified_query =
         from a in Audit,
           where: a.item_id == ^second_workflow_id
 
-      assert Repo.one(unmodified_query) == nil
+      refute Repo.exists?(unmodified_query) == nil
 
       deleted_query =
         from a in Audit,
@@ -845,7 +845,7 @@ defmodule Lightning.Projects.ProvisionerTest do
           where: a.event == "deleted_by_provisioner",
           where: a.actor_id == ^user_id
 
-      assert Repo.one(deleted_query) != nil
+      assert Repo.exists?(deleted_query)
 
       updated_query =
         from a in Audit,
@@ -853,7 +853,7 @@ defmodule Lightning.Projects.ProvisionerTest do
           where: a.event == "updated_by_provisioner",
           where: a.actor_id == ^user_id
 
-      assert Repo.one(updated_query) != nil
+      assert Repo.exists?(updated_query)
     end
 
     test "functions correctly if there are no workflow changes", %{
