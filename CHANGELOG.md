@@ -19,10 +19,16 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v2.10.12] - 2025-01-21
+
+### Changed
+
 - PromEx metrics endpoint returns 401 on unauthorized requests.
   [#2823](https://github.com/OpenFn/lightning/issues/2823)
-
-### Fixed
+- Allow non-openfn.org users to access AI Assistant
+  [#2845](https://github.com/OpenFn/lightning/issues/2845)
 
 ## [v2.10.11] - 2025-01-21
 
