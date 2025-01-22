@@ -88,12 +88,12 @@ defmodule LightningWeb.WorkflowLive.JobView do
     ~H"""
     <.container id={"job-edit-view-#{@job.id}"}>
       <:top>
-        <div class="flex p-4 gap-6">
-          <div class="flex items-baseline font-semibold">
+        <div class="flex p-4 gap-4">
+          <div class="flex items-center font-semibold">
             <span>
               <.icon
                 name="hero-code-bracket-mini"
-                class="w-4 h-4 mr-2 text-indigo-500"
+                class="align-middle w-4 h-4 mr-1 text-indigo-500"
               />
             </span>
             <%= @job.name %>
@@ -104,22 +104,24 @@ defmodule LightningWeb.WorkflowLive.JobView do
               @form[:project_credential_id] && @form[:project_credential_id].value
             )
           } />
-          <LightningWeb.Components.Common.snapshot_version_chip
-            id="inspector-workflow-version"
-            version={@snapshot_version}
-            tooltip={
-              if @snapshot_version == "latest",
-                do: "This is the latest version of this workflow",
-                else:
-                  "You are viewing a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(@snapshot.inserted_at)}"
-            }
-          />
-          <LightningWeb.WorkflowLive.Components.online_users
-            id="inspector-online-users"
-            presences={@presences}
-            current_user={@current_user}
-            prior_user={@prior_user_presence.user}
-          />
+          <div class="flex gap-2">
+            <LightningWeb.Components.Common.snapshot_version_chip
+              id="inspector-workflow-version"
+              version={@snapshot_version}
+              tooltip={
+                if @snapshot_version == "latest",
+                  do: "This is the latest version of this workflow",
+                  else:
+                    "You are viewing a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(@snapshot.inserted_at)}"
+              }
+            />
+            <LightningWeb.WorkflowLive.Components.online_users
+              id="inspector-online-users"
+              presences={@presences}
+              current_user={@current_user}
+              prior_user={@prior_user_presence.user}
+            />
+          </div>
           <div class="flex flex-grow items-center justify-end">
             <.offline_indicator />
             <.link
@@ -232,13 +234,13 @@ defmodule LightningWeb.WorkflowLive.JobView do
 
   defp credential_block(assigns) do
     ~H"""
-    <div id="modal-header-credential-block" class="flex items-baseline">
+    <div id="modal-header-credential-block" class="flex items-center">
       <%= if @credential do %>
         <Common.tooltip
           id="credential-name-tooltip"
           title={"Credential: " <> @credential.name}
-          class="mr-2"
-          icon_class="text-indigo-500 h-4 w-4"
+          class="mr-1"
+          icon_class="align-middle text-indigo-500 h-4 w-4"
           icon="hero-lock-closed-mini"
         />
         <span class="text-xs text-gray-500 font-semibold">
@@ -248,8 +250,8 @@ defmodule LightningWeb.WorkflowLive.JobView do
         <Common.tooltip
           id="credential-name-tooltip"
           title="This step doesn't use a credential."
-          class="mr-2"
-          icon_class="text-gray-500 h-4 w-4"
+          class="mr-1"
+          icon_class="align-middle mb-1 text-gray-500 h-4 w-4"
           icon="hero-lock-open-mini"
         />
         <span class="text-xs text-gray-500 font-semibold">
@@ -272,12 +274,12 @@ defmodule LightningWeb.WorkflowLive.JobView do
       )
 
     ~H"""
-    <div id="modal-header-adaptor-block" class="flex items-baseline">
+    <div id="modal-header-adaptor-block" class="flex items-center">
       <Common.tooltip
         id="adaptor-name-tooltip"
         title={"Adaptor: " <> @package_name <> "@" <> @version}
-        class="mr-2"
-        icon_class="text-indigo-500 h-4 w-4"
+        class="mr-1"
+        icon_class="align-middle text-indigo-500 h-4 w-4"
         icon="hero-cube-mini"
       />
       <code class="text-xs text-gray-500 font-semibold">
