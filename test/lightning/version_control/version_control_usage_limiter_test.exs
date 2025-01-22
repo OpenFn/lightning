@@ -7,7 +7,7 @@ defmodule Lightning.VersionControl.VersionControlUsageLimiterTest do
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.VersionControl.VersionControlUsageLimiter
 
-  describe ".limit_github_sync/1" do
+  describe "limit_github_sync/1" do
     test "returns :ok when passed nil" do
       assert VersionControlUsageLimiter.limit_github_sync(nil) == :ok
     end
