@@ -18,7 +18,6 @@ defmodule Lightning.VersionControl do
   alias Lightning.VersionControl.GithubError
   alias Lightning.VersionControl.ProjectRepoConnection
   alias Lightning.VersionControl.VersionControlUsageLimiter
-  alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Workflow
 
   require Logger
@@ -146,7 +145,7 @@ defmodule Lightning.VersionControl do
              repo_connection.project_id
            ),
          snapshots <-
-           list_or_create_snapshots_for_project(repo_connection),
+           list_snapshots_for_project(repo_connection),
          {:ok, client} <-
            GithubClient.build_installation_client(
              repo_connection.github_installation_id
@@ -175,28 +174,15 @@ defmodule Lightning.VersionControl do
     end
   end
 
-  defp list_or_create_snapshots_for_project(
-         %{project_id: project_id} = repo_connection
-       ) do
+  defp list_snapshots_for_project(%{project_id: project_id}) do
     current_query =
       from w in Workflow,
-        left_join: s in assoc(w, :snapshots),
+        join: s in assoc(w, :snapshots),
         on: s.lock_version == w.lock_version,
         where: w.project_id == ^project_id and is_nil(w.deleted_at),
-        select: {w, s.id}
+        select: s.id
 
-    workflows = Repo.all(current_query)
-
-    Enum.reduce(workflows, [], fn {workflow, snapshot_id}, acc ->
-      if is_nil(snapshot_id) do
-        {:ok, snapshot} =
-          Snapshot.get_or_create_latest_for(workflow, repo_connection)
-
-        [snapshot.id | acc]
-      else
-        [snapshot_id | acc]
-      end
-    end)
+    Repo.all(current_query) |> Enum.reverse()
   end
 
   defp maybe_add_snapshots(inputs, snapshot_ids) do

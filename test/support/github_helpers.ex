@@ -324,12 +324,40 @@ defmodule Lightning.GithubHelpers do
     )
   end
 
+  def expect_create_workflow_dispatch_with_request_body(
+        repo,
+        workflow_path,
+        request_body,
+        opts \\ []
+      ) do
+    resp_body = Keyword.get(opts, :resp_body, "")
+    resp_status = Keyword.get(opts, :resp_status, 204)
+
+    json_body = Jason.encode!(request_body)
+
+    Mox.expect(
+      Lightning.Tesla.Mock,
+      :call,
+      fn %{
+           url:
+             "https://api.github.com/repos/" <>
+               ^repo <> "/actions/workflows/" <> ^workflow_path <> "/dispatches",
+           body: ^json_body
+         },
+         _opts ->
+        {:ok, %Tesla.Env{status: resp_status, body: resp_body}}
+      end
+    )
+  end
+
   def expect_create_workflow_dispatch(
         repo,
         workflow_path,
-        resp_status \\ 204,
-        resp_body \\ ""
+        opts \\ []
       ) do
+    resp_body = Keyword.get(opts, :resp_body, "")
+    resp_status = Keyword.get(opts, :resp_status, 204)
+
     Mox.expect(
       Lightning.Tesla.Mock,
       :call,

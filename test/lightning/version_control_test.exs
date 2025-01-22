@@ -2,6 +2,10 @@ defmodule Lightning.VersionControlTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Auditing.Audit
+  alias Lightning.Extensions.MockUsageLimiter
+  alias Lightning.Extensions.Message
+  alias Lightning.Extensions.UsageLimiting.Action
+  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Repo
   alias Lightning.VersionControl
   alias Lightning.VersionControl.ProjectRepoConnection
@@ -559,56 +563,94 @@ defmodule Lightning.VersionControlTest do
       verify_on_exit!()
 
       project = insert(:project)
+
       workflow = insert(:simple_workflow, project: project)
-      user = user_with_valid_github_oauth()
+      {:ok, snapshot} = Snapshot.create(workflow)
+
+      other_workflow = insert(:simple_workflow, project: project)
+      {:ok, other_snapshot} = Snapshot.create(other_workflow)
+
       repo_connection = insert(:project_repo_connection, project: project)
 
       [
+        commit_message: "my little commit message",
         project: project,
-        user: user,
         repo_connection: repo_connection,
+        snapshots: [snapshot, other_snapshot],
         workflow: workflow
       ]
     end
 
-    test "creates snapshots for workflows without snapshots", %{
-      user: user,
-      repo_connection: repo_connection,
-      workflow: workflow
+    test "checks if github sync is rate limited", %{
+      commit_message: commit_message,
+      project: %{id: project_id},
+      repo_connection: repo_connection
     } do
-      refute Snapshot.get_current_for(workflow)
+      action = %Action{type: :github_sync}
+      context = %Context{project_id: project_id}
 
-      expect_create_installation_token(repo_connection.github_installation_id)
-      expect_get_repo(repo_connection.repo)
-      expect_create_workflow_dispatch(repo_connection.repo, "openfn-pull.yml")
+      Mox.expect(MockUsageLimiter, :limit_action, fn ^action, ^context ->
+        :ok
+      end)
 
-      assert :ok = VersionControl.initiate_sync(repo_connection, user.email)
-      assert Snapshot.get_current_for(workflow)
+      VersionControl.initiate_sync(repo_connection, commit_message)
     end
 
-    test "creates audit entries for any snapshots created", %{
-      user: user,
-      repo_connection: %{id: repo_connection_id} = repo_connection,
-      workflow: %{id: workflow_id} = workflow
+    test "returns error if github sync is rate limited", %{
+      commit_message: commit_message,
+      project: %{id: project_id},
+      repo_connection: repo_connection
+    } do
+      action = %Action{type: :github_sync}
+      context = %Context{project_id: project_id}
+
+      message = %Message{text: "You melted the CPU."}
+
+      Mox.stub(MockUsageLimiter, :limit_action, fn ^action, ^context ->
+        {:error, :melted, message}
+      end)
+
+      assert {:error, ^message} =
+               VersionControl.initiate_sync(repo_connection, commit_message)
+    end
+
+    test "creates GH workflow dispatch event", %{
+      commit_message: commit_message,
+      repo_connection: repo_connection,
+      snapshots: [snapshot, other_snapshot]
     } do
       expect_create_installation_token(repo_connection.github_installation_id)
       expect_get_repo(repo_connection.repo)
-      expect_create_workflow_dispatch(repo_connection.repo, "openfn-pull.yml")
 
-      assert :ok = VersionControl.initiate_sync(repo_connection, user.email)
+      expect_create_workflow_dispatch_with_request_body(
+        repo_connection.repo,
+        "openfn-pull.yml",
+        %{
+          ref: "main",
+          inputs: %{
+            projectId: repo_connection.project_id,
+            apiSecretName: api_secret_name(repo_connection),
+            branch: repo_connection.branch,
+            pathToConfig: path_to_config(repo_connection),
+            commitMessage: commit_message,
+            snapshots: "#{other_snapshot.id} #{snapshot.id}"
+          }
+        }
+      )
 
-      %{id: snapshot_id} = Snapshot.get_current_for(workflow)
+      assert :ok = VersionControl.initiate_sync(repo_connection, commit_message)
+    end
 
-      audit = Audit |> Repo.one!()
+    defp api_secret_name(%{project_id: project_id}) do
+      project_id
+      |> String.replace("-", "_")
+      |> then(&"OPENFN_#{&1}_API_KEY")
+    end
 
-      assert %{
-               event: "snapshot_created",
-               item_id: ^workflow_id,
-               actor_id: ^repo_connection_id,
-               changes: %{
-                 after: %{"snapshot_id" => ^snapshot_id}
-               }
-             } = audit
+    defp path_to_config(repo_connection) do
+      repo_connection
+      |> ProjectRepoConnection.config_path()
+      |> Path.relative_to(".")
     end
   end
 
