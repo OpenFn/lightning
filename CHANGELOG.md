@@ -17,6 +17,7 @@ and this project adheres to
 
 ### Added
 
+<<<<<<< HEAD
 - Add support for local adaptors. This can be enabled via `LOCAL_ADAPTORS=true`
   and path specified via `OPENFN_ADAPTORS_REPO=./path/to/repo/`
   [#905](https://github.com/OpenFn/lightning/issues/905)
@@ -25,6 +26,9 @@ and this project adheres to
 - Audit the provisioning of projects via the API
   [#2718](https://github.com/OpenFn/lightning/issues/2718)
 - Temporary instrumentation for JobEditor to help identify performance issues.
+  [#2617](https://github.com/OpenFn/lightning/issues/2617)
+- Indexes to foreign keys on `workflow_edges` and `steps` tables to try and
+  alleviate slow loading of the job editor.
   [#2617](https://github.com/OpenFn/lightning/issues/2617)
 
 ### Changed
