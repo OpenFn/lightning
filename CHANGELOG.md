@@ -21,6 +21,7 @@ and this project adheres to
 
 - Remove snapshot creation when performing the Github sync - no longer needed
   post-migration.
+  [#2703](https://github.com/OpenFn/lightning/issues/2703)
 - Remove use of Snapshot.get_or_create_latest_for from tests.
   [#2703](https://github.com/OpenFn/lightning/issues/2703)
 
