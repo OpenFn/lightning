@@ -631,6 +631,9 @@ defmodule Lightning.Config.Bootstrap do
         env!("KAFKA_NUMBER_OF_MESSAGES_PER_SECOND", :float, 1),
       number_of_processors: env!("KAFKA_NUMBER_OF_PROCESSORS", :integer, 1)
 
+      config :lightning, :ui_metrics_tracking,
+        enabled: env!("UI_METRICS_ENABLED", &Utils.ensure_boolean/1, false)
+
     # # ==============================================================================
 
     setup_storage()
