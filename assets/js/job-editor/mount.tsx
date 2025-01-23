@@ -60,6 +60,8 @@ export default {
     // this.handleContentChange(this.currentContent);
   },
   mounted(this: JobEditorEntrypoint) {
+    instrumentStart('Mount to first render');
+
     window.jobEditor = this;
 
     this._debouncedPushChange = pDebounce(this.pushChange, EDITOR_DEBOUNCE_MS);
@@ -76,7 +78,16 @@ export default {
       }
       this.setupObserver();
       this.render();
-      this.requestMetadata().then(() => this.render());
+
+      instrumentFinish('Mount to first render');
+
+      this.requestMetadata().then(() => {
+        instrumentStart('Render - metadata received');
+
+        this.render()
+
+        instrumentFinish('Render - metadata received');
+      });
     });
   },
   handleContentChange(content: string) {
@@ -125,7 +136,13 @@ export default {
   },
   requestMetadata() {
     this.metadata = true; // indicate we're loading
+
+    instrumentStart('Render - prior to requesting metadata');
+
     this.render();
+
+    instrumentFinish('Render - prior to requesting metadata');
+
     return new Promise(resolve => {
       const callbackRef = this.handleEvent('metadata_ready', data => {
         this.removeHandleEvent(callbackRef);
@@ -188,4 +205,14 @@ function checkAdaptorVersion(adaptor: string) {
       "job-editor hook received an adaptor with @latest as it's version - to load docs a specific version must be provided"
     );
   }
+}
+
+function instrumentStart(label: string) {
+  console.debug(`${label} - start`, new Date().toISOString());
+  console.time(label);
+}
+
+function instrumentFinish(label: string) {
+  console.debug(`${label} - finish`, new Date().toISOString());
+  console.timeEnd(label);
 }
