@@ -118,6 +118,27 @@ defmodule Lightning.DigestEmailWorkerTest do
                  workflow: workflow_b
                }
     end
+
+    test "Gets project digest data with no activity for all digest periods" do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user_id: user.id, digest: :daily}])
+
+      workflow = insert(:simple_workflow, project: project)
+
+      for period <- [:daily, :weekly, :monthly] do
+        start_date = DigestEmailWorker.digest_to_date(period)
+        end_date = Timex.now()
+
+        assert DigestEmailWorker.get_digest_data(workflow, start_date, end_date) ==
+                 %{
+                   failed_workorders: 0,
+                   successful_workorders: 0,
+                   workflow: workflow
+                 }
+      end
+    end
   end
 
   defp create_runs(
