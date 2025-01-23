@@ -12,7 +12,7 @@ Closes #__
 
 1. *(Is there anything else the reviewer should know or look out for?)*
 
-## AI Usage
+### AI Usage
 
 Please disclose how you've used AI in this work (it's cool, we just want to know!):
 
