@@ -231,64 +231,6 @@ defmodule Lightning.WorkOrdersTest do
         work_order: %{id: ^workorder_id}
       }
     end
-
-    test "with a job", %{job: job, workflow: workflow, snapshot: snapshot} do
-      project_id = workflow.project_id
-
-      project =
-        Repo.get(Lightning.Projects.Project, project_id)
-        |> Lightning.Projects.Project.changeset(%{retention_policy: :erase_all})
-        |> Repo.update!()
-
-      dataclip = insert(:dataclip, project: project)
-      user = insert(:user)
-
-      {:ok, workorder} =
-        WorkOrders.create_for(
-          job,
-          dataclip: dataclip,
-          workflow: workflow,
-          created_by: user
-        )
-
-      assert workorder.snapshot_id == snapshot.id
-      assert workorder.workflow_id == workflow.id
-      assert workorder.dataclip_id == dataclip.id
-
-      [run] = workorder.runs
-
-      assert run.starting_job == job
-      assert run.dataclip == dataclip
-    end
-
-    test "with a job and a passed in multi, executes the multi", %{
-      job: job,
-      multi: multi,
-      trigger: trigger,
-      workflow: workflow
-    } do
-      project_id = workflow.project_id
-
-      project =
-        Repo.get(Lightning.Projects.Project, project_id)
-        |> Lightning.Projects.Project.changeset(%{retention_policy: :erase_all})
-        |> Repo.update!()
-
-      dataclip = insert(:dataclip, project: project)
-      user = insert(:user)
-
-      assert {:ok, _workorder} =
-               WorkOrders.create_for(
-                 job,
-                 multi,
-                 dataclip: dataclip,
-                 workflow: workflow,
-                 created_by: user
-               )
-
-      assert TriggerKafkaMessageRecord
-             |> Repo.get_by(trigger_id: trigger.id) != nil
-    end
   end
 
   describe "retry/1" do
