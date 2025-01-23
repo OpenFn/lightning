@@ -17,12 +17,17 @@ and this project adheres to
 
 ### Added
 
+- Audit the provisioning of projects via the API
+  [#2718](https://github.com/OpenFn/lightning/issues/2718)
+
 ### Changed
 
 - Remove snapshot creation when performing the Github sync - no longer needed
   post-migration.
   [#2703](https://github.com/OpenFn/lightning/issues/2703)
 - Remove some redundant code related to `WorkOrders.create_for`.
+  [#2703](https://github.com/OpenFn/lightning/issues/2703)
+- Remove use of Snapshot.get_or_create_latest_for from tests.
   [#2703](https://github.com/OpenFn/lightning/issues/2703)
 
 ### Fixed

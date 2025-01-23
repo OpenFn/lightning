@@ -11,7 +11,6 @@ defmodule Lightning.InvocationTest do
   require SearchParams
 
   defp build_workflow(opts) do
-    actor = insert(:user)
     job = build(:job)
     trigger = build(:trigger)
 
@@ -23,7 +22,7 @@ defmodule Lightning.InvocationTest do
       |> insert()
 
     {:ok, snapshot} =
-      Lightning.Workflows.Snapshot.get_or_create_latest_for(workflow, actor)
+      Lightning.Workflows.Snapshot.create(workflow)
 
     %{
       workflow: workflow,
