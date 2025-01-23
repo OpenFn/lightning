@@ -54,6 +54,8 @@ defmodule Lightning.Projects.Provisioner do
              Repo.insert_or_update(project_changeset),
            updated_project <- preload_dependencies(project),
            {:ok, _changes} <-
+             audit_workflows(project_changeset, user_or_repo_connection),
+           {:ok, _changes} <-
              create_snapshots(
                project_changeset,
                updated_project.workflows,
@@ -76,6 +78,64 @@ defmodule Lightning.Projects.Provisioner do
     |> parse_document(data)
     |> maybe_add_project_user(user_or_repo_connection)
     |> maybe_add_project_credentials(user_or_repo_connection)
+  end
+
+  defp audit_workflows(project_changeset, user_or_repo_connection) do
+    project_changeset
+    |> get_assoc(:workflows)
+    |> Enum.reduce(
+      Multi.new(),
+      fn workflow_changeset, multi ->
+        append_audit_multi(workflow_changeset, multi, user_or_repo_connection)
+      end
+    )
+    |> Repo.transaction()
+  end
+
+  defp append_audit_multi(workflow_changeset, multi, user_or_repo_connection) do
+    case classify_audit(workflow_changeset) do
+      {:no_action, _nil} ->
+        multi
+
+      {action, workflow_id} ->
+        Multi.append(
+          multi,
+          audit_workflow_multi(action, workflow_id, user_or_repo_connection)
+        )
+    end
+  end
+
+  defp classify_audit(%{action: :insert, changes: %{id: workflow_id}}) do
+    {:insert, workflow_id}
+  end
+
+  defp classify_audit(%{action: :delete, data: %{id: workflow_id}}) do
+    {:delete, workflow_id}
+  end
+
+  defp classify_audit(%{
+         action: :update,
+         data: %{id: workflow_id},
+         changes: changes
+       })
+       when changes != %{} do
+    {:update, workflow_id}
+  end
+
+  defp classify_audit(_unrecognised_changeset) do
+    {:no_action, nil}
+  end
+
+  defp audit_workflow_multi(action, workflow_id, user_or_repo_connection) do
+    Multi.new()
+    |> Multi.insert(
+      "audit_#{action}_workflow_#{workflow_id}",
+      Audit.provisioner_event(
+        action,
+        workflow_id,
+        user_or_repo_connection
+      )
+    )
   end
 
   defp create_snapshots(
