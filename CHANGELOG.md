@@ -19,6 +19,8 @@ and this project adheres to
 
 - Audit the provisioning of projects via the API
   [#2718](https://github.com/OpenFn/lightning/issues/2718)
+- Temporary instrumentation for JobEditor to help identify performance issues.
+  [#2617](https://github.com/OpenFn/lightning/issues/2617)
 
 ### Changed
 
