@@ -319,6 +319,42 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       assert workflow_ids == expected_workflow_ids
     end
+
+    test "creates collections" do
+      Mox.verify_on_exit!()
+      user = insert(:user)
+
+      %{body: body, project_id: project_id} = valid_document()
+
+      collection_id = Ecto.UUID.generate()
+      collection_name = "test-collection"
+
+      body_with_collections =
+        Map.put(body, "collections", [
+          %{id: collection_id, name: collection_name}
+        ])
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      {:ok, project} =
+        Provisioner.import_document(
+          %Lightning.Projects.Project{},
+          user,
+          body_with_collections
+        )
+
+      assert %{id: ^project_id, collections: [collection]} = project
+
+      assert %{
+               id: ^collection_id,
+               name: ^collection_name,
+               project_id: ^project_id
+             } = collection
+    end
   end
 
   describe "import_document/2 with an existing project" do

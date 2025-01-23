@@ -374,7 +374,10 @@ defmodule Lightning.ExportUtils do
 
   def generate_new_yaml(project, nil) do
     project =
-      Lightning.Repo.preload(project, project_credentials: [credential: :user])
+      Lightning.Repo.preload(project,
+        project_credentials: [credential: :user],
+        collections: []
+      )
 
     yaml =
       project
@@ -387,7 +390,10 @@ defmodule Lightning.ExportUtils do
 
   def generate_new_yaml(project, snapshots) when is_list(snapshots) do
     project =
-      Lightning.Repo.preload(project, project_credentials: [credential: :user])
+      Lightning.Repo.preload(project,
+        project_credentials: [credential: :user],
+        collections: []
+      )
 
     yaml =
       snapshots
