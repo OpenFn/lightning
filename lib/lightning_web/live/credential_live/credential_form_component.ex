@@ -604,11 +604,9 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     # TODO: Gracefully determine which adaptors define custom credential types
     # and which adaptors use OAuth2 credential types. (Edit for Jan 24th, 2025:
     # or which adaptors shouldn't use credentials at all! E.g., "Collections".)
-    |> IO.inspect(label: "before")
     |> List.delete({"Googlesheets", "googlesheets", nil, nil})
     |> List.delete({"Gmail", "gmail", nil, nil})
     |> List.delete({"Collections", "collections", nil, nil})
-    |> IO.inspect(label: "after")
     |> Enum.sort_by(& &1, :asc)
   end
 
