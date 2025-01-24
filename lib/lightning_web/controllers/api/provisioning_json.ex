@@ -4,6 +4,7 @@ defmodule LightningWeb.API.ProvisioningJSON do
   import LightningWeb.CoreComponents, only: [translate_error: 1]
   import Ecto.Changeset
 
+  alias Lightning.Collections.Collection
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Workflows.Edge
@@ -31,6 +32,12 @@ defmodule LightningWeb.API.ProvisioningJSON do
     |> Map.put(
       :project_credentials,
       project.project_credentials
+      |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
+      |> Enum.map(&as_json/1)
+    )
+    |> Map.put(
+      :collections,
+      project.collections
       |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
       |> Enum.map(&as_json/1)
     )
@@ -107,6 +114,10 @@ defmodule LightningWeb.API.ProvisioningJSON do
       name: project_credential.credential.name,
       owner: project_credential.credential.user.email
     }
+  end
+
+  def as_json(%Collection{} = collection) do
+    %{id: collection.id, name: collection.name}
   end
 
   defp drop_keys_with_nil_value(map) do

@@ -544,7 +544,7 @@ defmodule Lightning.ProjectsTest do
       project = project_fixture(name: "newly-created-project")
 
       expected_yaml =
-        "name: newly-created-project\ndescription: null\ncredentials: null\nworkflows: null"
+        "name: newly-created-project\ndescription: null\ncollections: null\ncredentials: null\nworkflows: null"
 
       {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
 
