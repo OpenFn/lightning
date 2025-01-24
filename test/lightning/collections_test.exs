@@ -250,10 +250,23 @@ defmodule Lightning.CollectionsTest do
     test "creates a new entry in the collection for the given collection" do
       collection = insert(:collection)
 
-      assert :ok = Collections.put(collection, "some-key", "some-value")
+      assert :ok = Collections.put(collection, "some-key1", "some-value1")
+      assert :ok = Collections.put(collection, "some-key12", "some-value12")
 
-      assert %{key: "some-key", value: "some-value"} =
-               Repo.get_by!(Item, key: "some-key")
+      byte_size1 = byte_size("some-key1") + byte_size("some-value1")
+
+      assert %{key: "some-key1", value: "some-value1", byte_size: ^byte_size1} =
+               Repo.get_by!(Item, key: "some-key1")
+
+      byte_size12 = byte_size("some-key12") + byte_size("some-value12")
+
+      assert %{key: "some-key12", value: "some-value12", byte_size: ^byte_size12} =
+               Repo.get_by!(Item, key: "some-key12")
+
+      byte_size_sum = byte_size1 + byte_size12
+
+      assert %{byte_size_sum: ^byte_size_sum} =
+               Repo.get!(Collection, collection.id)
     end
 
     test "updates the value of an item when key exists" do
@@ -264,10 +277,15 @@ defmodule Lightning.CollectionsTest do
       assert %{key: "some-key", value: "some-value1"} =
                Repo.get_by!(Item, key: "some-key")
 
-      assert :ok = Collections.put(collection, "some-key", "some-value2")
+      assert :ok = Collections.put(collection, "some-key", "some-value12")
 
-      assert %{key: "some-key", value: "some-value2"} =
+      assert %{key: "some-key", value: "some-value12"} =
                Repo.get_by!(Item, key: "some-key")
+
+      byte_size_sum = byte_size("some-key") + byte_size("some-value12")
+
+      assert %{byte_size_sum: ^byte_size_sum} =
+               Repo.get!(Collection, collection.id)
     end
 
     test "returns an :error if the value is bigger than max len" do
@@ -312,16 +330,32 @@ defmodule Lightning.CollectionsTest do
     test "inserts multiple entries at once in a given collection" do
       collection = insert(:collection)
 
-      items =
-        Enum.map(1..5, fn i -> %{"key" => "key#{i}", "value" => "value#{i}"} end)
+      {items, storage_used} =
+        Enum.map_reduce(10..50, 0, fn i, mem_used ->
+          {
+            %{"key" => "key#{i}", "value" => "value#{i}"},
+            mem_used + byte_size("key#{i}") + byte_size("value#{i}")
+          }
+        end)
 
-      assert {:ok, 5} = Collections.put_all(collection, items)
+      assert {:ok, 41} = Collections.put_all(collection, items)
 
-      assert Item |> Repo.all() |> Enum.map(&Map.take(&1, [:key, :value])) ==
-               Enum.map(items, &%{key: &1["key"], value: &1["value"]})
+      assert Item
+             |> Repo.all()
+             |> Enum.map(&Map.take(&1, [:key, :value, :byte_size])) ==
+               Enum.map(items, fn item ->
+                 %{
+                   key: item["key"],
+                   value: item["value"],
+                   byte_size: byte_size(item["key"]) + byte_size(item["value"])
+                 }
+               end)
+
+      assert %{byte_size_sum: ^storage_used} =
+               Repo.get!(Collection, collection.id)
     end
 
-    test "replaces conflicting values and updates timestamp" do
+    test "replaces conflicting values, timestamps and byte_size" do
       collection = insert(:collection)
 
       items =
@@ -352,6 +386,26 @@ defmodule Lightning.CollectionsTest do
 
       assert %{value: "value5", updated_at: ^updated_at5} =
                Repo.get_by(Item, key: "key5")
+
+      final_items = Enum.drop(items, 2) ++ update_items
+
+      assert Item
+             |> Repo.all()
+             |> Enum.map(&Map.take(&1, [:key, :value, :byte_size])) ==
+               Enum.map(final_items, fn item ->
+                 %{
+                   key: item["key"],
+                   value: item["value"],
+                   byte_size: byte_size(item["key"]) + byte_size(item["value"])
+                 }
+               end)
+
+      storage_used =
+        Enum.map(final_items, &(byte_size(&1["key"]) + byte_size(&1["value"])))
+        |> Enum.sum()
+
+      assert %{byte_size_sum: ^storage_used} =
+               Repo.get!(Collection, collection.id)
     end
 
     test "raises Postgrex error when an item is bigger than allowed max len" do
@@ -372,12 +426,26 @@ defmodule Lightning.CollectionsTest do
     test "deletes an entry for the given collection" do
       collection = insert(:collection)
 
-      %{key: key} =
+      %{key: key1, byte_size: byte_size1} =
         insert(:collection_item, collection: collection)
 
-      assert :ok = Collections.delete(collection, key)
+      %{key: key2, byte_size: byte_size2} =
+        insert(:collection_item, collection: collection)
 
-      refute Collections.get(collection, key)
+      _collection =
+        Repo.update!(
+          Ecto.Changeset.change(collection, %{
+            byte_size_sum: byte_size1 + byte_size2
+          })
+        )
+
+      assert :ok = Collections.delete(collection, key1)
+
+      refute Collections.get(collection, key1)
+      assert Collections.get(collection, key2)
+
+      assert %{byte_size_sum: ^byte_size2} =
+               Repo.get!(Collection, collection.id)
     end
 
     test "returns an :error if the collection does not exist" do

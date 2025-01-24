@@ -321,21 +321,23 @@ defmodule Lightning.Factories do
   def collection_factory do
     %Lightning.Collections.Collection{
       project: build(:project),
-      name: sequence(:name, &"collection-#{&1}")
+      name: sequence(:name, &"collection-#{&1}"),
+      byte_size_sum: 0
     }
   end
 
   def collection_item_factory do
     %Lightning.Collections.Item{
       id: sequence(:id, & &1),
-      key: sequence(:key, &"key-#{&1}"),
-      value: sequence(:value, &"value-#{&1}"),
+      key: sequence(:key, &"key-#{&1}", start_at: 100),
+      value: sequence(:value, &"value-#{&1}", start_at: 100),
       collection: build(:collection),
       inserted_at:
         sequence(
           :inserted_at,
           &DateTime.add(DateTime.utc_now(), &1, :microsecond)
-        )
+        ),
+      byte_size: String.length("key-100") + String.length("value-100")
     }
   end
 

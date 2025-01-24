@@ -10,12 +10,14 @@ defmodule Lightning.Collections.Collection do
           id: Ecto.UUID.t(),
           project_id: Ecto.UUID.t(),
           name: String.t(),
+          byte_size_sum: integer(),
           inserted_at: NaiveDateTime.t(),
           updated_at: NaiveDateTime.t()
         }
 
   schema "collections" do
     field :name, :string
+    field :byte_size_sum, :integer
     belongs_to :project, Lightning.Projects.Project
     has_many :items, Lightning.Collections.Item
 

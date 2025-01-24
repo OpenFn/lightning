@@ -10,6 +10,7 @@ defmodule Lightning.Collections.Item do
           collection_id: Ecto.UUID.t(),
           key: String.t(),
           value: String.t(),
+          byte_size: integer(),
           inserted_at: DateTime.t(),
           updated_at: DateTime.t()
         }
@@ -19,8 +20,14 @@ defmodule Lightning.Collections.Item do
     field :id, :integer, primary_key: true
     belongs_to :collection, Lightning.Collections.Collection, primary_key: true
 
+    # Note: The value type is a string because Lightning doesn't need to decode it to a map and
+    #       encode it again to send to Postgres on every write. This is applicable also to all
+    #       Collection read operations from Runtime worker or external API calls.
+    #       Notice that the CPU + memory saved cost becomes meaningful once the JSON value
+    #       max length is 1MB.
     field :key, :string
     field :value, :string
+    field :byte_size, :integer
 
     timestamps(type: :utc_datetime_usec)
   end
@@ -28,7 +35,7 @@ defmodule Lightning.Collections.Item do
   @doc false
   def changeset(entry, attrs) do
     entry
-    |> cast(attrs, [:collection_id, :key, :value])
+    |> cast(attrs, [:collection_id, :key, :value, :byte_size])
     |> validate_required([:collection_id, :key, :value])
     |> validate_length(:value, max: 1_000_000)
     |> unique_constraint([:collection_id, :key])
