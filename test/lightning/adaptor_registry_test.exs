@@ -1,21 +1,15 @@
 defmodule Lightning.AdaptorRegistryTest do
   use Lightning.DataCase, async: false
 
-  use Mimic
+  import Mox
+  import Tesla.Test
+
+  setup :set_mox_from_context
+  setup :verify_on_exit!
 
   alias Lightning.AdaptorRegistry
 
   describe "start_link/1" do
-    # AdaptorRegistry is a GenServer, and so stubbed (external) functions must
-    # be mocked globally. See: https://github.com/edgurgel/mimic#private-and-global-mode
-    setup :set_mimic_from_context
-
-    setup do
-      stub(:hackney)
-
-      :ok
-    end
-
     test "uses cache from a specific location" do
       file_path =
         Briefly.create!(extname: ".json")
@@ -39,19 +33,26 @@ defmodule Lightning.AdaptorRegistryTest do
     end
 
     test "retrieves a list of adaptors when caching is disabled" do
-      # :hackney.request(request.method, request.url, request.headers, request.body, hn_options)
-      expect(:hackney, :request, fn
-        :get,
-        "https://registry.npmjs.org/-/user/openfn/package",
-        [],
-        "",
-        [recv_timeout: 15_000, pool: :default] ->
-          {:ok, 200, "headers", :client}
-      end)
+      default_npm_response =
+        File.read!("test/fixtures/language-common-npm.json") |> Jason.decode!()
 
-      expect(:hackney, :body, fn :client, _timeout ->
-        {:ok, File.read!("test/fixtures/openfn-packages-npm.json")}
-      end)
+      expect_tesla_call(
+        times: 7,
+        returns: fn env, [] ->
+          case env.url do
+            "https://registry.npmjs.org/-/user/openfn/package" ->
+              {:ok,
+               json(
+                 %Tesla.Env{status: 200},
+                 File.read!("test/fixtures/openfn-packages-npm.json")
+                 |> Jason.decode!()
+               )}
+
+            "https://registry.npmjs.org/@openfn/" <> _adaptor ->
+              {:ok, json(%Tesla.Env{status: 200}, default_npm_response)}
+          end
+        end
+      )
 
       expected_adaptors = [
         "@openfn/language-asana",
@@ -62,25 +63,30 @@ defmodule Lightning.AdaptorRegistryTest do
         "@openfn/language-salesforce"
       ]
 
-      stub(:hackney, :body, fn :adaptor, _timeout ->
-        {:ok, File.read!("test/fixtures/language-common-npm.json")}
-      end)
-
-      stub(:hackney, :request, fn
-        :get,
-        "https://registry.npmjs.org/" <> adaptor,
-        [],
-        "",
-        [recv_timeout: 15_000, pool: :default] ->
-          assert adaptor in expected_adaptors
-          {:ok, 200, "headers", :adaptor}
-      end)
-
       start_supervised!(
         {AdaptorRegistry, [name: :test_adaptor_registry, use_cache: false]}
       )
 
       results = AdaptorRegistry.all(:test_adaptor_registry)
+
+      assert_received_tesla_call(env, [])
+
+      assert_tesla_env(env, %Tesla.Env{
+        method: :get,
+        url: "https://registry.npmjs.org/-/user/openfn/package"
+      })
+
+      1..length(expected_adaptors)
+      |> Enum.each(fn _ ->
+        assert_received_tesla_call(env, [])
+
+        assert %Tesla.Env{
+                 method: :get,
+                 url: "https://registry.npmjs.org/" <> adaptor
+               } = env
+
+        assert adaptor in expected_adaptors
+      end)
 
       assert length(results) == 6
 

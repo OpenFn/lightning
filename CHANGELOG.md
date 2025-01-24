@@ -22,10 +22,43 @@ and this project adheres to
   [#905](https://github.com/OpenFn/lightning/issues/905)
 - Add component injection for AI responses feedback
   [#2495](https://github.com/OpenFn/lightning/issues/2495)
+- Audit the provisioning of projects via the API
+  [#2718](https://github.com/OpenFn/lightning/issues/2718)
 
 ### Changed
 
+- Remove snapshot creation when performing the Github sync - no longer needed
+  post-migration. [#2703](https://github.com/OpenFn/lightning/issues/2703)
+- Remove some redundant code related to `WorkOrders.create_for`.
+  [#2703](https://github.com/OpenFn/lightning/issues/2703)
+- Remove use of Snapshot.get_or_create_latest_for from tests.
+  [#2703](https://github.com/OpenFn/lightning/issues/2703)
+- Bump PostCSS [#2863](https://github.com/OpenFn/lightning/pull/2863)
+- Replaced HTTPoison with Tesla in the AdaptorRegistry.
+  [#2861](https://github.com/OpenFn/lightning/pull/2861)
+
 ### Fixed
+
+## [v2.10.12] - 2025-01-21
+
+### Changed
+
+- PromEx metrics endpoint returns 401 on unauthorized requests.
+  [#2823](https://github.com/OpenFn/lightning/issues/2823)
+- Allow non-openfn.org users to access AI Assistant
+  [#2845](https://github.com/OpenFn/lightning/issues/2845)
+
+## [v2.10.11] - 2025-01-21
+
+### Added
+
+- Add component injection for AI responses feedback
+  [#2495](https://github.com/OpenFn/lightning/issues/2495)
+
+### Fixed
+
+- Fix `z-index` for unsaved workflow dot on workflow edit page
+  [#2809](https://github.com/OpenFn/lightning/issues/2809)
 
 ## [v2.10.10] - 2025-01-15
 

@@ -26,12 +26,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
   describe "New credential from project context " do
     setup %{project: project} do
-      actor = insert(:user)
       %{job: job} = workflow_job_fixture(project_id: project.id)
       workflow = Repo.get(Workflow, job.workflow_id)
 
-      {:ok, snapshot} =
-        Workflows.Snapshot.get_or_create_latest_for(workflow, actor)
+      {:ok, snapshot} = Workflows.Snapshot.create(workflow)
 
       %{job: job, workflow: workflow, snapshot: snapshot}
     end
@@ -371,15 +369,17 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     end
 
     test "Switching between workflow versions maintains correct read-only and edit modes",
-         %{conn: conn, project: project, workflow: workflow} do
+         %{
+           conn: conn,
+           project: project,
+           snapshot: snapshot,
+           workflow: workflow
+         } do
       {:ok, view, _html} =
         live(
           conn,
           ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
         )
-
-      {:ok, snapshot} =
-        Snapshot.get_or_create_latest_for(workflow, insert(:user))
 
       assert snapshot.lock_version == workflow.lock_version
 
@@ -629,7 +629,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     test "Creating an audit event on rerun", %{
       conn: conn,
       project: project,
-      user: %{id: user_id} = user,
+      snapshot: snapshot,
+      user: %{id: user_id},
       workflow: %{id: workflow_id} = workflow
     } do
       {:ok, view, _html} =
@@ -637,8 +638,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           conn,
           ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
         )
-
-      {:ok, snapshot} = Snapshot.get_or_create_latest_for(workflow, user)
 
       view |> fill_workflow_name("#{workflow.name} v2")
 
@@ -713,12 +712,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
          %{
            conn: conn,
            project: project,
+           snapshot: earliest_snapshot,
            user: user,
            workflow: workflow
          } do
-      {:ok, earliest_snapshot} =
-        Snapshot.get_or_create_latest_for(workflow, user)
-
       run_1 =
         insert(:run,
           work_order: build(:workorder, workflow: workflow),
@@ -745,7 +742,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         Workflows.change_workflow(workflow, %{jobs: jobs_attrs})
         |> Workflows.save_workflow(user)
 
-      {:ok, latest_snapshot} = Snapshot.get_or_create_latest_for(workflow, user)
+      latest_snapshot = Snapshot.get_current_for(workflow)
 
       run_2 =
         insert(:run,
@@ -817,11 +814,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     test "Can't switch to the latest version from a deleted step", %{
       conn: conn,
       project: project,
+      snapshot: snapshot,
       user: user,
       workflow: workflow
     } do
-      {:ok, snapshot} = Snapshot.get_or_create_latest_for(workflow, user)
-
       run =
         insert(:run,
           work_order: build(:workorder, workflow: workflow),
@@ -848,7 +844,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         Workflows.change_workflow(workflow, %{jobs: jobs_attrs})
         |> Workflows.save_workflow(user)
 
-      {:ok, latest_snapshot} = Snapshot.get_or_create_latest_for(workflow, user)
+      latest_snapshot = Snapshot.get_current_for(workflow)
 
       insert(:run,
         work_order: build(:workorder, workflow: workflow),
@@ -1371,9 +1367,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         |> with_trigger(trigger)
         |> with_edge({trigger, job})
         |> insert()
-
-      {:ok, _snapshot} =
-        Workflows.Snapshot.get_or_create_latest_for(workflow, insert(:user))
+        |> with_snapshot()
 
       {:ok, view, _html} =
         live(
@@ -1406,11 +1400,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         |> with_edge({trigger, job_a})
         |> with_edge({job_a, job_b})
         |> insert()
+        |> with_snapshot()
 
       insert(:step, job: job_b)
-
-      {:ok, _snapshot} =
-        Workflows.Snapshot.get_or_create_latest_for(workflow, insert(:user))
 
       {:ok, view, _html} =
         live(
@@ -1460,9 +1452,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         |> with_edge({job_a, job_b})
         |> with_edge({job_b, job_c})
         |> insert()
-
-      {:ok, _snapshot} =
-        Workflows.Snapshot.get_or_create_latest_for(workflow, insert(:user))
+        |> with_snapshot()
 
       {:ok, view, html} =
         live(
@@ -2183,6 +2173,32 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   describe "AI Assistant:" do
     setup :create_workflow
 
+    test "non openfn.org users can access the AI Assistant", %{
+      conn: conn,
+      project: project,
+      user: user,
+      workflow: %{jobs: [job_1 | _]} = workflow
+    } do
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> "http://localhost:4001"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
+      end)
+
+      # user's email is not from @openfn.org
+      refute String.match?(user.email, ~r/@openfn\.org/i)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      render_async(view)
+
+      html = view |> element("#aichat-#{job_1.id}") |> render()
+      assert html =~ "Get started with the AI Assistant"
+    end
+
     @tag email: "user@openfn.org"
     test "correct information is displayed when the assistant is not configured",
          %{
@@ -2360,7 +2376,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
         user =
           insert(:user,
-            email: "email-#{Enum.random(1..1_000)}@openfn.org",
+            email: "email-#{Enum.random(1..1_000)}@testemail.org",
             preferences: %{"ai_assistant.disclaimer_read_at" => timestamp}
           )
 
@@ -3539,8 +3555,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       workflow = insert(:simple_workflow, project: project)
 
-      {:ok, snapshot} =
-        Snapshot.get_or_create_latest_for(workflow, insert(:user))
+      {:ok, snapshot} = Snapshot.create(workflow)
 
       %{jobs: [job], triggers: [trigger]} = workflow
 

@@ -5,6 +5,8 @@ defmodule Lightning.Projects.ProvisionerTest do
   alias Lightning.Projects.Provisioner
   alias Lightning.ProjectsFixtures
   alias Lightning.Workflows.Snapshot
+
+  import Ecto.Query
   import Lightning.Factories
   import LightningWeb.CoreComponents, only: [translate_error: 1]
 
@@ -134,9 +136,13 @@ defmodule Lightning.Projects.ProvisionerTest do
       %{
         body: %{"workflows" => [workflow]} = body,
         project_id: project_id,
-        workflow_id: workflow_id,
-        first_job_id: first_job_id,
-        second_job_id: second_job_id
+        workflows: [
+          %{
+            id: workflow_id,
+            first_job_id: first_job_id,
+            second_job_id: second_job_id
+          }
+        ]
       } = valid_document()
 
       project_credential_id = Ecto.UUID.generate()
@@ -212,8 +218,12 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       %{
         body: %{"workflows" => [workflow]} = body,
-        workflow_id: workflow_id,
-        first_job_id: first_job_id
+        workflows: [
+          %{
+            id: workflow_id,
+            first_job_id: first_job_id
+          }
+        ]
       } = valid_document()
 
       project_credential_id = Ecto.UUID.generate()
@@ -254,12 +264,11 @@ defmodule Lightning.Projects.ProvisionerTest do
         body_with_credentials
       )
 
-      %{id: snapshot_id} = Snapshot |> Repo.one!()
+      %{id: snapshot_id} = Repo.one!(Snapshot)
 
-      audit = Audit |> Repo.one!()
+      audit = Repo.one!(from a in Audit, where: a.event == "snapshot_created")
 
       assert %{
-               event: "snapshot_created",
                item_id: ^workflow_id,
                actor_id: ^user_id,
                changes: %{
@@ -268,6 +277,47 @@ defmodule Lightning.Projects.ProvisionerTest do
                  }
                }
              } = audit
+    end
+
+    test "audits the creation of workflows" do
+      %{id: user_id} = user = insert(:user)
+
+      %{
+        body: body,
+        workflows: [
+          %{id: first_workflow_id},
+          %{id: second_workflow_id},
+          %{id: third_workflow_id}
+        ]
+      } = valid_document(nil, 3)
+
+      expected_workflow_ids =
+        [
+          first_workflow_id,
+          second_workflow_id,
+          third_workflow_id
+        ]
+        |> Enum.sort()
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      Provisioner.import_document(%Lightning.Projects.Project{}, user, body)
+
+      query =
+        from a in Audit,
+          where: a.event == "inserted_by_provisioner" and a.actor_id == ^user_id
+
+      workflow_ids =
+        query
+        |> Repo.all()
+        |> Enum.map(& &1.item_id)
+        |> Enum.sort()
+
+      assert workflow_ids == expected_workflow_ids
     end
   end
 
@@ -311,6 +361,37 @@ defmodule Lightning.Projects.ProvisionerTest do
       refute user2.id in project_user_ids
     end
 
+    test "audits the creation of a snapshot", %{
+      project: %{id: project_id} = project,
+      user: %{id: user_id} = user
+    } do
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, %{project_id: ^project_id} ->
+          :ok
+        end
+      )
+
+      %{body: body, workflows: [%{id: workflow_id}]} = valid_document(project.id)
+
+      {:ok, _project} = Provisioner.import_document(project, user, body)
+
+      %{id: snapshot_id} = Snapshot |> Repo.one!()
+
+      audit = Repo.one!(from a in Audit, where: a.event == "snapshot_created")
+
+      assert %{
+               item_id: ^workflow_id,
+               actor_id: ^user_id,
+               changes: %{
+                 after: %{
+                   "snapshot_id" => ^snapshot_id
+                 }
+               }
+             } = audit
+    end
+
     test "changing, adding records", %{
       project: %{id: project_id} = project,
       user: user
@@ -323,7 +404,7 @@ defmodule Lightning.Projects.ProvisionerTest do
         end
       )
 
-      %{body: body} = valid_document(project.id)
+      %{body: body, workflows: [%{id: workflow_id}]} = valid_document(project.id)
 
       {:ok, project} = Provisioner.import_document(project, user, body)
 
@@ -352,7 +433,7 @@ defmodule Lightning.Projects.ProvisionerTest do
       body =
         body
         |> Map.put("name", "test-project-renamed")
-        |> add_job_to_document(%{
+        |> add_job_to_document(workflow_id, %{
           "id" => third_job_id,
           "name" => "third-job",
           "adaptor" => "@openfn/language-common@latest",
@@ -410,7 +491,7 @@ defmodule Lightning.Projects.ProvisionerTest do
         end
       )
 
-      %{body: body, workflow_id: workflow_id} = valid_document(project.id)
+      %{body: body, workflows: [%{id: workflow_id}]} = valid_document(project.id)
 
       {:ok, project} = Provisioner.import_document(project, user, body)
 
@@ -502,7 +583,7 @@ defmodule Lightning.Projects.ProvisionerTest do
         end
       )
 
-      %{body: body, workflow_id: workflow_id} = valid_document(project.id)
+      %{body: body, workflows: [%{id: workflow_id}]} = valid_document(project.id)
 
       %{id: other_edge_id} = Lightning.Factories.insert(:edge)
 
@@ -545,7 +626,7 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       %{
         body: body,
-        second_job_id: second_job_id
+        workflows: [%{second_job_id: second_job_id}]
       } = valid_document(project.id)
 
       {:ok, project} = Provisioner.import_document(project, user, body)
@@ -602,7 +683,7 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       %{
         body: body,
-        workflow_id: workflow_id
+        workflows: [%{id: workflow_id}]
       } = valid_document(project.id)
 
       {:ok, project} = Provisioner.import_document(project, user, body)
@@ -685,7 +766,7 @@ defmodule Lightning.Projects.ProvisionerTest do
       project: %{id: project_id} = project,
       user: user
     } do
-      %{body: body, workflow_id: workflow_id} = valid_document(project.id)
+      %{body: body, workflows: [%{id: workflow_id}]} = valid_document(project.id)
 
       Mox.stub(
         Lightning.Extensions.MockUsageLimiter,
@@ -704,10 +785,118 @@ defmodule Lightning.Projects.ProvisionerTest do
         workflow: %{id: ^workflow_id}
       }
     end
+
+    test "audits workflow events as a result of the provisioner", %{
+      user: %{id: user_id} = user
+    } do
+      %{
+        body: body,
+        workflows: [
+          %{id: first_workflow_id},
+          %{id: second_workflow_id},
+          %{id: third_workflow_id}
+        ]
+      } = valid_document(nil, 3)
+
+      {:ok, project} =
+        Provisioner.import_document(%Lightning.Projects.Project{}, user, body)
+
+      {%{"id" => new_workflow_id} = new_workflow, _properties} =
+        valid_workflow(4)
+
+      body_with_modifications =
+        body
+        |> add_job_to_document(first_workflow_id, %{
+          "id" => Ecto.UUID.generate(),
+          "name" => "third-job",
+          "adaptor" => "@openfn/language-common@latest",
+          "body" => "console.log('hello world');"
+        })
+        |> remove_workflow_from_document(third_workflow_id)
+        |> add_workflow_to_document(new_workflow)
+
+      # Clear any audit records from the initial import
+      Repo.delete_all(Audit)
+
+      assert {:ok, _project} =
+               Provisioner.import_document(
+                 project,
+                 user,
+                 body_with_modifications
+               )
+
+      inserted_query =
+        from a in Audit,
+          where: a.item_id == ^new_workflow_id,
+          where: a.event == "inserted_by_provisioner",
+          where: a.actor_id == ^user_id
+
+      assert Repo.exists?(inserted_query)
+
+      unmodified_query =
+        from a in Audit,
+          where: a.item_id == ^second_workflow_id
+
+      refute Repo.exists?(unmodified_query) == nil
+
+      deleted_query =
+        from a in Audit,
+          where: a.item_id == ^third_workflow_id,
+          where: a.event == "deleted_by_provisioner",
+          where: a.actor_id == ^user_id
+
+      assert Repo.exists?(deleted_query)
+
+      updated_query =
+        from a in Audit,
+          where: a.item_id == ^first_workflow_id,
+          where: a.event == "updated_by_provisioner",
+          where: a.actor_id == ^user_id
+
+      assert Repo.exists?(updated_query)
+    end
+
+    test "functions correctly if there are no workflow changes", %{
+      user: user
+    } do
+      %{body: body} = valid_document(nil, 3)
+
+      {:ok, project} =
+        Provisioner.import_document(%Lightning.Projects.Project{}, user, body)
+
+      # Clear any audit records from the initial import
+      Repo.delete_all(Audit)
+
+      # Rerun without any changes to the project
+      assert {:ok, _project} = Provisioner.import_document(project, user, body)
+
+      assert Repo.all(Audit) == []
+    end
   end
 
-  defp valid_document(project_id \\ nil) do
+  defp valid_document(project_id \\ nil, number_of_workflows \\ 1) do
     project_id = project_id || Ecto.UUID.generate()
+
+    [workflows, workflow_properties] =
+      1..number_of_workflows
+      |> Enum.map(&valid_workflow/1)
+      |> Enum.unzip()
+      |> Tuple.to_list()
+
+    body = %{
+      "id" => project_id,
+      "name" => "test-project",
+      "workflows" => workflows
+    }
+
+    %{
+      body: body,
+      project_id: project_id,
+      workflows: workflow_properties
+    }
+  end
+
+  defp valid_workflow(index) do
     first_job_id = Ecto.UUID.generate()
     second_job_id = Ecto.UUID.generate()
     trigger_id = Ecto.UUID.generate()
@@ -715,60 +904,56 @@ defmodule Lightning.Projects.ProvisionerTest do
     trigger_edge_id = Ecto.UUID.generate()
     job_edge_id = Ecto.UUID.generate()
 
-    body = %{
-      "id" => project_id,
-      "name" => "test-project",
-      "workflows" => [
-        %{
-          "id" => workflow_id,
-          "name" => "default",
-          "jobs" => [
-            %{
-              "id" => first_job_id,
-              "name" => "first-job",
-              "adaptor" => "@openfn/language-common@latest",
-              "body" => "console.log('hello world');"
-            },
-            %{
-              "id" => second_job_id,
-              "name" => "second-job",
-              "adaptor" => "@openfn/language-common@latest",
-              "body" => "console.log('hello world');"
-            }
-          ],
-          "triggers" => [
-            %{
-              "id" => trigger_id,
-              "enabled" => true
-            }
-          ],
-          "edges" => [
-            %{
-              "id" => trigger_edge_id,
-              "source_trigger_id" => trigger_id,
-              "condition_label" => "Always",
-              "condition_type" => "js_expression",
-              "condition_expression" => "true"
-            },
-            %{
-              "id" => job_edge_id,
-              "source_job_id" => first_job_id,
-              "condition_type" => "on_job_success",
-              "target_job_id" => second_job_id
-            }
-          ]
-        }
-      ]
-    }
+    workflow =
+      %{
+        "id" => workflow_id,
+        "name" => "default-#{index}",
+        "jobs" => [
+          %{
+            "id" => first_job_id,
+            "name" => "first-job",
+            "adaptor" => "@openfn/language-common@latest",
+            "body" => "console.log('hello world');"
+          },
+          %{
+            "id" => second_job_id,
+            "name" => "second-job",
+            "adaptor" => "@openfn/language-common@latest",
+            "body" => "console.log('hello world');"
+          }
+        ],
+        "triggers" => [
+          %{
+            "id" => trigger_id,
+            "enabled" => true
+          }
+        ],
+        "edges" => [
+          %{
+            "id" => trigger_edge_id,
+            "source_trigger_id" => trigger_id,
+            "condition_label" => "Always",
+            "condition_type" => "js_expression",
+            "condition_expression" => "true"
+          },
+          %{
+            "id" => job_edge_id,
+            "source_job_id" => first_job_id,
+            "condition_type" => "on_job_success",
+            "target_job_id" => second_job_id
+          }
+        ]
+      }
 
-    %{
-      body: body,
-      project_id: project_id,
-      workflow_id: workflow_id,
-      first_job_id: first_job_id,
-      second_job_id: second_job_id,
-      trigger_id: trigger_id,
-      job_edge_id: job_edge_id
+    {
+      workflow,
+      %{
+        id: workflow_id,
+        first_job_id: first_job_id,
+        second_job_id: second_job_id,
+        trigger_id: trigger_id,
+        job_edge_id: job_edge_id
+      }
     }
   end
 
@@ -779,15 +964,19 @@ defmodule Lightning.Projects.ProvisionerTest do
     )
   end
 
-  defp add_job_to_document(document, job_params) do
+  defp add_job_to_document(document, workflow_id, job_params) do
     document
     |> Map.update!("workflows", fn workflows ->
-      Enum.at(workflows, 0)
-      |> Map.update!("jobs", fn jobs ->
-        [job_params | jobs]
-      end)
-      |> then(fn workflow ->
-        List.replace_at(workflows, 0, workflow)
+      workflows
+      |> Enum.map(fn workflow ->
+        if workflow["id"] == workflow_id do
+          workflow
+          |> Map.update!("jobs", fn jobs ->
+            [job_params | jobs]
+          end)
+        else
+          workflow
+        end
       end)
     end)
   end
@@ -839,6 +1028,13 @@ defmodule Lightning.Projects.ProvisionerTest do
           workflow
         end
       end)
+    end)
+  end
+
+  defp add_workflow_to_document(document, workflow) do
+    document
+    |> Map.update!("workflows", fn workflows ->
+      [workflow | workflows]
     end)
   end
 end

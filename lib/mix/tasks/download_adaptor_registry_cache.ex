@@ -11,7 +11,8 @@ defmodule Mix.Tasks.Lightning.DownloadAdaptorRegistryCache do
   alias Lightning.AdaptorRegistry
 
   def run(args) do
-    HTTPoison.start()
+    Application.ensure_started(:telemetry)
+    Finch.start_link(name: Lightning.Finch)
 
     case AdaptorRegistry.fetch() do
       [] ->

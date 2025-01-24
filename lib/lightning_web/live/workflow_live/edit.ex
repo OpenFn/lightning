@@ -208,10 +208,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     <:tab hash="manual">
                       <span class="inline-block align-middle">Input</span>
                     </:tab>
-                    <:tab
-                      :if={Lightning.AiAssistant.available?(@current_user)}
-                      hash="aichat"
-                    >
+                    <:tab hash="aichat">
                       <span class="inline-block align-middle">AI Assistant</span>
                     </:tab>
                   </LightningWeb.Components.Tabbed.tabs>
@@ -242,11 +239,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                       />
                     </div>
                   </:panel>
-                  <:panel
-                    :if={Lightning.AiAssistant.available?(@current_user)}
-                    hash="aichat"
-                    class="h-full"
-                  >
+                  <:panel hash="aichat" class="h-full">
                     <%= if @ai_assistant_enabled do %>
                       <div class="grow min-h-0 h-full text-sm">
                         <.live_component
@@ -2463,7 +2456,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     <div class="relative">
       <div
         :if={@changeset.changes |> Enum.any?()}
-        class="absolute -m-1 rounded-full bg-danger-500 w-3 h-3 top-0 right-0 z-50"
+        class="absolute -m-1 rounded-full bg-danger-500 w-3 h-3 top-0 right-0 z-10"
         data-is-dirty="true"
       >
       </div>

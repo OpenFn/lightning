@@ -50,9 +50,7 @@ defmodule LightningWeb.Endpoint do
 
   plug Plug.RequestId
 
-  plug Unplug,
-    if: {LightningWeb.PromExPlugAuthorization, nil},
-    do: {PromEx.Plug, prom_ex_module: Lightning.PromEx}
+  plug Plugs.PromexWrapper
 
   @plug_extensions Application.compile_env(
                      :lightning,

@@ -232,6 +232,25 @@ defmodule Lightning.Config do
     defp kafka_trigger_config do
       Application.get_env(:lightning, :kafka_triggers, [])
     end
+
+    @impl true
+    def promex_metrics_endpoint_authorization_required? do
+      promex_config() |> Keyword.get(:metrics_endpoint_authorization_required)
+    end
+
+    @impl true
+    def promex_metrics_endpoint_scheme do
+      promex_config() |> Keyword.get(:metrics_endpoint_scheme)
+    end
+
+    @impl true
+    def promex_metrics_endpoint_token do
+      promex_config() |> Keyword.get(:metrics_endpoint_token)
+    end
+
+    defp promex_config do
+      Application.get_env(:lightning, Lightning.PromEx, [])
+    end
   end
 
   @callback apollo(key :: atom() | nil) :: map()
@@ -252,6 +271,9 @@ defmodule Lightning.Config do
   @callback kafka_number_of_processors() :: integer()
   @callback kafka_triggers_enabled?() :: boolean()
   @callback oauth_provider(key :: atom()) :: keyword() | nil
+  @callback promex_metrics_endpoint_authorization_required?() :: boolean()
+  @callback promex_metrics_endpoint_scheme() :: String.t()
+  @callback promex_metrics_endpoint_token() :: String.t()
   @callback purge_deleted_after_days() :: integer()
   @callback repo_connection_token_signer() :: Joken.Signer.t()
   @callback reset_password_token_validity_in_days() :: integer()
@@ -424,6 +446,18 @@ defmodule Lightning.Config do
 
   def kafka_number_of_processors do
     impl().kafka_number_of_processors()
+  end
+
+  def promex_metrics_endpoint_authorization_required? do
+    impl().promex_metrics_endpoint_authorization_required?()
+  end
+
+  def promex_metrics_endpoint_scheme do
+    impl().promex_metrics_endpoint_scheme()
+  end
+
+  def promex_metrics_endpoint_token do
+    impl().promex_metrics_endpoint_token()
   end
 
   defp impl do
