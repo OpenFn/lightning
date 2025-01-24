@@ -14,7 +14,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-FBC08A8E.js"></script>
+    <script src="dist/sidebar_items-CC1E203A.js"></script>
     <script src="docs_config.js"></script>
     <script async src="dist/html-YIPIRHGU.js"></script>
 
@@ -219,7 +219,23 @@ while <code class="inline">Dockerfile-dev</code> runs it in <code class="inline"
 be configured using <code class="inline">RTM</code> env var. In case you don't want the hassle of
 configuring the worker in <code class="inline">dev</code>, you can just remove/comment out the <code class="inline">worker</code>
 service from the <code class="inline">docker-compose.yaml</code> file because lightning will start it for
-you.</p><p><a href="workers.html">Learn more about configuring workers</a></p><h3 id="problems-with-apple-silicon" class="section-heading">
+you.</p><p><a href="workers.html">Learn more about configuring workers</a></p><h3 id="using-local-adaptors" class="section-heading">
+  <a href="#using-local-adaptors" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Using Local Adaptors</span>
+</h3>
+<p>You can force lightning to use adaptor builds from your local
+<a href="https://github.com/openfn/adaptors">adaptors</a> repo.</p><p>Note that this is a global toggle: ALL runs will use local adaptor versions, and
+the adaptor picklist in the Workflow Editor will only suggest adaptors present
+in the monorepo.</p><p>Remember to re-build your adaptors after making changes (use
+<code class="inline">pnpm build --watch</code> in the monorepo).</p><p>To start, set up the following environment variables:</p><ul><li><code class="inline">LOCAL_ADAPTORS</code>: Used to enable or disable the local adaptors mode. Set it to
+<code class="inline">true</code> to enable.</li><li><code class="inline">OPENFN_ADAPTORS_REPO</code>: This should point to the adaptors monorepo. This is
+the same variable used when you pass <code class="inline">-m</code> to the CLI.</li></ul><p>Example configuration:</p><pre><code class="makeup sh" translate="no"><span class="">export LOCAL_ADAPTORS=true
+</span><span class="">export OPENFN_ADAPTORS_REPO=/path/to/repo/
+</span></code></pre><p>You can also run the server directly in local mode with:</p><pre><code class="makeup sh" translate="no"><span class="">LOCAL_ADAPTORS=true mix phx.server
+</span></code></pre><p>Ensure that the <code class="inline">OPENFN_ADAPTORS_REPO</code> directory is correctly set up with the
+necessary <code class="inline">packages</code> subdirectory, otherwise the app wont start</p><h3 id="problems-with-apple-silicon" class="section-heading">
   <a href="#problems-with-apple-silicon" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>

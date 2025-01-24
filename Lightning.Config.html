@@ -14,7 +14,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-FBC08A8E.js"></script>
+    <script src="dist/sidebar_items-CC1E203A.js"></script>
     <script src="docs_config.js"></script>
     <script async src="dist/html-YIPIRHGU.js"></script>
 
@@ -154,6 +154,14 @@ Pages
   <h2>
     <a href="#callbacks">Callbacks</a>
   </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#c:adaptor_registry/0" data-no-tooltip translate="no">adaptor_registry()</a>
+
+      </div>
+
+    </div>
 
     <div class="summary-row">
       <div class="summary-signature">
@@ -448,6 +456,16 @@ Pages
   <h2>
     <a href="#functions">Functions</a>
   </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#adaptor_registry/0" data-no-tooltip translate="no">adaptor_registry()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns the configuration for the <a href="Lightning.AdaptorRegistry.html"><code class="inline">Lightning.AdaptorRegistry</code></a> service</p></div>
+
+    </div>
 
     <div class="summary-row">
       <div class="summary-signature">
@@ -761,6 +779,34 @@ amount of time after a given run was meant to be finished.</p></div>
       <span class="text">Callbacks</span>
     </h1>
     <div class="callbacks-list">
+<section class="detail" id="c:adaptor_registry/0">
+
+  <div class="detail-header">
+    <a href="#c:adaptor_registry/0" class="detail-link" data-no-tooltip title="Link to this callback">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this callback</span>
+    </a>
+    <h1 class="signature" translate="no">adaptor_registry()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L292" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@callback</span> adaptor_registry() :: <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()</pre>
+
+      </div>
+
+
+  </section>
+</section>
 <section class="detail" id="c:apollo/1">
 
   <div class="detail-header">
@@ -770,7 +816,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">apollo(key)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L251" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L256" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -798,7 +844,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">check_flag?(atom)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L252" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L257" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -826,7 +872,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">cors_origin()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L253" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L258" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -854,7 +900,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">default_max_run_duration()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L254" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L259" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -882,7 +928,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">email_sender_name()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L255" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L260" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -910,7 +956,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">get_extension_mod(key)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L256" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L261" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -938,7 +984,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">google(key)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L257" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L262" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -966,7 +1012,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">grace_period()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L258" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L263" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -994,7 +1040,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">instance_admin_email()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L259" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L264" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1022,7 +1068,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">kafka_alternate_storage_enabled?()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L260" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L265" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1050,7 +1096,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">kafka_alternate_storage_file_path()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L261" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L266" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1078,7 +1124,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">kafka_duplicate_tracking_retention_seconds()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L262" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L267" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1106,7 +1152,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">kafka_notification_embargo_seconds()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L263" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L268" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1134,7 +1180,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">kafka_number_of_consumers()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L264" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L269" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1162,7 +1208,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">kafka_number_of_messages_per_second()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L265" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L270" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1190,7 +1236,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">kafka_number_of_processors()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L266" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L271" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1218,7 +1264,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">kafka_triggers_enabled?()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L267" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L272" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1246,7 +1292,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">oauth_provider(key)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L268" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L273" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1274,7 +1320,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">promex_metrics_endpoint_authorization_required?()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L269" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L274" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1302,7 +1348,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">promex_metrics_endpoint_scheme()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L270" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L275" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1330,7 +1376,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">promex_metrics_endpoint_token()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L271" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L276" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1358,7 +1404,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">purge_deleted_after_days()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L272" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L277" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1386,7 +1432,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">repo_connection_token_signer()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L273" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L278" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1414,7 +1460,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">reset_password_token_validity_in_days()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L274" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L279" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1442,7 +1488,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">run_token_signer()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L275" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L280" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1470,7 +1516,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">storage()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L276" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L281" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1498,7 +1544,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">storage(key)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L277" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L282" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1526,7 +1572,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">token_signer()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L278" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L283" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1554,7 +1600,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">usage_tracking()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L279" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L284" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1582,7 +1628,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">usage_tracking_cleartext_uuids_enabled?()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L280" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L285" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1610,7 +1656,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">usage_tracking_cron_opts()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L281" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L286" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1638,7 +1684,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">usage_tracking_enabled?()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L282" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L287" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1666,7 +1712,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">usage_tracking_host()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L283" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L288" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1694,7 +1740,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">usage_tracking_run_chunk_size()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L284" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L289" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1722,7 +1768,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">worker_secret()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L285" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L290" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1750,7 +1796,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">worker_token_signer()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L286" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L291" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1781,6 +1827,28 @@ amount of time after a given run was meant to be finished.</p></div>
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
+<section class="detail" id="adaptor_registry/0">
+
+  <div class="detail-header">
+    <a href="#adaptor_registry/0" class="detail-link" data-no-tooltip title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">adaptor_registry()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L297" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Returns the configuration for the <a href="Lightning.AdaptorRegistry.html"><code class="inline">Lightning.AdaptorRegistry</code></a> service</p>
+  </section>
+</section>
 <section class="detail" id="apollo/1">
 
     <span id="apollo/0"></span>
@@ -1792,7 +1860,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">apollo(key \\ nil)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L291" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L304" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1814,7 +1882,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">check_flag?(flag)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L346" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L359" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1836,7 +1904,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">cors_origin()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L358" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L371" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1858,7 +1926,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">default_max_run_duration()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L330" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L343" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1880,7 +1948,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">email_sender_name()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L366" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L379" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1902,7 +1970,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">get_extension_mod(key)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L350" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L363" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1924,7 +1992,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">google(key)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L354" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L367" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1946,7 +2014,7 @@ amount of time after a given run was meant to be finished.</p></div>
     </a>
     <h1 class="signature" translate="no">grace_period()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L323" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L336" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1969,7 +2037,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
     </a>
     <h1 class="signature" translate="no">instance_admin_email()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L362" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L375" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1991,7 +2059,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
     </a>
     <h1 class="signature" translate="no">kafka_alternate_storage_enabled?()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L410" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L423" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -2013,7 +2081,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
     </a>
     <h1 class="signature" translate="no">kafka_alternate_storage_file_path()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L414" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L427" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -2035,7 +2103,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
     </a>
     <h1 class="signature" translate="no">kafka_duplicate_tracking_retention_seconds()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L418" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L431" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -2057,7 +2125,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
     </a>
     <h1 class="signature" translate="no">kafka_notification_embargo_seconds()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L426" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L439" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -2079,7 +2147,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
     </a>
     <h1 class="signature" translate="no">kafka_number_of_consumers()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L422" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L435" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -2101,7 +2169,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
     </a>
     <h1 class="signature" translate="no">kafka_number_of_messages_per_second()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L430" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L443" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -2123,7 +2191,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
     </a>
     <h1 class="signature" translate="no">kafka_number_of_processors()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L434" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L447" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -2145,7 +2213,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
     </a>
     <h1 class="signature" translate="no">kafka_triggers_enabled?()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L406" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L419" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -2167,7 +2235,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
     </a>
     <h1 class="signature" translate="no">oauth_provider(key)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L338" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L351" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -2189,7 +2257,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
     </a>
     <h1 class="signature" translate="no">promex_metrics_endpoint_authorization_required?()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L438" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L451" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -2211,7 +2279,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
     </a>
     <h1 class="signature" translate="no">promex_metrics_endpoint_scheme()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L442" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L455" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -2233,7 +2301,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
     </a>
     <h1 class="signature" translate="no">promex_metrics_endpoint_token()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L446" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L459" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -2255,7 +2323,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
     </a>
     <h1 class="signature" translate="no">purge_deleted_after_days()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L342" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L355" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -2277,7 +2345,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
     </a>
     <h1 class="signature" translate="no">repo_connection_token_signer()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L334" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L347" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -2299,7 +2367,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
     </a>
     <h1 class="signature" translate="no">reset_password_token_validity_in_days()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L370" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L383" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -2321,7 +2389,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
     </a>
     <h1 class="signature" translate="no">run_token_signer()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L298" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L311" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -2343,7 +2411,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
     </a>
     <h1 class="signature" translate="no">storage()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L374" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L387" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -2365,7 +2433,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
     </a>
     <h1 class="signature" translate="no">storage(key)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L378" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L391" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -2387,7 +2455,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
     </a>
     <h1 class="signature" translate="no">token_signer()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L302" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L315" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -2409,7 +2477,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
     </a>
     <h1 class="signature" translate="no">usage_tracking()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L382" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L395" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -2431,7 +2499,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
     </a>
     <h1 class="signature" translate="no">usage_tracking_cleartext_uuids_enabled?()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L386" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L399" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -2453,7 +2521,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
     </a>
     <h1 class="signature" translate="no">usage_tracking_cron_opts()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L390" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L403" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -2475,7 +2543,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
     </a>
     <h1 class="signature" translate="no">usage_tracking_enabled?()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L394" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L407" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -2497,7 +2565,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
     </a>
     <h1 class="signature" translate="no">usage_tracking_host()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L398" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L411" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -2519,7 +2587,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
     </a>
     <h1 class="signature" translate="no">usage_tracking_run_chunk_size()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L402" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L415" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -2541,7 +2609,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
     </a>
     <h1 class="signature" translate="no">worker_secret()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L313" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L326" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -2563,7 +2631,7 @@ amount of time after a given run was meant to be finished.</p><p>The returned va
     </a>
     <h1 class="signature" translate="no">worker_token_signer()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L309" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/config.ex#L322" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
