@@ -223,7 +223,7 @@ export default {
   },
   getWorkflowParams() {
     console.debug('get-initial-state pushed', new Date().toISOString());
-    console.time('get-initial-state -> current-workflow-params');
+    console.time('workflow-params load');
     this.pushEventTo(this.el, 'get-initial-state', {});
   },
   handleWorkflowParams({ workflow_params: payload }) {
@@ -242,7 +242,7 @@ export default {
 
     this.maybeMountComponent();
     console.debug('current-worflow-params processed', new Date().toISOString());
-    console.timeEnd('get-initial-state -> current-workflow-params');
+    console.timeEnd('workflow-params load');
   },
   maybeMountComponent() {
     if (!this._isMounting && !this.component) {

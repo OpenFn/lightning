@@ -60,7 +60,7 @@ export default {
     // this.handleContentChange(this.currentContent);
   },
   mounted(this: JobEditorEntrypoint) {
-    instrumentStart('Mount to first render');
+    instrumentStart('editor load');
 
     window.jobEditor = this;
 
@@ -79,7 +79,7 @@ export default {
       this.setupObserver();
       this.render();
 
-      instrumentFinish('Mount to first render');
+      instrumentFinish('editor load');
 
       this.requestMetadata().then(() => {
         instrumentStart('Render - metadata received');
