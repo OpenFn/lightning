@@ -23,12 +23,12 @@ and this project adheres to
 ### Changed
 
 - Remove snapshot creation when performing the Github sync - no longer needed
-  post-migration.
-  [#2703](https://github.com/OpenFn/lightning/issues/2703)
+  post-migration. [#2703](https://github.com/OpenFn/lightning/issues/2703)
 - Remove some redundant code related to `WorkOrders.create_for`.
   [#2703](https://github.com/OpenFn/lightning/issues/2703)
 - Remove use of Snapshot.get_or_create_latest_for from tests.
   [#2703](https://github.com/OpenFn/lightning/issues/2703)
+- Bump PostCSS [#2863](https://github.com/OpenFn/lightning/pull/2863)
 
 ### Fixed
 
