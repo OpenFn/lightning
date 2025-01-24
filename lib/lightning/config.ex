@@ -8,6 +8,11 @@ defmodule Lightning.Config do
     alias Lightning.Services.AdapterHelper
 
     @impl true
+    def adaptor_registry do
+      Application.get_env(:lightning, Lightning.AdaptorRegistry, [])
+    end
+
+    @impl true
     def token_signer do
       :persistent_term.get({__MODULE__, "token_signer"}, nil)
       |> case do
@@ -284,6 +289,14 @@ defmodule Lightning.Config do
   @callback usage_tracking_run_chunk_size() :: integer()
   @callback worker_secret() :: binary() | nil
   @callback worker_token_signer() :: Joken.Signer.t()
+  @callback adaptor_registry() :: Keyword.t()
+
+  @doc """
+  Returns the configuration for the `Lightning.AdaptorRegistry` service
+  """
+  def adaptor_registry do
+    impl().adaptor_registry()
+  end
 
   @doc """
   Returns the Apollo server configuration.

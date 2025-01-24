@@ -89,34 +89,31 @@ defmodule Lightning.AdaptorRegistry do
 
   @impl GenServer
   def handle_continue(opts, _state) do
-    cache_path =
-      case opts[:use_cache] do
-        true ->
-          Path.join([
-            System.tmp_dir!(),
-            "lightning",
-            "adaptor_registry_cache.json"
-          ])
+    adaptors =
+      case Enum.into(opts, %{}) do
+        %{local_adaptors_repo: repo_path} when is_binary(repo_path) ->
+          read_adaptors_from_local_repo(repo_path)
 
-        path when is_binary(path) ->
-          path
+        %{use_cache: use_cache}
+        when use_cache === true or is_binary(use_cache) ->
+          cache_path =
+            if is_binary(use_cache) do
+              use_cache
+            else
+              Path.join([
+                System.tmp_dir!(),
+                "lightning",
+                "adaptor_registry_cache.json"
+              ])
+            end
 
-        _ ->
-          nil
+          read_from_cache(cache_path) || write_to_cache(cache_path, fetch())
+
+        _other ->
+          fetch()
       end
 
-    if cache_path do
-      read_from_cache(cache_path)
-      |> case do
-        nil ->
-          {:noreply, write_to_cache(cache_path, fetch())}
-
-        adaptors ->
-          {:noreply, adaptors}
-      end
-    else
-      {:noreply, fetch()}
-    end
+    {:noreply, adaptors}
   end
 
   # false positive, it's a file from init
@@ -273,6 +270,22 @@ defmodule Lightning.AdaptorRegistry do
     }
   end
 
+  defp read_adaptors_from_local_repo(repo_path) do
+    Logger.debug("Using local adaptors repo at #{repo_path}")
+
+    repo_path
+    |> Path.join("packages")
+    |> File.ls!()
+    |> Enum.map(fn package ->
+      %{
+        name: "@openfn/language-" <> package,
+        repo: "file://" <> Path.join([repo_path, "packages", package]),
+        latest: "local",
+        versions: []
+      }
+    end)
+  end
+
   @doc """
   Destructures an NPM style package name into module name and version.
 
@@ -303,6 +316,17 @@ defmodule Lightning.AdaptorRegistry do
       _ ->
         {nil, nil}
     end
+    |> then(fn
+      {name, version} when is_binary(name) ->
+        if local_adaptors_enabled?() do
+          {name, "local"}
+        else
+          {name, version}
+        end
+
+      other ->
+        other
+    end)
   end
 
   @doc """
@@ -326,11 +350,20 @@ defmodule Lightning.AdaptorRegistry do
       {nil, nil} ->
         ""
 
+      {adaptor_name, "local"} ->
+        "#{adaptor_name}@local"
+
       {adaptor_name, "latest"} ->
         "#{adaptor_name}@#{latest_for(adaptor_name)}"
 
       _ ->
         adaptor
     end
+  end
+
+  def local_adaptors_enabled? do
+    config = Lightning.Config.adaptor_registry()
+
+    if config[:local_adaptors_repo], do: true, else: false
   end
 end

@@ -17,6 +17,11 @@ and this project adheres to
 
 ### Added
 
+- Add support for local adaptors. This can be enabled via `LOCAL_ADAPTORS=true`
+  and path specified via `OPENFN_ADAPTORS_REPO=./path/to/repo/`
+  [#905](https://github.com/OpenFn/lightning/issues/905)
+- Add component injection for AI responses feedback
+  [#2495](https://github.com/OpenFn/lightning/issues/2495)
 - Audit the provisioning of projects via the API
   [#2718](https://github.com/OpenFn/lightning/issues/2718)
 

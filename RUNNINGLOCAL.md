@@ -142,6 +142,41 @@ you.
 
 [Learn more about configuring workers](WORKERS.md)
 
+### Using Local Adaptors
+
+You can force lightning to use adaptor builds from your local
+[adaptors](https://github.com/openfn/adaptors) repo.
+
+Note that this is a global toggle: ALL runs will use local adaptor versions, and
+the adaptor picklist in the Workflow Editor will only suggest adaptors present
+in the monorepo.
+
+Remember to re-build your adaptors after making changes (use
+`pnpm build --watch` in the monorepo).
+
+To start, set up the following environment variables:
+
+- `LOCAL_ADAPTORS`: Used to enable or disable the local adaptors mode. Set it to
+  `true` to enable.
+- `OPENFN_ADAPTORS_REPO`: This should point to the adaptors monorepo. This is
+  the same variable used when you pass `-m` to the CLI.
+
+Example configuration:
+
+```sh
+export LOCAL_ADAPTORS=true
+export OPENFN_ADAPTORS_REPO=/path/to/repo/
+```
+
+You can also run the server directly in local mode with:
+
+```sh
+LOCAL_ADAPTORS=true mix phx.server
+```
+
+Ensure that the `OPENFN_ADAPTORS_REPO` directory is correctly set up with the
+necessary `packages` subdirectory, otherwise the app wont start
+
 ### Problems with Apple Silicon
 
 You might run into some errors when running the docker containers on Apple
