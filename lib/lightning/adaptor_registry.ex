@@ -48,17 +48,12 @@ defmodule Lightning.AdaptorRegistry do
     @moduledoc """
     NPM API functions
     """
-    use HTTPoison.Base
 
-    @impl true
-    def process_request_url(url) do
-      "https://registry.npmjs.org" <> url
-    end
-
-    @impl true
-    def process_response_body(body) do
-      body
-      |> Jason.decode!()
+    def client() do
+      Tesla.client([
+        {Tesla.Middleware.BaseUrl, "https://registry.npmjs.org"},
+        Tesla.Middleware.JSON
+      ])
     end
 
     @doc """
@@ -67,12 +62,9 @@ defmodule Lightning.AdaptorRegistry do
     """
     @spec user_packages(user :: String.t()) :: [map()]
     def user_packages(user) do
-      get("/-/user/#{user}/package", [],
-        hackney: [pool: :default],
-        recv_timeout: 15_000
-      )
+      Tesla.get(client(), "/-/user/#{user}/package")
       |> case do
-        {:error, %HTTPoison.Error{reason: :nxdomain, id: nil}} ->
+        {:error, :nxdomain} ->
           Logger.info("Unable to connect to NPM; no adaptors fetched.")
           []
 
@@ -86,10 +78,7 @@ defmodule Lightning.AdaptorRegistry do
     """
     @spec package_detail(package_name :: String.t()) :: map()
     def package_detail(package_name) do
-      get!("/#{package_name}", [],
-        hackney: [pool: :default],
-        recv_timeout: 15_000
-      ).body
+      Tesla.get!(client(), "/#{package_name}").body
     end
   end
 

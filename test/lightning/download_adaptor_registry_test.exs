@@ -1,26 +1,29 @@
 defmodule Lightning.DownloadAdaptorRegistryCacheTest do
   use ExUnit.Case, async: false
-  use Mimic
+
+  import Mox
+  import Tesla.Test
+
+  setup :set_mox_from_context
+  setup :verify_on_exit!
 
   alias Mix.Tasks.Lightning.DownloadAdaptorRegistryCache
 
   describe "download_adaptor_registry_cache mix task" do
     @describetag :tmp_dir
-    setup do
-      stub(:hackney)
-
-      :ok
-    end
-
     test "does not write file when no adaptors are found", %{tmp_dir: tmp_dir} do
-      expect(:hackney, :request, fn
-        :get,
-        "https://registry.npmjs.org/-/user/openfn/package",
-        [],
-        "",
-        [recv_timeout: 15_000, pool: :default] ->
-          {:error, :nxdomain}
-      end)
+      expect_tesla_call(
+        times: 1,
+        returns: fn env, [] ->
+          case env.url do
+            "https://registry.npmjs.org/-/user/openfn/package" ->
+              {:ok, json(%Tesla.Env{status: 200}, [])}
+
+            "https://registry.npmjs.org/@openfn/language-asana" ->
+              {:ok, json(%Tesla.Env{status: 200}, [])}
+          end
+        end
+      )
 
       file_path = Path.join([tmp_dir, "cache.json"])
       refute File.exists?(file_path)
@@ -31,31 +34,26 @@ defmodule Lightning.DownloadAdaptorRegistryCacheTest do
     end
 
     test "writes to specified file", %{tmp_dir: tmp_dir} do
-      expect(:hackney, :request, fn
-        :get,
-        "https://registry.npmjs.org/-/user/openfn/package",
-        [],
-        "",
-        [recv_timeout: 15_000, pool: :default] ->
-          {:ok, 200, "headers", :client}
-      end)
+      language_common_response =
+        File.read!("test/fixtures/language-common-npm.json") |> Jason.decode!()
 
-      expect(:hackney, :body, fn :client, _timeout ->
-        {:ok, File.read!("test/fixtures/openfn-packages-npm.json")}
-      end)
+      expect_tesla_call(
+        times: 7,
+        returns: fn env, [] ->
+          case env.url do
+            "https://registry.npmjs.org/-/user/openfn/package" ->
+              {:ok,
+               json(
+                 %Tesla.Env{status: 200},
+                 File.read!("test/fixtures/openfn-packages-npm.json")
+                 |> Jason.decode!()
+               )}
 
-      stub(:hackney, :body, fn :adaptor, _timeout ->
-        {:ok, File.read!("test/fixtures/language-common-npm.json")}
-      end)
-
-      stub(:hackney, :request, fn
-        :get,
-        "https://registry.npmjs.org/" <> _adaptor,
-        [],
-        "",
-        [recv_timeout: 15_000, pool: :default] ->
-          {:ok, 200, "headers", :adaptor}
-      end)
+            "https://registry.npmjs.org/@openfn/" <> _adaptor ->
+              {:ok, json(%Tesla.Env{status: 200}, language_common_response)}
+          end
+        end
+      )
 
       file_path = Path.join([tmp_dir, "cache.json"])
       refute File.exists?(file_path)
