@@ -29,6 +29,8 @@ and this project adheres to
 - Remove use of Snapshot.get_or_create_latest_for from tests.
   [#2703](https://github.com/OpenFn/lightning/issues/2703)
 - Bump PostCSS [#2863](https://github.com/OpenFn/lightning/pull/2863)
+- Replaced HTTPoison with Tesla in the AdaptorRegistry.
+  [#2861](https://github.com/OpenFn/lightning/pull/2861)
 
 ### Fixed
 
