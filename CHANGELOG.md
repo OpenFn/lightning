@@ -32,6 +32,9 @@ and this project adheres to
 
 ### Fixed
 
+- Do not send digest emails for projects with no workflows
+  [#2688](https://github.com/OpenFn/lightning/issues/2688)
+
 ## [v2.10.12] - 2025-01-21
 
 ### Changed
