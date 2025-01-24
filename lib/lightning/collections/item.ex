@@ -10,7 +10,6 @@ defmodule Lightning.Collections.Item do
           collection_id: Ecto.UUID.t(),
           key: String.t(),
           value: String.t(),
-          byte_size: integer(),
           inserted_at: DateTime.t(),
           updated_at: DateTime.t()
         }
@@ -27,7 +26,6 @@ defmodule Lightning.Collections.Item do
     #       max length is 1MB.
     field :key, :string
     field :value, :string
-    field :byte_size, :integer
 
     timestamps(type: :utc_datetime_usec)
   end
@@ -35,7 +33,7 @@ defmodule Lightning.Collections.Item do
   @doc false
   def changeset(entry, attrs) do
     entry
-    |> cast(attrs, [:collection_id, :key, :value, :byte_size])
+    |> cast(attrs, [:collection_id, :key, :value])
     |> validate_required([:collection_id, :key, :value])
     |> validate_length(:value, max: 1_000_000)
     |> unique_constraint([:collection_id, :key])

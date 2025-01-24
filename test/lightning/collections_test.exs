@@ -253,17 +253,15 @@ defmodule Lightning.CollectionsTest do
       assert :ok = Collections.put(collection, "some-key1", "some-value1")
       assert :ok = Collections.put(collection, "some-key12", "some-value12")
 
-      byte_size1 = byte_size("some-key1") + byte_size("some-value1")
-
-      assert %{key: "some-key1", value: "some-value1", byte_size: ^byte_size1} =
+      assert %{key: "some-key1", value: "some-value1"} =
                Repo.get_by!(Item, key: "some-key1")
 
-      byte_size12 = byte_size("some-key12") + byte_size("some-value12")
-
-      assert %{key: "some-key12", value: "some-value12", byte_size: ^byte_size12} =
+      assert %{key: "some-key12", value: "some-value12"} =
                Repo.get_by!(Item, key: "some-key12")
 
-      byte_size_sum = byte_size1 + byte_size12
+      byte_size_sum =
+        byte_size("some-key1") + byte_size("some-value1") +
+          byte_size("some-key12") + byte_size("some-value12")
 
       assert %{byte_size_sum: ^byte_size_sum} =
                Repo.get!(Collection, collection.id)
@@ -342,12 +340,11 @@ defmodule Lightning.CollectionsTest do
 
       assert Item
              |> Repo.all()
-             |> Enum.map(&Map.take(&1, [:key, :value, :byte_size])) ==
+             |> Enum.map(&Map.take(&1, [:key, :value])) ==
                Enum.map(items, fn item ->
                  %{
                    key: item["key"],
-                   value: item["value"],
-                   byte_size: byte_size(item["key"]) + byte_size(item["value"])
+                   value: item["value"]
                  }
                end)
 
@@ -355,7 +352,7 @@ defmodule Lightning.CollectionsTest do
                Repo.get!(Collection, collection.id)
     end
 
-    test "replaces conflicting values, timestamps and byte_size" do
+    test "replaces conflicting values and timestamps" do
       collection = insert(:collection)
 
       items =
@@ -377,12 +374,12 @@ defmodule Lightning.CollectionsTest do
       assert %{value: "value11", updated_at: updated_at} =
                Repo.get_by(Item, key: "key1")
 
-      assert updated_at > updated_at1
+      assert DateTime.after?(updated_at, updated_at1)
 
       assert %{value: "value12", updated_at: updated_at} =
                Repo.get_by(Item, key: "key2")
 
-      assert updated_at > updated_at2
+      assert DateTime.after?(updated_at, updated_at2)
 
       assert %{value: "value5", updated_at: ^updated_at5} =
                Repo.get_by(Item, key: "key5")
@@ -391,12 +388,11 @@ defmodule Lightning.CollectionsTest do
 
       assert Item
              |> Repo.all()
-             |> Enum.map(&Map.take(&1, [:key, :value, :byte_size])) ==
+             |> Enum.map(&Map.take(&1, [:key, :value])) ==
                Enum.map(final_items, fn item ->
                  %{
                    key: item["key"],
-                   value: item["value"],
-                   byte_size: byte_size(item["key"]) + byte_size(item["value"])
+                   value: item["value"]
                  }
                end)
 
@@ -426,11 +422,14 @@ defmodule Lightning.CollectionsTest do
     test "deletes an entry for the given collection" do
       collection = insert(:collection)
 
-      %{key: key1, byte_size: byte_size1} =
+      %{key: key1, value: value1} =
         insert(:collection_item, collection: collection)
 
-      %{key: key2, byte_size: byte_size2} =
+      %{key: key2, value: value2} =
         insert(:collection_item, collection: collection)
+
+      byte_size1 = byte_size(key1) + byte_size(value1)
+      byte_size2 = byte_size(key2) + byte_size(value2)
 
       _collection =
         Repo.update!(

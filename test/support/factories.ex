@@ -336,8 +336,7 @@ defmodule Lightning.Factories do
         sequence(
           :inserted_at,
           &DateTime.add(DateTime.utc_now(), &1, :microsecond)
-        ),
-      byte_size: String.length("key-100") + String.length("value-100")
+        )
     }
   end
 

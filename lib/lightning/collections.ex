@@ -153,7 +153,7 @@ defmodule Lightning.Collections do
           :ok | {:error, Ecto.Changeset.t()}
   def put(%{id: collection_id} = collection, key, value) do
     case get(collection, key) do
-      nil -> upsert_item(%Item{collection_id: collection_id, byte_size: 0}, key, value)
+      nil -> upsert_item(%Item{collection_id: collection_id}, key, value)
       item -> upsert_item(item, key, value)
     end
   end
@@ -166,40 +166,37 @@ defmodule Lightning.Collections do
     {item_list, {key_list, new_mem_used}} =
       Enum.map_reduce(kv_list, {[], 0}, fn %{"key" => key, "value" => value},
                                            {key_list, mem_used} ->
-        item_size = byte_size(key) + byte_size(value)
-
         {
           %{
             collection_id: collection_id,
             key: key,
             value: value,
             inserted_at: now,
-            updated_at: now,
-            byte_size: item_size
+            updated_at: now
           },
           {
             [key | key_list],
-            mem_used + item_size
+            mem_used + byte_size(key) + byte_size(value)
           }
         }
       end)
 
-    old_mem_used =
+    Multi.new()
+    |> Multi.one(
+      :old_mem_used,
       from(c in Item,
         where: c.collection_id == ^collection_id and c.key in ^key_list,
-        select: sum(c.byte_size)
+        select: fragment("sum(octet_length(key) + octet_length(value))::bigint")
       )
-      |> Repo.one() || 0
-
-    Multi.new()
+    )
     |> Multi.insert_all(:items, Item, item_list,
       conflict_target: [:collection_id, :key],
-      on_conflict: {:replace, [:value, :byte_size, :updated_at]}
+      on_conflict: {:replace, [:value, :updated_at]}
     )
     |> Multi.update_all(
       :collection,
-      fn _changes ->
-        increment = [byte_size_sum: new_mem_used - old_mem_used]
+      fn %{old_mem_used: old_mem_used} ->
+        increment = [byte_size_sum: new_mem_used - (old_mem_used || 0)]
 
         from(c in Collection,
           where: c.id == ^collection_id,
@@ -244,28 +241,30 @@ defmodule Lightning.Collections do
     with {count, _nil} <- Repo.delete_all(query), do: {:ok, count}
   end
 
-  defp upsert_item(%Item{byte_size: old_size} = item, key, value) do
-    kv_size = byte_size(key) + byte_size(value)
-
+  defp upsert_item(%Item{value: old_value} = item, key, value) do
     Multi.new()
     |> Multi.insert(
       :item,
       fn _no_change ->
         Item.changeset(item, %{
           key: key,
-          value: value,
-          byte_size: kv_size
+          value: value
         })
       end,
       conflict_target: [:collection_id, :key],
       on_conflict: [
-        set: [value: value, byte_size: kv_size, updated_at: DateTime.utc_now()]
+        set: [value: value, updated_at: DateTime.utc_now()]
       ]
     )
     |> Multi.update_all(
       :collection,
       fn %{item: %{collection_id: collection_id}} ->
-        increment = [byte_size_sum: byte_size(key) + byte_size(value) - old_size]
+        increment =
+          if is_nil(old_value) do
+            [byte_size_sum: byte_size(key) + byte_size(value)]
+          else
+            [byte_size_sum: byte_size(value) - byte_size(old_value)]
+          end
 
         from(c in Collection,
           where: c.id == ^collection_id,
