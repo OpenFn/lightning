@@ -49,7 +49,7 @@ defmodule Lightning.AdaptorRegistry do
     NPM API functions
     """
 
-    def client() do
+    def client do
       Tesla.client([
         {Tesla.Middleware.BaseUrl, "https://registry.npmjs.org"},
         Tesla.Middleware.JSON
