@@ -24,6 +24,8 @@ and this project adheres to
   [#2495](https://github.com/OpenFn/lightning/issues/2495)
 - Audit the provisioning of projects via the API
   [#2718](https://github.com/OpenFn/lightning/issues/2718)
+- Track Collections storage usage based on items key and value sizes
+  [#2853](https://github.com/OpenFn/lightning/issues/2853)
 
 ### Changed
 
