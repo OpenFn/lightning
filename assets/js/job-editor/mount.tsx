@@ -81,13 +81,7 @@ export default {
 
       instrumentFinish('editor load');
 
-      this.requestMetadata().then(() => {
-        instrumentStart('Render - metadata received');
-
-        this.render()
-
-        instrumentFinish('Render - metadata received');
-      });
+      this.requestMetadata().then(() => this.render());
     });
   },
   handleContentChange(content: string) {
@@ -136,13 +130,7 @@ export default {
   },
   requestMetadata() {
     this.metadata = true; // indicate we're loading
-
-    instrumentStart('Render - prior to requesting metadata');
-
     this.render();
-
-    instrumentFinish('Render - prior to requesting metadata');
-
     return new Promise(resolve => {
       const callbackRef = this.handleEvent('metadata_ready', data => {
         this.removeHandleEvent(callbackRef);
