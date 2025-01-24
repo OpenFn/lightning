@@ -4,6 +4,8 @@ defmodule LightningWeb.WorkflowLive.EditorPane do
   alias Lightning.Credentials
   alias LightningWeb.JobLive.JobBuilderComponents
 
+  # alias LightningWeb.WorkflowLive.Stats
+
   attr :id, :string, required: true
   attr :disabled, :boolean, default: false
   attr :disabled_message, :string, required: true
@@ -74,6 +76,15 @@ defmodule LightningWeb.WorkflowLive.EditorPane do
         event: :metadata_ready
       )
     end)
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("job_editor_stats_report", _params, socket) do
+    # data.workflow_id
+    IO.inspect(socket.assigns, label: "A sign")
+    # Stats.capture_stats("job_editor")
 
     {:noreply, socket}
   end

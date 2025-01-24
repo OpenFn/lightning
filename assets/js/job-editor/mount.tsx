@@ -88,6 +88,8 @@ export default {
 
         instrumentFinish('Render - metadata received');
       });
+
+      this.pushEventTo(this.el, 'job_editor_stats_report', {foo: 'bar', buz: 'baz'})
     });
   },
   handleContentChange(content: string) {
