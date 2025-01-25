@@ -5,15 +5,17 @@ defmodule LightningWeb.UiMetricsTest do
 
   import ExUnit.CaptureLog
 
-  describe "job_editor_metrics/2" do
+  setup do
+    current_log_level = Logger.level()
+    Logger.configure(level: :info)
+
+    on_exit(fn ->
+      Logger.configure(level: current_log_level)
+    end)
+  end
+
+  describe "log_job_editor_metrics/2" do
     setup do
-      current_log_level = Logger.level()
-      Logger.configure(level: :info)
-
-      on_exit(fn ->
-        Logger.configure(level: current_log_level)
-      end)
-
       metrics = [
         %{
           "event" => "mount to 1st render",
@@ -32,7 +34,7 @@ defmodule LightningWeb.UiMetricsTest do
       %{job: job, metrics: metrics}
     end
 
-    test "logs the job editor metrics passed in", %{
+    test "logs the job editor metrics provided", %{
       job: job,
       metrics: metrics
     } do
@@ -97,6 +99,98 @@ defmodule LightningWeb.UiMetricsTest do
           "event=`#{event}` " <>
           "workflow_id=#{workflow_id} " <>
           "job_id=#{job_id} " <>
+          "start_time=#{DateTime.to_iso8601(start_time)} " <>
+          "end_time=#{DateTime.to_iso8601(end_time)} " <>
+          "duration=#{duration} ms"
+
+      ~r/#{log_line}/
+    end
+  end
+
+  describe "log_workflow_editor_metrics/2" do
+    setup do
+      metrics = [
+        %{
+          "event" => "workflow-params load",
+          "start" => 1_737_635_739_914,
+          "end" => 1_737_635_808_890
+        },
+        %{
+          "event" => "something else important",
+          "start" => 1_737_637_606_066,
+          "end" => 1_737_637_623_051
+        }
+      ]
+
+      workflow = insert(:workflow)
+
+      %{metrics: metrics, workflow: workflow}
+    end
+
+    test "logs the workflow metrics provided", %{
+      metrics: metrics,
+      workflow: workflow
+    } do
+      Mox.stub(Lightning.MockConfig, :ui_metrics_tracking_enabled?, fn ->
+        true
+      end)
+
+      expected_entry_1 =
+        workflow_editor_log_regex(
+          workflow: workflow,
+          event: "workflow-params load",
+          start: 1_737_635_739_914,
+          end: 1_737_635_808_890
+        )
+
+      expected_entry_2 =
+        workflow_editor_log_regex(
+          workflow: workflow,
+          event: "something else important",
+          start: 1_737_637_606_066,
+          end: 1_737_637_623_051
+        )
+
+      fun = fn -> UiMetrics.log_workflow_editor_metrics(workflow, metrics) end
+
+      assert capture_log(fun) =~ expected_entry_1
+      assert capture_log(fun) =~ expected_entry_2
+    end
+
+    test "does not write metrics to the log if logging is disabled", %{
+      metrics: metrics,
+      workflow: workflow
+    } do
+      Mox.stub(Lightning.MockConfig, :ui_metrics_tracking_enabled?, fn ->
+        false
+      end)
+
+      fun = fn -> UiMetrics.log_workflow_editor_metrics(workflow, metrics) end
+
+      refute capture_log(fun) =~ ~r/UiMetrics/
+    end
+
+    def workflow_editor_log_regex(opts \\ []) do
+      %{id: workflow_id} = Keyword.fetch!(opts, :workflow)
+
+      event = Keyword.fetch!(opts, :event)
+
+      start_time =
+        opts
+        |> Keyword.fetch!(:start)
+        |> DateTime.from_unix!(:millisecond)
+
+      end_time =
+        opts
+        |> Keyword.fetch!(:end)
+        |> DateTime.from_unix!(:millisecond)
+
+      duration = DateTime.diff(end_time, start_time, :millisecond)
+
+      log_line =
+        "UiMetrics: \\[JobEditor\\] " <>
+          "event=`#{event}` " <>
+          "workflow_id=#{workflow_id} " <>
           "start_time=#{DateTime.to_iso8601(start_time)} " <>
           "end_time=#{DateTime.to_iso8601(end_time)} " <>
           "duration=#{duration} ms"
