@@ -15,18 +15,11 @@ defmodule LightningWeb.UiMetrics do
   defp enrich_job_editor_metric(metric, job) do
     %{id: job_id, workflow_id: workflow_id} = job
 
-    %{
-      "start" => start_ts,
-      "end" => end_ts
-    } = metric
-
     metric
+    |> common_enrichment()
     |> Map.merge(%{
       "workflow_id" => workflow_id,
       "job_id" => job_id,
-      "start_time" => convert_ts(start_ts),
-      "end_time" => convert_ts(end_ts),
-      "duration" => end_ts - start_ts
     })
   end
 
@@ -61,18 +54,7 @@ defmodule LightningWeb.UiMetrics do
   end
 
   defp enrich_workflow_editor_metric(metric, %{id: workflow_id}) do
-    %{
-      "start" => start_ts,
-      "end" => end_ts
-    } = metric
-
-    metric
-    |> Map.merge(%{
-      "workflow_id" => workflow_id,
-      "start_time" => convert_ts(start_ts),
-      "end_time" => convert_ts(end_ts),
-      "duration" => end_ts - start_ts
-    })
+    metric |> common_enrichment() |> Map.put("workflow_id", workflow_id)
   end
 
   defp create_workflow_editor_log_line(metric) do
@@ -84,12 +66,21 @@ defmodule LightningWeb.UiMetrics do
       "duration" => duration
     } = metric
 
-    "UiMetrics: [JobEditor] " <>
+    "UiMetrics: [WorkflowEditor] " <>
       "event=`#{event}` " <>
       "workflow_id=#{workflow_id} " <>
       "start_time=#{start_time} " <>
       "end_time=#{end_time} " <>
       "duration=#{duration} ms"
+  end
+
+  defp common_enrichment(%{"start" => start_ts, "end" => end_ts} = metric) do
+    metric
+    |> Map.merge(%{
+      "start_time" => convert_ts(start_ts),
+      "end_time" => convert_ts(end_ts),
+      "duration" => end_ts - start_ts
+    })
   end
 
   defp convert_ts(ts) do

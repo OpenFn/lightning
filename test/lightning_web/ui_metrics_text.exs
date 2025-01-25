@@ -188,7 +188,7 @@ defmodule LightningWeb.UiMetricsTest do
       duration = DateTime.diff(end_time, start_time, :millisecond)
 
       log_line =
-        "UiMetrics: \\[JobEditor\\] " <>
+        "UiMetrics: \\[WorkflowEditor\\] " <>
           "event=`#{event}` " <>
           "workflow_id=#{workflow_id} " <>
           "start_time=#{DateTime.to_iso8601(start_time)} " <>
