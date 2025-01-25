@@ -60,7 +60,8 @@ export default {
     // this.handleContentChange(this.currentContent);
   },
   mounted(this: JobEditorEntrypoint) {
-    instrumentStart('editor load');
+    let event = 'editor load';
+    let start = instrumentStart(event);
 
     window.jobEditor = this;
 
@@ -79,7 +80,13 @@ export default {
       this.setupObserver();
       this.render();
 
-      instrumentFinish('editor load');
+      let end = instrumentEnd(event);
+
+      this.pushEventTo(
+        this.el,
+        'job_editor_metrics_report',
+        {metrics: [{event, start, end}]}
+      );
 
       this.requestMetadata().then(() => this.render());
     });
@@ -196,11 +203,15 @@ function checkAdaptorVersion(adaptor: string) {
 }
 
 function instrumentStart(label: string) {
-  console.debug(`${label} - start`, new Date().toISOString());
+  let time = new Date();
+  console.debug(`${label} - start`, time.toISOString());
   console.time(label);
+  return time.getTime();
 }
 
-function instrumentFinish(label: string) {
-  console.debug(`${label} - finish`, new Date().toISOString());
+function instrumentEnd(label: string) {
+  let time = new Date();
+  console.debug(`${label} - end`, time.toISOString());
   console.timeEnd(label);
+  return time.getTime();
 }

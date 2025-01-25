@@ -3,6 +3,7 @@ defmodule LightningWeb.WorkflowLive.EditorPane do
 
   alias Lightning.Credentials
   alias LightningWeb.JobLive.JobBuilderComponents
+  alias LightningWeb.UiMetrics
 
   attr :id, :string, required: true
   attr :disabled, :boolean, default: false
@@ -74,6 +75,13 @@ defmodule LightningWeb.WorkflowLive.EditorPane do
         event: :metadata_ready
       )
     end)
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("job_editor_metrics_report", params, socket) do
+    UiMetrics.log_job_editor_metrics(socket.assigns.form.data, params["metrics"])
 
     {:noreply, socket}
   end
