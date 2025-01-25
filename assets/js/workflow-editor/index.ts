@@ -67,6 +67,10 @@ const createNewWorkflow = () => {
 };
 
 export default {
+  // To support temporary workflow editor metrics submissions to Lightning
+  // server.
+  workflowLoadParamsStart: null,
+
   mounted(this: WorkflowEditorEntrypoint) {
     let setHasLoaded: (href: URL) => void;
 
@@ -222,7 +226,9 @@ export default {
     });
   },
   getWorkflowParams() {
-    console.debug('get-initial-state pushed', new Date().toISOString());
+    let start = new Date();
+    this.workflowLoadParamsStart = start.getTime();
+    console.debug('get-initial-state pushed', start.toISOString());
     console.time('workflow-params load');
     this.pushEventTo(this.el, 'get-initial-state', {});
   },
@@ -241,8 +247,22 @@ export default {
     }
 
     this.maybeMountComponent();
+    let end = new Date();
     console.debug('current-worflow-params processed', new Date().toISOString());
     console.timeEnd('workflow-params load');
+    this.pushEventTo(
+      this.el,
+      'workflow_editor_metrics_report',
+      {
+        metrics: [
+          {
+            event: 'workflow-params load',
+            start: this.workflowLoadParamsStart,
+            end: end.getTime()
+          }
+        ]
+      }
+    )
   },
   maybeMountComponent() {
     if (!this._isMounting && !this.component) {

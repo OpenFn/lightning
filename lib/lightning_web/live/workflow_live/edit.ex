@@ -28,6 +28,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
   alias Lightning.WorkOrders
+  alias LightningWeb.UiMetrics
   alias LightningWeb.WorkflowLive.Helpers
   alias LightningWeb.WorkflowNewLive.WorkflowParams
   alias Phoenix.LiveView.JS
@@ -1319,6 +1320,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> push_event("current-workflow-params", %{
        workflow_params: socket.assigns.workflow_params
      })}
+  end
+
+  @impl true
+  def handle_event("workflow_editor_metrics_report", params, socket) do
+    UiMetrics.log_workflow_editor_metrics(
+      socket.assigns.workflow,
+      params["metrics"]
+    )
+
+    {:noreply, socket}
   end
 
   def handle_event("get-current-state", _params, socket) do
