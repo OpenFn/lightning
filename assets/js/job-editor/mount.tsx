@@ -60,6 +60,8 @@ export default {
     // this.handleContentChange(this.currentContent);
   },
   mounted(this: JobEditorEntrypoint) {
+    instrumentStart('editor load');
+
     window.jobEditor = this;
 
     this._debouncedPushChange = pDebounce(this.pushChange, EDITOR_DEBOUNCE_MS);
@@ -76,6 +78,9 @@ export default {
       }
       this.setupObserver();
       this.render();
+
+      instrumentFinish('editor load');
+
       this.requestMetadata().then(() => this.render());
     });
   },
@@ -188,4 +193,14 @@ function checkAdaptorVersion(adaptor: string) {
       "job-editor hook received an adaptor with @latest as it's version - to load docs a specific version must be provided"
     );
   }
+}
+
+function instrumentStart(label: string) {
+  console.debug(`${label} - start`, new Date().toISOString());
+  console.time(label);
+}
+
+function instrumentFinish(label: string) {
+  console.debug(`${label} - finish`, new Date().toISOString());
+  console.timeEnd(label);
 }

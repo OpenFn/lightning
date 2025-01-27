@@ -26,6 +26,11 @@ and this project adheres to
   [#2718](https://github.com/OpenFn/lightning/issues/2718)
 - Track Collections storage usage based on items key and value sizes
   [#2853](https://github.com/OpenFn/lightning/issues/2853)
+- Temporary instrumentation for JobEditor to help identify performance issues.
+  [#2617](https://github.com/OpenFn/lightning/issues/2617)
+- Indexes to foreign keys on `workflow_edges` and `steps` tables to try and
+  alleviate slow loading of the job editor.
+  [#2617](https://github.com/OpenFn/lightning/issues/2617)
 
 ### Changed
 
