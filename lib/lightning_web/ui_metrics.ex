@@ -1,4 +1,8 @@
 defmodule LightningWeb.UiMetrics do
+  @moduledoc """
+  A temporary measure to allow WorkflowEditor and JobEditor UI components to 
+  report selected metrics and have these logged.
+  """
   require Logger
 
   def log_job_editor_metrics(job, metrics) do
@@ -19,7 +23,7 @@ defmodule LightningWeb.UiMetrics do
     |> common_enrichment()
     |> Map.merge(%{
       "workflow_id" => workflow_id,
-      "job_id" => job_id,
+      "job_id" => job_id
     })
   end
 

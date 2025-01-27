@@ -470,7 +470,7 @@ defmodule Lightning.Config do
     impl().promex_metrics_endpoint_token()
   end
 
-  def ui_metrics_tracking_enabled?() do
+  def ui_metrics_tracking_enabled? do
     impl().ui_metrics_tracking_enabled?()
   end
 
