@@ -12,7 +12,6 @@ defmodule Lightning.Workflows.Snapshot do
 
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Repo
-  alias Lightning.Workflows.Audit
   alias Lightning.Workflows.WebhookAuthMethod
   alias Lightning.Workflows.Workflow
 
@@ -169,9 +168,7 @@ defmodule Lightning.Workflows.Snapshot do
   Get the latest snapshot for a workflow, based on the lock_version.
 
   It returns the latest snapshot regardless of the lock_version of the
-  workflow passed in. This is intentional to ensure that
-  `get_or_create_latest_for/1` doesn't attempt to create a new snapshot if the
-  workflow has been updated elsewhere.
+  workflow passed in.
   """
   @spec get_current_for(Workflow.t()) :: t() | nil
   def get_current_for(%Workflow{} = workflow) do
@@ -195,70 +192,6 @@ defmodule Lightning.Workflows.Snapshot do
       preload: [triggers: [:webhook_auth_methods]]
     )
     |> Repo.one()
-  end
-
-  @doc """
-  Get the latest snapshot for a workflow, or create one if it doesn't exist.
-  """
-  @spec get_or_create_latest_for(Workflow.t(), struct()) ::
-          {:ok, t()} | {:error, Ecto.Changeset.t()}
-  def get_or_create_latest_for(workflow, actor) do
-    Multi.new()
-    |> get_or_create_latest_for(workflow, actor)
-    |> Repo.transaction()
-    |> case do
-      {:ok, %{snapshot: snapshot}} -> {:ok, snapshot}
-      {:error, _name, error, _multi} -> {:error, error}
-    end
-  end
-
-  @spec get_or_create_latest_for(
-          Multi.t(),
-          binary() | :snapshot,
-          Workflow.t(),
-          struct()
-        ) ::
-          Multi.t()
-  def get_or_create_latest_for(multi, name \\ :snapshot, workflow, actor) do
-    unique_op = "_existing#{System.unique_integer()}"
-
-    multi
-    |> Multi.one(unique_op, get_current_query(workflow))
-    |> Multi.merge(fn %{^unique_op => snapshot} ->
-      return_or_create(name, snapshot, workflow, actor)
-    end)
-  end
-
-  defp return_or_create(name, snapshot, workflow, actor) do
-    if snapshot do
-      Multi.new() |> Multi.put(name, snapshot)
-    else
-      unique_op = "_workflow#{System.unique_integer()}"
-
-      audit_snapshot =
-        fn %{^name => %{id: snapshot_id}} ->
-          Audit.snapshot_created(workflow.id, snapshot_id, actor)
-        end
-
-      Multi.new()
-      |> Multi.one(
-        unique_op,
-        from(w in Workflow,
-          where: w.id == ^workflow.id,
-          preload: [:jobs, :triggers, :edges],
-          lock: "FOR UPDATE"
-        )
-      )
-      |> Multi.merge(fn %{^unique_op => workflow} ->
-        if workflow do
-          Multi.new()
-          |> Multi.insert(name, build(workflow))
-          |> Multi.insert(String.to_atom("audit_of_#{name}"), audit_snapshot)
-        else
-          Multi.new() |> Multi.error(:workflow, :no_workflow)
-        end
-      end)
-    end
   end
 
   @spec include_latest_snapshot(Multi.t(), binary() | :snapshot, Workflow.t()) ::
