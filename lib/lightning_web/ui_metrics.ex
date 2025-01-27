@@ -1,6 +1,6 @@
 defmodule LightningWeb.UiMetrics do
   @moduledoc """
-  A temporary measure to allow WorkflowEditor and JobEditor UI components to 
+  A temporary measure to allow WorkflowEditor and JobEditor UI components to
   report selected metrics and have these logged.
   """
   require Logger
