@@ -29,6 +29,8 @@ and this project adheres to
 - Indexes to foreign keys on `workflow_edges` and `steps` tables to try and
   alleviate slow loading of the job editor.
   [#2617](https://github.com/OpenFn/lightning/issues/2617)
+- Remove `Snapshot.get_or_create_latest_for`.
+  [#2703](https://github.com/OpenFn/lightning/issues/2703)
 
 ### Changed
 
