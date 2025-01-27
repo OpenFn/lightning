@@ -19,6 +19,11 @@ defmodule Lightning.Collections.Item do
     field :id, :integer, primary_key: true
     belongs_to :collection, Lightning.Collections.Collection, primary_key: true
 
+    # Note: The value type is a string because Lightning doesn't need to decode it to a map and
+    #       encode it again to send to Postgres on every write. This is applicable also to all
+    #       Collection read operations from Runtime worker or external API calls.
+    #       Notice that the CPU + memory saved cost becomes meaningful once the JSON value
+    #       max length is 1MB.
     field :key, :string
     field :value, :string
 

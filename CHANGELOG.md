@@ -24,6 +24,8 @@ and this project adheres to
   [#2495](https://github.com/OpenFn/lightning/issues/2495)
 - Audit the provisioning of projects via the API
   [#2718](https://github.com/OpenFn/lightning/issues/2718)
+- Track Collections storage usage based on items key and value sizes
+  [#2853](https://github.com/OpenFn/lightning/issues/2853)
 - Temporary instrumentation for JobEditor to help identify performance issues.
   [#2617](https://github.com/OpenFn/lightning/issues/2617)
 - Indexes to foreign keys on `workflow_edges` and `steps` tables to try and
@@ -43,8 +45,13 @@ and this project adheres to
 - Bump PostCSS [#2863](https://github.com/OpenFn/lightning/pull/2863)
 - Replaced HTTPoison with Tesla in the AdaptorRegistry.
   [#2861](https://github.com/OpenFn/lightning/pull/2861)
+- Remove googlesheets, gmail and collections from credential schemas list
+  [#2854](https://github.com/OpenFn/lightning/issues/2854)
 
 ### Fixed
+
+- Fixed navbar items alignment in the workflow builder
+  [#2825](https://github.com/OpenFn/lightning/issues/2825)
 
 ## [v2.10.12] - 2025-01-21
 

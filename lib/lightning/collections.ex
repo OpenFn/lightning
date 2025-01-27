@@ -4,6 +4,8 @@ defmodule Lightning.Collections do
   """
   import Ecto.Query
 
+  alias Ecto.Multi
+
   alias Lightning.Collections.Collection
   alias Lightning.Collections.Item
   alias Lightning.Repo
@@ -149,16 +151,11 @@ defmodule Lightning.Collections do
 
   @spec put(Collection.t(), String.t(), String.t()) ::
           :ok | {:error, Ecto.Changeset.t()}
-  def put(%{id: collection_id}, key, value) do
-    %Item{}
-    |> Item.changeset(%{collection_id: collection_id, key: key, value: value})
-    |> Repo.insert(
-      conflict_target: [:collection_id, :key],
-      on_conflict: [set: [value: value, updated_at: DateTime.utc_now()]]
-    )
-    |> then(fn result ->
-      with {:ok, _no_return} <- result, do: :ok
-    end)
+  def put(%{id: collection_id} = collection, key, value) do
+    case get(collection, key) do
+      nil -> upsert_item(%Item{collection_id: collection_id}, key, value)
+      item -> upsert_item(item, key, value)
+    end
   end
 
   @spec put_all(Collection.t(), [{String.t(), String.t()}]) ::
@@ -166,23 +163,53 @@ defmodule Lightning.Collections do
   def put_all(%{id: collection_id}, kv_list) do
     now = DateTime.utc_now()
 
-    item_list =
-      Enum.map(kv_list, fn %{"key" => key, "value" => value} ->
-        %{
-          collection_id: collection_id,
-          key: key,
-          value: value,
-          inserted_at: now,
-          updated_at: now
+    {item_list, {key_list, new_mem_used}} =
+      Enum.map_reduce(kv_list, {[], 0}, fn %{"key" => key, "value" => value},
+                                           {key_list, mem_used} ->
+        {
+          %{
+            collection_id: collection_id,
+            key: key,
+            value: value,
+            inserted_at: now,
+            updated_at: now
+          },
+          {
+            [key | key_list],
+            mem_used + byte_size(key) + byte_size(value)
+          }
         }
       end)
 
-    with {count, _nil} <-
-           Repo.insert_all(Item, item_list,
-             conflict_target: [:collection_id, :key],
-             on_conflict: {:replace, [:value, :updated_at]}
-           ),
-         do: {:ok, count}
+    Multi.new()
+    |> Multi.one(
+      :old_mem_used,
+      from(c in Item,
+        where: c.collection_id == ^collection_id and c.key in ^key_list,
+        select: fragment("sum(octet_length(key) + octet_length(value))::bigint")
+      )
+    )
+    |> Multi.insert_all(:items, Item, item_list,
+      conflict_target: [:collection_id, :key],
+      on_conflict: {:replace, [:value, :updated_at]}
+    )
+    |> Multi.update_all(
+      :collection,
+      fn %{old_mem_used: old_mem_used} ->
+        increment = [byte_size_sum: new_mem_used - (old_mem_used || 0)]
+
+        from(c in Collection,
+          where: c.id == ^collection_id,
+          update: [inc: ^increment]
+        )
+      end,
+      []
+    )
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{items: {count, nil}}} -> {:ok, count}
+      {:error, _op, changeset, _changes} -> {:error, changeset}
+    end
   rescue
     e in Postgrex.Error ->
       if e.postgres.code == :cardinality_violation do
@@ -193,13 +220,10 @@ defmodule Lightning.Collections do
   end
 
   @spec delete(Collection.t(), String.t()) :: :ok | {:error, :not_found}
-  def delete(%{id: collection_id}, key) do
-    query =
-      from(i in Item, where: i.collection_id == ^collection_id and i.key == ^key)
-
-    case Repo.delete_all(query) do
-      {0, nil} -> {:error, :not_found}
-      {1, nil} -> :ok
+  def delete(collection, key) do
+    case get(collection, key) do
+      nil -> {:error, :not_found}
+      item -> delete_item(item)
     end
   end
 
@@ -215,6 +239,70 @@ defmodule Lightning.Collections do
       end)
 
     with {count, _nil} <- Repo.delete_all(query), do: {:ok, count}
+  end
+
+  defp upsert_item(%Item{value: old_value} = item, key, value) do
+    Multi.new()
+    |> Multi.insert(
+      :item,
+      fn _no_change ->
+        Item.changeset(item, %{
+          key: key,
+          value: value
+        })
+      end,
+      conflict_target: [:collection_id, :key],
+      on_conflict: [
+        set: [value: value, updated_at: DateTime.utc_now()]
+      ]
+    )
+    |> Multi.update_all(
+      :collection,
+      fn %{item: %{collection_id: collection_id}} ->
+        increment =
+          if is_nil(old_value) do
+            [byte_size_sum: byte_size(key) + byte_size(value)]
+          else
+            [byte_size_sum: byte_size(value) - byte_size(old_value)]
+          end
+
+        from(c in Collection,
+          where: c.id == ^collection_id,
+          update: [inc: ^increment]
+        )
+      end,
+      []
+    )
+    |> Repo.transaction()
+    |> case do
+      {:ok, _changes} -> :ok
+      {:error, _op, changeset, _changes} -> {:error, changeset}
+    end
+  end
+
+  defp delete_item(%{collection_id: collection_id, key: key, value: value}) do
+    Multi.new()
+    |> Multi.delete_all(:item, fn _no_change ->
+      from(i in Item, where: i.collection_id == ^collection_id and i.key == ^key)
+    end)
+    |> Multi.update_all(
+      :collection,
+      fn _changes ->
+        increment = [byte_size_sum: -(byte_size(key) + byte_size(value))]
+
+        from(c in Collection,
+          where: c.id == ^collection_id,
+          update: [inc: ^increment]
+        )
+      end,
+      []
+    )
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{item: {1, nil}}} -> :ok
+      {:ok, %{item: {0, nil}}} -> {:error, :not_found}
+      {:error, _op, changeset, _changes} -> {:error, changeset}
+    end
   end
 
   defp all_query(collection_id, cursor, limit) do
