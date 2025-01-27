@@ -36,6 +36,8 @@ and this project adheres to
 - Bump PostCSS [#2863](https://github.com/OpenFn/lightning/pull/2863)
 - Replaced HTTPoison with Tesla in the AdaptorRegistry.
   [#2861](https://github.com/OpenFn/lightning/pull/2861)
+- Remove googlesheets, gmail and collections from credential schemas list
+  [#2854](https://github.com/OpenFn/lightning/issues/2854)
 
 ### Fixed
 

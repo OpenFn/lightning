@@ -600,13 +600,10 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       end)
 
     schemas_options
+    |> Enum.reject(fn {_, name, _, _} ->
+      name in ["googlesheets", "gmail", "collections"]
+    end)
     |> Enum.concat([{"Raw JSON", "raw", nil, nil}])
-    # TODO: Gracefully determine which adaptors define custom credential types
-    # and which adaptors use OAuth2 credential types. (Edit for Jan 24th, 2025:
-    # or which adaptors shouldn't use credentials at all! E.g., "Collections".)
-    |> List.delete({"Googlesheets", "googlesheets", nil, nil})
-    |> List.delete({"Gmail", "gmail", nil, nil})
-    |> List.delete({"Collections", "collections", nil, nil})
     |> Enum.sort_by(& &1, :asc)
   end
 
