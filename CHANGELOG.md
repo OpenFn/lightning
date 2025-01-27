@@ -46,6 +46,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed navbar items alignment in the workflow builder
+  [#2825](https://github.com/OpenFn/lightning/issues/2825)
+
 ## [v2.10.12] - 2025-01-21
 
 ### Changed
