@@ -14,7 +14,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-CC1E203A.js"></script>
+    <script src="dist/sidebar_items-2865491C.js"></script>
     <script src="docs_config.js"></script>
     <script async src="dist/html-YIPIRHGU.js"></script>
 
@@ -175,7 +175,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#delete/2" data-no-tooltip translate="no">delete(map, key)</a>
+        <a href="#delete/2" data-no-tooltip translate="no">delete(collection, key)</a>
 
       </div>
 
@@ -233,7 +233,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#put/3" data-no-tooltip translate="no">put(map, key, value)</a>
+        <a href="#put/3" data-no-tooltip translate="no">put(collection, key, value)</a>
 
       </div>
 
@@ -279,7 +279,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">create_collection(attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L71" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L73" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -308,11 +308,11 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_collection</span><span class="p" data-group-id="7852173850-1">(</span><span class="p" data-group-id="7852173850-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;New Collection&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Description here&quot;</span><span class="p" data-group-id="7852173850-2">}</span><span class="p" data-group-id="7852173850-1">)</span><span class="w">
-</span><span class="p" data-group-id="7852173850-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7852173850-4">%</span><span class="nc" data-group-id="7852173850-4">Collection</span><span class="p" data-group-id="7852173850-4">{</span><span class="p" data-group-id="7852173850-4">}</span><span class="p" data-group-id="7852173850-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_collection</span><span class="p" data-group-id="0957571839-1">(</span><span class="p" data-group-id="0957571839-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;New Collection&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Description here&quot;</span><span class="p" data-group-id="0957571839-2">}</span><span class="p" data-group-id="0957571839-1">)</span><span class="w">
+</span><span class="p" data-group-id="0957571839-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0957571839-4">%</span><span class="nc" data-group-id="0957571839-4">Collection</span><span class="p" data-group-id="0957571839-4">{</span><span class="p" data-group-id="0957571839-4">}</span><span class="p" data-group-id="0957571839-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_collection</span><span class="p" data-group-id="7852173850-5">(</span><span class="p" data-group-id="7852173850-6">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="no">nil</span><span class="p" data-group-id="7852173850-6">}</span><span class="p" data-group-id="7852173850-5">)</span><span class="w">
-</span><span class="p" data-group-id="7852173850-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7852173850-8">%</span><span class="nc" data-group-id="7852173850-8">Ecto.Changeset</span><span class="p" data-group-id="7852173850-8">{</span><span class="p" data-group-id="7852173850-8">}</span><span class="p" data-group-id="7852173850-7">}</span></code></pre><h2 id="create_collection/1-returns" class="section-heading">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_collection</span><span class="p" data-group-id="0957571839-5">(</span><span class="p" data-group-id="0957571839-6">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="no">nil</span><span class="p" data-group-id="0957571839-6">}</span><span class="p" data-group-id="0957571839-5">)</span><span class="w">
+</span><span class="p" data-group-id="0957571839-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0957571839-8">%</span><span class="nc" data-group-id="0957571839-8">Ecto.Changeset</span><span class="p" data-group-id="0957571839-8">{</span><span class="p" data-group-id="0957571839-8">}</span><span class="p" data-group-id="0957571839-7">}</span></code></pre><h2 id="create_collection/1-returns" class="section-heading">
   <a href="#create_collection/1-returns" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -330,7 +330,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">create_collection(project_id, name)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L108" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L110" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -357,9 +357,9 @@ Pages
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">delete(map, key)</h1>
+    <h1 class="signature" translate="no">delete(collection, key)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L196" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L223" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -390,7 +390,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">delete_all(map, key_pattern \\ nil)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L207" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L231" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -419,7 +419,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">delete_collection(collection_id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L118" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L120" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -450,7 +450,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">get(map, key)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L126" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L128" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -481,7 +481,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">get_all(map, params, key_pattern \\ nil)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L131" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L133" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -510,7 +510,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">get_collection(name)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L42" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L44" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -541,7 +541,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">list_collections(opts \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L33" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L35" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -569,11 +569,11 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_collections</span><span class="p" data-group-id="6760589989-1">(</span><span class="p" data-group-id="6760589989-1">)</span><span class="w">
-</span><span class="p" data-group-id="6760589989-2">[</span><span class="p" data-group-id="6760589989-3">%</span><span class="nc" data-group-id="6760589989-3">Collection</span><span class="p" data-group-id="6760589989-3">{</span><span class="p" data-group-id="6760589989-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="6760589989-2">]</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_collections</span><span class="p" data-group-id="8218787608-1">(</span><span class="p" data-group-id="8218787608-1">)</span><span class="w">
+</span><span class="p" data-group-id="8218787608-2">[</span><span class="p" data-group-id="8218787608-3">%</span><span class="nc" data-group-id="8218787608-3">Collection</span><span class="p" data-group-id="8218787608-3">{</span><span class="p" data-group-id="8218787608-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="8218787608-2">]</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">list_collections</span><span class="p" data-group-id="6760589989-4">(</span><span class="ss">order_by</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6760589989-5">[</span><span class="ss">asc</span><span class="p">:</span><span class="w"> </span><span class="ss">:inserted_at</span><span class="p" data-group-id="6760589989-5">]</span><span class="p">,</span><span class="w"> </span><span class="ss">preload</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6760589989-6">[</span><span class="ss">:project</span><span class="p">,</span><span class="w"> </span><span class="ss">:user</span><span class="p" data-group-id="6760589989-6">]</span><span class="p" data-group-id="6760589989-4">)</span><span class="w">
-</span><span class="p" data-group-id="6760589989-7">[</span><span class="p" data-group-id="6760589989-8">%</span><span class="nc" data-group-id="6760589989-8">Collection</span><span class="p" data-group-id="6760589989-8">{</span><span class="p" data-group-id="6760589989-8">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="6760589989-7">]</span></code></pre><h2 id="list_collections/1-returns" class="section-heading">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">list_collections</span><span class="p" data-group-id="8218787608-4">(</span><span class="ss">order_by</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8218787608-5">[</span><span class="ss">asc</span><span class="p">:</span><span class="w"> </span><span class="ss">:inserted_at</span><span class="p" data-group-id="8218787608-5">]</span><span class="p">,</span><span class="w"> </span><span class="ss">preload</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8218787608-6">[</span><span class="ss">:project</span><span class="p">,</span><span class="w"> </span><span class="ss">:user</span><span class="p" data-group-id="8218787608-6">]</span><span class="p" data-group-id="8218787608-4">)</span><span class="w">
+</span><span class="p" data-group-id="8218787608-7">[</span><span class="p" data-group-id="8218787608-8">%</span><span class="nc" data-group-id="8218787608-8">Collection</span><span class="p" data-group-id="8218787608-8">{</span><span class="p" data-group-id="8218787608-8">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="8218787608-7">]</span></code></pre><h2 id="list_collections/1-returns" class="section-heading">
   <a href="#list_collections/1-returns" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
@@ -589,9 +589,9 @@ Pages
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">put(map, key, value)</h1>
+    <h1 class="signature" translate="no">put(collection, key, value)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L152" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L154" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -620,7 +620,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">put_all(map, kv_list)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L166" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L163" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -649,7 +649,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">update_collection(collection, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L100" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collections.ex#L102" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -678,11 +678,11 @@ Pages
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_collection</span><span class="p" data-group-id="5820334461-1">(</span><span class="n">collection</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5820334461-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Updated Name&quot;</span><span class="p" data-group-id="5820334461-2">}</span><span class="p" data-group-id="5820334461-1">)</span><span class="w">
-</span><span class="p" data-group-id="5820334461-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5820334461-4">%</span><span class="nc" data-group-id="5820334461-4">Collection</span><span class="p" data-group-id="5820334461-4">{</span><span class="p" data-group-id="5820334461-4">}</span><span class="p" data-group-id="5820334461-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_collection</span><span class="p" data-group-id="3148996247-1">(</span><span class="n">collection</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3148996247-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Updated Name&quot;</span><span class="p" data-group-id="3148996247-2">}</span><span class="p" data-group-id="3148996247-1">)</span><span class="w">
+</span><span class="p" data-group-id="3148996247-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3148996247-4">%</span><span class="nc" data-group-id="3148996247-4">Collection</span><span class="p" data-group-id="3148996247-4">{</span><span class="p" data-group-id="3148996247-4">}</span><span class="p" data-group-id="3148996247-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_collection</span><span class="p" data-group-id="5820334461-5">(</span><span class="n">collection</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5820334461-6">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="no">nil</span><span class="p" data-group-id="5820334461-6">}</span><span class="p" data-group-id="5820334461-5">)</span><span class="w">
-</span><span class="p" data-group-id="5820334461-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5820334461-8">%</span><span class="nc" data-group-id="5820334461-8">Ecto.Changeset</span><span class="p" data-group-id="5820334461-8">{</span><span class="p" data-group-id="5820334461-8">}</span><span class="p" data-group-id="5820334461-7">}</span></code></pre><h2 id="update_collection/2-returns" class="section-heading">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_collection</span><span class="p" data-group-id="3148996247-5">(</span><span class="n">collection</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3148996247-6">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="no">nil</span><span class="p" data-group-id="3148996247-6">}</span><span class="p" data-group-id="3148996247-5">)</span><span class="w">
+</span><span class="p" data-group-id="3148996247-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3148996247-8">%</span><span class="nc" data-group-id="3148996247-8">Ecto.Changeset</span><span class="p" data-group-id="3148996247-8">{</span><span class="p" data-group-id="3148996247-8">}</span><span class="p" data-group-id="3148996247-7">}</span></code></pre><h2 id="update_collection/2-returns" class="section-heading">
   <a href="#update_collection/2-returns" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
