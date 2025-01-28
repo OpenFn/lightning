@@ -106,6 +106,46 @@ defmodule LightningWeb.RunWithOptionsTest do
              |> Jason.decode!() ==
                expected_result
     end
+
+    @tag :tmp_dir
+    test "renders adaptors with @local when local_daptors_repo is configured", %{
+      tmp_dir: tmp_dir
+    } do
+      Mox.stub(Lightning.MockConfig, :adaptor_registry, fn ->
+        [local_adaptors_repo: tmp_dir]
+      end)
+
+      user = insert(:user)
+
+      {:ok, %{triggers: [trigger], jobs: [job]} = workflow} =
+        insert(:simple_workflow)
+        |> Workflow.touch()
+        |> Workflows.save_workflow(user)
+
+      %{runs: [run]} =
+        work_order_for(trigger,
+          workflow: workflow,
+          dataclip: insert(:dataclip)
+        )
+        |> insert()
+
+      expected_result =
+        %{
+          "jobs" => [
+            %{
+              "adaptor" => "@openfn/language-common@local",
+              "body" => job.body,
+              "credential_id" => nil,
+              "id" => job.id,
+              "name" => job.name
+            }
+          ]
+        }
+
+      result = run.id |> Runs.get_for_worker() |> RunWithOptions.render()
+
+      assert expected_result["jobs"] == result["jobs"]
+    end
   end
 
   describe "options_for_worker/1" do

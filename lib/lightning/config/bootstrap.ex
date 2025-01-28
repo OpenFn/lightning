@@ -154,13 +154,36 @@ defmodule Lightning.Config.Bootstrap do
     config :lightning, :adaptor_service,
       adaptors_path: env!("ADAPTORS_PATH", :string, "./priv/openfn")
 
+    local_adaptors_repo =
+      env!(
+        "OPENFN_ADAPTORS_REPO",
+        :string,
+        Utils.get_env([
+          :lightning,
+          Lightning.AdaptorRegistry,
+          :local_adaptors_repo
+        ])
+      )
+
+    use_local_adaptors_repo? =
+      env!("LOCAL_ADAPTORS", &Utils.ensure_boolean/1, false)
+      |> tap(fn v ->
+        if v && !is_binary(local_adaptors_repo) do
+          raise """
+          LOCAL_ADAPTORS is set to true, but OPENFN_ADAPTORS_REPO is not set.
+          """
+        end
+      end)
+
     config :lightning, Lightning.AdaptorRegistry,
       use_cache:
         env!(
           "ADAPTORS_REGISTRY_JSON_PATH",
           :string,
           Utils.get_env([:lightning, Lightning.AdaptorRegistry, :use_cache])
-        )
+        ),
+      local_adaptors_repo:
+        use_local_adaptors_repo? && Path.expand(local_adaptors_repo)
 
     config :lightning, :oauth_clients,
       google: [

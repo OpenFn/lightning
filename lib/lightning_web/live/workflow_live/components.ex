@@ -733,16 +733,20 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :presences, :list
   attr :prior_user, :map
   attr :current_user, :map
+  attr :avatar_icon_size, :string, default: "h-5 w-5"
+  attr :avatar_font_size, :string, default: "text-[9px]"
 
   def online_users(assigns) do
     ~H"""
-    <div id={@id} class={["flex gap-0", @class]}>
+    <div id={@id} class={["flex items-center gap-0", @class]}>
       <.render_user
         :for={%{user: online_user} <- @presences}
         :if={online_user.id != @current_user.id}
         id={"#{@id}-#{online_user.id}"}
         user={online_user}
         prior={@prior_user.id == online_user.id}
+        avatar_icon_size={@avatar_icon_size}
+        avatar_font_size={@avatar_font_size}
       />
     </div>
     """
@@ -755,9 +759,9 @@ defmodule LightningWeb.WorkflowLive.Components do
       phx-hook="Tooltip"
       aria-label={"#{@user.first_name} #{@user.last_name} (#{@user.email})"}
       data-placement="right"
-      class={"inline-flex h-6 w-6 items-center justify-center rounded-full border-2 #{if @prior, do: "border-green-400 bg-green-500", else: "border-gray-400 bg-gray-500"}"}
+      class={"inline-flex #{@avatar_icon_size} items-center justify-center rounded-full border-2 #{if @prior, do: "border-green-400 bg-green-500", else: "border-gray-400 bg-gray-500"}"}
     >
-      <span class="text-xs font-medium leading-none text-white">
+      <span class={"#{@avatar_font_size} font-normal leading-none text-white"}>
         <%= user_name(@user) %>
       </span>
     </span>

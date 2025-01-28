@@ -17,20 +17,39 @@ and this project adheres to
 
 ### Added
 
+- Add support for local adaptors. This can be enabled via `LOCAL_ADAPTORS=true`
+  and path specified via `OPENFN_ADAPTORS_REPO=./path/to/repo/`
+  [#905](https://github.com/OpenFn/lightning/issues/905)
+- Add component injection for AI responses feedback
+  [#2495](https://github.com/OpenFn/lightning/issues/2495)
 - Audit the provisioning of projects via the API
   [#2718](https://github.com/OpenFn/lightning/issues/2718)
+- Track Collections storage usage based on items key and value sizes
+  [#2853](https://github.com/OpenFn/lightning/issues/2853)
+- Temporary instrumentation for JobEditor to help identify performance issues.
+  [#2617](https://github.com/OpenFn/lightning/issues/2617)
+- Indexes to foreign keys on `workflow_edges` and `steps` tables to try and
+  alleviate slow loading of the job editor.
+  [#2617](https://github.com/OpenFn/lightning/issues/2617)
 
 ### Changed
 
 - Remove snapshot creation when performing the Github sync - no longer needed
-  post-migration.
-  [#2703](https://github.com/OpenFn/lightning/issues/2703)
+  post-migration. [#2703](https://github.com/OpenFn/lightning/issues/2703)
 - Remove some redundant code related to `WorkOrders.create_for`.
   [#2703](https://github.com/OpenFn/lightning/issues/2703)
 - Remove use of Snapshot.get_or_create_latest_for from tests.
   [#2703](https://github.com/OpenFn/lightning/issues/2703)
+- Bump PostCSS [#2863](https://github.com/OpenFn/lightning/pull/2863)
+- Replaced HTTPoison with Tesla in the AdaptorRegistry.
+  [#2861](https://github.com/OpenFn/lightning/pull/2861)
+- Remove googlesheets, gmail and collections from credential schemas list
+  [#2854](https://github.com/OpenFn/lightning/issues/2854)
 
 ### Fixed
+
+- Fixed navbar items alignment in the workflow builder
+  [#2825](https://github.com/OpenFn/lightning/issues/2825)
 
 ## [v2.10.12] - 2025-01-21
 

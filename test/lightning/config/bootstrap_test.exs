@@ -388,6 +388,40 @@ defmodule Lightning.Config.BootstrapTest do
     end
   end
 
+  describe "adaptor registry" do
+    test "raises an exception when LOCAL_ADAPTORS is set to true but OPENFN_ADAPTORS_REPO is not set" do
+      assert_raise RuntimeError,
+                   ~r/LOCAL_ADAPTORS is set to true, but OPENFN_ADAPTORS_REPO is not set/,
+                   fn ->
+                     Dotenvy.source([%{"LOCAL_ADAPTORS" => "true"}])
+
+                     Bootstrap.configure()
+                   end
+    end
+
+    test "local_adaptors_repo is set to false when OPENFN_ADAPTORS_REPO is set but LOCAL_ADAPTORS is not set" do
+      Dotenvy.source([%{"OPENFN_ADAPTORS_REPO" => "/path"}])
+      Bootstrap.configure()
+
+      adaptor_registry = get_env(:lightning, Lightning.AdaptorRegistry)
+
+      assert adaptor_registry[:local_adaptors_repo] == false
+    end
+
+    test "local_adaptors_repo is set when both OPENFN_ADAPTORS_REPO and LOCAL_ADAPTORS are set" do
+      # configure both
+      Dotenvy.source([
+        %{"OPENFN_ADAPTORS_REPO" => "/path", "LOCAL_ADAPTORS" => "true"}
+      ])
+
+      Bootstrap.configure()
+
+      adaptor_registry = get_env(:lightning, Lightning.AdaptorRegistry)
+
+      assert adaptor_registry[:local_adaptors_repo] == "/path"
+    end
+  end
+
   # A helper function to get a value from the process dictionary
   # that is stored by the Config module.
   defp get_env(app) do
