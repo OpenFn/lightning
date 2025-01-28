@@ -54,6 +54,8 @@ and this project adheres to
   [#2688](https://github.com/OpenFn/lightning/issues/2688)
 - Fixed navbar items alignment in the workflow builder
   [#2825](https://github.com/OpenFn/lightning/issues/2825)
+- PromEx metrics no longer detaching on error
+  [#2875](https://github.com/OpenFn/lightning/issues/2875)
 
 ## [v2.10.12] - 2025-01-21
 
