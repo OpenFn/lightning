@@ -3,6 +3,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
   import Ecto.Query
   import Eventually
+  import ExUnit.CaptureLog
   import Lightning.Factories
   import Lightning.JobsFixtures
   import Lightning.WorkflowLive.Helpers
@@ -1063,6 +1064,67 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert view |> save_is_disabled?()
     end
 
+    test "renders the job form correctly when local_adaptors_repo is NOT set", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+        )
+
+      job_1 = hd(workflow.jobs)
+
+      view |> select_node(job_1, workflow.lock_version)
+
+      adaptor_name_label =
+        view |> element("label[for='adaptor-name']") |> render()
+
+      assert adaptor_name_label =~ "Adaptor"
+      refute adaptor_name_label =~ "Adaptor (local)"
+
+      # adapter version picker is available
+      assert has_element?(view, "#adaptor-version")
+    end
+
+    @tag :tmp_dir
+    test "renders the job form correctly when local_adaptors_repo is set", %{
+      conn: conn,
+      project: project,
+      workflow: workflow,
+      tmp_dir: tmp_dir
+    } do
+      Mox.stub(Lightning.MockConfig, :adaptor_registry, fn ->
+        [local_adaptors_repo: tmp_dir]
+      end)
+
+      expected_adaptors = ["foo", "bar", "baz"]
+
+      Enum.each(expected_adaptors, fn adaptor ->
+        [tmp_dir, "packages", adaptor] |> Path.join() |> File.mkdir_p!()
+      end)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+        )
+
+      job_1 = hd(workflow.jobs)
+
+      view |> select_node(job_1, workflow.lock_version)
+
+      adaptor_name_label =
+        view |> element("label[for='adaptor-name']") |> render()
+
+      assert adaptor_name_label =~ "Adaptor (local)"
+
+      # version picker is not present
+      refute has_element?(view, "#adaptor-version")
+    end
+
     test "Save button is disabled when workflow is deleted", %{
       conn: conn,
       project: project,
@@ -1789,6 +1851,56 @@ defmodule LightningWeb.WorkflowLive.EditTest do
              |> has_element?(
                "#toggle-container-workflow[aria-label='This workflow is active (webhook trigger enabled)']"
              )
+    end
+  end
+
+  describe "Tracking Workflow editor metrics" do
+    setup :create_workflow
+
+    setup context do
+      Mox.stub(Lightning.MockConfig, :ui_metrics_tracking_enabled?, fn ->
+        true
+      end)
+
+      current_log_level = Logger.level()
+      Logger.configure(level: :info)
+
+      on_exit(fn ->
+        Logger.configure(level: current_log_level)
+      end)
+
+      context
+      |> Map.merge(%{
+        metrics: [
+          %{
+            "event" => "foo-bar-event",
+            "start" => 1_737_635_739_914,
+            "end" => 1_737_635_808_890
+          }
+        ]
+      })
+    end
+
+    test "logs the metrics", %{
+      conn: conn,
+      metrics: metrics,
+      project: project,
+      workflow: %{id: workflow_id} = workflow
+    } do
+      assert [] = Presence.list_presences_for(workflow)
+      refute Presence.has_any_presence?(workflow)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      fun = fn ->
+        view
+        |> editor_element()
+        |> render_hook("workflow_editor_metrics_report", %{"metrics" => metrics})
+      end
+
+      assert capture_log(fun) =~ ~r/foo-bar-event/
+      assert capture_log(fun) =~ ~r/#{workflow_id}/
     end
   end
 

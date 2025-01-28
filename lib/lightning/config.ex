@@ -8,6 +8,11 @@ defmodule Lightning.Config do
     alias Lightning.Services.AdapterHelper
 
     @impl true
+    def adaptor_registry do
+      Application.get_env(:lightning, Lightning.AdaptorRegistry, [])
+    end
+
+    @impl true
     def token_signer do
       :persistent_term.get({__MODULE__, "token_signer"}, nil)
       |> case do
@@ -246,6 +251,15 @@ defmodule Lightning.Config do
     defp promex_config do
       Application.get_env(:lightning, Lightning.PromEx, [])
     end
+
+    @impl true
+    def ui_metrics_tracking_enabled? do
+      Keyword.get(ui_metrics_tracking_config(), :enabled)
+    end
+
+    defp ui_metrics_tracking_config do
+      Application.get_env(:lightning, :ui_metrics_tracking, [])
+    end
   end
 
   @callback apollo(key :: atom() | nil) :: map()
@@ -276,6 +290,7 @@ defmodule Lightning.Config do
   @callback storage() :: term()
   @callback storage(key :: atom()) :: term()
   @callback token_signer() :: Joken.Signer.t()
+  @callback ui_metrics_tracking_enabled?() :: boolean()
   @callback usage_tracking() :: Keyword.t()
   @callback usage_tracking_cleartext_uuids_enabled?() :: boolean()
   @callback usage_tracking_cron_opts() :: [Oban.Plugins.Cron.cron_input()]
@@ -284,6 +299,14 @@ defmodule Lightning.Config do
   @callback usage_tracking_run_chunk_size() :: integer()
   @callback worker_secret() :: binary() | nil
   @callback worker_token_signer() :: Joken.Signer.t()
+  @callback adaptor_registry() :: Keyword.t()
+
+  @doc """
+  Returns the configuration for the `Lightning.AdaptorRegistry` service
+  """
+  def adaptor_registry do
+    impl().adaptor_registry()
+  end
 
   @doc """
   Returns the Apollo server configuration.
@@ -445,6 +468,10 @@ defmodule Lightning.Config do
 
   def promex_metrics_endpoint_token do
     impl().promex_metrics_endpoint_token()
+  end
+
+  def ui_metrics_tracking_enabled? do
+    impl().ui_metrics_tracking_enabled?()
   end
 
   defp impl do

@@ -174,7 +174,7 @@ defmodule LightningWeb.Components.Common do
     assigns = assign(assigns, has_tooltip?: has_tooltip?, styles: styles)
 
     ~H"""
-    <div id={"#{@id}-container"} class="flex items-baseline text-sm font-normal">
+    <div id={"#{@id}-container"} class="flex items-middle text-sm font-normal">
       <span
         id={@id}
         {if @has_tooltip?, do: ["phx-hook": "Tooltip", "data-placement": "bottom", "aria-label": @tooltip], else: []}

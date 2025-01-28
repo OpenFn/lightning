@@ -1,14 +1,14 @@
-### Description
+## Description
 
 This PR *[adds/changes/fixes]... (A description of your work goes here.)*
 
 Closes #__
 
-### Validation steps
+## Validation steps
 
 1. *(How can a reviewer validate your work?)*
 
-### Additional notes for the reviewer
+## Additional notes for the reviewer
 
 1. *(Is there anything else the reviewer should know or look out for?)*
 
@@ -26,7 +26,7 @@ Please disclose how you've used AI in this work (it's cool, we just want to know
 
 You can read more details in our [Responsible AI Policy](https://www.openfn.org/ai#pull-request-templates)
 
-### Pre-submission checklist
+## Pre-submission checklist
 
 - [ ] I have performed a **self-review** of my code.
 - [ ] I have implemented and tested all related **authorization policies**. (e.g., `:owner`, `:admin`, `:editor`, `:viewer`)

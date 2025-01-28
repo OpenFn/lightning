@@ -28,6 +28,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
   alias Lightning.WorkOrders
+  alias LightningWeb.UiMetrics
   alias LightningWeb.WorkflowLive.Helpers
   alias LightningWeb.WorkflowNewLive.WorkflowParams
   alias Phoenix.LiveView.JS
@@ -74,38 +75,39 @@ defmodule LightningWeb.WorkflowLive.Edit do
           breadcrumbs={[{"Workflows", "/projects/#{@project.id}/w"}]}
         >
           <:title>
-            <%= @page_title %>
-            <div class="mx-2"></div>
-            <LightningWeb.Components.Common.snapshot_version_chip
-              id="canvas-workflow-version"
-              version={@snapshot_version_tag}
-              tooltip={
-                if @snapshot_version_tag == "latest",
-                  do: "This is the latest version of this workflow",
-                  else:
-                    "You are viewing a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(@snapshot.inserted_at)}"
-              }
-            />
-            <LightningWeb.WorkflowLive.Components.online_users
-              id="canvas-online-users"
-              presences={@presences}
-              current_user={@current_user}
-              prior_user={@prior_user_presence.user}
-              class="mr-2"
-            />
-            <div :if={@snapshot_version_tag != "latest" && @can_edit_workflow}>
-              <span
-                id="edit-disabled-warning"
-                class="cursor-pointer text-xs flex items-center"
-                phx-hook="Tooltip"
-                data-placement="bottom"
-                aria-label="You cannot edit or run an old snapshot of a workflow"
-              >
-                <.icon
-                  name="hero-information-circle-solid"
-                  class="h-4 w-4 text-primary-600 opacity-50"
-                /> Read-only
-              </span>
+            <div class="flex gap-2">
+              <%= @page_title %>
+
+              <LightningWeb.Components.Common.snapshot_version_chip
+                id="canvas-workflow-version"
+                version={@snapshot_version_tag}
+                tooltip={
+                  if @snapshot_version_tag == "latest",
+                    do: "This is the latest version of this workflow",
+                    else:
+                      "You are viewing a snapshot of this workflow that was taken on #{Lightning.Helpers.format_date(@snapshot.inserted_at)}"
+                }
+              />
+              <LightningWeb.WorkflowLive.Components.online_users
+                id="canvas-online-users"
+                presences={@presences}
+                current_user={@current_user}
+                prior_user={@prior_user_presence.user}
+              />
+              <div :if={@snapshot_version_tag != "latest" && @can_edit_workflow}>
+                <span
+                  id="edit-disabled-warning"
+                  class="cursor-pointer text-xs flex items-center"
+                  phx-hook="Tooltip"
+                  data-placement="bottom"
+                  aria-label="You cannot edit or run an old snapshot of a workflow"
+                >
+                  <.icon
+                    name="hero-information-circle-solid"
+                    class="h-4 w-4 text-primary-600 opacity-50"
+                  /> Read-only
+                </span>
+              </div>
             </div>
           </:title>
 
@@ -1319,6 +1321,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> push_event("current-workflow-params", %{
        workflow_params: socket.assigns.workflow_params
      })}
+  end
+
+  @impl true
+  def handle_event("workflow_editor_metrics_report", params, socket) do
+    UiMetrics.log_workflow_editor_metrics(
+      socket.assigns.workflow,
+      params["metrics"]
+    )
+
+    {:noreply, socket}
   end
 
   def handle_event("get-current-state", _params, socket) do

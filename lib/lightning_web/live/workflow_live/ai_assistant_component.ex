@@ -330,13 +330,15 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
       %{
         quote: "AI is neither artificial nor intelligent",
         author: "Kate Crawford",
-        source_link: "http://rfkhuamnrights.org",
+        source_link:
+          "https://www.wired.com/story/researcher-says-ai-not-artificial-intelligent/",
         enabled: true
       },
       %{
         quote: "With big data comes big responsibilities",
         author: "Kate Crawford",
-        source_link: "http://technologyreview.com",
+        source_link:
+          "https://www.technologyreview.com/2011/10/05/190904/with-big-data-comes-big-responsibilities",
         enabled: true
       },
       %{
@@ -384,7 +386,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         quote:
           "If you make an algorithm, and let it optimise for a certain value, then it won't care what you really want",
         author: "Tom Chivers",
-        source_link: "http://effectivealtruism.org"
+        source_link:
+          "https://forum.effectivealtruism.org/posts/feNJWCo4LbsoKbRon/interview-with-tom-chivers-ai-is-a-plausible-existential"
       },
       %{
         quote:
@@ -392,7 +395,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         author: "Eliezer Yudkowsky",
         source_attribute:
           "Artificial Intelligence as a Positive and Negative Factor in Global Risk",
-        source_link: "http://intelligence.org"
+        source_link:
+          "https://zoo.cs.yale.edu/classes/cs671/12f/12f-papers/yudkowsky-ai-pos-neg-factor.pdf"
       },
       %{
         quote:
@@ -400,7 +404,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         author: "Eliezer Yudkowsky",
         source_attribute:
           "Artificial Intelligence as a Positive and Negative Factor in Global Risk",
-        source_link: "http://intelligence.org"
+        source_link:
+          "https://zoo.cs.yale.edu/classes/cs671/12f/12f-papers/yudkowsky-ai-pos-neg-factor.pdf"
       },
       %{
         quote:

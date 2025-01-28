@@ -48,17 +48,12 @@ defmodule Lightning.AdaptorRegistry do
     @moduledoc """
     NPM API functions
     """
-    use HTTPoison.Base
 
-    @impl true
-    def process_request_url(url) do
-      "https://registry.npmjs.org" <> url
-    end
-
-    @impl true
-    def process_response_body(body) do
-      body
-      |> Jason.decode!()
+    def client do
+      Tesla.client([
+        {Tesla.Middleware.BaseUrl, "https://registry.npmjs.org"},
+        Tesla.Middleware.JSON
+      ])
     end
 
     @doc """
@@ -67,12 +62,9 @@ defmodule Lightning.AdaptorRegistry do
     """
     @spec user_packages(user :: String.t()) :: [map()]
     def user_packages(user) do
-      get("/-/user/#{user}/package", [],
-        hackney: [pool: :default],
-        recv_timeout: 15_000
-      )
+      Tesla.get(client(), "/-/user/#{user}/package")
       |> case do
-        {:error, %HTTPoison.Error{reason: :nxdomain, id: nil}} ->
+        {:error, :nxdomain} ->
           Logger.info("Unable to connect to NPM; no adaptors fetched.")
           []
 
@@ -86,10 +78,7 @@ defmodule Lightning.AdaptorRegistry do
     """
     @spec package_detail(package_name :: String.t()) :: map()
     def package_detail(package_name) do
-      get!("/#{package_name}", [],
-        hackney: [pool: :default],
-        recv_timeout: 15_000
-      ).body
+      Tesla.get!(client(), "/#{package_name}").body
     end
   end
 
@@ -100,34 +89,31 @@ defmodule Lightning.AdaptorRegistry do
 
   @impl GenServer
   def handle_continue(opts, _state) do
-    cache_path =
-      case opts[:use_cache] do
-        true ->
-          Path.join([
-            System.tmp_dir!(),
-            "lightning",
-            "adaptor_registry_cache.json"
-          ])
+    adaptors =
+      case Enum.into(opts, %{}) do
+        %{local_adaptors_repo: repo_path} when is_binary(repo_path) ->
+          read_adaptors_from_local_repo(repo_path)
 
-        path when is_binary(path) ->
-          path
+        %{use_cache: use_cache}
+        when use_cache === true or is_binary(use_cache) ->
+          cache_path =
+            if is_binary(use_cache) do
+              use_cache
+            else
+              Path.join([
+                System.tmp_dir!(),
+                "lightning",
+                "adaptor_registry_cache.json"
+              ])
+            end
 
-        _ ->
-          nil
+          read_from_cache(cache_path) || write_to_cache(cache_path, fetch())
+
+        _other ->
+          fetch()
       end
 
-    if cache_path do
-      read_from_cache(cache_path)
-      |> case do
-        nil ->
-          {:noreply, write_to_cache(cache_path, fetch())}
-
-        adaptors ->
-          {:noreply, adaptors}
-      end
-    else
-      {:noreply, fetch()}
-    end
+    {:noreply, adaptors}
   end
 
   # false positive, it's a file from init
@@ -284,6 +270,22 @@ defmodule Lightning.AdaptorRegistry do
     }
   end
 
+  defp read_adaptors_from_local_repo(repo_path) do
+    Logger.debug("Using local adaptors repo at #{repo_path}")
+
+    repo_path
+    |> Path.join("packages")
+    |> File.ls!()
+    |> Enum.map(fn package ->
+      %{
+        name: "@openfn/language-" <> package,
+        repo: "file://" <> Path.join([repo_path, "packages", package]),
+        latest: "local",
+        versions: []
+      }
+    end)
+  end
+
   @doc """
   Destructures an NPM style package name into module name and version.
 
@@ -314,6 +316,17 @@ defmodule Lightning.AdaptorRegistry do
       _ ->
         {nil, nil}
     end
+    |> then(fn
+      {name, version} when is_binary(name) ->
+        if local_adaptors_enabled?() do
+          {name, "local"}
+        else
+          {name, version}
+        end
+
+      other ->
+        other
+    end)
   end
 
   @doc """
@@ -337,11 +350,20 @@ defmodule Lightning.AdaptorRegistry do
       {nil, nil} ->
         ""
 
+      {adaptor_name, "local"} ->
+        "#{adaptor_name}@local"
+
       {adaptor_name, "latest"} ->
         "#{adaptor_name}@#{latest_for(adaptor_name)}"
 
       _ ->
         adaptor
     end
+  end
+
+  def local_adaptors_enabled? do
+    config = Lightning.Config.adaptor_registry()
+
+    if config[:local_adaptors_repo], do: true, else: false
   end
 end
