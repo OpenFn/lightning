@@ -429,8 +429,6 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       user: %{id: user_id},
       workflow: %{id: workflow_id} = workflow
     } do
-      Lightning.Repo.delete_all(Lightning.Auditing.Audit)
-
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
 
       view |> click_delete_workflow(workflow)
