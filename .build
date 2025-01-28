@@ -303,6 +303,7 @@ LightningWeb.RunLive.Streaming.html
 LightningWeb.RunLive.WorkOrderComponent.html
 LightningWeb.Telemetry.html
 LightningWeb.TokensLive.Index.html
+LightningWeb.UiMetrics.html
 LightningWeb.UserAuth.html
 LightningWeb.UserConfirmationController.html
 LightningWeb.UserLive.Components.html
@@ -354,8 +355,8 @@ dist/lato-latin-ext-300-normal-VPGGJKJL.woff2
 dist/lato-latin-ext-400-normal-N27NCBWW.woff2
 dist/lato-latin-ext-700-normal-Q2L5DVMW.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-9BF256AD.js
-dist/sidebar_items-2865491C.js
+dist/search_data-73882769.js
+dist/sidebar_items-77C225AA.js
 index.html
 provisioning.html
 readme.html
