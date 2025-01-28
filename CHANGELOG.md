@@ -31,6 +31,8 @@ and this project adheres to
 - Indexes to foreign keys on `workflow_edges` and `steps` tables to try and
   alleviate slow loading of the job editor.
   [#2617](https://github.com/OpenFn/lightning/issues/2617)
+- Extend provisioner to support collections
+  [#2830](https://github.com/OpenFn/lightning/issues/2830)
 
 ### Changed
 
