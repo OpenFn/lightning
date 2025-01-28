@@ -1,14 +1,14 @@
+import pDebounce from 'p-debounce';
+import pRetry from 'p-retry';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import type JobEditor from './JobEditor';
-import { sortMetadata } from '../metadata-loader/metadata';
-import { LiveSocket, PhoenixHook } from '../hooks/PhoenixHook';
-import type WorkflowEditorEntrypoint from '../workflow-editor';
-import pRetry from 'p-retry';
-import pDebounce from 'p-debounce';
-import { WorkflowStore } from '../workflow-editor/store';
-import { Lightning } from '../workflow-diagram/types';
 import { EDITOR_DEBOUNCE_MS } from '../common';
+import { LiveSocket, PhoenixHook } from '../hooks/PhoenixHook';
+import { sortMetadata } from '../metadata-loader/metadata';
+import { Lightning } from '../workflow-diagram/types';
+import type WorkflowEditorEntrypoint from '../workflow-editor';
+import { WorkflowStore } from '../workflow-editor/store';
+import type JobEditor from './JobEditor';
 
 type JobEditorEntrypoint = PhoenixHook<
   {
@@ -46,8 +46,8 @@ let JobEditorComponent: typeof JobEditor | undefined;
 export default {
   findWorkflowEditorStore() {
     return pRetry(
-      () => {
-        console.debug('Looking up WorkflowEditorHook');
+      attempt => {
+        console.debug('Looking up WorkflowEditorHook', { attempt });
         return lookupWorkflowEditorHook(this.liveSocket, this.el);
       },
       { retries: 5 }
@@ -60,7 +60,8 @@ export default {
     // this.handleContentChange(this.currentContent);
   },
   mounted(this: JobEditorEntrypoint) {
-    instrumentStart('editor load');
+    let event = 'editor load';
+    let start = instrumentStart(event);
 
     window.jobEditor = this;
 
@@ -79,7 +80,11 @@ export default {
       this.setupObserver();
       this.render();
 
-      instrumentFinish('editor load');
+      let end = instrumentEnd(event);
+
+      this.pushEventTo(this.el, 'job_editor_metrics_report', {
+        metrics: [{ event, start, end }],
+      });
 
       this.requestMetadata().then(() => this.render());
     });
@@ -106,27 +111,32 @@ export default {
 
     checkAdaptorVersion(adaptor);
 
-    this.findWorkflowEditorStore().then(workflowStore => {
-      const job = workflowStore.getState().getById<Lightning.Job>(jobId);
+    pRetry(
+      async attempt => {
+        console.debug('JobEditor', { attempt });
 
-      if (!job) {
-        console.error('Job not found', jobId);
-        return;
-      }
-
-      if (JobEditorComponent) {
-        this.componentRoot?.render(
-          <JobEditorComponent
-            adaptor={adaptor}
-            source={job.body}
-            metadata={this.metadata}
-            disabled={disabled === 'true'}
-            disabledMessage={disabledMessage}
-            onSourceChanged={src => this.handleContentChange(src)}
-          />
-        );
-      }
-    });
+        const workflowStore = await this.findWorkflowEditorStore();
+        const job = workflowStore.getState().getById<Lightning.Job>(jobId);
+        if (!job) {
+          throw new Error('Job not found in store yet');
+        }
+        if (JobEditorComponent) {
+          this.componentRoot?.render(
+            <JobEditorComponent
+              adaptor={adaptor}
+              source={job.body}
+              metadata={this.metadata}
+              disabled={disabled === 'true'}
+              disabledMessage={disabledMessage}
+              onSourceChanged={src_1 => this.handleContentChange(src_1)}
+            />
+          );
+        } else {
+          throw new Error('JobEditorComponent not loaded yet');
+        }
+      },
+      { retries: 5 }
+    );
   },
   requestMetadata() {
     this.metadata = true; // indicate we're loading
@@ -196,11 +206,15 @@ function checkAdaptorVersion(adaptor: string) {
 }
 
 function instrumentStart(label: string) {
-  console.debug(`${label} - start`, new Date().toISOString());
+  let time = new Date();
+  console.debug(`${label} - start`, time.toISOString());
   console.time(label);
+  return time.getTime();
 }
 
-function instrumentFinish(label: string) {
-  console.debug(`${label} - finish`, new Date().toISOString());
+function instrumentEnd(label: string) {
+  let time = new Date();
+  console.debug(`${label} - end`, time.toISOString());
   console.timeEnd(label);
+  return time.getTime();
 }

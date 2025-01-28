@@ -3,6 +3,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
   import Ecto.Query
   import Eventually
+  import ExUnit.CaptureLog
   import Lightning.Factories
   import Lightning.JobsFixtures
   import Lightning.WorkflowLive.Helpers
@@ -1850,6 +1851,56 @@ defmodule LightningWeb.WorkflowLive.EditTest do
              |> has_element?(
                "#toggle-container-workflow[aria-label='This workflow is active (webhook trigger enabled)']"
              )
+    end
+  end
+
+  describe "Tracking Workflow editor metrics" do
+    setup :create_workflow
+
+    setup context do
+      Mox.stub(Lightning.MockConfig, :ui_metrics_tracking_enabled?, fn ->
+        true
+      end)
+
+      current_log_level = Logger.level()
+      Logger.configure(level: :info)
+
+      on_exit(fn ->
+        Logger.configure(level: current_log_level)
+      end)
+
+      context
+      |> Map.merge(%{
+        metrics: [
+          %{
+            "event" => "foo-bar-event",
+            "start" => 1_737_635_739_914,
+            "end" => 1_737_635_808_890
+          }
+        ]
+      })
+    end
+
+    test "logs the metrics", %{
+      conn: conn,
+      metrics: metrics,
+      project: project,
+      workflow: %{id: workflow_id} = workflow
+    } do
+      assert [] = Presence.list_presences_for(workflow)
+      refute Presence.has_any_presence?(workflow)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      fun = fn ->
+        view
+        |> editor_element()
+        |> render_hook("workflow_editor_metrics_report", %{"metrics" => metrics})
+      end
+
+      assert capture_log(fun) =~ ~r/foo-bar-event/
+      assert capture_log(fun) =~ ~r/#{workflow_id}/
     end
   end
 
