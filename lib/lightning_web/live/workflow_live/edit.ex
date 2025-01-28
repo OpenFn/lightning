@@ -2530,7 +2530,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
         form="workflow-form"
         phx-disconnected={JS.set_attribute({"disabled", ""})}
         tooltip={@tooltip}
-        class={[] ++ if @project_repo_connection, do: ["rounded-r-none"], else: []}
+        class={
+          ["focus:ring-transparent"] ++
+            if @project_repo_connection, do: ["rounded-r-none"], else: []
+        }
         phx-connected={
           !@disabled && !@has_presence_priority && JS.remove_attribute("disabled")
         }
