@@ -339,6 +339,7 @@ defmodule Lightning.Accounts.UserNotifier do
           })
         )
       end)
+      |> String.trim()
 
     body = """
     Hi #{user.first_name},
