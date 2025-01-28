@@ -47,6 +47,8 @@ and this project adheres to
   [#2861](https://github.com/OpenFn/lightning/pull/2861)
 - Remove googlesheets, gmail and collections from credential schemas list
   [#2854](https://github.com/OpenFn/lightning/issues/2854)
+- Remove ring on save workflow button
+  [#2829](https://github.com/OpenFn/lightning/issues/2829)
 
 ### Fixed
 
