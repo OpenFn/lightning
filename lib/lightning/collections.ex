@@ -8,7 +8,11 @@ defmodule Lightning.Collections do
 
   alias Lightning.Collections.Collection
   alias Lightning.Collections.Item
+  alias Lightning.Extensions.Message
+  alias Lightning.Extensions.UsageLimiting.Action
+  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Repo
+  alias Lightning.Services.UsageLimiter
 
   @doc """
   Returns the list of collections with optional ordering and preloading.
@@ -57,10 +61,10 @@ defmodule Lightning.Collections do
 
   ## Examples
 
-      iex> create_collection(%{name: "New Collection", description: "Description here"})
+      iex> create_collection(%{name: "New Collection", project_id: "a7895d29-02a9-42cd-845b-7ad893557c24"})
       {:ok, %Collection{}}
 
-      iex> create_collection(%{name: nil})
+      iex> create_collection(%{name: nil, project_id: "a7895d29-02a9-42cd-845b-7ad893557c24"}})
       {:error, %Ecto.Changeset{}}
 
   ## Returns
@@ -70,10 +74,21 @@ defmodule Lightning.Collections do
   """
   @spec create_collection(map()) ::
           {:ok, Collection.t()} | {:error, Ecto.Changeset.t()}
-  def create_collection(attrs) do
-    %Collection{}
-    |> Collection.changeset(attrs)
-    |> Repo.insert()
+  def create_collection(%{"project_id" => project_id} = attrs) do
+    Multi.new()
+    |> Multi.run(:limiter, fn _repo, _changes ->
+      case UsageLimiter.limit_action(%Action{type: :collection_create}, %Context{project_id: project_id}) do
+        :ok -> {:ok, nil}
+        {:error, :exceeds_limit, message} -> {:error, message}
+      end
+    end)
+    |> Multi.insert(:create, Collection.changeset(%Collection{}, attrs))
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{create: collection}} -> {:ok, collection}
+      {:error, :limiter, message, _changes} -> {:error, :exceeds_limit, message}
+      {:error, _op, changeset, _changes} -> {:error, changeset}
+    end
   end
 
   @doc """
@@ -103,14 +118,6 @@ defmodule Lightning.Collections do
     collection
     |> Collection.changeset(attrs)
     |> Repo.update()
-  end
-
-  @spec create_collection(Ecto.UUID.t(), String.t()) ::
-          {:ok, Collection.t()} | {:error, Ecto.Changeset.t()}
-  def create_collection(project_id, name) do
-    %Collection{}
-    |> Collection.changeset(%{project_id: project_id, name: name})
-    |> Repo.insert()
   end
 
   @spec delete_collection(Ecto.UUID.t()) ::
@@ -151,16 +158,21 @@ defmodule Lightning.Collections do
 
   @spec put(Collection.t(), String.t(), String.t()) ::
           :ok | {:error, Ecto.Changeset.t()}
-  def put(%{id: collection_id} = collection, key, value) do
+  def put(collection, key, value) do
     case get(collection, key) do
-      nil -> upsert_item(%Item{collection_id: collection_id}, key, value)
-      item -> upsert_item(item, key, value)
+      nil ->
+        upsert_item(collection, %Item{collection_id: collection.id}, key, value)
+
+      item ->
+        upsert_item(collection, item, key, value)
     end
   end
 
   @spec put_all(Collection.t(), [{String.t(), String.t()}]) ::
-          {:ok, non_neg_integer()} | {:error, :duplicate_key}
-  def put_all(%{id: collection_id}, kv_list) do
+          {:ok, non_neg_integer()}
+          | {:error, :duplicate_key}
+          | {:error, :exceeds_limit, Message.t()}
+  def put_all(%{id: collection_id, project_id: project_id}, kv_list) do
     now = DateTime.utc_now()
 
     {item_list, {key_list, new_mem_used}} =
@@ -189,14 +201,23 @@ defmodule Lightning.Collections do
         select: fragment("sum(octet_length(key) + octet_length(value))::bigint")
       )
     )
+    |> Multi.run(:increment_size, fn _repo, %{old_mem_used: old_mem_used} ->
+      {:ok, new_mem_used - (old_mem_used || 0)}
+    end)
+    |> Multi.run(:limiter, fn _repo, %{increment_size: increment_size} ->
+      case limit_put(project_id, increment_size) do
+        :ok -> {:ok, nil}
+        {:error, :exceeds_limit, message} -> {:error, message}
+      end
+    end)
     |> Multi.insert_all(:items, Item, item_list,
       conflict_target: [:collection_id, :key],
       on_conflict: {:replace, [:value, :updated_at]}
     )
     |> Multi.update_all(
       :collection,
-      fn %{old_mem_used: old_mem_used} ->
-        increment = [byte_size_sum: new_mem_used - (old_mem_used || 0)]
+      fn %{increment_size: increment_size} ->
+        increment = [byte_size_sum: increment_size]
 
         from(c in Collection,
           where: c.id == ^collection_id,
@@ -208,6 +229,7 @@ defmodule Lightning.Collections do
     |> Repo.transaction()
     |> case do
       {:ok, %{items: {count, nil}}} -> {:ok, count}
+      {:error, :limiter, message, _changes} -> {:error, :exceeds_limit, message}
       {:error, _op, changeset, _changes} -> {:error, changeset}
     end
   rescue
@@ -241,8 +263,23 @@ defmodule Lightning.Collections do
     with {count, _nil} <- Repo.delete_all(query), do: {:ok, count}
   end
 
-  defp upsert_item(%Item{value: old_value} = item, key, value) do
+  defp upsert_item(
+         %Collection{project_id: project_id},
+         %Item{value: old_value} = item,
+         key,
+         value
+       ) do
     Multi.new()
+    |> Multi.run(:increment_size, fn _repo, _changes ->
+      if is_nil(old_value) do
+        {:ok, byte_size(key) + byte_size(value)}
+      else
+        {:ok, byte_size(value) - byte_size(old_value)}
+      end
+    end)
+    |> Multi.run(:limiter, fn _repo, %{increment_size: increment_size} ->
+      with :ok <- limit_put(project_id, increment_size), do: {:ok, nil}
+    end)
     |> Multi.insert(
       :item,
       fn _no_change ->
@@ -258,17 +295,10 @@ defmodule Lightning.Collections do
     )
     |> Multi.update_all(
       :collection,
-      fn %{item: %{collection_id: collection_id}} ->
-        increment =
-          if is_nil(old_value) do
-            [byte_size_sum: byte_size(key) + byte_size(value)]
-          else
-            [byte_size_sum: byte_size(value) - byte_size(old_value)]
-          end
-
+      fn %{item: %{collection_id: collection_id}, increment_size: increment_size} ->
         from(c in Collection,
           where: c.id == ^collection_id,
-          update: [inc: ^increment]
+          update: [inc: ^[byte_size_sum: increment_size]]
         )
       end,
       []
@@ -355,5 +385,12 @@ defmodule Lightning.Collections do
     |> String.replace("\\", "\\\\")
     |> String.replace("%", "\\%")
     |> String.replace("*", "%")
+  end
+
+  defp limit_put(project_id, requested_size) do
+    UsageLimiter.limit_action(
+      %Action{type: :collection_put, amount: requested_size},
+      %Context{project_id: project_id}
+    )
   end
 end

@@ -22,12 +22,12 @@ project =
 
 {:ok, collection1} =
   with {:error, :not_found} <- Collections.get_collection("bench1") do
-    Collections.create_collection(project.id, "bench1")
+    Collections.create_collection(%{"project_id" => project.id, "name" => "bench1"})
   end
 
 {:ok, collection2} =
   with {:error, :not_found} <- Collections.get_collection("bench2") do
-    Collections.create_collection(project.id, "bench2")
+    Collections.create_collection(%{"project_id" => project.id, "name" => "bench2"})
   end
 
 record1 = fn prefix, i ->

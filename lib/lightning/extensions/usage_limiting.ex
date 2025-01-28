@@ -4,8 +4,8 @@ defmodule Lightning.Extensions.UsageLimiting do
   """
   @type error_reason ::
           :too_many_runs
-          | :too_many_queries
           | :runs_hard_limit
+          | :exceeds_limit
           | :unknown_project
   @type message :: Lightning.Extensions.Message.t()
   @type error :: {:error, error_reason(), message()}
@@ -14,11 +14,13 @@ defmodule Lightning.Extensions.UsageLimiting do
     @moduledoc false
     @type t :: %__MODULE__{
             type:
-              :new_run
-              | :activate_workflow
+              :activate_workflow
               | :ai_usage
               | :alert_failure
+              | :collection_create
+              | :collection_put
               | :github_sync
+              | :new_run
               | :new_user
               | :require_mfa,
             amount: pos_integer()

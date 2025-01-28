@@ -27,7 +27,7 @@ defmodule Lightning.AiAssistant.LimiterTest do
 
     test "return limiter error when limit is reached" do
       limiter_error =
-        {:error, :too_many_queries,
+        {:error, :exceeds_limit,
          %Lightning.Extensions.Message{text: "Too many queries"}}
 
       project_id = Ecto.UUID.generate()

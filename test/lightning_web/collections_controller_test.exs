@@ -4,6 +4,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
   import Lightning.Factories
 
   alias Lightning.Collections
+  alias Lightning.Extensions.Message
 
   @limits Application.compile_env!(
             :lightning,
@@ -260,7 +261,60 @@ defmodule LightningWeb.API.CollectionsControllerTest do
              }
     end
 
-    test "returns a 422 when a key is referenced twice", %{conn: conn} do
+    test "returns 404 when the collection doesn't exist", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      _another_collection = insert(:collection, project: project)
+
+      token = Lightning.Accounts.generate_api_token(user)
+
+      conn =
+        conn
+        |> assign_bearer(token)
+        |> post(~p"/collections/misspelled-collection", %{
+          items: [%{key: "baz", value: "qux"}]
+        })
+
+      assert json_response(conn, 404) == %{"error" => "Not Found"}
+    end
+
+    test "returns 422 when request exceeds the limit", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      collection =
+        insert(:collection,
+          project: project,
+          items: Enum.map(1..3, &%{key: "foo#{&1}", value: "bar#{&1}"})
+        )
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :collection_put}, _context ->
+          {:error, :exceeds_limit, %Message{text: "some limit error message"}}
+        end
+      )
+
+      conn =
+        conn
+        |> assign_bearer(Lightning.Accounts.generate_api_token(user))
+        |> post(~p"/collections/#{collection.name}", %{
+          items: [%{key: "foo1", value: "bar1"}, %{key: "foo2", value: "bar2"}]
+        })
+
+      assert json_response(conn, 422) == %{
+               "upserted" => 0,
+               "error" => "some limit error message"
+             }
+    end
+
+    test "returns 422 when a key is referenced twice", %{conn: conn} do
       user = insert(:user)
 
       project =
@@ -285,26 +339,6 @@ defmodule LightningWeb.API.CollectionsControllerTest do
                "upserted" => 0,
                "error" => "Duplicate key found"
              }
-    end
-
-    test "returns 404 when the collection doesn't exist", %{conn: conn} do
-      user = insert(:user)
-
-      project =
-        insert(:project, project_users: [%{user: user}])
-
-      _another_collection = insert(:collection, project: project)
-
-      token = Lightning.Accounts.generate_api_token(user)
-
-      conn =
-        conn
-        |> assign_bearer(token)
-        |> post(~p"/collections/misspelled-collection", %{
-          items: [%{key: "baz", value: "qux"}]
-        })
-
-      assert json_response(conn, 404) == %{"error" => "Not Found"}
     end
   end
 

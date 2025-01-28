@@ -2,6 +2,7 @@ defmodule LightningWeb.CollectionsController do
   use LightningWeb, :controller
 
   alias Lightning.Collections
+  alias Lightning.Extensions.Message
   alias Lightning.Policies.Permissions
 
   action_fallback LightningWeb.FallbackController
@@ -44,6 +45,7 @@ defmodule LightningWeb.CollectionsController do
           json(conn, %{upserted: 0, error: "Format error"})
       end
     end
+    |> maybe_handle_limit_error(conn)
   end
 
   def put_all(conn, %{"name" => col_name, "items" => items}) do
@@ -60,6 +62,7 @@ defmodule LightningWeb.CollectionsController do
       other ->
         other
     end
+    |> maybe_handle_limit_error(conn)
   end
 
   def get(conn, %{"name" => col_name, "key" => key}) do
@@ -308,4 +311,15 @@ defmodule LightningWeb.CollectionsController do
         {:halt, {:error, conn}}
     end
   end
+
+  defp maybe_handle_limit_error(
+         {:error, :exceeds_limit, %Message{text: error_msg}},
+         conn
+       ) do
+    conn
+    |> put_status(:unprocessable_entity)
+    |> json(%{upserted: 0, error: error_msg})
+  end
+
+  defp maybe_handle_limit_error(result, _conn), do: result
 end

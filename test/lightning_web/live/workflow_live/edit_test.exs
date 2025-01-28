@@ -2896,7 +2896,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                                                                           project_id:
                                                                             ^project_id
                                                                         } ->
-        {:error, :too_many_queries,
+        {:error, :exceeds_limit,
          %Lightning.Extensions.Message{text: error_message}}
       end)
 
