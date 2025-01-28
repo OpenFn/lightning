@@ -73,11 +73,15 @@ defmodule Lightning.Collections do
     - `{:error, %Ecto.Changeset{}}` on failure due to validation errors.
   """
   @spec create_collection(map()) ::
-          {:ok, Collection.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, Collection.t()}
+          | {:error, Ecto.Changeset.t()}
+          | {:error, :exceeds_limit, Message.t()}
   def create_collection(%{"project_id" => project_id} = attrs) do
     Multi.new()
     |> Multi.run(:limiter, fn _repo, _changes ->
-      case UsageLimiter.limit_action(%Action{type: :collection_create}, %Context{project_id: project_id}) do
+      case UsageLimiter.limit_action(%Action{type: :collection_create}, %Context{
+             project_id: project_id
+           }) do
         :ok -> {:ok, nil}
         {:error, :exceeds_limit, message} -> {:error, message}
       end

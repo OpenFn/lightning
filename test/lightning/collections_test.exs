@@ -25,7 +25,10 @@ defmodule Lightning.CollectionsTest do
       name = "col1_project1"
 
       assert {:ok, %Collection{project_id: ^project_id, name: ^name}} =
-               Collections.create_collection(%{"project_id" => project_id, "name" => name})
+               Collections.create_collection(%{
+                 "project_id" => project_id,
+                 "name" => name
+               })
     end
 
     test "returns an error when collection name is taken" do
@@ -33,7 +36,10 @@ defmodule Lightning.CollectionsTest do
       name = "col1_project1"
 
       assert {:ok, %Collection{project_id: ^project_id1, name: ^name}} =
-               Collections.create_collection(%{"project_id" => project_id1, "name" => name})
+               Collections.create_collection(%{
+                 "project_id" => project_id1,
+                 "name" => name
+               })
 
       assert {:error,
               %{
@@ -45,9 +51,12 @@ defmodule Lightning.CollectionsTest do
                        constraint_name: "collections_name_index"
                      ]}
                 ]
-              }} = Collections.create_collection(%{"project_id" => project_id1, "name" => name})
+              }} =
+               Collections.create_collection(%{
+                 "project_id" => project_id1,
+                 "name" => name
+               })
     end
-
 
     test "returns an error when limit is exceeded" do
       %{id: project_id1} = insert(:project)
@@ -56,7 +65,10 @@ defmodule Lightning.CollectionsTest do
       message = %Lightning.Extensions.Message{text: "some error"}
 
       assert {:ok, %Collection{project_id: ^project_id1, name: ^name}} =
-               Collections.create_collection(%{"project_id" => project_id1, "name" => name})
+               Collections.create_collection(%{
+                 "project_id" => project_id1,
+                 "name" => name
+               })
 
       Mox.stub(
         Lightning.Extensions.MockUsageLimiter,
@@ -66,7 +78,11 @@ defmodule Lightning.CollectionsTest do
         end
       )
 
-      assert {:error, :exceeds_limit, ^message} = Collections.create_collection(%{"project_id" => project_id2, "name" => name})
+      assert {:error, :exceeds_limit, ^message} =
+               Collections.create_collection(%{
+                 "project_id" => project_id2,
+                 "name" => name
+               })
     end
   end
 
@@ -340,7 +356,12 @@ defmodule Lightning.CollectionsTest do
                        constraint_name: "collection_items_collection_id_fkey"
                      ]}
                 ]
-              }} = Collections.put(%Collection{id: Ecto.UUID.generate()}, "key", "value")
+              }} =
+               Collections.put(
+                 %Collection{id: Ecto.UUID.generate()},
+                 "key",
+                 "value"
+               )
     end
   end
 

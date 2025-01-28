@@ -3,6 +3,7 @@ defmodule LightningWeb.CollectionLive.CollectionCreationModal do
 
   alias Lightning.Collections
   alias Lightning.Collections.Collection
+  alias Lightning.Extensions.Message
   alias Lightning.Helpers
   alias Lightning.Projects
 
@@ -70,6 +71,12 @@ defmodule LightningWeb.CollectionLive.CollectionCreationModal do
         {:noreply,
          socket
          |> put_flash(:info, "Collection #{mode}d successfully")
+         |> push_navigate(to: return_to)}
+
+      {:error, :exceeds_limit, %Message{text: error_msg}} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, error_msg)
          |> push_navigate(to: return_to)}
 
       {:error, changeset} ->
