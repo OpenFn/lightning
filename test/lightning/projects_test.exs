@@ -230,7 +230,8 @@ defmodule Lightning.ProjectsTest do
     test "delete_project/1 deletes the project" do
       %{project: p1, workflow_1_job: w1_job, workflow_1: w1} =
         full_project_fixture(
-          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second),
+          collections: [build(:collection, project: nil)]
         )
 
       t1 = insert(:trigger, %{workflow: w1, type: :webhook})
