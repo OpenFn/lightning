@@ -1,20 +1,15 @@
 defmodule Lightning.AdaptorRegistryTest do
-  use ExUnit.Case, async: false
-  use Mimic
+  use Lightning.DataCase, async: false
+
+  import Mox
+  import Tesla.Test
+
+  setup :set_mox_from_context
+  setup :verify_on_exit!
 
   alias Lightning.AdaptorRegistry
 
   describe "start_link/1" do
-    # AdaptorRegistry is a GenServer, and so stubbed (external) functions must
-    # be mocked globally. See: https://github.com/edgurgel/mimic#private-and-global-mode
-    setup :set_mimic_from_context
-
-    setup do
-      stub(:hackney)
-
-      :ok
-    end
-
     test "uses cache from a specific location" do
       file_path =
         Briefly.create!(extname: ".json")
@@ -38,19 +33,26 @@ defmodule Lightning.AdaptorRegistryTest do
     end
 
     test "retrieves a list of adaptors when caching is disabled" do
-      # :hackney.request(request.method, request.url, request.headers, request.body, hn_options)
-      expect(:hackney, :request, fn
-        :get,
-        "https://registry.npmjs.org/-/user/openfn/package",
-        [],
-        "",
-        [recv_timeout: 15_000, pool: :default] ->
-          {:ok, 200, "headers", :client}
-      end)
+      default_npm_response =
+        File.read!("test/fixtures/language-common-npm.json") |> Jason.decode!()
 
-      expect(:hackney, :body, fn :client, _timeout ->
-        {:ok, File.read!("test/fixtures/openfn-packages-npm.json")}
-      end)
+      expect_tesla_call(
+        times: 7,
+        returns: fn env, [] ->
+          case env.url do
+            "https://registry.npmjs.org/-/user/openfn/package" ->
+              {:ok,
+               json(
+                 %Tesla.Env{status: 200},
+                 File.read!("test/fixtures/openfn-packages-npm.json")
+                 |> Jason.decode!()
+               )}
+
+            "https://registry.npmjs.org/@openfn/" <> _adaptor ->
+              {:ok, json(%Tesla.Env{status: 200}, default_npm_response)}
+          end
+        end
+      )
 
       expected_adaptors = [
         "@openfn/language-asana",
@@ -61,25 +63,30 @@ defmodule Lightning.AdaptorRegistryTest do
         "@openfn/language-salesforce"
       ]
 
-      stub(:hackney, :body, fn :adaptor, _timeout ->
-        {:ok, File.read!("test/fixtures/language-common-npm.json")}
-      end)
-
-      stub(:hackney, :request, fn
-        :get,
-        "https://registry.npmjs.org/" <> adaptor,
-        [],
-        "",
-        [recv_timeout: 15_000, pool: :default] ->
-          assert adaptor in expected_adaptors
-          {:ok, 200, "headers", :adaptor}
-      end)
-
       start_supervised!(
         {AdaptorRegistry, [name: :test_adaptor_registry, use_cache: false]}
       )
 
       results = AdaptorRegistry.all(:test_adaptor_registry)
+
+      assert_received_tesla_call(env, [])
+
+      assert_tesla_env(env, %Tesla.Env{
+        method: :get,
+        url: "https://registry.npmjs.org/-/user/openfn/package"
+      })
+
+      1..length(expected_adaptors)
+      |> Enum.each(fn _ ->
+        assert_received_tesla_call(env, [])
+
+        assert %Tesla.Env{
+                 method: :get,
+                 url: "https://registry.npmjs.org/" <> adaptor
+               } = env
+
+        assert adaptor in expected_adaptors
+      end)
 
       assert length(results) == 6
 
@@ -122,6 +129,35 @@ defmodule Lightning.AdaptorRegistryTest do
              ) ==
                nil
     end
+
+    @tag :tmp_dir
+    test "lists directory names of the when local_adaptors_repo is set", %{
+      tmp_dir: tmp_dir,
+      test: test
+    } do
+      expected_adaptors = ["foo", "bar", "baz"]
+
+      Enum.each(expected_adaptors, fn adaptor ->
+        [tmp_dir, "packages", adaptor] |> Path.join() |> File.mkdir_p!()
+      end)
+
+      start_supervised!(
+        {AdaptorRegistry, [name: test, local_adaptors_repo: tmp_dir]}
+      )
+
+      results = AdaptorRegistry.all(test)
+
+      for adaptor <- expected_adaptors do
+        expected_result = %{
+          name: "@openfn/language-#{adaptor}",
+          repo: "file://" <> Path.join([tmp_dir, "packages", adaptor]),
+          latest: "local",
+          versions: []
+        }
+
+        assert expected_result in results
+      end
+    end
   end
 
   describe "resolve_package_name/1" do
@@ -136,6 +172,23 @@ defmodule Lightning.AdaptorRegistryTest do
 
       assert AdaptorRegistry.resolve_package_name("@openfn/language-foo") ==
                {"@openfn/language-foo", nil}
+
+      assert AdaptorRegistry.resolve_package_name("") ==
+               {nil, nil}
+    end
+
+    @tag :tmp_dir
+    test "returns local as the version when local_adaptors_repo config is set",
+         %{tmp_dir: tmp_dir} do
+      Mox.stub(Lightning.MockConfig, :adaptor_registry, fn ->
+        [local_adaptors_repo: tmp_dir]
+      end)
+
+      assert AdaptorRegistry.resolve_package_name("@openfn/language-foo@1.2.3") ==
+               {"@openfn/language-foo", "local"}
+
+      assert AdaptorRegistry.resolve_package_name("@openfn/language-foo") ==
+               {"@openfn/language-foo", "local"}
 
       assert AdaptorRegistry.resolve_package_name("") ==
                {nil, nil}

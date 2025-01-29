@@ -2,9 +2,13 @@ defmodule Lightning.VersionControlTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Auditing.Audit
+  alias Lightning.Extensions.MockUsageLimiter
+  alias Lightning.Extensions.Message
+  alias Lightning.Extensions.UsageLimiting.Action
+  alias Lightning.Extensions.UsageLimiting.Context
+  alias Lightning.Repo
   alias Lightning.VersionControl
   alias Lightning.VersionControl.ProjectRepoConnection
-  alias Lightning.Repo
   alias Lightning.Workflows.Snapshot
 
   import Lightning.Factories
@@ -124,6 +128,99 @@ defmodule Lightning.VersionControlTest do
                params["github_installation_id"]
     end
 
+    test "creating the repo connection creates an audit entry" do
+      %{id: project_id} = insert(:project)
+      %{id: user_id} = user = user_with_valid_github_oauth()
+
+      repo = "someaccount/somerepo"
+      branch = "somebranch"
+      github_installation_id = "1234"
+
+      expected_installation = %{
+        "id" => github_installation_id,
+        "account" => %{
+          "type" => "User",
+          "login" => "username"
+        }
+      }
+
+      expected_repo = %{
+        "full_name" => repo,
+        "default_branch" => "main"
+      }
+
+      expected_branch = %{"name" => branch}
+
+      # push pull.yml
+      expect_get_repo(expected_repo["full_name"], 200, expected_repo)
+      expect_create_blob(expected_repo["full_name"])
+
+      expect_get_commit(
+        expected_repo["full_name"],
+        expected_repo["default_branch"]
+      )
+
+      expect_create_tree(expected_repo["full_name"])
+      expect_create_commit(expected_repo["full_name"])
+
+      expect_update_ref(
+        expected_repo["full_name"],
+        expected_repo["default_branch"]
+      )
+
+      # push deploy.yml + config.json
+      # deploy.yml blob
+      expect_create_blob(expected_repo["full_name"])
+      # config.json blob
+      expect_create_blob(expected_repo["full_name"])
+      expect_get_commit(expected_repo["full_name"], expected_branch["name"])
+      expect_create_tree(expected_repo["full_name"])
+      expect_create_commit(expected_repo["full_name"])
+      expect_update_ref(expected_repo["full_name"], expected_branch["name"])
+
+      # write secret
+      expect_get_public_key(expected_repo["full_name"])
+      secret_name = "OPENFN_#{String.replace(project_id, "-", "_")}_API_KEY"
+      expect_create_repo_secret(expected_repo["full_name"], secret_name)
+
+      # initialize sync
+      expect_create_installation_token(expected_installation["id"])
+      expect_get_repo(expected_repo["full_name"], 200, expected_repo)
+
+      expect_create_workflow_dispatch(
+        expected_repo["full_name"],
+        "openfn-pull.yml"
+      )
+
+      params = %{
+        "project_id" => project_id,
+        "repo" => repo,
+        "branch" => branch,
+        "github_installation_id" => github_installation_id,
+        "sync_direction" => "pull",
+        "accept" => "true"
+      }
+
+      {:ok, %{id: _repo_connection_id}} =
+        VersionControl.create_github_connection(params, user)
+
+      audit = Repo.one!(Audit)
+
+      assert %{
+               event: "repo_connection_created",
+               item_id: ^project_id,
+               item_type: "project",
+               actor_id: ^user_id,
+               changes: %{
+                 after: %{
+                   "repo" => ^repo,
+                   "branch" => ^branch,
+                   "sync_direction" => "pull"
+                 }
+               }
+             } = audit
+    end
+
     test "user without an oauth token cannot create a repo connection" do
       project = insert(:project)
       user = insert(:user)
@@ -202,6 +299,71 @@ defmodule Lightning.VersionControlTest do
                )
 
       assert Repo.aggregate(ProjectRepoConnection, :count) == 0
+    end
+
+    test "audits the removal of the repo connection" do
+      %{id: project_id} = project = insert(:project)
+      %{id: user_id} = user = user_with_valid_github_oauth()
+
+      repo = "someaccount/somerepo"
+      branch = "somebranch"
+
+      repo_connection =
+        insert(:project_repo_connection,
+          project: project,
+          repo: repo,
+          branch: branch,
+          github_installation_id: "1234",
+          access_token: "someaccesstoken"
+        )
+
+      assert is_map(user.github_oauth_token)
+
+      # check if deploy yml exists for deletion
+      expected_deploy_yml_path =
+        ".github/workflows/openfn-#{project.id}-deploy.yml"
+
+      expect_get_repo_content(repo_connection.repo, expected_deploy_yml_path)
+
+      # deletes successfully
+      expect_delete_repo_content(
+        repo_connection.repo,
+        expected_deploy_yml_path
+      )
+
+      # check if deploy yml exists for deletion
+      expected_config_json_path = "openfn-#{project.id}-config.json"
+      expect_get_repo_content(repo_connection.repo, expected_config_json_path)
+      # fails to delete
+      expect_delete_repo_content(
+        repo_connection.repo,
+        expected_config_json_path,
+        400,
+        %{"something" => "happened"}
+      )
+
+      # delete secret
+      expect_delete_repo_secret(
+        repo_connection.repo,
+        "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
+      )
+
+      VersionControl.remove_github_connection(repo_connection, user)
+
+      audit = Repo.one!(Audit)
+
+      assert %{
+               event: "repo_connection_removed",
+               item_id: ^project_id,
+               item_type: "project",
+               actor_id: ^user_id,
+               changes: %{
+                 before: %{
+                   "repo" => ^repo,
+                   "branch" => ^branch
+                 }
+               }
+             } = audit
     end
 
     test "user without an oauth token can successfully remove a connection" do
@@ -401,56 +563,94 @@ defmodule Lightning.VersionControlTest do
       verify_on_exit!()
 
       project = insert(:project)
+
       workflow = insert(:simple_workflow, project: project)
-      user = user_with_valid_github_oauth()
+      {:ok, snapshot} = Snapshot.create(workflow)
+
+      other_workflow = insert(:simple_workflow, project: project)
+      {:ok, other_snapshot} = Snapshot.create(other_workflow)
+
       repo_connection = insert(:project_repo_connection, project: project)
 
       [
+        commit_message: "my little commit message",
         project: project,
-        user: user,
         repo_connection: repo_connection,
+        snapshots: [snapshot, other_snapshot],
         workflow: workflow
       ]
     end
 
-    test "creates snapshots for workflows without snapshots", %{
-      user: user,
-      repo_connection: repo_connection,
-      workflow: workflow
+    test "checks if github sync is rate limited", %{
+      commit_message: commit_message,
+      project: %{id: project_id},
+      repo_connection: repo_connection
     } do
-      refute Snapshot.get_current_for(workflow)
+      action = %Action{type: :github_sync}
+      context = %Context{project_id: project_id}
 
-      expect_create_installation_token(repo_connection.github_installation_id)
-      expect_get_repo(repo_connection.repo)
-      expect_create_workflow_dispatch(repo_connection.repo, "openfn-pull.yml")
+      Mox.expect(MockUsageLimiter, :limit_action, fn ^action, ^context ->
+        :ok
+      end)
 
-      assert :ok = VersionControl.initiate_sync(repo_connection, user.email)
-      assert Snapshot.get_current_for(workflow)
+      VersionControl.initiate_sync(repo_connection, commit_message)
     end
 
-    test "creates audit entries for any snapshots created", %{
-      user: user,
-      repo_connection: %{id: repo_connection_id} = repo_connection,
-      workflow: %{id: workflow_id} = workflow
+    test "returns error if github sync is rate limited", %{
+      commit_message: commit_message,
+      project: %{id: project_id},
+      repo_connection: repo_connection
+    } do
+      action = %Action{type: :github_sync}
+      context = %Context{project_id: project_id}
+
+      message = %Message{text: "You melted the CPU."}
+
+      Mox.stub(MockUsageLimiter, :limit_action, fn ^action, ^context ->
+        {:error, :melted, message}
+      end)
+
+      assert {:error, ^message} =
+               VersionControl.initiate_sync(repo_connection, commit_message)
+    end
+
+    test "creates GH workflow dispatch event", %{
+      commit_message: commit_message,
+      repo_connection: repo_connection,
+      snapshots: [snapshot, other_snapshot]
     } do
       expect_create_installation_token(repo_connection.github_installation_id)
       expect_get_repo(repo_connection.repo)
-      expect_create_workflow_dispatch(repo_connection.repo, "openfn-pull.yml")
 
-      assert :ok = VersionControl.initiate_sync(repo_connection, user.email)
+      expect_create_workflow_dispatch_with_request_body(
+        repo_connection.repo,
+        "openfn-pull.yml",
+        %{
+          ref: "main",
+          inputs: %{
+            projectId: repo_connection.project_id,
+            apiSecretName: api_secret_name(repo_connection),
+            branch: repo_connection.branch,
+            pathToConfig: path_to_config(repo_connection),
+            commitMessage: commit_message,
+            snapshots: "#{other_snapshot.id} #{snapshot.id}"
+          }
+        }
+      )
 
-      %{id: snapshot_id} = Snapshot.get_current_for(workflow)
+      assert :ok = VersionControl.initiate_sync(repo_connection, commit_message)
+    end
 
-      audit = Audit |> Repo.one!()
+    defp api_secret_name(%{project_id: project_id}) do
+      project_id
+      |> String.replace("-", "_")
+      |> then(&"OPENFN_#{&1}_API_KEY")
+    end
 
-      assert %{
-               event: "snapshot_created",
-               item_id: ^workflow_id,
-               actor_id: ^repo_connection_id,
-               changes: %{
-                 after: %{"snapshot_id" => ^snapshot_id}
-               }
-             } = audit
+    defp path_to_config(repo_connection) do
+      repo_connection
+      |> ProjectRepoConnection.config_path()
+      |> Path.relative_to(".")
     end
   end
 

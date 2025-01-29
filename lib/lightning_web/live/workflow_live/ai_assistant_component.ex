@@ -330,13 +330,15 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
       %{
         quote: "AI is neither artificial nor intelligent",
         author: "Kate Crawford",
-        source_link: "http://rfkhuamnrights.org",
+        source_link:
+          "https://www.wired.com/story/researcher-says-ai-not-artificial-intelligent/",
         enabled: true
       },
       %{
         quote: "With big data comes big responsibilities",
         author: "Kate Crawford",
-        source_link: "http://technologyreview.com",
+        source_link:
+          "https://www.technologyreview.com/2011/10/05/190904/with-big-data-comes-big-responsibilities",
         enabled: true
       },
       %{
@@ -384,7 +386,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         quote:
           "If you make an algorithm, and let it optimise for a certain value, then it won't care what you really want",
         author: "Tom Chivers",
-        source_link: "http://effectivealtruism.org"
+        source_link:
+          "https://forum.effectivealtruism.org/posts/feNJWCo4LbsoKbRon/interview-with-tom-chivers-ai-is-a-plausible-existential"
       },
       %{
         quote:
@@ -392,7 +395,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         author: "Eliezer Yudkowsky",
         source_attribute:
           "Artificial Intelligence as a Positive and Negative Factor in Global Risk",
-        source_link: "http://intelligence.org"
+        source_link:
+          "https://zoo.cs.yale.edu/classes/cs671/12f/12f-papers/yudkowsky-ai-pos-neg-factor.pdf"
       },
       %{
         quote:
@@ -400,7 +404,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         author: "Eliezer Yudkowsky",
         source_attribute:
           "Artificial Intelligence as a Positive and Negative Factor in Global Risk",
-        source_link: "http://intelligence.org"
+        source_link:
+          "https://zoo.cs.yale.edu/classes/cs671/12f/12f-papers/yudkowsky-ai-pos-neg-factor.pdf"
       },
       %{
         quote:
@@ -745,6 +750,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   attr :target, :any, required: true
 
   defp render_individual_session(assigns) do
+    assigns = assign(assigns, ai_feedback: ai_feedback())
+
     ~H"""
     <div class="row-span-full flex flex-col">
       <div class="bg-white border-b border-gray-200 px-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
@@ -812,6 +819,13 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             </div>
             <div class="break-words max-w-[80%]">
               <.formatted_content content={message.content} />
+              <div :if={@ai_feedback} class="flex justify-start mt-4">
+                <%= Phoenix.LiveView.TagEngine.component(
+                  @ai_feedback.component,
+                  %{session_id: @session.id, message_id: message.id},
+                  {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
+                ) %>
+              </div>
             </div>
           </div>
         <% end %>
@@ -961,5 +975,9 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
   defp display_cancel_message_btn?(session) do
     user_messages = Enum.filter(session.messages, &(&1.role == :user))
     length(user_messages) > 1
+  end
+
+  defp ai_feedback do
+    Application.get_env(:lightning, :ai_feedback)
   end
 end

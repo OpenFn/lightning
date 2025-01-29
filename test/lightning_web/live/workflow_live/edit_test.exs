@@ -3,16 +3,21 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
   import Ecto.Query
   import Eventually
+  import ExUnit.CaptureLog
   import Lightning.Factories
   import Lightning.JobsFixtures
   import Lightning.WorkflowLive.Helpers
   import Lightning.WorkflowsFixtures
+  import Lightning.GithubHelpers
+  import Phoenix.Component
   import Phoenix.LiveViewTest
+  import Mox
 
   alias Lightning.Auditing.Audit
   alias Lightning.Helpers
   alias Lightning.Repo
   alias Lightning.Workflows
+  alias Lightning.Workflows.Presence
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Workflow
   alias LightningWeb.CredentialLiveHelpers
@@ -22,12 +27,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
   describe "New credential from project context " do
     setup %{project: project} do
-      actor = insert(:user)
       %{job: job} = workflow_job_fixture(project_id: project.id)
       workflow = Repo.get(Workflow, job.workflow_id)
 
-      {:ok, snapshot} =
-        Workflows.Snapshot.get_or_create_latest_for(workflow, actor)
+      {:ok, snapshot} = Workflows.Snapshot.create(workflow)
 
       %{job: job, workflow: workflow, snapshot: snapshot}
     end
@@ -312,6 +315,24 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   describe "edit" do
     setup :create_workflow
 
+    test "Editing tracks user presence", %{
+      conn: conn,
+      project: project,
+      workflow: workflow,
+      user: user
+    } do
+      assert [] = Presence.list_presences_for(workflow)
+      refute Presence.has_any_presence?(workflow)
+
+      {:ok, _view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      user = Map.put(user, :password, nil)
+
+      assert [%Presence{user: ^user}] = Presence.list_presences_for(workflow)
+      assert Presence.has_any_presence?(workflow)
+    end
+
     test "Switching trigger types doesn't erase webhook URL input content", %{
       conn: conn,
       project: project,
@@ -349,15 +370,17 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     end
 
     test "Switching between workflow versions maintains correct read-only and edit modes",
-         %{conn: conn, project: project, workflow: workflow} do
+         %{
+           conn: conn,
+           project: project,
+           snapshot: snapshot,
+           workflow: workflow
+         } do
       {:ok, view, _html} =
         live(
           conn,
           ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
         )
-
-      {:ok, snapshot} =
-        Snapshot.get_or_create_latest_for(workflow, insert(:user))
 
       assert snapshot.lock_version == workflow.lock_version
 
@@ -607,7 +630,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     test "Creating an audit event on rerun", %{
       conn: conn,
       project: project,
-      user: %{id: user_id} = user,
+      snapshot: snapshot,
+      user: %{id: user_id},
       workflow: %{id: workflow_id} = workflow
     } do
       {:ok, view, _html} =
@@ -615,8 +639,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           conn,
           ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
         )
-
-      {:ok, snapshot} = Snapshot.get_or_create_latest_for(workflow, user)
 
       view |> fill_workflow_name("#{workflow.name} v2")
 
@@ -691,12 +713,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
          %{
            conn: conn,
            project: project,
+           snapshot: earliest_snapshot,
            user: user,
            workflow: workflow
          } do
-      {:ok, earliest_snapshot} =
-        Snapshot.get_or_create_latest_for(workflow, user)
-
       run_1 =
         insert(:run,
           work_order: build(:workorder, workflow: workflow),
@@ -723,7 +743,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         Workflows.change_workflow(workflow, %{jobs: jobs_attrs})
         |> Workflows.save_workflow(user)
 
-      {:ok, latest_snapshot} = Snapshot.get_or_create_latest_for(workflow, user)
+      latest_snapshot = Snapshot.get_current_for(workflow)
 
       run_2 =
         insert(:run,
@@ -795,11 +815,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     test "Can't switch to the latest version from a deleted step", %{
       conn: conn,
       project: project,
+      snapshot: snapshot,
       user: user,
       workflow: workflow
     } do
-      {:ok, snapshot} = Snapshot.get_or_create_latest_for(workflow, user)
-
       run =
         insert(:run,
           work_order: build(:workorder, workflow: workflow),
@@ -826,7 +845,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         Workflows.change_workflow(workflow, %{jobs: jobs_attrs})
         |> Workflows.save_workflow(user)
 
-      {:ok, latest_snapshot} = Snapshot.get_or_create_latest_for(workflow, user)
+      latest_snapshot = Snapshot.get_current_for(workflow)
 
       insert(:run,
         work_order: build(:workorder, workflow: workflow),
@@ -1043,6 +1062,67 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                new_job_name
 
       assert view |> save_is_disabled?()
+    end
+
+    test "renders the job form correctly when local_adaptors_repo is NOT set", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+        )
+
+      job_1 = hd(workflow.jobs)
+
+      view |> select_node(job_1, workflow.lock_version)
+
+      adaptor_name_label =
+        view |> element("label[for='adaptor-name']") |> render()
+
+      assert adaptor_name_label =~ "Adaptor"
+      refute adaptor_name_label =~ "Adaptor (local)"
+
+      # adapter version picker is available
+      assert has_element?(view, "#adaptor-version")
+    end
+
+    @tag :tmp_dir
+    test "renders the job form correctly when local_adaptors_repo is set", %{
+      conn: conn,
+      project: project,
+      workflow: workflow,
+      tmp_dir: tmp_dir
+    } do
+      Mox.stub(Lightning.MockConfig, :adaptor_registry, fn ->
+        [local_adaptors_repo: tmp_dir]
+      end)
+
+      expected_adaptors = ["foo", "bar", "baz"]
+
+      Enum.each(expected_adaptors, fn adaptor ->
+        [tmp_dir, "packages", adaptor] |> Path.join() |> File.mkdir_p!()
+      end)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+        )
+
+      job_1 = hd(workflow.jobs)
+
+      view |> select_node(job_1, workflow.lock_version)
+
+      adaptor_name_label =
+        view |> element("label[for='adaptor-name']") |> render()
+
+      assert adaptor_name_label =~ "Adaptor (local)"
+
+      # version picker is not present
+      refute has_element?(view, "#adaptor-version")
     end
 
     test "Save button is disabled when workflow is deleted", %{
@@ -1288,9 +1368,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         |> with_trigger(trigger)
         |> with_edge({trigger, job})
         |> insert()
-
-      {:ok, _snapshot} =
-        Workflows.Snapshot.get_or_create_latest_for(workflow, insert(:user))
+        |> with_snapshot()
 
       {:ok, view, _html} =
         live(
@@ -1323,11 +1401,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         |> with_edge({trigger, job_a})
         |> with_edge({job_a, job_b})
         |> insert()
+        |> with_snapshot()
 
       insert(:step, job: job_b)
-
-      {:ok, _snapshot} =
-        Workflows.Snapshot.get_or_create_latest_for(workflow, insert(:user))
 
       {:ok, view, _html} =
         live(
@@ -1377,9 +1453,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         |> with_edge({job_a, job_b})
         |> with_edge({job_b, job_c})
         |> insert()
-
-      {:ok, _snapshot} =
-        Workflows.Snapshot.get_or_create_latest_for(workflow, insert(:user))
+        |> with_snapshot()
 
       {:ok, view, html} =
         live(
@@ -1780,8 +1854,401 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     end
   end
 
+  describe "Tracking Workflow editor metrics" do
+    setup :create_workflow
+
+    setup context do
+      Mox.stub(Lightning.MockConfig, :ui_metrics_tracking_enabled?, fn ->
+        true
+      end)
+
+      current_log_level = Logger.level()
+      Logger.configure(level: :info)
+
+      on_exit(fn ->
+        Logger.configure(level: current_log_level)
+      end)
+
+      context
+      |> Map.merge(%{
+        metrics: [
+          %{
+            "event" => "foo-bar-event",
+            "start" => 1_737_635_739_914,
+            "end" => 1_737_635_808_890
+          }
+        ]
+      })
+    end
+
+    test "logs the metrics", %{
+      conn: conn,
+      metrics: metrics,
+      project: project,
+      workflow: %{id: workflow_id} = workflow
+    } do
+      assert [] = Presence.list_presences_for(workflow)
+      refute Presence.has_any_presence?(workflow)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      fun = fn ->
+        view
+        |> editor_element()
+        |> render_hook("workflow_editor_metrics_report", %{"metrics" => metrics})
+      end
+
+      assert capture_log(fun) =~ ~r/foo-bar-event/
+      assert capture_log(fun) =~ ~r/#{workflow_id}/
+    end
+  end
+
+  describe "Save and Sync to Github" do
+    setup :verify_on_exit!
+    setup :create_workflow
+
+    setup %{project: project} do
+      repo_connection =
+        insert(:project_repo_connection,
+          project: project,
+          repo: "someaccount/somerepo",
+          branch: "somebranch",
+          github_installation_id: "1234",
+          access_token: "someaccesstoken"
+        )
+
+      %{repo_connection: repo_connection}
+    end
+
+    @tag role: :editor
+    test "is not available when project isn't connected to github", %{
+      conn: conn,
+      project: project,
+      workflow: workflow,
+      repo_connection: repo_connection
+    } do
+      Repo.delete!(repo_connection)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      refute view |> has_element?("button[phx-click='toggle_github_sync_modal']")
+    end
+
+    @tag role: :editor
+    test "can be done when creating a new workflow", %{
+      conn: conn,
+      project: project,
+      repo_connection: repo_connection
+    } do
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new?m=settings")
+
+      assert view |> push_patches_to_view(initial_workflow_patchset(project))
+
+      workflow_name = "My Workflow"
+      view |> fill_workflow_name(workflow_name)
+
+      assert view |> save_is_disabled?()
+
+      {job, _, _} = view |> select_first_job()
+
+      view |> fill_job_fields(job, %{name: "My Job"})
+
+      # Editing the Jobs' body
+      view |> click_edit(job)
+
+      view |> change_editor_text("some body")
+
+      refute view |> save_is_disabled?()
+
+      assert view |> has_pending_changes()
+
+      # let return ok with the limitter
+      stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context ->
+          :ok
+        end
+      )
+
+      # button to sync to github exists
+      assert view |> has_element?("button[phx-click='toggle_github_sync_modal']")
+
+      # verify connection
+      repo_name = repo_connection.repo
+      branch_name = repo_connection.branch
+      installation_id = repo_connection.github_installation_id
+
+      expected_default_branch = "main"
+
+      expected_deploy_yml_path =
+        ".github/workflows/openfn-#{repo_connection.project_id}-deploy.yml"
+
+      expected_config_json_path =
+        "openfn-#{repo_connection.project_id}-config.json"
+
+      expected_secret_name =
+        "OPENFN_#{String.replace(repo_connection.project_id, "-", "_")}_API_KEY"
+
+      expect(Lightning.Tesla.Mock, :call, 6, fn
+        # get installation access token.
+        %{
+          url:
+            "https://api.github.com/app/installations/" <>
+                ^installation_id <> "/access_tokens"
+        },
+        _opts ->
+          {:ok,
+           %Tesla.Env{
+             status: 201,
+             body: %{"token" => "some-token"}
+           }}
+
+        # get repo content
+        %{url: "https://api.github.com/repos/" <> ^repo_name}, _opts ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: %{"default_branch" => expected_default_branch}
+           }}
+
+        # check if pull yml exists in the default branch
+        %{
+          method: :get,
+          query: [{:ref, "heads/" <> ^expected_default_branch}],
+          url:
+            "https://api.github.com/repos/" <>
+                ^repo_name <> "/contents/.github/workflows/openfn-pull.yml"
+        },
+        _opts ->
+          {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+
+        # check if deploy yml exists in the target branch
+        %{
+          method: :get,
+          query: [{:ref, "heads/" <> ^branch_name}],
+          url:
+            "https://api.github.com/repos/" <>
+                ^repo_name <> "/contents/" <> ^expected_deploy_yml_path
+        },
+        _opts ->
+          {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+
+        # check if config.json exists in the target branch
+        %{
+          method: :get,
+          query: [{:ref, "heads/" <> ^branch_name}],
+          url:
+            "https://api.github.com/repos/" <>
+                ^repo_name <> "/contents/" <> ^expected_config_json_path
+        },
+        _opts ->
+          {:ok, %Tesla.Env{status: 200, body: %{"sha" => "somesha"}}}
+
+        # check if api key secret exists
+        %{
+          method: :get,
+          url:
+            "https://api.github.com/repos/" <>
+                ^repo_name <> "/actions/secrets/" <> ^expected_secret_name
+        },
+        _opts ->
+          {:ok, %Tesla.Env{status: 200, body: %{}}}
+      end)
+
+      # click to open the github sync modal
+      refute has_element?(view, "#github-sync-modal")
+      render_click(view, "toggle_github_sync_modal")
+      assert has_element?(view, "#github-sync-modal")
+      assert render_async(view) =~ "Save and sync changes to GitHub"
+
+      expect_create_installation_token(repo_connection.github_installation_id)
+      expect_get_repo(repo_connection.repo)
+      expect_create_workflow_dispatch(repo_connection.repo, "openfn-pull.yml")
+
+      # submit form
+      view
+      |> form("#workflow-form")
+      |> render_submit(%{"github-sync" => %{"commit_message" => "some message"}})
+
+      assert workflow =
+               Lightning.Repo.one(
+                 from w in Workflow,
+                   where:
+                     w.project_id == ^project.id and w.name == ^workflow_name
+               )
+
+      assert_patched(
+        view,
+        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[m: "expand", s: job.id, v: workflow.lock_version]}"
+      )
+
+      assert render(view) =~ "Workflow saved and synced to GitHub successfully."
+      refute has_element?(view, "#github-sync-modal")
+    end
+
+    test "does not close the github modal when Github sync fails", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+        )
+
+      assert view |> page_title() =~ workflow.name
+
+      job_2 = workflow.jobs |> Enum.at(1)
+
+      view |> select_node(job_2, workflow.lock_version)
+
+      new_job_name = "My Other Job"
+
+      assert view |> fill_job_fields(job_2, %{name: new_job_name}) =~
+               new_job_name
+
+      refute view |> save_is_disabled?()
+
+      # let return ok with the limitter
+      stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context ->
+          :ok
+        end
+      )
+
+      # return error for Github
+      stub(Lightning.Tesla.Mock, :call, fn
+        %{url: "https://api.github.com/app/installations" <> _rest}, _opts ->
+          {:ok,
+           %Tesla.Env{
+             status: 404,
+             body: %{"error" => "some-error"}
+           }}
+
+        %{url: "https://api.github.com/" <> _rest}, _opts ->
+          {:ok,
+           %Tesla.Env{
+             status: 400,
+             body: %{"error" => "some-error"}
+           }}
+      end)
+
+      # click to open the github sync modal
+      refute has_element?(view, "#github-sync-modal")
+      render_click(view, "toggle_github_sync_modal")
+      assert has_element?(view, "#github-sync-modal")
+
+      # submit form
+      view
+      |> form("#workflow-form")
+      |> render_submit(%{"github-sync" => %{"commit_message" => "some message"}})
+
+      workflow = Repo.reload!(workflow)
+
+      assert_patched(
+        view,
+        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: job_2.id, v: workflow.lock_version]}"
+      )
+
+      assert render(view) =~
+               "Workflow saved but not synced to GitHub. Check the project GitHub connection settings"
+
+      # modal is still present
+      assert has_element?(view, "#github-sync-modal")
+    end
+
+    test "save and sync button on the modal is disabled when verification is still going on",
+         %{
+           conn: conn,
+           project: project,
+           workflow: workflow
+         } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+        )
+
+      assert view |> page_title() =~ workflow.name
+
+      job_2 = workflow.jobs |> Enum.at(1)
+
+      view |> select_node(job_2, workflow.lock_version)
+
+      new_job_name = "My Other Job"
+
+      assert view |> fill_job_fields(job_2, %{name: new_job_name}) =~
+               new_job_name
+
+      refute view |> save_is_disabled?()
+
+      # let return ok with the limitter
+      stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context ->
+          :ok
+        end
+      )
+
+      stub(Lightning.Tesla.Mock, :call, fn
+        %{url: "https://api.github.com/app/installations" <> _rest}, _opts ->
+          # sleep to block the async task
+          Process.sleep(5000)
+
+          {:ok,
+           %Tesla.Env{
+             status: 201,
+             body: %{"token" => "some-token"}
+           }}
+      end)
+
+      # click to open the github sync modal
+      refute has_element?(view, "#github-sync-modal")
+      render_click(view, "toggle_github_sync_modal")
+      assert has_element?(view, "#github-sync-modal")
+
+      assert view
+             |> element("button#submit-btn-github-sync-modal")
+             |> render() =~ "disabled=\"disabled\""
+    end
+  end
+
   describe "AI Assistant:" do
     setup :create_workflow
+
+    test "non openfn.org users can access the AI Assistant", %{
+      conn: conn,
+      project: project,
+      user: user,
+      workflow: %{jobs: [job_1 | _]} = workflow
+    } do
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> "http://localhost:4001"
+        :ai_assistant_api_key -> "ai_assistant_api_key"
+      end)
+
+      # user's email is not from @openfn.org
+      refute String.match?(user.email, ~r/@openfn\.org/i)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      render_async(view)
+
+      html = view |> element("#aichat-#{job_1.id}") |> render()
+      assert html =~ "Get started with the AI Assistant"
+    end
 
     @tag email: "user@openfn.org"
     test "correct information is displayed when the assistant is not configured",
@@ -1960,7 +2427,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
         user =
           insert(:user,
-            email: "email-#{Enum.random(1..1_000)}@openfn.org",
+            email: "email-#{Enum.random(1..1_000)}@testemail.org",
             preferences: %{"ai_assistant.disclaimer_read_at" => timestamp}
           )
 
@@ -3033,6 +3500,78 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                "#cancel-message-#{List.first(single_message_session.messages).id}"
              )
     end
+
+    @tag email: "user@openfn.org"
+    test "AI Assistant renders custom component for collecting feedback", %{
+      conn: conn,
+      project: project,
+      user: user,
+      workflow: %{jobs: [job_1 | _]} = workflow
+    } do
+      on_exit(fn -> Application.delete_env(:lightning, :ai_feedback) end)
+
+      Application.put_env(:lightning, :ai_feedback, %{
+        component: fn assigns ->
+          ~H"""
+          <div id="ai-feedback">Hello from AI Feedback</div>
+          """
+        end
+      })
+
+      apollo_endpoint = "http://localhost:4001"
+
+      Mox.stub(Lightning.MockConfig, :apollo, fn
+        :endpoint -> apollo_endpoint
+        :ai_assistant_api_key -> "ai_assistant_api_key"
+      end)
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        fn
+          %{method: :get, url: ^apollo_endpoint <> "/"}, _opts ->
+            {:ok, %Tesla.Env{status: 200}}
+
+          %{method: :post}, _opts ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{
+                 "history" => [
+                   %{"role" => "assistant", "content" => "Hello, World!"}
+                 ]
+               }
+             }}
+        end
+      )
+
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          messages: [
+            %{role: :assistant, content: "Hello, World!"}
+          ]
+        )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+        )
+
+      view |> element("#get-started-with-ai-btn") |> render_click()
+
+      view |> element("#session-#{session.id}") |> render_click()
+
+      assert_patch(view)
+
+      feedback_el = element(view, "#ai-feedback")
+
+      assert has_element?(feedback_el)
+
+      assert render(feedback_el) =~ "Hello from AI Feedback"
+    end
   end
 
   describe "Allow low priority access users to retry steps and create workorders" do
@@ -3067,8 +3606,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       workflow = insert(:simple_workflow, project: project)
 
-      {:ok, snapshot} =
-        Snapshot.get_or_create_latest_for(workflow, insert(:user))
+      {:ok, snapshot} = Snapshot.create(workflow)
 
       %{jobs: [job], triggers: [trigger]} = workflow
 
@@ -3159,7 +3697,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       refute_eventually(
         low_priority_view
         |> has_element?("#inspector-workflow-version", "latest"),
-        15_000
+        30_000
       )
 
       assert low_priority_view

@@ -59,10 +59,10 @@ Note that for secure deployments, it's recommended to use a combination of
   JSON plug and may (in future) limit the size of dataclips that can be stored
   as run_results via the websocket connection from a worker.
 
-### Github
+### GitHub
 
-Lightning enables connection to github via Github Apps. The following github
-permissions are needed for the github app:
+Lightning enables connection to GitHub via GitHub Apps. The following GitHub
+repository permissions are needed for the GitHub app:
 
 | **Resource** | **Access**     |
 | ------------ | -------------- |
@@ -188,6 +188,7 @@ For SMTP, the following environment variables are required:
 | `ADAPTORS_REGISTRY_JSON_PATH`            | Path to adaptor registry file. When provided, the app will attempt to read from it then later fallback to the internet                                                                                                                 |
 | `SECRET_KEY_BASE`                        | A secret key used as a base to generate secrets for encrypting and signing data.                                                                                                                                                       |
 | `SENTRY_DSN`                             | If using Sentry for error monitoring, your DSN                                                                                                                                                                                         |
+| `UI_METRICS_ENABLED`                     | Enable serverside tracking of certain metrics related to the UI. This s temporary functionality. Defaults to `false`.                                                                                                                  |
 | `URL_HOST`                               | The host used for writing URLs (e.g., `demo.openfn.org`)                                                                                                                                                                               |
 | `URL_PORT`                               | The port, usually `443` for production                                                                                                                                                                                                 |
 | `URL_SCHEME`                             | The scheme for writing URLs (e.g., `https`)                                                                                                                                                                                            |

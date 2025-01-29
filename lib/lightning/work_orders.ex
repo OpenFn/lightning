@@ -73,27 +73,21 @@ defmodule Lightning.WorkOrders do
 
   **For a webhook**
       create_for(trigger, workflow: workflow, dataclip: dataclip)
-
-  **For a user**
-      create_for(job, workflow: workflow, dataclip: dataclip, user: user)
   """
-  @spec create_for(Trigger.t() | Job.t(), Multi.t(), [work_order_option()]) ::
+  @spec create_for(Trigger.t(), Multi.t(), [work_order_option()]) ::
           {:ok, WorkOrder.t()}
           | {:error, Ecto.Changeset.t(WorkOrder.t()) | :workflow_deleted}
-  def create_for(target, multi \\ Multi.new(), opts)
-
-  def create_for(%Trigger{} = trigger, multi, opts) do
+  def create_for(%Trigger{} = trigger, multi \\ Multi.new(), opts) do
     multi
     |> Multi.put(:workflow, opts[:workflow])
     |> get_or_insert_dataclip(opts[:dataclip])
-    |> get_or_create_snapshot(opts[:workflow], opts[:actor])
-    |> Multi.insert(:workorder, fn %{dataclip: dataclip, snapshot: snapshot} ->
+    |> Multi.insert(:workorder, fn %{dataclip: dataclip} ->
       {without_run?, opts} = Keyword.pop(opts, :without_run, false)
 
       attrs =
         opts
         |> Map.new()
-        |> Map.merge(%{dataclip: dataclip, snapshot: snapshot})
+        |> Map.merge(%{dataclip: dataclip})
         |> then(fn attrs ->
           if without_run? do
             attrs |> Map.put(:state, :rejected)
@@ -104,15 +98,6 @@ defmodule Lightning.WorkOrders do
 
       build_for(trigger, attrs)
     end)
-    |> Runs.enqueue()
-    |> emit_and_return_work_order()
-  end
-
-  def create_for(%Job{} = job, multi, opts) do
-    multi
-    |> Multi.put(:workflow, opts[:workflow])
-    |> get_or_create_snapshot(opts[:actor])
-    |> Multi.insert(:workorder, build_for(job, opts |> Map.new()))
     |> Runs.enqueue()
     |> emit_and_return_work_order()
   end
@@ -128,14 +113,12 @@ defmodule Lightning.WorkOrders do
     end)
     |> get_or_insert_dataclip(manual)
     |> Multi.put(:workflow, manual.workflow)
-    |> get_or_create_snapshot(manual.created_by)
-    |> Multi.insert(:workorder, fn %{dataclip: dataclip, snapshot: snapshot} ->
+    |> Multi.insert(:workorder, fn %{dataclip: dataclip} ->
       build_for(manual.job, %{
         workflow: manual.workflow,
         dataclip: dataclip,
         created_by: manual.created_by,
-        priority: :immediate,
-        snapshot: snapshot
+        priority: :immediate
       })
     end)
     |> Runs.enqueue()
@@ -154,7 +137,7 @@ defmodule Lightning.WorkOrders do
     {:error, changeset}
   end
 
-  defp get_or_create_snapshot(multi, workflow \\ nil, name \\ :snapshot, actor) do
+  defp maybe_get_snapshot(multi, workflow \\ nil, name \\ :snapshot) do
     multi
     |> Multi.merge(fn
       %{^name => _snapshot} ->
@@ -163,7 +146,7 @@ defmodule Lightning.WorkOrders do
 
       changes ->
         workflow = workflow || changes[:workflow]
-        Snapshot.get_or_create_latest_for(Multi.new(), name, workflow, actor)
+        Snapshot.include_latest_snapshot(Multi.new(), name, workflow)
     end)
   end
 
@@ -198,26 +181,11 @@ defmodule Lightning.WorkOrders do
     get_or_insert_dataclip(multi, Dataclip.new(params))
   end
 
-  defp try_put_snapshot(changeset, attrs) do
-    if snapshot = attrs |> Map.get(:snapshot) do
-      changeset |> put_assoc(:snapshot, snapshot)
-    else
-      Snapshot.get_or_create_latest_for(attrs[:workflow], attrs[:actor])
-      |> case do
-        {:ok, snapshot} ->
-          changeset |> put_assoc(:snapshot, snapshot)
-
-        {:error, _changeset} ->
-          changeset
-      end
-    end
-  end
-
-  def build(attrs) do
+  defp build(attrs) do
     %WorkOrder{}
     |> change()
     |> put_if_provided(:state, attrs)
-    |> try_put_snapshot(attrs)
+    |> put_assoc(:snapshot, Snapshot.get_current_for(attrs[:workflow]))
     |> put_assoc(:workflow, attrs[:workflow])
     |> put_assoc(:dataclip, attrs[:dataclip])
   end
@@ -347,7 +315,7 @@ defmodule Lightning.WorkOrders do
     |> Multi.run(:workflow, fn _repo, %{run: run} ->
       {:ok, run.work_order.workflow}
     end)
-    |> get_or_create_snapshot(creating_user)
+    |> maybe_get_snapshot()
     |> Multi.insert(:new_run, fn %{
                                    run: run,
                                    step: step,
@@ -394,12 +362,8 @@ defmodule Lightning.WorkOrders do
          }
        }) do
     edges
-    |> Enum.reduce(Graph.new(), fn edge, graph ->
-      graph
-      |> Graph.add_edge(
-        edge.source_trigger_id || edge.source_job_id,
-        edge.target_job_id
-      )
+    |> Enum.reduce(Graph.new(), fn item, graph ->
+      Graph.add_edge(graph, item)
     end)
     |> Graph.prune(step_job_id)
     |> Graph.nodes()
@@ -543,7 +507,7 @@ defmodule Lightning.WorkOrders do
       snapshot_op = "snapshot-#{workflow.id}"
 
       multi
-      |> get_or_create_snapshot(workflow, snapshot_op, creating_user)
+      |> maybe_get_snapshot(workflow, snapshot_op)
       |> Multi.insert(run_op, fn %{^snapshot_op => snapshot} ->
         starting_job = determine_starting_job(workorder)
 

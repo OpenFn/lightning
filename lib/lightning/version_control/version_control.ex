@@ -8,15 +8,16 @@ defmodule Lightning.VersionControl do
 
   import Ecto.Query, warn: false
 
+  alias Ecto.Multi
   alias Lightning.Accounts.User
   alias Lightning.Extensions.UsageLimiting
   alias Lightning.Repo
+  alias Lightning.VersionControl.Audit
   alias Lightning.VersionControl.Events
   alias Lightning.VersionControl.GithubClient
   alias Lightning.VersionControl.GithubError
   alias Lightning.VersionControl.ProjectRepoConnection
   alias Lightning.VersionControl.VersionControlUsageLimiter
-  alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Workflow
 
   require Logger
@@ -35,6 +36,10 @@ defmodule Lightning.VersionControl do
 
     Repo.transact(fn ->
       with {:ok, repo_connection} <- Repo.insert(changeset),
+           {:ok, _audit} <-
+             repo_connection
+             |> Audit.repo_connection(:created, user)
+             |> Repo.insert(),
            :ok <-
              VersionControlUsageLimiter.limit_github_sync(
                repo_connection.project_id
@@ -103,10 +108,15 @@ defmodule Lightning.VersionControl do
   Deletes a github connection
   """
   def remove_github_connection(repo_connection, user) do
-    repo_connection
-    |> Repo.delete()
+    Multi.new()
+    |> Multi.delete(:delete_repo_connection, repo_connection)
+    |> Multi.insert(
+      :audit,
+      Audit.repo_connection(repo_connection, :removed, user)
+    )
+    |> Repo.transaction()
     |> tap(fn
-      {:ok, repo_connection} ->
+      {:ok, %{delete_repo_connection: repo_connection}} ->
         undo_repo_actions(
           repo_connection,
           user
@@ -127,15 +137,15 @@ defmodule Lightning.VersionControl do
 
   @spec initiate_sync(
           repo_connection :: ProjectRepoConnection.t(),
-          user_email :: String.t()
+          commit_message :: String.t()
         ) :: :ok | {:error, UsageLimiting.message() | map()}
-  def initiate_sync(repo_connection, user_email) do
+  def initiate_sync(repo_connection, commit_message) do
     with :ok <-
            VersionControlUsageLimiter.limit_github_sync(
              repo_connection.project_id
            ),
          snapshots <-
-           list_or_create_snapshots_for_project(repo_connection),
+           list_snapshots_for_project(repo_connection),
          {:ok, client} <-
            GithubClient.build_installation_client(
              repo_connection.github_installation_id
@@ -155,8 +165,7 @@ defmodule Lightning.VersionControl do
                    apiSecretName: api_secret_name(repo_connection),
                    pathToConfig: config_target_path(repo_connection),
                    branch: repo_connection.branch,
-                   commitMessage:
-                     "user #{user_email} initiated a sync from Lightning"
+                   commitMessage: commit_message
                  }
                  |> maybe_add_snapshots(snapshots)
              }
@@ -165,28 +174,15 @@ defmodule Lightning.VersionControl do
     end
   end
 
-  defp list_or_create_snapshots_for_project(
-         %{project_id: project_id} = repo_connection
-       ) do
+  defp list_snapshots_for_project(%{project_id: project_id}) do
     current_query =
       from w in Workflow,
-        left_join: s in assoc(w, :snapshots),
+        join: s in assoc(w, :snapshots),
         on: s.lock_version == w.lock_version,
         where: w.project_id == ^project_id and is_nil(w.deleted_at),
-        select: {w, s.id}
+        select: s.id
 
-    workflows = Repo.all(current_query)
-
-    Enum.reduce(workflows, [], fn {workflow, snapshot_id}, acc ->
-      if is_nil(snapshot_id) do
-        {:ok, snapshot} =
-          Snapshot.get_or_create_latest_for(workflow, repo_connection)
-
-        [snapshot.id | acc]
-      else
-        [snapshot_id | acc]
-      end
-    end)
+    Repo.all(current_query) |> Enum.reverse()
   end
 
   defp maybe_add_snapshots(inputs, snapshot_ids) do

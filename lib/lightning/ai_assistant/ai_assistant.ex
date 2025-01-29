@@ -196,10 +196,6 @@ defmodule Lightning.AiAssistant do
     is_binary(endpoint) && is_binary(api_key)
   end
 
-  def available?(user) do
-    String.match?(user.email, ~r/@openfn\.org/i)
-  end
-
   @spec user_has_read_disclaimer?(User.t()) :: boolean()
   def user_has_read_disclaimer?(user) do
     read_at =

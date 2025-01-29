@@ -21,10 +21,19 @@ defmodule Lightning.Workflows.Trigger do
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil
         }
+  @type trigger_type :: :webhook | :cron
 
   @trigger_types [:webhook, :cron, :kafka]
 
-  @type trigger_type :: :webhook | :cron
+  @derive {Jason.Encoder,
+           only: [
+             :id,
+             :comment,
+             :custom_path,
+             :cron_expression,
+             :type,
+             :enabled
+           ]}
   schema "triggers" do
     field :comment, :string
     field :custom_path, :string
@@ -83,6 +92,7 @@ defmodule Lightning.Workflows.Trigger do
     |> validate_required([:type])
     |> assoc_constraint(:workflow)
     |> validate_by_type()
+    |> unique_constraint(:id, name: "triggers_pkey")
   end
 
   defp validate_cron(changeset, _options \\ []) do

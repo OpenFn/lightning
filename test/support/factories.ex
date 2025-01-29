@@ -321,15 +321,16 @@ defmodule Lightning.Factories do
   def collection_factory do
     %Lightning.Collections.Collection{
       project: build(:project),
-      name: sequence(:name, &"collection-#{&1}")
+      name: sequence(:name, &"collection-#{&1}"),
+      byte_size_sum: 0
     }
   end
 
   def collection_item_factory do
     %Lightning.Collections.Item{
       id: sequence(:id, & &1),
-      key: sequence(:key, &"key-#{&1}"),
-      value: sequence(:value, &"value-#{&1}"),
+      key: sequence(:key, &"key-#{&1}", start_at: 100),
+      value: sequence(:value, &"value-#{&1}", start_at: 100),
       collection: build(:collection),
       inserted_at:
         sequence(
@@ -480,8 +481,10 @@ defmodule Lightning.Factories do
             Enum.into(extra, %{
               id: Ecto.UUID.generate(),
               source_trigger_id: trigger.id,
+              source_job_id: nil,
               target_job_id: job.id,
-              condition_type: :always
+              condition_type: :always,
+              enabled: true
             })
           )
     }
@@ -605,5 +608,9 @@ defmodule Lightning.Factories do
       left when is_list(left) ->
         Enum.concat(left, List.wrap(right))
     end
+  end
+
+  def with_snapshot(workflow) do
+    workflow |> tap(&Lightning.Workflows.Snapshot.create/1)
   end
 end

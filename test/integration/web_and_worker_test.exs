@@ -11,8 +11,9 @@ defmodule Lightning.WebAndWorkerTest do
   alias Lightning.Runs.Events
   alias Lightning.Invocation
   alias Lightning.Repo
-  alias Lightning.WorkOrders
   alias Lightning.Runtime.RuntimeManager
+  alias Lightning.WorkOrders
+  alias Lightning.Workflows.Snapshot
 
   require Run
 
@@ -43,6 +44,7 @@ defmodule Lightning.WebAndWorkerTest do
       project = insert(:project)
 
       %{triggers: [%{id: webhook_trigger_id}], edges: edges} =
+        workflow =
         insert(:complex_workflow, project: project)
 
       # ensure the workflow has parallel jobs. Eliminate the branching edge
@@ -52,6 +54,9 @@ defmodule Lightning.WebAndWorkerTest do
       branching_edge
       |> Ecto.Changeset.change(%{condition_type: :on_job_success})
       |> Repo.update!()
+
+      # Create snapshot only after we have made the edge changes
+      Snapshot.create(workflow |> Repo.reload!())
 
       # Post to webhook
       webhook_body = %{"x" => 1}
@@ -183,6 +188,8 @@ defmodule Lightning.WebAndWorkerTest do
         condition_expression: "state.x < 1000"
       })
 
+      Snapshot.create(workflow)
+
       webhook_body = %{"fieldOne" => 123, "fieldTwo" => "some string"}
 
       conn = post(conn, "/i/#{webhook_trigger.id}", webhook_body)
@@ -246,7 +253,7 @@ defmodule Lightning.WebAndWorkerTest do
         end)
 
       assert version_logs =~ "▸ node.js                  18.17"
-      assert version_logs =~ "▸ worker                   1.8"
+      assert version_logs =~ "▸ worker                   1.9"
       assert version_logs =~ "▸ @openfn/language-http    3.1.12"
 
       expected_lines =

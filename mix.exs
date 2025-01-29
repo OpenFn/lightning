@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.10.8",
+      version: "2.10.12",
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -123,7 +123,7 @@ defmodule Lightning.MixProject do
       {:cors_plug, "~> 3.0"},
       {:plug_cowboy, "~> 2.5"},
       {:postgrex, ">= 0.0.0"},
-      {:prom_ex, "~> 1.9.0"},
+      {:prom_ex, "~> 1.11.0"},
       {:rambo, "~> 0.3.4"},
       {:retry, "~> 0.18"},
       {:scrivener, "~> 2.7"},
@@ -133,11 +133,10 @@ defmodule Lightning.MixProject do
       {:swoosh, "~> 1.17"},
       {:gen_smtp, "~> 1.1"},
       {:tailwind, "~> 0.1", runtime: Mix.env() == :dev},
-      {:telemetry_metrics, "~> 0.6"},
+      {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:tesla, "~> 1.13"},
       {:timex, "~> 3.7"},
-      {:unplug, "~> 1.0"},
       {:replug, "~> 0.1.0"},
       {:phoenix_swoosh, "~> 1.2.1"},
       {:hammer_backend_mnesia, "~> 0.6"},
@@ -181,6 +180,7 @@ defmodule Lightning.MixProject do
       "assets.deploy": [
         "tailwind default --minify",
         "esbuild default --minify",
+        "esbuild monaco --minify",
         "phx.digest"
       ],
       verify: [

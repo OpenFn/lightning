@@ -6,7 +6,6 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
   require Lightning.Run
 
   alias Ecto.Multi
-  alias Lightning.Auditing.Audit
   alias Lightning.Extensions.MockUsageLimiter
   alias Lightning.Extensions.Message
   alias Lightning.Extensions.UsageLimiting.Action
@@ -29,7 +28,9 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
           ]
         )
 
-      trigger = insert(:trigger, type: :kafka)
+      %{workflow: workflow} = trigger = insert(:trigger, type: :kafka)
+
+      workflow |> with_snapshot()
 
       record_changeset =
         TriggerKafkaMessageRecord.changeset(
@@ -55,6 +56,7 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
       trigger: trigger
     } do
       %{workflow: workflow} = trigger
+
       MessageHandling.persist_message(multi, trigger.id, message)
 
       created_workorder =
@@ -103,16 +105,6 @@ defmodule Lightning.KafkaTriggers.MessageHandlingTest do
       assert dataclip.body["request"] == message.metadata |> persisted_metadata()
       assert dataclip.type == :kafka
       assert dataclip.project_id == workflow.project_id
-    end
-
-    test "identifies the trigger as the actor for the audit event", %{
-      message: message,
-      multi: multi,
-      trigger: %{id: trigger_id}
-    } do
-      MessageHandling.persist_message(multi, trigger_id, message)
-
-      assert %{actor_id: ^trigger_id} = Repo.one(Audit)
     end
 
     test "executes any other instructions in the multi", %{

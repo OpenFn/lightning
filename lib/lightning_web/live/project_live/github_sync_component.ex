@@ -256,8 +256,9 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
 
   defp initiate_github_sync(%{assigns: assigns} = socket) do
     repo_connection = assigns.project_repo_connection
+    commit_message = "user #{assigns.user.email} initiated a sync from Lightning"
 
-    case VersionControl.initiate_sync(repo_connection, assigns.user.email) do
+    case VersionControl.initiate_sync(repo_connection, commit_message) do
       :ok ->
         socket
         |> put_flash(:info, "Github sync initiated successfully!")

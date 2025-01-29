@@ -31,11 +31,7 @@ const DocsLink = ({ specifier }: { specifier: string }) => {
       </div>
       <div>
         Source code:
-        <a
-          className="link ml-2"
-          href={srcLink}
-          target="_blank"
-        >
+        <a className="link ml-2" href={srcLink} target="_blank">
           github.com/OpenFn/adaptors
         </a>
       </div>
@@ -43,19 +39,26 @@ const DocsLink = ({ specifier }: { specifier: string }) => {
   );
 };
 
-const EditorHelp = () => <details className="mb-4">
-  <summary className='text-sm cursor-pointer'>
-    <h3 className="inline">Editor tips & shortcuts</h3>
-  </summary>
-  <div className="text-sm border-solid border-grey-300 border-l-4 pl-2 mt-2">
-    <p className="mb-2">Most adaptors provide intelligent code suggestions to the editor. Start typing and press TAB or ENTER to accept a suggestion, or ESC to cancel</p>
-    <ul className="list-disc ml-4">
-      <li>Press CTRL+SPACE to show suggestions</li>
-      <li>Press CTRL+SPACE again to toggle suggestion details (recommended!)</li>
-      <li>Press F1 to show the command menu (not all commands will work!)</li>
-    </ul>
-  </div>
-</details>
+const EditorHelp = () => (
+  <details className="mb-4">
+    <summary className="text-sm cursor-pointer">
+      <h3 className="inline">Editor tips & shortcuts</h3>
+    </summary>
+    <div className="text-sm border-solid border-grey-300 border-l-4 pl-2 mt-2">
+      <p className="mb-2">
+        Most adaptors provide intelligent code suggestions to the editor. Start
+        typing and press TAB or ENTER to accept a suggestion, or ESC to cancel
+      </p>
+      <ul className="list-disc ml-4">
+        <li>Press CTRL+SPACE to show suggestions</li>
+        <li>
+          Press CTRL+SPACE again to toggle suggestion details (recommended!)
+        </li>
+        <li>Press F1 to show the command menu (not all commands will work!)</li>
+      </ul>
+    </div>
+  </details>
+);
 
 const DocsPanel = ({ specifier, onInsert }: DocsPanelProps) => {
   if (!specifier) {
@@ -65,14 +68,18 @@ const DocsPanel = ({ specifier, onInsert }: DocsPanelProps) => {
   const pkg = useDocs(specifier);
 
   if (pkg === null) {
-    return <div className="block m-2">Loading docs...</div>;
+    return (
+      <div className="block w-full overflow-auto ml-1">Loading docs...</div>
+    );
   }
   if (pkg === false) {
     return (
       <>
-        <DocsLink specifier={specifier} />
-        <div className="block m-2">
-          <p>An error occurred loading the docs for this adaptor.</p>
+        <div className="block w-full overflow-auto ml-1 mt-1">
+          <p className="mt-2">
+            An error occurred loading the docs for this adaptor.
+          </p>
+          <DocsLink specifier={specifier} />
         </div>
       </>
     );
@@ -82,12 +89,12 @@ const DocsPanel = ({ specifier, onInsert }: DocsPanelProps) => {
 
   if (functions.length === 0) {
     return (
-      <div className="block m-2">
+      <div className="block w-full overflow-auto ml-1 mt-1">
         <h1 className="h1 text-lg font-bold text-secondary-700 mb-2">
           {name} ({version})
         </h1>
+        <p className="mt-2">Docs are unavailable for this adaptor.</p>
         <DocsLink specifier={specifier} />
-        <p>Docs are unavailable for this adaptor.</p>
       </div>
     );
   }

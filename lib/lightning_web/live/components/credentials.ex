@@ -357,6 +357,7 @@ defmodule LightningWeb.Components.Credentials do
   attr :credentials, :list, required: true
   attr :title, :string, required: true
   attr :display_table_title, :boolean, default: true
+  attr :show_owner, :boolean, default: false
 
   slot :actions,
     doc: "the slot for showing user actions in the last table column"
@@ -376,8 +377,9 @@ defmodule LightningWeb.Components.Credentials do
         <.table id={"#{@id}-table"}>
           <.tr>
             <.th>Name</.th>
-            <.th>Projects with access</.th>
             <.th>Type</.th>
+            <.th :if={@show_owner}>Owner</.th>
+            <.th>Projects with access</.th>
             <.th>Production</.th>
             <.th>
               <span class="sr-only">Actions</span>
@@ -404,15 +406,20 @@ defmodule LightningWeb.Components.Credentials do
                 <% end %>
               </div>
             </.td>
+            <.td class="break-words max-w-[10rem] border-">
+              <%= credential.schema %>
+            </.td>
+            <.td :if={@show_owner} class="break-words max-w-[15rem]">
+              <div class="flex-auto items-center">
+                <%= credential.user.email %>
+              </div>
+            </.td>
             <.td class="break-words max-w-[25rem]">
               <%= for project_name <- credential.project_names do %>
                 <span class="inline-flex items-center rounded-md bg-primary-50 p-1 my-0.5 text-xs font-medium ring-1 ring-inset ring-gray-500/10">
                   <%= project_name %>
                 </span>
               <% end %>
-            </.td>
-            <.td class="break-words max-w-[10rem] border-">
-              <%= credential.schema %>
             </.td>
             <.td class="break-words max-w-[5rem]">
               <%= if credential.production do %>

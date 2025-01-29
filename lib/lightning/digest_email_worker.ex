@@ -51,32 +51,40 @@ defmodule Lightning.DigestEmailWorker do
       )
       |> Repo.all()
 
-    project_users
-    |> Enum.group_by(& &1.project.id)
-    |> Enum.each(fn {_project_id, project_users} ->
-      [%{project: project} | _other] = project_users
+    {notified_users, skipped_users} =
+      project_users
+      |> Enum.group_by(& &1.project.id)
+      |> Enum.reduce({[], []}, fn {_project_id, project_users},
+                                  {notified_acc, skipped_acc} ->
+        [%{project: project} | _other] = project_users
+        workflows = Workflows.get_workflows_for(project)
 
-      project_digest_data =
-        Workflows.get_workflows_for(project)
-        |> Enum.map(fn workflow ->
-          get_digest_data(workflow, start_date, end_date)
-        end)
+        if length(workflows) > 0 do
+          project_digest_data =
+            Enum.map(workflows, fn workflow ->
+              get_digest_data(workflow, start_date, end_date)
+            end)
 
-      Enum.each(project_users, fn pu ->
-        UserNotifier.deliver_project_digest(
-          project_digest_data,
-          %{
-            user: pu.user,
-            project: pu.project,
-            digest: digest,
-            start_date: start_date,
-            end_date: end_date
-          }
-        )
+          Enum.each(project_users, fn pu ->
+            UserNotifier.deliver_project_digest(
+              project_digest_data,
+              %{
+                user: pu.user,
+                project: pu.project,
+                digest: digest,
+                start_date: start_date,
+                end_date: end_date
+              }
+            )
+          end)
+
+          {notified_acc ++ project_users, skipped_acc}
+        else
+          {notified_acc, skipped_acc ++ project_users}
+        end
       end)
-    end)
 
-    {:ok, project_users}
+    {:ok, %{notified_users: notified_users, skipped_users: skipped_users}}
   end
 
   def digest_to_date(digest) do

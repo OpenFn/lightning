@@ -23,6 +23,17 @@ defmodule Lightning.Workflows.Workflow do
           project: nil | Project.t() | Ecto.Association.NotLoaded.t()
         }
 
+  @derive {Jason.Encoder,
+           only: [
+             :id,
+             :name,
+             :project_id,
+             :edges,
+             :jobs,
+             :triggers,
+             :inserted_at,
+             :updated_at
+           ]}
   schema "workflows" do
     field :name, :string
     field :concurrency, :integer, default: nil

@@ -103,7 +103,7 @@ defmodule LightningWeb.LayoutComponents do
       <div class={[@title_class, @title_height]}>
         <%= if @current_user do %>
           <nav class="flex" aria-label="Breadcrumb">
-            <ol role="list" class="flex items-center space-x-4">
+            <ol role="list" class="flex items-center space-x-2">
               <li>
                 <div>
                   <a href="/" class="text-gray-400 hover:text-gray-500">
@@ -253,13 +253,13 @@ defmodule LightningWeb.LayoutComponents do
         <%= if @path do %>
           <.link
             patch={@path}
-            class="flex ml-4 text-sm font-medium text-gray-500 hover:text-gray-700"
+            class="flex ml-2 text-sm font-medium text-gray-500 hover:text-gray-700"
             aria-current="page"
           >
             <%= if assigns[:label], do: render_slot(@label) %>
           </.link>
         <% else %>
-          <span class="flex ml-4 text-sm font-medium text-gray-500">
+          <span class="flex items-center ml-2 text-sm font-medium text-gray-500">
             <%= if assigns[:label], do: render_slot(@label) %>
           </span>
         <% end %>

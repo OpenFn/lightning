@@ -17,14 +17,117 @@ and this project adheres to
 
 ### Added
 
+- Add support for local adaptors. This can be enabled via `LOCAL_ADAPTORS=true`
+  and path specified via `OPENFN_ADAPTORS_REPO=./path/to/repo/`
+  [#905](https://github.com/OpenFn/lightning/issues/905)
+- Add component injection for AI responses feedback
+  [#2495](https://github.com/OpenFn/lightning/issues/2495)
+- Audit the provisioning of projects via the API
+  [#2718](https://github.com/OpenFn/lightning/issues/2718)
+- Track Collections storage usage based on items key and value sizes
+  [#2853](https://github.com/OpenFn/lightning/issues/2853)
+- Temporary instrumentation for JobEditor to help identify performance issues.
+  [#2617](https://github.com/OpenFn/lightning/issues/2617)
+- Indexes to foreign keys on `workflow_edges` and `steps` tables to try and
+  alleviate slow loading of the job editor.
+  [#2617](https://github.com/OpenFn/lightning/issues/2617)
+- Add temporary events to allow Lightning to log metrics reported by editors.
+  [#2617](https://github.com/OpenFn/lightning/issues/2617)
+- Audit when workflow deletion is requested.
+  [#2727](https://github.com/OpenFn/lightning/issues/2727)
+
 ### Changed
 
+- Remove snapshot creation when performing the Github sync - no longer needed
+  post-migration. [#2703](https://github.com/OpenFn/lightning/issues/2703)
+- Remove some redundant code related to `WorkOrders.create_for`.
+  [#2703](https://github.com/OpenFn/lightning/issues/2703)
+- Remove use of Snapshot.get_or_create_latest_for from tests.
+  [#2703](https://github.com/OpenFn/lightning/issues/2703)
+- Bump PostCSS [#2863](https://github.com/OpenFn/lightning/pull/2863)
+- Replaced HTTPoison with Tesla in the AdaptorRegistry.
+  [#2861](https://github.com/OpenFn/lightning/pull/2861)
+- Remove googlesheets, gmail and collections from credential schemas list
+  [#2854](https://github.com/OpenFn/lightning/issues/2854)
+- Remove ring on save workflow button
+  [#2829](https://github.com/OpenFn/lightning/issues/2829)
+
+### Fixed
+
+- Do not send digest emails for projects with no workflows
+  [#2688](https://github.com/OpenFn/lightning/issues/2688)
+- Fixed navbar items alignment in the workflow builder
+  [#2825](https://github.com/OpenFn/lightning/issues/2825)
+- PromEx metrics no longer detaching on error
+  [#2875](https://github.com/OpenFn/lightning/issues/2875)
+
+## [v2.10.12] - 2025-01-21
+
+### Changed
+
+- PromEx metrics endpoint returns 401 on unauthorized requests.
+  [#2823](https://github.com/OpenFn/lightning/issues/2823)
+- Allow non-openfn.org users to access AI Assistant
+  [#2845](https://github.com/OpenFn/lightning/issues/2845)
+
+## [v2.10.11] - 2025-01-21
+
+### Added
+
+- Add component injection for AI responses feedback
+  [#2495](https://github.com/OpenFn/lightning/issues/2495)
+
+### Fixed
+
+- Fix `z-index` for unsaved workflow dot on workflow edit page
+  [#2809](https://github.com/OpenFn/lightning/issues/2809)
+
+## [v2.10.10] - 2025-01-15
+
+### Added
+
+- Add workflows API to create, update, get and list.
+  [#1887](https://github.com/OpenFn/lightning/issues/1887)
+- Show email address of credential owner on project credentials page
+  [#2210](https://github.com/OpenFn/lightning/issues/2210)
+
+### Changed
+
+- Configure Monaco to load files from lightning instead of cdn
+  [#2786](https://github.com/OpenFn/lightning/issues/2786)
+
+### Fixed
+
+- Fixed Save and Run to always execute jobs with latest changes
+  [#2804](https://github.com/OpenFn/lightning/issues/2804)
+- Fixed aggressive CSS rule in app.css that made it hard to style menu items
+  [#2807](https://github.com/OpenFn/lightning/pull/2807)
+- `z-index` broken on unsaved dot on workflow edit page
+  [#2809](https://github.com/OpenFn/lightning/issues/2809)
+- Fixed an issue in the editor where the Loading Types message displays forever
+  while running offline [#2813](https://github.com/OpenFn/lightning/issues/2813)
+- Fixed an a small layout issue in the Docs panel when loading the editor
+  offline [#2813](https://github.com/OpenFn/lightning/issues/2813)
+
+## [v2.10.9] - 2025-01-09
+
+### Added
+
+- Audit the creation and removal of Github repo connections.
+  [#2668](https://github.com/OpenFn/lightning/issues/2668)
+- Add save and sync option in the workflow edit page
+  [#2707](https://github.com/OpenFn/lightning/issues/2707)
+
+### Changed
+
+- Git-ignore files from mix assets.deploy
+  [#2788](https://github.com/OpenFn/lightning/issues/2788)
 - Added Claude integration in job chat
   [#2403](https://github.com/OpenFn/lightning/pull/2403)
 - OPENAI_API_KEY renamed to AI_ASSISTANT_API_KEY
   [#2403](https://github.com/OpenFn/lightning/pull/2403)
-
-### Fixed
+- Remove snapshot creation from WorkOrders, no longer necessary post-migration.
+  [#2703](https://github.com/OpenFn/lightning/issues/2703)
 
 ## [v2.10.8] - 2024-12-18
 
@@ -35,8 +138,6 @@ and this project adheres to
 
 ### Changed
 
-- Adjusted AI Assistant documentation to note that messages may be monitored
-
 ## [v2.10.7] - 2024-12-13 🎂 ❤️ Happy Birthday, Mom!
 
 ### Added
@@ -46,7 +147,7 @@ and this project adheres to
 - Allow different rules and action for delete user.
   [#2500](https://github.com/OpenFn/lightning/issues/2500)
 - Handle errors from the AI Assistant more gracefully
-  [#2741](https://github.com/OpenFn/lightning/issues/2741)
+  [#2474](https://github.com/OpenFn/lightning/issues/2474)
 
 ### Changed
 

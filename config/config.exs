@@ -101,6 +101,14 @@ config :esbuild,
          --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
     cd: Path.expand("../assets", __DIR__),
     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+  ],
+  monaco: [
+    args: ~w(
+         #{Path.expand("../assets/node_modules/monaco-editor/min/vs/**/*.*", __DIR__) |> Path.wildcard() |> Enum.join(" ")}
+         --loader:.ttf=copy
+         --outdir=../priv/static/assets/monaco-editor/vs ),
+    cd: Path.expand("../assets", __DIR__),
+    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
   ]
 
 # https://fly.io/phoenix-files/tailwind-standalone/
@@ -150,6 +158,21 @@ config :lightning, Lightning.Runtime.RuntimeManager, start: false
 config :lightning, LightningWeb.CollectionsController,
   default_stream_limit: 1_000,
   max_database_limit: 500
+
+# Configuration for injecting a custom feedback mechanism or component collection
+# for the AI Assistant. This can include interactive elements such as a button
+# that triggers a modal with a survey form, or a PostHog component to capture
+# user feedback on AI Assistant messages.
+
+# Example:
+# To enable feedback using a custom component, you can configure it as follows:
+#
+# config :lightning, :ai_feedback, %{
+#   component: &LightningWeb.Components.open_feedback_modal/1
+# }
+#
+# To disable the feedback mechanism, set the value to `false` as shown below:
+config :lightning, :ai_feedback, false
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
