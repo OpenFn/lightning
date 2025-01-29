@@ -30,6 +30,10 @@ Mox.defmock(Lightning.Extensions.MockAccountHook,
   for: Lightning.Extensions.AccountHooking
 )
 
+Mox.defmock(Lightning.Extensions.MockCollectionHook,
+  for: Lightning.Extensions.CollectionHooking
+)
+
 Mox.defmock(Lightning.Extensions.MockProjectHook,
   for: Lightning.Extensions.ProjectHooking
 )
@@ -45,6 +49,7 @@ Application.put_env(:lightning, Lightning.Extensions,
   usage_limiter: Lightning.Extensions.MockUsageLimiter,
   run_queue: Lightning.Extensions.FifoRunQueue,
   account_hook: Lightning.Extensions.MockAccountHook,
+  collection_hook: Lightning.Extensions.MockCollectionHook,
   project_hook: Lightning.Extensions.MockProjectHook
 )
 

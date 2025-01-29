@@ -179,7 +179,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
       conn =
         conn
         |> assign_bearer(token)
-        |> put(~p"/collections/#{collection.name}/foo", %{value: "qux2"})
+        |> put(~p"/collections/#{collection.name}/foo", value: "qux2")
 
       assert json_response(conn, 200) == %{
                "upserted" => 1,
@@ -200,9 +200,40 @@ defmodule LightningWeb.API.CollectionsControllerTest do
       conn =
         conn
         |> assign_bearer(token)
-        |> post(~p"/collections/misspelled-collection/baz", value: "qux")
+        |> put(~p"/collections/misspelled-collection/baz", value: "qux")
 
       assert json_response(conn, 404) == %{"error" => "Not Found"}
+    end
+
+    test "returns 422 when request exceeds the limit", %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user}])
+
+      collection =
+        insert(:collection,
+          project: project,
+          items: Enum.map(1..2, &%{key: "foo#{&1}", value: "bar#{&1}"})
+        )
+
+      Mox.stub(
+        Lightning.Extensions.MockCollectionHook,
+        :handle_put_items,
+        fn _collection, _size ->
+          {:error, :exceeds_limit, %Message{text: "some limit error message"}}
+        end
+      )
+
+      conn =
+        conn
+        |> assign_bearer(Lightning.Accounts.generate_api_token(user))
+        |> put(~p"/collections/#{collection.name}/foo2", value: "bar22")
+
+      assert json_response(conn, 422) == %{
+               "upserted" => 0,
+               "error" => "some limit error message"
+             }
     end
   end
 
@@ -294,9 +325,9 @@ defmodule LightningWeb.API.CollectionsControllerTest do
         )
 
       Mox.stub(
-        Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        fn %{type: :collection_put}, _context ->
+        Lightning.Extensions.MockCollectionHook,
+        :handle_put_items,
+        fn _collection, _size ->
           {:error, :exceeds_limit, %Message{text: "some limit error message"}}
         end
       )
@@ -305,7 +336,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
         conn
         |> assign_bearer(Lightning.Accounts.generate_api_token(user))
         |> post(~p"/collections/#{collection.name}", %{
-          items: [%{key: "foo1", value: "bar1"}, %{key: "foo2", value: "bar2"}]
+          items: [%{key: "foo4", value: "bar4"}, %{key: "foo5", value: "bar5"}]
         })
 
       assert json_response(conn, 422) == %{

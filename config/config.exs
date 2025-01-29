@@ -35,6 +35,7 @@ config :lightning, Lightning.Extensions,
   usage_limiter: Lightning.Extensions.UsageLimiter,
   run_queue: Lightning.Extensions.FifoRunQueue,
   account_hook: Lightning.Extensions.AccountHook,
+  collection_hook: Lightning.Extensions.CollectionHook,
   project_hook: Lightning.Extensions.ProjectHook
 
 config :lightning, Lightning.Extensions.Routing,

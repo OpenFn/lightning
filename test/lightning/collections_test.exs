@@ -61,19 +61,19 @@ defmodule Lightning.CollectionsTest do
     test "returns an error when limit is exceeded" do
       %{id: project_id1} = insert(:project)
       %{id: project_id2} = insert(:project)
-      name = "col1_project1"
-      message = %Lightning.Extensions.Message{text: "some error"}
 
-      assert {:ok, %Collection{project_id: ^project_id1, name: ^name}} =
+      assert {:ok, %Collection{project_id: ^project_id1, name: "col1"}} =
                Collections.create_collection(%{
                  "project_id" => project_id1,
-                 "name" => name
+                 "name" => "col1"
                })
 
+      message = %Lightning.Extensions.Message{text: "some error"}
+
       Mox.stub(
-        Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        fn %{type: :collection_create}, _context ->
+        Lightning.Extensions.MockCollectionHook,
+        :handle_create,
+        fn %{"project_id" => _project_id} ->
           {:error, :exceeds_limit, message}
         end
       )
@@ -81,7 +81,7 @@ defmodule Lightning.CollectionsTest do
       assert {:error, :exceeds_limit, ^message} =
                Collections.create_collection(%{
                  "project_id" => project_id2,
-                 "name" => name
+                 "name" => "col2"
                })
     end
   end

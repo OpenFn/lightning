@@ -36,16 +36,16 @@ defmodule LightningWeb.CollectionsController do
 
   def put(conn, %{"name" => col_name, "key" => key, "value" => value}) do
     with {:ok, collection} <- Collections.get_collection(col_name),
-         :ok <- authorize(conn, collection) do
-      case Collections.put(collection, key, value) do
-        :ok ->
-          json(conn, %{upserted: 1, error: nil})
+         :ok <- authorize(conn, collection),
+         :ok <- Collections.put(collection, key, value) do
+      json(conn, %{upserted: 1, error: nil})
+    else
+      {:error, %Ecto.Changeset{}} ->
+        json(conn, %{upserted: 0, error: "Format error"})
 
-        {:error, _reason} ->
-          json(conn, %{upserted: 0, error: "Format error"})
-      end
+      error ->
+        maybe_handle_limit_error(conn, error)
     end
-    |> maybe_handle_limit_error(conn)
   end
 
   def put_all(conn, %{"name" => col_name, "items" => items}) do
@@ -59,10 +59,9 @@ defmodule LightningWeb.CollectionsController do
         |> put_status(:unprocessable_entity)
         |> json(%{upserted: 0, error: "Duplicate key found"})
 
-      other ->
-        other
+      error ->
+        maybe_handle_limit_error(conn, error)
     end
-    |> maybe_handle_limit_error(conn)
   end
 
   def get(conn, %{"name" => col_name, "key" => key}) do
@@ -313,13 +312,13 @@ defmodule LightningWeb.CollectionsController do
   end
 
   defp maybe_handle_limit_error(
-         {:error, :exceeds_limit, %Message{text: error_msg}},
-         conn
+         conn,
+         {:error, :exceeds_limit, %Message{text: error_msg}}
        ) do
     conn
     |> put_status(:unprocessable_entity)
     |> json(%{upserted: 0, error: error_msg})
   end
 
-  defp maybe_handle_limit_error(result, _conn), do: result
+  defp maybe_handle_limit_error(_conn, error), do: error
 end
