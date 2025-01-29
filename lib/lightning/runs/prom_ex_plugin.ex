@@ -85,7 +85,8 @@ defmodule Lightning.Runs.PromExPlugin do
           description: "The count of runs stuck in the `available` state",
           measurement: :count
         )
-      ]
+      ],
+      detach_on_error: false
     )
   end
 
@@ -148,7 +149,8 @@ defmodule Lightning.Runs.PromExPlugin do
             "The number of runs finalised during the consideration window",
           measurement: :count
         )
-      ]
+      ],
+      detach_on_error: false
     )
   end
 

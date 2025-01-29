@@ -271,8 +271,6 @@ defmodule Lightning.Accounts.UserNotifierTest do
         Click the link below to view this in the history page:
         #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
 
-
-
         OpenFn
         """
       )
@@ -348,8 +346,6 @@ defmodule Lightning.Accounts.UserNotifierTest do
         - 7 work orders that failed, crashed or timed out
         Click the link below to view this in the history page:
         #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
-
-
 
         OpenFn
         """
@@ -429,11 +425,63 @@ defmodule Lightning.Accounts.UserNotifierTest do
         Click the link below to view this in the history page:
         #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
 
-
-
         OpenFn
         """
       )
+    end
+
+    test "digest emails with no activity" do
+      user = %User{email: "real@email.com", first_name: "Elias"}
+      project = %Project{name: "Real Project"}
+      workflow = Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow A")
+
+      data = [
+        %{
+          workflow: workflow,
+          successful_workorders: 0,
+          rerun_workorders: 0,
+          failed_workorders: 0
+        }
+      ]
+
+      for digest_type <- [:daily, :weekly, :monthly] do
+        period =
+          case digest_type do
+            :daily -> "today"
+            :weekly -> "this week"
+            :monthly -> "this month"
+          end
+
+        start_date = DigestEmailWorker.digest_to_date(digest_type)
+        end_date = Timex.now()
+
+        UserNotifier.deliver_project_digest(data, %{
+          user: user,
+          project: project,
+          digest: digest_type,
+          start_date: start_date,
+          end_date: end_date
+        })
+
+        assert_email_sent(
+          subject:
+            "#{String.capitalize("#{digest_type}")} digest for project Real Project",
+          to: Swoosh.Email.Recipient.format(user),
+          text_body: """
+          Hi Elias,
+
+          Here's your #{digest_type} project digest for "Real Project", covering activity from #{start_date |> Calendar.strftime("%a %B %d %Y at %H:%M %Z")} to #{end_date |> Calendar.strftime("%a %B %d %Y at %H:%M %Z")}.
+
+          Workflow A:
+          - 0 workorders correctly processed #{period}
+          - 0 work orders that failed, crashed or timed out
+          Click the link below to view this in the history page:
+          #{UserNotifier.build_digest_url(workflow, start_date, end_date)}
+
+          OpenFn
+          """
+        )
+      end
     end
 
     test "Kafka trigger failure - alternate storage disabled" do

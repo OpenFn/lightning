@@ -31,6 +31,8 @@ and this project adheres to
 - Indexes to foreign keys on `workflow_edges` and `steps` tables to try and
   alleviate slow loading of the job editor.
   [#2617](https://github.com/OpenFn/lightning/issues/2617)
+- Add temporary events to allow Lightning to log metrics reported by editors.
+  [#2617](https://github.com/OpenFn/lightning/issues/2617)
 - Extend provisioner to support collections
   [#2830](https://github.com/OpenFn/lightning/issues/2830)
 
@@ -50,8 +52,12 @@ and this project adheres to
 
 ### Fixed
 
+- Do not send digest emails for projects with no workflows
+  [#2688](https://github.com/OpenFn/lightning/issues/2688)
 - Fixed navbar items alignment in the workflow builder
   [#2825](https://github.com/OpenFn/lightning/issues/2825)
+- PromEx metrics no longer detaching on error
+  [#2875](https://github.com/OpenFn/lightning/issues/2875)
 
 ## [v2.10.12] - 2025-01-21
 

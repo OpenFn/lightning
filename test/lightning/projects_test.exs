@@ -1472,6 +1472,17 @@ defmodule Lightning.ProjectsTest do
       assert {:ok, _} =
                Projects.invite_collaborators(project, collaborators, user)
     end
+
+    test "project collaborators digest emails are by default turned off" do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user_id: user.id}])
+
+      assert project.project_users
+             |> Enum.map(& &1.digest)
+             |> Enum.all?(&(&1 == :never))
+    end
   end
 
   describe ".find_users_to_notify_of_trigger_failure/1" do
