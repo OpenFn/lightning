@@ -101,6 +101,7 @@ defmodule LightningWeb.CollectionLive.Components do
               </div>
             </.th>
             <.th>Project</.th>
+            <.th>Used Storage (MB)</.th>
             <.th></.th>
           </.tr>
 
@@ -115,7 +116,9 @@ defmodule LightningWeb.CollectionLive.Components do
             <.td class="break-words max-w-[25rem]">
               <%= collection.project.name %>
             </.td>
-
+            <.td class="break-words max-w-[25rem]">
+              <%= div(collection.byte_size_sum, 1_000_000) %>
+            </.td>
             <.td>
               <div class="text-right">
                 <button

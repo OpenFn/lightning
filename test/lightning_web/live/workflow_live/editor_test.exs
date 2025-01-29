@@ -1,6 +1,7 @@
 defmodule LightningWeb.WorkflowLive.EditorTest do
   use LightningWeb.ConnCase, async: true
 
+  import ExUnit.CaptureLog
   import Phoenix.LiveViewTest
   import Lightning.WorkflowLive.Helpers
   import Lightning.Factories
@@ -1749,8 +1750,61 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
     end
   end
 
+  describe "UI metrics events" do
+    setup context do
+      Mox.stub(Lightning.MockConfig, :ui_metrics_tracking_enabled?, fn ->
+        true
+      end)
+
+      current_log_level = Logger.level()
+      Logger.configure(level: :info)
+
+      on_exit(fn ->
+        Logger.configure(level: current_log_level)
+      end)
+
+      context
+      |> Map.merge(%{
+        metrics: [
+          %{
+            "event" => "foo-bar-job-event",
+            "start" => 1_737_635_739_914,
+            "end" => 1_737_635_808_890
+          }
+        ]
+      })
+    end
+
+    test "writes the UI metrics to the logs", %{
+      conn: conn,
+      metrics: metrics,
+      project: project,
+      workflow: workflow
+    } do
+      %{id: job_id} = job = workflow.jobs |> hd()
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand", v: workflow.lock_version]}"
+        )
+
+      fun = fn ->
+        view
+        |> with_target("#job-editor-pane-#{job.id}")
+        |> render_hook(
+          "job_editor_metrics_report",
+          %{"metrics" => metrics}
+        )
+      end
+
+      assert capture_log(fun) =~ ~r/foo-bar-job-event/
+      assert capture_log(fun) =~ ~r/#{job_id}/
+    end
+  end
+
   describe "Output & Logs" do
-    test "all users can view output and logs for a follwed run", %{
+    test "all users can view output and logs for a followed run", %{
       conn: conn,
       project: project,
       workflow: %{jobs: [job_1 | _rest]} = workflow,

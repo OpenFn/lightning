@@ -1,11 +1,7 @@
 defmodule Lightning.DigestEmailWorkerTest do
   use Lightning.DataCase, async: true
 
-  alias Lightning.{
-    AccountsFixtures,
-    ProjectsFixtures,
-    DigestEmailWorker
-  }
+  alias Lightning.DigestEmailWorker
 
   import Lightning.Factories
 
@@ -21,63 +17,92 @@ defmodule Lightning.DigestEmailWorkerTest do
           ]
         )
 
-      assert project.project_users |> length() == 1
+      assert length(project.project_users) == 1
 
-      {:ok, notified_project_users} =
+      {:ok, result} =
         DigestEmailWorker.perform(%Oban.Job{
           args: %{"type" => "daily_project_digest"}
         })
 
-      assert notified_project_users |> length() == 0
+      assert length(result.notified_users) == 0
+      assert length(result.skipped_users) == 0
     end
 
     test "all project users of different project that have a digest of :daily, :weekly, and :monthly" do
-      user_1 = AccountsFixtures.user_fixture()
-      user_2 = AccountsFixtures.user_fixture()
-      user_3 = AccountsFixtures.user_fixture()
+      [user_1, user_2, user_3] = insert_list(3, :user)
 
-      ProjectsFixtures.project_fixture(
-        project_users: [
-          %{user_id: user_1.id, digest: :daily},
-          %{user_id: user_2.id, digest: :weekly},
-          %{user_id: user_3.id, digest: :monthly}
-        ]
-      )
+      project_1 =
+        insert(:project,
+          project_users: [
+            %{user_id: user_1.id, digest: :daily},
+            %{user_id: user_2.id, digest: :weekly},
+            %{user_id: user_3.id, digest: :monthly}
+          ]
+        )
 
-      ProjectsFixtures.project_fixture(
-        project_users: [
-          %{user_id: user_1.id, digest: :monthly},
-          %{user_id: user_2.id, digest: :daily},
-          %{user_id: user_3.id, digest: :daily}
-        ]
-      )
+      project_2 =
+        insert(:project,
+          project_users: [
+            %{user_id: user_1.id, digest: :monthly},
+            %{user_id: user_2.id, digest: :daily},
+            %{user_id: user_3.id, digest: :daily}
+          ]
+        )
 
-      ProjectsFixtures.project_fixture(
-        project_users: [
-          %{user_id: user_1.id, digest: :weekly},
-          %{user_id: user_2.id, digest: :daily},
-          %{user_id: user_3.id, digest: :weekly}
-        ]
-      )
+      project_3 =
+        insert(:project,
+          project_users: [
+            %{user_id: user_1.id, digest: :weekly},
+            %{user_id: user_2.id, digest: :daily},
+            %{user_id: user_3.id, digest: :weekly}
+          ]
+        )
 
-      {:ok, daily_project_users} =
+      insert(:simple_workflow, project: project_1)
+      insert(:simple_workflow, project: project_2)
+      insert(:simple_workflow, project: project_3)
+
+      {:ok, daily_result} =
         DigestEmailWorker.perform(%Oban.Job{
           args: %{"type" => "daily_project_digest"}
         })
 
-      {:ok, weekly_project_users} =
+      {:ok, weekly_result} =
         DigestEmailWorker.perform(%Oban.Job{
           args: %{"type" => "weekly_project_digest"}
         })
 
-      {:ok, monthly_project_users} =
+      {:ok, monthly_result} =
         DigestEmailWorker.perform(%Oban.Job{
           args: %{"type" => "monthly_project_digest"}
         })
 
-      assert daily_project_users |> length() == 4
-      assert weekly_project_users |> length() == 3
-      assert monthly_project_users |> length() == 2
+      assert length(daily_result.notified_users) == 4
+      assert length(weekly_result.notified_users) == 3
+      assert length(monthly_result.notified_users) == 2
+
+      assert length(daily_result.skipped_users) == 0
+      assert length(weekly_result.skipped_users) == 0
+      assert length(monthly_result.skipped_users) == 0
+    end
+
+    test "skips users when project has no workflows" do
+      user = insert(:user)
+
+      _project =
+        insert(:project,
+          project_users: [
+            %{user_id: user.id, digest: :daily}
+          ]
+        )
+
+      {:ok, result} =
+        DigestEmailWorker.perform(%Oban.Job{
+          args: %{"type" => "daily_project_digest"}
+        })
+
+      assert result.notified_users == []
+      assert length(result.skipped_users) == 1
     end
   end
 
@@ -117,6 +142,27 @@ defmodule Lightning.DigestEmailWorkerTest do
                  successful_workorders: 1,
                  workflow: workflow_b
                }
+    end
+
+    test "Gets project digest data with no activity for all digest periods" do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user_id: user.id, digest: :daily}])
+
+      workflow = insert(:simple_workflow, project: project)
+
+      for period <- [:daily, :weekly, :monthly] do
+        start_date = DigestEmailWorker.digest_to_date(period)
+        end_date = Timex.now()
+
+        assert DigestEmailWorker.get_digest_data(workflow, start_date, end_date) ==
+                 %{
+                   failed_workorders: 0,
+                   successful_workorders: 0,
+                   workflow: workflow
+                 }
+      end
     end
   end
 

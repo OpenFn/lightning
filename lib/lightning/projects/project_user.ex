@@ -36,7 +36,7 @@ defmodule Lightning.Projects.ProjectUser do
     field :delete, :boolean, virtual: true
     field :failure_alert, :boolean, default: true
     field :role, RolesEnum
-    field :digest, DigestEnum, default: :weekly
+    field :digest, DigestEnum, default: :never
 
     timestamps()
   end

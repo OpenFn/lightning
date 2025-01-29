@@ -1,4 +1,6 @@
 defmodule Lightning.VersionControl.Events do
+  @moduledoc false
+
   defmodule OauthTokenAdded do
     @moduledoc false
     defstruct user: nil

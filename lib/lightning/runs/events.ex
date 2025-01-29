@@ -1,4 +1,6 @@
 defmodule Lightning.Runs.Events do
+  @moduledoc false
+
   defmodule StepStarted do
     @moduledoc false
     defstruct step: nil
