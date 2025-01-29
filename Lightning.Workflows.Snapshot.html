@@ -14,7 +14,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-801E2F19.js"></script>
+    <script src="dist/sidebar_items-E8AE63FF.js"></script>
     <script src="docs_config.js"></script>
     <script async src="dist/html-YIPIRHGU.js"></script>
 
@@ -221,24 +221,6 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_or_create_latest_for/2" data-no-tooltip translate="no">get_or_create_latest_for(workflow, actor)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Get the latest snapshot for a workflow, or create one if it doesn't exist.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#get_or_create_latest_for/4" data-no-tooltip translate="no">get_or_create_latest_for(multi, name \\ :snapshot, workflow, actor)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
         <a href="#include_latest_snapshot/3" data-no-tooltip translate="no">include_latest_snapshot(multi, name \\ :snapshot, workflow)</a>
 
       </div>
@@ -275,7 +257,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">t()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L19" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L18" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -366,7 +348,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">build(workflow)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L123" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L122" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -394,7 +376,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">create(workflow)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L147" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L146" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -423,7 +405,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">get_all_by_ids(ids)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L161" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L160" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -445,7 +427,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">get_all_for(workflow)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L153" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L152" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -473,7 +455,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">get_by_version(workflow_id, version)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L191" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L188" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -495,7 +477,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">get_current_for(workflow)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L177" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L174" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -512,75 +494,7 @@ Pages
       </div>
 
 <p>Get the latest snapshot for a workflow, based on the lock_version.</p><p>It returns the latest snapshot regardless of the lock_version of the
-workflow passed in. This is intentional to ensure that
-<code class="inline">get_or_create_latest_for/1</code> doesn't attempt to create a new snapshot if the
-workflow has been updated elsewhere.</p>
-  </section>
-</section>
-<section class="detail" id="get_or_create_latest_for/2">
-
-  <div class="detail-header">
-    <a href="#get_or_create_latest_for/2" class="detail-link" data-no-tooltip title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">get_or_create_latest_for(workflow, actor)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L205" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> get_or_create_latest_for(
-  <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>(),
-  <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">struct</a>()
-) :: {:ok, <a href="#t:t/0">t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
-
-      </div>
-
-<p>Get the latest snapshot for a workflow, or create one if it doesn't exist.</p>
-  </section>
-</section>
-<section class="detail" id="get_or_create_latest_for/4">
-
-    <span id="get_or_create_latest_for/3"></span>
-
-  <div class="detail-header">
-    <a href="#get_or_create_latest_for/4" class="detail-link" data-no-tooltip title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">get_or_create_latest_for(multi, name \\ :snapshot, workflow, actor)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L222" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> get_or_create_latest_for(
-  <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.Multi.html#t:t/0">Ecto.Multi.t</a>(),
-  <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>() | :snapshot,
-  <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>(),
-  <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">struct</a>()
-) :: <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.Multi.html#t:t/0">Ecto.Multi.t</a>()</pre>
-
-      </div>
-
-
+workflow passed in.</p>
   </section>
 </section>
 <section class="detail" id="include_latest_snapshot/3">
@@ -594,7 +508,7 @@ workflow has been updated elsewhere.</p>
     </a>
     <h1 class="signature" translate="no">include_latest_snapshot(multi, name \\ :snapshot, workflow)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L266" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L199" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -627,7 +541,7 @@ workflow has been updated elsewhere.</p>
     </a>
     <h1 class="signature" translate="no">new(workflow)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L85" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/snapshot.ex#L84" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
