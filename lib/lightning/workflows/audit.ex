@@ -11,7 +11,8 @@ defmodule Lightning.Workflows.Audit do
       "disabled",
       "deleted_by_provisioner",
       "inserted_by_provisioner",
-      "updated_by_provisioner"
+      "updated_by_provisioner",
+      "marked_for_deletion"
     ]
 
   def snapshot_created(workflow_id, snapshot_id, actor) do
@@ -45,5 +46,14 @@ defmodule Lightning.Workflows.Audit do
 
   def past_tense(action) do
     if action == :insert, do: "inserted", else: "#{action}d"
+  end
+
+  def marked_for_deletion(workflow_id, actor) do
+    event(
+      "marked_for_deletion",
+      workflow_id,
+      actor,
+      %{}
+    )
   end
 end

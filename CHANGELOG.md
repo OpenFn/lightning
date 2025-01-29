@@ -33,6 +33,8 @@ and this project adheres to
   [#2617](https://github.com/OpenFn/lightning/issues/2617)
 - Add temporary events to allow Lightning to log metrics reported by editors.
   [#2617](https://github.com/OpenFn/lightning/issues/2617)
+- Audit when workflow deletion is requested.
+  [#2727](https://github.com/OpenFn/lightning/issues/2727)
 
 ### Changed
 

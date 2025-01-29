@@ -702,7 +702,9 @@ defmodule Lightning.WorkflowsTest do
              |> length() == 2
     end
 
-    test "mark_for_deletion/2", %{project: project, w1: w1, w2: w2} do
+    test "mark_for_deletion/3", %{project: project, w1: w1, w2: w2} do
+      user = insert(:user)
+
       workflows = Workflows.get_workflows_for(project)
 
       assert length(workflows) == 2
@@ -712,9 +714,10 @@ defmodule Lightning.WorkflowsTest do
 
       %{id: trigger_1_id} = insert(:trigger, workflow: w1, enabled: true)
       %{id: trigger_2_id} = insert(:trigger, workflow: w1, enabled: true)
+      %{id: trigger_3_id} = insert(:trigger, workflow: w2, enabled: true)
 
       # request workflow deletion (and disable all associated triggers)
-      assert {:ok, _workflow} = Workflows.mark_for_deletion(w1)
+      assert {:ok, _workflow} = Workflows.mark_for_deletion(w1, user)
 
       assert Workflows.get_workflow!(w1.id).deleted_at != nil
       assert Workflows.get_workflow!(w2.id).deleted_at == nil
@@ -724,9 +727,28 @@ defmodule Lightning.WorkflowsTest do
 
       assert Repo.get(Trigger, trigger_1_id) |> Map.get(:enabled) == false
       assert Repo.get(Trigger, trigger_2_id) |> Map.get(:enabled) == false
+      assert Repo.get(Trigger, trigger_3_id) |> Map.get(:enabled) == true
     end
 
-    test "mark_for_deletion/2 publishes events for Kafka triggers", %{w1: w1} do
+    test "mark_for_deletion/3 creates an audit event", %{
+      w1: %{id: workflow_id} = workflow
+    } do
+      %{id: user_id} = user = insert(:user)
+
+      assert {:ok, _workflow} = Workflows.mark_for_deletion(workflow, user)
+
+      audit = Repo.one!(Audit)
+
+      assert %{
+               event: "marked_for_deletion",
+               item_id: ^workflow_id,
+               actor_id: ^user_id
+             } = audit
+    end
+
+    test "mark_for_deletion/3 publishes events for Kafka triggers", %{w1: w1} do
+      user = insert(:user)
+
       %{id: kafka_trigger_1_id} =
         insert(:trigger, workflow: w1, enabled: true, type: :kafka)
 
@@ -738,7 +760,7 @@ defmodule Lightning.WorkflowsTest do
 
       Events.subscribe_to_kafka_trigger_updated()
 
-      assert {:ok, _workflow} = Workflows.mark_for_deletion(w1)
+      assert {:ok, _workflow} = Workflows.mark_for_deletion(w1, user)
 
       refute_received %KafkaTriggerUpdated{trigger_id: ^webhook_trigger_id}
       assert_received %KafkaTriggerUpdated{trigger_id: ^kafka_trigger_2_id}
