@@ -1791,7 +1791,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
     test "workflow state toggle tooltip messages vary by trigger type", %{
       conn: conn,
-      user: user,
       project: project
     } do
       cron_trigger = build(:trigger, type: :cron, enabled: false)
@@ -1814,12 +1813,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         |> with_edge({webhook_trigger, job_2})
         |> insert()
 
-      Lightning.Workflows.Snapshot.get_or_create_latest_for(cron_workflow, user)
+      Lightning.Workflows.Snapshot.create(cron_workflow)
 
-      Lightning.Workflows.Snapshot.get_or_create_latest_for(
-        webhook_workflow,
-        user
-      )
+      Lightning.Workflows.Snapshot.create(webhook_workflow)
 
       {:ok, view, _html} =
         live(

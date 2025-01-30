@@ -1,7 +1,6 @@
 defmodule Lightning.Workflows.SnapshotsTest do
   use Lightning.DataCase, async: true
 
-  alias Lightning.Auditing.Audit
   alias Lightning.Workflows
 
   import Lightning.Factories
@@ -115,85 +114,6 @@ defmodule Lightning.Workflows.SnapshotsTest do
       # Ensure that the snapshot is the latest one, despite initial_workflow
       # having a `lock_version` of 0.
       assert snapshot == Workflows.Snapshot.get_current_for(initial_workflow)
-    end
-  end
-
-  describe "get_or_create_latest_for" do
-    setup do
-      %{actor: insert(:project_repo_connection)}
-    end
-
-    test "without a workflow", %{actor: actor} do
-      workflow = build(:simple_workflow, id: Ecto.UUID.generate())
-
-      {:error, :no_workflow} =
-        Workflows.Snapshot.get_or_create_latest_for(workflow, actor)
-    end
-
-    test "without an existing snapshot", %{actor: actor} do
-      workflow = insert(:simple_workflow)
-
-      assert {:ok, snapshot} =
-               Workflows.Snapshot.get_or_create_latest_for(workflow, actor)
-
-      assert snapshot == Workflows.Snapshot.get_current_for(workflow)
-    end
-
-    test "creates an audit entry if a snapshot was created", %{
-      actor: %{id: actor_id} = actor
-    } do
-      %{id: workflow_id} = workflow = insert(:simple_workflow)
-
-      assert {:ok, %{id: snapshot_id}} =
-               Workflows.Snapshot.get_or_create_latest_for(workflow, actor)
-
-      audit = Repo.one!(Audit)
-
-      assert %{
-               event: "snapshot_created",
-               item_id: ^workflow_id,
-               actor_id: ^actor_id,
-               changes: %{
-                 after: %{"snapshot_id" => ^snapshot_id}
-               }
-             } = audit
-    end
-
-    test "called with multi - creates an audit entry if snapshot was created", %{
-      actor: %{id: actor_id} = actor
-    } do
-      %{id: workflow_id} = workflow = insert(:simple_workflow)
-
-      {:ok, %{snapshot: %{id: snapshot_id}}} =
-        Workflows.Snapshot.get_or_create_latest_for(
-          Ecto.Multi.new(),
-          workflow,
-          actor
-        )
-        |> Repo.transaction()
-
-      audit = Repo.one!(Audit)
-
-      assert %{
-               event: "snapshot_created",
-               item_id: ^workflow_id,
-               actor_id: ^actor_id,
-               changes: %{
-                 after: %{"snapshot_id" => ^snapshot_id}
-               }
-             } = audit
-    end
-
-    test "with an existing snapshot", %{actor: actor} do
-      workflow = insert(:simple_workflow)
-
-      {:ok, existing} =
-        Workflows.Snapshot.get_or_create_latest_for(workflow, actor)
-
-      {:ok, latest} =
-        Workflows.Snapshot.get_or_create_latest_for(workflow, actor)
-
-      assert existing == latest
     end
   end
 

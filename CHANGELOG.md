@@ -17,6 +17,17 @@ and this project adheres to
 
 ### Added
 
+- Extend provisioner to support collections
+  [#2830](https://github.com/OpenFn/lightning/issues/2830)
+
+### Changed
+
+### Fixed
+
+## [v2.10.13] - 2025-01-29
+
+### Added
+
 - Add support for local adaptors. This can be enabled via `LOCAL_ADAPTORS=true`
   and path specified via `OPENFN_ADAPTORS_REPO=./path/to/repo/`
   [#905](https://github.com/OpenFn/lightning/issues/905)
@@ -31,10 +42,12 @@ and this project adheres to
 - Indexes to foreign keys on `workflow_edges` and `steps` tables to try and
   alleviate slow loading of the job editor.
   [#2617](https://github.com/OpenFn/lightning/issues/2617)
+- Remove `Snapshot.get_or_create_latest_for`.
+  [#2703](https://github.com/OpenFn/lightning/issues/2703)
 - Add temporary events to allow Lightning to log metrics reported by editors.
   [#2617](https://github.com/OpenFn/lightning/issues/2617)
-- Extend provisioner to support collections
-  [#2830](https://github.com/OpenFn/lightning/issues/2830)
+- Audit when workflow deletion is requested.
+  [#2727](https://github.com/OpenFn/lightning/issues/2727)
 
 ### Changed
 
@@ -49,6 +62,8 @@ and this project adheres to
   [#2861](https://github.com/OpenFn/lightning/pull/2861)
 - Remove googlesheets, gmail and collections from credential schemas list
   [#2854](https://github.com/OpenFn/lightning/issues/2854)
+- Remove ring on save workflow button
+  [#2829](https://github.com/OpenFn/lightning/issues/2829)
 
 ### Fixed
 
