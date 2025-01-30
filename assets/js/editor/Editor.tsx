@@ -3,9 +3,43 @@ import type { editor } from 'monaco-editor';
 import type { EditorProps as MonacoProps } from '@monaco-editor/react';
 
 import { MonacoEditor, type Monaco } from '../monaco';
-import { fetchDTSListing, fetchFile } from '@openfn/describe-package';
+import * as describe from '@openfn/describe-package';
 import createCompletionProvider from './magic-completion';
 import { initiateSaveAndRun } from '../common';
+
+// export async function* fetchDTSListing(packageName: string) {
+//   for (const f of await fetchFileListing(packageName)) {
+//     if (dtsExtension.test(f)) {
+//       yield f;
+//     }
+//   }
+// }
+async function* fetchDTSListing(specifier: string) {
+  if (specifier.endsWith('@local')) {
+    const lang = specifier
+      .replace('@local', '')
+      .replace('@openfn/language-', '');
+    const url = `http://localhost:5000/packages/${lang}/types`;
+    const r = await fetch(url, { headers: { Accept: 'application/json' } });
+    const json = await r.json();
+    for (const f of json.files) {
+      yield `/types/${f.base}`;
+    }
+  } else {
+    return describe.fetchDTSListing(specifier);
+  }
+}
+const fetchFile = async (path: string) => {
+  if (path.includes('@local')) {
+    path = path.replace('@openfn/language-', '').replace('@local', '');
+    const url = `http://localhost:5000/packages/${path}`;
+    return fetch(url, { headers: { Accept: 'text/plain' } }).then(r =>
+      r.text()
+    );
+  } else {
+    return describe.fetchFile(path);
+  }
+};
 
 // static imports for core lib
 import dts_es5 from './lib/es5.min.dts';
@@ -95,6 +129,8 @@ type Lib = {
 };
 
 async function loadDTS(specifier: string): Promise<Lib[]> {
+  const useLocal = specifier.endsWith('@local');
+
   // Work out the module name from the specifier
   // (his gets a bit tricky with @openfn/ module names)
   const nameParts = specifier.split('@');
@@ -107,16 +143,18 @@ async function loadDTS(specifier: string): Promise<Lib[]> {
   // TODO maybe we need other dependencies too? collections?
   if (name !== '@openfn/language-common') {
     const pkg = await fetchFile(`${specifier}/package.json`);
-    const commonVersion = JSON.parse(pkg || '{}').dependencies?.[
-      '@openfn/language-common'
-    ];
+    const commonVersion = useLocal
+      ? 'local'
+      : JSON.parse(pkg || '{}').dependencies?.['@openfn/language-common'];
 
-    // jsDeliver doesn't appear to support semver range syntax (^1.0.0, 1.x, ~1.1.0)
-    const commonVersionMatch = commonVersion?.match(/^\d+\.\d+\.\d+/);
-    if (!commonVersionMatch) {
-      console.warn(
-        `@openfn/language-common@${commonVersion} contains semver range syntax.`
-      );
+    if (!useLocal) {
+      // jsDeliver doesn't appear to support semver range syntax (^1.0.0, 1.x, ~1.1.0)
+      const commonVersionMatch = commonVersion?.match(/^\d+\.\d+\.\d+/);
+      if (!commonVersionMatch) {
+        console.warn(
+          `@openfn/language-common@${commonVersion} contains semver range syntax.`
+        );
+      }
     }
 
     const commonSpecifier = `@openfn/language-common@${commonVersion.replace(
@@ -128,6 +166,7 @@ async function loadDTS(specifier: string): Promise<Lib[]> {
         // Load every common typedef into the common module
         let content = await fetchFile(`${commonSpecifier}${filePath}`);
         content = content.replace(/\* +@(.+?)\*\//gs, '*/');
+        console.log(content);
         results.push({
           content: `declare module '@openfn/language-common' { ${content} }`,
         });
