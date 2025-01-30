@@ -62,8 +62,15 @@ defmodule Lightning.Helpers do
     Crontab.Scheduler.get_next_run_date!(cron_expression, due_date)
   end
 
-  def format_date(date, formatter \\ "%a %d/%m/%Y at %H:%M:%S") do
+  def format_date(date, formatter \\ "%F %T") do
     Timex.Format.DateTime.Formatters.Strftime.format!(date, formatter)
+  end
+
+  def format_date_long(date) do
+    Timex.Format.DateTime.Formatters.Strftime.format!(
+      date,
+      "%A, %B %d, %Y at %H:%M %Z"
+    )
   end
 
   @doc """

@@ -61,9 +61,9 @@
           </span>
         </code>
       </:col>
-      <:col :let={token} label="Created at">
+      <:col :let={token} label="Created on">
         <span class="my-auto whitespace-nowrap text-center align-baseline font-medium leading-none">
-          <%= Calendar.strftime(token.inserted_at, "%a, %-d %b %Y at %X") %>
+          <%= Lightning.Helpers.format_date_long(token.inserted_at) %>
         </span>
       </:col>
       <:col :let={token} label="Last Used at">

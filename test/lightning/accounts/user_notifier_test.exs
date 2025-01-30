@@ -251,7 +251,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
         text_body: """
         Hi Elias,
 
-        Here's your daily project digest for "Real Project", covering activity from #{start_date |> Calendar.strftime("%a %B %d %Y at %H:%M %Z")} to #{end_date |> Calendar.strftime("%a %B %d %Y at %H:%M %Z")}.
+        Here's your daily project digest for "Real Project", covering activity from #{start_date |> Lightning.Helpers.format_date_long()} to #{end_date |> Lightning.Helpers.format_date_long()}.
 
         Workflow A:
         - 12 workorders correctly processed today
@@ -327,7 +327,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
         text_body: """
         Hi Elias,
 
-        Here's your weekly project digest for "Real Project", covering activity from #{start_date |> Calendar.strftime("%a %B %d %Y at %H:%M %Z")} to #{end_date |> Calendar.strftime("%a %B %d %Y at %H:%M %Z")}.
+        Here's your weekly project digest for "Real Project", covering activity from #{start_date |> Lightning.Helpers.format_date_long()} to #{end_date |> Lightning.Helpers.format_date_long()}.
 
         Workflow A:
         - 12 workorders correctly processed this week
@@ -405,7 +405,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
         text_body: """
         Hi Elias,
 
-        Here's your monthly project digest for "Real Project", covering activity from #{start_date |> Calendar.strftime("%a %B %d %Y at %H:%M %Z")} to #{end_date |> Calendar.strftime("%a %B %d %Y at %H:%M %Z")}.
+        Here's your monthly project digest for "Real Project", covering activity from #{start_date |> Lightning.Helpers.format_date_long()} to #{end_date |> Lightning.Helpers.format_date_long()}.
 
         Workflow A:
         - 12 workorders correctly processed this month
@@ -470,7 +470,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
           text_body: """
           Hi Elias,
 
-          Here's your #{digest_type} project digest for "Real Project", covering activity from #{start_date |> Calendar.strftime("%a %B %d %Y at %H:%M %Z")} to #{end_date |> Calendar.strftime("%a %B %d %Y at %H:%M %Z")}.
+          Here's your #{digest_type} project digest for "Real Project", covering activity from #{start_date |> Lightning.Helpers.format_date_long()} to #{end_date |> Lightning.Helpers.format_date_long()}.
 
           Workflow A:
           - 0 workorders correctly processed #{period}

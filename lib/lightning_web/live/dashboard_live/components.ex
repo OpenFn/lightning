@@ -18,7 +18,7 @@ defmodule LightningWeb.DashboardLive.Components do
           class="text-gray-500 focus:outline-none"
         >
           <span class="text-lg">
-            <.icon name={"hero-chevron-#{if @collapsed, do: "down", else: "up"}"} />
+            <.icon name={"hero-chevron-#{if @collapsed, do: "up", else: "down"}"} />
           </span>
         </button>
       </div>
@@ -201,10 +201,7 @@ defmodule LightningWeb.DashboardLive.Components do
             </.td>
             <.td>
               <%= if project.last_updated_at do %>
-                <%= Lightning.Helpers.format_date(
-                  project.last_updated_at,
-                  "%d/%m/%Y %H:%M:%S"
-                ) %>
+                <%= Lightning.Helpers.format_date(project.last_updated_at) %>
               <% else %>
                 N/A
               <% end %>

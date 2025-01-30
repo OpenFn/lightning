@@ -1077,7 +1077,7 @@
               label="Export Date"
             >
               <%= file.inserted_at
-              |> Lightning.Helpers.format_date("%d/%m/%Y %H:%M:%S") %>
+              |> Lightning.Helpers.format_date() %>
             </:col>
             <:col
               :let={file}
