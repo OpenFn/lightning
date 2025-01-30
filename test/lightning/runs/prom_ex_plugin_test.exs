@@ -59,7 +59,9 @@ defmodule Lightning.Runs.PromExPluginText do
 
       assert %PromEx.MetricTypes.Polling{
                poll_rate: @poll_rate,
-               measurements_mfa: ^expected_mfa,
+               measurements_mfa:
+                 {PromEx.MetricTypes.Polling, :safe_polling_runner,
+                  [^expected_mfa]},
                metrics: [metric | _]
              } = stalled_run_polling
 
@@ -84,7 +86,9 @@ defmodule Lightning.Runs.PromExPluginText do
 
       assert %PromEx.MetricTypes.Polling{
                poll_rate: @poll_rate,
-               measurements_mfa: ^expected_mfa
+               measurements_mfa:
+                 {PromEx.MetricTypes.Polling, :safe_polling_runner,
+                  [^expected_mfa]}
              } = run_performance_polling
     end
 
