@@ -7,13 +7,6 @@ import * as describe from '@openfn/describe-package';
 import createCompletionProvider from './magic-completion';
 import { initiateSaveAndRun } from '../common';
 
-// export async function* fetchDTSListing(packageName: string) {
-//   for (const f of await fetchFileListing(packageName)) {
-//     if (dtsExtension.test(f)) {
-//       yield f;
-//     }
-//   }
-// }
 async function* fetchDTSListing(specifier: string) {
   if (specifier.endsWith('@local')) {
     const lang = specifier
