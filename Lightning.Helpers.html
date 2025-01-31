@@ -14,7 +14,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-9825448B.js"></script>
+    <script src="dist/sidebar_items-3CDA5350.js"></script>
     <script src="docs_config.js"></script>
     <script async src="dist/html-YIPIRHGU.js"></script>
 
@@ -186,7 +186,15 @@ If it cannot be converted, it leaves the original value</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#format_date/2" data-no-tooltip translate="no">format_date(date, formatter \\ &quot;%a %d/%m/%Y at %H:%M:%S&quot;)</a>
+        <a href="#format_date/2" data-no-tooltip translate="no">format_date(date, formatter \\ &quot;%F %T&quot;)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#format_date_long/1" data-no-tooltip translate="no">format_date_long(date)</a>
 
       </div>
 
@@ -252,7 +260,7 @@ replacing unwanted characters with hyphens, and trimming leading/trailing hyphen
     </a>
     <h1 class="signature" translate="no">actual_deletion_date(grace_period, cron_expression \\ &quot;4 2 * * *&quot;, unit \\ :days)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L48" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L50" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -274,7 +282,7 @@ replacing unwanted characters with hyphens, and trimming leading/trailing hyphen
     </a>
     <h1 class="signature" translate="no">coerce_json_field(attrs, field)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L11" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L13" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -305,7 +313,7 @@ If it cannot be converted, it leaves the original value</p>
     </a>
     <h1 class="signature" translate="no">copy_error(changeset, original_key, new_key, opts \\ [overwrite: true])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L112" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L121" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -327,10 +335,10 @@ If it cannot be converted, it leaves the original value</p>
   </a>
   <span class="text">Example</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">changeset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="3579880613-1">%</span><span class="nc" data-group-id="3579880613-1">Ecto.Changeset</span><span class="p" data-group-id="3579880613-1">{</span><span class="ss">errors</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3579880613-2">[</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3579880613-3">{</span><span class="s">&quot;has already been taken&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3579880613-4">[</span><span class="p" data-group-id="3579880613-4">]</span><span class="p" data-group-id="3579880613-3">}</span><span class="p" data-group-id="3579880613-2">]</span><span class="p" data-group-id="3579880613-1">}</span><span class="w">
-</span><span class="gp unselectable">iex&gt; </span><span class="n">updated_changeset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Helpers</span><span class="o">.</span><span class="n">copy_error</span><span class="p" data-group-id="3579880613-5">(</span><span class="n">changeset</span><span class="p">,</span><span class="w"> </span><span class="ss">:name</span><span class="p">,</span><span class="w"> </span><span class="ss">:raw_name</span><span class="p" data-group-id="3579880613-5">)</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">changeset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="1704222637-1">%</span><span class="nc" data-group-id="1704222637-1">Ecto.Changeset</span><span class="p" data-group-id="1704222637-1">{</span><span class="ss">errors</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1704222637-2">[</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1704222637-3">{</span><span class="s">&quot;has already been taken&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1704222637-4">[</span><span class="p" data-group-id="1704222637-4">]</span><span class="p" data-group-id="1704222637-3">}</span><span class="p" data-group-id="1704222637-2">]</span><span class="p" data-group-id="1704222637-1">}</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">updated_changeset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Helpers</span><span class="o">.</span><span class="n">copy_error</span><span class="p" data-group-id="1704222637-5">(</span><span class="n">changeset</span><span class="p">,</span><span class="w"> </span><span class="ss">:name</span><span class="p">,</span><span class="w"> </span><span class="ss">:raw_name</span><span class="p" data-group-id="1704222637-5">)</span><span class="w">
 </span><span class="gp unselectable">iex&gt; </span><span class="n">updated_changeset</span><span class="o">.</span><span class="n">errors</span><span class="w">
-</span><span class="p" data-group-id="3579880613-6">[</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3579880613-7">{</span><span class="s">&quot;has already been taken&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3579880613-8">[</span><span class="p" data-group-id="3579880613-8">]</span><span class="p" data-group-id="3579880613-7">}</span><span class="p">,</span><span class="w"> </span><span class="ss">raw_name</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3579880613-9">{</span><span class="s">&quot;has already been taken&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3579880613-10">[</span><span class="p" data-group-id="3579880613-10">]</span><span class="p" data-group-id="3579880613-9">}</span><span class="p" data-group-id="3579880613-6">]</span></code></pre><p>If the <code class="inline">original_key</code> doesn't exist in the errors, or if the <code class="inline">new_key</code> already exists and <code class="inline">overwrite</code> is set to <code class="inline">false</code>, the changeset is returned unchanged.</p>
+</span><span class="p" data-group-id="1704222637-6">[</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1704222637-7">{</span><span class="s">&quot;has already been taken&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1704222637-8">[</span><span class="p" data-group-id="1704222637-8">]</span><span class="p" data-group-id="1704222637-7">}</span><span class="p">,</span><span class="w"> </span><span class="ss">raw_name</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1704222637-9">{</span><span class="s">&quot;has already been taken&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1704222637-10">[</span><span class="p" data-group-id="1704222637-10">]</span><span class="p" data-group-id="1704222637-9">}</span><span class="p" data-group-id="1704222637-6">]</span></code></pre><p>If the <code class="inline">original_key</code> doesn't exist in the errors, or if the <code class="inline">new_key</code> already exists and <code class="inline">overwrite</code> is set to <code class="inline">false</code>, the changeset is returned unchanged.</p>
   </section>
 </section>
 <section class="detail" id="format_date/2">
@@ -342,9 +350,31 @@ If it cannot be converted, it leaves the original value</p>
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">format_date(date, formatter \\ &quot;%a %d/%m/%Y at %H:%M:%S&quot;)</h1>
+    <h1 class="signature" translate="no">format_date(date, formatter \\ &quot;%F %T&quot;)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L65" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L67" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="format_date_long/1">
+
+  <div class="detail-header">
+    <a href="#format_date_long/1" class="detail-link" data-no-tooltip title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">format_date_long(date)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L71" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -366,7 +396,7 @@ If it cannot be converted, it leaves the original value</p>
     </a>
     <h1 class="signature" translate="no">json_safe(data)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L73" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L82" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -389,7 +419,7 @@ where all keys are strings and all values are json safe (primitive values).</p>
     </a>
     <h1 class="signature" translate="no">ms_to_human(milliseconds)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L42" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L44" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -419,7 +449,7 @@ where all keys are strings and all values are json safe (primitive values).</p>
     </a>
     <h1 class="signature" translate="no">url_safe_name(name)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L148" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/helpers.ex#L157" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -449,10 +479,10 @@ percent-encoded in URLs by browsers.</p><h2 id="url_safe_name/1-parameters" clas
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">url_safe_name</span><span class="p" data-group-id="0695670721-1">(</span><span class="s">&quot;My Project!!&quot;</span><span class="p" data-group-id="0695670721-1">)</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">url_safe_name</span><span class="p" data-group-id="2079276770-1">(</span><span class="s">&quot;My Project!!&quot;</span><span class="p" data-group-id="2079276770-1">)</span><span class="w">
 </span><span class="s">&quot;my-project&quot;</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">url_safe_name</span><span class="p" data-group-id="0695670721-2">(</span><span class="no">nil</span><span class="p" data-group-id="0695670721-2">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">url_safe_name</span><span class="p" data-group-id="2079276770-2">(</span><span class="no">nil</span><span class="p" data-group-id="2079276770-2">)</span><span class="w">
 </span><span class="s">&quot;&quot;</span></code></pre>
   </section>
 </section>
