@@ -65,14 +65,15 @@ defmodule LightningWeb.CollectionLive.Components do
     """
   end
 
+  # TODO - replace with common table when moving to project scope!
   def collections_table(assigns) do
-    next_sort_icon = %{asc: "hero-chevron-down", desc: "hero-chevron-up"}
+    sort_icon = %{asc: "hero-chevron-down", desc: "hero-chevron-up"}
 
     assigns =
       assign(assigns,
         collections_count: Enum.count(assigns.collections),
         empty?: Enum.empty?(assigns.collections),
-        name_sort_icon: next_sort_icon[assigns.name_direction]
+        name_sort_icon: sort_icon[assigns.name_direction]
       )
 
     ~H"""
@@ -88,6 +89,7 @@ defmodule LightningWeb.CollectionLive.Components do
       <div id="collections-table">
         <.table>
           <.tr>
+            # TODO - replace with common sortable header when moving to project scope!
             <.th>
               <div class="group inline-flex items-center">
                 Name

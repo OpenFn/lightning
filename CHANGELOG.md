@@ -17,9 +17,19 @@ and this project adheres to
 
 ### Added
 
+- Adds project name to failure alert email
+  [#2884](https://github.com/OpenFn/lightning/pull/2884)
+
 ### Changed
 
+- Standardizes date formats to YYYY-MM-DD
+  [#2884](https://github.com/OpenFn/lightning/pull/2884)
+
 ### Fixed
+
+- Standardizes sort order arrows (all now show the direction of sort, rather
+  than the direction they would sort if toggled)
+  [#2423](https://github.com/OpenFn/lightning/issues/2423)
 
 ## [v2.10.13] - 2025-01-29
 

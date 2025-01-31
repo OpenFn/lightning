@@ -3,6 +3,8 @@ defmodule Lightning.Helpers do
   Common functions for the context
   """
 
+  alias Timex.Format.DateTime.Formatters.Strftime
+
   @doc """
   Changes a given maps field from a json string to a map.
   If it cannot be converted, it leaves the original value
@@ -62,8 +64,15 @@ defmodule Lightning.Helpers do
     Crontab.Scheduler.get_next_run_date!(cron_expression, due_date)
   end
 
-  def format_date(date, formatter \\ "%a %d/%m/%Y at %H:%M:%S") do
-    Timex.Format.DateTime.Formatters.Strftime.format!(date, formatter)
+  def format_date(date, formatter \\ "%F %T") do
+    Strftime.format!(date, formatter)
+  end
+
+  def format_date_long(date) do
+    Strftime.format!(
+      date,
+      "%A, %B %d, %Y at %H:%M %Z"
+    )
   end
 
   @doc """

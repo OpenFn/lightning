@@ -711,9 +711,9 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
           >
             <%= if @sort_direction == :desc, do: "Latest", else: "Oldest" %>
             <%= if @sort_direction == :desc do %>
-              <.icon name="hero-chevron-up" class="size-5" />
-            <% else %>
               <.icon name="hero-chevron-down" class="size-5" />
+            <% else %>
+              <.icon name="hero-chevron-up" class="size-5" />
             <% end %>
           </button>
         </div>

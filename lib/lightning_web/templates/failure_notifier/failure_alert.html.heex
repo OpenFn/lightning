@@ -2,8 +2,8 @@
   <p>Hi <%= @recipient.first_name %>,</p>
 
   <p>
-    A run just failed for the "<%= @workflow_name %>" workflow.<br /> Click
-    <a href={@work_order_url}>here</a>
+    A "<%= @workflow_name %>" run just failed in "<%= @project_name %>". <br />
+    Click <a href={@work_order_url}>here</a>
     to view the state of the work order and <a href={@run_url}>here</a>
     to inspect the run or view the logs at the bottom of this email.
   </p>

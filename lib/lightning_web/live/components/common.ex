@@ -569,9 +569,9 @@ defmodule LightningWeb.Components.Common do
         )
       ]}>
         <%= if @active and @sort_direction == "desc" do %>
-          <.icon name="hero-chevron-up" class="size-5" />
-        <% else %>
           <.icon name="hero-chevron-down" class="size-5" />
+        <% else %>
+          <.icon name="hero-chevron-up" class="size-5" />
         <% end %>
       </span>
     </.link>
