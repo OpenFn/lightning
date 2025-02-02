@@ -128,11 +128,11 @@ workflows:
             - run: sudo -u lightning mix sobelow
       - build:
           name: "Coveralls & codecov (always full suite)"
-          continue-on-error: true
           execute:
             - run: sudo -u lightning mix do ecto.create, ecto.migrate
             - run:
                 command: sudo -u lightning mix coveralls.json -o ./test/reports
+                continue-on-error: true
             - codecov/upload:
                 file: test/reports/excoveralls.json
       - build:
