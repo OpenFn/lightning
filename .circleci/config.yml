@@ -142,8 +142,8 @@ workflows:
                 command: |
                   circleci tests run --command='xargs -n1 echo > test_file_paths.txt'
 
-                  mix ecto.setup --quiet
-                  cat test_file_paths.txt | xargs mix test
+                  sudo -u lightning mix ecto.setup --quiet
+                  cat test_file_paths.txt | sudo -u xargs mix test
             - store_test_results:
                 path: _build/test/my_app/test-junit-report.xml
             - store_test_results:
