@@ -4,6 +4,7 @@ defmodule LightningWeb.DashboardLive.Components do
   import PetalComponents.Table
 
   alias LightningWeb.Components.Common
+  alias Phoenix.LiveView.JS
 
   def welcome_banner(assigns) do
     ~H"""
@@ -173,15 +174,11 @@ defmodule LightningWeb.DashboardLive.Components do
           <.tr
             :for={project <- @projects}
             id={"projects-table-row-#{project.id}"}
-            class="hover:bg-gray-100 transition-colors duration-200"
+            class="hover:bg-gray-100 transition-colors duration-200 cursor-pointer"
+            phx-click={JS.navigate(~p"/projects/#{project.id}/w")}
           >
             <.td>
-              <.link
-                class="break-words max-w-[15rem] text-gray-800"
-                href={~p"/projects/#{project.id}/w"}
-              >
-                <%= project.name %>
-              </.link>
+              <%= project.name %>
             </.td>
             <.td class="break-words max-w-[25rem]">
               <%= project.role
@@ -195,6 +192,7 @@ defmodule LightningWeb.DashboardLive.Components do
               <.link
                 class="link"
                 href={~p"/projects/#{project.id}/settings#collaboration"}
+                onclick="event.stopPropagation()"
               >
                 <%= project.collaborators_count %>
               </.link>
@@ -210,6 +208,7 @@ defmodule LightningWeb.DashboardLive.Components do
               <.link
                 class="table-action"
                 navigate={~p"/projects/#{project.id}/history"}
+                onclick="event.stopPropagation()"
               >
                 History
               </.link>
