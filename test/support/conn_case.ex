@@ -59,6 +59,11 @@ defmodule LightningWeb.ConnCase do
     )
 
     Mox.stub_with(
+      Lightning.Extensions.MockCollectionHook,
+      Lightning.Extensions.CollectionHook
+    )
+
+    Mox.stub_with(
       Lightning.Extensions.MockProjectHook,
       Lightning.Extensions.ProjectHook
     )

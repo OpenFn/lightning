@@ -14,7 +14,7 @@ defmodule LightningWeb.ProfileLive.Components do
       </p>
       <div class="border-b border-gray-900/10 mt-6 mb-6" />
       <p class="mt-1 text-sm leading-6 text-gray-600">
-        Created: <%= @current_user.inserted_at |> Calendar.strftime("%c %Z") %> UTC
+        Created: <%= @current_user.inserted_at |> Lightning.Helpers.format_date() %>
       </p>
       <p class="mt-1 text-sm leading-6 text-gray-600">
         Email: <%= @current_user.email %>

@@ -34,7 +34,9 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   defp set_details(socket, work_order) do
     last_step = get_last_step(work_order)
     last_step_finished_at = format_finished_at(last_step)
-    work_order_inserted_at = Calendar.strftime(work_order.inserted_at, "%c %Z")
+
+    work_order_inserted_at =
+      Lightning.Helpers.format_date(work_order.inserted_at)
 
     workflow_name =
       cond do
@@ -71,7 +73,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   defp format_finished_at(last_step) do
     case last_step do
       %{finished_at: %_{} = finished_at} ->
-        Calendar.strftime(finished_at, "%c %Z")
+        Lightning.Helpers.format_date(finished_at)
 
       _ ->
         nil

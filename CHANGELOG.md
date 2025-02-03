@@ -19,10 +19,19 @@ and this project adheres to
 
 - Extend provisioner to support collections
   [#2830](https://github.com/OpenFn/lightning/issues/2830)
+- Adds project name to failure alert email
+  [#2884](https://github.com/OpenFn/lightning/pull/2884)
 
 ### Changed
 
+- Standardizes date formats to YYYY-MM-DD
+  [#2884](https://github.com/OpenFn/lightning/pull/2884)
+
 ### Fixed
+
+- Standardizes sort order arrows (all now show the direction of sort, rather
+  than the direction they would sort if toggled)
+  [#2423](https://github.com/OpenFn/lightning/issues/2423)
 
 ## [v2.10.13] - 2025-01-29
 
@@ -36,6 +45,8 @@ and this project adheres to
 - Audit the provisioning of projects via the API
   [#2718](https://github.com/OpenFn/lightning/issues/2718)
 - Track Collections storage usage based on items key and value sizes
+  [#2853](https://github.com/OpenFn/lightning/issues/2853)
+- Allow limiting Collection create, put and put_all
   [#2853](https://github.com/OpenFn/lightning/issues/2853)
 - Temporary instrumentation for JobEditor to help identify performance issues.
   [#2617](https://github.com/OpenFn/lightning/issues/2617)

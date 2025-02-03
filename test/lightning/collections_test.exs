@@ -25,16 +25,21 @@ defmodule Lightning.CollectionsTest do
       name = "col1_project1"
 
       assert {:ok, %Collection{project_id: ^project_id, name: ^name}} =
-               Collections.create_collection(project_id, name)
+               Collections.create_collection(%{
+                 "project_id" => project_id,
+                 "name" => name
+               })
     end
 
     test "returns an error when collection name is taken" do
       %{id: project_id1} = insert(:project)
-      %{id: project_id2} = insert(:project)
       name = "col1_project1"
 
       assert {:ok, %Collection{project_id: ^project_id1, name: ^name}} =
-               Collections.create_collection(project_id1, name)
+               Collections.create_collection(%{
+                 "project_id" => project_id1,
+                 "name" => name
+               })
 
       assert {:error,
               %{
@@ -46,7 +51,38 @@ defmodule Lightning.CollectionsTest do
                        constraint_name: "collections_name_index"
                      ]}
                 ]
-              }} = Collections.create_collection(project_id2, name)
+              }} =
+               Collections.create_collection(%{
+                 "project_id" => project_id1,
+                 "name" => name
+               })
+    end
+
+    test "returns an error when limit is exceeded" do
+      %{id: project_id1} = insert(:project)
+      %{id: project_id2} = insert(:project)
+
+      assert {:ok, %Collection{project_id: ^project_id1, name: "col1"}} =
+               Collections.create_collection(%{
+                 "project_id" => project_id1,
+                 "name" => "col1"
+               })
+
+      message = %Lightning.Extensions.Message{text: "some error"}
+
+      Mox.stub(
+        Lightning.Extensions.MockCollectionHook,
+        :handle_create,
+        fn %{"project_id" => _project_id} ->
+          {:error, :exceeds_limit, message}
+        end
+      )
+
+      assert {:error, :exceeds_limit, ^message} =
+               Collections.create_collection(%{
+                 "project_id" => project_id2,
+                 "name" => "col2"
+               })
     end
   end
 
@@ -320,7 +356,12 @@ defmodule Lightning.CollectionsTest do
                        constraint_name: "collection_items_collection_id_fkey"
                      ]}
                 ]
-              }} = Collections.put(%{id: Ecto.UUID.generate()}, "key", "value")
+              }} =
+               Collections.put(
+                 %Collection{id: Ecto.UUID.generate()},
+                 "key",
+                 "value"
+               )
     end
   end
 
@@ -539,19 +580,18 @@ defmodule Lightning.CollectionsTest do
   describe "create_collection/1" do
     test "creates a new collection with valid attributes" do
       %{id: project_id} = insert(:project)
-      attrs = %{name: "new-collection", project_id: project_id}
+      attrs = %{"name" => "new-collection", "project_id" => project_id}
 
       assert {:ok, %Collection{name: "new-collection"}} =
                Collections.create_collection(attrs)
     end
 
     test "returns an error if invalid attributes are provided" do
-      attrs = %{name: nil}
+      attrs = %{"name" => nil, "project_id" => Ecto.UUID.generate()}
 
       assert {:error, changeset} = Collections.create_collection(attrs)
 
-      assert %{name: ["can't be blank"], project_id: ["can't be blank"]} ==
-               errors_on(changeset)
+      assert %{name: ["can't be blank"]} == errors_on(changeset)
     end
   end
 

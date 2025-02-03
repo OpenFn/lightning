@@ -15,7 +15,7 @@
       <%= for audit <- @page.entries do %>
         <.tr id={"audit-#{audit.id}"} class="border-dotted border-gray-100">
           <.td>
-            <%= audit.inserted_at |> Calendar.strftime("%c %Z") %>
+            <%= audit.inserted_at |> Lightning.Helpers.format_date() %>
           </.td>
           <.td>
             <.badge color="success" label={audit.event} />

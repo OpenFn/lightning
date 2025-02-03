@@ -344,7 +344,7 @@ defmodule Lightning.Accounts.UserNotifier do
     body = """
     Hi #{user.first_name},
 
-    Here's your #{Atom.to_string(digest)} project digest for "#{project.name}", covering activity from #{start_date |> Calendar.strftime("%a %B %d %Y at %H:%M %Z")} to #{end_date |> Calendar.strftime("%a %B %d %Y at %H:%M %Z")}.
+    Here's your #{Atom.to_string(digest)} project digest for "#{project.name}", covering activity from #{start_date |> Lightning.Helpers.format_date_long()} to #{end_date |> Lightning.Helpers.format_date_long()}.
 
     #{body}
 

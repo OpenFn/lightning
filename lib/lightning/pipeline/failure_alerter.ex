@@ -15,6 +15,8 @@ defmodule Lightning.FailureAlerter do
     workflow = run.work_order.workflow
 
     if :ok == ProjectLimiter.limit_failure_alert(workflow.project_id) do
+      project = Lightning.Projects.get_project!(workflow.project_id)
+
       Lightning.Accounts.get_users_to_alert_for_project(%{
         id: workflow.project_id
       })
@@ -22,6 +24,7 @@ defmodule Lightning.FailureAlerter do
         %{
           "workflow_id" => workflow.id,
           "workflow_name" => workflow.name,
+          "project_name" => project.name,
           "work_order_id" => run.work_order_id,
           "run_id" => run.id,
           "project_id" => workflow.project_id,
@@ -36,6 +39,7 @@ defmodule Lightning.FailureAlerter do
   def alert(%{
         "workflow_id" => workflow_id,
         "workflow_name" => workflow_name,
+        "project_name" => project_name,
         "work_order_id" => work_order_id,
         "run_id" => run_id,
         "project_id" => project_id,
@@ -76,6 +80,7 @@ defmodule Lightning.FailureAlerter do
           run_id: run_id,
           run_url: run_url,
           run_logs: run_logs,
+          project_name: project_name,
           workflow_name: workflow_name,
           workflow_id: workflow_id,
           recipient: recipient

@@ -15,7 +15,7 @@ project =
 
 {:ok, collection} =
   with {:error, :not_found} <- Collections.get_collection("benchee") do
-    Collections.create_collection(project.id, "benchee")
+    Collections.create_collection(%{"project_id" => project.id, "name" => "benchee"})
   end
 
 IO.puts("\n### Setup:")

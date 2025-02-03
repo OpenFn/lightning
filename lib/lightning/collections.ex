@@ -8,7 +8,9 @@ defmodule Lightning.Collections do
 
   alias Lightning.Collections.Collection
   alias Lightning.Collections.Item
+  alias Lightning.Extensions.Message
   alias Lightning.Repo
+  alias Lightning.Services.CollectionHook
 
   @doc """
   Returns the list of collections with optional ordering and preloading.
@@ -57,10 +59,10 @@ defmodule Lightning.Collections do
 
   ## Examples
 
-      iex> create_collection(%{name: "New Collection", description: "Description here"})
+      iex> create_collection(%{name: "New Collection", project_id: "a7895d29-02a9-42cd-845b-7ad893557c24"})
       {:ok, %Collection{}}
 
-      iex> create_collection(%{name: nil})
+      iex> create_collection(%{name: nil, project_id: "a7895d29-02a9-42cd-845b-7ad893557c24"}})
       {:error, %Ecto.Changeset{}}
 
   ## Returns
@@ -69,11 +71,24 @@ defmodule Lightning.Collections do
     - `{:error, %Ecto.Changeset{}}` on failure due to validation errors.
   """
   @spec create_collection(map()) ::
-          {:ok, Collection.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, Collection.t()}
+          | {:error, Ecto.Changeset.t()}
+          | {:error, :exceeds_limit, Message.t()}
   def create_collection(attrs) do
-    %Collection{}
-    |> Collection.changeset(attrs)
-    |> Repo.insert()
+    Multi.new()
+    |> Multi.run(:limiter, fn _repo, _changes ->
+      case CollectionHook.handle_create(attrs) do
+        :ok -> {:ok, nil}
+        {:error, :exceeds_limit, message} -> {:error, message}
+      end
+    end)
+    |> Multi.insert(:create, Collection.changeset(%Collection{}, attrs))
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{create: collection}} -> {:ok, collection}
+      {:error, :limiter, message, _changes} -> {:error, :exceeds_limit, message}
+      {:error, _op, changeset, _changes} -> {:error, changeset}
+    end
   end
 
   @doc """
@@ -105,22 +120,20 @@ defmodule Lightning.Collections do
     |> Repo.update()
   end
 
-  @spec create_collection(Ecto.UUID.t(), String.t()) ::
-          {:ok, Collection.t()} | {:error, Ecto.Changeset.t()}
-  def create_collection(project_id, name) do
-    %Collection{}
-    |> Collection.changeset(%{project_id: project_id, name: name})
-    |> Repo.insert()
-  end
-
   @spec delete_collection(Ecto.UUID.t()) ::
           {:ok, Collection.t()}
           | {:error, Ecto.Changeset.t()}
           | {:error, :not_found}
   def delete_collection(collection_id) do
     case Repo.get(Collection, collection_id) do
-      nil -> {:error, :not_found}
-      collection -> Repo.delete(collection)
+      nil ->
+        {:error, :not_found}
+
+      collection ->
+        Repo.transact(fn ->
+          :ok = CollectionHook.handle_delete(collection)
+          Repo.delete(collection)
+        end)
     end
   end
 
@@ -151,24 +164,29 @@ defmodule Lightning.Collections do
 
   @spec put(Collection.t(), String.t(), String.t()) ::
           :ok | {:error, Ecto.Changeset.t()}
-  def put(%{id: collection_id} = collection, key, value) do
+  def put(collection, key, value) do
     case get(collection, key) do
-      nil -> upsert_item(%Item{collection_id: collection_id}, key, value)
-      item -> upsert_item(item, key, value)
+      nil ->
+        upsert_item(collection, %Item{collection_id: collection.id}, key, value)
+
+      item ->
+        upsert_item(collection, item, key, value)
     end
   end
 
   @spec put_all(Collection.t(), [{String.t(), String.t()}]) ::
-          {:ok, non_neg_integer()} | {:error, :duplicate_key}
-  def put_all(%{id: collection_id}, kv_list) do
+          {:ok, non_neg_integer()}
+          | {:error, :duplicate_key}
+          | {:error, :exceeds_limit, Message.t()}
+  def put_all(collection, kv_list) do
     now = DateTime.utc_now()
 
-    {item_list, {key_list, new_mem_used}} =
+    {item_list, {key_list, new_used_mem}} =
       Enum.map_reduce(kv_list, {[], 0}, fn %{"key" => key, "value" => value},
                                            {key_list, mem_used} ->
         {
           %{
-            collection_id: collection_id,
+            collection_id: collection.id,
             key: key,
             value: value,
             inserted_at: now,
@@ -183,23 +201,29 @@ defmodule Lightning.Collections do
 
     Multi.new()
     |> Multi.one(
-      :old_mem_used,
+      :items_used_mem,
       from(c in Item,
-        where: c.collection_id == ^collection_id and c.key in ^key_list,
+        where: c.collection_id == ^collection.id and c.key in ^key_list,
         select: fragment("sum(octet_length(key) + octet_length(value))::bigint")
       )
     )
+    |> Multi.run(:increment_size, fn _repo, %{items_used_mem: items_used_mem} ->
+      {:ok, new_used_mem - (items_used_mem || 0)}
+    end)
+    |> Multi.run(:hook, fn _repo, %{increment_size: increment_size} ->
+      handle_put_items(collection, increment_size)
+    end)
     |> Multi.insert_all(:items, Item, item_list,
       conflict_target: [:collection_id, :key],
       on_conflict: {:replace, [:value, :updated_at]}
     )
     |> Multi.update_all(
       :collection,
-      fn %{old_mem_used: old_mem_used} ->
-        increment = [byte_size_sum: new_mem_used - (old_mem_used || 0)]
+      fn %{increment_size: increment_size} ->
+        increment = [byte_size_sum: increment_size]
 
         from(c in Collection,
-          where: c.id == ^collection_id,
+          where: c.id == ^collection.id,
           update: [inc: ^increment]
         )
       end,
@@ -208,6 +232,7 @@ defmodule Lightning.Collections do
     |> Repo.transaction()
     |> case do
       {:ok, %{items: {count, nil}}} -> {:ok, count}
+      {:error, :hook, message, _changes} -> {:error, :exceeds_limit, message}
       {:error, _op, changeset, _changes} -> {:error, changeset}
     end
   rescue
@@ -228,9 +253,9 @@ defmodule Lightning.Collections do
   end
 
   @spec delete_all(Collection.t(), String.t() | nil) :: {:ok, non_neg_integer()}
-  def delete_all(%{id: collection_id}, key_pattern \\ nil) do
+  def delete_all(collection, key_pattern \\ nil) do
     query =
-      from(i in Item, where: i.collection_id == ^collection_id)
+      from(i in Item, where: i.collection_id == ^collection.id)
       |> then(fn query ->
         case key_pattern do
           nil -> query
@@ -238,11 +263,43 @@ defmodule Lightning.Collections do
         end
       end)
 
-    with {count, _nil} <- Repo.delete_all(query), do: {:ok, count}
+    Multi.new()
+    |> Multi.one(
+      :items_used_mem,
+      select(
+        query,
+        [i],
+        fragment("sum(octet_length(key) + octet_length(value))::bigint")
+      )
+    )
+    |> Multi.run(:hook, fn _repo, %{items_used_mem: items_used_mem} ->
+      handle_delete_items(collection, items_used_mem)
+    end)
+    |> Multi.delete_all(:delete, query)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{delete: {count, nil}}} -> {:ok, count}
+      _other_error -> {:ok, 0}
+    end
   end
 
-  defp upsert_item(%Item{value: old_value} = item, key, value) do
+  defp upsert_item(
+         collection,
+         %Item{value: old_value} = item,
+         key,
+         value
+       ) do
     Multi.new()
+    |> Multi.run(:increment_size, fn _repo, _changes ->
+      if is_nil(old_value) do
+        {:ok, byte_size(key) + byte_size(value)}
+      else
+        {:ok, byte_size(value) - byte_size(old_value)}
+      end
+    end)
+    |> Multi.run(:limiter, fn _repo, %{increment_size: increment_size} ->
+      handle_put_items(collection, increment_size)
+    end)
     |> Multi.insert(
       :item,
       fn _no_change ->
@@ -258,17 +315,10 @@ defmodule Lightning.Collections do
     )
     |> Multi.update_all(
       :collection,
-      fn %{item: %{collection_id: collection_id}} ->
-        increment =
-          if is_nil(old_value) do
-            [byte_size_sum: byte_size(key) + byte_size(value)]
-          else
-            [byte_size_sum: byte_size(value) - byte_size(old_value)]
-          end
-
+      fn %{item: %{collection_id: collection_id}, increment_size: increment_size} ->
         from(c in Collection,
           where: c.id == ^collection_id,
-          update: [inc: ^increment]
+          update: [inc: ^[byte_size_sum: increment_size]]
         )
       end,
       []
@@ -276,17 +326,25 @@ defmodule Lightning.Collections do
     |> Repo.transaction()
     |> case do
       {:ok, _changes} -> :ok
+      {:error, :limiter, message, _changes} -> {:error, :exceeds_limit, message}
       {:error, _op, changeset, _changes} -> {:error, changeset}
     end
   end
 
   defp delete_item(%{collection_id: collection_id, key: key, value: value}) do
     Multi.new()
+    |> Multi.one(
+      :collection,
+      from(c in Collection, where: c.id == ^collection_id)
+    )
+    |> Multi.run(:hook, fn _repo, %{collection: collection} ->
+      handle_delete_items(collection, byte_size(key) + byte_size(value))
+    end)
     |> Multi.delete_all(:item, fn _no_change ->
       from(i in Item, where: i.collection_id == ^collection_id and i.key == ^key)
     end)
     |> Multi.update_all(
-      :collection,
+      :update_collection,
       fn _changes ->
         increment = [byte_size_sum: -(byte_size(key) + byte_size(value))]
 
@@ -355,5 +413,17 @@ defmodule Lightning.Collections do
     |> String.replace("\\", "\\\\")
     |> String.replace("%", "\\%")
     |> String.replace("*", "%")
+  end
+
+  defp handle_put_items(collection, delta_size) do
+    case CollectionHook.handle_put_items(collection, delta_size) do
+      :ok -> {:ok, nil}
+      {:error, :exceeds_limit, message} -> {:error, message}
+    end
+  end
+
+  defp handle_delete_items(collection, delta_size) do
+    :ok = CollectionHook.handle_delete_items(collection, delta_size)
+    {:ok, nil}
   end
 end

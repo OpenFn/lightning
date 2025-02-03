@@ -147,6 +147,9 @@ defmodule Lightning.FailureAlertTest do
       assert html_body =~ "workflow-a"
       assert html_body =~ workorder.id
 
+      assert html_body =~
+               "A \"#{workorder.workflow.name}\" run just failed in \"#{workorder.workflow.project.name}\""
+
       s2 = "\"workflow-a\" has failed 2 times in the last #{period}."
       assert_receive {:email, %Swoosh.Email{subject: ^s2}}, 1500
 
