@@ -37,7 +37,7 @@ defmodule LightningWeb.UiMetricsTest do
     end
 
     test "logs the job editor metrics when a job is provided", %{
-      job: job,
+      job: %{id: job_id, workflow_id: workflow_id} = job,
       metrics: metrics
     } do
       Mox.stub(Lightning.MockConfig, :ui_metrics_tracking_enabled?, fn ->
@@ -46,7 +46,8 @@ defmodule LightningWeb.UiMetricsTest do
 
       expected_entry_1 =
         job_editor_log_regex(
-          job: job,
+          job_id: job_id,
+          workflow_id: workflow_id,
           event: "mount to 1st render",
           start: 1_737_635_739_914,
           end: 1_737_635_808_890
@@ -54,7 +55,8 @@ defmodule LightningWeb.UiMetricsTest do
 
       expected_entry_2 =
         job_editor_log_regex(
-          job: job,
+          job_id: job_id,
+          workflow_id: workflow_id,
           event: "render before fetching metadata",
           start: 1_737_637_606_066,
           end: 1_737_637_623_051
@@ -67,7 +69,7 @@ defmodule LightningWeb.UiMetricsTest do
     end
 
     test "logs the job editor metrics when a snapshot job is provided", %{
-      job: job,
+      job: %{id: job_id, workflow_id: workflow_id},
       metrics: metrics,
       snapshot_job: snapshot_job
     } do
@@ -77,7 +79,8 @@ defmodule LightningWeb.UiMetricsTest do
 
       expected_entry_1 =
         job_editor_log_regex(
-          job: job,
+          job_id: job_id,
+          workflow_id: workflow_id,
           event: "mount to 1st render",
           start: 1_737_635_739_914,
           end: 1_737_635_808_890
@@ -85,7 +88,8 @@ defmodule LightningWeb.UiMetricsTest do
 
       expected_entry_2 =
         job_editor_log_regex(
-          job: job,
+          job_id: job_id,
+          workflow_id: workflow_id,
           event: "render before fetching metadata",
           start: 1_737_637_606_066,
           end: 1_737_637_623_051
@@ -107,16 +111,18 @@ defmodule LightningWeb.UiMetricsTest do
       end)
 
       expected_entry_1 =
-        job_editor_no_workflow_log_regex(
-          job: snapshot_job,
+        job_editor_log_regex(
+          job_id: snapshot_job.id,
+          workflow_id: "unknown",
           event: "mount to 1st render",
           start: 1_737_635_739_914,
           end: 1_737_635_808_890
         )
 
       expected_entry_2 =
-        job_editor_no_workflow_log_regex(
-          job: snapshot_job,
+        job_editor_log_regex(
+          job_id: snapshot_job.id,
+          workflow_id: "unknown",
           event: "render before fetching metadata",
           start: 1_737_637_606_066,
           end: 1_737_637_623_051
@@ -142,7 +148,8 @@ defmodule LightningWeb.UiMetricsTest do
     end
 
     def job_editor_log_regex(opts \\ []) do
-      %{id: job_id, workflow_id: workflow_id} = Keyword.fetch!(opts, :job)
+      job_id = Keyword.fetch!(opts, :job_id)
+      workflow_id = Keyword.fetch!(opts, :workflow_id)
 
       event = Keyword.fetch!(opts, :event)
 
@@ -162,35 +169,6 @@ defmodule LightningWeb.UiMetricsTest do
         "UiMetrics: \\[JobEditor\\] " <>
           "event=`#{event}` " <>
           "workflow_id=#{workflow_id} " <>
-          "job_id=#{job_id} " <>
-          "start_time=#{DateTime.to_iso8601(start_time)} " <>
-          "end_time=#{DateTime.to_iso8601(end_time)} " <>
-          "duration=#{duration} ms"
-
-      ~r/#{log_line}/
-    end
-
-    def job_editor_no_workflow_log_regex(opts \\ []) do
-      %{id: job_id} = Keyword.fetch!(opts, :job)
-
-      event = Keyword.fetch!(opts, :event)
-
-      start_time =
-        opts
-        |> Keyword.fetch!(:start)
-        |> DateTime.from_unix!(:millisecond)
-
-      end_time =
-        opts
-        |> Keyword.fetch!(:end)
-        |> DateTime.from_unix!(:millisecond)
-
-      duration = DateTime.diff(end_time, start_time, :millisecond)
-
-      log_line =
-        "UiMetrics: \\[JobEditor\\] " <>
-          "event=`#{event}` " <>
-          "workflow_id=unknown " <>
           "job_id=#{job_id} " <>
           "start_time=#{DateTime.to_iso8601(start_time)} " <>
           "end_time=#{DateTime.to_iso8601(end_time)} " <>
