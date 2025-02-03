@@ -5,6 +5,9 @@ defmodule LightningWeb.UiMetrics do
   """
   require Logger
 
+  alias Lightning.Repo
+  alias Lightning.Workflows.Job
+
   def log_job_editor_metrics(job, metrics) do
     if Lightning.Config.ui_metrics_tracking_enabled?() do
       Enum.each(metrics, fn metric ->
@@ -17,7 +20,22 @@ defmodule LightningWeb.UiMetrics do
   end
 
   defp enrich_job_editor_metric(metric, job) do
-    %{id: job_id, workflow_id: workflow_id} = job
+    {job_id, workflow_id} =
+      job
+      |> case do
+        %{id: job_id, workflow_id: workflow_id} ->
+          {job_id, workflow_id}
+
+        %{id: job_id} ->
+          Repo.get(Job, job_id)
+          |> case do
+            %{workflow_id: workflow_id} ->
+              {job_id, workflow_id}
+
+            nil ->
+              {job_id, "unknown"}
+          end
+      end
 
     metric
     |> common_enrichment()

@@ -31,10 +31,12 @@ defmodule LightningWeb.UiMetricsTest do
 
       job = insert(:job)
 
-      %{job: job, metrics: metrics}
+      snapshot_job = build(:snapshot_job, id: job.id)
+
+      %{job: job, metrics: metrics, snapshot_job: snapshot_job}
     end
 
-    test "logs the job editor metrics provided", %{
+    test "logs the job editor metrics when a job is provided", %{
       job: job,
       metrics: metrics
     } do
@@ -59,6 +61,68 @@ defmodule LightningWeb.UiMetricsTest do
         )
 
       fun = fn -> UiMetrics.log_job_editor_metrics(job, metrics) end
+
+      assert capture_log(fun) =~ expected_entry_1
+      assert capture_log(fun) =~ expected_entry_2
+    end
+
+    test "logs the job editor metrics when a snapshot job is provided", %{
+      job: job,
+      metrics: metrics,
+      snapshot_job: snapshot_job
+    } do
+      Mox.stub(Lightning.MockConfig, :ui_metrics_tracking_enabled?, fn ->
+        true
+      end)
+
+      expected_entry_1 =
+        job_editor_log_regex(
+          job: job,
+          event: "mount to 1st render",
+          start: 1_737_635_739_914,
+          end: 1_737_635_808_890
+        )
+
+      expected_entry_2 =
+        job_editor_log_regex(
+          job: job,
+          event: "render before fetching metadata",
+          start: 1_737_637_606_066,
+          end: 1_737_637_623_051
+        )
+
+      fun = fn -> UiMetrics.log_job_editor_metrics(snapshot_job, metrics) end
+
+      assert capture_log(fun) =~ expected_entry_1
+      assert capture_log(fun) =~ expected_entry_2
+    end
+
+    test "logs the metrics when the workflow for the snapshot job is missing", %{
+      metrics: metrics
+    } do
+      snapshot_job = build(:snapshot_job)
+
+      Mox.stub(Lightning.MockConfig, :ui_metrics_tracking_enabled?, fn ->
+        true
+      end)
+
+      expected_entry_1 =
+        job_editor_no_workflow_log_regex(
+          job: snapshot_job,
+          event: "mount to 1st render",
+          start: 1_737_635_739_914,
+          end: 1_737_635_808_890
+        )
+
+      expected_entry_2 =
+        job_editor_no_workflow_log_regex(
+          job: snapshot_job,
+          event: "render before fetching metadata",
+          start: 1_737_637_606_066,
+          end: 1_737_637_623_051
+        )
+
+      fun = fn -> UiMetrics.log_job_editor_metrics(snapshot_job, metrics) end
 
       assert capture_log(fun) =~ expected_entry_1
       assert capture_log(fun) =~ expected_entry_2
@@ -98,6 +162,35 @@ defmodule LightningWeb.UiMetricsTest do
         "UiMetrics: \\[JobEditor\\] " <>
           "event=`#{event}` " <>
           "workflow_id=#{workflow_id} " <>
+          "job_id=#{job_id} " <>
+          "start_time=#{DateTime.to_iso8601(start_time)} " <>
+          "end_time=#{DateTime.to_iso8601(end_time)} " <>
+          "duration=#{duration} ms"
+
+      ~r/#{log_line}/
+    end
+
+    def job_editor_no_workflow_log_regex(opts \\ []) do
+      %{id: job_id} = Keyword.fetch!(opts, :job)
+
+      event = Keyword.fetch!(opts, :event)
+
+      start_time =
+        opts
+        |> Keyword.fetch!(:start)
+        |> DateTime.from_unix!(:millisecond)
+
+      end_time =
+        opts
+        |> Keyword.fetch!(:end)
+        |> DateTime.from_unix!(:millisecond)
+
+      duration = DateTime.diff(end_time, start_time, :millisecond)
+
+      log_line =
+        "UiMetrics: \\[JobEditor\\] " <>
+          "event=`#{event}` " <>
+          "workflow_id=unknown " <>
           "job_id=#{job_id} " <>
           "start_time=#{DateTime.to_iso8601(start_time)} " <>
           "end_time=#{DateTime.to_iso8601(end_time)} " <>
