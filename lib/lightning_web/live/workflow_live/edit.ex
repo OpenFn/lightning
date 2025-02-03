@@ -550,7 +550,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               />
               <:footer>
                 <div class="flex flex-row">
-                  <div class="flex items-center">
+                  <div class={["grow", @show_cron_run_button && "mt-2"]}>
                     <.input
                       type="toggle"
                       field={tf[:enabled]}
@@ -560,6 +560,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           !@has_presence_edit_priority
                       }
                       label="Enabled"
+                    />
+                  </div>
+                  <div :if={@show_cron_run_button}>
+                    <.live_component
+                      id="cron-run-button"
+                      module={LightningWeb.JobLive.CronRunButton}
                     />
                   </div>
                 </div>
@@ -1114,6 +1120,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
        selected_job: nil,
        selected_run: nil,
        selected_trigger: nil,
+       show_cron_run_button: false,
        selection_mode: nil,
        query_params: %{
          "s" => nil,
@@ -2156,6 +2163,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
         WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
 
       socket
+      |> assign(
+        :show_cron_run_button,
+        get_in(params, ["triggers", "0", "type"]) == "cron"
+      )
       |> apply_params(next_params, type)
       |> mark_validated()
       |> push_patches_applied(initial_params)
