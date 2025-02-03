@@ -282,6 +282,13 @@ defmodule Lightning.WebAndWorkerTest do
 
       log = Invocation.assemble_logs_for_step(step_2)
 
+      # Testing for how "empty" logs are handled
+      # console.log();          => new line
+      # console.log('');        => new line
+      # console.log(null);      => null
+      # console.log(undefined); => new line
+      assert log =~ "Starting operation 1\n\nnull\n{"
+
       assert log =~ ~S[{"password":"***","username":"quux"}]
       assert log =~ ~S"Check state.errors"
 
@@ -346,6 +353,10 @@ defmodule Lightning.WebAndWorkerTest do
 
   defp flow_expression do
     "fn(state => {
+      console.log();
+      console.log('');
+      console.log(null);
+      console.log(undefined);
       console.log(state.configuration);
       throw 'fail!'
     });"

@@ -753,7 +753,7 @@ defmodule Lightning.RunsTest do
               {"should be at most %{count} character(s)",
                [count: 8, validation: :length, kind: :max, type: :string]}} in changeset.errors
 
-      assert {:message, {"can't be blank", [validation: :required]}} in changeset.errors
+      assert {:message, {"can't be blank", []}} in changeset.errors
 
       assert {:timestamp, {"can't be blank", [validation: :required]}} in changeset.errors
 

@@ -394,7 +394,7 @@ defmodule Lightning.SetupUtilsTest do
                  "references" => []
                }
 
-      assert Invocation.assemble_logs_for_step(first_step) <> "\n" ==
+      assert Invocation.assemble_logs_for_step(first_step) ==
                """
                -- THIS IS ONLY A SAMPLE --
                [CLI] ℹ Versions:
@@ -443,7 +443,7 @@ defmodule Lightning.SetupUtilsTest do
                  "references" => []
                }
 
-      assert Invocation.assemble_logs_for_step(last_step) <> "\n" ==
+      assert Invocation.assemble_logs_for_step(last_step) ==
                """
                -- THIS IS ONLY A SAMPLE --
                [CLI] ℹ Versions:
@@ -491,7 +491,7 @@ defmodule Lightning.SetupUtilsTest do
                  "references" => []
                }
 
-      assert Invocation.assemble_logs_for_step(second_step) <> "\n" ==
+      assert Invocation.assemble_logs_for_step(second_step) ==
                """
                -- THIS IS ONLY A SAMPLE --
                [CLI] ℹ Versions:
@@ -580,7 +580,7 @@ defmodule Lightning.SetupUtilsTest do
 
       assert failed_step.output_dataclip == nil
 
-      assert Invocation.assemble_logs_for_step(failed_step) <> "\n" ==
+      assert Invocation.assemble_logs_for_step(failed_step) ==
                """
                -- THIS IS ONLY A SAMPLE --
                [CLI] ℹ Versions:
