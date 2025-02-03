@@ -27,6 +27,8 @@ and this project adheres to
 
 ### Fixed
 
+- Removed empty first line in job editor helper text
+  [#2887](https://github.com/OpenFn/lightning/pull/2887)
 - Standardizes sort order arrows (all now show the direction of sort, rather
   than the direction they would sort if toggled)
   [#2423](https://github.com/OpenFn/lightning/issues/2423)

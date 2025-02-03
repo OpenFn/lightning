@@ -9,8 +9,7 @@ import { initiateSaveAndRun } from '../common';
 // static imports for core lib
 import dts_es5 from './lib/es5.min.dts';
 
-export const DEFAULT_TEXT = `
-// Check out the Job Writing Guide for help getting started:
+export const DEFAULT_TEXT = `// Check out the Job Writing Guide for help getting started:
 // https://docs.openfn.org/documentation/jobs/job-writing-guide
 `;
 
