@@ -17,6 +17,8 @@ defmodule Lightning.Collections.Item do
   @primary_key false
   schema "collection_items" do
     field :id, :integer, primary_key: true
+    # The collection belongs to the primary key for pagination purposes.
+    # The next node on the BTREE belongs to the collection.
     belongs_to :collection, Lightning.Collections.Collection, primary_key: true
 
     # Note: The value type is a string because Lightning doesn't need to decode it to a map and

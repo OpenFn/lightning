@@ -191,20 +191,18 @@ defmodule Lightning.CollectionsTest do
     test "returns matching items for the given collection sorted by inserted_at" do
       collection = insert(:collection)
 
+      insert(:collection_item, key: "rkeynomatch", collection: collection)
+
       items =
-        1..11
-        |> Enum.map(fn _i ->
+        Enum.map(1..11, fn _i ->
           insert(:collection_item,
-            key: "rkeyA#{:rand.uniform()}",
+            key: "rkeymatch#{:rand.uniform()}",
             collection: collection
           )
+          |> item_reload()
         end)
 
-      insert(:collection_item, key: "rkeyB", collection: collection)
-
-      get_items =
-        Collections.get_all(collection, %{limit: 50}, "rkeyA*")
-        |> Repo.preload(collection: :project)
+      get_items = Collections.get_all(collection, %{limit: 50}, "rkeymatch*")
 
       assert List.last(get_items) ==
                Enum.sort_by(items, & &1.inserted_at) |> List.last()
@@ -261,11 +259,12 @@ defmodule Lightning.CollectionsTest do
 
     test "returns item escaping the %" do
       collection = insert(:collection)
-      item = insert(:collection_item, key: "keyA%", collection: collection)
 
-      assert [item] ==
-               Collections.get_all(collection, %{limit: 50}, "keyA%*")
-               |> Repo.preload(collection: :project)
+      item =
+        insert(:collection_item, key: "keyA%", collection: collection)
+        |> item_reload()
+
+      assert [item] == Collections.get_all(collection, %{limit: 50}, "keyA%*")
 
       insert(:collection_item, key: "keyBC", collection: collection)
 
@@ -274,11 +273,12 @@ defmodule Lightning.CollectionsTest do
 
     test "returns item escaping the \\" do
       collection = insert(:collection)
-      item = insert(:collection_item, key: "keyA\\", collection: collection)
 
-      assert [item] ==
-               Collections.get_all(collection, %{limit: 50}, "keyA\\*")
-               |> Repo.preload(collection: :project)
+      item =
+        insert(:collection_item, key: "keyA\\", collection: collection)
+        |> item_reload()
+
+      assert [item] == Collections.get_all(collection, %{limit: 50}, "keyA\\*")
     end
   end
 
@@ -613,5 +613,10 @@ defmodule Lightning.CollectionsTest do
 
       assert %{name: ["can't be blank"]} == errors_on(changeset)
     end
+  end
+
+  defp item_reload(item) do
+    # composite primary
+    Repo.get_by(Item, id: item.id, collection_id: item.collection_id)
   end
 end

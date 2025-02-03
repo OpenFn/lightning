@@ -60,6 +60,22 @@ defmodule Lightning.FactoriesTest do
     end
   end
 
+  describe "collection_item" do
+    test "has a sequence on both id and inserted_at" do
+      items = build_list(100, :collection_item)
+
+      assert items == Enum.sort_by(items, & &1.id)
+      assert items == Enum.sort_by(items, & &1.inserted_at)
+    end
+
+    test "uses given inserted_at when saving the record" do
+      now =
+        DateTime.utc_now() |> DateTime.add(Enum.random(10..100), :second)
+
+      assert %{inserted_at: ^now} = insert(:collection_item, inserted_at: now)
+    end
+  end
+
   defp register_user(_context) do
     %{user: Lightning.AccountsFixtures.user_fixture()}
   end
