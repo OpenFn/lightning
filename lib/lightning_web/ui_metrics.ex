@@ -3,10 +3,11 @@ defmodule LightningWeb.UiMetrics do
   A temporary measure to allow WorkflowEditor and JobEditor UI components to
   report selected metrics and have these logged.
   """
-  require Logger
 
   alias Lightning.Repo
   alias Lightning.Workflows.Job
+
+  require Logger
 
   def log_job_editor_metrics(job, metrics) do
     if Lightning.Config.ui_metrics_tracking_enabled?() do
