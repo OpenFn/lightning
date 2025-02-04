@@ -48,7 +48,7 @@ defmodule LightningWeb.BackupCodesLiveTest do
     end
   end
 
-  test "the project combobox is popualted", %{
+  test "the project combobox is populated with the user's projects", %{
     conn: conn,
     user: user
   } do
