@@ -319,6 +319,42 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       assert workflow_ids == expected_workflow_ids
     end
+
+    test "creates collections" do
+      Mox.verify_on_exit!()
+      user = insert(:user)
+
+      %{body: body, project_id: project_id} = valid_document()
+
+      collection_id = Ecto.UUID.generate()
+      collection_name = "test-collection"
+
+      body_with_collections =
+        Map.put(body, "collections", [
+          %{id: collection_id, name: collection_name}
+        ])
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      {:ok, project} =
+        Provisioner.import_document(
+          %Lightning.Projects.Project{},
+          user,
+          body_with_collections
+        )
+
+      assert %{id: ^project_id, collections: [collection]} = project
+
+      assert %{
+               id: ^collection_id,
+               name: ^collection_name,
+               project_id: ^project_id
+             } = collection
+    end
   end
 
   describe "import_document/2 with an existing project" do
@@ -871,6 +907,108 @@ defmodule Lightning.Projects.ProvisionerTest do
       assert {:ok, _project} = Provisioner.import_document(project, user, body)
 
       assert Repo.all(Audit) == []
+    end
+
+    test "creating collection", %{
+      project: %{id: project_id} = project,
+      user: user
+    } do
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, %{project_id: ^project_id} ->
+          :ok
+        end
+      )
+
+      %{body: body} = valid_document(project.id)
+
+      {:ok, project} = Provisioner.import_document(project, user, body)
+      collection_id = Ecto.UUID.generate()
+      collection_name = "test-collection"
+
+      body_with_collections =
+        Map.put(body, "collections", [
+          %{id: collection_id, name: collection_name}
+        ])
+
+      {:ok, project} =
+        Provisioner.import_document(project, user, body_with_collections)
+
+      assert %{id: ^project_id, collections: [collection]} = project
+
+      assert %{
+               id: ^collection_id,
+               name: ^collection_name,
+               project_id: ^project_id
+             } = collection
+    end
+
+    test "updating a collection", %{
+      project: %{id: project_id} = project,
+      user: user
+    } do
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, %{project_id: ^project_id} ->
+          :ok
+        end
+      )
+
+      collection = insert(:collection, project: project)
+      collection_id = collection.id
+      new_collection_name = "new-collection-name"
+
+      assert collection.name != new_collection_name
+
+      body = %{
+        "id" => project_id,
+        "name" => "test-project",
+        "collections" => [
+          %{"id" => collection_id, "name" => new_collection_name}
+        ]
+      }
+
+      assert {:ok, %{id: ^project_id, collections: [collection]}} =
+               Provisioner.import_document(project, user, body)
+
+      assert %{
+               id: ^collection_id,
+               name: ^new_collection_name,
+               project_id: ^project_id
+             } = collection
+    end
+
+    test "deleting a collection", %{
+      project: %{id: project_id} = project,
+      user: user
+    } do
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, %{project_id: ^project_id} ->
+          :ok
+        end
+      )
+
+      collection = insert(:collection, project: project)
+      collection_to_delete = insert(:collection, project: project)
+
+      body = %{
+        "id" => project_id,
+        "name" => "test-project",
+        "collections" => [
+          %{"id" => collection.id},
+          %{"id" => collection_to_delete.id, "delete" => true}
+        ]
+      }
+
+      assert {:ok, %{id: ^project_id, collections: [remaining_collection]}} =
+               Provisioner.import_document(project, user, body)
+
+      assert Repo.reload(collection_to_delete) |> is_nil()
+      assert remaining_collection.id == collection.id
     end
   end
 

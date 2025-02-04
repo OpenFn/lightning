@@ -286,7 +286,20 @@ defmodule Lightning.CliDeployTest do
          expected_project_credential_state(pc)}
       end)
 
-    Map.merge(state, %{workflows: workflows, project_credentials: credentials})
+    collections =
+      Map.new(project.collections, fn collection ->
+        {hyphenize(collection.name), expected_collection_state(collection)}
+      end)
+
+    Map.merge(state, %{
+      workflows: workflows,
+      project_credentials: credentials,
+      collections: collections
+    })
+  end
+
+  defp expected_collection_state(collection) do
+    Map.take(collection, [:id, :name])
   end
 
   defp expected_project_credential_state(project_credential) do

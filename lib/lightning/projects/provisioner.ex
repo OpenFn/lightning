@@ -13,6 +13,7 @@ defmodule Lightning.Projects.Provisioner do
 
   alias Ecto.Multi
   alias Lightning.Accounts.User
+  alias Lightning.Collections.Collection
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Projects.ProjectUser
@@ -180,6 +181,7 @@ defmodule Lightning.Projects.Provisioner do
   def parse_document(%Project{} = project, data) when is_map(data) do
     project
     |> project_changeset(data)
+    |> cast_assoc(:collections, with: &collection_changeset/2)
     |> cast_assoc(:workflows, with: &workflow_changeset/2)
     |> then(fn changeset ->
       case WorkflowUsageLimiter.limit_workflows_activation(
@@ -234,6 +236,7 @@ defmodule Lightning.Projects.Provisioner do
       project,
       [
         :project_users,
+        :collections,
         project_credentials: [credential: [:user]],
         workflows: {w, [:jobs, :triggers, :edges]}
       ],
@@ -253,6 +256,15 @@ defmodule Lightning.Projects.Provisioner do
     |> validate_required([:id])
     |> validate_extraneous_params()
     |> Project.validate()
+  end
+
+  defp collection_changeset(collection, attrs) do
+    collection
+    |> cast(attrs, [:id, :name, :delete])
+    |> validate_required([:id])
+    |> maybe_mark_for_deletion()
+    |> validate_extraneous_params()
+    |> Collection.validate()
   end
 
   defp workflow_changeset(workflow, attrs) do

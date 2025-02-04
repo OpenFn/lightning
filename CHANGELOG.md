@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Extend provisioner to support collections
+  [#2830](https://github.com/OpenFn/lightning/issues/2830)
 - Adds project name to failure alert email
   [#2884](https://github.com/OpenFn/lightning/pull/2884)
 
