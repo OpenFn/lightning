@@ -32,6 +32,8 @@ and this project adheres to
 - Standardizes sort order arrows (all now show the direction of sort, rather
   than the direction they would sort if toggled)
   [#2423](https://github.com/OpenFn/lightning/issues/2423)
+- Project combobox is populated when viewing MFA backup codes.
+  [#2870](https://github.com/OpenFn/lightning/issues/2870)
 
 ## [v2.10.13] - 2025-01-29
 
