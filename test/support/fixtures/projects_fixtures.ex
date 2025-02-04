@@ -124,9 +124,13 @@ defmodule Lightning.ProjectsFixtures do
         condition_type: :on_job_success
       )
 
+    collection =
+      Factories.build(:collection, name: "cannonical-collection", project: nil)
+
     Factories.build(:project,
       name: "a-test-project",
       description: "This is only a test",
+      collections: [collection],
       project_credentials: [project_credential],
       workflows: [workflow_1, workflow_2],
       project_users: [%{user: user}]

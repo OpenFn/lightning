@@ -48,6 +48,34 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
              } = response["data"]
     end
 
+    test "returns a project with collections", %{
+      conn: conn,
+      user: user
+    } do
+      %{id: project_id, name: project_name} =
+        project =
+        insert(:project,
+          project_users: [%{user_id: user.id}]
+        )
+
+      %{id: collection_id, name: collection_name} =
+        insert(:collection, project: project)
+
+      conn = get(conn, ~p"/api/provision/#{project_id}")
+      response = json_response(conn, 200)
+
+      assert %{
+               "id" => ^project_id,
+               "name" => ^project_name,
+               "workflows" => [],
+               "collections" => collections_resp
+             } = response["data"]
+
+      assert collections_resp == [
+               %{"id" => collection_id, "name" => collection_name}
+             ]
+    end
+
     test "returns a non empty project without credentials", %{
       conn: conn,
       user: user

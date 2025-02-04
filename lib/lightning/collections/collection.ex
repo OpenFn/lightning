@@ -19,6 +19,8 @@ defmodule Lightning.Collections.Collection do
     field :name, :string
     field :byte_size_sum, :integer
     field :raw_name, :string, virtual: true
+    field :delete, :boolean, virtual: true
+
     belongs_to :project, Lightning.Projects.Project
     has_many :items, Lightning.Collections.Item
 
@@ -30,6 +32,11 @@ defmodule Lightning.Collections.Collection do
     entry
     |> cast(attrs, [:project_id, :name])
     |> validate_required([:project_id, :name])
+    |> validate()
+  end
+
+  def validate(changeset) do
+    changeset
     |> validate_format(:name, ~r/^[a-z0-9]+([\-_.][a-z0-9]+)*$/,
       message: "Collection name must be URL safe"
     )

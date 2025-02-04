@@ -230,7 +230,8 @@ defmodule Lightning.ProjectsTest do
     test "delete_project/1 deletes the project" do
       %{project: p1, workflow_1_job: w1_job, workflow_1: w1} =
         full_project_fixture(
-          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second),
+          collections: [build(:collection, project: nil)]
         )
 
       t1 = insert(:trigger, %{workflow: w1, type: :webhook})
@@ -544,7 +545,7 @@ defmodule Lightning.ProjectsTest do
       project = project_fixture(name: "newly-created-project")
 
       expected_yaml =
-        "name: newly-created-project\ndescription: null\ncredentials: null\nworkflows: null"
+        "name: newly-created-project\ndescription: null\ncollections: null\ncredentials: null\nworkflows: null"
 
       {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
 
