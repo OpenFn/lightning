@@ -3,6 +3,10 @@ defmodule LightningWeb.UiMetrics do
   A temporary measure to allow WorkflowEditor and JobEditor UI components to
   report selected metrics and have these logged.
   """
+
+  alias Lightning.Repo
+  alias Lightning.Workflows.Job
+
   require Logger
 
   def log_job_editor_metrics(job, metrics) do
@@ -17,7 +21,22 @@ defmodule LightningWeb.UiMetrics do
   end
 
   defp enrich_job_editor_metric(metric, job) do
-    %{id: job_id, workflow_id: workflow_id} = job
+    {job_id, workflow_id} =
+      job
+      |> case do
+        %{id: job_id, workflow_id: workflow_id} ->
+          {job_id, workflow_id}
+
+        %{id: job_id} ->
+          Repo.get(Job, job_id)
+          |> case do
+            %{workflow_id: workflow_id} ->
+              {job_id, workflow_id}
+
+            nil ->
+              {job_id, "unknown"}
+          end
+      end
 
     metric
     |> common_enrichment()

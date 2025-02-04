@@ -16,7 +16,15 @@ defmodule Lightning.ExportUtils do
   ]
 
   @ordering_map %{
-    project: [:name, :description, :credentials, :globals, :workflows],
+    project: [
+      :name,
+      :description,
+      :collections,
+      :credentials,
+      :globals,
+      :workflows
+    ],
+    collection: [:name],
     credential: [:name, :owner],
     workflow: [:name, :jobs, :triggers, :edges],
     job: [:name, :adaptor, :credential, :globals, :body],
@@ -321,12 +329,22 @@ defmodule Lightning.ExportUtils do
         )
       end)
 
+    collections_map =
+      project.collections
+      |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
+      |> Enum.reduce(%{}, fn collection, acc ->
+        ytree = build_collection_yaml_tree(collection)
+
+        Map.put(acc, hyphenate(collection.name), ytree)
+      end)
+
     %{
       name: project.name,
       description: project.description,
       node_type: :project,
       workflows: workflows_map,
-      credentials: credentials_map
+      credentials: credentials_map,
+      collections: collections_map
     }
   end
 
@@ -341,6 +359,13 @@ defmodule Lightning.ExportUtils do
       name: project_credential.credential.name,
       node_type: :credential,
       owner: project_credential.credential.user.email
+    }
+  end
+
+  defp build_collection_yaml_tree(collection) do
+    %{
+      name: collection.name,
+      node_type: :collection
     }
   end
 
@@ -374,7 +399,10 @@ defmodule Lightning.ExportUtils do
 
   def generate_new_yaml(project, nil) do
     project =
-      Lightning.Repo.preload(project, project_credentials: [credential: :user])
+      Lightning.Repo.preload(project,
+        project_credentials: [credential: :user],
+        collections: []
+      )
 
     yaml =
       project
@@ -387,7 +415,10 @@ defmodule Lightning.ExportUtils do
 
   def generate_new_yaml(project, snapshots) when is_list(snapshots) do
     project =
-      Lightning.Repo.preload(project, project_credentials: [credential: :user])
+      Lightning.Repo.preload(project,
+        project_credentials: [credential: :user],
+        collections: []
+      )
 
     yaml =
       snapshots

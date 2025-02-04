@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Extend provisioner to support collections
+  [#2830](https://github.com/OpenFn/lightning/issues/2830)
 - Adds project name to failure alert email
   [#2884](https://github.com/OpenFn/lightning/pull/2884)
 
@@ -34,6 +36,9 @@ and this project adheres to
   [#2423](https://github.com/OpenFn/lightning/issues/2423)
 - Project combobox is populated when viewing MFA backup codes.
   [#2870](https://github.com/OpenFn/lightning/issues/2870)
+- Allow JobEditor metrics to be tracked when the version of the workflow being
+  viewed is not the latest version.
+  [#2891](https://github.com/OpenFn/lightning/issues/2891)
 
 ## [v2.10.13] - 2025-01-29
 

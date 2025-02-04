@@ -1,6 +1,9 @@
 name: a-test-project
 description: |
   This is only a test
+collections:
+  cannonical-collection:
+    name: cannonical-collection
 credentials:
   cannonical-user@lightning.com-new-credential:
     name: new credential
