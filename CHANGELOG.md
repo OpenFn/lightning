@@ -36,6 +36,9 @@ and this project adheres to
 - Standardizes sort order arrows (all now show the direction of sort, rather
   than the direction they would sort if toggled)
   [#2423](https://github.com/OpenFn/lightning/issues/2423)
+- Allow JobEditor metrics to be tracked when the version of the workflow being
+  viewed is not the latest version.
+  [#2891](https://github.com/OpenFn/lightning/issues/2891)
 
 ## [v2.10.13] - 2025-01-29
 
