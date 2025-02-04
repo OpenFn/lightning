@@ -7,6 +7,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   import PetalComponents.Table
 
   alias Lightning.Accounts.User
+  alias Lightning.Collections
   alias Lightning.Credentials
   alias Lightning.Credentials.Credential
   alias Lightning.OauthClients
@@ -42,6 +43,7 @@ defmodule LightningWeb.ProjectLive.Settings do
     oauth_clients = list_clients(project)
     auth_methods = WebhookAuthMethods.list_for_project(project)
     project_files = Projects.list_project_files(project)
+    collections = Collections.list_project_collections(project)
 
     projects = Projects.get_projects_for_user(current_user)
 
@@ -117,6 +119,14 @@ defmodule LightningWeb.ProjectLive.Settings do
         project_user
       )
 
+    can_create_collection =
+      Permissions.can?(
+        ProjectUsers,
+        :create_collection,
+        current_user,
+        project_user
+      )
+
     can_receive_failure_alerts =
       :ok == ProjectLimiter.limit_failure_alert(project.id)
 
@@ -130,6 +140,7 @@ defmodule LightningWeb.ProjectLive.Settings do
        credentials: credentials,
        oauth_clients: oauth_clients,
        project_files: project_files,
+       collections: collections,
        project_users: [],
        current_user: socket.assigns.current_user,
        project_changeset: Projects.change_project(socket.assigns.project),
@@ -145,6 +156,7 @@ defmodule LightningWeb.ProjectLive.Settings do
        can_install_github: can_write_github_connection,
        can_initiate_github_sync: can_initiate_github_sync,
        can_receive_failure_alerts: can_receive_failure_alerts,
+       can_create_collection: can_create_collection,
        selected_credential_type: nil,
        show_collaborators_modal: false,
        show_invite_collaborators_modal: false,

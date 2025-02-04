@@ -4956,6 +4956,306 @@ defmodule LightningWeb.ProjectLiveTest do
     end
   end
 
+  describe "project settings:collections" do
+    setup :register_and_log_in_user
+
+    test "only authorized users can access the create modal", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      for {conn, _user} <- setup_project_users(conn, project, [:viewer]) do
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collections"
+          )
+
+        button = element(view, "#open-create-collection-modal-button")
+        assert has_element?(button)
+
+        # modal is not present
+        refute has_element?(view, "#create-collection-modal")
+
+        # try clicking the button
+        assert_raise ArgumentError, ~r/is disabled/, fn ->
+          render_click(button)
+        end
+
+        # send event either way
+        view
+        |> with_target("#collections")
+        |> render_click("toggle_action", %{"action" => "new"})
+
+        flash =
+          assert_redirected(
+            view,
+            ~p"/projects/#{project.id}/settings#collections"
+          )
+
+        assert flash["error"] == "You are not authorized to perform this action"
+      end
+
+      for {conn, _user} <-
+            setup_project_users(conn, project, [:owner, :admin, :editor]) do
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collections"
+          )
+
+        button = element(view, "#open-create-collection-modal-button")
+        assert has_element?(button)
+
+        # modal is not present
+        refute has_element?(view, "#create-collection-modal")
+
+        # try clicking the button
+        render_click(button)
+
+        # modal is now present
+        assert has_element?(view, "#create-collection-modal")
+      end
+    end
+
+    test "user can create collection successfully", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      for {{conn, _user}, index} <-
+            setup_project_users(conn, project, [:owner, :admin, :editor])
+            |> Enum.with_index() do
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collections"
+          )
+
+        # open the modal
+        view |> element("#open-create-collection-modal-button") |> render_click()
+
+        # modal is now present
+        assert has_element?(view, "#create-collection-modal")
+
+        # fill in the form
+        collection_name = "test collection #{index}"
+        expected_collection_name = String.replace(collection_name, " ", "-")
+
+        html =
+          view
+          |> form("#create-collection-modal form",
+            collection: %{raw_name: collection_name}
+          )
+          |> render_change()
+
+        assert html =~ "Your collection will be named"
+
+        # collection does not exist
+        refute Lightning.Repo.get_by(Lightning.Collections.Collection,
+                 project_id: project.id,
+                 name: expected_collection_name
+               )
+
+        # submit the form
+        view |> form("#create-collection-modal form") |> render_submit()
+
+        flash =
+          assert_redirected(
+            view,
+            ~p"/projects/#{project.id}/settings#collections"
+          )
+
+        assert flash["info"] == "Collection created successfully!"
+
+        # collection now exists
+        assert Lightning.Repo.get_by(Lightning.Collections.Collection,
+                 project_id: project.id,
+                 name: expected_collection_name
+               )
+      end
+    end
+
+    test "user can edit a collection successfully", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      for {conn, _user} <- setup_project_users(conn, project, [:viewer]) do
+        collection = insert(:collection, project: project)
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collections"
+          )
+
+        button = element(view, "#edit-collection-#{collection.id}-button")
+        assert has_element?(button)
+
+        # modal is not present
+        refute has_element?(view, "#edit-collection-#{collection.id}-modal")
+
+        # try clicking the button
+        assert_raise ArgumentError, ~r/is disabled/, fn ->
+          render_click(button)
+        end
+
+        # send event either way
+        view
+        |> with_target("#collections")
+        |> render_click("toggle_action", %{
+          "action" => "edit",
+          "collection" => collection.name
+        })
+
+        flash =
+          assert_redirected(
+            view,
+            ~p"/projects/#{project.id}/settings#collections"
+          )
+
+        assert flash["error"] == "You are not authorized to perform this action"
+      end
+
+      for {conn, _user} <-
+            setup_project_users(conn, project, [:owner, :admin, :editor]) do
+        collection = insert(:collection, project: project)
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collections"
+          )
+
+        # open the modal
+        view
+        |> element("#edit-collection-#{collection.id}-button")
+        |> render_click()
+
+        # modal is now present
+        assert has_element?(view, "#edit-collection-#{collection.id}-modal")
+
+        # fill in the form
+        new_collection_name = "#{collection.name}-#{collection.id}"
+
+        html =
+          view
+          |> form("#edit-collection-#{collection.id}-modal form",
+            collection: %{raw_name: new_collection_name}
+          )
+          |> render_change()
+
+        assert html =~ "Your collection will be named"
+
+        # collection does not exist
+        refute Lightning.Repo.get_by(Lightning.Collections.Collection,
+                 project_id: project.id,
+                 name: new_collection_name
+               )
+
+        # submit the form
+        view
+        |> form("#edit-collection-#{collection.id}-modal form")
+        |> render_submit()
+
+        flash =
+          assert_redirected(
+            view,
+            ~p"/projects/#{project.id}/settings#collections"
+          )
+
+        assert flash["info"] == "Collection updated successfully!"
+
+        assert Lightning.Repo.get_by(Lightning.Collections.Collection,
+                 project_id: project.id,
+                 name: new_collection_name
+               )
+      end
+    end
+
+    test "user can delete a collection successfully", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      for {conn, _user} <- setup_project_users(conn, project, [:viewer]) do
+        collection = insert(:collection, project: project)
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collections"
+          )
+
+        button = element(view, "#delete-collection-#{collection.id}-button")
+        assert has_element?(button)
+
+        # modal is not present
+        refute has_element?(view, "#delete-collection-#{collection.id}-modal")
+
+        # try clicking the button
+        assert_raise ArgumentError, ~r/is disabled/, fn ->
+          render_click(button)
+        end
+
+        # send event either way
+        view
+        |> with_target("#collections")
+        |> render_click("toggle_action", %{
+          "action" => "delete",
+          "collection" => collection.name
+        })
+
+        flash =
+          assert_redirected(
+            view,
+            ~p"/projects/#{project.id}/settings#collections"
+          )
+
+        assert flash["error"] == "You are not authorized to perform this action"
+      end
+
+      for {conn, _user} <-
+            setup_project_users(conn, project, [:owner, :admin, :editor]) do
+        collection = insert(:collection, project: project)
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collections"
+          )
+
+        # open the modal
+        view
+        |> element("#delete-collection-#{collection.id}-button")
+        |> render_click()
+
+        # modal is now present
+        assert has_element?(view, "#delete-collection-#{collection.id}-modal")
+
+        # click the delete button
+        view
+        |> element("#delete-collection-#{collection.id}-modal_confirm_button")
+        |> render_click()
+
+        flash =
+          assert_redirected(
+            view,
+            ~p"/projects/#{project.id}/settings#collections"
+          )
+
+        assert flash["info"] == "Collection deleted successfully!"
+
+        # collection does not exist
+        refute Lightning.Repo.get(
+                 Lightning.Collections.Collection,
+                 collection.id
+               )
+      end
+    end
+  end
+
   defp find_selected_option(html, selector) do
     html
     |> Floki.parse_fragment!()

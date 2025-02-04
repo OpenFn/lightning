@@ -28,6 +28,10 @@
         <.icon name="hero-key" class="h-5 w-5 inline-block mr-2" />
         <span class="inline-block align-middle">Credentials</span>
       </:tab>
+      <:tab hash="collections">
+        <.icon name="hero-circle-stack" class="h-5 w-5 inline-block mr-2" />
+        <span class="inline-block align-middle">Collections</span>
+      </:tab>
       <:tab hash="webhook_security">
         <.icon name="hero-lock-closed" class="h-5 w-5 inline-block mr-2" />
         <span class="inline-block align-middle">Webhook Security</span>
@@ -387,6 +391,16 @@
           allow_global={@current_user.role === :superuser}
           can_create_oauth_client={@can_create_project_credential}
           return_to={~p"/projects/#{@project.id}/settings#credentials"}
+        />
+      </:panel>
+      <:panel hash="collections">
+        <.live_component
+          module={LightningWeb.ProjectLive.CollectionsComponent}
+          id="collections"
+          project={@project}
+          collections={@collections}
+          can_create_collection={@can_create_collection}
+          return_to={~p"/projects/#{@project.id}/settings#collections"}
         />
       </:panel>
       <:panel hash="webhook_security">
