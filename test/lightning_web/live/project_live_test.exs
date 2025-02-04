@@ -5015,6 +5015,14 @@ defmodule LightningWeb.ProjectLiveTest do
 
         # modal is now present
         assert has_element?(view, "#create-collection-modal")
+
+        # clicking close button closes the modal
+        view
+        |> element("#create-collection-modal button", "Cancel")
+        |> render_click()
+
+        # modal is now closed
+        refute has_element?(view, "#create-collection-modal")
       end
     end
 
@@ -5074,6 +5082,89 @@ defmodule LightningWeb.ProjectLiveTest do
                  name: expected_collection_name
                )
       end
+    end
+
+    test "choosing an already taken name shows an error", %{
+      conn: conn,
+      user: user
+    } do
+      project = insert(:project)
+      collection = insert(:collection, project: project)
+
+      conn = setup_project_user(conn, project, user, :owner)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#collections"
+        )
+
+      # open the modal
+      view |> element("#open-create-collection-modal-button") |> render_click()
+
+      # modal is now present
+      assert has_element?(view, "#create-collection-modal")
+
+      # fill in the form and submit with the same name
+      view
+      |> form("#create-collection-modal form",
+        collection: %{raw_name: collection.name}
+      )
+      |> render_change()
+
+      html =
+        view
+        |> form("#create-collection-modal form")
+        |> render_submit()
+
+      assert html =~ "A collection with this name already exists"
+    end
+
+    test "shows an error when the limiter returns an error", %{
+      conn: conn,
+      user: user
+    } do
+      project = insert(:project)
+
+      conn = setup_project_user(conn, project, user, :owner)
+
+      error_msg = "Some error message"
+
+      Mox.stub(Lightning.Extensions.MockCollectionHook, :handle_create, fn
+        _attrs ->
+          {:error, :exceeds_limit, %{text: error_msg}}
+      end)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#collections"
+        )
+
+      # open the modal
+      view |> element("#open-create-collection-modal-button") |> render_click()
+
+      # modal is now present
+      assert has_element?(view, "#create-collection-modal")
+
+      # fill in the form and submit with the same name
+      view
+      |> form("#create-collection-modal form",
+        collection: %{raw_name: "some name"}
+      )
+      |> render_change()
+
+      view
+      |> form("#create-collection-modal form")
+      |> render_submit()
+
+      flash =
+        assert_redirected(
+          view,
+          ~p"/projects/#{project.id}/settings#collections"
+        )
+
+      assert flash["error"] == error_msg
     end
 
     test "user can edit a collection successfully", %{
