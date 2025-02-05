@@ -54,7 +54,7 @@ defmodule LightningWeb.CollectionLiveTest do
       sorted_names = get_sorted_collection_names(view)
       assert sorted_names == ["A Collection", "B Collection"]
 
-      view |> element("span[phx-click='sort']") |> render_click()
+      view |> element("a[phx-click='sort']") |> render_click()
       sorted_names = get_sorted_collection_names(view)
       assert sorted_names == ["B Collection", "A Collection"]
     end
