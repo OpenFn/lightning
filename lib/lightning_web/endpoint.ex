@@ -2,7 +2,7 @@ defmodule LightningWeb.Endpoint do
   use Sentry.PlugCapture
   use Phoenix.Endpoint, otp_app: :lightning
 
-  import LightningWeb.PlugInstaller
+  import LightningWeb.PlugManager
 
   alias LightningWeb.Plugs
 
@@ -55,12 +55,12 @@ defmodule LightningWeb.Endpoint do
 
   plug Plugs.PromexWrapper
 
-  @pre_session_plugs Application.compile_env(
+  @pre_parsers_plugs Application.compile_env(
                        :lightning,
-                       Lightning.Extensions.PreSessionPlugs,
+                       Lightning.Extensions.PreParsersPlugs,
                        []
                      )
-  install_plugs(@pre_session_plugs)
+  setup @pre_parsers_plugs
 
   plug Replug,
     plug: Plug.Parsers,
@@ -83,7 +83,7 @@ defmodule LightningWeb.Endpoint do
                         Lightning.Extensions.PostSessionPlugs,
                         []
                       )
-  install_plugs(@post_session_plugs)
+  setup @post_session_plugs
 
   plug LightningWeb.Router
 end

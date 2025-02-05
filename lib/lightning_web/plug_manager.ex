@@ -1,13 +1,13 @@
-defmodule LightningWeb.PlugInstaller do
+defmodule LightningWeb.PlugManager do
   @moduledoc """
-  Helper module for installing plugs in a Phoenix endpoint or router.
+  Helper module for setting up plugs in a Phoenix endpoint or router.
 
-  This module provides a macro to simplify the installation of multiple plugs
+  This module provides a macro to simplify the setup of multiple plugs
   configured through application environment variables.
   """
 
   @doc """
-  Installs multiple plugs using Replug.
+  Sets up multiple plugs using Replug.
 
   Takes a list of plug configurations in the format of `{PlugModule, opts}` where:
   - `PlugModule` is the module implementing the plug
@@ -17,11 +17,11 @@ defmodule LightningWeb.PlugInstaller do
   ## Example
 
       @pre_session_plugs Application.compile_env(:my_app, :pre_session_plugs, [])
-      install_plugs(@pre_session_plugs)
+      setup(@pre_session_plugs)
 
-  The above will install all configured plugs using Replug with their respective options.
+  The above will set up all configured plugs using Replug with their respective options.
   """
-  defmacro install_plugs(plugs) do
+  defmacro setup(plugs) do
     quote do
       for {plug, opts} <- unquote(plugs) do
         plug Replug, plug: plug, opts: opts
