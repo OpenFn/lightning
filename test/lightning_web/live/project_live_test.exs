@@ -5167,7 +5167,7 @@ defmodule LightningWeb.ProjectLiveTest do
       assert flash["error"] == error_msg
     end
 
-    test "user can edit a collection successfully", %{
+    test "unauthorized users cannot edit a collection", %{
       conn: conn
     } do
       project = insert(:project)
@@ -5208,6 +5208,12 @@ defmodule LightningWeb.ProjectLiveTest do
 
         assert flash["error"] == "You are not authorized to perform this action"
       end
+    end
+
+    test "authorized users can edit a collection successfully", %{
+      conn: conn
+    } do
+      project = insert(:project)
 
       for {conn, _user} <-
             setup_project_users(conn, project, [:owner, :admin, :editor]) do
@@ -5265,7 +5271,50 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
-    test "user can delete a collection successfully", %{
+    test "unauthorized users cannot delete a collection", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      for {conn, _user} <- setup_project_users(conn, project, [:viewer]) do
+        collection = insert(:collection, project: project)
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/settings#collections"
+          )
+
+        button = element(view, "#delete-collection-#{collection.id}-button")
+        assert has_element?(button)
+
+        # modal is not present
+        refute has_element?(view, "#delete-collection-#{collection.id}-modal")
+
+        # try clicking the button
+        assert_raise ArgumentError, ~r/is disabled/, fn ->
+          render_click(button)
+        end
+
+        # send event either way
+        view
+        |> with_target("#collections")
+        |> render_click("toggle_action", %{
+          "action" => "delete",
+          "collection" => collection.name
+        })
+
+        flash =
+          assert_redirected(
+            view,
+            ~p"/projects/#{project.id}/settings#collections"
+          )
+
+        assert flash["error"] == "You are not authorized to perform this action"
+      end
+    end
+
+    test "authorized users can delete a collection successfully", %{
       conn: conn
     } do
       project = insert(:project)
