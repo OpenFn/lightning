@@ -46,6 +46,13 @@
           <Heroicons.archive_box class="h-5 w-5 inline-block mr-2" />
           <span class="inline-block align-middle">Audit</span>
         </Menu.menu_item>
+        <Menu.menu_item
+          to={~p"/settings/collections"}
+          active={@active_menu_item == :collections}
+        >
+          <Heroicons.circle_stack class="h-5 w-5 inline-block mr-2" />
+          <span class="inline-block align-middle">Collections</span>
+        </Menu.menu_item>
         <div class="grow"></div>
         <Menu.menu_item to={~p"/projects"}>
           <Icon.left class="h-5 w-5 inline-block mr-2" />
