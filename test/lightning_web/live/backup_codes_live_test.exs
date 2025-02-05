@@ -48,6 +48,38 @@ defmodule LightningWeb.BackupCodesLiveTest do
     end
   end
 
+  test "the project combobox is populated with the user's projects", %{
+    conn: conn,
+    user: user
+  } do
+    project_1 = insert(:project, project_users: [%{user: user, role: :owner}])
+
+    project_2 = insert(:project, project_users: [%{user: user, role: :admin}])
+
+    project_3 =
+      insert(:project, project_users: [%{user: build(:user), role: :owner}])
+
+    {:ok, view, _html} = live(conn, ~p"/profile/auth/backup_codes")
+
+    assert view
+           |> has_element?(
+             "ul[aria-labelledby='combobox'] li#option-#{project_1.id}",
+             project_1.name
+           )
+
+    assert view
+           |> has_element?(
+             "ul[aria-labelledby='combobox'] li#option-#{project_2.id}",
+             project_2.name
+           )
+
+    refute view
+           |> has_element?(
+             "ul[aria-labelledby='combobox'] li#option-#{project_3.id}",
+             project_3.name
+           )
+  end
+
   test "user can regenerate backup codes", %{
     conn: conn,
     user: user
