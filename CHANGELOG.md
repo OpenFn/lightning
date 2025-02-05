@@ -24,6 +24,8 @@ and this project adheres to
 
 ### Changed
 
+- Makes the whole project row in the projects table clickable.
+  [#2889](https://github.com/OpenFn/lightning/pull/2889)
 - Standardizes date formats to YYYY-MM-DD
   [#2884](https://github.com/OpenFn/lightning/pull/2884)
 

@@ -332,7 +332,7 @@ defmodule LightningWeb.DashboardLiveTest do
 
     assert has_element?(
              view,
-             "tr#projects-table-row-#{project.id} > td:nth-child(1) > a[href='/projects/#{project.id}/w']",
+             "tr#projects-table-row-#{project.id}",
              project.name
            )
 
@@ -437,7 +437,7 @@ defmodule LightningWeb.DashboardLiveTest do
     |> Floki.parse_document!()
     |> Floki.find("#projects-table tr")
     |> Enum.map(fn tr ->
-      Floki.find(tr, "td:nth-child(1) a")
+      Floki.find(tr, "td:nth-child(1)")
       |> Floki.text()
       |> String.trim()
     end)
