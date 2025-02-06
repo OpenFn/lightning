@@ -55,13 +55,13 @@ defmodule LightningWeb.Endpoint do
 
   plug Plugs.PromexWrapper
 
-  LightningWeb.Utils.add_dynamic_plugs(
-    Application.compile_env(
-      :lightning,
-      Lightning.Extensions.PreParsersPlugs,
-      []
-    )
-  )
+  @pre_parsers_plugs Application.compile_env(
+                       :lightning,
+                       Lightning.Extensions.PreParsersPlugs,
+                       []
+                     )
+
+  LightningWeb.Utils.add_dynamic_plugs(@pre_parsers_plugs)
 
   plug Replug,
     plug: Plug.Parsers,
@@ -79,13 +79,13 @@ defmodule LightningWeb.Endpoint do
   plug Plug.Head
   plug Plug.Session, @session_options
 
-  LightningWeb.Utils.add_dynamic_plugs(
-    Application.compile_env(
-      :lightning,
-      Lightning.Extensions.PostSessionPlugs,
-      []
-    )
-  )
+  @post_session_plugs Application.compile_env(
+                        :lightning,
+                        Lightning.Extensions.PostSessionPlugs,
+                        []
+                      )
+
+  LightningWeb.Utils.add_dynamic_plugs(@post_session_plugs)
 
   plug LightningWeb.Router
 end
