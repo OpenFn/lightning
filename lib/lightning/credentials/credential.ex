@@ -49,6 +49,9 @@ defmodule Lightning.Credentials.Credential do
     )
     |> assoc_constraint(:user)
     |> assoc_constraint(:oauth_client)
+    |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/,
+      message: "credential name has invalid format"
+    )
     |> validate_oauth()
     |> validate_transfer_ownership()
   end
