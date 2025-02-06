@@ -14,10 +14,14 @@ defmodule Lightning.Projects.Provisioner do
   alias Ecto.Multi
   alias Lightning.Accounts.User
   alias Lightning.Collections.Collection
+  alias Lightning.Extensions.UsageLimiting.Action
+  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Projects.ProjectUser
   alias Lightning.Repo
+  alias Lightning.Services.CollectionHook
+  alias Lightning.Services.UsageLimiter
   alias Lightning.VersionControl.ProjectRepoConnection
   alias Lightning.VersionControl.VersionControlUsageLimiter
   alias Lightning.Workflows
@@ -53,6 +57,7 @@ defmodule Lightning.Projects.Provisioner do
              build_import_changeset(project, user_or_repo_connection, data),
            {:ok, %{workflows: workflows} = project} <-
              Repo.insert_or_update(project_changeset),
+           :ok <- handle_collection_deletion(project_changeset),
            updated_project <- preload_dependencies(project),
            {:ok, _changes} <-
              audit_workflows(project_changeset, user_or_repo_connection),
@@ -195,6 +200,56 @@ defmodule Lightning.Projects.Provisioner do
           add_error(changeset, :id, message)
       end
     end)
+    |> then(fn changeset ->
+      case limit_collection_creation(changeset) do
+        :ok ->
+          changeset
+
+        {:error, _reason, %{text: message}} ->
+          add_error(changeset, :id, message)
+      end
+    end)
+  end
+
+  defp limit_collection_creation(changeset) do
+    new_collections_count =
+      changeset
+      |> get_assoc(:collections)
+      |> Enum.count(fn collection_changeset ->
+        # We only want to count collections that are being inserted
+        collection_changeset.data.__meta__.state == :built
+      end)
+
+    if new_collections_count > 0 do
+      UsageLimiter.limit_action(
+        %Action{type: :new_collection, amount: new_collections_count},
+        %Context{project_id: changeset.data.id}
+      )
+    else
+      :ok
+    end
+  end
+
+  defp handle_collection_deletion(project_changeset) do
+    deleted_size =
+      project_changeset
+      |> get_assoc(:collections)
+      |> Enum.reduce(0, fn collection_changeset, sum ->
+        if get_change(collection_changeset, :delete) do
+          sum + get_field(collection_changeset, :byte_size_sum)
+        else
+          sum
+        end
+      end)
+
+    if deleted_size > 0 do
+      CollectionHook.handle_delete(
+        project_changeset.data.id,
+        deleted_size
+      )
+    else
+      :ok
+    end
   end
 
   defp maybe_add_project_user(changeset, user_or_repo_connection) do

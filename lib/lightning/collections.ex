@@ -142,7 +142,12 @@ defmodule Lightning.Collections do
 
       collection ->
         Repo.transact(fn ->
-          :ok = CollectionHook.handle_delete(collection)
+          :ok =
+            CollectionHook.handle_delete(
+              collection.project_id,
+              collection.byte_size_sum
+            )
+
           Repo.delete(collection)
         end)
     end

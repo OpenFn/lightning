@@ -19,6 +19,8 @@ and this project adheres to
 
 - Extend provisioner to support collections
   [#2830](https://github.com/OpenFn/lightning/issues/2830)
+- Add collection limiter in the provisioner
+  [PR#2910](https://github.com/OpenFn/lightning/pull/2910)
 - Adds project name to failure alert email
   [#2884](https://github.com/OpenFn/lightning/pull/2884)
 - Allow project users to manage collections

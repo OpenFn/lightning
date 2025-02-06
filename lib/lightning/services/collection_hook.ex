@@ -12,8 +12,8 @@ defmodule Lightning.Services.CollectionHook do
   end
 
   @impl true
-  def handle_delete(collection) do
-    adapter().handle_delete(collection)
+  def handle_delete(project_id, collection_byte_size) do
+    adapter().handle_delete(project_id, collection_byte_size)
   end
 
   @impl true
