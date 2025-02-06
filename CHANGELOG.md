@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.10.14] - 2025-02-06
+
+### Added
+
 - Extend provisioner to support collections
   [#2830](https://github.com/OpenFn/lightning/issues/2830)
 - Add collection limiter in the provisioner
