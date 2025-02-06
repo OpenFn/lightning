@@ -299,6 +299,10 @@ defmodule LightningWeb.CredentialLiveTest do
              |> form("#credential-form-new", credential: %{name: ""})
              |> render_change() =~ "can&#39;t be blank"
 
+      assert index_live
+             |> form("#credential-form-new", credential: %{name: "MailChimp'24"})
+             |> render_change() =~ "credential name has invalid format"
+
       {:ok, _index_live, html} =
         index_live
         |> form("#credential-form-new", credential: @create_attrs)
