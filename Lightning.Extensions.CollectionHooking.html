@@ -14,7 +14,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-A508C202.js"></script>
+    <script src="dist/sidebar_items-B5824A6F.js"></script>
     <script src="docs_config.js"></script>
     <script async src="dist/html-YIPIRHGU.js"></script>
 
@@ -179,7 +179,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:handle_delete/1" data-no-tooltip translate="no">handle_delete(t)</a>
+        <a href="#c:handle_delete/2" data-no-tooltip translate="no">handle_delete(project_id, delta_size)</a>
 
       </div>
 
@@ -282,14 +282,14 @@ Pages
 
   </section>
 </section>
-<section class="detail" id="c:handle_delete/1">
+<section class="detail" id="c:handle_delete/2">
 
   <div class="detail-header">
-    <a href="#c:handle_delete/1" class="detail-link" data-no-tooltip title="Link to this callback">
+    <a href="#c:handle_delete/2" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
-    <h1 class="signature" translate="no">handle_delete(t)</h1>
+    <h1 class="signature" translate="no">handle_delete(project_id, delta_size)</h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/collection_hooking.ex#L11" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
@@ -303,7 +303,10 @@ Pages
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@callback</span> handle_delete(<a href="Lightning.Collections.Collection.html#t:t/0">Lightning.Collections.Collection.t</a>()) :: :ok</pre>
+          <pre translate="no"><span class="attribute">@callback</span> handle_delete(
+  project_id :: <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
+  delta_size :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">neg_integer</a>()
+) :: :ok</pre>
 
       </div>
 
@@ -319,7 +322,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">handle_delete_items(t, delta_size)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/collection_hooking.ex#L16" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/collection_hooking.ex#L19" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -350,7 +353,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">handle_put_items(t, delta_size)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/collection_hooking.ex#L13" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/collection_hooking.ex#L16" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
