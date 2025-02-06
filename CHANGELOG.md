@@ -35,6 +35,8 @@ and this project adheres to
 
 ### Fixed
 
+- Allow ordering of Plug Injection
+  [#2903](https://github.com/OpenFn/lightning/issues/2903)
 - Removed empty first line in job editor helper text
   [#2887](https://github.com/OpenFn/lightning/pull/2887)
 - Standardizes sort order arrows (all now show the direction of sort, rather
