@@ -8,7 +8,7 @@ defmodule Lightning.Extensions.CollectionHook do
   def handle_create(_attrs), do: :ok
 
   @impl true
-  def handle_delete(_col), do: :ok
+  def handle_delete(_project_id, _size), do: :ok
 
   @impl true
   def handle_put_items(_col, _size), do: :ok

@@ -216,6 +216,7 @@ defmodule Lightning.Projects.Provisioner do
       changeset
       |> get_assoc(:collections)
       |> Enum.count(fn collection_changeset ->
+        # We only want to count collections that are being inserted
         collection_changeset.data.__meta__.state == :built
       end)
 
@@ -242,10 +243,10 @@ defmodule Lightning.Projects.Provisioner do
       end)
 
     if deleted_size > 0 do
-      CollectionHook.handle_delete(%{
-        project_id: project_changeset.data.id,
-        byte_size_sum: deleted_size
-      })
+      CollectionHook.handle_delete(
+        project_changeset.data.id,
+        deleted_size
+      )
     else
       :ok
     end

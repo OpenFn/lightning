@@ -8,7 +8,10 @@ defmodule Lightning.Extensions.CollectionHooking do
 
   @callback handle_create(attrs :: map()) :: :ok | limit_error()
 
-  @callback handle_delete(Collection.t()) :: :ok
+  @callback handle_delete(
+              project_id :: Ecto.UUID.t(),
+              delta_size :: neg_integer()
+            ) :: :ok
 
   @callback handle_put_items(Collection.t(), delta_size :: integer()) ::
               :ok | limit_error()

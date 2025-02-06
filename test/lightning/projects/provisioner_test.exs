@@ -1123,7 +1123,7 @@ defmodule Lightning.Projects.ProvisionerTest do
       Mox.expect(
         Lightning.Extensions.MockCollectionHook,
         :handle_delete,
-        fn %{project_id: ^project_id, byte_size_sum: ^expected_byte_size_sum} ->
+        fn ^project_id, ^expected_byte_size_sum ->
           :ok
         end
       )
