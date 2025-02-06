@@ -55,7 +55,7 @@ defmodule LightningWeb.Endpoint do
 
   plug Plugs.PromexWrapper
 
-  Utils.add_dynamic_plugs(
+  LightningWeb.Utils.add_dynamic_plugs(
     Application.compile_env(
       :lightning,
       Lightning.Extensions.PreParsersPlugs,
@@ -79,7 +79,7 @@ defmodule LightningWeb.Endpoint do
   plug Plug.Head
   plug Plug.Session, @session_options
 
-  Utils.add_dynamic_plugs(
+  LightningWeb.Utils.add_dynamic_plugs(
     Application.compile_env(
       :lightning,
       Lightning.Extensions.PostSessionPlugs,
