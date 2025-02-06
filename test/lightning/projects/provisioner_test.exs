@@ -773,7 +773,7 @@ defmodule Lightning.Projects.ProvisionerTest do
              }
     end
 
-    test "adds error incase limit action is returns error", %{
+    test "adds error incase workflow limit action returns error", %{
       project: %{id: project_id} = project,
       user: user
     } do
@@ -787,7 +787,7 @@ defmodule Lightning.Projects.ProvisionerTest do
       )
       |> Mox.expect(
         :limit_action,
-        fn _action, %{project_id: ^project_id} ->
+        fn %{type: :activate_workflow}, %{project_id: ^project_id} ->
           {:error, :too_many_workflows, %{text: error_msg}}
         end
       )
@@ -1008,6 +1008,129 @@ defmodule Lightning.Projects.ProvisionerTest do
                Provisioner.import_document(project, user, body)
 
       assert Repo.reload(collection_to_delete) |> is_nil()
+      assert remaining_collection.id == collection.id
+    end
+
+    test "usage limiter is called when creating collection", %{
+      project: %{id: project_id} = project,
+      user: user
+    } do
+      collections_count = 3
+
+      Lightning.Extensions.MockUsageLimiter
+      |> Mox.expect(
+        :limit_action,
+        fn %{type: :github_sync}, %{project_id: ^project_id} -> :ok end
+      )
+      |> Mox.expect(
+        :limit_action,
+        fn %{type: :activate_workflow}, %{project_id: ^project_id} -> :ok end
+      )
+      |> Mox.expect(
+        :limit_action,
+        fn %{type: :new_collection, amount: ^collections_count},
+           %{project_id: ^project_id} ->
+          :ok
+        end
+      )
+
+      %{body: body} = valid_document(project.id)
+
+      body_with_collections =
+        Map.put(
+          body,
+          "collections",
+          Enum.map(1..collections_count, fn n ->
+            %{id: Ecto.UUID.generate(), name: "test-collection-#{n}"}
+          end)
+        )
+
+      {:ok, _project} =
+        Provisioner.import_document(project, user, body_with_collections)
+    end
+
+    test "adds error incase create collection limiter returns error", %{
+      project: %{id: project_id} = project,
+      user: user
+    } do
+      error_msg = "Oopsie Doopsie"
+
+      Lightning.Extensions.MockUsageLimiter
+      |> Mox.expect(
+        :limit_action,
+        fn %{type: :github_sync}, %{project_id: ^project_id} -> :ok end
+      )
+      |> Mox.expect(
+        :limit_action,
+        fn %{type: :activate_workflow}, %{project_id: ^project_id} -> :ok end
+      )
+      |> Mox.expect(
+        :limit_action,
+        fn %{type: :new_collection}, %{project_id: ^project_id} ->
+          {:error, :exceeds_limit, %{text: error_msg}}
+        end
+      )
+
+      %{body: body} = valid_document(project.id)
+
+      body_with_collections =
+        Map.put(
+          body,
+          "collections",
+          [%{id: Ecto.UUID.generate(), name: "test-collection"}]
+        )
+
+      assert {:error, changeset} =
+               Provisioner.import_document(project, user, body_with_collections)
+
+      assert flatten_errors(changeset) == %{id: [error_msg]}
+    end
+
+    test "collection hook is called when deleting a collection", %{
+      project: %{id: project_id} = project,
+      user: user
+    } do
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, %{project_id: ^project_id} ->
+          :ok
+        end
+      )
+
+      collection = insert(:collection, byte_size_sum: 1000, project: project)
+
+      collection_to_delete_1 =
+        insert(:collection, byte_size_sum: 2500, project: project)
+
+      collection_to_delete_2 =
+        insert(:collection, byte_size_sum: 3333, project: project)
+
+      body = %{
+        "id" => project_id,
+        "name" => "test-project",
+        "collections" => [
+          %{"id" => collection.id},
+          %{"id" => collection_to_delete_1.id, "delete" => true},
+          %{"id" => collection_to_delete_2.id, "delete" => true}
+        ]
+      }
+
+      expected_byte_size_sum =
+        collection_to_delete_1.byte_size_sum +
+          collection_to_delete_2.byte_size_sum
+
+      Mox.expect(
+        Lightning.Extensions.MockCollectionHook,
+        :handle_delete,
+        fn %{project_id: ^project_id, byte_size_sum: ^expected_byte_size_sum} ->
+          :ok
+        end
+      )
+
+      assert {:ok, %{id: ^project_id, collections: [remaining_collection]}} =
+               Provisioner.import_document(project, user, body)
+
       assert remaining_collection.id == collection.id
     end
   end

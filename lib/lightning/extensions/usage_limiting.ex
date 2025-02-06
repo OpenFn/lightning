@@ -18,6 +18,7 @@ defmodule Lightning.Extensions.UsageLimiting do
               | :ai_usage
               | :alert_failure
               | :github_sync
+              | :new_collection
               | :new_run
               | :new_user
               | :require_mfa,
