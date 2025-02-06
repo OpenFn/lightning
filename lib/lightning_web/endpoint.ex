@@ -1,7 +1,10 @@
 defmodule LightningWeb.Endpoint do
   use Sentry.PlugCapture
   use Phoenix.Endpoint, otp_app: :lightning
+
   alias LightningWeb.Plugs
+
+  require LightningWeb.Utils
 
   # The session will be stored in the cookie and signed,
   # this means its contents can be read but not tampered with.
@@ -52,14 +55,13 @@ defmodule LightningWeb.Endpoint do
 
   plug Plugs.PromexWrapper
 
-  @plug_extensions Application.compile_env(
-                     :lightning,
-                     Lightning.Extensions.Plugs,
-                     []
-                   )
-  for {plug, mfa_opts} <- @plug_extensions do
-    plug Replug, plug: plug, opts: mfa_opts
-  end
+  @pre_parsers_plugs Application.compile_env(
+                       :lightning,
+                       Lightning.Extensions.PreParsersPlugs,
+                       []
+                     )
+
+  LightningWeb.Utils.add_dynamic_plugs(@pre_parsers_plugs)
 
   plug Replug,
     plug: Plug.Parsers,
@@ -76,5 +78,14 @@ defmodule LightningWeb.Endpoint do
   plug Plug.MethodOverride
   plug Plug.Head
   plug Plug.Session, @session_options
+
+  @post_session_plugs Application.compile_env(
+                        :lightning,
+                        Lightning.Extensions.PostSessionPlugs,
+                        []
+                      )
+
+  LightningWeb.Utils.add_dynamic_plugs(@post_session_plugs)
+
   plug LightningWeb.Router
 end
