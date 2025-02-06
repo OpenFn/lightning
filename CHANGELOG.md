@@ -21,6 +21,8 @@ and this project adheres to
   [#2830](https://github.com/OpenFn/lightning/issues/2830)
 - Adds project name to failure alert email
   [#2884](https://github.com/OpenFn/lightning/pull/2884)
+- Allow project users to manage collections
+  [#2838](https://github.com/OpenFn/lightning/issues/2838)
 
 ### Changed
 

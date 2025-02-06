@@ -9,6 +9,7 @@ defmodule Lightning.Collections do
   alias Lightning.Collections.Collection
   alias Lightning.Collections.Item
   alias Lightning.Extensions.Message
+  alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Services.CollectionHook
 
@@ -39,6 +40,16 @@ defmodule Lightning.Collections do
     preload = Keyword.get(opts, :preload, [:project])
 
     Repo.all(from(c in Collection, order_by: ^order_by, preload: ^preload))
+  end
+
+  @spec list_project_collections(Project.t()) :: [Collection.t(), ...] | []
+  def list_project_collections(%Project{id: project_id}) do
+    query =
+      from c in Collection,
+        where: c.project_id == ^project_id,
+        order_by: [desc: :inserted_at]
+
+    Repo.all(query)
   end
 
   @spec get_collection(String.t()) ::
