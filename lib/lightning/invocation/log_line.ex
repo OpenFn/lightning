@@ -65,10 +65,7 @@ defmodule Lightning.Invocation.LogLine do
     |> then(fn changeset ->
       fetch_field(changeset, :message)
       |> case do
-        {:changes, message} when message in [nil, [nil]] ->
-          add_error(changeset, :message, "can't be blank")
-
-        {:data, message} when is_nil(message) ->
+        {_type, message} when is_nil(message) ->
           add_error(changeset, :message, "can't be blank")
 
         _ ->

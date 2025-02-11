@@ -41,5 +41,15 @@ defmodule Lightning.Invocation.LogLineTest do
       )
 
     assert log_line.valid?, "should be able to have an empty message"
+
+    log_line =
+      LogLine.new(
+        run,
+        %{message: nil, timestamp: DateTime.utc_now()},
+        nil
+      )
+
+    assert {:message, {"can't be blank", []}} in log_line.errors
+    refute log_line.valid?
   end
 end
