@@ -585,9 +585,16 @@ defmodule Lightning.Factories do
   end
 
   def work_order_for(trigger_or_job, attrs) do
+    attrs = Map.new(attrs)
+    workflow = Map.fetch!(attrs, :workflow)
+
+    snapshot =
+      Lightning.Workflows.Snapshot.get_current_for(workflow) ||
+        build(:snapshot, workflow: workflow)
+
     Lightning.WorkOrders.build_for(
       trigger_or_job,
-      Map.new(attrs) |> Map.merge(%{actor: insert(:user)})
+      Map.merge(attrs, %{actor: insert(:user), snapshot: snapshot})
     )
     |> Ecto.Changeset.apply_changes()
   end

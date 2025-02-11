@@ -14,6 +14,7 @@ defmodule Lightning.Run do
   alias Lightning.Invocation.Step
   alias Lightning.RunStep
   alias Lightning.Services.UsageLimiter
+  alias Lightning.Workflows
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
@@ -95,10 +96,14 @@ defmodule Lightning.Run do
     |> put_assoc(:starting_trigger, trigger)
     |> put_assoc(:dataclip, attrs[:dataclip])
     |> put_assoc(:snapshot, attrs[:snapshot])
-    |> add_options(attrs.dataclip.project_id)
     |> validate_required_assoc(:dataclip)
     |> validate_required_assoc(:snapshot)
     |> validate_required_assoc(:starting_trigger)
+    |> then(fn changeset ->
+      snapshot = get_assoc(changeset, :snapshot, :struct)
+      dataclip = get_assoc(changeset, :dataclip, :struct)
+      add_options(changeset, snapshot.workflow_id, dataclip.project_id)
+    end)
   end
 
   def for(%Job{} = job, attrs) do
@@ -108,11 +113,15 @@ defmodule Lightning.Run do
     |> put_assoc(:dataclip, attrs[:dataclip])
     |> put_assoc(:snapshot, attrs[:snapshot])
     |> put_assoc(:starting_job, job)
-    |> add_options(attrs.dataclip.project_id)
     |> validate_required_assoc(:created_by)
     |> validate_required_assoc(:dataclip)
     |> validate_required_assoc(:snapshot)
     |> validate_required_assoc(:starting_job)
+    |> then(fn changeset ->
+      snapshot = get_assoc(changeset, :snapshot, :struct)
+      dataclip = get_assoc(changeset, :dataclip, :struct)
+      add_options(changeset, snapshot.workflow_id, dataclip.project_id)
+    end)
   end
 
   def new(attrs \\ %{}) do
@@ -132,15 +141,17 @@ defmodule Lightning.Run do
   end
 
   @doc """
-  Adds options (project-level logging options, resource limits such as timeout
+  Adds options (workflow-level and project-level logging options, resource limits such as timeout
   and memory usage, etc.) to the run before storing in the DB.
   """
-  def add_options(changeset, project_id) do
+  def add_options(changeset, workflow_id, project_id) do
+    workflow = Workflows.get_workflow!(workflow_id)
+
     put_change(
       changeset,
       :options,
       UsageLimiter.get_run_options(%Context{project_id: project_id})
-      |> Enum.into(%{})
+      |> Enum.into(%{enable_job_logs: workflow.enable_job_logs})
     )
   end
 

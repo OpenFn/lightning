@@ -73,7 +73,8 @@ defmodule Lightning.Policies.ProjectUsers do
              :edit_project,
              :edit_data_retention,
              :add_project_user,
-             :remove_project_user
+             :remove_project_user,
+             :edit_run_settings
            ],
       do: project_user.role in [:owner, :admin]
 

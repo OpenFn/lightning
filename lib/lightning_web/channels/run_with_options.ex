@@ -87,8 +87,12 @@ defmodule LightningWeb.RunWithOptions do
     %{
       output_dataclips: options.save_dataclips,
       run_timeout_ms: options.run_timeout_ms,
-      run_memory_limit_mb: options.run_memory_limit_mb
+      run_memory_limit_mb: options.run_memory_limit_mb,
+      job_log_level: job_log_level(options.enable_job_logs)
     }
     |> Map.reject(fn {_key, val} -> is_nil(val) end)
   end
+
+  defp job_log_level(false), do: "none"
+  defp job_log_level(_enable_job_logs), do: nil
 end
