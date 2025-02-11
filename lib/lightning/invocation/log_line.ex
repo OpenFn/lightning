@@ -39,7 +39,7 @@ defmodule Lightning.Invocation.LogLine do
       values: [:success, :always, :info, :warn, :error, :debug],
       default: :info
 
-    field :message, LogMessage, default: ""
+    field :message, LogMessage, default: nil
 
     belongs_to :step, Step
     belongs_to :run, Run
@@ -49,34 +49,43 @@ defmodule Lightning.Invocation.LogLine do
 
   def new(%Run{} = run, attrs \\ %{}, scrubber) do
     %__MODULE__{id: Ecto.UUID.generate()}
-    |> cast(attrs, [:message, :timestamp, :step_id, :run_id, :level, :source])
+    |> cast(attrs, [:message, :timestamp, :step_id, :run_id, :level, :source],
+      empty_values: [[], nil]
+    )
     |> put_assoc(:run, run)
     |> validate(scrubber)
   end
 
   def validate(changeset, scrubber \\ nil) do
     changeset
-    |> validate_required([:message, :timestamp])
+    |> validate_required([:timestamp])
     |> validate_length(:source, max: 8)
     |> assoc_constraint(:step)
     |> assoc_constraint(:run)
-    |> validate_change(:message, fn _, message ->
-      # cast converts [nil] into "null"
-      if message == "null" do
-        [message: "This field can't be blank."]
-      else
-        []
+    |> then(fn changeset ->
+      fetch_field(changeset, :message)
+      |> case do
+        {_type, message} when is_nil(message) ->
+          add_error(changeset, :message, "can't be blank")
+
+        _ ->
+          changeset
       end
     end)
-    |> maybe_scrub(scrubber)
+    |> scrub_message(scrubber)
   end
 
-  defp maybe_scrub(%Ecto.Changeset{valid?: true} = changeset, scrubber)
+  defp scrub_message(%Ecto.Changeset{valid?: true} = changeset, scrubber)
        when scrubber != nil do
-    {:ok, message} = fetch_change(changeset, :message)
-    scrubbed = Scrubber.scrub(scrubber, message)
-    put_change(changeset, :message, scrubbed)
+    case fetch_change(changeset, :message) do
+      :error ->
+        changeset
+
+      {:ok, message} ->
+        scrubbed_message = Scrubber.scrub(scrubber, message)
+        put_change(changeset, :message, scrubbed_message)
+    end
   end
 
-  defp maybe_scrub(changeset, _scrubber), do: changeset
+  defp scrub_message(changeset, _scrubber), do: changeset
 end

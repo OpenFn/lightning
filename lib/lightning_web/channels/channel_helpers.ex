@@ -4,7 +4,7 @@ defmodule LightningWeb.ChannelHelpers do
   """
 
   def reply_with(socket, {:error, error}) do
-    send_error_to_sentry(socket, error)
+    send_warning_to_sentry(error)
     {:reply, {:error, error_to_map(error)}, socket}
   end
 
@@ -18,9 +18,10 @@ defmodule LightningWeb.ChannelHelpers do
 
   defp error_to_map(error), do: error
 
-  defp send_error_to_sentry(socket, error) do
-    Sentry.capture_message("#{socket.channel}.Error",
-      extra: %{error: inspect(error)}
+  defp send_warning_to_sentry(error) do
+    Sentry.capture_message("RunChannel replied with error",
+      extra: %{error: inspect(error)},
+      level: :warning
     )
   end
 end

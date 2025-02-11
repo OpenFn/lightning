@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Allow empty/blank log lines from the worker/jobs
+  [#2914](https://github.com/OpenFn/lightning/issues/2914)
+
 ### Fixed
 
 ## [v2.10.14] - 2025-02-06

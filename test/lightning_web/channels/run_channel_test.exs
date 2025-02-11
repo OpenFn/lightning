@@ -979,9 +979,7 @@ defmodule LightningWeb.RunChannelTest do
           "message" => [nil]
         })
 
-      assert_reply ref, :error, errors
-
-      assert errors == %{message: ["This field can't be blank."]}
+      assert_reply ref, :ok, %{log_line_id: _}
     end
 
     test "run:log timestamp is handled at microsecond resolution", %{
