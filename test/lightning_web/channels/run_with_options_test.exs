@@ -163,5 +163,36 @@ defmodule LightningWeb.RunWithOptionsTest do
       assert RunWithOptions.options_for_worker(lightning_options) ==
                expected_worker_options
     end
+
+    test "converts enable_job_logs correctly for the worker" do
+      # when enable_job_logs is true
+      lightning_options = %Lightning.Runs.RunOptions{
+        save_dataclips: true,
+        run_timeout_ms: 123,
+        enable_job_logs: true
+      }
+
+      # job_log_level is not included in the worker option
+      assert RunWithOptions.options_for_worker(lightning_options) ==
+               %{
+                 output_dataclips: true,
+                 run_timeout_ms: 123
+               }
+
+      # when enable_job_logs is false
+      lightning_options = %Lightning.Runs.RunOptions{
+        save_dataclips: true,
+        run_timeout_ms: 123,
+        enable_job_logs: false
+      }
+
+      # job_log_level is set to "none" in the worker option
+      assert RunWithOptions.options_for_worker(lightning_options) ==
+               %{
+                 output_dataclips: true,
+                 run_timeout_ms: 123,
+                 job_log_level: "none"
+               }
+    end
   end
 end

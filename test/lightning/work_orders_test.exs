@@ -75,6 +75,7 @@ defmodule Lightning.WorkOrdersTest do
       assert run.dataclip_id == dataclip.id
 
       assert run.options == %Lightning.Runs.RunOptions{
+               enable_job_logs: workflow.enable_job_logs,
                save_dataclips: false,
                run_timeout_ms: 300_000
              }
@@ -143,6 +144,7 @@ defmodule Lightning.WorkOrdersTest do
       assert run.snapshot_id == snapshot.id
 
       assert run.options == %Lightning.Runs.RunOptions{
+               enable_job_logs: workflow.enable_job_logs,
                save_dataclips: true,
                run_timeout_ms: 300_000
              }
@@ -219,6 +221,7 @@ defmodule Lightning.WorkOrdersTest do
       assert run.snapshot_id == snapshot.id
 
       assert run.options == %Lightning.Runs.RunOptions{
+               enable_job_logs: workflow.enable_job_logs,
                save_dataclips: true,
                run_timeout_ms: 300_000
              }
@@ -319,6 +322,7 @@ defmodule Lightning.WorkOrdersTest do
       assert retry_run.work_order_id == run.work_order_id
 
       assert retry_run.options == %Lightning.Runs.RunOptions{
+               enable_job_logs: workflow.enable_job_logs,
                save_dataclips: true,
                run_timeout_ms: 300_000
              }
@@ -381,6 +385,7 @@ defmodule Lightning.WorkOrdersTest do
       assert retry_run.state == :available
 
       assert retry_run.options == %Lightning.Runs.RunOptions{
+               enable_job_logs: workflow.enable_job_logs,
                save_dataclips: true,
                run_timeout_ms: 300_000
              }
@@ -703,6 +708,7 @@ defmodule Lightning.WorkOrdersTest do
       assert retry_run.state == :available
 
       assert retry_run.options == %Lightning.Runs.RunOptions{
+               enable_job_logs: workflow.enable_job_logs,
                save_dataclips: true,
                run_timeout_ms: 300_000
              }

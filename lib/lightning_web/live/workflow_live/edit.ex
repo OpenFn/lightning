@@ -434,7 +434,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
             phx-remove={fade_out()}
             cancel_url={@base_url}
           >
-            <.workflow_settings form={@workflow_form} />
+            <.workflow_settings
+              form={@workflow_form}
+              can_edit_run_settings={@can_edit_run_settings}
+            />
           </.panel>
 
           <.single_inputs_for
@@ -1051,6 +1054,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
               :edit_data_retention,
               current_user,
               project_user
+            ),
+          can_edit_run_settings:
+            Permissions.can?(
+              ProjectUsers,
+              :edit_run_settings,
+              current_user,
+              project_user
             )
         )
 
@@ -1086,6 +1096,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
         Permissions.can?(
           ProjectUsers,
           :edit_data_retention,
+          current_user,
+          project_user
+        ),
+      can_edit_run_settings:
+        Permissions.can?(
+          ProjectUsers,
+          :edit_run_settings,
           current_user,
           project_user
         )
