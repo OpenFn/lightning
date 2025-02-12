@@ -21,6 +21,8 @@ and this project adheres to
 
 - Allow empty/blank log lines from the worker/jobs
   [#2914](https://github.com/OpenFn/lightning/issues/2914)
+- Only allow `owner` and `admin` users to manage collections
+  [#2923](https://github.com/OpenFn/lightning/issues/2923)
 
 ### Fixed
 
