@@ -11,10 +11,17 @@ defmodule Lightning.ProjectsTest do
   alias Lightning.Auditing.Audit
   alias Lightning.Accounts.User
   alias Lightning.Invocation.Dataclip
+  alias Lightning.Invocation.LogLine
+  alias Lightning.Invocation.Step
   alias Lightning.Projects
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectOverviewRow
   alias Lightning.Projects.ProjectUser
+  alias Lightning.Repo
+  alias Lightning.Run
+  alias Lightning.Workflows.Snapshot
+  alias Lightning.WorkOrder
+
   alias Swoosh.Email
 
   require Phoenix.VerifiedRoutes
@@ -796,21 +803,30 @@ defmodule Lightning.ProjectsTest do
 
       now = DateTime.utc_now()
 
-      workorder_to_delete =
-        insert(:workorder,
-          workflow: workflow,
-          last_activity: Timex.shift(now, days: -7),
-          trigger: trigger,
-          dataclip: build(:dataclip),
-          runs: [
-            build(:run,
-              starting_trigger: trigger,
-              dataclip: build(:dataclip),
-              log_lines: [build(:log_line)],
-              steps: [build(:step, job: job)]
-            )
-          ]
-        )
+      snapshot_to_delete = insert(:snapshot, workflow: workflow, lock_version: 1)
+      snapshot_to_keep = insert(:snapshot, workflow: workflow, lock_version: 2)
+
+      workorders_to_delete =
+        Enum.map(1..10, fn i ->
+          snapshot =
+            if rem(i, 2) == 0, do: snapshot_to_delete, else: snapshot_to_keep
+
+          insert(:workorder,
+            workflow: workflow,
+            last_activity: Timex.shift(now, days: -7),
+            trigger: trigger,
+            dataclip: build(:dataclip),
+            snapshot: snapshot,
+            runs: [
+              build(:run,
+                starting_trigger: trigger,
+                dataclip: build(:dataclip),
+                log_lines: [build(:log_line)],
+                steps: [build(:step, job: job)]
+              )
+            ]
+          )
+        end)
 
       workorder_to_remain =
         insert(:workorder,
@@ -818,6 +834,7 @@ defmodule Lightning.ProjectsTest do
           last_activity: Timex.shift(now, days: -6),
           trigger: trigger,
           dataclip: build(:dataclip),
+          snapshot: snapshot_to_keep,
           runs: [
             build(:run,
               starting_trigger: trigger,
@@ -832,17 +849,18 @@ defmodule Lightning.ProjectsTest do
                Projects.perform(%Oban.Job{args: %{"type" => "data_retention"}})
 
       # deleted history
-      refute Lightning.Repo.get(Lightning.WorkOrder, workorder_to_delete.id)
-      run_to_delete = hd(workorder_to_delete.runs)
-      refute Lightning.Repo.get(Lightning.Run, run_to_delete.id)
-      step_to_delete = hd(run_to_delete.steps)
-      refute Lightning.Repo.get(Lightning.Invocation.Step, step_to_delete.id)
-      log_line_to_delete = hd(run_to_delete.log_lines)
+      refute Repo.get(Snapshot, snapshot_to_delete.id)
 
-      refute Lightning.Repo.get_by(
-               Lightning.Invocation.LogLine,
-               id: log_line_to_delete.id
-             )
+      Enum.each(workorders_to_delete, fn workorder ->
+        refute Repo.get(WorkOrder, workorder.id)
+        run_to_delete = hd(workorder.runs)
+        refute Repo.get(Run, run_to_delete.id)
+        step_to_delete = hd(run_to_delete.steps)
+        refute Repo.get(Step, step_to_delete.id)
+        log_line_to_delete = hd(run_to_delete.log_lines)
+
+        refute Repo.get_by(LogLine, id: log_line_to_delete.id)
+      end)
 
       # remaining history
       assert Lightning.Repo.get(Lightning.WorkOrder, workorder_to_remain.id)
@@ -856,6 +874,10 @@ defmodule Lightning.ProjectsTest do
                Lightning.Invocation.LogLine,
                id: log_line_to_remain.id
              )
+
+      # snapshot that is still in use
+      assert workorder_to_remain.snapshot_id == snapshot_to_keep.id
+      assert Repo.get(Snapshot, snapshot_to_keep.id)
 
       # extra checks. Jobs, Triggers, Workflows are not deleted
       assert Repo.get(Lightning.Workflows.Job, job.id)

@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Delete unused snapshots on workorders retention cleanup
+  [#1832](https://github.com/OpenFn/lightning/issues/1832)
+
 ### Changed
 
 ### Fixed
