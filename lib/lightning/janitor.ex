@@ -46,10 +46,6 @@ defmodule Lightning.Janitor do
         |> Lightning.FailureAlerter.alert_on_failure()
       end)
       |> Stream.run()
-
-      # TODO - this appears to be a duplicate of https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs.ex#L291
-      # but without it, the tests don't pass. @midigofrank, do you have ideas?
-      Runs.Query.lost_steps() |> Runs.mark_steps_lost()
     end)
   end
 end

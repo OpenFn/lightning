@@ -105,7 +105,7 @@ defmodule Lightning.JanitorTest do
                      1000
     end
 
-    test "updates steps whose run has finished but step hasn't" do
+    test "does not update steps whose run has finished but step hasn't" do
       %{triggers: [trigger], jobs: [job_1 | _]} =
         workflow = insert(:simple_workflow)
 
@@ -181,11 +181,8 @@ defmodule Lightning.JanitorTest do
         step = hd(run.steps)
         reloaded_step = Repo.reload(step)
 
-        assert is_nil(step.finished_at)
-        assert is_nil(step.exit_reason)
-
-        assert is_struct(reloaded_step.finished_at, DateTime)
-        assert reloaded_step.exit_reason == "lost"
+        assert is_nil(reloaded_step.finished_at)
+        assert is_nil(reloaded_step.exit_reason)
       end
 
       # finished steps having finished runs don't get updated
