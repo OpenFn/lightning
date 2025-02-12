@@ -73,7 +73,8 @@ defmodule Lightning.Policies.ProjectUsers do
              :edit_project,
              :edit_data_retention,
              :add_project_user,
-             :remove_project_user
+             :remove_project_user,
+             :create_collection
            ],
       do: project_user.role in [:owner, :admin]
 
@@ -85,8 +86,7 @@ defmodule Lightning.Policies.ProjectUsers do
              :run_workflow,
              :provision_project,
              :create_project_credential,
-             :initiate_github_sync,
-             :create_collection
+             :initiate_github_sync
            ],
       do: project_user.role in [:owner, :admin, :editor]
 
