@@ -24,6 +24,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed issue where we failed to send failure alerts via email when runs were
+  "lost". [#2921](https://github.com/OpenFn/lightning/issues/2921)
+
 ## [v2.10.14] - 2025-02-06
 
 ### Added
