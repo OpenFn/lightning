@@ -23,7 +23,7 @@
     /* If your code runs in the DOM: */
     "lib": ["es2020", "dom", "dom.iterable"],
 
-    "types": [],
+    "types": ["@total-typescript/ts-reset"],
     "rootDir": "../",
     "jsx": "react-jsx",
     "checkJs": true,
