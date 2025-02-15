@@ -50,7 +50,7 @@ export const create = (parentNode: Flow.Node) => {
 };
 
 export default (
-  ref: HTMLElement | null,
+  ref: HTMLElement | undefined,
   store: StoreApi<WorkflowState>,
   requestSelectionChange: (id: string | null) => void // TODO more like changeSelection
 ) => {

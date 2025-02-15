@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import { createStore } from 'zustand/vanilla';
 import { subscribeWithSelector } from 'zustand/middleware';
 
 export type LogLine = {
@@ -97,7 +97,7 @@ function formatLogLine(log: LogLine) {
 }
 
 export const createLogStore = () => {
-  const createStore = create<LogStore>()(
+  const logStore = createStore<LogStore>()(
     subscribeWithSelector((set, get) => ({
       stepId: undefined,
       setStepId: (stepId: string | undefined) => set({ stepId }),
@@ -121,10 +121,10 @@ export const createLogStore = () => {
 
   // Subscribe to the store and update the highlighted ranges when the
   // log lines or step ID changes.
-  createStore.subscribe<[LogLine[], undefined | string]>(
+  logStore.subscribe<[LogLine[], undefined | string]>(
     state => [state.logLines, state.stepId],
     ([logLines, stepId], _) => {
-      createStore.setState({
+      logStore.setState({
         highlightedRanges: findSelectedRanges(logLines, stepId),
       });
     },
@@ -138,5 +138,5 @@ export const createLogStore = () => {
     }
   );
 
-  return createStore;
+  return logStore;
 };

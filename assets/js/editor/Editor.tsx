@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import type { editor } from 'monaco-editor';
 import type { EditorProps as MonacoProps } from '@monaco-editor/react';
 
 import { MonacoEditor, type Monaco } from '../monaco';
@@ -148,7 +149,8 @@ async function loadDTS(specifier: string): Promise<Lib[]> {
       // this regex means: find a * then an @ (with 1+ space in between), then match everything up to a closing comment */
       // content = content.replace(/\* +@(.+?)\*\//gs, '*/');
 
-      let fileName = filePath.split('/').at(-1).replace('.d.ts', '');
+      let fileName: string[] | string = filePath.split('/');
+      fileName = fileName[fileName.length - 1].replace('.d.ts', '');
 
       // Import the index as the global namespace - but take care to convert all paths to absolute
       if (fileName === 'index' || fileName === 'Adaptor') {
@@ -222,12 +224,13 @@ export default function Editor({
   );
 
   const handleEditorDidMount = useCallback(
-    (editor: any, monaco: Monaco) => {
+    (editor: editor.IStandaloneCodeEditor, monaco: Monaco) => {
       setMonaco(monaco);
 
       editor.addCommand(
         monaco.KeyCode.Escape,
         () => {
+          if (!(document.activeElement instanceof HTMLElement)) return;
           document.activeElement.blur();
         },
         '!suggestWidgetVisible'

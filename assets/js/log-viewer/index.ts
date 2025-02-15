@@ -10,7 +10,7 @@ type LogViewer = PhoenixHook<{
 }>;
 
 export default {
-  mounted(this: LogViewer) {
+  mounted() {
     const viewerId = this.el.dataset.viewerEl;
     const loadingId = this.el.dataset.loadingEl;
 
@@ -30,9 +30,9 @@ export default {
 
     this.component = mount(this.viewerEl, this.store);
 
-    this.handleEvent(
+    this.handleEvent<{ logs: LogLine[] }>(
       `logs-${this.el.dataset.runId}`,
-      (event: { logs: LogLine[] }) => {
+      event => {
         if (this.loadingEl && this.viewerEl) {
           this.viewerEl.classList.remove('hidden');
           this.loadingEl.classList.add('hidden');
