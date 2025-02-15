@@ -6,23 +6,21 @@
     "target": "es2020",
     "allowJs": true,
     "resolveJsonModule": true,
-    "moduleDetection": "force",
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
 
+    /* If your code does not run in the DOM: */
+    "lib": ["es2020"],
     "module": "nodenext",
     "moduleResolution": "nodenext",
 
+    /* If NOT transpiling with TypeScript: */
     "noEmit": true,
 
-    "types": [],
-    "rootDir": "../",
+    "types": ["@total-typescript/ts-reset"],
+
+    "jsx": "react-jsx",
     "checkJs": true,
     "forceConsistentCasingInFileNames": true
-  },
-  "files": [],
-  "references": [
-    { "path": "./tsconfig.node.json" },
-    { "path": "./tsconfig.browser.json" }
-  ]
+  }
 }

@@ -1,0 +1,20 @@
+{
+  "extends": ["@tsconfig/strictest/tsconfig.json", "./tsconfig.base.json"],
+  "compilerOptions": {
+    "composite": true,
+
+    /* If your code runs in the DOM: */
+    "lib": ["es2020", "dom", "dom.iterable"],
+
+    "module": "esnext",
+    "moduleResolution": "bundler",
+
+    "jsx": "react-jsx",
+    "checkJs": true,
+    "forceConsistentCasingInFileNames": true,
+
+    "rootDir": "../"
+  },
+  "include": ["js/**/*", "vendor/**/*", "dev-server/**/*", "*.d.ts"],
+  "exclude": ["node_modules/**"]
+}

@@ -98,6 +98,7 @@ config :esbuild,
          fonts/fira-code.css
          --loader:.woff2=file
          --format=esm --splitting --bundle
+         --jsx=automatic
          --target=es2020
          --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
     cd: Path.expand("../assets", __DIR__),

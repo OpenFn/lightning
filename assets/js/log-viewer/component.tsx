@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useShallow } from 'zustand/react/shallow';
 import { editor as e } from 'monaco-editor';
-import { Monaco, MonacoEditor } from '../monaco';
+import { type Monaco, MonacoEditor } from '../monaco';
 import { createLogStore } from './store';
 
 export function mount(

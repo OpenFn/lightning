@@ -2,14 +2,14 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ReactFlow, {
   Controls,
   ControlButton,
-  NodeChange,
-  ReactFlowInstance,
+  type NodeChange,
+  type ReactFlowInstance,
   ReactFlowProvider,
   applyNodeChanges,
   getRectOfNodes,
-  Rect,
+  type Rect,
 } from 'reactflow';
-import { useStore, StoreApi } from 'zustand';
+import { useStore, type StoreApi } from 'zustand';
 import { shallow } from 'zustand/shallow';
 
 import layout from './layout';

@@ -1,4 +1,4 @@
-import { PhoenixHook } from './PhoenixHook';
+import type { PhoenixHook } from './PhoenixHook';
 
 const LogLineHighlight = {
   mounted() {

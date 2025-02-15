@@ -1,4 +1,3 @@
-import React from 'react';
 import { EDGE_COLOR_SELECTED } from '../styles';
 import { BezierEdge } from 'reactflow';
 

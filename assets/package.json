@@ -35,6 +35,9 @@
   },
   "devDependencies": {
     "@openfn/ws-worker": "^1.11.1",
+    "@tsconfig/node-lts": "^22.0.1",
+    "@tsconfig/recommended": "^1.0.8",
+    "@tsconfig/strictest": "^2.0.5",
     "@types/marked": "^4.0.8",
     "@types/react": "^18.0.15",
     "@types/react-dom": "^18.0.6",
