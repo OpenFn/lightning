@@ -19,6 +19,9 @@ const LogLineHighlight = {
       }
     });
   },
-} as PhoenixHook<{ highlightRows: () => void }, { highlightId: null | string }>;
+} as PhoenixHook<
+  { highlightRows: () => void },
+  { highlightId?: undefined | string }
+>;
 
 export default LogLineHighlight;
