@@ -51,6 +51,7 @@
     "tap-xunit": "^2.4.1",
     "ts-node": "^10.9.2",
     "tslib": "^2.8.1",
+    "type-fest": "^4.37.0",
     "typescript": "^5.8.2"
   },
   "type": "module"
