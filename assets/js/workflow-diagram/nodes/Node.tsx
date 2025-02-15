@@ -1,5 +1,5 @@
-import React, { memo } from 'react';
-import { Handle, NodeProps } from 'reactflow';
+import { memo } from 'react';
+import { Handle, type NodeProps } from 'reactflow';
 
 import Shape from '../components/Shape';
 import ErrorMessage from '../components/ErrorMessage';

@@ -1,5 +1,3 @@
-import React from 'react';
-
 const Empty = ({ adaptor }: { adaptor: string; error }) => (
   <div>
     <p className="block m-2">{`No metadata found for ${adaptor}`}</p>

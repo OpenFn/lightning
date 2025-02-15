@@ -1,5 +1,5 @@
-import tippy, { Instance as TippyInstance } from 'tippy.js';
-import { PhoenixHook } from './PhoenixHook';
+import tippy, { type Instance as TippyInstance } from 'tippy.js';
+import type { PhoenixHook } from './PhoenixHook';
 
 import LogLineHighlight from './LogLineHighlight';
 import ElapsedIndicator from './ElapsedIndicator';

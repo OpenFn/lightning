@@ -1,20 +1,34 @@
 {
   "compilerOptions": {
-    "target": "ES6",
-    "module": "NodeNext",
-    "moduleResolution": "Node16",
-    "rootDir": "../",
-    "lib": ["dom", "ES2023"],
-    "jsx": "react",
-    "strict": true,
+    /* Base Options: */
     "esModuleInterop": true,
-    "allowJs": true,
-    "checkJs": true,
-    "resolveJsonModule": true,
     "skipLibCheck": true,
+    "target": "es2020",
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "moduleDetection": "force",
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+
+    /* Strictness */
+    "strict": true,
+    // "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+
+    /* If NOT transpiling with TypeScript: */
+    "module": "esnext",
+    "moduleResolution": "bundler",
     "noEmit": true,
+
+    /* If your code runs in the DOM: */
+    "lib": ["es2020", "dom", "dom.iterable"],
+
+    "types": [],
+    "rootDir": "../",
+    "jsx": "react-jsx",
+    "checkJs": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["js/**/*"],
-  "exclude": ["node_modules"]
+  "include": ["js/**/*", "dev-server/**/*", "*.d.ts"],
+  "exclude": ["node_modules/**"]
 }
