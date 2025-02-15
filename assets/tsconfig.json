@@ -15,7 +15,7 @@
 
     "noEmit": true,
 
-    "types": [],
+    "types": ["@total-typescript/ts-reset"],
     "rootDir": "../",
     "checkJs": true,
     "forceConsistentCasingInFileNames": true
