@@ -1,4 +1,3 @@
-import React from 'react';
 import { Handle } from 'reactflow';
 import { LinkIcon } from '@heroicons/react/24/outline';
 

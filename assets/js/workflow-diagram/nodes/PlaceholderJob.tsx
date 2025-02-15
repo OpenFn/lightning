@@ -40,7 +40,7 @@ const dispatch = (
 };
 
 const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
-  const textRef = useRef<HTMLInputElement>();
+  const textRef = useRef<HTMLInputElement>(null);
 
   const [validationResult, setValidationResult] = useState<ValidationResult>({
     isValid: true,
@@ -52,7 +52,7 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
       handleCancel();
       return;
     }
-    if (evt.target.value.trim() === '') {
+    if (evt.currentTarget.value.trim() === '') {
       setValidationResult({
         isValid: false,
         message: 'Name cannot be empty.',

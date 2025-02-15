@@ -169,7 +169,10 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
 
     const handleBackgroundClick = useCallback(
       (event: React.MouseEvent) => {
-        if (event.target.classList?.contains('react-flow__pane')) {
+        if (
+          event.target instanceof HTMLElement &&
+          event.target.classList?.contains('react-flow__pane')
+        ) {
           cancelPlaceholder();
           updateSelection(null);
         }
@@ -185,7 +188,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
       if (flow && ref) {
         let isFirstCallback = true;
 
-        let cachedTargetBounds: Rect;
+        let cachedTargetBounds: Rect | null = null;
         let cacheTimeout: any;
 
         const throttledResize = throttle(() => {
