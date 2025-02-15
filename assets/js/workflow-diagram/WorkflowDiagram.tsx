@@ -28,6 +28,7 @@ import type { Flow, Positions } from './types';
 import { getVisibleRect, isPointInRect } from './util/viewport';
 
 type WorkflowDiagramProps = {
+  el?: HTMLElement | null;
   selection: string | null;
   onSelectionChange: (id: string | null) => void;
   store: StoreApi<WorkflowState>;
@@ -43,222 +44,220 @@ type ChartCache = {
 
 const LAYOUT_DURATION = 300;
 
-export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
-  (props, ref) => {
-    const { selection, onSelectionChange, store } = props;
+export default (props: WorkflowDiagramProps) => {
+  const { selection, onSelectionChange, store, el } = props;
 
-    const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
+  const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
 
-    const updateSelection = useCallback(
-      (id?: string | null) => {
-        id = id || null;
+  const updateSelection = useCallback(
+    (id?: string | null) => {
+      id = id || null;
 
-        chartCache.current.lastSelection = id;
-        onSelectionChange(id);
-      },
-      [onSelectionChange, selection]
-    );
+      chartCache.current.lastSelection = id;
+      onSelectionChange(id);
+    },
+    [onSelectionChange, selection]
+  );
 
-    const {
+  const {
+    placeholders,
+    add: addPlaceholder,
+    cancel: cancelPlaceholder,
+  } = usePlaceholders(el, store, updateSelection);
+
+  const workflow = useStore(
+    store!,
+    state => ({
+      jobs: state.jobs,
+      triggers: state.triggers,
+      edges: state.edges,
+      disabled: state.disabled,
+    }),
+    shallow
+  );
+
+  // Track positions and selection on a ref, as a passive cache, to prevent re-renders
+  const chartCache = useRef<ChartCache>({
+    positions: {},
+    // This will set the initial selection into the cache
+    lastSelection: selection,
+    lastLayout: undefined,
+  });
+
+  const [flow, setFlow] = useState<ReactFlowInstance>();
+
+  // Respond to changes pushed into the component from outside
+  // This usually means the workflow has changed or its the first load, so we don't want to animate
+  // Later, if responding to changes from other users live, we may want to animate
+  useEffect(() => {
+    const { positions } = chartCache.current;
+    const newModel = fromWorkflow(
+      workflow,
+      positions,
       placeholders,
-      add: addPlaceholder,
-      cancel: cancelPlaceholder,
-    } = usePlaceholders(ref, store, updateSelection);
-
-    const workflow = useStore(
-      store!,
-      state => ({
-        jobs: state.jobs,
-        triggers: state.triggers,
-        edges: state.edges,
-        disabled: state.disabled,
-      }),
-      shallow
+      // Re-render the model based on whatever was last selected
+      // This handles first load and new node safely
+      chartCache.current.lastSelection
     );
-
-    // Track positions and selection on a ref, as a passive cache, to prevent re-renders
-    const chartCache = useRef<ChartCache>({
-      positions: {},
-      // This will set the initial selection into the cache
-      lastSelection: selection,
-      lastLayout: undefined,
-    });
-
-    const [flow, setFlow] = useState<ReactFlowInstance>();
-
-    // Respond to changes pushed into the component from outside
-    // This usually means the workflow has changed or its the first load, so we don't want to animate
-    // Later, if responding to changes from other users live, we may want to animate
-    useEffect(() => {
-      const { positions } = chartCache.current;
-      const newModel = fromWorkflow(
-        workflow,
-        positions,
-        placeholders,
-        // Re-render the model based on whatever was last selected
-        // This handles first load and new node safely
-        chartCache.current.lastSelection
+    if (flow && newModel.nodes.length) {
+      const layoutId = shouldLayout(
+        newModel.edges,
+        chartCache.current.lastLayout
       );
-      if (flow && newModel.nodes.length) {
-        const layoutId = shouldLayout(
-          newModel.edges,
-          chartCache.current.lastLayout
-        );
 
-        if (layoutId) {
-          chartCache.current.lastLayout = layoutId;
-          const viewBounds = {
-            width: ref?.clientWidth ?? 0,
-            height: ref?.clientHeight ?? 0,
-          };
-          layout(newModel, setModel, flow, viewBounds, {
-            duration: props.layoutDuration ?? LAYOUT_DURATION,
-            forceFit: props.forceFit,
-          }).then(positions => {
-            // Note we don't update positions until the animation has finished
-            chartCache.current.positions = positions;
-          });
-        } else {
-          // If layout is id, ensure nodes have positions
-          // This is really only needed when there's a single trigger node
-          newModel.nodes.forEach(n => {
-            if (!n.position) {
-              n.position = { x: 0, y: 0 };
-            }
-          });
-          setModel(newModel);
-        }
-      } else {
-        chartCache.current.positions = {};
-      }
-    }, [workflow, flow, placeholders, ref]);
-
-    useEffect(() => {
-      const updatedModel = updateSelectionStyles(model, selection);
-      setModel(updatedModel);
-    }, [selection]);
-
-    const onNodesChange = useCallback(
-      (changes: NodeChange[]) => {
-        const newNodes = applyNodeChanges(changes, model.nodes);
-        setModel({ nodes: newNodes, edges: model.edges });
-      },
-      [setModel, model]
-    );
-
-    const handleNodeClick = useCallback(
-      (event: React.MouseEvent, node: Flow.Node) => {
-        if ((event.target as HTMLElement).closest('[name=add-node]')) {
-          addPlaceholder(node);
-        } else {
-          if (node.type != 'placeholder') cancelPlaceholder();
-
-          updateSelection(node.id);
-        }
-      },
-      [updateSelection]
-    );
-
-    const handleEdgeClick = useCallback(
-      (_event: React.MouseEvent, edge: Flow.Edge) => {
-        cancelPlaceholder();
-        updateSelection(edge.id);
-      },
-      [updateSelection]
-    );
-
-    const handleBackgroundClick = useCallback(
-      (event: React.MouseEvent) => {
-        if (
-          event.target instanceof HTMLElement &&
-          event.target.classList?.contains('react-flow__pane')
-        ) {
-          cancelPlaceholder();
-          updateSelection(null);
-        }
-      },
-      [updateSelection]
-    );
-
-    // Trigger a fit to bounds when the parent div changes size
-    // To keep the chart more stable, try and take a snapshot of the target bounds
-    // when a new resize starts
-    // This will be imperfect but stops the user completely losing context
-    useEffect(() => {
-      if (flow && ref) {
-        let isFirstCallback = true;
-
-        let cachedTargetBounds: Rect | null = null;
-        let cacheTimeout: any;
-
-        const throttledResize = throttle(() => {
-          clearTimeout(cacheTimeout);
-
-          // After 3 seconds, clear the timeout and take a new cache snapshot
-          cacheTimeout = setTimeout(() => {
-            cachedTargetBounds = null;
-          }, 3000);
-
-          if (!cachedTargetBounds) {
-            // Take a snapshot of what bounds to try and maintain throughout the resize
-            const viewBounds = {
-              width: ref?.clientWidth ?? 0,
-              height: ref?.clientHeight ?? 0,
-            };
-            const rect = getVisibleRect(flow.getViewport(), viewBounds, 1);
-            const visible = model.nodes.filter(n =>
-              isPointInRect(n.position, rect)
-            );
-            cachedTargetBounds = getRectOfNodes(visible);
-          }
-
-          // Run an animated fit
-          flow.fitBounds(cachedTargetBounds, {
-            duration: FIT_DURATION,
-            padding: FIT_PADDING,
-          });
-        }, FIT_DURATION * 2);
-
-        const resizeOb = new ResizeObserver(function (entries) {
-          if (!isFirstCallback) {
-            // Don't fit when the listener attaches (it callsback immediately)
-            throttledResize();
-          }
-          isFirstCallback = false;
-        });
-        resizeOb.observe(ref);
-
-        return () => {
-          throttledResize.cancel();
-          resizeOb.unobserve(ref);
+      if (layoutId) {
+        chartCache.current.lastLayout = layoutId;
+        const viewBounds = {
+          width: el?.clientWidth ?? 0,
+          height: el?.clientHeight ?? 0,
         };
+        layout(newModel, setModel, flow, viewBounds, {
+          duration: props.layoutDuration ?? LAYOUT_DURATION,
+          forceFit: props.forceFit,
+        }).then(positions => {
+          // Note we don't update positions until the animation has finished
+          chartCache.current.positions = positions;
+        });
+      } else {
+        // If layout is id, ensure nodes have positions
+        // This is really only needed when there's a single trigger node
+        newModel.nodes.forEach(n => {
+          if (!n.position) {
+            n.position = { x: 0, y: 0 };
+          }
+        });
+        setModel(newModel);
       }
-    }, [flow, ref, model]);
+    } else {
+      chartCache.current.positions = {};
+    }
+  }, [workflow, flow, placeholders, el]);
 
-    const connectHandlers = useConnect(model, setModel, store);
-    return (
-      <ReactFlowProvider>
-        <ReactFlow
-          proOptions={{ account: 'paid-pro', hideAttribution: true }}
-          nodes={model.nodes}
-          edges={model.edges}
-          onNodesChange={onNodesChange}
-          nodesDraggable={false}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          onClick={handleBackgroundClick}
-          onNodeClick={handleNodeClick}
-          onEdgeClick={handleEdgeClick}
-          onInit={setFlow}
-          deleteKeyCode={null}
-          fitView
-          fitViewOptions={{ padding: FIT_PADDING }}
-          minZoom={0.2}
-          {...connectHandlers}
-        >
-          <Controls showInteractive={false} position="bottom-left" />
-        </ReactFlow>
-      </ReactFlowProvider>
-    );
-  }
-);
+  useEffect(() => {
+    const updatedModel = updateSelectionStyles(model, selection);
+    setModel(updatedModel);
+  }, [selection]);
+
+  const onNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      const newNodes = applyNodeChanges(changes, model.nodes);
+      setModel({ nodes: newNodes, edges: model.edges });
+    },
+    [setModel, model]
+  );
+
+  const handleNodeClick = useCallback(
+    (event: React.MouseEvent, node: Flow.Node) => {
+      if ((event.target as HTMLElement).closest('[name=add-node]')) {
+        addPlaceholder(node);
+      } else {
+        if (node.type != 'placeholder') cancelPlaceholder();
+
+        updateSelection(node.id);
+      }
+    },
+    [updateSelection]
+  );
+
+  const handleEdgeClick = useCallback(
+    (_event: React.MouseEvent, edge: Flow.Edge) => {
+      cancelPlaceholder();
+      updateSelection(edge.id);
+    },
+    [updateSelection]
+  );
+
+  const handleBackgroundClick = useCallback(
+    (event: React.MouseEvent) => {
+      if (
+        event.target instanceof HTMLElement &&
+        event.target.classList?.contains('react-flow__pane')
+      ) {
+        cancelPlaceholder();
+        updateSelection(null);
+      }
+    },
+    [updateSelection]
+  );
+
+  // Trigger a fit to bounds when the parent div changes size
+  // To keep the chart more stable, try and take a snapshot of the target bounds
+  // when a new resize starts
+  // This will be imperfect but stops the user completely losing context
+  useEffect(() => {
+    if (flow && el) {
+      let isFirstCallback = true;
+
+      let cachedTargetBounds: Rect | null = null;
+      let cacheTimeout: any;
+
+      const throttledResize = throttle(() => {
+        clearTimeout(cacheTimeout);
+
+        // After 3 seconds, clear the timeout and take a new cache snapshot
+        cacheTimeout = setTimeout(() => {
+          cachedTargetBounds = null;
+        }, 3000);
+
+        if (!cachedTargetBounds) {
+          // Take a snapshot of what bounds to try and maintain throughout the resize
+          const viewBounds = {
+            width: el.clientWidth ?? 0,
+            height: el.clientHeight ?? 0,
+          };
+          const rect = getVisibleRect(flow.getViewport(), viewBounds, 1);
+          const visible = model.nodes.filter(n =>
+            isPointInRect(n.position, rect)
+          );
+          cachedTargetBounds = getRectOfNodes(visible);
+        }
+
+        // Run an animated fit
+        flow.fitBounds(cachedTargetBounds, {
+          duration: FIT_DURATION,
+          padding: FIT_PADDING,
+        });
+      }, FIT_DURATION * 2);
+
+      const resizeOb = new ResizeObserver(function (entries) {
+        if (!isFirstCallback) {
+          // Don't fit when the listener attaches (it callsback immediately)
+          throttledResize();
+        }
+        isFirstCallback = false;
+      });
+      resizeOb.observe(el);
+
+      return () => {
+        throttledResize.cancel();
+        resizeOb.unobserve(el);
+      };
+    }
+  }, [flow, model, el]);
+
+  const connectHandlers = useConnect(model, setModel, store);
+  return (
+    <ReactFlowProvider>
+      <ReactFlow
+        proOptions={{ account: 'paid-pro', hideAttribution: true }}
+        nodes={model.nodes}
+        edges={model.edges}
+        onNodesChange={onNodesChange}
+        nodesDraggable={false}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
+        onClick={handleBackgroundClick}
+        onNodeClick={handleNodeClick}
+        onEdgeClick={handleEdgeClick}
+        onInit={setFlow}
+        deleteKeyCode={null}
+        fitView
+        fitViewOptions={{ padding: FIT_PADDING }}
+        minZoom={0.2}
+        {...connectHandlers}
+      >
+        <Controls showInteractive={false} position="bottom-left" />
+      </ReactFlow>
+    </ReactFlowProvider>
+  );
+};
