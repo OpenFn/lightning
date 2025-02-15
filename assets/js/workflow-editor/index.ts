@@ -36,7 +36,7 @@ export type WorkflowEditorEntrypoint = PhoenixHook<
     setupObserver(): void;
     hasLoaded: Promise<URL>;
   },
-  { baseUrl: string | null }
+  { baseUrl?: string | undefined }
 >;
 
 const createNewWorkflow = () => {
@@ -71,7 +71,7 @@ const createNewWorkflow = () => {
 let workflowLoadParamsStart: number | null = null;
 
 export default {
-  mounted(this: WorkflowEditorEntrypoint) {
+  mounted() {
     let setHasLoaded: (href: URL) => void;
 
     this.hasLoaded = new Promise(resolve => {
