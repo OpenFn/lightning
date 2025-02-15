@@ -26,6 +26,7 @@ import shouldLayout from './util/should-layout';
 import type { WorkflowState } from '../workflow-editor/store';
 import type { Flow, Positions } from './types';
 import { getVisibleRect, isPointInRect } from './util/viewport';
+import useForkRef from './useForkRef';
 
 type WorkflowDiagramProps = {
   selection: string | null;
@@ -44,7 +45,10 @@ type ChartCache = {
 const LAYOUT_DURATION = 300;
 
 export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
-  (props, ref) => {
+  (props, forwardedRef) => {
+    const ref = useRef<HTMLElement>();
+    const setRefs = useForkRef(forwardedRef, ref);
+
     const { selection, onSelectionChange, store } = props;
 
     const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
@@ -63,7 +67,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
       placeholders,
       add: addPlaceholder,
       cancel: cancelPlaceholder,
-    } = usePlaceholders(ref, store, updateSelection);
+    } = usePlaceholders(ref.current, store, updateSelection);
 
     const workflow = useStore(
       store!,
@@ -108,8 +112,8 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
         if (layoutId) {
           chartCache.current.lastLayout = layoutId;
           const viewBounds = {
-            width: ref?.clientWidth ?? 0,
-            height: ref?.clientHeight ?? 0,
+            width: ref.current?.clientWidth ?? 0,
+            height: ref.current?.clientHeight ?? 0,
           };
           layout(newModel, setModel, flow, viewBounds, {
             duration: props.layoutDuration ?? LAYOUT_DURATION,
@@ -131,7 +135,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
       } else {
         chartCache.current.positions = {};
       }
-    }, [workflow, flow, placeholders, ref]);
+    }, [workflow, flow, placeholders]);
 
     useEffect(() => {
       const updatedModel = updateSelectionStyles(model, selection);
@@ -185,7 +189,8 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
     // when a new resize starts
     // This will be imperfect but stops the user completely losing context
     useEffect(() => {
-      if (flow && ref) {
+      const el = ref.current;
+      if (flow && el) {
         let isFirstCallback = true;
 
         let cachedTargetBounds: Rect | null = null;
@@ -202,8 +207,8 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
           if (!cachedTargetBounds) {
             // Take a snapshot of what bounds to try and maintain throughout the resize
             const viewBounds = {
-              width: ref?.clientWidth ?? 0,
-              height: ref?.clientHeight ?? 0,
+              width: ref.current?.clientWidth ?? 0,
+              height: ref.current?.clientHeight ?? 0,
             };
             const rect = getVisibleRect(flow.getViewport(), viewBounds, 1);
             const visible = model.nodes.filter(n =>
@@ -226,14 +231,14 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
           }
           isFirstCallback = false;
         });
-        resizeOb.observe(ref);
+        resizeOb.observe(el);
 
         return () => {
           throttledResize.cancel();
-          resizeOb.unobserve(ref);
+          resizeOb.unobserve(el);
         };
       }
-    }, [flow, ref, model]);
+    }, [flow, model]);
 
     const connectHandlers = useConnect(model, setModel, store);
     return (
