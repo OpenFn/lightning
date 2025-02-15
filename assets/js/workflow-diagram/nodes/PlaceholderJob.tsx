@@ -92,28 +92,22 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
   };
 
   // TODO what if a name hasn't been entered?
-  const handleCommit = useCallback(
-    (evt?: SyntheticEvent) => {
-      if (textRef.current) {
-        dispatch(textRef.current, 'commit-placeholder', {
-          id,
-          name: textRef.current.value,
-        });
-      }
-      evt?.stopPropagation();
-    },
-    [textRef]
-  );
+  const handleCommit = useCallback((evt?: SyntheticEvent) => {
+    if (textRef.current) {
+      dispatch(textRef.current, 'commit-placeholder', {
+        id,
+        name: textRef.current.value,
+      });
+    }
+    evt?.stopPropagation();
+  }, []);
 
-  const handleCancel = useCallback(
-    (evt?: SyntheticEvent) => {
-      if (textRef.current) {
-        dispatch(textRef.current, 'cancel-placeholder', { id });
-      }
-      evt?.stopPropagation();
-    },
-    [textRef]
-  );
+  const handleCancel = useCallback((evt?: SyntheticEvent) => {
+    if (textRef.current) {
+      dispatch(textRef.current, 'cancel-placeholder', { id });
+    }
+    evt?.stopPropagation();
+  }, []);
 
   return (
     <div
