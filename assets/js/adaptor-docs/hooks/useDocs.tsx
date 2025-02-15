@@ -9,7 +9,7 @@ import {
 const cache: Record<string, PackageDescription | null | false> = {};
 
 const useDocs = (specifier: string) => {
-  const [docs, setDocs] = useState<PackageDescription | false>(null);
+  const [docs, setDocs] = useState<PackageDescription | null | false>(null);
 
   useEffect(() => {
     if (cache.hasOwnProperty(specifier)) {

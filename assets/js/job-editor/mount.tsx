@@ -13,6 +13,12 @@ import type WorkflowEditorEntrypoint from '../workflow-editor';
 import type { WorkflowStore } from '../workflow-editor/store';
 import type JobEditor from './JobEditor';
 
+declare global {
+  interface Window {
+    jobEditor?: GetPhoenixHookInternalThis<JobEditorEntrypoint> | undefined;
+  }
+}
+
 type JobEditorEntrypoint = PhoenixHook<
   {
     componentRoot: ReturnType<typeof createRoot> | null;
@@ -47,7 +53,7 @@ type AttributeMutationRecord = MutationRecord & {
 let JobEditorComponent: typeof JobEditor | undefined;
 
 export default {
-  findWorkflowEditorStore() {
+  findWorkflowEditorStore(): Promise<WorkflowStore> {
     return pRetry(
       attempt => {
         console.debug('Looking up WorkflowEditorHook', { attempt });
@@ -201,7 +207,8 @@ function lookupWorkflowEditorHook(liveSocket: LiveSocket, el: HTMLElement) {
 }
 
 function checkAdaptorVersion(adaptor: string) {
-  if (adaptor.split('@').at(-1) === 'latest') {
+  let slugs = adaptor.split('@');
+  if (slugs[slugs.length - 1] === 'latest') {
     console.warn(
       "job-editor hook received an adaptor with @latest as it's version - to load docs a specific version must be provided"
     );
