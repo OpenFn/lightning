@@ -40,6 +40,7 @@
     "@tsconfig/node-lts": "^22.0.1",
     "@tsconfig/recommended": "^1.0.8",
     "@tsconfig/strictest": "^2.0.5",
+    "@types/jsonpath": "^0.2.4",
     "@types/marked": "^4.0.8",
     "@types/node": "^18.0.0",
     "@types/react": "^18.0.15",
