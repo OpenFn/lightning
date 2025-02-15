@@ -10,7 +10,7 @@ type TabbedContainer = PhoenixHook<{
 }>;
 
 const TabbedContainer = {
-  mounted(this: TabbedContainer) {
+  mounted() {
     this.defaultHash = this.el.dataset.defaultHash || null;
 
     // Trigger a URL hash change when the server sends a 'push-hash' event.
@@ -90,14 +90,8 @@ function getComponentHash(component: HTMLElement) {
   return localStorage.getItem(key);
 }
 
-const TabbedSelector: PhoenixHook<{
-  defaultHash: string | null;
-  _onHashChange(e: Event): void;
-  updateTabs(): void;
-  findTarget(hash: string | null): HTMLElement | null;
-  syncSelectedTab(): void;
-}> = {
-  mounted(this: typeof TabbedSelector) {
+const TabbedSelector = {
+  mounted() {
     this.defaultHash = this.el.dataset.defaultHash || null;
 
     // Trigger a URL hash change when the server sends a 'push-hash' event.
@@ -150,16 +144,16 @@ const TabbedSelector: PhoenixHook<{
     window.removeEventListener('hashchange', this._onHashChange);
     window.removeEventListener('phx:page-loading-stop', this._onHashChange);
   },
-} as typeof TabbedSelector;
-
-const TabbedPanels: PhoenixHook<{
+} as PhoenixHook<{
   defaultHash: string | null;
   _onHashChange(e: Event): void;
-  updatePanels(): void;
+  updateTabs(): void;
   findTarget(hash: string | null): HTMLElement | null;
-  syncSelectedPanel(): void;
-}> = {
-  mounted(this: typeof TabbedPanels) {
+  syncSelectedTab(): void;
+}>;
+
+const TabbedPanels = {
+  mounted() {
     this.defaultHash = this.el.dataset.defaultHash || null;
 
     // Trigger a URL hash change when the server sends a 'push-hash' event.
@@ -213,7 +207,13 @@ const TabbedPanels: PhoenixHook<{
     window.removeEventListener('hashchange', this._onHashChange);
     window.removeEventListener('phx:page-loading-stop', this._onHashChange);
   },
-} as typeof TabbedPanels;
+} as PhoenixHook<{
+  defaultHash: string | null;
+  _onHashChange(e: Event): void;
+  updatePanels(): void;
+  findTarget(hash: string | null): HTMLElement | null;
+  syncSelectedPanel(): void;
+}>;
 
 function syncHash(component: typeof TabbedSelector | typeof TabbedPanels) {
   const hash = getHash();
