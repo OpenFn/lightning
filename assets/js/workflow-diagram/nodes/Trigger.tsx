@@ -12,19 +12,20 @@ type TriggerMeta = {
   label: string;
   sublabel?: string;
   tooltip?: string;
-  primaryIcon?: typeof ClockIcon | typeof GlobeAltIcon;
-  secondaryIcon?: typeof lockClosedIcon;
+  primaryIcon?: React.ReactElement;
+  secondaryIcon?: React.ReactElement | null;
 };
 
 const TriggerNode = ({
   sourcePosition = Position.Bottom,
   ...props
+}: t.DistributedOmit<React.ComponentPropsWithoutRef<typeof Node>, 'data'> & {
+  data: Lightning.TriggerNode;
 }): JSX.Element => {
   // Do not remove yet, we might need this snippet of code when implementing issue #1121
   // const toolbar = () => props.data?.allowPlaceholder && <PlusButton />;
-  const { label, sublabel, tooltip, primaryIcon, secondaryIcon } = getTriggerMeta(
-    props.data as Lightning.TriggerNode
-  );
+  const { label, sublabel, tooltip, primaryIcon, secondaryIcon } =
+    getTriggerMeta(props.data);
   return (
     <Node
       {...props}

@@ -1,3 +1,5 @@
+/** @type import('./app.d.ts') */
+//
 // We import the CSS which is extracted to its own file by esbuild.
 // Remove this line if you add a your own CSS build pipeline (e.g postcss).
 
@@ -53,19 +55,31 @@ let liveSocket = new LiveSocket('/live', Socket, {
       // the given attribute to maintain various styles and properties
       // that have had their control handed-over to a Hook or JS implementation.
       if (from.attributes['lv-keep-style']) {
-        to.setAttribute('style', from.attributes.style.value);
+        let style = from.getAttribute('style');
+        if (style != null) {
+          to.setAttribute('style', style);
+        }
       }
 
       if (from.attributes['lv-keep-class']) {
-        to.setAttribute('class', from.attributes.class.value);
+        let className = from.getAttribute('class');
+        if (className != null) {
+          to.setAttribute('class', className);
+        }
       }
 
       if (from.attributes['lv-keep-hidden']) {
-        to.setAttribute('hidden', from.getAttribute('hidden'));
+        let hidden = from.getAttribute('hidden');
+        if (hidden != null) {
+          to.setAttribute('hidden', hidden);
+        }
       }
 
       if (from.attributes['lv-keep-type']) {
-        to.setAttribute('type', from.getAttribute('type'));
+        let type = from.getAttribute('type');
+        if (type != null) {
+          to.setAttribute('type', type);
+        }
       }
 
       if (from.attributes['lv-keep-aria']) {
@@ -75,6 +89,8 @@ let liveSocket = new LiveSocket('/live', Socket, {
           }
         });
       }
+
+      return true;
     },
   },
 });
@@ -83,7 +99,7 @@ let liveSocket = new LiveSocket('/live', Socket, {
 // Include a 120ms timeout to avoid small flashes when things load quickly.
 topbar.config({ barColors: { 0: '#29d' }, shadowColor: 'rgba(0, 0, 0, .3)' });
 
-let topBarScheduled = undefined;
+let topBarScheduled = 0;
 
 window.addEventListener('phx:page-loading-start', () => {
   if (!topBarScheduled) {
@@ -93,7 +109,7 @@ window.addEventListener('phx:page-loading-start', () => {
 
 window.addEventListener('phx:page-loading-stop', () => {
   clearTimeout(topBarScheduled);
-  topBarScheduled = undefined;
+  topBarScheduled = 0;
   topbar.hide();
 });
 
@@ -107,6 +123,6 @@ window.liveSocket = liveSocket;
 
 // Testing helper to simulate a reconnect
 window.triggerReconnect = function triggerReconnect(timeout = 5000) {
-  liveSocket.disconnect();
+  liveSocket.disconnect(() => {});
   setTimeout(liveSocket.connect.bind(liveSocket), timeout);
 };

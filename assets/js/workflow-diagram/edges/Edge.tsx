@@ -1,7 +1,7 @@
 import { BezierEdge, type EdgeProps, EdgeLabelRenderer } from 'reactflow';
 import { edgeLabelStyles } from '../styles';
 
-const CustomEdge: React.FC<EdgeProps> = props => {
+const CustomEdge: React.FC<EdgeProps<{ enabled?: boolean }>> = props => {
   const { sourceX, sourceY, targetX, targetY, selected } = props;
   const { label, ...stepEdgeProps } = props;
 
