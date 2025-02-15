@@ -18,7 +18,7 @@ export function mount(
   function render(selection?: string | null) {
     componentRoot.render(
       <WorkflowDiagram
-        ref={el}
+        el={el}
         selection={selection || null}
         store={workflowStore}
         onSelectionChange={onSelectionChange}
