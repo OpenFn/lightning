@@ -58,6 +58,7 @@ defmodule Lightning.Projects.Project do
     |> cast(attrs, [
       :id,
       :name,
+      :concurrency,
       :description,
       :scheduled_deletion,
       :requires_mfa,

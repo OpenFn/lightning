@@ -69,36 +69,40 @@ defmodule Lightning.Runs.Query do
   - `row_number`, the number of the row in the window, per workflow
   - `limit`, the maximum number of runs that can be claimed for the workflow
   """
-  @spec in_progress_window(:workflow | :project) :: Ecto.Queryable.t()
-  def in_progress_window(scope \\ :workflow) do
+  @spec in_progress_window() :: Ecto.Queryable.t()
+  def in_progress_window do
     from(r in Run,
       where: r.state in [:available, :claimed, :started],
       join: wo in assoc(r, :work_order),
       join: w in assoc(wo, :workflow),
       join: p in assoc(w, :project)
     )
-    |> then(fn query ->
-      if scope == :workflow do
-        query
-        |> windows([r, _wo, w],
-          row_number: [
-            partition_by: w.id,
-            order_by: [asc: r.inserted_at]
-          ]
-        )
-        |> select([_r, _wo, w], %{concurrency: w.concurrency})
-      else
-        query
-        |> windows([r, _wo, w],
-          row_number: [
-            partition_by: w.project_id,
-            order_by: [asc: r.inserted_at]
-          ]
-        )
-        |> select([_r, _wo, _w, p], %{concurrency: p.concurrency})
-      end
-    end)
-    |> select_merge([r, _wo, w], %{
+    |> windows([r, _wo, w, p],
+      row_number: [
+        partition_by:
+          fragment(
+            """
+              CASE
+                WHEN ? IS NULL AND ? IS NULL THEN ?
+                WHEN ? IS NULL THEN ?
+                WHEN ? < ? THEN ?
+                ELSE ?
+              END
+            """,
+            w.concurrency,
+            p.concurrency,
+            w.id,
+            w.concurrency,
+            p.id,
+            w.concurrency,
+            p.concurrency,
+            w.id,
+            p.id
+          ),
+        order_by: [asc: r.inserted_at]
+      ]
+    )
+    |> select([r, _wo, w, p], %{
       id: r.id,
       state: r.state,
       # need to check what performance implications are of using row_number
@@ -106,6 +110,7 @@ defmodule Lightning.Runs.Query do
       # calculated here?
       row_number: row_number() |> over(:row_number),
       project_id: w.project_id,
+      concurrency: coalesce(w.concurrency, p.concurrency),
       inserted_at: r.inserted_at
     })
   end
@@ -125,18 +130,18 @@ defmodule Lightning.Runs.Query do
   > eligible_for_claim() |> prepend_order_by([:priority])
   > ```
   """
-  @spec eligible_for_claim(:workflow | :project) :: Ecto.Queryable.t()
-  def eligible_for_claim(scope \\ :workflow) do
+  @spec eligible_for_claim() :: Ecto.Queryable.t()
+  def eligible_for_claim do
     Run
-    |> with_cte("in_progress_window", as: ^in_progress_window(scope))
+    |> with_cte("in_progress_window", as: ^in_progress_window())
     |> join(:inner, [r], ipw in fragment(~s("in_progress_window")),
       on: r.id == ipw.id,
       as: :in_progress_window
     )
     |> where(
-      [r, s],
-      s.state == "available" and
-      (is_nil(s.concurrency) or s.row_number <= s.concurrency)
+      [r, ipw],
+      r.state == :available and
+      (is_nil(ipw.concurrency) or ipw.row_number <= ipw.concurrency)
     )
     |> order_by([r], asc: r.inserted_at)
   end
