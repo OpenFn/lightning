@@ -19,6 +19,7 @@ defmodule Lightning.Projects.Project do
 
   schema "projects" do
     field :name, :string
+    field :concurrency, :integer
     field :description, :string
     field :scheduled_deletion, :utc_datetime
     field :requires_mfa, :boolean, default: false
