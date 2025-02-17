@@ -278,7 +278,7 @@ defmodule Lightning.Runs.QueryTest do
             insert_run(cyan, :available)
           end,
           insert_run(magenta, :available),
-          # insert_run(yellow, :available),
+          insert_run(yellow, :available),
           for _ <- 1..9 do
             insert_run(indigo, :available)
           end,
@@ -301,7 +301,7 @@ defmodule Lightning.Runs.QueryTest do
             %{project_id: cyan.project.id, row_number: 9, concurrency: nil},
             %{project_id: cyan.project.id, row_number: 10, concurrency: nil},
             %{project_id: magenta.project.id, row_number: 1, concurrency: 5},
-            # %{project_id: yellow.project.id, row_number: 1, concurrency: 4},
+            %{project_id: yellow.project.id, row_number: 1, concurrency: 4},
             %{project_id: indigo.project.id, row_number: 1, concurrency: 6},
             %{project_id: indigo.project.id, row_number: 2, concurrency: 6},
             %{project_id: indigo.project.id, row_number: 3, concurrency: 6},
