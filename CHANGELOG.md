@@ -22,9 +22,12 @@ and this project adheres to
 
 ### Changed
 
+- Bumped CI NodeJS and Postgres versions to 22.12.0 and 17.3 respectively
+  [#2938](https://github.com/OpenFn/lightning/pull/2938)
+
 ### Fixed
 
-## [v2.10.15-pre.0] - 2025-02-12
+## [v2.10.15] - 2025-02-14
 
 ### Changed
 
