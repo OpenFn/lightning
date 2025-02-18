@@ -75,6 +75,7 @@ defmodule Lightning.Projects.Project do
     |> validate_required([:name])
     |> validate_format(:name, ~r/^[a-z\-\d]+$/)
     |> validate_dataclip_retention_period()
+    |> validate_inclusion(:concurrency, [1, nil])
     |> validate_inclusion(:history_retention_period, data_retention_options())
     |> validate_inclusion(:dataclip_retention_period, data_retention_options())
   end

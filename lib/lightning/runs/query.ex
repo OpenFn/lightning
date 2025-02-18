@@ -67,7 +67,7 @@ defmodule Lightning.Runs.Query do
   - `id`, the id of the run
   - `state`, the state of the run
   - `row_number`, the number of the row in the window, per workflow
-  - `limit`, the maximum number of runs that can be claimed for the workflow
+  - `concurrency`, the maximum number of runs that can be claimed for the workflow
   """
   @spec in_progress_window() :: Ecto.Queryable.t()
   def in_progress_window do
@@ -82,19 +82,11 @@ defmodule Lightning.Runs.Query do
         partition_by:
           fragment(
             """
-              CASE
-                WHEN ? IS NULL AND ? IS NULL THEN ?
-                WHEN ? IS NULL THEN ?
-                WHEN ? < ? THEN ?
-                ELSE ?
-              END
+            CASE
+              WHEN ? IS NULL THEN ?
+              ELSE ?
+            END
             """,
-            w.concurrency,
-            p.concurrency,
-            w.id,
-            w.concurrency,
-            p.id,
-            w.concurrency,
             p.concurrency,
             w.id,
             p.id
@@ -110,25 +102,7 @@ defmodule Lightning.Runs.Query do
       # calculated here?
       row_number: row_number() |> over(:row_number),
       project_id: w.project_id,
-      concurrency: fragment(
-        """
-          CASE
-            WHEN ? IS NULL AND ? IS NULL THEN ?
-            WHEN ? IS NULL THEN ?
-            WHEN ? < ? THEN ?
-            ELSE ?
-          END
-        """,
-        p.concurrency,
-        w.concurrency,
-        nil,
-        p.concurrency,
-        w.concurrency,
-        w.concurrency,
-        p.concurrency,
-        w.concurrency,
-        p.concurrency
-      ),
+      concurrency: coalesce(p.concurrency, w.concurrency),
       inserted_at: r.inserted_at
     })
   end
