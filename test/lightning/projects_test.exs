@@ -237,7 +237,8 @@ defmodule Lightning.ProjectsTest do
     test "delete_project/1 deletes the project" do
       %{project: p1, workflow_1_job: w1_job, workflow_1: w1} =
         full_project_fixture(
-          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second),
+          scheduled_deletion:
+            Lightning.current_time() |> DateTime.truncate(:second),
           collections: [build(:collection, project: nil)]
         )
 
@@ -496,7 +497,8 @@ defmodule Lightning.ProjectsTest do
       {:ok, %{scheduled_deletion: scheduled_deletion}} =
         Projects.schedule_project_deletion(project)
 
-      assert Timex.diff(scheduled_deletion, DateTime.utc_now(), :seconds) <= 10
+      assert Timex.diff(scheduled_deletion, Lightning.current_time(), :seconds) <=
+               10
     end
 
     test "schedule_project_deletion/1 schedules a project for deletion to purge_deleted_after_days days from now" do
@@ -510,7 +512,7 @@ defmodule Lightning.ProjectsTest do
 
       assert project.scheduled_deletion == nil
 
-      now = DateTime.utc_now() |> DateTime.add(-1, :second)
+      now = Lightning.current_time() |> DateTime.add(-1, :second)
       {:ok, project} = Projects.schedule_project_deletion(project)
 
       project_triggers = Projects.project_triggers_query(project) |> Repo.all()
@@ -524,7 +526,8 @@ defmodule Lightning.ProjectsTest do
     test "cancel_scheduled_deletion/2" do
       project =
         project_fixture(
-          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+          scheduled_deletion:
+            Lightning.current_time() |> DateTime.truncate(:second)
         )
 
       assert project.scheduled_deletion
@@ -775,12 +778,14 @@ defmodule Lightning.ProjectsTest do
     test "removes all projects past deletion date when called with type 'purge_deleted'" do
       project_to_delete =
         project_fixture(
-          scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: -10)
+          scheduled_deletion:
+            Lightning.current_time() |> Timex.shift(seconds: -10)
         )
 
       not_to_delete =
         project_fixture(
-          scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: 10)
+          scheduled_deletion:
+            Lightning.current_time() |> Timex.shift(seconds: 10)
         )
 
       count_before = Repo.all(Project) |> Enum.count()
@@ -801,7 +806,7 @@ defmodule Lightning.ProjectsTest do
       %{triggers: [trigger], jobs: [job | _rest]} =
         workflow = insert(:simple_workflow, project: project)
 
-      now = DateTime.utc_now()
+      now = Lightning.current_time()
 
       snapshot_to_delete = insert(:snapshot, workflow: workflow, lock_version: 1)
       snapshot_to_keep = insert(:snapshot, workflow: workflow, lock_version: 2)
@@ -888,7 +893,7 @@ defmodule Lightning.ProjectsTest do
     test "deletes project dataclips not associated to any work order correctly" do
       project = insert(:project, history_retention_period: 7)
       workflow = insert(:simple_workflow, project: project)
-      now = DateTime.utc_now()
+      now = Lightning.current_time()
 
       # pre_retention means it exists earlier than the retention cut off time
       # post_retention means it exists later than the retention cut off time
@@ -982,7 +987,7 @@ defmodule Lightning.ProjectsTest do
       %{triggers: [trigger]} =
         workflow = insert(:simple_workflow, project: project)
 
-      now = DateTime.utc_now()
+      now = Lightning.current_time()
 
       # pre_retention means it exists earlier than the retention cut off time
       # post_retention means it exists later than the retention cut off time
@@ -1089,7 +1094,7 @@ defmodule Lightning.ProjectsTest do
       %{triggers: [trigger], jobs: [job | _rest]} =
         workflow = insert(:simple_workflow, project: project)
 
-      now = DateTime.utc_now()
+      now = Lightning.current_time()
 
       # pre_retention means it exists earlier than the retention cut off time
       # post_retention means it exists later than the retention cut off time
@@ -1217,7 +1222,7 @@ defmodule Lightning.ProjectsTest do
       %{triggers: [trigger], jobs: [job | _rest]} =
         workflow = insert(:simple_workflow, project: project)
 
-      now = DateTime.utc_now()
+      now = Lightning.current_time()
 
       # pre_retention means it exists earlier than the retention cut off time
       # post_retention means it exists later than the retention cut off time
