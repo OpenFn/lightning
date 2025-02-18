@@ -739,13 +739,10 @@ defmodule Lightning.Projects do
   """
   @spec delete_project_workorders(Project.t(), non_neg_integer()) :: :ok
   def delete_project_workorders(project, batch_size \\ 1000) do
-    workorders_query =
-      from wo in WorkOrder,
-        join: wf in assoc(wo, :workflow),
-        on: wf.project_id == ^project.id,
-        select: wo.id
-
-    delete_workorders_history(workorders_query, batch_size)
+    :ok =
+      project
+      |> project_workorders_query()
+      |> delete_workorders_history(batch_size)
   end
 
   @doc """
@@ -793,22 +790,22 @@ defmodule Lightning.Projects do
     {:error, :missing_dataclip_retention_period}
   end
 
-  defp delete_history_for(%Project{history_retention_period: period} = project)
-       when is_integer(period) do
-    workorders_query =
-      from wo in WorkOrder,
-        join: wf in assoc(wo, :workflow),
-        on: wf.project_id == ^project.id,
-        where: wo.last_activity < ago(^period, "day"),
-        select: wo.id
-
-    delete_workorders_history(workorders_query, 1000)
+  defp delete_history_for(
+         %Project{
+           history_retention_period: period_days
+         } = project
+       )
+       when is_integer(period_days) do
+    :ok =
+      project
+      |> project_workorders_query()
+      |> delete_workorders_history(1000, period_days)
 
     dataclips_query =
       from d in Dataclip,
         as: :dataclip,
         where: d.project_id == ^project.id,
-        where: d.inserted_at < ago(^period, "day"),
+        where: d.inserted_at < ago(^period_days, "day"),
         left_join: wo in WorkOrder,
         on: d.id == wo.dataclip_id,
         left_join: r in Run,
@@ -827,8 +824,21 @@ defmodule Lightning.Projects do
     {:error, :missing_history_retention_period}
   end
 
-  defp delete_workorders_history(workorders_query, batch_size) do
-    workorders_count = Repo.aggregate(workorders_query, :count)
+  defp delete_workorders_history(
+         project_workorders_query,
+         batch_size,
+         retention_period_days \\ nil
+       ) do
+    workorders_query =
+      if retention_period_days do
+        where(
+          project_workorders_query,
+          [wo],
+          wo.last_activity < ago(^retention_period_days, "day")
+        )
+      else
+        project_workorders_query
+      end
 
     workorders_delete_query =
       WorkOrder
@@ -847,6 +857,16 @@ defmodule Lightning.Projects do
         on: r.work_order_id == wtd.id
       )
 
+    workorders_count = Repo.aggregate(workorders_query, :count)
+
+    snapshot_ids_on_delete =
+      if retention_period_days do
+        workorders_query
+        |> distinct(true)
+        |> select([wo], wo.snapshot_id)
+        |> Repo.all()
+      end
+
     for _i <- 1..ceil(workorders_count / batch_size) do
       Repo.transaction(
         fn ->
@@ -857,6 +877,28 @@ defmodule Lightning.Projects do
         end,
         timeout: 50_000
       )
+    end
+
+    # If it's on a retention cleanup, it also deletes unused snapshots after the workorders deletion.
+    # Otherwise, it's a cleanup for the whole project when the snapshots are automatically deleted
+    # by the workflows deletion.
+    if retention_period_days do
+      snapshot_ids_in_use =
+        project_workorders_query
+        |> distinct(true)
+        |> select([wo], wo.snapshot_id)
+        |> Repo.all()
+
+      snapshots_to_delete =
+        snapshot_ids_on_delete
+        |> MapSet.new()
+        |> MapSet.difference(MapSet.new(snapshot_ids_in_use))
+        |> MapSet.to_list()
+
+      {_count, nil} =
+        Repo.delete_all(from(s in Snapshot, where: s.id in ^snapshots_to_delete),
+          returning: false
+        )
     end
 
     :ok

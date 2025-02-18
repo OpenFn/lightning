@@ -11,10 +11,17 @@ defmodule Lightning.ProjectsTest do
   alias Lightning.Auditing.Audit
   alias Lightning.Accounts.User
   alias Lightning.Invocation.Dataclip
+  alias Lightning.Invocation.LogLine
+  alias Lightning.Invocation.Step
   alias Lightning.Projects
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectOverviewRow
   alias Lightning.Projects.ProjectUser
+  alias Lightning.Repo
+  alias Lightning.Run
+  alias Lightning.Workflows.Snapshot
+  alias Lightning.WorkOrder
+
   alias Swoosh.Email
 
   require Phoenix.VerifiedRoutes
@@ -230,7 +237,8 @@ defmodule Lightning.ProjectsTest do
     test "delete_project/1 deletes the project" do
       %{project: p1, workflow_1_job: w1_job, workflow_1: w1} =
         full_project_fixture(
-          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second),
+          scheduled_deletion:
+            Lightning.current_time() |> DateTime.truncate(:second),
           collections: [build(:collection, project: nil)]
         )
 
@@ -489,7 +497,8 @@ defmodule Lightning.ProjectsTest do
       {:ok, %{scheduled_deletion: scheduled_deletion}} =
         Projects.schedule_project_deletion(project)
 
-      assert Timex.diff(scheduled_deletion, DateTime.utc_now(), :seconds) <= 10
+      assert Timex.diff(scheduled_deletion, Lightning.current_time(), :seconds) <=
+               10
     end
 
     test "schedule_project_deletion/1 schedules a project for deletion to purge_deleted_after_days days from now" do
@@ -503,7 +512,7 @@ defmodule Lightning.ProjectsTest do
 
       assert project.scheduled_deletion == nil
 
-      now = DateTime.utc_now() |> DateTime.add(-1, :second)
+      now = Lightning.current_time() |> DateTime.add(-1, :second)
       {:ok, project} = Projects.schedule_project_deletion(project)
 
       project_triggers = Projects.project_triggers_query(project) |> Repo.all()
@@ -517,7 +526,8 @@ defmodule Lightning.ProjectsTest do
     test "cancel_scheduled_deletion/2" do
       project =
         project_fixture(
-          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+          scheduled_deletion:
+            Lightning.current_time() |> DateTime.truncate(:second)
         )
 
       assert project.scheduled_deletion
@@ -768,12 +778,14 @@ defmodule Lightning.ProjectsTest do
     test "removes all projects past deletion date when called with type 'purge_deleted'" do
       project_to_delete =
         project_fixture(
-          scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: -10)
+          scheduled_deletion:
+            Lightning.current_time() |> Timex.shift(seconds: -10)
         )
 
       not_to_delete =
         project_fixture(
-          scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: 10)
+          scheduled_deletion:
+            Lightning.current_time() |> Timex.shift(seconds: 10)
         )
 
       count_before = Repo.all(Project) |> Enum.count()
@@ -794,23 +806,32 @@ defmodule Lightning.ProjectsTest do
       %{triggers: [trigger], jobs: [job | _rest]} =
         workflow = insert(:simple_workflow, project: project)
 
-      now = DateTime.utc_now()
+      now = Lightning.current_time()
 
-      workorder_to_delete =
-        insert(:workorder,
-          workflow: workflow,
-          last_activity: Timex.shift(now, days: -7),
-          trigger: trigger,
-          dataclip: build(:dataclip),
-          runs: [
-            build(:run,
-              starting_trigger: trigger,
-              dataclip: build(:dataclip),
-              log_lines: [build(:log_line)],
-              steps: [build(:step, job: job)]
-            )
-          ]
-        )
+      snapshot_to_delete = insert(:snapshot, workflow: workflow, lock_version: 1)
+      snapshot_to_keep = insert(:snapshot, workflow: workflow, lock_version: 2)
+
+      workorders_to_delete =
+        Enum.map(1..10, fn i ->
+          snapshot =
+            if rem(i, 2) == 0, do: snapshot_to_delete, else: snapshot_to_keep
+
+          insert(:workorder,
+            workflow: workflow,
+            last_activity: Timex.shift(now, days: -7),
+            trigger: trigger,
+            dataclip: build(:dataclip),
+            snapshot: snapshot,
+            runs: [
+              build(:run,
+                starting_trigger: trigger,
+                dataclip: build(:dataclip),
+                log_lines: [build(:log_line)],
+                steps: [build(:step, job: job)]
+              )
+            ]
+          )
+        end)
 
       workorder_to_remain =
         insert(:workorder,
@@ -818,6 +839,7 @@ defmodule Lightning.ProjectsTest do
           last_activity: Timex.shift(now, days: -6),
           trigger: trigger,
           dataclip: build(:dataclip),
+          snapshot: snapshot_to_keep,
           runs: [
             build(:run,
               starting_trigger: trigger,
@@ -832,17 +854,18 @@ defmodule Lightning.ProjectsTest do
                Projects.perform(%Oban.Job{args: %{"type" => "data_retention"}})
 
       # deleted history
-      refute Lightning.Repo.get(Lightning.WorkOrder, workorder_to_delete.id)
-      run_to_delete = hd(workorder_to_delete.runs)
-      refute Lightning.Repo.get(Lightning.Run, run_to_delete.id)
-      step_to_delete = hd(run_to_delete.steps)
-      refute Lightning.Repo.get(Lightning.Invocation.Step, step_to_delete.id)
-      log_line_to_delete = hd(run_to_delete.log_lines)
+      refute Repo.get(Snapshot, snapshot_to_delete.id)
 
-      refute Lightning.Repo.get_by(
-               Lightning.Invocation.LogLine,
-               id: log_line_to_delete.id
-             )
+      Enum.each(workorders_to_delete, fn workorder ->
+        refute Repo.get(WorkOrder, workorder.id)
+        run_to_delete = hd(workorder.runs)
+        refute Repo.get(Run, run_to_delete.id)
+        step_to_delete = hd(run_to_delete.steps)
+        refute Repo.get(Step, step_to_delete.id)
+        log_line_to_delete = hd(run_to_delete.log_lines)
+
+        refute Repo.get_by(LogLine, id: log_line_to_delete.id)
+      end)
 
       # remaining history
       assert Lightning.Repo.get(Lightning.WorkOrder, workorder_to_remain.id)
@@ -857,6 +880,10 @@ defmodule Lightning.ProjectsTest do
                id: log_line_to_remain.id
              )
 
+      # snapshot that is still in use
+      assert workorder_to_remain.snapshot_id == snapshot_to_keep.id
+      assert Repo.get(Snapshot, snapshot_to_keep.id)
+
       # extra checks. Jobs, Triggers, Workflows are not deleted
       assert Repo.get(Lightning.Workflows.Job, job.id)
       assert Repo.get(Lightning.Workflows.Trigger, trigger.id)
@@ -866,7 +893,7 @@ defmodule Lightning.ProjectsTest do
     test "deletes project dataclips not associated to any work order correctly" do
       project = insert(:project, history_retention_period: 7)
       workflow = insert(:simple_workflow, project: project)
-      now = DateTime.utc_now()
+      now = Lightning.current_time()
 
       # pre_retention means it exists earlier than the retention cut off time
       # post_retention means it exists later than the retention cut off time
@@ -960,7 +987,7 @@ defmodule Lightning.ProjectsTest do
       %{triggers: [trigger]} =
         workflow = insert(:simple_workflow, project: project)
 
-      now = DateTime.utc_now()
+      now = Lightning.current_time()
 
       # pre_retention means it exists earlier than the retention cut off time
       # post_retention means it exists later than the retention cut off time
@@ -1067,7 +1094,7 @@ defmodule Lightning.ProjectsTest do
       %{triggers: [trigger], jobs: [job | _rest]} =
         workflow = insert(:simple_workflow, project: project)
 
-      now = DateTime.utc_now()
+      now = Lightning.current_time()
 
       # pre_retention means it exists earlier than the retention cut off time
       # post_retention means it exists later than the retention cut off time
@@ -1195,7 +1222,7 @@ defmodule Lightning.ProjectsTest do
       %{triggers: [trigger], jobs: [job | _rest]} =
         workflow = insert(:simple_workflow, project: project)
 
-      now = DateTime.utc_now()
+      now = Lightning.current_time()
 
       # pre_retention means it exists earlier than the retention cut off time
       # post_retention means it exists later than the retention cut off time
