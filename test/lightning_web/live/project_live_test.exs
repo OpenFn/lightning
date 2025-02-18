@@ -20,6 +20,7 @@ defmodule LightningWeb.ProjectLiveTest do
   alias Lightning.Auditing.Audit
   alias Lightning.Name
   alias Lightning.Projects
+  alias Lightning.Projects.Project
   alias Lightning.Repo
 
   setup :stub_usage_limiter_ok
@@ -806,7 +807,7 @@ defmodule LightningWeb.ProjectLiveTest do
       assert view |> has_element?("button[disabled][type=submit]")
     end
 
-    test "project admin can edit project name and description with valid data",
+    test "project admin can edit project name, description and concurrency with valid data",
          %{
            conn: conn,
            user: user
@@ -827,12 +828,19 @@ defmodule LightningWeb.ProjectLiveTest do
 
       valid_project_attrs = %{
         name: "somename",
-        description: "some description"
+        description: "some description",
+        concurrency: "1"
       }
 
       assert view
              |> form("#project-settings-form", project: valid_project_attrs)
              |> render_submit() =~ "Project updated successfully"
+
+      assert %{
+               name: "somename",
+               description: "some description",
+               concurrency: 1
+             } = Repo.get!(Project, project.id)
     end
 
     test "only users with admin level on project can edit project details", %{

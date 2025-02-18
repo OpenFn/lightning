@@ -133,7 +133,7 @@ defmodule Lightning.Runs.Query do
     |> where(
       [r, ipw],
       r.state == :available and
-      (is_nil(ipw.concurrency) or ipw.row_number <= ipw.concurrency)
+        (is_nil(ipw.concurrency) or ipw.row_number <= ipw.concurrency)
     )
     |> order_by([r], asc: r.inserted_at)
   end
