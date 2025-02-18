@@ -72,7 +72,7 @@
         </div>
         <div class="bg-white p-4 rounded-md">
           <div>
-            <h6 class="font-medium text-black">Project Identity</h6>
+            <h6 class="font-medium text-black">Project Identity and Execution</h6>
             <small class="block my-1 text-xs text-gray-600">
               This metadata helps you identify the types of workflows managed in this project and the people that have access.
             </small>
@@ -111,6 +111,24 @@
                 />
                 <small class="mt-2 block text-xs text-gray-600">
                   A short description of a project [max 240 characters]
+                </small>
+              </div>
+            </div>
+            <div class="hidden sm:block" aria-hidden="true">
+              <div class="py-2"></div>
+            </div>
+            <div class="grid grid-cols gap-6">
+              <div class="md:col-span-2">
+                <.input
+                  type="checkbox"
+                  field={f[:concurrency]}
+                  disabled={!@can_edit_project}
+                  label="Disable Parallel Execution?"
+                  checked_value="1"
+                  unchecked_value={nil}
+                />
+                <small class="block my-1 text-xs text-gray-600">
+                  Additionally you can setup all runs from this project, accross multiple workflows, to not execute in parallel.  
                 </small>
               </div>
             </div>

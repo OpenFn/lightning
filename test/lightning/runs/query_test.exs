@@ -265,7 +265,7 @@ defmodule Lightning.Runs.QueryTest do
 
       # magenta project has only project level concurrecy
       Repo.update!(Projects.change_project(magenta.project, %{concurrency: 1}))
-      # indigo project has serialized project level concurrecy that overrides the workflow level one
+      # indigo project has project level concurrecy (serial execution). It overrides the workflow level one.
       Repo.update!(Projects.change_project(indigo.project, %{concurrency: 1}))
 
       runs_in_order =
