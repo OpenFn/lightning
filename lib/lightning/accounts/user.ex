@@ -191,13 +191,12 @@ defmodule Lightning.Accounts.User do
             if Enum.empty?(projects) do
               changeset
             else
-              formatted_projects =
-                projects |> Enum.map(& &1.name) |> Enum.join(", ")
+              projects_names = Enum.map_join(projects, ", ", & &1.name)
 
               add_error(
                 changeset,
                 :email,
-                "User doesn't have access to these projects: #{formatted_projects}"
+                "User doesn't have access to these projects: #{projects_names}"
               )
             end
         end

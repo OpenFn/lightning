@@ -9,6 +9,7 @@ defmodule LightningWeb.CredentialLiveTest do
   import Lightning.Factories
 
   import Ecto.Query
+  import Swoosh.TestAssertions
 
   alias Lightning.Accounts.User
   alias Lightning.Credentials
@@ -784,68 +785,68 @@ defmodule LightningWeb.CredentialLiveTest do
       assert flash == %{"info" => "Credential updated successfully"}
     end
 
-    test "blocks credential transfer to invalid owner; allows to valid owner", %{
-      conn: conn,
-      user: first_owner,
-      credential: credential_1
-    } do
-      user_2 = insert(:user)
-      user_3 = insert(:user)
+    # test "blocks credential transfer to invalid owner; allows to valid owner", %{
+    #   conn: conn,
+    #   user: first_owner,
+    #   credential: credential_1
+    # } do
+    #   user_2 = insert(:user)
+    #   user_3 = insert(:user)
 
-      project =
-        insert(:project,
-          name: "myproject",
-          project_users: [%{user_id: first_owner.id}, %{user_id: user_2.id}]
-        )
+    #   project =
+    #     insert(:project,
+    #       name: "myproject",
+    #       project_users: [%{user_id: first_owner.id}, %{user_id: user_2.id}]
+    #     )
 
-      credential =
-        insert(:credential,
-          user: first_owner,
-          name: "the one for giving away",
-          project_credentials: [
-            %{project: project, credential: nil}
-          ]
-        )
+    #   credential =
+    #     insert(:credential,
+    #       user: first_owner,
+    #       name: "the one for giving away",
+    #       project_credentials: [
+    #         %{project: project, credential: nil}
+    #       ]
+    #     )
 
-      {:ok, index_live, html} = live(conn, ~p"/credentials")
+    #   {:ok, index_live, html} = live(conn, ~p"/credentials")
 
-      # both credentials appear in the list
-      assert html =~ credential_1.name
-      assert html =~ credential.name
+    #   # both credentials appear in the list
+    #   assert html =~ credential_1.name
+    #   assert html =~ credential.name
 
-      assert html =~ first_owner.id
-      assert html =~ user_2.id
-      assert html =~ user_3.id
+    #   assert html =~ first_owner.id
+    #   assert html =~ user_2.id
+    #   assert html =~ user_3.id
 
-      assert index_live
-             |> form("#credential-form-#{credential.id}",
-               credential: Map.put(@update_attrs, :user_id, user_3.id)
-             )
-             |> render_change() =~ "Invalid owner"
+    #   assert index_live
+    #          |> form("#credential-form-#{credential.id}",
+    #            credential: Map.put(@update_attrs, :user_id, user_3.id)
+    #          )
+    #          |> render_change() =~ "Invalid owner"
 
-      #  Can't transfer to user who doesn't have access to right projects
-      assert index_live |> submit_disabled()
+    #   #  Can't transfer to user who doesn't have access to right projects
+    #   assert index_live |> submit_disabled()
 
-      {:ok, _index_live, html} =
-        index_live
-        |> form("#credential-form-#{credential.id}",
-          credential: %{
-            body: "{\"a\":\"new_secret\"}",
-            user_id: user_2.id
-          }
-        )
-        |> render_submit()
-        |> follow_redirect(
-          conn,
-          ~p"/credentials"
-        )
+    #   {:ok, _index_live, html} =
+    #     index_live
+    #     |> form("#credential-form-#{credential.id}",
+    #       credential: %{
+    #         body: "{\"a\":\"new_secret\"}",
+    #         user_id: user_2.id
+    #       }
+    #     )
+    #     |> render_submit()
+    #     |> follow_redirect(
+    #       conn,
+    #       ~p"/credentials"
+    #     )
 
-      # Once the transfer is made, the credential should not show up in the list
+    #   # Once the transfer is made, the credential should not show up in the list
 
-      assert html =~ "Credential updated successfully"
-      assert html =~ credential_1.name
-      refute html =~ "the one for giving away"
-    end
+    #   assert html =~ "Credential updated successfully"
+    #   assert html =~ credential_1.name
+    #   refute html =~ "the one for giving away"
+    # end
   end
 
   describe "Authorizing an oauth credential" do
@@ -2598,6 +2599,209 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert edit_live
              |> has_element?("p", "Failed renewing your access token.")
+    end
+  end
+
+  describe "transfer credential modal" do
+    setup %{conn: conn} do
+      owner = insert(:user)
+      project = build(:project) |> with_project_user(owner, :owner) |> insert()
+
+      credential =
+        insert(:credential,
+          user: owner,
+          project_credentials: [%{project_id: project.id}]
+        )
+
+      conn = log_in_user(conn, owner)
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      %{
+        owner: owner,
+        project: project,
+        credential: credential,
+        view: view
+      }
+    end
+
+    test "validates required email", %{view: view, credential: credential} do
+      view
+      |> element("#transfer-credential-#{credential.id}-modal-form")
+      |> render_change(%{"receiver" => %{"email" => ""}}) =~ "can't be blank"
+    end
+
+    test "validates email format", %{view: view, credential: credential} do
+      view
+      |> element("#transfer-credential-#{credential.id}-modal-form")
+      |> render_change(%{"receiver" => %{"email" => "invalid-email"}}) =~
+        "must have the @ sign and no spaces"
+    end
+
+    test "validates receiver exists", %{view: view, credential: credential} do
+      view
+      |> element("#transfer-credential-#{credential.id}-modal-form")
+      |> render_change(%{"receiver" => %{"email" => "nonexistent@example.com"}}) =~
+        "User does not exist"
+    end
+
+    test "validates cannot transfer to self", %{
+      view: view,
+      owner: owner,
+      credential: credential
+    } do
+      view
+      |> element("#transfer-credential-#{credential.id}-modal-form")
+      |> render_change(%{"receiver" => %{"email" => owner.email}}) =~
+        "You cannot transfer a credential to yourself"
+    end
+
+    test "validates receiver has project access", %{
+      view: view,
+      credential: credential
+    } do
+      receiver = insert(:user)
+
+      view
+      |> element("#transfer-credential-#{credential.id}-modal-form")
+      |> render_change(%{"receiver" => %{"email" => receiver.email}}) =~
+        "User doesn't have access to these projects"
+    end
+
+    test "initiates transfer for valid receiver", %{
+      conn: conn,
+      view: view,
+      project: project,
+      credential: credential
+    } do
+      receiver = insert(:user)
+      insert(:project_user, project: project, user: receiver)
+
+      assert {:ok, _view, html} =
+               view
+               |> element("#transfer-credential-#{credential.id}-modal-form")
+               |> render_submit(%{"receiver" => %{"email" => receiver.email}})
+               |> follow_redirect(conn, ~p"/credentials")
+
+      assert html =~
+               "Credential transfer initiated"
+
+      assert_email_sent(
+        to: Swoosh.Email.Recipient.format(credential.user),
+        subject: "Confirm your credential transfer"
+      )
+
+      assert Repo.get_by(Lightning.Accounts.UserToken,
+               context: "credential_transfer",
+               user_id: credential.user_id
+             )
+    end
+
+    test "closes modal", %{view: view, credential: credential} do
+      view
+      |> element("#transfer-credential-#{credential.id}-modal-cancel-button")
+      |> render_click()
+
+      assert_redirect(view, ~p"/credentials")
+    end
+
+    test "enables submit when form valid", %{
+      view: view,
+      project: project,
+      credential: credential
+    } do
+      receiver = insert(:user)
+      insert(:project_user, project: project, user: receiver)
+
+      view
+      |> element("#transfer-credential-#{credential.id}-modal-form")
+      |> render_change(%{
+        "receiver" => %{"email" => receiver.email}
+      })
+
+      refute view
+             |> submit_disabled(
+               "#transfer-credential-#{credential.id}-modal-submit-button"
+             )
+    end
+
+    test "invalid email format stops validation chain", %{
+      view: view,
+      credential: credential
+    } do
+      html =
+        view
+        |> element("#transfer-credential-#{credential.id}-modal-form_email")
+        |> render_blur(%{"value" => "not-an-email"})
+
+      assert html =~ "Email address not valid"
+      refute html =~ "user does not exist"
+      refute html =~ "You cannot transfer a credential to yourself"
+      refute html =~ "User doesn&#39;t have access to these projects"
+    end
+
+    test "self transfer validation with valid email format", %{
+      view: view,
+      owner: owner,
+      credential: credential
+    } do
+      html =
+        view
+        |> element("#transfer-credential-#{credential.id}-modal-form_email")
+        |> render_blur(%{"value" => owner.email})
+
+      refute html =~ "Email address not valid"
+      refute html =~ "user does not exist"
+      assert html =~ "You cannot transfer a credential to yourself"
+    end
+
+    test "non-existent user validation with valid email format", %{
+      view: view,
+      credential: credential
+    } do
+      html =
+        view
+        |> element("#transfer-credential-#{credential.id}-modal-form_email")
+        |> render_blur(%{"value" => "nonexistent@example.com"})
+
+      refute html =~ "Email address not valid"
+      assert html =~ "user does not exist"
+      refute html =~ "You cannot transfer a credential to yourself"
+    end
+
+    test "project access validation with valid user", %{
+      view: view,
+      credential: credential
+    } do
+      receiver = insert(:user)
+
+      html =
+        view
+        |> element("#transfer-credential-#{credential.id}-modal-form_email")
+        |> render_blur(%{"value" => receiver.email})
+
+      refute html =~ "Email address not valid"
+      refute html =~ "user does not exist"
+      refute html =~ "You cannot transfer a credential to yourself"
+      assert html =~ "User doesn&#39;t have access to these projects"
+    end
+
+    test "successful validation with valid user and project access", %{
+      view: view,
+      project: project,
+      credential: credential
+    } do
+      receiver = insert(:user)
+      insert(:project_user, project: project, user: receiver)
+
+      html =
+        view
+        |> element("#transfer-credential-#{credential.id}-modal-form_email")
+        |> render_blur(%{"value" => receiver.email})
+
+      refute html =~ "Email address not valid"
+      refute html =~ "user does not exist"
+      refute html =~ "You cannot transfer a credential to yourself"
+      refute html =~ "User doesn&#39;t have access to these projects"
     end
   end
 

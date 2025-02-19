@@ -28,7 +28,7 @@ defmodule Lightning.Credentials do
 
   require Logger
 
-  @type transfer_error :: :token_error | :not_found
+  @type transfer_error :: :token_error | :not_found | :not_owner
 
   @doc """
   Perform, when called with %{"type" => "purge_deleted"}
@@ -551,10 +551,10 @@ defmodule Lightning.Credentials do
 
   ## Examples
 
-      iex> invalid_projects_for_user(credential_id, user_id)
+      iex> diff_project_credentials_and_project_users(credential_id, user_id)
       []
 
-      iex> invalid_projects_for_user(credential_id, user_id)
+      iex> diff_project_credentials_and_project_users(credential_id, user_id)
       ["52ea8758-6ce5-43d7-912f-6a1e1f11dc55"]
   """
   def diff_project_credentials_and_project_users(
@@ -710,24 +710,24 @@ defmodule Lightning.Credentials do
     end
   end
 
-  @doc """
-  Revokes a pending credential transfer.
-  """
-  @spec revoke_transfer(String.t(), User.t()) ::
-          {:ok, Credential.t()} | {:error, transfer_error() | Ecto.Changeset.t()}
-  def revoke_transfer(credential_id, %User{} = owner) do
-    with credential when not is_nil(credential) <- get_credential(credential_id) do
-      from(t in UserToken,
-        where: t.user_id == ^owner.id,
-        where: t.context == "credential_transfer"
-      )
-      |> Repo.delete_all()
-      |> case do
-        {_count, _} -> {:ok, credential}
-        error -> error
-      end
-    end
-  end
+  # @doc """
+  # Revokes a pending credential transfer.
+  # """
+  # @spec revoke_transfer(String.t(), User.t()) ::
+  #         {:ok, Credential.t()} | {:error, transfer_error() | Ecto.Changeset.t()}
+  # def revoke_transfer(credential_id, %User{} = owner) do
+  #   with credential when not is_nil(credential) <- get_credential(credential_id) do
+  #     from(t in UserToken,
+  #       where: t.user_id == ^owner.id,
+  #       where: t.context == "credential_transfer"
+  #     )
+  #     |> Repo.delete_all()
+  #     |> case do
+  #       {_count, _} -> {:ok, credential}
+  #       error -> error
+  #     end
+  #   end
+  # end
 
   defp create_transfer_token(%{email: email} = owner) do
     {encoded_token, user_token} =
