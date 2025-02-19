@@ -53,7 +53,6 @@ defmodule Lightning.Credentials.Credential do
       message: "credential name has invalid format"
     )
     |> validate_oauth()
-    |> validate_transfer_ownership()
   end
 
   defp validate_oauth(changeset) do
@@ -76,39 +75,6 @@ defmodule Lightning.Credentials.Credential do
           :body,
           "Invalid OAuth token. Missing required fields: access_token, refresh_token, and either expires_in or expires_at."
         )
-      end
-    else
-      changeset
-    end
-  end
-
-  defp validate_transfer_ownership(changeset) do
-    if changed?(changeset, :user_id) && get_field(changeset, :id) do
-      user_id = get_field(changeset, :user_id)
-      credential_id = get_field(changeset, :id)
-
-      diff =
-        Lightning.Credentials.invalid_projects_for_user(
-          credential_id,
-          user_id
-        )
-
-      if Enum.any?(diff) do
-        owner = Lightning.Accounts.get_user!(user_id)
-
-        diff_projects_names =
-          diff
-          |> Enum.map(fn project_id ->
-            Lightning.Projects.get_project!(project_id).name
-          end)
-
-        add_error(
-          changeset,
-          :user_id,
-          "Invalid owner: #{owner.first_name} #{owner.last_name} doesn't have access to #{Enum.join(diff_projects_names, ", ")}. Please grant them access or select another owner."
-        )
-      else
-        changeset
       end
     else
       changeset
