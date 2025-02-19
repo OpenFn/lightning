@@ -1,6 +1,7 @@
 defmodule Lightning.CredentialsTest do
   use Lightning.DataCase, async: true
 
+  alias Lightning.Accounts.UserToken
   alias Lightning.Auditing
   alias Lightning.Credentials
   alias Lightning.Credentials.{Audit, Credential}
@@ -258,10 +259,10 @@ defmodule Lightning.CredentialsTest do
       assert %Ecto.Changeset{} = Credentials.change_credential(credential)
     end
 
-    test "invalid_projects_for_user/2 returns a list of invalid projects, given a credential and a user" do
-      %{id: user_id_1} = insert(:user)
-      %{id: user_id_2} = insert(:user)
-      %{id: user_id_3} = insert(:user)
+    test "diff_project_credentials_and_project_users/2 returns a list of invalid projects, given a credential and a user" do
+      %{id: user_id_1} = _user_1 = insert(:user)
+      %{id: user_id_2} = user_2 = insert(:user)
+      %{id: _user_id_3} = user_3 = insert(:user)
 
       %Lightning.Projects.Project{id: project_id} =
         insert(:project,
@@ -275,14 +276,14 @@ defmodule Lightning.CredentialsTest do
           project_credentials: [%{project_id: project_id}]
         )
 
-      assert Credentials.invalid_projects_for_user(
-               credential.id,
-               user_id_2
+      assert Credentials.diff_project_credentials_and_project_users(
+               credential,
+               user_2
              ) == []
 
-      assert Credentials.invalid_projects_for_user(
-               credential.id,
-               user_id_3
+      assert Credentials.diff_project_credentials_and_project_users(
+               credential,
+               user_3
              ) ==
                [project_id]
     end
@@ -965,5 +966,178 @@ defmodule Lightning.CredentialsTest do
       assert is_nil(Repo.get(Credential, scheduled_credential_2.id))
       assert Repo.get(Credential, credential.id)
     end
+  end
+
+  describe "diff_project_credentials_and_project_users/2" do
+    test "returns empty list when user has access to all projects" do
+      user = insert(:user)
+      project = build(:project) |> with_project_user(user, :owner) |> insert()
+
+      credential =
+        insert(:credential,
+          project_credentials: [%{project_id: project.id}]
+        )
+
+      assert [] ==
+               Credentials.diff_project_credentials_and_project_users(
+                 credential,
+                 user
+               )
+    end
+
+    test "returns project ids where user lacks access" do
+      user = insert(:user)
+      other_user = insert(:user)
+
+      project1 = build(:project) |> with_project_user(user, :owner) |> insert()
+      project2 = build(:project) |> with_project_user(user, :owner) |> insert()
+
+      credential =
+        insert(:credential,
+          project_credentials: [
+            %{project_id: project1.id},
+            %{project_id: project2.id}
+          ]
+        )
+
+      assert [] ==
+               Credentials.diff_project_credentials_and_project_users(
+                 credential,
+                 user
+               )
+
+      assert [project1.id, project2.id] --
+               Credentials.diff_project_credentials_and_project_users(
+                 credential,
+                 other_user
+               ) == []
+    end
+
+    test "handles credentials with no projects" do
+      user = insert(:user)
+      credential = insert(:credential)
+
+      assert [] ==
+               Credentials.diff_project_credentials_and_project_users(
+                 credential,
+                 user
+               )
+    end
+  end
+
+  describe "credential transfers" do
+    test "confirm_transfer/4 transfers credential ownership" do
+      owner = insert(:user)
+      receiver = insert(:user)
+      credential = insert(:credential, user_id: owner.id)
+
+      :ok = Credentials.initiate_credential_transfer(owner, receiver, credential)
+
+      assert_email_sent(fn email ->
+        [token] =
+          Regex.run(~r{/transfer/[^/]+/[^/]+/([^\s\n]+)}, email.text_body,
+            capture: :all_but_first
+          )
+
+        assert {:ok, updated_credential} =
+                 Credentials.confirm_transfer(
+                   credential.id,
+                   receiver.id,
+                   owner.id,
+                   token
+                 )
+
+        assert updated_credential.user_id == receiver.id
+
+        assert [audit] =
+                 Repo.all(
+                   from(a in Auditing.Audit, where: a.event == "transfered")
+                 )
+
+        assert audit.changes.before["user_id"] == credential.user_id
+        assert audit.changes.after["user_id"] == receiver.id
+
+        refute Repo.get_by(UserToken,
+                 context: "credential_transfer",
+                 user_id: owner.id
+               )
+
+        assert_email_sent(
+          to: Swoosh.Email.Recipient.format(receiver),
+          subject: "You have received a credential"
+        )
+      end)
+    end
+
+    test "confirm_transfer/4 fails with non-existent entities" do
+      owner = insert(:user)
+      receiver = insert(:user)
+      credential = insert(:credential)
+
+      :ok = Credentials.initiate_credential_transfer(owner, receiver, credential)
+
+      assert_email_sent(fn email ->
+        [token] =
+          Regex.run(~r{/transfer/[^/]+/[^/]+/([^\s\n]+)}, email.text_body,
+            capture: :all_but_first
+          )
+
+        assert {:error, :not_found} ==
+                 Credentials.confirm_transfer(
+                   Ecto.UUID.generate(),
+                   receiver.id,
+                   owner.id,
+                   token
+                 )
+
+        assert {:error, :not_found} ==
+                 Credentials.confirm_transfer(
+                   credential.id,
+                   Ecto.UUID.generate(),
+                   owner.id,
+                   token
+                 )
+      end)
+    end
+
+    test "confirm_transfer/4 fails with invalid token" do
+      owner = insert(:user)
+      receiver = insert(:user)
+      credential = insert(:credential)
+
+      assert {:error, :token_error} ==
+               Credentials.confirm_transfer(
+                 credential.id,
+                 receiver.id,
+                 owner.id,
+                 "invalid_token"
+               )
+
+      refreshed_credential = Repo.get!(Credential, credential.id)
+      assert refreshed_credential.user_id == credential.user_id
+    end
+
+    # test "revoke_transfer/2 removes transfer token" do
+    #   owner = insert(:user)
+    #   receiver = insert(:user)
+    #   credential = insert(:credential)
+
+    #   :ok = Credentials.initiate_credential_transfer(owner, receiver, credential)
+
+    #   assert {:ok, _credential} =
+    #     Credentials.revoke_transfer(credential.id, owner)
+
+    #   refute Repo.get_by(UserToken,
+    #     context: "credential_transfer",
+    #     user_id: owner.id
+    #   )
+    # end
+
+    # test "revoke_transfer/2 handles non-existent credential" do
+    #   owner = insert(:user)
+
+    #   assert {:error, :not_found} =
+    #            Credentials.revoke_transfer(Ecto.UUID.generate(), owner)
+    # end
   end
 end

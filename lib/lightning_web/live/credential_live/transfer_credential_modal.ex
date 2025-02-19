@@ -4,9 +4,6 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
   """
   use LightningWeb, :live_component
 
-  alias Lightning.Accounts
-  alias Lightning.Credentials
-
   import Lightning.Accounts.User,
     only: [
       validate_email_format: 1,
@@ -14,6 +11,9 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
       validate_project_access: 2,
       validate_not_same_user: 4
     ]
+
+  alias Lightning.Accounts
+  alias Lightning.Credentials
 
   @impl true
   def update(assigns, socket) do
@@ -158,7 +158,7 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
     ~H"""
     <.form
       :let={f}
-      id={"#{@id}_form"}
+      id={"#{@id}-form"}
       as={:receiver}
       for={@changeset}
       phx-target={@myself}
@@ -166,7 +166,7 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
       phx-submit="transfer-credential"
     >
       <.form_fields f={f} myself={@myself} />
-      <.form_footer myself={@myself} changeset={@changeset} />
+      <.form_footer id={@id} myself={@myself} changeset={@changeset} />
     </.form>
     """
   end
@@ -196,7 +196,7 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
     <.modal_footer class="mx-6 mt-6">
       <div class="flex flex-row-reverse gap-4">
         <.button
-          id="transfer-credential-submit-button"
+          id={"#{@id}-submit-button"}
           type="submit"
           phx-disable-with="Transferring..."
           disabled={!@changeset.valid?}
@@ -204,6 +204,7 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
           Transfer
         </.button>
         <button
+          id={"#{@id}-cancel-button"}
           type="button"
           phx-target={@myself}
           phx-click="close-modal"
