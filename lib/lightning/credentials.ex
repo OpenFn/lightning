@@ -11,8 +11,10 @@ defmodule Lightning.Credentials do
   import Lightning.Helpers, only: [coerce_json_field: 2]
 
   alias Ecto.Multi
+  alias Lightning.Accounts
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserNotifier
+  alias Lightning.Accounts.UserToken
   alias Lightning.AuthProviders.Common
   alias Lightning.AuthProviders.OauthHTTPClient
   alias Lightning.Credentials
@@ -26,12 +28,13 @@ defmodule Lightning.Credentials do
 
   require Logger
 
+  @type transfer_error :: :token_error | :not_found
+
   @doc """
   Perform, when called with %{"type" => "purge_deleted"}
   will find credentials that are ready for permanent deletion, set their bodies
   to null, and try to purge them.
   """
-
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"type" => "purge_deleted"}}) do
     credentials_to_update =
@@ -113,6 +116,8 @@ defmodule Lightning.Credentials do
 
   """
   def get_credential!(id), do: Repo.get!(Credential, id)
+
+  def get_credential(id), do: Repo.get(Credential, id)
 
   def get_credential_by_project_credential(project_credential_id) do
     query =
@@ -546,13 +551,18 @@ defmodule Lightning.Credentials do
 
   ## Examples
 
-      iex> can_credential_be_shared_to_user(credential_id, user_id)
+      iex> invalid_projects_for_user(credential_id, user_id)
       []
 
-      iex> can_credential_be_shared_to_user(credential_id, user_id)
+      iex> invalid_projects_for_user(credential_id, user_id)
       ["52ea8758-6ce5-43d7-912f-6a1e1f11dc55"]
   """
-  def invalid_projects_for_user(credential_id, user_id) do
+  def diff_project_credentials_and_project_users(
+        %Credential{id: credential_id},
+        %User{
+          id: user_id
+        }
+      ) do
     project_credentials =
       from(pc in Lightning.Projects.ProjectCredential,
         where: pc.credential_id == ^credential_id,
@@ -629,6 +639,124 @@ defmodule Lightning.Credentials do
     case :ets.lookup(:adapter_lookup, schema) do
       [{^schema, adapter}] -> adapter
       [] -> nil
+    end
+  end
+
+  @doc """
+  Initiates a credential transfer from owner to receiver.
+  """
+  @spec initiate_credential_transfer(User.t(), User.t(), Credential.t()) ::
+          :ok | {:error, transfer_error() | Ecto.Changeset.t()}
+  def initiate_credential_transfer(
+        %User{} = owner,
+        %User{} = receiver,
+        %Credential{} = credential
+      ) do
+    with {:ok, encoded_token} <- create_transfer_token(owner) do
+      UserNotifier.deliver_credential_transfer_confirmation_instructions(
+        owner,
+        receiver,
+        credential,
+        encoded_token
+      )
+
+      :ok
+    end
+  end
+
+  @doc """
+  Confirms and executes a credential transfer.
+  Returns {:ok, credential} on success or {:error, reason} on failure.
+  """
+  @spec confirm_transfer(String.t(), String.t(), String.t(), String.t()) ::
+          {:ok, Credential.t()} | {:error, transfer_error() | Ecto.Changeset.t()}
+  def confirm_transfer(credential_id, receiver_id, owner_id, token) do
+    with {:ok, owner} <- verify_transfer_token(token, owner_id),
+         credential when not is_nil(credential) <- get_credential(credential_id),
+         receiver when not is_nil(receiver) <- Accounts.get_user(receiver_id) do
+      Multi.new()
+      |> Multi.update(:credential, fn _changes ->
+        change_credential(credential, %{"user_id" => receiver.id})
+      end)
+      |> Multi.insert(:audit, fn %{credential: updated_credential} ->
+        Audit.user_initiated_event("transfered", credential, %{
+          before: %{user_id: credential.user_id},
+          after: %{user_id: updated_credential.user_id}
+        })
+      end)
+      |> Multi.delete_all(:tokens, fn _changes ->
+        from(t in UserToken,
+          where: t.user_id == ^owner.id,
+          where: t.context == "credential_transfer"
+        )
+      end)
+      |> Repo.transaction()
+      |> case do
+        {:ok, %{credential: credential} = _result} ->
+          UserNotifier.deliver_credential_transfer_notification(
+            receiver,
+            owner,
+            credential
+          )
+
+          {:ok, credential}
+
+        {:error, _failed_operation, error, _changes} ->
+          {:error, error}
+      end
+    else
+      nil -> {:error, :not_found}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Revokes a pending credential transfer.
+  """
+  @spec revoke_transfer(String.t(), User.t()) ::
+          {:ok, Credential.t()} | {:error, transfer_error() | Ecto.Changeset.t()}
+  def revoke_transfer(credential_id, %User{} = owner) do
+    with credential when not is_nil(credential) <- get_credential(credential_id) do
+      from(t in UserToken,
+        where: t.user_id == ^owner.id,
+        where: t.context == "credential_transfer"
+      )
+      |> Repo.delete_all()
+      |> case do
+        {_count, _} -> {:ok, credential}
+        error -> error
+      end
+    end
+  end
+
+  defp create_transfer_token(%{email: email} = owner) do
+    {encoded_token, user_token} =
+      UserToken.build_email_token(owner, "credential_transfer", email)
+
+    with {:ok, _token} <- Repo.insert(user_token) do
+      {:ok, encoded_token}
+    end
+  end
+
+  defp verify_transfer_token(token, owner_id) do
+    case UserToken.verify_email_token_query(
+           token,
+           "credential_transfer"
+         ) do
+      {:ok, query} ->
+        case Repo.one(query) do
+          nil ->
+            {:error, :token_error}
+
+          owner when owner.id == owner_id ->
+            {:ok, owner}
+
+          _other ->
+            {:error, :not_owner}
+        end
+
+      _error ->
+        {:error, :token_error}
     end
   end
 end
