@@ -29,7 +29,9 @@
     "rc-resize-observer": "^1.4.0",
     "react": "^18.1.0",
     "react-dom": "^18.1.0",
+    "react-error-boundary": "^5.0.0",
     "reactflow": "^11.7.0",
+    "tiny-invariant": "^1.3.3",
     "tippy.js": "^6.3.7",
     "zustand": "^4.3.7"
   },

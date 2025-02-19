@@ -37,6 +37,8 @@ export {
   CloseNodePanelViaEscape,
 };
 
+export { ReactComponent } from './ReactComponent';
+
 export const TabIndent = {
   mounted() {
     this.el.addEventListener('keydown', e => {
