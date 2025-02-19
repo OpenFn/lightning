@@ -110,7 +110,7 @@ defmodule Lightning.Runs.Query do
   @doc """
   Query to return runs that are eligible for claiming.
 
-  Uses `in_progress_window/1` and filters for runs that are either in the
+  Uses `in_progress_window/0` and filters for runs that are either in the
   available state and have not reached the concurrency limit for their workflow.
 
   > ### Note {: .info}
