@@ -45,7 +45,7 @@ defmodule Lightning.Repo.Migrations.CatchTsVectorSizeException do
     LANGUAGE plpgsql
     AS $function$
       begin
-        UPDATE log_lines SET search_vector = jsonb_to_tsvector('english_nostop', body, '"all"') WHERE id = NEW.id;
+        UPDATE dataclips SET search_vector = jsonb_to_tsvector('english_nostop', body, '"all"') WHERE id = NEW.id;
         RETURN NEW;
       end
     $function$ ;
