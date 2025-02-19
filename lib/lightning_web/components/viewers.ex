@@ -19,8 +19,6 @@ defmodule LightningWeb.Components.Viewers do
 
   require Lightning.Run
 
-  @all_log_levels ["success", "always", "info", "warn", "error", "debug"]
-
   @doc """
   Renders out a log line stream
 
@@ -72,8 +70,8 @@ defmodule LightningWeb.Components.Viewers do
     <% else %>
       <div class="relative flex grow">
         <.log_level_filter
-          :if={dbg(@current_user)}
-          id={"#{@id}-level-filter"}
+          :if={@current_user}
+          id={"#{@id}-filter"}
           levels={@selected_log_levels}
         />
 
@@ -117,7 +115,9 @@ defmodule LightningWeb.Components.Viewers do
   end
 
   defp all_log_levels do
-    @all_log_levels
+    Lightning.Invocation.LogLine
+    |> Ecto.Enum.values(:level)
+    |> Enum.map(&to_string/1)
   end
 
   attr :id, :string, required: true
@@ -150,6 +150,7 @@ defmodule LightningWeb.Components.Viewers do
         </:title>
         <.form
           :let={f}
+          id={"#{@id}-form"}
           for={to_form(%{}, as: :log_filter)}
           phx-change="save-log-filter"
         >

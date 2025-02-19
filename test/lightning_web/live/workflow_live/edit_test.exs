@@ -3762,10 +3762,63 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           ~p"/projects/#{project.id}/w/#{workflow.id}?#{%{a: run.id, m: "expand", s: job_1.id}}"
         )
 
-      run_viewer = find_live_child(view, "run-viewer-#{run.id}")
+      run_view = find_live_child(view, "run-viewer-#{run.id}")
 
-      assert render_async(run_viewer) =~ "Configure log levels"
+      render_async(run_view)
+      assert render(run_view) =~ "Configure log levels"
+
+      # when the user has not set their preference, we assume they want all the levels
+      assert user.preferences["log_levels"] |> is_nil()
+      log_viewer = run_view |> element("#run-log-#{run.id}")
+
+      all_log_levels =
+        Lightning.Invocation.LogLine
+        |> Ecto.Enum.values(:level)
+        |> Enum.map(&to_string/1)
+        |> Enum.sort()
+
+      # all log levels are set in the viewer element
+      assert log_viewer_selected_filters(log_viewer) == all_log_levels
+
+      # try unchecking one of the levels
+      run_view
+      |> form("#run-log-#{run.id}-filter-form")
+      |> render_change(log_filter: %{debug: false})
+
+      # all except debug are set in the viewer
+      expected_levels =
+        Enum.reject(all_log_levels, fn level -> level == "debug" end)
+
+      assert log_viewer_selected_filters(log_viewer) == expected_levels
+
+      # the preference is saved with expected levels
+      updated_user = Repo.reload(user)
+      assert Enum.sort(updated_user.preferences["log_levels"]) == expected_levels
+
+      # let us uncheck all
+      run_view
+      |> form("#run-log-#{run.id}-filter-form")
+      |> render_change(
+        log_filter: Map.new(all_log_levels, fn level -> {level, false} end)
+      )
+
+      # the preference is saved with no levels
+      updated_user = Repo.reload(user)
+      assert updated_user.preferences["log_levels"] == []
+
+      # all log levels are set in the viewer element
+      assert log_viewer_selected_filters(log_viewer) == all_log_levels
     end
+  end
+
+  defp log_viewer_selected_filters(log_viewer) do
+    log_viewer
+    |> render()
+    |> Floki.parse_fragment!()
+    |> Floki.attribute("data-log-levels")
+    |> hd()
+    |> String.split(",")
+    |> Enum.sort()
   end
 
   defp access_views(
