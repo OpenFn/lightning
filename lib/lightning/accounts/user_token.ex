@@ -190,6 +190,9 @@ defmodule Lightning.Accounts.UserToken do
   defp days_for_context("confirm"), do: @confirm_validity_in_days
   defp days_for_context("reset_password"), do: @reset_password_validity_in_days
 
+  defp days_for_context("credential_transfer"),
+    do: Lightning.Config.credential_transfer_token_validity_in_days()
+
   @doc """
   Checks if the token is valid and returns its underlying lookup query.
 
