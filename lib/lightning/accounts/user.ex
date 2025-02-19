@@ -164,7 +164,64 @@ defmodule Lightning.Accounts.User do
     |> put_change(:role, :superuser)
   end
 
-  def validate_email(changeset) do
+  @doc """
+  Validates that a user has access to all projects associated with a credential.
+  Returns a changeset with any project access errors.
+  """
+  def validate_project_access(changeset, credential) do
+    case get_field(changeset, :email) do
+      nil ->
+        changeset
+
+      email ->
+        case Lightning.Repo.exists?(User |> where(email: ^email)) do
+          false ->
+            changeset
+
+          true ->
+            user = Lightning.Accounts.get_user_by_email(email)
+
+            projects =
+              credential
+              |> Lightning.Credentials.diff_project_credentials_and_project_users(
+                user
+              )
+              |> Lightning.Projects.get_projects_by_ids()
+
+            if Enum.empty?(projects) do
+              changeset
+            else
+              formatted_projects =
+                projects |> Enum.map(& &1.name) |> Enum.join(", ")
+
+              add_error(
+                changeset,
+                :email,
+                "User doesn't have access to these projects: #{formatted_projects}"
+              )
+            end
+        end
+    end
+  end
+
+  def validate_not_same_user(changeset, field, current_user, opts \\ []) do
+    message = opts[:message] || "Cannot be the same as current user"
+    value = get_field(changeset, field)
+    current_value = Map.get(current_user, field)
+
+    cond do
+      is_nil(value) ->
+        changeset
+
+      value == current_value ->
+        add_error(changeset, field, message)
+
+      true ->
+        changeset
+    end
+  end
+
+  def validate_email_format(changeset) do
     changeset
     |> validate_required(:email, message: "can't be blank")
     |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/,
@@ -172,6 +229,10 @@ defmodule Lightning.Accounts.User do
     )
     |> validate_length(:email, max: 160)
     |> update_change(:email, &String.downcase/1)
+  end
+
+  def validate_email_exists(changeset) do
+    changeset
     |> validate_change(:email, fn :email, email ->
       if Lightning.Repo.exists?(User |> where(email: ^email)) do
         [email: "has already been taken"]
@@ -179,6 +240,23 @@ defmodule Lightning.Accounts.User do
         []
       end
     end)
+  end
+
+  def validate_email_not_exists(changeset) do
+    changeset
+    |> validate_change(:email, fn :email, email ->
+      if Lightning.Repo.exists?(User |> where(email: ^email)) do
+        []
+      else
+        [email: "user does not exist"]
+      end
+    end)
+  end
+
+  def validate_email(changeset) do
+    changeset
+    |> validate_email_format()
+    |> validate_email_exists()
   end
 
   defp validate_password(changeset, opts) do
