@@ -3711,6 +3711,63 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     end
   end
 
+  describe "run viewer" do
+    test "user can toggle their preferred log levels", %{
+      conn: conn,
+      project: project,
+      user: user
+    } do
+      %{triggers: [trigger], jobs: [job_1 | _rest]} =
+        workflow = insert(:simple_workflow, project: project) |> with_snapshot()
+
+      workflow = Lightning.Repo.reload(workflow)
+
+      snapshot = Lightning.Workflows.Snapshot.get_current_for(workflow)
+
+      dataclip = build(:http_request_dataclip, project: project)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          snapshot: snapshot,
+          dataclip: dataclip
+        )
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          state: "failed",
+          error_type: "CompileError",
+          dataclip: dataclip,
+          steps: [
+            build(:step,
+              job: job_1,
+              snapshot: snapshot,
+              input_dataclip: dataclip,
+              exit_reason: "fail",
+              error_type: "CompileError",
+              started_at: DateTime.utc_now(),
+              finished_at: DateTime.utc_now()
+            )
+          ]
+        )
+
+      insert(:log_line, run: run)
+      insert(:log_line, run: run, step: hd(run.steps))
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{%{a: run.id, m: "expand", s: job_1.id}}"
+        )
+
+      run_viewer = find_live_child(view, "run-viewer-#{run.id}")
+
+      assert render_async(run_viewer) =~ "Configure log levels"
+    end
+  end
+
   defp access_views(
          conn,
          project,

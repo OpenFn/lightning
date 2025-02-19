@@ -19,6 +19,8 @@ defmodule LightningWeb.Components.Viewers do
 
   require Lightning.Run
 
+  @all_log_levels ["success", "always", "info", "warn", "error", "debug"]
+
   @doc """
   Renders out a log line stream
 
@@ -40,11 +42,24 @@ defmodule LightningWeb.Components.Viewers do
   attr :logs_empty?, :boolean, required: true
   attr :selected_step_id, :string
 
+  attr :current_user, Lightning.Accounts.User,
+    default: nil,
+    doc: "for checking log filter preference"
+
   attr :class, :string,
     default: nil,
     doc: "Additional classes to add to the log viewer container"
 
   def log_viewer(assigns) do
+    assigns =
+      assign_new(assigns, :selected_log_levels, fn ->
+        if assigns[:current_user] do
+          selected_log_levels(assigns.current_user)
+        else
+          all_log_levels()
+        end
+      end)
+
     ~H"""
     <%= if @run_state in Lightning.Run.final_states() and @logs_empty? do %>
       <div class={["m-2 relative p-12 text-center col-span-full"]}>
@@ -55,29 +70,111 @@ defmodule LightningWeb.Components.Viewers do
         </span>
       </div>
     <% else %>
-      <div
-        id={@id}
-        class={["flex grow", @class]}
-        phx-hook="LogViewer"
-        phx-update="ignore"
-        data-run-id={@run_id}
-        data-step-id={@selected_step_id}
-        data-loading-el={"#{@id}-nothing-yet"}
-        data-viewer-el={"#{@id}-viewer"}
-      >
-        <div class="relative grow">
-          <div
-            id={"#{@id}-nothing-yet"}
-            class="relative rounded-md p-12 text-center bg-slate-700 font-mono text-gray-200"
-          >
-            <.text_ping_loader>
-              Nothing yet
-            </.text_ping_loader>
+      <div class="relative flex grow">
+        <.log_level_filter
+          :if={dbg(@current_user)}
+          id={"#{@id}-level-filter"}
+          levels={@selected_log_levels}
+        />
+
+        <div
+          id={@id}
+          class={["flex grow", @class]}
+          phx-hook="LogViewer"
+          phx-update="ignore"
+          data-run-id={@run_id}
+          data-step-id={@selected_step_id}
+          data-log-levels={Enum.join(@selected_log_levels, ",")}
+          data-loading-el={"#{@id}-nothing-yet"}
+          data-viewer-el={"#{@id}-viewer"}
+        >
+          <div class="relative grow">
+            <div
+              id={"#{@id}-nothing-yet"}
+              class="relative rounded-md p-12 text-center bg-slate-700 font-mono text-gray-200"
+            >
+              <.text_ping_loader>
+                Nothing yet
+              </.text_ping_loader>
+            </div>
+            <div id={"#{@id}-viewer"} class="hidden absolute inset-0 rounded-md">
+            </div>
           </div>
-          <div id={"#{@id}-viewer"} class="hidden absolute inset-0 rounded-md"></div>
         </div>
       </div>
     <% end %>
+    """
+  end
+
+  defp selected_log_levels(user) do
+    configured_levels = user.preferences["log_levels"] || []
+
+    if configured_levels == [] do
+      all_log_levels()
+    else
+      configured_levels
+    end
+  end
+
+  defp all_log_levels do
+    @all_log_levels
+  end
+
+  attr :id, :string, required: true
+  attr :levels, :list
+
+  defp log_level_filter(assigns) do
+    ~H"""
+    <div id={@id} class="absolute top-0 right-4 z-50">
+      <.modal
+        id={"#{@id}-modal"}
+        close_on_click_away={false}
+        close_on_keydown={false}
+      >
+        <:title>
+          <div class="flex justify-between gap-2">
+            <span class="font-bold">
+              Configure log levels
+            </span>
+
+            <button
+              phx-click={hide_modal("#{@id}-modal")}
+              type="button"
+              class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
+              aria-label={gettext("close")}
+            >
+              <span class="sr-only">Close</span>
+              <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
+            </button>
+          </div>
+        </:title>
+        <.form
+          :let={f}
+          for={to_form(%{}, as: :log_filter)}
+          phx-change="save-log-filter"
+        >
+          <fieldset>
+            <div class="space-y-2">
+              <%= for level <- all_log_levels() do %>
+                <.input
+                  type="checkbox"
+                  label={level}
+                  field={f[level]}
+                  checked={level in @levels}
+                />
+              <% end %>
+            </div>
+          </fieldset>
+        </.form>
+      </.modal>
+      <button
+        phx-click={show_modal("#{@id}-modal")}
+        type="button"
+        class="rounded-bl-md rounded-br-md p-1 pt-0 opacity-70 hover:opacity-100 content-center bg-blue-500 text-blue-900"
+      >
+        <.icon name="hero-cog-6-tooth" class="h-4 w-4 inline-block align-middle" />
+      </button>
+    </div>
     """
   end
 
