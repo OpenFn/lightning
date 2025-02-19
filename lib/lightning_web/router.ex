@@ -263,6 +263,7 @@ defmodule LightningWeb.Router do
       forward "/mailbox", Plug.Swoosh.MailboxPreview
 
       live "/components", LightningWeb.Dev.ComponentsLive, :index
+      live "/react", LightningWeb.Dev.ReactLive, :index
     end
   end
 
