@@ -2805,6 +2805,92 @@ defmodule LightningWeb.CredentialLiveTest do
     end
   end
 
+  describe "revoke credential transfer modal" do
+    setup %{conn: conn} do
+      owner = insert(:user)
+      project = build(:project) |> with_project_user(owner, :owner) |> insert()
+
+      credential =
+        insert(:credential,
+          user: owner,
+          project_credentials: [%{project_id: project.id}],
+          transfer_status: :pending
+        )
+
+      conn = log_in_user(conn, owner)
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      %{
+        owner: owner,
+        project: project,
+        credential: credential,
+        view: view
+      }
+    end
+
+    test "shows revoke UI when transfer is pending", %{view: view} do
+      html = render(view)
+      assert html =~ "Revoke Credential Transfer"
+      assert html =~ "A transfer of this credential is pending"
+      assert html =~ "Revoking this transfer will cancel the pending request"
+    end
+
+    test "revokes transfer successfully", %{
+      conn: conn,
+      view: view,
+      credential: credential
+    } do
+      assert {:ok, _view, html} =
+               view
+               |> element(
+                 "#transfer-credential-#{credential.id}-modal-revoke-button"
+               )
+               |> render_click()
+               |> follow_redirect(conn, ~p"/credentials")
+
+      assert html =~ "Transfer revoked successfully"
+
+      updated_credential =
+        Repo.get(Lightning.Credentials.Credential, credential.id)
+
+      assert is_nil(updated_credential.transfer_status)
+
+      # Verify token was deleted
+      refute Repo.get_by(Lightning.Accounts.UserToken,
+               context: "credential_transfer",
+               user_id: credential.user_id
+             )
+    end
+
+    test "closes modal after canceling revoke", %{
+      view: view,
+      credential: credential
+    } do
+      view
+      |> element("#transfer-credential-#{credential.id}-modal-cancel-button")
+      |> render_click()
+
+      assert_redirect(view, ~p"/credentials")
+    end
+
+    test "handles revoke failure gracefully", %{
+      conn: conn,
+      view: view,
+      credential: credential
+    } do
+      # Force a failure by deleting the credential first
+      Repo.delete!(credential)
+
+      {:ok, _view, html} =
+        view
+        |> element("#transfer-credential-#{credential.id}-modal-revoke-button")
+        |> render_click()
+        |> follow_redirect(conn, ~p"/credentials")
+
+      assert html =~ "Could not revoke transfer"
+    end
+  end
+
   defp wait_for_assigns(live, key, id) do
     Enum.reduce_while(1..10, nil, fn n, _ ->
       {_mod, assigns} =

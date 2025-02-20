@@ -1072,7 +1072,7 @@ defmodule Lightning.CredentialsTest do
     test "confirm_transfer/4 fails with non-existent entities" do
       owner = insert(:user)
       receiver = insert(:user)
-      credential = insert(:credential)
+      credential = insert(:credential, user: owner)
 
       :ok = Credentials.initiate_credential_transfer(owner, receiver, credential)
 
@@ -1117,27 +1117,112 @@ defmodule Lightning.CredentialsTest do
       assert refreshed_credential.user_id == credential.user_id
     end
 
-    # test "revoke_transfer/2 removes transfer token" do
-    #   owner = insert(:user)
-    #   receiver = insert(:user)
-    #   credential = insert(:credential)
+    test "initiate_credential_transfer/3 sets transfer status to pending" do
+      owner = insert(:user)
+      receiver = insert(:user)
+      credential = insert(:credential, user_id: owner.id)
 
-    #   :ok = Credentials.initiate_credential_transfer(owner, receiver, credential)
+      :ok = Credentials.initiate_credential_transfer(owner, receiver, credential)
 
-    #   assert {:ok, _credential} =
-    #     Credentials.revoke_transfer(credential.id, owner)
+      updated_credential = Repo.get!(Credential, credential.id)
+      assert updated_credential.transfer_status == :pending
+    end
 
-    #   refute Repo.get_by(UserToken,
-    #     context: "credential_transfer",
-    #     user_id: owner.id
-    #   )
-    # end
+    test "confirm_transfer/4 updates transfer status from pending to completed" do
+      owner = insert(:user)
+      receiver = insert(:user)
 
-    # test "revoke_transfer/2 handles non-existent credential" do
-    #   owner = insert(:user)
+      credential =
+        insert(:credential, user_id: owner.id, transfer_status: :pending)
 
-    #   assert {:error, :not_found} =
-    #            Credentials.revoke_transfer(Ecto.UUID.generate(), owner)
-    # end
+      :ok = Credentials.initiate_credential_transfer(owner, receiver, credential)
+
+      assert_email_sent(fn email ->
+        [token] =
+          Regex.run(~r{/transfer/[^/]+/[^/]+/([^\s\n]+)}, email.text_body,
+            capture: :all_but_first
+          )
+
+        {:ok, updated_credential} =
+          Credentials.confirm_transfer(
+            credential.id,
+            receiver.id,
+            owner.id,
+            token
+          )
+
+        assert updated_credential.transfer_status == :completed
+      end)
+    end
+
+    test "revoke_transfer/2 clears transfer status" do
+      owner = insert(:user)
+
+      credential =
+        insert(:credential, user_id: owner.id, transfer_status: :pending)
+
+      assert {:ok, updated_credential} =
+               Credentials.revoke_transfer(credential.id, owner)
+
+      assert is_nil(updated_credential.transfer_status)
+    end
+
+    test "revoke_transfer/2 clears transfer status and deletes tokens" do
+      owner = insert(:user)
+
+      credential =
+        insert(:credential, user_id: owner.id, transfer_status: :pending)
+
+      # Create a transfer token that should be deleted
+      {_token_value, user_token} =
+        UserToken.build_email_token(owner, "credential_transfer", owner.email)
+
+      {:ok, _token} = Repo.insert(user_token)
+
+      assert {:ok, updated_credential} =
+               Credentials.revoke_transfer(credential.id, owner)
+
+      assert is_nil(updated_credential.transfer_status)
+      # Verify token was deleted
+      refute Repo.get_by(UserToken,
+               context: "credential_transfer",
+               user_id: owner.id
+             )
+    end
+
+    test "revoke_transfer/2 fails with non-existent credential" do
+      owner = insert(:user)
+
+      assert {:error, :not_found} =
+               Credentials.revoke_transfer(Ecto.UUID.generate(), owner)
+    end
+
+    test "revoke_transfer/2 fails when user is not owner" do
+      owner = insert(:user)
+      other_user = insert(:user)
+
+      credential =
+        insert(:credential, user_id: owner.id, transfer_status: :pending)
+
+      assert {:error, :not_owner} =
+               Credentials.revoke_transfer(credential.id, other_user)
+    end
+
+    test "revoke_transfer/2 only works for pending transfers" do
+      owner = insert(:user)
+
+      # Test with completed status
+      credential =
+        insert(:credential, user_id: owner.id, transfer_status: :completed)
+
+      assert {:error, :not_pending} =
+               Credentials.revoke_transfer(credential.id, owner)
+
+      # Test with nil status
+      credential = insert(:credential, user_id: owner.id, transfer_status: nil)
+
+      assert {:error, :not_pending} =
+               Credentials.revoke_transfer(credential.id, owner)
+    end
   end
 end

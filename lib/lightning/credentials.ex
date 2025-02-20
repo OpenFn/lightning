@@ -733,7 +733,8 @@ defmodule Lightning.Credentials do
           {:ok, Credential.t()} | {:error, transfer_error() | Ecto.Changeset.t()}
   def revoke_transfer(credential_id, %User{} = owner) do
     with credential when not is_nil(credential) <- get_credential(credential_id),
-         true <- credential.user_id == owner.id do
+         true <- credential.user_id == owner.id || :not_owner,
+         true <- credential.transfer_status == :pending || :not_pending do
       Multi.new()
       |> Multi.update(:credential, fn _changes ->
         change_credential(credential, %{transfer_status: nil})
@@ -751,7 +752,8 @@ defmodule Lightning.Credentials do
       end
     else
       nil -> {:error, :not_found}
-      false -> {:error, :not_owner}
+      :not_owner -> {:error, :not_owner}
+      :not_pending -> {:error, :not_pending}
     end
   end
 

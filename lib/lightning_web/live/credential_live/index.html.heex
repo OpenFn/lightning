@@ -107,7 +107,7 @@
                 show_modal("transfer-credential-#{credential.id}-modal")
               }
             >
-              <%= case credential.transfer_status |> IO.inspect() do %>
+              <%= case credential.transfer_status do %>
                 <% :pending -> %>
                   Revoke Transfer
                 <% :completed -> %>
