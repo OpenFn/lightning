@@ -187,7 +187,7 @@
                 </div>
               </div>
               <Common.alert
-                  :if={f[:concurrency].value == 1}
+                  :if={f[:concurrency].value == 1 and Enum.any?(@project_changeset.changes)}
                   id="heads-up-description"
                   type="warning"
                   header="Heads Up!"
@@ -208,7 +208,7 @@
                 <.button
                   id="project-identity-submit-btn"
                   type="submit"
-                  disabled={!(@project_changeset.valid? and @can_edit_project)}
+                  disabled={!(Enum.any?(@project_changeset.changes) and @can_edit_project)}
                 >
                   Save
                 </.button>

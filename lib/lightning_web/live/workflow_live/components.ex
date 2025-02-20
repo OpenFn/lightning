@@ -166,7 +166,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             }
             class="text-xs text-red-500 italic"
           >
-            This workflow concurrency limit won't take effect. Parallel execution of runs is disabled for this project. You can modify this setting via your <.link class="underline" patch={~p"/projects/#{@project_id}/settings"}>project setup</.link> page.
+            This workflow concurrency limit won't take effect. Parallel execution of runs is disabled for this project. You can modify this setting on your <.link class="underline" patch={~p"/projects/#{@project_id}/settings"}>project setup</.link> page.
           </div>
         </div>
       </div>
