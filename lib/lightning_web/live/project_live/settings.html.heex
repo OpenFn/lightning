@@ -186,10 +186,19 @@
                   />
                 </div>
               </div>
-              <div>
-                <small class="block my-1 text-xs text-gray-600">
-                </small>
-              </div>
+              <Common.alert
+                  :if={f[:concurrency].value == 1}
+                  id="heads-up-description"
+                  type="warning"
+                  header="Heads Up!"
+                  class="mt-2"
+                >
+                  <:message>
+                    <p>
+                      By disabling parallel execution, the work orders in this project will be processed sequentially.
+                    </p>
+                  </:message>
+              </Common.alert>
             </div>
             <div class="hidden sm:block" aria-hidden="true">
               <div class="py-2"></div>

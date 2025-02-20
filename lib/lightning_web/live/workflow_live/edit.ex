@@ -435,6 +435,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             cancel_url={@base_url}
           >
             <.workflow_settings
+              project_id={@workflow.project_id}
               project_concurrency_disabled={@workflow.project.concurrency == 1}
               form={@workflow_form}
             />

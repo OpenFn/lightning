@@ -108,6 +108,7 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   attr :form, :map, required: true
   attr :project_concurrency_disabled, :boolean, required: true
+  attr :project_id, :string, required: true
 
   def workflow_settings(assigns) do
     ~H"""
@@ -165,7 +166,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             }
             class="text-xs text-red-500 italic"
           >
-            Parallel execution of runs is disabled for this project. This workflow concurrency limit won't take effect.
+            This workflow concurrency limit won't take effect. Parallel execution of runs is disabled for this project. You can modify this setting via your <.link class="underline" patch={~p"/projects/#{@project_id}/settings"}>project setup</.link> page.
           </div>
         </div>
       </div>
