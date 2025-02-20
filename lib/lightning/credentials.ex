@@ -652,15 +652,28 @@ defmodule Lightning.Credentials do
         %User{} = receiver,
         %Credential{} = credential
       ) do
-    with {:ok, encoded_token} <- create_transfer_token(owner) do
-      UserNotifier.deliver_credential_transfer_confirmation_instructions(
-        owner,
-        receiver,
-        credential,
-        encoded_token
-      )
+    {token_value, user_token} =
+      UserToken.build_email_token(owner, "credential_transfer", owner.email)
 
-      :ok
+    Multi.new()
+    |> Multi.update(:credential, fn _changes ->
+      change_credential(credential, %{transfer_status: :pending})
+    end)
+    |> Multi.insert(:token, user_token)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{credential: credential, token: _token}} ->
+        UserNotifier.deliver_credential_transfer_confirmation_instructions(
+          owner,
+          receiver,
+          credential,
+          token_value
+        )
+
+        :ok
+
+      {:error, _failed_operation, error, _changes} ->
+        {:error, error}
     end
   end
 
@@ -676,7 +689,10 @@ defmodule Lightning.Credentials do
          receiver when not is_nil(receiver) <- Accounts.get_user(receiver_id) do
       Multi.new()
       |> Multi.update(:credential, fn _changes ->
-        change_credential(credential, %{"user_id" => receiver.id})
+        change_credential(credential, %{
+          "user_id" => receiver.id,
+          "transfer_status" => :completed
+        })
       end)
       |> Multi.insert(:audit, fn %{credential: updated_credential} ->
         Audit.user_initiated_event("transfered", credential, %{
@@ -710,31 +726,32 @@ defmodule Lightning.Credentials do
     end
   end
 
-  # @doc """
-  # Revokes a pending credential transfer.
-  # """
-  # @spec revoke_transfer(String.t(), User.t()) ::
-  #         {:ok, Credential.t()} | {:error, transfer_error() | Ecto.Changeset.t()}
-  # def revoke_transfer(credential_id, %User{} = owner) do
-  #   with credential when not is_nil(credential) <- get_credential(credential_id) do
-  #     from(t in UserToken,
-  #       where: t.user_id == ^owner.id,
-  #       where: t.context == "credential_transfer"
-  #     )
-  #     |> Repo.delete_all()
-  #     |> case do
-  #       {_count, _} -> {:ok, credential}
-  #       error -> error
-  #     end
-  #   end
-  # end
-
-  defp create_transfer_token(%{email: email} = owner) do
-    {encoded_token, user_token} =
-      UserToken.build_email_token(owner, "credential_transfer", email)
-
-    with {:ok, _token} <- Repo.insert(user_token) do
-      {:ok, encoded_token}
+  @doc """
+  Revokes a pending credential transfer.
+  """
+  @spec revoke_transfer(String.t(), User.t()) ::
+          {:ok, Credential.t()} | {:error, transfer_error() | Ecto.Changeset.t()}
+  def revoke_transfer(credential_id, %User{} = owner) do
+    with credential when not is_nil(credential) <- get_credential(credential_id),
+         true <- credential.user_id == owner.id do
+      Multi.new()
+      |> Multi.update(:credential, fn _changes ->
+        change_credential(credential, %{transfer_status: nil})
+      end)
+      |> Multi.delete_all(:tokens, fn _changes ->
+        from(t in UserToken,
+          where: t.user_id == ^owner.id,
+          where: t.context == "credential_transfer"
+        )
+      end)
+      |> Repo.transaction()
+      |> case do
+        {:ok, %{credential: credential}} -> {:ok, credential}
+        {:error, _op, error, _changes} -> {:error, error}
+      end
+    else
+      nil -> {:error, :not_found}
+      false -> {:error, :not_owner}
     end
   end
 
