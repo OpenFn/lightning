@@ -73,7 +73,7 @@
         <div class="bg-white p-4 rounded-md">
           <div>
             <h6 class="font-medium text-black">
-              Project Identity and Execution
+              Project Identity
             </h6>
             <small class="block my-1 text-xs text-gray-600">
               This metadata helps you identify the types of workflows managed in this project and the people that have access.
@@ -119,6 +119,57 @@
             <div class="hidden sm:block" aria-hidden="true">
               <div class="py-2"></div>
             </div>
+            <div class="grid grid-cols gap-6">
+              <div class="md:col-span-2">
+                <.button
+                  id="project-identity-submit-btn"
+                  type="submit"
+                  disabled={!(@project_changeset.valid? and @can_edit_project)}
+                >
+                  Save
+                </.button>
+              </div>
+            </div>
+          </.form>
+        </div>
+        <div class="hidden sm:block" aria-hidden="true">
+          <div class="py-2"></div>
+        </div>
+        <div class="bg-white p-4 rounded-md">
+          <div>
+            <h6 class="font-medium text-black">
+              Project Execution
+            </h6>
+            <small class="block my-1 text-xs text-gray-600">
+              Decide how the runs from this project are executed across multiple workflows, whether in parallel or sequentially.
+            </small>
+          </div>
+          <.form
+            :let={f}
+            for={@project_changeset}
+            id="project-execution-form"
+            phx-change="validate"
+            phx-submit="save"
+          >
+            <div class="grid grid-cols gap-6">
+              <div class="md:col-span-2">
+                <.input
+                  type="hidden"
+                  field={f[:name]}
+                />
+              </div>
+            </div>
+            <div class="grid grid-cols gap-6">
+              <div class="md:col-span-2">
+                <.input
+                  type="hidden"
+                  field={f[:description]}
+                />
+              </div>
+            </div>
+            <div class="hidden sm:block" aria-hidden="true">
+              <div class="py-2"></div>
+            </div>
             <div class="grid grid-cols md:col-span-2">
               <div class="flex flex-row">
                 <div>
@@ -137,12 +188,11 @@
               </div>
               <div>
                 <small class="block my-1 text-xs text-gray-600">
-                  Additionally you can setup all runs from this project, accross multiple workflows, to not execute in parallel.
                 </small>
               </div>
             </div>
             <div class="hidden sm:block" aria-hidden="true">
-              <div class="py-4"></div>
+              <div class="py-2"></div>
             </div>
             <div class="grid grid-cols gap-6">
               <div class="md:col-span-2">

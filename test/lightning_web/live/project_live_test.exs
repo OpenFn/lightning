@@ -807,7 +807,7 @@ defmodule LightningWeb.ProjectLiveTest do
       assert view |> has_element?("button[disabled][type=submit]")
     end
 
-    test "project admin can edit project name, description and concurrency with valid data",
+    test "project admin can edit project name and description with valid data",
          %{
            conn: conn,
            user: user
@@ -829,7 +829,6 @@ defmodule LightningWeb.ProjectLiveTest do
       valid_project_attrs = %{
         name: "somename",
         description: "some description",
-        concurrency: "1"
       }
 
       assert view
@@ -839,8 +838,35 @@ defmodule LightningWeb.ProjectLiveTest do
       assert %{
                name: "somename",
                description: "some description",
-               concurrency: 1
              } = Repo.get!(Project, project.id)
+    end
+
+    test "project admin can edit project concurrency with valid data",
+         %{
+           conn: conn,
+           user: user
+         } do
+      project =
+        insert(:project,
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_project_settings_path(conn, :index, project.id)
+        )
+
+      assert html =~ "Project settings"
+
+      assert view
+             |> form("#project-execution-form", project: %{
+              concurrency: "1",
+            })
+             |> render_submit() =~ "Project updated successfully"
+
+      assert %{concurrency: 1} = Repo.get!(Project, project.id)
     end
 
     test "only users with admin level on project can edit project details", %{
