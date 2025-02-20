@@ -27,6 +27,9 @@ and this project adheres to
 
 ### Fixed
 
+- Creating a dataclip fails on indexing when it's too large
+  [#2682](https://github.com/OpenFn/lightning/issues/2682)
+
 ## [v2.10.15] - 2025-02-14
 
 ### Changed
