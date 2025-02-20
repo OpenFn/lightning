@@ -68,7 +68,8 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
            socket,
            :error,
            "Could not revoke transfer: #{inspect(reason)}"
-         )}
+         )
+         |> push_navigate(to: return_to)}
     end
   end
 
