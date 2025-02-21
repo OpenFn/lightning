@@ -166,11 +166,23 @@ defmodule LightningWeb.WorkflowLive.Components do
             }
             class="text-xs text-red-500 italic"
           >
-            This workflow concurrency limit won't take effect. Parallel execution of runs is disabled for this project. You can modify this setting on your
-            <.link class="underline" patch={~p"/projects/#{@project_id}/settings"}>
-              project setup
-            </.link>
-            page.
+            <div class="flex items-center">
+              <.icon
+                name="hero-exclamation-triangle"
+                class="h-4 w-4 mr-2 flex-shrink-0"
+              />
+              <div>
+                Parallel execution of runs is disabled for this project.
+                This setting will have no effect.
+              </div>
+            </div>
+            <p class="pt-2">
+              You can modify your Project Concurrency setting on the
+              <.link patch={~p"/projects/#{@project_id}/settings"}>
+                <span class="underline">project setup</span>
+              </.link>
+              page.
+            </p>
           </div>
         </div>
       </div>
