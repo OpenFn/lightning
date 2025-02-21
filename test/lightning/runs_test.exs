@@ -59,6 +59,48 @@ defmodule Lightning.RunsTest do
       assert {:ok, []} = Runs.claim()
     end
 
+    test "claims a run from the queue having parallel runs disabled" do
+      project1 = insert(:project, concurrency: 1)
+      project2 = insert(:project)
+
+      [
+        {%{id: run1_id}, _},
+        {%{id: run2a_id}, %{trigger: trigger2, workflow: workflow2}},
+        {%{id: run3_id}, _}
+      ] =
+        Enum.map([project1, project2, project1], fn project ->
+          %{triggers: [trigger]} =
+            workflow =
+            insert(:simple_workflow, project: project) |> with_snapshot()
+
+          {:ok, %{runs: [run]}} =
+            WorkOrders.create_for(trigger,
+              workflow: workflow,
+              dataclip: params_with_assocs(:dataclip)
+            )
+
+          {run, %{trigger: trigger, workflow: workflow}}
+        end)
+
+      assert {:ok, [%{id: ^run1_id, state: :claimed}]} = Runs.claim()
+      assert {:ok, [%{id: ^run2a_id, state: :claimed}]} = Runs.claim()
+      assert {:ok, []} = Runs.claim()
+
+      {:ok, %{runs: [%{id: run2b_id}]}} =
+        WorkOrders.create_for(trigger2,
+          workflow: workflow2,
+          dataclip: params_with_assocs(:dataclip)
+        )
+
+      assert {:ok, [%{id: ^run2b_id, state: :claimed}]} = Runs.claim()
+
+      Repo.get!(Run, run1_id)
+      |> Ecto.Changeset.change(%{state: :success})
+      |> Repo.update!()
+
+      assert {:ok, [%{id: ^run3_id, state: :claimed}]} = Runs.claim()
+    end
+
     test "claims with demand" do
       %{triggers: [trigger]} =
         workflow = insert(:simple_workflow) |> with_snapshot()

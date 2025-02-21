@@ -67,7 +67,7 @@ defmodule Lightning.Runs.Query do
   - `id`, the id of the run
   - `state`, the state of the run
   - `row_number`, the number of the row in the window, per workflow
-  - `limit`, the maximum number of runs that can be claimed for the workflow
+  - `concurrency`, the maximum number of runs that can be claimed for the workflow
   """
   @spec in_progress_window() :: Ecto.Queryable.t()
   def in_progress_window do
@@ -75,25 +75,36 @@ defmodule Lightning.Runs.Query do
       where: r.state in [:available, :claimed, :started],
       join: wo in assoc(r, :work_order),
       join: w in assoc(wo, :workflow),
-      join: p in assoc(w, :project),
-      windows: [
-        row_number: [
-          partition_by: w.id,
-          order_by: [asc: r.inserted_at]
-        ]
-      ],
-      select: %{
-        id: r.id,
-        state: r.state,
-        # need to check what performance implications are of using row_number
-        # does the subsequent query's limit clause get applied to the row_number
-        # calculated here?
-        row_number: row_number() |> over(:row_number),
-        project_id: p.id,
-        concurrency: w.concurrency,
-        inserted_at: r.inserted_at
-      }
+      join: p in assoc(w, :project)
     )
+    |> windows([r, _wo, w, p],
+      row_number: [
+        partition_by:
+          fragment(
+            """
+            CASE
+              WHEN ? IS NULL THEN ?
+              ELSE ?
+            END
+            """,
+            p.concurrency,
+            w.id,
+            p.id
+          ),
+        order_by: [asc: r.inserted_at]
+      ]
+    )
+    |> select([r, _wo, w, p], %{
+      id: r.id,
+      state: r.state,
+      # need to check what performance implications are of using row_number
+      # does the subsequent query's limit clause get applied to the row_number
+      # calculated here?
+      row_number: row_number() |> over(:row_number),
+      project_id: w.project_id,
+      concurrency: coalesce(p.concurrency, w.concurrency),
+      inserted_at: r.inserted_at
+    })
   end
 
   @doc """
@@ -115,14 +126,14 @@ defmodule Lightning.Runs.Query do
   def eligible_for_claim do
     Run
     |> with_cte("in_progress_window", as: ^in_progress_window())
-    |> join(:inner, [r], w in fragment(~s("in_progress_window")),
-      on: r.id == w.id,
+    |> join(:inner, [r], ipw in fragment(~s("in_progress_window")),
+      on: r.id == ipw.id,
       as: :in_progress_window
     )
     |> where(
-      [r, w],
-      (is_nil(w.concurrency) or w.row_number <= w.concurrency) and
-        w.state == "available"
+      [r, ipw],
+      r.state == :available and
+        (is_nil(ipw.concurrency) or ipw.row_number <= ipw.concurrency)
     )
     |> order_by([r], asc: r.inserted_at)
   end

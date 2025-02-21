@@ -19,6 +19,7 @@ defmodule Lightning.Projects.Project do
 
   schema "projects" do
     field :name, :string
+    field :concurrency, :integer
     field :description, :string
     field :scheduled_deletion, :utc_datetime
     field :requires_mfa, :boolean, default: false
@@ -57,6 +58,7 @@ defmodule Lightning.Projects.Project do
     |> cast(attrs, [
       :id,
       :name,
+      :concurrency,
       :description,
       :scheduled_deletion,
       :requires_mfa,
@@ -73,6 +75,7 @@ defmodule Lightning.Projects.Project do
     |> validate_required([:name])
     |> validate_format(:name, ~r/^[a-z\-\d]+$/)
     |> validate_dataclip_retention_period()
+    |> validate_inclusion(:concurrency, [1, nil])
     |> validate_inclusion(:history_retention_period, data_retention_options())
     |> validate_inclusion(:dataclip_retention_period, data_retention_options())
   end

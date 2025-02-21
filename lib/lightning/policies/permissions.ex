@@ -8,7 +8,7 @@ defmodule Lightning.Policies.Permissions do
   - The `users.ex` file has all the policies for the instances wide access levels
   - The `project_users.ex` file has all the policies for the project wide access levels
   - The `permissions.ex` file defines the `Lightning.Policies.Permissions.can/4` interface. Which is a wrapper around the `Bodyguard.permit/4` function.
-  We use that interface to be able to harmonize the use of policies accross the entire app.
+  We use that interface to be able to harmonize the use of policies across the entire app.
 
   All the policies are tested in the `test/lightning/policies` folder. And the test are written in a way that allows the reader to quickly who can do what in the app.
 

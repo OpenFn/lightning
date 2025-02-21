@@ -2,6 +2,7 @@ defmodule Lightning.Runs.QueryTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Runs.Query
+  alias Lightning.Projects
 
   describe "lost/1" do
     test "returns only those runs which were claimed before the earliest
@@ -244,13 +245,14 @@ defmodule Lightning.Runs.QueryTest do
     end
 
     test "in_progress_window/0" do
-      [red, _green, blue, cyan, _magenta] =
+      [red, _green, blue, cyan, magenta, indigo] =
         [
           {"red", 1},
           {"green", 2},
           {"blue", 3},
           {"cyan", nil},
-          {"magenta", 5}
+          {"magenta", nil},
+          {"indigo", 5}
         ]
         |> Enum.map(fn {name, concurrency} ->
           project = insert(:project, name: name)
@@ -261,11 +263,21 @@ defmodule Lightning.Runs.QueryTest do
           %{project: project, workflow: workflow}
         end)
 
+      # magenta project has only project level concurrecy
+      Repo.update!(Projects.change_project(magenta.project, %{concurrency: 1}))
+
+      # indigo project has project level concurrecy (serial execution). It overrides the workflow level one.
+      Repo.update!(Projects.change_project(indigo.project, %{concurrency: 1}))
+
       runs_in_order =
         [
           insert_run(red, :available),
           for _ <- 1..10 do
             insert_run(cyan, :available)
+          end,
+          insert_run(magenta, :available),
+          for _ <- 1..5 do
+            insert_run(indigo, :available)
           end,
           insert_run(blue, :claimed),
           insert_run(blue, :claimed),
@@ -285,6 +297,12 @@ defmodule Lightning.Runs.QueryTest do
             %{project_id: cyan.project.id, row_number: 8, concurrency: nil},
             %{project_id: cyan.project.id, row_number: 9, concurrency: nil},
             %{project_id: cyan.project.id, row_number: 10, concurrency: nil},
+            %{project_id: magenta.project.id, row_number: 1, concurrency: 1},
+            %{project_id: indigo.project.id, row_number: 1, concurrency: 1},
+            %{project_id: indigo.project.id, row_number: 2, concurrency: 1},
+            %{project_id: indigo.project.id, row_number: 3, concurrency: 1},
+            %{project_id: indigo.project.id, row_number: 4, concurrency: 1},
+            %{project_id: indigo.project.id, row_number: 5, concurrency: 1},
             %{project_id: blue.project.id, row_number: 1, concurrency: 3},
             %{project_id: blue.project.id, row_number: 2, concurrency: 3},
             %{project_id: blue.project.id, row_number: 3, concurrency: 3}
@@ -346,14 +364,17 @@ defmodule Lightning.Runs.QueryTest do
              ) == 6,
              "there should be 6 claimed runs for project cyan"
 
-      runs_in_order =
-        Enum.zip_with(
-          runs_in_order,
-          List.duplicate(%{state: :claimed}, 7) ++ List.duplicate(%{}, 8),
+      num_runs = length(runs_in_order)
+
+      runs_in_order_match =
+        runs_in_order
+        |> Enum.zip_with(
+          List.duplicate(%{state: :claimed}, 7) ++
+            List.duplicate(%{}, num_runs - 7),
           &Map.merge(&1, &2)
         )
 
-      assert match?(^runs_in_order, window), """
+      assert match?(^runs_in_order_match, window), """
       Expected the first 7 to be claimed.
       Being one red and 6 cyan.
       #{inspect(window, pretty: true)}
@@ -361,16 +382,18 @@ defmodule Lightning.Runs.QueryTest do
     end
 
     test "eligible_for_claim/0 with claim" do
-      # we need 3 projects, each with one workflow, called: red, green, blue
+      # we need 4 projects, each with one workflow, called: red, green, blue and magenta
       # red should have a limit of 1
       # green should have a limit of 2
       # blue should have a limit of 3
+      # magenta has a workflow concurrecy of 5 but it's overriden by the project concurrency set to 1
 
-      [red, green, blue] =
+      [red, green, blue, magenta] =
         [
           {"red", 1},
           {"green", 2},
-          {"blue", 3}
+          {"blue", 3},
+          {"magenta", 5}
         ]
         |> Enum.map(fn {name, concurrency} ->
           project = insert(:project, name: name)
@@ -389,11 +412,20 @@ defmodule Lightning.Runs.QueryTest do
 
       insert_run(blue, :available)
 
+      for _ <- 1..2 do
+        insert_run(magenta, :available)
+      end
+
+      # magenta project has only project level concurrecy
+      Repo.update!(Projects.change_project(magenta.project, %{concurrency: 1}))
+
       {:ok, [%{id: run_id} = red_run_1]} =
         Lightning.Runs.Queue.claim(1, Query.eligible_for_claim())
 
       red_project_id = red.project.id
       green_project_id = green.project.id
+      blue_project_id = blue.project.id
+      magenta_project_id = magenta.project.id
 
       Query.in_progress_window()
       |> Repo.all()
@@ -422,7 +454,27 @@ defmodule Lightning.Runs.QueryTest do
                      row_number: 1,
                      concurrency: 2
                    },
-                   _
+                   %{
+                     id: _,
+                     project_id: ^blue_project_id,
+                     state: :available,
+                     row_number: 1,
+                     concurrency: 3
+                   },
+                   %{
+                     id: _,
+                     project_id: ^magenta_project_id,
+                     state: :available,
+                     row_number: 1,
+                     concurrency: 1
+                   },
+                   %{
+                     id: _,
+                     project_id: ^magenta_project_id,
+                     state: :available,
+                     row_number: 2,
+                     concurrency: 1
+                   }
                  ],
                  in_progress
                )
@@ -430,8 +482,6 @@ defmodule Lightning.Runs.QueryTest do
 
       {:ok, [%{id: claimed_run_id}]} =
         Lightning.Runs.Queue.claim(1, Query.eligible_for_claim())
-
-      blue_project_id = blue.project.id
 
       Query.in_progress_window()
       |> Repo.all()
@@ -457,6 +507,18 @@ defmodule Lightning.Runs.QueryTest do
                    %{
                      project_id: ^blue_project_id,
                      state: :available
+                   },
+                   %{
+                     project_id: ^magenta_project_id,
+                     state: :available,
+                     row_number: 1,
+                     concurrency: 1
+                   },
+                   %{
+                     project_id: ^magenta_project_id,
+                     state: :available,
+                     row_number: 2,
+                     concurrency: 1
                    }
                  ],
                  in_progress
@@ -503,12 +565,292 @@ defmodule Lightning.Runs.QueryTest do
                      state: :available,
                      row_number: 1,
                      concurrency: 3
+                   },
+                   %{
+                     id: _,
+                     project_id: ^magenta_project_id,
+                     state: :available,
+                     row_number: 1,
+                     concurrency: 1
+                   },
+                   %{
+                     id: _,
+                     project_id: ^magenta_project_id,
+                     state: :available,
+                     row_number: 2,
+                     concurrency: 1
                    }
                  ],
                  in_progress
                ),
                """
                the next red should be claimed because the first one is finished
+               #{inspect(in_progress, pretty: true)}
+               """
+      end)
+    end
+
+    test "eligible_for_claim/0 respects serial project concurrency" do
+      # these are the projects
+      # red: has a workflow concurrecy of 2 runs but it's overriden by the project concurrency set to 1 (serial execution)
+      # orange: has only project concurrency set to 1
+      # green: has workflow concurrency of 2 runs
+
+      [red, orange, green] =
+        [
+          {"red", 2},
+          {"orange", nil},
+          {"green", 2}
+        ]
+        |> Enum.map(fn {name, concurrency} ->
+          project = insert(:project, name: name)
+
+          workflow1 =
+            insert(:simple_workflow, project: project, concurrency: concurrency)
+
+          workflow2 =
+            if name in ["red", "orange"],
+              do:
+                insert(:simple_workflow,
+                  project: project,
+                  concurrency: concurrency
+                )
+
+          %{project: project, workflow1: workflow1, workflow2: workflow2}
+        end)
+
+      insert_run(red, :available, red.workflow1)
+      insert_run(red, :available, red.workflow2)
+
+      insert_run(orange, :available, orange.workflow1)
+      insert_run(orange, :available, orange.workflow2)
+
+      insert_run(green, :available, green.workflow1)
+      insert_run(green, :available, green.workflow1)
+
+      # red workflow concurrency is overriden by serial project concurrency
+      Repo.update!(Projects.change_project(red.project, %{concurrency: 1}))
+      # orange project has only project level concurrecy
+      Repo.update!(Projects.change_project(orange.project, %{concurrency: 1}))
+
+      {:ok, [%{id: claimed_run_id} = red_run_1]} =
+        Lightning.Runs.Queue.claim(1, Query.eligible_for_claim())
+
+      red_project_id = red.project.id
+      orange_project_id = orange.project.id
+      green_project_id = green.project.id
+
+      Query.in_progress_window()
+      |> Repo.all()
+      |> Enum.sort_by(& &1.inserted_at, DateTime)
+      |> then(fn in_progress ->
+        assert match?(
+                 [
+                   %{
+                     id: ^claimed_run_id,
+                     project_id: ^red_project_id,
+                     state: :claimed,
+                     row_number: 1,
+                     concurrency: 1
+                   },
+                   %{
+                     project_id: ^red_project_id,
+                     state: :available,
+                     row_number: 2,
+                     concurrency: 1
+                   },
+                   %{
+                     project_id: ^orange_project_id,
+                     state: :available,
+                     row_number: 1,
+                     concurrency: 1
+                   },
+                   %{
+                     project_id: ^orange_project_id,
+                     state: :available,
+                     row_number: 2,
+                     concurrency: 1
+                   },
+                   %{
+                     project_id: ^green_project_id,
+                     state: :available,
+                     row_number: 1,
+                     concurrency: 2
+                   },
+                   %{
+                     project_id: ^green_project_id,
+                     state: :available,
+                     row_number: 2,
+                     concurrency: 2
+                   }
+                 ],
+                 in_progress
+               )
+      end)
+
+      {:ok, [%{id: claimed_run_id} = _orange_run]} =
+        Lightning.Runs.Queue.claim(1, Query.eligible_for_claim())
+
+      Query.in_progress_window()
+      |> Repo.all()
+      |> Enum.sort_by(& &1.inserted_at, DateTime)
+      |> then(fn in_progress ->
+        assert match?(
+                 [
+                   %{
+                     project_id: ^red_project_id,
+                     state: :claimed
+                   },
+                   %{
+                     project_id: ^red_project_id,
+                     state: :available
+                   },
+                   %{
+                     id: ^claimed_run_id,
+                     project_id: ^orange_project_id,
+                     state: :claimed
+                   },
+                   %{
+                     project_id: ^orange_project_id,
+                     state: :available
+                   },
+                   %{
+                     project_id: ^green_project_id,
+                     state: :available
+                   },
+                   %{
+                     project_id: ^green_project_id,
+                     state: :available
+                   }
+                 ],
+                 in_progress
+               ),
+               """
+               red continue with 1 claimed (serial execution) and next claimed is an orange one
+               #{inspect(in_progress, pretty: true)}
+               """
+      end)
+
+      # Mark the first red run as finished
+      Ecto.Changeset.change(red_run_1,
+        state: :success,
+        finished_at: build(:timestamp)
+      )
+      |> Repo.update()
+
+      {:ok, [%{id: claimed_run_id}]} =
+        Lightning.Runs.Queue.claim(1, Query.eligible_for_claim())
+
+      Query.in_progress_window()
+      |> Repo.all()
+      |> Enum.sort_by(& &1.inserted_at, DateTime)
+      |> then(fn in_progress ->
+        assert match?(
+                 [
+                   %{
+                     id: ^claimed_run_id,
+                     project_id: ^red_project_id,
+                     state: :claimed
+                   },
+                   %{
+                     project_id: ^orange_project_id,
+                     state: :claimed
+                   },
+                   %{
+                     project_id: ^orange_project_id,
+                     state: :available
+                   },
+                   %{
+                     project_id: ^green_project_id,
+                     state: :available
+                   },
+                   %{
+                     project_id: ^green_project_id,
+                     state: :available
+                   }
+                 ],
+                 in_progress
+               ),
+               """
+               the next red should be claimed because the first one is finished
+               #{inspect(in_progress, pretty: true)}
+               """
+      end)
+
+      {:ok, [%{id: claimed_run_id} = _green1]} =
+        Lightning.Runs.Queue.claim(1, Query.eligible_for_claim())
+
+      Query.in_progress_window()
+      |> Repo.all()
+      |> Enum.sort_by(& &1.inserted_at, DateTime)
+      |> then(fn in_progress ->
+        assert match?(
+                 [
+                   %{
+                     project_id: ^red_project_id,
+                     state: :claimed
+                   },
+                   %{
+                     project_id: ^orange_project_id,
+                     state: :claimed
+                   },
+                   %{
+                     project_id: ^orange_project_id,
+                     state: :available
+                   },
+                   %{
+                     id: ^claimed_run_id,
+                     project_id: ^green_project_id,
+                     state: :claimed
+                   },
+                   %{
+                     project_id: ^green_project_id,
+                     state: :available
+                   }
+                 ],
+                 in_progress
+               ),
+               """
+               the first green should be claimed as the orange project has serial concurrency
+               #{inspect(in_progress, pretty: true)}
+               """
+      end)
+
+      {:ok, [%{id: claimed_run_id} = _green2]} =
+        Lightning.Runs.Queue.claim(1, Query.eligible_for_claim())
+
+      Query.in_progress_window()
+      |> Repo.all()
+      |> Enum.sort_by(& &1.inserted_at, DateTime)
+      |> then(fn in_progress ->
+        assert match?(
+                 [
+                   %{
+                     project_id: ^red_project_id,
+                     state: :claimed
+                   },
+                   %{
+                     project_id: ^orange_project_id,
+                     state: :claimed
+                   },
+                   %{
+                     project_id: ^orange_project_id,
+                     state: :available
+                   },
+                   %{
+                     project_id: ^green_project_id,
+                     state: :claimed
+                   },
+                   %{
+                     id: ^claimed_run_id,
+                     project_id: ^green_project_id,
+                     state: :claimed
+                   }
+                 ],
+                 in_progress
+               ),
+               """
+               the second green should be claimed since it doesn't have serial project concurrency
                #{inspect(in_progress, pretty: true)}
                """
       end)
@@ -666,7 +1008,9 @@ defmodule Lightning.Runs.QueryTest do
     )
   end
 
-  defp insert_run(project_workflow_pair, state) do
+  defp insert_run(project_workflow_pair, state, workflow \\ nil) do
+    workflow = workflow || project_workflow_pair.workflow
+
     case state do
       :available ->
         [state: state]
@@ -675,9 +1019,9 @@ defmodule Lightning.Runs.QueryTest do
         [state: state, claimed_at: fn -> build(:timestamp) end]
     end
     |> Keyword.merge(
-      work_order: insert(:workorder, workflow: project_workflow_pair.workflow),
+      work_order: insert(:workorder, workflow: workflow),
       inserted_at: build(:timestamp),
-      starting_job: project_workflow_pair.workflow.jobs |> hd(),
+      starting_job: hd(workflow.jobs),
       dataclip: params_with_assocs(:dataclip)
     )
     |> then(fn params -> insert(:run, params) end)

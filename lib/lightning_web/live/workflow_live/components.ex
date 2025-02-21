@@ -107,6 +107,8 @@ defmodule LightningWeb.WorkflowLive.Components do
   end
 
   attr :form, :map, required: true
+  attr :project_concurrency_disabled, :boolean, required: true
+  attr :project_id, :string, required: true
 
   def workflow_settings(assigns) do
     ~H"""
@@ -145,15 +147,30 @@ defmodule LightningWeb.WorkflowLive.Components do
         <div class="flex place-content-between items-center space-x-2 pt-1">
           <.errors field={@form[:concurrency]} />
           <div
-            :if={Enum.empty?(@form[:concurrency].errors)}
+            :if={
+              not @project_concurrency_disabled and
+                Enum.empty?(@form[:concurrency].errors)
+            }
             class="text-xs text-slate-500 italic"
           >
-            <%= case @form[:concurrency].value do
-              nil -> "Unlimited (up to max available)"
+            <%= case @form[:concurrency].value || "" do
               "" -> "Unlimited (up to max available)"
               1 -> "No more than one run at a time"
               value -> "No more than #{value} runs at a time"
             end %>
+          </div>
+          <div
+            :if={
+              @project_concurrency_disabled and
+                Enum.empty?(@form[:concurrency].errors)
+            }
+            class="text-xs text-red-500 italic"
+          >
+            This workflow concurrency limit won't take effect. Parallel execution of runs is disabled for this project. You can modify this setting on your
+            <.link class="underline" patch={~p"/projects/#{@project_id}/settings"}>
+              project setup
+            </.link>
+            page.
           </div>
         </div>
       </div>
