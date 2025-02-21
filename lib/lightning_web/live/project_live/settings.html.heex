@@ -140,15 +140,19 @@
             <h6 class="font-medium text-black">
               Concurrency
             </h6>
-            <small class="block my-1 text-xs text-gray-600">
-              Runs are executed concurrently in accordance to the individual workflows settings.
-              However in some situations you may want to limit the number of concurrent runs
-              across all workflows in this project.
-            </small>
-            <small class="block my-1 text-xs text-gray-600">
-              By disabling parallel run execution, you can ensure that only one run
-              is executed at a time across all workflows in this project.
-            </small>
+            <div class="@container">
+              <div class="@sm:max-w-xl">
+                <p class="text-xs text-gray-600">
+                  Runs are executed concurrently in accordance to the individual workflows settings.
+                  However in some situations, you may want to limit the number of concurrent runs
+                  across all workflows in this project.
+                </p>
+                <p class="mt-2 text-xs text-gray-600">
+                  By disabling parallel run execution, you can ensure that only one run
+                  is executed at a time across all workflows in this project.
+                </p>
+              </div>
+            </div>
           </div>
           <.form
             :let={f}
