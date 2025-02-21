@@ -72,7 +72,7 @@ defmodule LightningWeb.Components.Viewers do
         <.log_level_filter
           :if={@current_user}
           id={"#{@id}-filter"}
-          levels={@selected_log_levels}
+          selected_levels={@selected_log_levels}
         />
 
         <div
@@ -105,9 +105,9 @@ defmodule LightningWeb.Components.Viewers do
   end
 
   defp selected_log_levels(user) do
-    configured_levels = user.preferences["log_levels"] || []
+    configured_levels = user.preferences["log_levels"]
 
-    if configured_levels == [] do
+    if is_nil(configured_levels) or configured_levels == [] do
       all_log_levels()
     else
       configured_levels
@@ -121,9 +121,11 @@ defmodule LightningWeb.Components.Viewers do
   end
 
   attr :id, :string, required: true
-  attr :levels, :list
+  attr :selected_levels, :list
 
   defp log_level_filter(assigns) do
+    assigns = assign(assigns, all_log_levels: all_log_levels())
+
     ~H"""
     <div id={@id} class="absolute top-0 right-4 z-50">
       <.modal
@@ -156,12 +158,12 @@ defmodule LightningWeb.Components.Viewers do
         >
           <fieldset>
             <div class="space-y-2">
-              <%= for level <- all_log_levels() do %>
+              <%= for level <- @all_log_levels do %>
                 <.input
                   type="checkbox"
                   label={level}
                   field={f[level]}
-                  checked={level in @levels}
+                  checked={level in @selected_levels}
                 />
               <% end %>
             </div>

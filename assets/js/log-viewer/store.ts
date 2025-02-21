@@ -17,16 +17,13 @@ interface LogStore {
   formattedLogLines: string;
   addLogLines: (newLogs: LogLine[]) => void;
   highlightedRanges: { start: number; end: number }[];
-  desiredLogLevels: string[] | undefined;
-  setDesiredLogLevels: (desiredLogLevel: string[] | undefined) => void;
+  desiredLogLevels: string[];
+  setDesiredLogLevels: (desiredLogLevels: string[] | undefined) => void;
 }
 
 // check if a log matches the desired log level
-function matchesLogFilter(
-  log: LogLine,
-  desiredLogLevels: string[] | undefined
-): boolean {
-  if (!desiredLogLevels) return true;
+function matchesLogFilter(log: LogLine, desiredLogLevels: string[]): boolean {
+  if (desiredLogLevels.length === 0) return true;
 
   return desiredLogLevels.includes(log.level);
 }
@@ -34,7 +31,7 @@ function matchesLogFilter(
 function findSelectedRanges(
   logs: LogLine[],
   stepId: string | undefined,
-  desiredLogLevels: string[] | undefined
+  desiredLogLevels: string[]
 ) {
   if (!stepId) return [];
 
@@ -117,10 +114,7 @@ function formatLogLine(log: LogLine) {
   return `${source} ${possiblyPrettify(message)}`;
 }
 
-function stringifyLogLines(
-  logLines: LogLine[],
-  desiredLogLevels: string[] | undefined
-) {
+function stringifyLogLines(logLines: LogLine[], desiredLogLevels: string[]) {
   const lines = logLines.reduce((formatted, log) => {
     if (matchesLogFilter(log, desiredLogLevels)) {
       return formatted + (formatted !== '' ? '\n' : '') + formatLogLine(log);
@@ -138,7 +132,7 @@ export const createLogStore = () => {
       setStepId: (stepId: string | undefined) => set({ stepId }),
       desiredLogLevels: undefined,
       setDesiredLogLevels: (desiredLogLevels: string[] | undefined) =>
-        set({ desiredLogLevels }),
+        set({ desiredLogLevels: desiredLogLevels || [] }),
       highlightedRanges: [],
       logLines: [],
       stepSetAt: undefined,
@@ -160,8 +154,8 @@ export const createLogStore = () => {
   );
 
   // Subscribe to the store and update the highlighted ranges when the
-  // log lines or step ID changes.
-  createStore.subscribe<[LogLine[], undefined | string, undefined | string[]]>(
+  // log lines or step ID or log levels changes.
+  createStore.subscribe<[LogLine[], undefined | string, string[]]>(
     state => [state.logLines, state.stepId, state.desiredLogLevels],
     (
       [logLines, stepId, desiredLogLevels],
