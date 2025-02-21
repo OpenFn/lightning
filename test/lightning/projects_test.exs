@@ -2056,6 +2056,58 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "get_projects_by_ids/1" do
+    test "returns empty list when no ids are provided" do
+      assert Projects.get_projects_by_ids([]) == []
+    end
+
+    test "returns empty list when no projects match the provided ids" do
+      random_ids = Enum.map(1..3, fn _ -> Ecto.UUID.generate() end)
+      assert Projects.get_projects_by_ids(random_ids) == []
+    end
+
+    test "returns all projects matching the provided ids" do
+      project1 = insert(:project)
+      project2 = insert(:project)
+      project3 = insert(:project)
+
+      requested_projects =
+        Projects.get_projects_by_ids([project1.id, project3.id])
+
+      project1 = project1 |> unload_relation(:project_users)
+      project3 = project3 |> unload_relation(:project_users)
+
+      assert length(requested_projects) == 2
+      assert project1 in requested_projects
+      assert project3 in requested_projects
+      refute Enum.any?(requested_projects, fn p -> p.id == project2.id end)
+    end
+
+    test "handles mix of existing and non-existing project ids" do
+      project = insert(:project) |> unload_relation(:project_users)
+      non_existent_id = Ecto.UUID.generate()
+
+      results = Projects.get_projects_by_ids([project.id, non_existent_id])
+
+      assert length(results) == 1
+      assert hd(results) == project
+    end
+
+    test "returns projects in any order" do
+      projects =
+        Enum.map(1..3, fn _ ->
+          insert(:project) |> unload_relation(:project_users)
+        end)
+
+      project_ids = Enum.map(projects, & &1.id)
+
+      results = Projects.get_projects_by_ids(Enum.reverse(project_ids))
+
+      assert length(results) == 3
+      assert Enum.all?(projects, &(&1 in results))
+    end
+  end
+
   @spec full_project_fixture(attrs :: Keyword.t()) :: %{optional(any) => any}
   def full_project_fixture(attrs \\ []) when is_list(attrs) do
     %{workflows: [workflow_1, workflow_2]} =

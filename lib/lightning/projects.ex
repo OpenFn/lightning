@@ -1060,4 +1060,8 @@ defmodule Lightning.Projects do
 
     query |> Repo.all()
   end
+
+  def get_projects_by_ids(ids) do
+    from(p in Project, where: p.id in ^ids) |> Repo.all()
+  end
 end

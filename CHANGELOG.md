@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Transfer credentials ownership to a project collaborator
+  [#2820](https://github.com/OpenFn/lightning/issues/2820)
 - Enable project level concurrency limit
   [#2906](https://github.com/OpenFn/lightning/issues/2906)
 - Delete unused snapshots on workorders retention cleanup
