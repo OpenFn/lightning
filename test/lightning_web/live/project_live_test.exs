@@ -828,7 +828,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       valid_project_attrs = %{
         name: "somename",
-        description: "some description",
+        description: "some description"
       }
 
       assert view
@@ -837,7 +837,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert %{
                name: "somename",
-               description: "some description",
+               description: "some description"
              } = Repo.get!(Project, project.id)
     end
 
@@ -861,9 +861,11 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "Project settings"
 
       assert view
-             |> form("#project-execution-form", project: %{
-              concurrency: "1",
-            })
+             |> form("#project-execution-form",
+               project: %{
+                 concurrency: "1"
+               }
+             )
              |> render_submit() =~ "Project updated successfully"
 
       assert %{concurrency: 1} = Repo.get!(Project, project.id)

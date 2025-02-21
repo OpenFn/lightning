@@ -153,18 +153,12 @@
           >
             <div class="grid grid-cols gap-6">
               <div class="md:col-span-2">
-                <.input
-                  type="hidden"
-                  field={f[:name]}
-                />
+                <.input type="hidden" field={f[:name]} />
               </div>
             </div>
             <div class="grid grid-cols gap-6">
               <div class="md:col-span-2">
-                <.input
-                  type="hidden"
-                  field={f[:description]}
-                />
+                <.input type="hidden" field={f[:description]} />
               </div>
             </div>
             <div class="hidden sm:block" aria-hidden="true">
@@ -187,17 +181,20 @@
                 </div>
               </div>
               <Common.alert
-                  :if={f[:concurrency].value == 1 and Enum.any?(@project_changeset.changes)}
-                  id="heads-up-description"
-                  type="warning"
-                  header="Heads Up!"
-                  class="mt-2"
-                >
-                  <:message>
-                    <p>
-                      By disabling parallel execution, the work orders in this project will be processed sequentially.
-                    </p>
-                  </:message>
+                :if={
+                  f[:concurrency].value == 1 and
+                    Enum.any?(@project_changeset.changes)
+                }
+                id="heads-up-description"
+                type="warning"
+                header="Heads Up!"
+                class="mt-2"
+              >
+                <:message>
+                  <p>
+                    By disabling parallel execution, the work orders in this project will be processed sequentially.
+                  </p>
+                </:message>
               </Common.alert>
             </div>
             <div class="hidden sm:block" aria-hidden="true">
@@ -208,7 +205,9 @@
                 <.button
                   id="project-identity-submit-btn"
                   type="submit"
-                  disabled={!(Enum.any?(@project_changeset.changes) and @can_edit_project)}
+                  disabled={
+                    !(Enum.any?(@project_changeset.changes) and @can_edit_project)
+                  }
                 >
                   Save
                 </.button>
