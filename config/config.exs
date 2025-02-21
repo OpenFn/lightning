@@ -88,7 +88,7 @@ config :lightning, :oauth_clients,
 
 # Configure esbuild (the version is required)
 config :esbuild,
-  version: "0.17.18",
+  version: "0.24.2",
   default: [
     args:
       ~w(js/app.js

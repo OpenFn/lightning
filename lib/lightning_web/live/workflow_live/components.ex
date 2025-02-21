@@ -164,13 +164,24 @@ defmodule LightningWeb.WorkflowLive.Components do
               @project_concurrency_disabled and
                 Enum.empty?(@form[:concurrency].errors)
             }
-            class="text-xs text-red-500 italic"
+            class="text-xs"
           >
-            This workflow concurrency limit won't take effect. Parallel execution of runs is disabled for this project. You can modify this setting on your
-            <.link class="underline" patch={~p"/projects/#{@project_id}/settings"}>
-              project setup
-            </.link>
-            page.
+            <div class="grid grid-flow-row-dense gap-2">
+              <div class="m-auto">
+                <.icon name="hero-exclamation-triangle" class="h-4 w-4 text-red-500" />
+              </div>
+              <span class="italic text-red-500">
+                Parallel execution of runs is disabled for this project.
+                This setting will have no effect.
+              </span>
+              <span class="col-start-2">
+                You can modify your Project Concurrency setting on the
+                <.link patch={~p"/projects/#{@project_id}/settings"}>
+                  <span class="underline">project setup</span>
+                </.link>
+                page.
+              </span>
+            </div>
           </div>
         </div>
       </div>

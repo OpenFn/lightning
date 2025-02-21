@@ -138,16 +138,26 @@
         <div class="bg-white p-4 rounded-md">
           <div>
             <h6 class="font-medium text-black">
-              Project Execution
+              Concurrency
             </h6>
-            <small class="block my-1 text-xs text-gray-600">
-              Decide how the runs from this project are executed across multiple workflows, whether in parallel or sequentially.
-            </small>
+            <div class="@container">
+              <div class="@sm:max-w-xl">
+                <p class="text-xs text-gray-600">
+                  Runs are executed concurrently in accordance to the individual workflows settings.
+                  However in some situations, you may want to limit the number of concurrent runs
+                  across all workflows in this project.
+                </p>
+                <p class="mt-2 text-xs text-gray-600">
+                  By disabling parallel run execution, you can ensure that only one run
+                  is executed at a time across all workflows in this project.
+                </p>
+              </div>
+            </div>
           </div>
           <.form
             :let={f}
             for={@project_changeset}
-            id="project-execution-form"
+            id="project-concurrency-form"
             phx-change="validate"
             phx-submit="save"
           >
@@ -165,21 +175,25 @@
               <div class="py-2"></div>
             </div>
             <div class="grid grid-cols md:col-span-2">
-              <div class="flex flex-row">
-                <div>
-                  <.label>Disable parallel run execution?</.label>
-                </div>
-                <div class="ml-2 mt-1">
-                  <.input
-                    type="checkbox"
-                    field={f[:concurrency]}
-                    disabled={!@can_edit_project}
-                    label=""
-                    checked_value="1"
-                    unchecked_value={nil}
-                  />
-                </div>
+              <div class="flex items-center gap-x-4 justify-between">
+                <.input
+                  type="integer-toggle"
+                  field={f[:concurrency]}
+                  disabled={!@can_edit_project}
+                  label=""
+                />
+                <span class="flex grow flex-col">
+                  <.label>Disable parallel run execution</.label>
+                  <span
+                    class="text-sm text-gray-500"
+                    id="concurrency-description"
+                  >
+                    Process all runs in this project no more than one at a time.
+                  </span>
+                </span>
               </div>
+              <div></div>
+              <div class="ml-2 mt-1"></div>
               <Common.alert
                 :if={
                   f[:concurrency].value == 1 and
@@ -192,7 +206,8 @@
               >
                 <:message>
                   <p>
-                    By disabling parallel execution, the work orders in this project will be processed sequentially.
+                    Disabling parallel run execution can severely limit the overall
+                    throughput of your project.
                   </p>
                 </:message>
               </Common.alert>
@@ -203,7 +218,7 @@
             <div class="grid grid-cols gap-6">
               <div class="md:col-span-2">
                 <.button
-                  id="project-identity-submit-btn"
+                  id="project-concurrency-submit-btn"
                   type="submit"
                   disabled={
                     !(Enum.any?(@project_changeset.changes) and @can_edit_project)
@@ -802,11 +817,11 @@
             <span class="flex flex-grow flex-col">
               <span
                 class="text-sm font-medium leading-6 text-gray-900"
-                id="availability-label"
+                id="mfa-label"
               >
                 Multi-Factor Authentication
               </span>
-              <span class="text-sm text-gray-500" id="availability-description">
+              <span class="text-sm text-gray-500" id="mfa-description">
                 Requiring multi-factor authentication (MFA) adds an
                 additional layer of security by requiring users to enable
                 MFA on their accounts before they are allowed access this

@@ -861,12 +861,9 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "Project settings"
 
       assert view
-             |> form("#project-execution-form",
-               project: %{
-                 concurrency: "1"
-               }
-             )
-             |> render_submit() =~ "Project updated successfully"
+             |> form("#project-concurrency-form")
+             |> render_submit(%{project: %{concurrency: "1"}}) =~
+               "Project updated successfully"
 
       assert %{concurrency: 1} = Repo.get!(Project, project.id)
     end
