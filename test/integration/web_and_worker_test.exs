@@ -287,7 +287,7 @@ defmodule Lightning.WebAndWorkerTest do
       # console.log('');        => new line
       # console.log(null);      => null
       # console.log(undefined); => new line
-      assert log =~ "Starting operation 1\n\nnull\n{"
+      assert log =~ "Starting operation 1\n\n\nnull\n{"
 
       assert log =~ ~S[{"password":"***","username":"quux"}]
       assert log =~ ~S"Check state.errors"

@@ -50,7 +50,7 @@ defmodule Lightning.Invocation.LogLine do
   def new(%Run{} = run, attrs \\ %{}, scrubber) do
     %__MODULE__{id: Ecto.UUID.generate()}
     |> cast(attrs, [:message, :timestamp, :step_id, :run_id, :level, :source],
-      empty_values: [[], nil]
+      empty_values: [nil]
     )
     |> put_assoc(:run, run)
     |> validate(scrubber)
