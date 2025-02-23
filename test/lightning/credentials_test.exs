@@ -258,35 +258,6 @@ defmodule Lightning.CredentialsTest do
       credential = insert(:credential, user_id: user.id)
       assert %Ecto.Changeset{} = Credentials.change_credential(credential)
     end
-
-    test "diff_project_credentials_and_project_users/2 returns a list of invalid projects, given a credential and a user" do
-      %{id: user_id_1} = _user_1 = insert(:user)
-      %{id: user_id_2} = user_2 = insert(:user)
-      %{id: _user_id_3} = user_3 = insert(:user)
-
-      %Lightning.Projects.Project{id: project_id} =
-        insert(:project,
-          name: "some-name",
-          project_users: [%{user_id: user_id_1}, %{user_id: user_id_2}]
-        )
-
-      credential =
-        insert(:credential,
-          user_id: user_id_1,
-          project_credentials: [%{project_id: project_id}]
-        )
-
-      assert Credentials.diff_project_credentials_and_project_users(
-               credential,
-               user_2
-             ) == []
-
-      assert Credentials.diff_project_credentials_and_project_users(
-               credential,
-               user_3
-             ) ==
-               [project_id]
-    end
   end
 
   describe "get_credential_by_project_credential/1" do
@@ -968,63 +939,6 @@ defmodule Lightning.CredentialsTest do
     end
   end
 
-  describe "diff_project_credentials_and_project_users/2" do
-    test "returns empty list when user has access to all projects" do
-      user = insert(:user)
-      project = build(:project) |> with_project_user(user, :owner) |> insert()
-
-      credential =
-        insert(:credential,
-          project_credentials: [%{project_id: project.id}]
-        )
-
-      assert [] ==
-               Credentials.diff_project_credentials_and_project_users(
-                 credential,
-                 user
-               )
-    end
-
-    test "returns project ids where user lacks access" do
-      user = insert(:user)
-      other_user = insert(:user)
-
-      project1 = build(:project) |> with_project_user(user, :owner) |> insert()
-      project2 = build(:project) |> with_project_user(user, :owner) |> insert()
-
-      credential =
-        insert(:credential,
-          project_credentials: [
-            %{project_id: project1.id},
-            %{project_id: project2.id}
-          ]
-        )
-
-      assert [] ==
-               Credentials.diff_project_credentials_and_project_users(
-                 credential,
-                 user
-               )
-
-      assert [project1.id, project2.id] --
-               Credentials.diff_project_credentials_and_project_users(
-                 credential,
-                 other_user
-               ) == []
-    end
-
-    test "handles credentials with no projects" do
-      user = insert(:user)
-      credential = insert(:credential)
-
-      assert [] ==
-               Credentials.diff_project_credentials_and_project_users(
-                 credential,
-                 user
-               )
-    end
-  end
-
   describe "credential transfers" do
     test "confirm_transfer/4 transfers credential ownership" do
       owner = insert(:user)
@@ -1223,6 +1137,110 @@ defmodule Lightning.CredentialsTest do
 
       assert {:error, :not_pending} =
                Credentials.revoke_transfer(credential.id, owner)
+    end
+
+    test "confirm_transfer/4 fails if credential is not pending" do
+      owner = insert(:user)
+      receiver = insert(:user)
+
+      credential =
+        insert(:credential, user_id: owner.id, transfer_status: :completed)
+
+      assert {:error, :token_error} =
+               Credentials.confirm_transfer(
+                 credential.id,
+                 receiver.id,
+                 owner.id,
+                 "valid_token"
+               )
+    end
+
+    test "revoke_transfer/2 fails if transfer is already completed" do
+      owner = insert(:user)
+
+      credential =
+        insert(:credential, user_id: owner.id, transfer_status: :completed)
+
+      assert {:error, :not_pending} =
+               Credentials.revoke_transfer(credential.id, owner)
+    end
+
+    test "revoke_transfer/2 fails if called by an unrelated user" do
+      owner = insert(:user)
+      unrelated_user = insert(:user)
+
+      credential =
+        insert(:credential, user_id: owner.id, transfer_status: :pending)
+
+      assert {:error, :not_owner} =
+               Credentials.revoke_transfer(credential.id, unrelated_user)
+    end
+  end
+
+  describe "validate_credential_transfer/3" do
+    test "returns valid changeset when recipient exists and is not sender" do
+      sender = insert(:user)
+      recipient = insert(:user, email: "recipient@example.com")
+      credential = insert(:credential)
+
+      changeset = Credentials.credential_transfer_changeset(recipient.email)
+
+      result =
+        Credentials.validate_credential_transfer(changeset, sender, credential)
+
+      assert result.valid?
+    end
+
+    test "adds error when sender tries to transfer to themselves" do
+      sender = insert(:user, email: "same@example.com")
+      credential = insert(:credential)
+
+      changeset = Credentials.credential_transfer_changeset(sender.email)
+
+      result =
+        Credentials.validate_credential_transfer(changeset, sender, credential)
+
+      assert {:email, {"You cannot transfer a credential to yourself", []}} in result.errors
+    end
+
+    test "adds error when recipient does not exist" do
+      sender = insert(:user)
+      credential = insert(:credential)
+
+      changeset =
+        Credentials.credential_transfer_changeset("nonexistent@example.com")
+
+      result =
+        Credentials.validate_credential_transfer(changeset, sender, credential)
+
+      assert {:email, {"User does not exist", []}} in result.errors
+    end
+
+    test "adds error when recipient lacks access to required projects" do
+      sender = insert(:user)
+      recipient = insert(:user, email: "recipient@example.com")
+      project = insert(:project, name: "Secret Project")
+
+      credential =
+        insert(:credential,
+          project_credentials: [%{project_id: project.id}]
+        )
+
+      changeset = Credentials.credential_transfer_changeset(recipient.email)
+
+      result =
+        Credentials.validate_credential_transfer(changeset, sender, credential)
+
+      assert {:email,
+              {"User doesn't have access to these projects: Secret Project", []}} in result.errors
+    end
+  end
+
+  describe "credential_transfer_changeset/1" do
+    test "creates changeset with valid email" do
+      changeset = Credentials.credential_transfer_changeset("test@example.com")
+      assert changeset.valid?
+      assert Ecto.Changeset.get_field(changeset, :email) == "test@example.com"
     end
   end
 end

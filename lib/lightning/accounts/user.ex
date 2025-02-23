@@ -164,62 +164,6 @@ defmodule Lightning.Accounts.User do
     |> put_change(:role, :superuser)
   end
 
-  @doc """
-  Validates that a user has access to all projects associated with a credential.
-  Returns a changeset with any project access errors.
-  """
-  def validate_project_access(changeset, credential) do
-    case get_field(changeset, :email) do
-      nil ->
-        changeset
-
-      email ->
-        case Lightning.Repo.exists?(User |> where(email: ^email)) do
-          false ->
-            changeset
-
-          true ->
-            user = Lightning.Accounts.get_user_by_email(email)
-
-            projects =
-              credential
-              |> Lightning.Credentials.diff_project_credentials_and_project_users(
-                user
-              )
-              |> Lightning.Projects.get_projects_by_ids()
-
-            if Enum.empty?(projects) do
-              changeset
-            else
-              projects_names = Enum.map_join(projects, ", ", & &1.name)
-
-              add_error(
-                changeset,
-                :email,
-                "User doesn't have access to these projects: #{projects_names}"
-              )
-            end
-        end
-    end
-  end
-
-  def validate_not_same_user(changeset, field, current_user, opts \\ []) do
-    message = opts[:message] || "Cannot be the same as current user"
-    value = get_field(changeset, field)
-    current_value = Map.get(current_user, field)
-
-    cond do
-      is_nil(value) ->
-        changeset
-
-      value == current_value ->
-        add_error(changeset, field, message)
-
-      true ->
-        changeset
-    end
-  end
-
   def validate_email_format(changeset) do
     changeset
     |> validate_required(:email, message: "can't be blank")
@@ -237,17 +181,6 @@ defmodule Lightning.Accounts.User do
         [email: "has already been taken"]
       else
         []
-      end
-    end)
-  end
-
-  def validate_email_not_exists(changeset) do
-    changeset
-    |> validate_change(:email, fn :email, email ->
-      if Lightning.Repo.exists?(User |> where(email: ^email)) do
-        []
-      else
-        [email: "user does not exist"]
       end
     end)
   end

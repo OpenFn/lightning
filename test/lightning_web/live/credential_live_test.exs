@@ -2764,7 +2764,7 @@ defmodule LightningWeb.CredentialLiveTest do
         |> render_blur(%{"value" => "nonexistent@example.com"})
 
       refute html =~ "Email address not valid"
-      assert html =~ "user does not exist"
+      assert html =~ "User does not exist"
       refute html =~ "You cannot transfer a credential to yourself"
     end
 

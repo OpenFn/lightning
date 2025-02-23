@@ -542,44 +542,6 @@ defmodule Lightning.Credentials do
 
   def basic_auth_for(_credential), do: []
 
-  @doc """
-  Given a credential and a user, returns a list of invalid projects—i.e., those
-  that the credential is shared with but that the user does not have access to.
-
-  This is used to generate a validation error when a credential cannot be
-  transferred.
-
-  ## Examples
-
-      iex> diff_project_credentials_and_project_users(credential_id, user_id)
-      []
-
-      iex> diff_project_credentials_and_project_users(credential_id, user_id)
-      ["52ea8758-6ce5-43d7-912f-6a1e1f11dc55"]
-  """
-  def diff_project_credentials_and_project_users(
-        %Credential{id: credential_id},
-        %User{
-          id: user_id
-        }
-      ) do
-    project_credentials =
-      from(pc in Lightning.Projects.ProjectCredential,
-        where: pc.credential_id == ^credential_id,
-        select: pc.project_id
-      )
-      |> Repo.all()
-
-    project_users =
-      from(pu in Lightning.Projects.ProjectUser,
-        where: pu.user_id == ^user_id,
-        select: pu.project_id
-      )
-      |> Repo.all()
-
-    project_credentials -- project_users
-  end
-
   def maybe_refresh_token(%Credential{schema: "oauth"} = credential) do
     cond do
       # TODO: Even tho the still_fresh/1 function is in the OauthHTTPClient module, it doesn't do any HTTP call.
@@ -643,7 +605,112 @@ defmodule Lightning.Credentials do
   end
 
   @doc """
-  Initiates a credential transfer from owner to receiver.
+  Creates a changeset for transferring credentials, validating the provided email.
+
+  ## Parameters
+
+    - `email`: The email address to be included in the changeset.
+
+  ## Returns
+
+    An `Ecto.Changeset` containing the email field.
+
+  ## Example
+
+      iex> credential_transfer_changeset("user@example.com")
+      #Ecto.Changeset<...>
+  """
+  @spec credential_transfer_changeset(String.t()) :: Ecto.Changeset.t()
+  def credential_transfer_changeset(email) do
+    credential_transfer_changeset()
+    |> Ecto.Changeset.cast(%{email: email}, [:email])
+  end
+
+  @doc """
+  Returns an empty changeset structure for credential transfers with an email field.
+
+  ## Returns
+
+    An `Ecto.Changeset` struct with an empty data map and an email field.
+
+  ## Example
+
+      iex> credential_transfer_changeset()
+      #Ecto.Changeset<...>
+  """
+  @spec credential_transfer_changeset() :: Ecto.Changeset.t()
+  def credential_transfer_changeset do
+    Ecto.Changeset.cast({%{}, %{email: :string}}, %{}, [:email])
+  end
+
+  @doc """
+  Validates a credential transfer request.
+
+  This function ensures:
+    - The email format is correct.
+    - The email does not already exist in the system.
+    - The credential is not transferred to the same user.
+    - The recipient has access to the necessary projects.
+
+  If the changeset is valid, additional validation checks are applied.
+
+  ## Parameters
+
+    - `changeset`: The `Ecto.Changeset` containing the credential transfer details.
+    - `current_user`: The user attempting the credential transfer.
+    - `credential`: The credential being transferred.
+
+  ## Returns
+
+    - An updated `Ecto.Changeset` with validation errors if any issues are found.
+  """
+  @spec validate_credential_transfer(
+          Ecto.Changeset.t(),
+          Lightning.Accounts.User.t(),
+          Lightning.Credentials.Credential.t()
+        ) :: Ecto.Changeset.t()
+  def validate_credential_transfer(changeset, sender, credential) do
+    changeset
+    |> Lightning.Accounts.User.validate_email_format()
+    |> then(fn changeset ->
+      if changeset.valid? do
+        changeset
+        |> validate_recipient(sender)
+        |> validate_project_access(credential)
+      else
+        changeset
+      end
+    end)
+    |> Map.put(:action, :validate)
+  end
+
+  @doc """
+  Initiates a credential transfer from the `owner` to the `receiver`.
+
+  This function:
+    - Marks the credential as `pending` for transfer.
+    - Generates an email token for the credential transfer.
+    - Sends a transfer confirmation email to the receiver.
+
+  ## Parameters
+
+    - `owner`: The `User` who currently owns the credential.
+    - `receiver`: The `User` who will receive the credential.
+    - `credential`: The `Credential` to be transferred.
+
+  ## Returns
+
+    - `:ok` if the transfer process is successfully initiated.
+    - `{:error, reason}` if any validation or transaction step fails.
+
+  ## Example
+
+  ```elixir
+  case initiate_credential_transfer(owner, receiver, credential) do
+    :ok -> IO.puts("Transfer initiated successfully")
+    {:error, error} -> IO.inspect(error, label: "Transfer failed")
+  end
+  ```
   """
   @spec initiate_credential_transfer(User.t(), User.t(), Credential.t()) ::
           :ok | {:error, transfer_error() | Ecto.Changeset.t()}
@@ -679,7 +746,43 @@ defmodule Lightning.Credentials do
 
   @doc """
   Confirms and executes a credential transfer.
-  Returns {:ok, credential} on success or {:error, reason} on failure.
+
+  This function:
+    - Verifies the transfer token to ensure the request is valid.
+    - Transfers the credential from the `owner` to the `receiver`.
+    - Records the transfer in the audit log.
+    - Deletes all related credential transfer tokens.
+    - Notifies both parties about the transfer.
+
+  ## Parameters
+
+    - `credential_id`: The ID of the `Credential` being transferred.
+    - `receiver_id`: The ID of the `User` receiving the credential.
+    - `owner_id`: The ID of the `User` currently owning the credential.
+    - `token`: The transfer token for verification.
+
+  ## Returns
+
+    - `{:ok, credential}` on successful transfer.
+    - `{:error, reason}` if the transfer fails.
+
+  ## Errors
+
+    - `{:error, :not_found}` if the credential or receiver does not exist.
+    - `{:error, :token_error}` if the token is invalid.
+    - `{:error, :not_owner}` if the token does not match the credential owner.
+    - `{:error, changeset}` if there is a validation or update issue.
+
+  ## Example
+
+  ```elixir
+  case confirm_transfer(credential_id, receiver_id, owner_id, token) do
+    {:ok, credential} -> IO.puts("Transfer successful")
+    {:error, :not_found} -> IO.puts("Error: Credential or receiver not found")
+    {:error, :token_error} -> IO.puts("Error: Invalid transfer token")
+    {:error, reason} -> IO.inspect(reason, label: "Transfer failed")
+  end
+  ```
   """
   @spec confirm_transfer(String.t(), String.t(), String.t(), String.t()) ::
           {:ok, Credential.t()} | {:error, transfer_error() | Ecto.Changeset.t()}
@@ -728,6 +831,37 @@ defmodule Lightning.Credentials do
 
   @doc """
   Revokes a pending credential transfer.
+
+  This function:
+    - Ensures the credential exists.
+    - Checks that the `owner` is the one who initiated the transfer.
+    - Confirms that the credential is still in a `pending` state.
+    - Resets the transfer status and deletes related credential transfer tokens.
+
+  ## Parameters
+
+    - `credential_id`: The ID of the `Credential` being revoked.
+    - `owner`: The `User` who owns the credential and is revoking the transfer.
+
+  ## Returns
+
+    - `{:ok, credential}` if the transfer is successfully revoked.
+    - `{:error, :not_found}` if the credential does not exist.
+    - `{:error, :not_owner}` if the user does not own the credential.
+    - `{:error, :not_pending}` if the transfer is not in a pending state.
+    - `{:error, changeset}` if there is a validation or update issue.
+
+  ## Example
+
+  ```elixir
+  case revoke_transfer(credential_id, owner) do
+    {:ok, credential} -> IO.puts("Transfer revoked for credential")
+    {:error, :not_found} -> IO.puts("Error: Credential not found")
+    {:error, :not_owner} -> IO.puts("Error: You do not own this credential")
+    {:error, :not_pending} -> IO.puts("Error: Transfer is not pending")
+    {:error, reason} -> IO.inspect(reason, label: "Revoke failed")
+  end
+  ```
   """
   @spec revoke_transfer(String.t(), User.t()) ::
           {:ok, Credential.t()} | {:error, transfer_error() | Ecto.Changeset.t()}
@@ -757,6 +891,8 @@ defmodule Lightning.Credentials do
     end
   end
 
+  @spec verify_transfer_token(String.t(), String.t()) ::
+          {:ok, User.t()} | {:error, transfer_error()}
   defp verify_transfer_token(token, owner_id) do
     case UserToken.verify_email_token_query(
            token,
@@ -776,6 +912,71 @@ defmodule Lightning.Credentials do
 
       _error ->
         {:error, :token_error}
+    end
+  end
+
+  @spec validate_project_access(
+          Ecto.Changeset.t(),
+          Lightning.Credentials.Credential.t()
+        ) :: Ecto.Changeset.t()
+  defp validate_project_access(changeset, credential) do
+    with email when not is_nil(email) <-
+           Ecto.Changeset.get_field(changeset, :email),
+         user when not is_nil(user) <-
+           Lightning.Accounts.get_user_by_email(email),
+         projects when projects != [] <-
+           projects_blocking_credential_transfer(credential, user) do
+      project_names = Enum.map_join(projects, ", ", & &1.name)
+
+      Ecto.Changeset.add_error(
+        changeset,
+        :email,
+        "User doesn't have access to these projects: #{project_names}"
+      )
+    else
+      _ -> changeset
+    end
+  end
+
+  @spec projects_blocking_credential_transfer(
+          Lightning.Credentials.Credential.t(),
+          Lightning.Accounts.User.t()
+        ) :: [Lightning.Projects.Project.t()]
+  defp projects_blocking_credential_transfer(
+         %Credential{id: credential_id},
+         %User{id: user_id}
+       ) do
+    from(p in Lightning.Projects.Project,
+      join: pc in Lightning.Projects.ProjectCredential,
+      on: pc.project_id == p.id and pc.credential_id == ^credential_id,
+      left_join: pu in Lightning.Projects.ProjectUser,
+      on: pu.project_id == p.id and pu.user_id == ^user_id,
+      where: is_nil(pu.id),
+      distinct: true,
+      select: p
+    )
+    |> Repo.all()
+  end
+
+  defp validate_recipient(changeset, %{email: sender_email} = _sender) do
+    recipient_email = Ecto.Changeset.get_field(changeset, :email)
+
+    cond do
+      is_nil(recipient_email) ->
+        changeset
+
+      recipient_email == sender_email ->
+        Ecto.Changeset.add_error(
+          changeset,
+          :email,
+          "You cannot transfer a credential to yourself"
+        )
+
+      !Lightning.Repo.exists?(User |> where(email: ^recipient_email)) ->
+        Ecto.Changeset.add_error(changeset, :email, "User does not exist")
+
+      true ->
+        changeset
     end
   end
 end

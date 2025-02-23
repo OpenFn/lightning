@@ -4,14 +4,6 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
   """
   use LightningWeb, :live_component
 
-  import Lightning.Accounts.User,
-    only: [
-      validate_email_format: 1,
-      validate_email_not_exists: 1,
-      validate_project_access: 2,
-      validate_not_same_user: 4
-    ]
-
   alias Lightning.Accounts
   alias Lightning.Credentials
 
@@ -23,7 +15,7 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
      socket
      |> assign(assigns)
      |> assign(:revoke_transfer, revoke_transfer)
-     |> assign(:changeset, empty_email_changeset())}
+     |> assign(:changeset, Credentials.credential_transfer_changeset())}
   end
 
   @impl true
@@ -32,7 +24,10 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
   end
 
   def handle_event("validate", %{"receiver" => %{"email" => email}}, socket) do
-    changeset = build_email_changeset(email) |> Map.put(:action, :validate)
+    changeset =
+      Credentials.credential_transfer_changeset(email)
+      |> Map.put(:action, :validate)
+
     {:noreply, assign(socket, :changeset, changeset)}
   end
 
@@ -40,8 +35,8 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
     %{assigns: %{current_user: current_user, credential: credential}} = socket
 
     changeset =
-      build_email_changeset(email)
-      |> validate_credential_transfer(current_user, credential)
+      Credentials.credential_transfer_changeset(email)
+      |> Credentials.validate_credential_transfer(current_user, credential)
 
     {:noreply, assign(socket, :changeset, changeset)}
   end
@@ -87,8 +82,8 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
     } = socket
 
     changeset =
-      build_email_changeset(email)
-      |> validate_credential_transfer(owner, credential)
+      Credentials.credential_transfer_changeset(email)
+      |> Credentials.validate_credential_transfer(owner, credential)
 
     if changeset.valid? do
       with receiver when not is_nil(receiver) <-
@@ -139,33 +134,6 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
       </.modal>
     </div>
     """
-  end
-
-  defp validate_credential_transfer(changeset, current_user, credential) do
-    changeset
-    |> validate_email_format()
-    |> then(fn changeset ->
-      if changeset.valid? do
-        changeset
-        |> validate_email_not_exists()
-        |> validate_not_same_user(:email, current_user,
-          message: "You cannot transfer a credential to yourself"
-        )
-        |> validate_project_access(credential)
-      else
-        changeset
-      end
-    end)
-    |> Map.put(:action, :validate)
-  end
-
-  defp build_email_changeset(email) do
-    empty_email_changeset()
-    |> Ecto.Changeset.cast(%{email: email}, [:email])
-  end
-
-  defp empty_email_changeset do
-    Ecto.Changeset.cast({%{}, %{email: :string}}, %{}, [:email])
   end
 
   defp close_button(assigns) do
