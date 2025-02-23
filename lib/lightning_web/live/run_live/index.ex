@@ -105,7 +105,12 @@ defmodule LightningWeb.RunLive.Index do
 
     search_fields = [
       %{id: :id, icon: "hero-finger-print-mini", label: "Include IDs"},
-      %{id: :body, icon: "hero-document-arrow-down", label: "Include inputs"},
+      %{
+        id: :body,
+        icon: "hero-document-arrow-down",
+        label:
+          "Include inputs (note that very large/complex inputs—often around 10MB—may not appear in string search due to a ts_vector index length limit of 1MB)"
+      },
       %{id: :log, icon: "hero-bars-arrow-down-mini", label: "Include run logs"}
     ]
 
