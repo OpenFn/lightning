@@ -99,6 +99,8 @@ defmodule LightningWeb.RunLive.Streaming do
       unquote(helpers())
       unquote(handle_infos())
       @impl true
+      unquote(handle_events())
+      @impl true
       unquote(handle_asyncs())
     end
   end
@@ -201,6 +203,26 @@ defmodule LightningWeb.RunLive.Streaming do
            :run,
            AsyncResult.failed(run, {:exit, reason})
          )}
+      end
+    end
+  end
+
+  defp handle_events do
+    quote do
+      def handle_event("save-log-filter", %{"log_filter" => params}, socket) do
+        selected_levels =
+          params
+          |> Map.filter(fn {_key, value} -> value == "true" end)
+          |> Map.keys()
+
+        {:ok, updated_user} =
+          Lightning.Accounts.update_user_preference(
+            socket.assigns.current_user,
+            "log_levels",
+            selected_levels
+          )
+
+        {:noreply, assign(socket, current_user: updated_user)}
       end
     end
   end

@@ -17,9 +17,22 @@ interface LogStore {
   formattedLogLines: string;
   addLogLines: (newLogs: LogLine[]) => void;
   highlightedRanges: { start: number; end: number }[];
+  desiredLogLevels: string[];
+  setDesiredLogLevels: (desiredLogLevels: string[] | undefined) => void;
 }
 
-function findSelectedRanges(logs: LogLine[], stepId: string | undefined) {
+// check if a log matches the desired log level
+function matchesLogFilter(log: LogLine, desiredLogLevels: string[]): boolean {
+  if (desiredLogLevels.length === 0) return true;
+
+  return desiredLogLevels.includes(log.level);
+}
+
+function findSelectedRanges(
+  logs: LogLine[],
+  stepId: string | undefined,
+  desiredLogLevels: string[]
+) {
   if (!stepId) return [];
 
   const { ranges } = logs.reduce<{
@@ -27,6 +40,11 @@ function findSelectedRanges(logs: LogLine[], stepId: string | undefined) {
     marker: number;
   }>(
     ({ ranges, marker }, log) => {
+      // Skip logs that don't match the desired log level
+      if (!matchesLogFilter(log, desiredLogLevels)) {
+        return { ranges, marker };
+      }
+
       // Get the number of newlines in the message, used to determine the end index.
       const newLineCount = [...possiblyPrettify(log.message).matchAll(/\n/g)]
         .length;
@@ -96,11 +114,25 @@ function formatLogLine(log: LogLine) {
   return `${source} ${possiblyPrettify(message)}`;
 }
 
+function stringifyLogLines(logLines: LogLine[], desiredLogLevels: string[]) {
+  const lines = logLines.reduce((formatted, log) => {
+    if (matchesLogFilter(log, desiredLogLevels)) {
+      return formatted + (formatted !== '' ? '\n' : '') + formatLogLine(log);
+    }
+    return formatted;
+  }, '');
+
+  return lines;
+}
+
 export const createLogStore = () => {
   const createStore = create<LogStore>()(
     subscribeWithSelector((set, get) => ({
       stepId: undefined,
       setStepId: (stepId: string | undefined) => set({ stepId }),
+      desiredLogLevels: undefined,
+      setDesiredLogLevels: (desiredLogLevels: string[] | undefined) =>
+        set({ desiredLogLevels: desiredLogLevels || [] }),
       highlightedRanges: [],
       logLines: [],
       stepSetAt: undefined,
@@ -111,8 +143,10 @@ export const createLogStore = () => {
 
         logLines.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
+        const desiredLogLevels = get().desiredLogLevels;
+
         set({
-          formattedLogLines: logLines.map(formatLogLine).join('\n'),
+          formattedLogLines: stringifyLogLines(logLines, desiredLogLevels),
           logLines,
         });
       },
@@ -120,19 +154,35 @@ export const createLogStore = () => {
   );
 
   // Subscribe to the store and update the highlighted ranges when the
-  // log lines or step ID changes.
-  createStore.subscribe<[LogLine[], undefined | string]>(
-    state => [state.logLines, state.stepId],
-    ([logLines, stepId], _) => {
-      createStore.setState({
-        highlightedRanges: findSelectedRanges(logLines, stepId),
-      });
+  // log lines or step ID or log levels changes.
+  createStore.subscribe<[LogLine[], undefined | string, string[]]>(
+    state => [state.logLines, state.stepId, state.desiredLogLevels],
+    (
+      [logLines, stepId, desiredLogLevels],
+      [_prevLogLines, _prevStepId, prevLogLevels]
+    ) => {
+      const state = {
+        highlightedRanges: findSelectedRanges(
+          logLines,
+          stepId,
+          desiredLogLevels
+        ),
+      };
+
+      if (prevLogLevels !== desiredLogLevels) {
+        state.formattedLogLines = stringifyLogLines(logLines, desiredLogLevels);
+      }
+      createStore.setState(state);
     },
     {
-      equalityFn: ([prevLogLines, prevStepId], [nextLogLines, nextStepId]) => {
+      equalityFn: (
+        [prevLogLines, prevStepId, prevLogLevels],
+        [nextLogLines, nextStepId, nextLogLevels]
+      ) => {
         return (
           prevLogLines.length === nextLogLines.length &&
-          prevStepId === nextStepId
+          prevStepId === nextStepId &&
+          prevLogLevels === nextLogLevels
         );
       },
     }

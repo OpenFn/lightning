@@ -27,6 +27,8 @@ export default {
 
     this.store = createLogStore();
     this.store.getState().setStepId(this.el.dataset.stepId);
+    let logLevels = this.el.dataset.logLevels?.split(',');
+    this.store.getState().setDesiredLogLevels(logLevels);
 
     this.component = mount(this.viewerEl, this.store);
 
@@ -44,6 +46,8 @@ export default {
 
   updated() {
     this.store.getState().setStepId(this.el.dataset.stepId);
+    let logLevels = this.el.dataset.logLevels?.split(',');
+    this.store.getState().setDesiredLogLevels(logLevels);
     // this.el.dispatchEvent(
     //   new CustomEvent('log-viewer:highlight-step', {
     //     detail: { stepId: this.el.dataset.stepId },
