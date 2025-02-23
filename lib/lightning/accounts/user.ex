@@ -164,7 +164,7 @@ defmodule Lightning.Accounts.User do
     |> put_change(:role, :superuser)
   end
 
-  def validate_email(changeset) do
+  def validate_email_format(changeset) do
     changeset
     |> validate_required(:email, message: "can't be blank")
     |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/,
@@ -172,6 +172,10 @@ defmodule Lightning.Accounts.User do
     )
     |> validate_length(:email, max: 160)
     |> update_change(:email, &String.downcase/1)
+  end
+
+  def validate_email_exists(changeset) do
+    changeset
     |> validate_change(:email, fn :email, email ->
       if Lightning.Repo.exists?(User |> where(email: ^email)) do
         [email: "has already been taken"]
@@ -179,6 +183,12 @@ defmodule Lightning.Accounts.User do
         []
       end
     end)
+  end
+
+  def validate_email(changeset) do
+    changeset
+    |> validate_email_format()
+    |> validate_email_exists()
   end
 
   defp validate_password(changeset, opts) do
