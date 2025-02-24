@@ -105,9 +105,9 @@ defmodule LightningWeb.Components.Viewers do
   end
 
   defp selected_log_levels(user) do
-    configured_levels = user.preferences["log_levels"]
+    configured_levels = Map.get(user.preferences, "log_levels", [])
 
-    if is_nil(configured_levels) or configured_levels == [] do
+    if configured_levels == [] do
       all_log_levels()
     else
       configured_levels
