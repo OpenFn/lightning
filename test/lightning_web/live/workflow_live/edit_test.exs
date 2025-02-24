@@ -934,7 +934,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert path == ~p"/projects/#{project.id}/w/#{workflow.id}?m=settings"
 
       assert has_element?(view, "#workflow-settings-#{workflow.id}")
-      assert render(view) =~ "Workflow settings"
+      html = render(view)
+      assert html =~ "Workflow settings"
+      assert html =~ "Unlimited (up to max available)"
 
       assert view
              |> form("#workflow-form", %{"workflow" => %{"concurrency" => "0"}})
@@ -942,6 +944,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert view |> element("#workflow-form") |> render_submit() =~
                "Workflow could not be saved"
+
+      assert view
+             |> form("#workflow-form", %{"workflow" => %{"concurrency" => "1"}})
+             |> render_change() =~ "No more than one run at a time"
 
       assert view
              |> form("#workflow-form", %{"workflow" => %{"concurrency" => "5"}})

@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Enable project level concurrency limit
+  [#2906](https://github.com/OpenFn/lightning/issues/2906)
 - Delete unused snapshots on workorders retention cleanup
   [#1832](https://github.com/OpenFn/lightning/issues/1832)
 - Allow users to configure their preferred log levels
@@ -28,6 +30,9 @@ and this project adheres to
   [#2938](https://github.com/OpenFn/lightning/pull/2938)
 
 ### Fixed
+
+- Creating a dataclip fails on indexing when it's too large
+  [#2682](https://github.com/OpenFn/lightning/issues/2682)
 
 ## [v2.10.15] - 2025-02-14
 

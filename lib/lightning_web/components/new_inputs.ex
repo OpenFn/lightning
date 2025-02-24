@@ -145,7 +145,7 @@ defmodule LightningWeb.Components.NewInputs do
     default: "text",
     values:
       ~w(checkbox color date datetime-local email file hidden month number password
-               range radio search select tel text textarea time url week toggle)
+               range radio search select tel text textarea time url week toggle integer-toggle)
 
   attr :field, Phoenix.HTML.FormField,
     doc:
@@ -373,6 +373,65 @@ defmodule LightningWeb.Components.NewInputs do
       ]}
       {@rest}
     />
+    """
+  end
+
+  def input(%{type: "integer-toggle"} = assigns) do
+    assigns =
+      assigns
+      |> assign_new(:hidden_input_selector, fn %{name: name} ->
+        "input[type=hidden][name='#{name}']"
+      end)
+      |> assign_new(:disabled, fn assigns ->
+        get_in(assigns, [:rest, :disabled]) || false
+      end)
+      |> assign_new(:values, fn ->
+        # TODO: placeholder for alternative values, like "0" and "1",
+        # or "false" and "true" when this might replace the other toggle component
+        [nil, "1"]
+        |> Enum.map(fn v ->
+          Phoenix.HTML.html_escape(v) |> Phoenix.HTML.safe_to_string()
+        end)
+      end)
+      |> update(:value, &to_string/1)
+
+    ~H"""
+    <button
+      type="button"
+      disabled={@disabled}
+      class={[
+        "relative inline-flex h-6 w-11 shrink-0",
+        "cursor-pointer rounded-full border-2 border-transparent",
+        "transition-colors duration-200 ease-in-out",
+        "focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2",
+        "disabled:cursor-not-allowed",
+        "bg-gray-200 aria-checked:bg-indigo-600 group"
+      ]}
+      role="switch"
+      aria-checked={"#{@value == "1" || false}"}
+      phx-click={
+        if !@disabled,
+          do:
+            JS.toggle_attribute(
+              ["value" | @values] |> List.to_tuple(),
+              to: @hidden_input_selector
+            )
+            |> JS.dispatch("input", to: @hidden_input_selector)
+      }
+    >
+      <span class="sr-only">Use setting</span>
+      <span
+        aria-hidden="true"
+        class={[
+          "pointer-events-none inline-block size-5",
+          "transform transition duration-200 ease-in-out",
+          "rounded-full bg-white shadow ring-0",
+          "translate-x-0 group-aria-checked:translate-x-5"
+        ]}
+      >
+      </span>
+      <input type="hidden" name={@name} value={@value} />
+    </button>
     """
   end
 
@@ -652,7 +711,7 @@ defmodule LightningWeb.Components.NewInputs do
     ~H"""
     <label
       for={@for}
-      class={["block text-sm font-semibold leading-6 text-slate-800", @class]}
+      class={["text-sm/6 font-medium text-slate-800", @class]}
       {@rest}
     >
       <%= render_slot(@inner_block) %>

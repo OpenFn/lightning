@@ -101,6 +101,24 @@ defmodule Lightning.InvocationTest do
                Invocation.create_dataclip(@invalid_attrs)
     end
 
+    test "huge dataclips can get saved" do
+      project = insert(:project)
+
+      body =
+        Map.new(1..20_000, fn _n ->
+          {Ecto.UUID.generate(), Ecto.UUID.generate()}
+        end)
+
+      assert {:ok, _dataclip} =
+               Dataclip.new(%{
+                 id: Ecto.UUID.generate(),
+                 project_id: project.id,
+                 body: body,
+                 type: :step_result
+               })
+               |> Repo.insert()
+    end
+
     test "update_dataclip/2 with valid data updates the dataclip" do
       dataclip = insert(:dataclip)
       update_attrs = %{body: %{}, type: :global}
