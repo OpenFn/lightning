@@ -6,26 +6,34 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
   use LightningWeb, :live_component
   alias Lightning.Jobs
   alias Lightning.Workflows
+  alias Lightning.WorkOrders
 
   @impl true
   def update(
         %{
           total_entries: _count,
-          selected_count: _selected_count,
-          workflow_id: workflow_id
+          selected_workorders:
+            [%{workflow_id: workflow_id} | _] = selected_workorders
         } = assigns,
         socket
       ) do
     workflow = Workflows.get_workflow!(workflow_id)
-    jobs = Jobs.list_jobs_for_workflow(workflow)
+    workflow_jobs = Jobs.list_jobs_for_workflow(workflow)
+
+    retriable_jobs =
+      selected_workorders
+      |> WorkOrders.get_last_runs_steps_with_dataclips(workflow_jobs)
+      |> MapSet.new(& &1.step.job_id)
 
     {:ok,
      socket
      |> assign(
        show: false,
        workflow: workflow,
-       workflow_jobs: jobs,
-       selected_job: hd(jobs)
+       workflow_jobs: workflow_jobs,
+       retriable_jobs: retriable_jobs,
+       selected_job: hd(workflow_jobs),
+       selected_count: Enum.count(selected_workorders)
      )
      |> assign(assigns)}
   end
@@ -105,10 +113,14 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
                                 do: "checked",
                                 else: false
                             }
+                            disabled={not MapSet.member?(@retriable_jobs, job.id)}
                           />
                           <label
                             for={"job_#{job.id}"}
-                            class="ml-3 block text-sm font-medium leading-6 text-gray-900"
+                            class={[
+                              "ml-3 block text-sm leading-6 font-medium",
+                              "#{if MapSet.member?(@retriable_jobs, job.id), do: "text-gray-900", else: "text-slate-500"}"
+                            ]}
                           >
                             <%= job.name %>
                           </label>
