@@ -700,7 +700,7 @@ defmodule Lightning.Projects do
   """
   def schedule_project_deletion(project) do
     Multi.new()
-    |> scheduled_project_deletion_changes(project)
+    |> scheduled_project_deletion_changes(project: project)
     |> Repo.transaction()
     |> case do
       {:ok, %{project: updated_project}} -> {:ok, updated_project}
@@ -708,7 +708,7 @@ defmodule Lightning.Projects do
     end
   end
 
-  def scheduled_project_deletion_changes(multi, project) do
+  def scheduled_project_deletion_changes(multi, [{project_op, project}]) do
     date =
       case Lightning.Config.purge_deleted_after_days() do
         nil -> DateTime.utc_now()
@@ -716,8 +716,9 @@ defmodule Lightning.Projects do
       end
 
     multi
-    |> Multi.all(:triggers, project_triggers_query(project))
-    |> Multi.merge(fn %{triggers: triggers} ->
+    |> Multi.merge(fn _changes ->
+      triggers = project_triggers_query(project) |> Repo.all()
+
       Enum.reduce(triggers, Multi.new(), fn trigger, multi ->
         Multi.update(
           multi,
@@ -727,7 +728,7 @@ defmodule Lightning.Projects do
       end)
     end)
     |> Multi.update(
-      :project,
+      project_op,
       Ecto.Changeset.change(project, %{
         scheduled_deletion: DateTime.truncate(date, :second)
       })
