@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Allow the billing app to schedule project deletion
+  [#2972](https://github.com/OpenFn/lightning/issues/2972)
 - Enable project level concurrency limit
   [#2906](https://github.com/OpenFn/lightning/issues/2906)
 - Transfer credentials ownership to a project collaborator
