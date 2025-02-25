@@ -554,7 +554,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               />
               <:footer>
                 <div class="flex flex-row">
-                  <div class="flex items-center">
+                  <div class={["grow", @show_cron_run_button && "mt-2"]}>
                     <.input
                       type="toggle"
                       field={tf[:enabled]}
@@ -564,6 +564,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           !@has_presence_edit_priority
                       }
                       label="Enabled"
+                    />
+                  </div>
+                  <div :if={@show_cron_run_button}>
+                    <.live_component
+                      id="cron-run-button"
+                      module={LightningWeb.JobLive.CronRunButton}
+                      workflow={@workflow}
+                      follow_run={@follow_run}
+                      snapshot_version_tag={@snapshot_version_tag}
                     />
                   </div>
                 </div>
@@ -1118,6 +1127,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
        selected_job: nil,
        selected_run: nil,
        selected_trigger: nil,
+       show_cron_run_button: false,
        selection_mode: nil,
        query_params: %{
          "s" => nil,
@@ -1667,80 +1677,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   # The manual_run_submit event is for create a new work order from a dataclip and
   # a job.
   def handle_event("manual_run_submit", params, socket) do
-    %{
-      project: project,
-      selected_job: selected_job,
-      current_user: current_user,
-      workflow_params: workflow_params,
-      has_presence_edit_priority: has_presence_edit_priority,
-      workflow: workflow,
-      manual_run_form: form
-    } = socket.assigns
-
-    manual_params = Map.get(params, "manual", %{})
-
-    params =
-      case form do
-        nil -> manual_params
-        %{params: form_params} -> Map.merge(form_params, manual_params)
-      end
-
-    socket = socket |> apply_params(workflow_params, :workflow)
-
-    workflow_or_changeset =
-      if has_presence_edit_priority do
-        socket.assigns.changeset
-      else
-        get_workflow_by_id(workflow.id)
-      end
-
-    with :ok <- check_user_can_manual_run_workflow(socket) do
-      case Helpers.run_workflow(
-             workflow_or_changeset,
-             params,
-             project: project,
-             selected_job: selected_job,
-             created_by: current_user
-           ) do
-        {:ok, %{workorder: workorder, workflow: workflow}} ->
-          %{runs: [run]} = workorder
-
-          Runs.subscribe(run)
-
-          snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
-
-          {:noreply,
-           socket
-           |> assign_workflow(workflow, snapshot)
-           |> follow_run(run)
-           |> push_event("push-hash", %{"hash" => "log"})}
-
-        {:error, %Ecto.Changeset{data: %WorkOrders.Manual{}} = changeset} ->
-          {:noreply,
-           socket
-           |> assign_manual_run_form(changeset)}
-
-        {:error, %Ecto.Changeset{data: %Workflow{}} = changeset} ->
-          {
-            :noreply,
-            socket
-            |> assign_changeset(changeset)
-            |> mark_validated()
-            |> put_flash(:error, "Workflow could not be saved")
-          }
-
-        {:error, %{text: message}} ->
-          {:noreply, put_flash(socket, :error, message)}
-
-        {:error, :workflow_deleted} ->
-          {:noreply,
-           put_flash(
-             socket,
-             :error,
-             "Oops! You cannot modify a deleted workflow"
-           )}
-      end
-    end
+    handle_manual_run_submit(socket, params)
   end
 
   def handle_event("toggle_workflow_state", %{"workflow_state" => state}, socket) do
@@ -1795,6 +1732,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
     else
       {:noreply, socket}
     end
+  end
+
+  def handle_info(
+        {LightningWeb.JobLive.CronRunButton, "cron_trigger_manual_run",
+         dataclip_id},
+        socket
+      ) do
+    params = %{"manual" => %{"dataclip_id" => dataclip_id}}
+    handle_manual_run_submit(socket, params)
   end
 
   def handle_info({"form_changed", %{"workflow" => params}}, socket) do
@@ -2161,6 +2107,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
         WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
 
       socket
+      |> assign(
+        :show_cron_run_button,
+        get_in(params, ["triggers", "0", "type"]) == "cron"
+      )
       |> apply_params(next_params, type)
       |> mark_validated()
       |> push_patches_applied(initial_params)
@@ -2631,4 +2581,83 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp loaded?(%Workflow{} = workflow), do: workflow.__meta__.state == :loaded
+
+  defp handle_manual_run_submit(socket, params) do
+    IO.inspect(params)
+
+    %{
+      project: project,
+      selected_job: selected_job,
+      current_user: current_user,
+      workflow_params: workflow_params,
+      has_presence_edit_priority: has_presence_edit_priority,
+      workflow: workflow,
+      manual_run_form: form
+    } = socket.assigns
+
+    manual_params = Map.get(params, "manual", %{})
+
+    params =
+      case form do
+        nil -> manual_params
+        %{params: form_params} -> Map.merge(form_params, manual_params)
+      end
+
+    socket = socket |> apply_params(workflow_params, :workflow)
+
+    workflow_or_changeset =
+      if has_presence_edit_priority do
+        socket.assigns.changeset
+      else
+        get_workflow_by_id(workflow.id)
+      end
+
+    with :ok <- check_user_can_manual_run_workflow(socket) do
+      case Helpers.run_workflow(
+             workflow_or_changeset,
+             params,
+             project: project,
+             selected_job: selected_job,
+             created_by: current_user
+           ) do
+        {:ok, %{workorder: workorder, workflow: workflow}} ->
+          %{runs: [run]} = workorder
+
+          Runs.subscribe(run)
+
+          snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
+
+          {:noreply,
+           socket
+           |> assign_workflow(workflow, snapshot)
+           |> follow_run(run)
+           |> push_event("push-hash", %{"hash" => "log"})}
+
+        {:error, %Ecto.Changeset{data: %WorkOrders.Manual{}} = changeset} ->
+          {:noreply,
+           socket
+           |> assign_manual_run_form(changeset)}
+
+        {:error, %Ecto.Changeset{data: %Workflow{}} = changeset} ->
+          {
+            :noreply,
+            socket
+            |> assign_changeset(changeset)
+            |> mark_validated()
+            |> put_flash(:error, "Workflow could not be saved")
+          }
+
+        {:error, %{text: message}} ->
+          {:noreply, put_flash(socket, :error, message)}
+
+        {:error, :workflow_deleted} ->
+          {:noreply,
+           put_flash(
+             socket,
+             :error,
+             "Oops! You cannot modify a deleted workflow"
+           )}
+      end
+    end
+  end
 end
