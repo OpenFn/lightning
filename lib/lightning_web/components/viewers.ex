@@ -50,11 +50,11 @@ defmodule LightningWeb.Components.Viewers do
 
   def log_viewer(assigns) do
     assigns =
-      assign_new(assigns, :selected_log_levels, fn ->
+      assign_new(assigns, :selected_log_level, fn ->
         if assigns[:current_user] do
-          selected_log_levels(assigns.current_user)
+          Map.get(assigns.current_user.preferences, "desired_log_level", "info")
         else
-          all_log_levels()
+          "info"
         end
       end)
 
@@ -72,7 +72,7 @@ defmodule LightningWeb.Components.Viewers do
         <.log_level_filter
           :if={@current_user}
           id={"#{@id}-filter"}
-          selected_levels={@selected_log_levels}
+          selected_level={@selected_log_level}
         />
 
         <div
@@ -82,7 +82,7 @@ defmodule LightningWeb.Components.Viewers do
           phx-update="ignore"
           data-run-id={@run_id}
           data-step-id={@selected_step_id}
-          data-log-levels={Enum.join(@selected_log_levels, ",")}
+          data-log-level={@selected_log_level}
           data-loading-el={"#{@id}-nothing-yet"}
           data-viewer-el={"#{@id}-viewer"}
         >
@@ -104,27 +104,19 @@ defmodule LightningWeb.Components.Viewers do
     """
   end
 
-  defp selected_log_levels(user) do
-    configured_levels = Map.get(user.preferences, "log_levels", [])
-
-    if configured_levels == [] do
-      all_log_levels()
-    else
-      configured_levels
-    end
-  end
-
-  defp all_log_levels do
-    Lightning.Invocation.LogLine
-    |> Ecto.Enum.values(:level)
-    |> Enum.map(&to_string/1)
-  end
-
   attr :id, :string, required: true
-  attr :selected_levels, :list
+  attr :selected_level, :string
 
   defp log_level_filter(assigns) do
-    assigns = assign(assigns, all_log_levels: all_log_levels())
+    assigns =
+      assign(assigns,
+        log_levels: [
+          {"debug", "Show all logs including debugs"},
+          {"info", "Only show general logs and warnings/errors"},
+          {"warn", "Only show warnings and errors"},
+          {"error", "Only show errors"}
+        ]
+      )
 
     ~H"""
     <div id={@id} class="absolute top-0 right-4 z-50">
@@ -150,21 +142,34 @@ defmodule LightningWeb.Components.Viewers do
             </button>
           </div>
         </:title>
-        <.form
-          :let={f}
-          id={"#{@id}-form"}
-          for={to_form(%{}, as: :log_filter)}
-          phx-change="save-log-filter"
-        >
+        <.form id={"#{@id}-form"} for={to_form(%{})} phx-change="save-log-filter">
           <fieldset>
-            <div class="space-y-2">
-              <%= for level <- @all_log_levels do %>
-                <.input
-                  type="checkbox"
-                  label={level}
-                  field={f[level]}
-                  checked={level in @selected_levels}
-                />
+            <p class="mt-1 text-sm/6 text-gray-600">
+              Which logs do you prefer to see?
+            </p>
+            <div class="mt-6 space-y-4">
+              <%= for {level, description} <- @log_levels do %>
+                <div class="relative flex items-start">
+                  <div class="flex h-6 items-center">
+                    <.input
+                      type="radio"
+                      id={"desired_level_#{level}"}
+                      name="desired_log_level"
+                      value={level}
+                      checked={level == @selected_level}
+                      class="relative size-4 appearance-none rounded-full border border-gray-300 bg-white before:absolute before:inset-1 before:rounded-full before:bg-white checked:border-indigo-600 checked:bg-indigo-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:border-gray-300 disabled:bg-gray-100 disabled:before:bg-gray-400 forced-colors:appearance-auto forced-colors:before:hidden [&:not(:checked)]:before:hidden"
+                    />
+                  </div>
+                  <div class="ml-3 text-sm/6">
+                    <.label
+                      for={"desired_level_#{level}"}
+                      class="font-medium text-gray-900 uppercase"
+                    >
+                      <%= level %>
+                    </.label>
+                    <p class="text-gray-500"><%= description %></p>
+                  </div>
+                </div>
               <% end %>
             </div>
           </fieldset>

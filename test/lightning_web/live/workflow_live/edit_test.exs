@@ -3773,58 +3773,35 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       render_async(run_view)
       assert render(run_view) =~ "Configure log levels"
 
-      # when the user has not set their preference, we assume they want all the levels
-      assert user.preferences["log_levels"] |> is_nil()
+      # when the user has not set their preference, we assume they want info
+      assert user.preferences["desired_log_level"] |> is_nil()
       log_viewer = run_view |> element("#run-log-#{run.id}")
 
-      all_log_levels =
-        Lightning.Invocation.LogLine
-        |> Ecto.Enum.values(:level)
-        |> Enum.map(&to_string/1)
-        |> Enum.sort()
+      # info log level is set in the viewer element
+      assert log_viewer_selected_level(log_viewer) == "info"
 
-      # all log levels are set in the viewer element
-      assert log_viewer_selected_filters(log_viewer) == all_log_levels
+      # try choosing another level
+      for log_level <- ["debug", "info", "error", "warn"] do
+        run_view
+        |> form("#run-log-#{run.id}-filter-form")
+        |> render_change(%{desired_log_level: log_level})
 
-      # try unchecking one of the levels
-      run_view
-      |> form("#run-log-#{run.id}-filter-form")
-      |> render_change(log_filter: %{debug: false})
+        # selected level is set in the viewer
+        assert log_viewer_selected_level(log_viewer) == log_level
 
-      # all except debug are set in the viewer
-      expected_levels =
-        Enum.reject(all_log_levels, fn level -> level == "debug" end)
-
-      assert log_viewer_selected_filters(log_viewer) == expected_levels
-
-      # the preference is saved with expected levels
-      updated_user = Repo.reload(user)
-      assert Enum.sort(updated_user.preferences["log_levels"]) == expected_levels
-
-      # let us uncheck all
-      run_view
-      |> form("#run-log-#{run.id}-filter-form")
-      |> render_change(
-        log_filter: Map.new(all_log_levels, fn level -> {level, false} end)
-      )
-
-      # the preference is saved with no levels
-      updated_user = Repo.reload(user)
-      assert updated_user.preferences["log_levels"] == []
-
-      # all log levels are set in the viewer element
-      assert log_viewer_selected_filters(log_viewer) == all_log_levels
+        # the preference is saved with expected levels
+        updated_user = Repo.reload(user)
+        assert updated_user.preferences["desired_log_level"] == log_level
+      end
     end
   end
 
-  defp log_viewer_selected_filters(log_viewer) do
+  defp log_viewer_selected_level(log_viewer) do
     log_viewer
     |> render()
     |> Floki.parse_fragment!()
-    |> Floki.attribute("data-log-levels")
+    |> Floki.attribute("data-log-level")
     |> hd()
-    |> String.split(",")
-    |> Enum.sort()
   end
 
   defp access_views(

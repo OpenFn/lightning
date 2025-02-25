@@ -209,17 +209,16 @@ defmodule LightningWeb.RunLive.Streaming do
 
   defp handle_events do
     quote do
-      def handle_event("save-log-filter", %{"log_filter" => params}, socket) do
-        selected_levels =
-          params
-          |> Map.filter(fn {_key, value} -> value == "true" end)
-          |> Map.keys()
-
+      def handle_event(
+            "save-log-filter",
+            %{"desired_log_level" => log_level},
+            socket
+          ) do
         {:ok, updated_user} =
           Lightning.Accounts.update_user_preference(
             socket.assigns.current_user,
-            "log_levels",
-            selected_levels
+            "desired_log_level",
+            log_level
           )
 
         {:noreply, assign(socket, current_user: updated_user)}

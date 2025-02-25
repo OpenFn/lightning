@@ -17,21 +17,35 @@ interface LogStore {
   formattedLogLines: string;
   addLogLines: (newLogs: LogLine[]) => void;
   highlightedRanges: { start: number; end: number }[];
-  desiredLogLevels: string[];
-  setDesiredLogLevels: (desiredLogLevels: string[] | undefined) => void;
+  desiredLogLevel: string;
+  setDesiredLogLevel: (desiredLogLevel: string | undefined) => void;
+}
+
+// get score for log level
+function logLevelScore(level: string): number {
+  switch (level) {
+    case 'debug':
+      return 0;
+    case 'info':
+      return 1;
+    case 'warn':
+      return 2;
+    case 'error':
+      return 3;
+    default:
+      return 4;
+  }
 }
 
 // check if a log matches the desired log level
-function matchesLogFilter(log: LogLine, desiredLogLevels: string[]): boolean {
-  if (desiredLogLevels.length === 0) return true;
-
-  return desiredLogLevels.includes(log.level);
+function matchesLogFilter(log: LogLine, desiredLogLevel: string): boolean {
+  return logLevelScore(log.level) >= logLevelScore(desiredLogLevel);
 }
 
 function findSelectedRanges(
   logs: LogLine[],
   stepId: string | undefined,
-  desiredLogLevels: string[]
+  desiredLogLevel: string
 ) {
   if (!stepId) return [];
 
@@ -47,7 +61,7 @@ function findSelectedRanges(
       const nextMarker = marker + 1 + newLineCount;
 
       // Skip logs that don't match the step ID or desired log levels
-      if (log.step_id !== stepId || !matchesLogFilter(log, desiredLogLevels)) {
+      if (log.step_id !== stepId || !matchesLogFilter(log, desiredLogLevel)) {
         return { ranges, marker: nextMarker };
       }
 
@@ -110,9 +124,9 @@ function formatLogLine(log: LogLine) {
   return `${source} ${possiblyPrettify(message)}`;
 }
 
-function stringifyLogLines(logLines: LogLine[], desiredLogLevels: string[]) {
+function stringifyLogLines(logLines: LogLine[], desiredLogLevel: string) {
   const lines = logLines.reduce((formatted, log) => {
-    if (matchesLogFilter(log, desiredLogLevels)) {
+    if (matchesLogFilter(log, desiredLogLevel)) {
       return formatted + (formatted !== '' ? '\n' : '') + formatLogLine(log);
     }
     return formatted;
@@ -126,9 +140,9 @@ export const createLogStore = () => {
     subscribeWithSelector((set, get) => ({
       stepId: undefined,
       setStepId: (stepId: string | undefined) => set({ stepId }),
-      desiredLogLevels: [],
-      setDesiredLogLevels: (desiredLogLevels: string[] | undefined) =>
-        set({ desiredLogLevels: desiredLogLevels || [] }),
+      desiredLogLevel: 'info',
+      setDesiredLogLevel: (desiredLogLevel: string | undefined) =>
+        set({ desiredLogLevel: desiredLogLevel || 'info' }),
       highlightedRanges: [],
       logLines: [],
       stepSetAt: undefined,
@@ -139,10 +153,10 @@ export const createLogStore = () => {
 
         logLines.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
-        const desiredLogLevels = get().desiredLogLevels;
+        const desiredLogLevel = get().desiredLogLevel;
 
         set({
-          formattedLogLines: stringifyLogLines(logLines, desiredLogLevels),
+          formattedLogLines: stringifyLogLines(logLines, desiredLogLevel),
           logLines,
         });
       },
@@ -151,34 +165,34 @@ export const createLogStore = () => {
 
   // Subscribe to the store and update the highlighted ranges when the
   // log lines or step ID or log levels changes.
-  createStore.subscribe<[LogLine[], undefined | string, string[]]>(
-    state => [state.logLines, state.stepId, state.desiredLogLevels],
+  createStore.subscribe<[LogLine[], undefined | string, string]>(
+    state => [state.logLines, state.stepId, state.desiredLogLevel],
     (
-      [logLines, stepId, desiredLogLevels],
-      [_prevLogLines, _prevStepId, prevLogLevels]
+      [logLines, stepId, desiredLogLevel],
+      [_prevLogLines, _prevStepId, prevLogLevel]
     ) => {
       const state = {
         highlightedRanges: findSelectedRanges(
           logLines,
           stepId,
-          desiredLogLevels
+          desiredLogLevel
         ),
       };
 
-      if (prevLogLevels !== desiredLogLevels) {
-        state.formattedLogLines = stringifyLogLines(logLines, desiredLogLevels);
+      if (prevLogLevel !== desiredLogLevel) {
+        state.formattedLogLines = stringifyLogLines(logLines, desiredLogLevel);
       }
       createStore.setState(state);
     },
     {
       equalityFn: (
-        [prevLogLines, prevStepId, prevLogLevels],
-        [nextLogLines, nextStepId, nextLogLevels]
+        [prevLogLines, prevStepId, prevLogLevel],
+        [nextLogLines, nextStepId, nextLogLevel]
       ) => {
         return (
           prevLogLines.length === nextLogLines.length &&
           prevStepId === nextStepId &&
-          prevLogLevels === nextLogLevels
+          prevLogLevel === nextLogLevel
         );
       },
     }
