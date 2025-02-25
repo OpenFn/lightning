@@ -21,6 +21,7 @@ defmodule Lightning.Credentials do
   alias Lightning.Credentials.Audit
   alias Lightning.Credentials.Credential
   alias Lightning.Credentials.OauthClient
+  alias Lightning.Credentials.OauthToken
   alias Lightning.Credentials.SchemaDocument
   alias Lightning.Credentials.SensitiveValues
   alias Lightning.Projects.Project
@@ -70,35 +71,43 @@ defmodule Lightning.Credentials do
   Retrieves all credentials based on the given context, either a Project or a User.
 
   ## Parameters
-
     - context: The Project or User struct to retrieve credentials for.
 
   ## Returns
-
     - A list of credentials associated with the given Project or created by the given User.
 
   ## Examples
-
     When given a Project:
+
       iex> list_credentials(%Project{id: 1})
       [%Credential{project_id: 1}, %Credential{project_id: 1}]
 
     When given a User:
+
       iex> list_credentials(%User{id: 123})
       [%Credential{user_id: 123}, %Credential{user_id: 123}]
   """
+  @spec list_credentials(Project.t()) :: [Credential.t()]
   def list_credentials(%Project{} = project) do
     Ecto.assoc(project, :credentials)
-    |> preload([:user, :project_credentials, :projects, :oauth_client])
+    |> preload([
+      :user,
+      :project_credentials,
+      :projects,
+      oauth_token: :oauth_client
+    ])
     |> Repo.all()
+    |> Enum.map(&Credential.with_oauth/1)
   end
 
+  @spec list_credentials(User.t()) :: [Credential.t()]
   def list_credentials(%User{id: user_id}) do
     from(c in Credential,
       where: c.user_id == ^user_id,
-      preload: [:projects, :oauth_client]
+      preload: [:projects, :user, oauth_token: :oauth_client]
     )
     |> Repo.all()
+    |> Enum.map(&Credential.with_oauth/1)
   end
 
   @doc """
@@ -135,69 +144,126 @@ defmodule Lightning.Credentials do
   end
 
   @doc """
-  Creates a credential.
+  Creates a new credential.
 
-  ## Examples
+  For regular credentials, this simply inserts the changeset.
+  For OAuth credentials, this extracts scopes from the token body, finds or creates
+  an OAuth token, and associates it with the credential.
 
-      iex> create_credential(%{field: value})
-      {:ok, %Credential{}}
+  ## Parameters
+    * `attrs` - Map of attributes for the credential
 
-      iex> create_credential(%{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-
+  ## Returns
+    * `{:ok, credential}` - Successfully created credential
+    * `{:error, error}` - Error with creation process
   """
+  @spec create_credential(map()) :: {:ok, Credential.t()} | {:error, any()}
   def create_credential(attrs \\ %{}) do
-    changeset =
-      %Credential{}
-      |> change_credential(attrs)
+    changeset = change_credential(%Credential{}, attrs)
 
-    Multi.new()
-    |> Multi.insert(
-      :credential,
-      changeset
-    )
+    multi =
+      if attrs["schema"] == "oauth" do
+        %{"user_id" => user_id, "oauth_client_id" => client_id, "body" => body} =
+          attrs
+
+        Multi.new()
+        |> Multi.run(:oauth_token, fn _repo, _changes ->
+          with {:ok, scopes} <- OauthToken.extract_scopes(body) do
+            OauthToken.find_or_create_for_scopes(
+              user_id,
+              client_id,
+              scopes,
+              body
+            )
+          else
+            :error -> {:error, "Could not extract scopes from OAuth token"}
+          end
+        end)
+        |> Multi.insert(:credential, fn %{oauth_token: token} ->
+          changeset
+          |> Ecto.Changeset.put_change(:oauth_token_id, token.id)
+          |> Ecto.Changeset.put_change(:body, %{})
+        end)
+      else
+        Multi.insert(Multi.new(), :credential, changeset)
+      end
+
+    multi
     |> derive_events(changeset)
     |> Repo.transaction()
     |> case do
-      {:error, _op, changeset, _changes} ->
-        {:error, changeset}
-
-      {:ok, %{credential: credential}} ->
-        {:ok, credential}
+      {:error, _op, error, _changes} -> {:error, error}
+      {:ok, %{credential: credential}} -> {:ok, credential}
     end
   end
 
   @doc """
-  Updates a credential.
+  Updates an existing credential.
 
-  ## Examples
+  For regular credentials, this simply updates the changeset.
+  For OAuth credentials with a body update, this updates the associated OAuth token
+  or creates a new one if needed.
 
-      iex> update_credential(credential, %{field: new_value})
-      {:ok, %Credential{}}
+  ## Parameters
+    * `credential` - The credential to update
+    * `attrs` - Map of attributes to update
 
-      iex> update_credential(credential, %{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-
+  ## Returns
+    * `{:ok, credential}` - Successfully updated credential
+    * `{:error, error}` - Error with update process
   """
+  @spec update_credential(Credential.t(), map()) ::
+          {:ok, Credential.t()} | {:error, any()}
   def update_credential(%Credential{} = credential, attrs) do
     changeset =
       credential
       |> change_credential(attrs)
       |> cast_body_change()
 
-    Multi.new()
-    |> Multi.update(:credential, changeset)
+    multi =
+      if credential.schema == "oauth" && Map.has_key?(attrs, "body") do
+        credential = Repo.preload(credential, :oauth_token)
+        new_body = attrs["body"]
+
+        Multi.new()
+        |> Multi.run(:oauth_token, fn _repo, _changes ->
+          if credential.oauth_token_id do
+            credential.oauth_token
+            |> OauthToken.update_token_changeset(new_body)
+            |> Repo.update()
+          else
+            case OauthToken.extract_scopes(new_body) do
+              {:ok, scopes} ->
+                oauth_client_id =
+                  credential.oauth_client_id || attrs["oauth_client_id"]
+
+                OauthToken.find_or_create_for_scopes(
+                  credential.user_id,
+                  oauth_client_id,
+                  scopes,
+                  new_body
+                )
+
+              :error ->
+                {:error, "Could not extract scopes from OAuth token"}
+            end
+          end
+        end)
+        |> Multi.update(:credential, fn %{oauth_token: token} ->
+          changeset
+          |> Ecto.Changeset.put_change(:oauth_token_id, token.id)
+          |> Ecto.Changeset.put_change(:body, nil)
+        end)
+      else
+        Multi.update(Multi.new(), :credential, changeset)
+      end
+
+    multi
     |> derive_events(changeset)
     |> Repo.transaction()
     |> case do
-      {:error, :credential, changeset, _changes} ->
-        {:error, changeset}
-
-      {:ok, %{credential: credential}} ->
-        Lightning.Repo.get(Lightning.Credentials.Credential, credential.id)
-        |> Map.get(:body)
-
-        {:ok, credential}
+      {:error, _op, error, _changes} -> {:error, error}
+      {:ok, %{credential: credential}} -> {:ok, credential}
     end
   end
 
