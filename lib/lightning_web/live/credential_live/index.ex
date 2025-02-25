@@ -93,7 +93,6 @@ defmodule LightningWeb.CredentialLive.Index do
 
   defp list_credentials(user) do
     Credentials.list_credentials(user)
-    |> IO.inspect(label: "Credentials")
     |> Enum.map(fn c ->
       project_names =
         Map.get(c, :projects, [])
