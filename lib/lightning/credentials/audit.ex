@@ -10,7 +10,8 @@ defmodule Lightning.Credentials.Audit do
       "updated",
       "added_to_project",
       "removed_from_project",
-      "deleted"
+      "deleted",
+      "transfered"
     ]
 
   def update_changes(changes) when is_map(changes) do

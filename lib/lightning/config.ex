@@ -260,6 +260,11 @@ defmodule Lightning.Config do
     defp ui_metrics_tracking_config do
       Application.get_env(:lightning, :ui_metrics_tracking, [])
     end
+
+    @impl true
+    def credential_transfer_token_validity_in_days do
+      2
+    end
   end
 
   @callback apollo(key :: atom() | nil) :: map()
@@ -300,6 +305,7 @@ defmodule Lightning.Config do
   @callback worker_secret() :: binary() | nil
   @callback worker_token_signer() :: Joken.Signer.t()
   @callback adaptor_registry() :: Keyword.t()
+  @callback credential_transfer_token_validity_in_days() :: integer()
 
   @doc """
   Returns the configuration for the `Lightning.AdaptorRegistry` service
@@ -472,6 +478,10 @@ defmodule Lightning.Config do
 
   def ui_metrics_tracking_enabled? do
     impl().ui_metrics_tracking_enabled?()
+  end
+
+  def credential_transfer_token_validity_in_days do
+    impl().credential_transfer_token_validity_in_days()
   end
 
   defp impl do
