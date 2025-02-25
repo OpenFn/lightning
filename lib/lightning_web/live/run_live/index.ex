@@ -575,10 +575,6 @@ defmodule LightningWeb.RunLive.Index do
     |> Enum.count()
   end
 
-  defp selected_workorder_count(selected_orders) do
-    Enum.count(selected_orders)
-  end
-
   defp maybe_humanize_date(date) do
     date && Timex.format!(date, "{D}/{M}/{YY}")
   end
