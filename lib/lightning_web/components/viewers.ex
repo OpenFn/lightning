@@ -112,9 +112,9 @@ defmodule LightningWeb.Components.Viewers do
       assign(assigns,
         log_levels: [
           {"debug", "Show all logs including debugs"},
-          {"info", "Only show general logs and warnings/errors"},
-          {"warn", "Only show warnings and errors"},
-          {"error", "Only show errors"}
+          {"info", "Only show general logs, warnings, errors and success"},
+          {"warn", "Only show warnings, errors and success"},
+          {"error", "Only show errors and success logs"}
         ]
       )
 
