@@ -699,27 +699,40 @@ defmodule Lightning.Projects do
   deletion.)
   """
   def schedule_project_deletion(project) do
+    Multi.new()
+    |> scheduled_project_deletion_changes(project)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{project: updated_project}} -> {:ok, updated_project}
+      {:error, _op, changeset, _changes} -> {:error, changeset}
+    end
+  end
+
+  def scheduled_project_deletion_changes(multi, project) do
     date =
       case Lightning.Config.purge_deleted_after_days() do
         nil -> DateTime.utc_now()
         integer -> DateTime.utc_now() |> Timex.shift(days: integer)
       end
 
-    Repo.transaction(fn ->
-      triggers = project_triggers_query(project) |> Repo.all()
-
-      triggers
-      |> Enum.each(fn trigger ->
-        Lightning.Workflows.update_trigger(trigger, %{"enabled" => false})
+    multi
+    |> Multi.all(:triggers, project_triggers_query(project))
+    |> Multi.merge(fn %{triggers: triggers} ->
+      Enum.reduce(triggers, Multi.new(), fn trigger, multi ->
+        Multi.update(
+          multi,
+          "update_trigger#{trigger.id}",
+          Trigger.changeset(trigger, %{"enabled" => false})
+        )
       end)
-
-      project =
-        project
-        |> Ecto.Changeset.change(%{
-          scheduled_deletion: DateTime.truncate(date, :second)
-        })
-        |> Repo.update!()
-
+    end)
+    |> Multi.update(
+      :project,
+      Ecto.Changeset.change(project, %{
+        scheduled_deletion: DateTime.truncate(date, :second)
+      })
+    )
+    |> Multi.run("notify_users#{project.id}", fn _repo, _changes ->
       :ok =
         Ecto.assoc(project, :users)
         |> Repo.all()
@@ -730,7 +743,7 @@ defmodule Lightning.Projects do
           )
         end)
 
-      project
+      {:ok, nil}
     end)
   end
 
