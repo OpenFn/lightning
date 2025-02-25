@@ -116,8 +116,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
         selected_projects
       )
 
-    assigns.credential |> dbg()
-
     {:ok,
      socket
      |> assign(

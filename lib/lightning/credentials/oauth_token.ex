@@ -48,9 +48,8 @@ defmodule Lightning.Credentials.OauthToken do
   @doc """
   Creates a changeset for updating token data.
   """
-  def update_tokens_changeset(oauth_token, new_tokens) do
-    oauth_token
-    |> cast(%{body: new_tokens}, [:body])
+  def update_token_changeset(oauth_token, new_token) do
+    cast(oauth_token, %{body: new_token}, [:body])
 
     # |> validate_oauth_body()
   end
@@ -61,7 +60,7 @@ defmodule Lightning.Credentials.OauthToken do
   """
   def find_or_create_for_scopes(user_id, oauth_client_id, scopes, tokens)
       when is_list(scopes) do
-    case find_by_user_client_and_scopes(user_id, oauth_client_id, scopes) do
+    case find_by_scopes(user_id, oauth_client_id, scopes) do
       nil ->
         %__MODULE__{}
         |> changeset(%{
@@ -81,16 +80,16 @@ defmodule Lightning.Credentials.OauthToken do
   @doc """
   Finds an OAuth token by user, client ID and exact scope match.
   """
-  def find_by_user_client_and_scopes(user_id, oauth_client_id, scopes)
+  def find_by_scopes(user_id, oauth_client_id, scopes)
       when is_list(scopes) do
-    normalized_scopes = Enum.sort(scopes)
+    sorted_scopes = Enum.sort(scopes)
 
     Lightning.Repo.one(
       from t in __MODULE__,
         where:
           t.user_id == ^user_id and
             t.oauth_client_id == ^oauth_client_id and
-            t.scopes == ^normalized_scopes
+            t.scopes == ^sorted_scopes
     )
   end
 
