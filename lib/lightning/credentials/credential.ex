@@ -59,26 +59,45 @@ defmodule Lightning.Credentials.Credential do
   end
 
   @doc """
-  Gets the oauth_client_id for a credential by checking its oauth_token.
-  """
-  def oauth_client_id(%__MODULE__{oauth_token: %OauthToken{oauth_client_id: id}}),
-    do: id
+  Transforms a credential by copying OAuth token fields to the credential struct.
 
-  def oauth_client_id(%__MODULE__{} = credential) do
-    credential = Lightning.Repo.preload(credential, :oauth_token)
-    oauth_client_id(credential)
+  For OAuth credentials with an associated token, this function copies the token's
+  `body`, `oauth_client`, and `oauth_client_id` fields directly to the credential struct,
+  making them accessible without having to navigate the association.
+
+  For non-OAuth credentials or OAuth credentials without a token, this function
+  returns the credential unchanged.
+
+  ## Parameters
+    - credential: The credential struct to transform
+
+  ## Returns
+    - The transformed credential with OAuth fields copied from the token, or
+    - The original credential if it's not an OAuth credential or has no token
+
+  ## Examples
+
+      # For an OAuth credential with a token
+      iex> with_oauth(%Credential{schema: "oauth", oauth_token: %{body: "secret", oauth_client_id: 123}})
+      %Credential{schema: "oauth", body: "secret", oauth_client_id: 123}
+
+      # For a non-OAuth credential
+      iex> with_oauth(%Credential{schema: "basic", body: "password"})
+      %Credential{schema: "basic", body: "password"}
+  """
+  @spec with_oauth(t()) :: t()
+  def with_oauth(%__MODULE__{schema: "oauth", oauth_token: token} = credential)
+      when not is_nil(token) do
+    %{
+      credential
+      | body: token.body,
+        oauth_client: token.oauth_client,
+        oauth_client_id: token.oauth_client_id
+    }
   end
 
-  @doc """
-  Gets the oauth_client for a credential through its oauth_token.
-  """
-  def oauth_client(%__MODULE__{oauth_token: %OauthToken{oauth_client: client}})
-      when not is_nil(client),
-      do: client
-
-  def oauth_client(%__MODULE__{} = credential) do
-    credential = Lightning.Repo.preload(credential, oauth_token: :oauth_client)
-    oauth_client(credential)
+  def with_oauth(%__MODULE__{} = credential) do
+    credential
   end
 
   # defp validate_oauth(changeset) do
