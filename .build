@@ -241,6 +241,8 @@ LightningWeb.CredentialLive.JsonSchemaBodyComponent.html
 LightningWeb.CredentialLive.OauthClientFormComponent.html
 LightningWeb.CredentialLive.OauthComponent.html
 LightningWeb.CredentialLive.RawBodyComponent.html
+LightningWeb.CredentialLive.TransferCredentialModal.html
+LightningWeb.CredentialTransferController.html
 LightningWeb.DashboardLive.Components.html
 LightningWeb.DashboardLive.Index.html
 LightningWeb.DashboardLive.ProjectCreationModal.html
@@ -356,8 +358,8 @@ dist/lato-latin-ext-300-normal-VPGGJKJL.woff2
 dist/lato-latin-ext-400-normal-N27NCBWW.woff2
 dist/lato-latin-ext-700-normal-Q2L5DVMW.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-D98B1091.js
-dist/sidebar_items-4D028729.js
+dist/search_data-9884103E.js
+dist/sidebar_items-C841E6B9.js
 index.html
 provisioning.html
 readme.html
