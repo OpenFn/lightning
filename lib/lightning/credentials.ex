@@ -70,66 +70,43 @@ defmodule Lightning.Credentials do
   Retrieves all credentials based on the given context, either a Project or a User.
 
   ## Parameters
-
     - context: The Project or User struct to retrieve credentials for.
 
   ## Returns
-
     - A list of credentials associated with the given Project or created by the given User.
 
   ## Examples
-
     When given a Project:
+
       iex> list_credentials(%Project{id: 1})
       [%Credential{project_id: 1}, %Credential{project_id: 1}]
 
     When given a User:
+
       iex> list_credentials(%User{id: 123})
       [%Credential{user_id: 123}, %Credential{user_id: 123}]
   """
+  @spec list_credentials(%Project{}) :: [%Credential{}]
   def list_credentials(%Project{} = project) do
-    credentials =
-      Ecto.assoc(project, :credentials)
-      |> preload([
-        :user,
-        :project_credentials,
-        :projects,
-        oauth_token: :oauth_client
-      ])
-      |> Repo.all()
-
-    # Set virtual fields for each credential
-    Enum.map(credentials, &set_oauth_virtual_fields/1)
+    Ecto.assoc(project, :credentials)
+    |> preload([
+      :user,
+      :project_credentials,
+      :projects,
+      oauth_token: :oauth_client
+    ])
+    |> Repo.all()
+    |> Enum.map(&Credential.with_oauth/1)
   end
 
+  @spec list_credentials(%User{id: integer()}) :: [%Credential{}]
   def list_credentials(%User{id: user_id}) do
-    credentials =
-      from(c in Credential,
-        where: c.user_id == ^user_id,
-        preload: [:projects, :user, oauth_token: :oauth_client]
-      )
-      |> Repo.all()
-
-    # Set virtual fields for each credential
-    Enum.map(credentials, &set_oauth_virtual_fields/1)
-  end
-
-  defp set_oauth_virtual_fields(%Credential{} = credential) do
-    if Ecto.assoc_loaded?(credential.oauth_token) && credential.oauth_token do
-      # Update both body and virtual fields for all credentials with oauth_token
-      %{
-        credential
-        | body: credential.oauth_token.body,
-          oauth_client_id: credential.oauth_token.oauth_client_id,
-          oauth_client:
-            if(Ecto.assoc_loaded?(credential.oauth_token.oauth_client),
-              do: credential.oauth_token.oauth_client,
-              else: nil
-            )
-      }
-    else
-      credential
-    end
+    from(c in Credential,
+      where: c.user_id == ^user_id,
+      preload: [:projects, :user, oauth_token: :oauth_client]
+    )
+    |> Repo.all()
+    |> Enum.map(&Credential.with_oauth/1)
   end
 
   @doc """
