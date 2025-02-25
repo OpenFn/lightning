@@ -6,8 +6,10 @@ defmodule Lightning.Credentials.OauthToken do
   """
   use Lightning.Schema
   import Ecto.Query
-  alias Lightning.Credentials.{Credential, OauthClient}
+
   alias Lightning.Accounts.User
+  alias Lightning.Credentials.Credential
+  alias Lightning.Credentials.OauthClient
 
   @type t :: %__MODULE__{
           id: Ecto.UUID.t() | nil,

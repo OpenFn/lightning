@@ -21,6 +21,7 @@ defmodule Lightning.Credentials do
   alias Lightning.Credentials.Audit
   alias Lightning.Credentials.Credential
   alias Lightning.Credentials.OauthClient
+  alias Lightning.Credentials.OauthToken
   alias Lightning.Credentials.SchemaDocument
   alias Lightning.Credentials.SensitiveValues
   alias Lightning.Projects.Project
@@ -86,7 +87,7 @@ defmodule Lightning.Credentials do
       iex> list_credentials(%User{id: 123})
       [%Credential{user_id: 123}, %Credential{user_id: 123}]
   """
-  @spec list_credentials(%Project{}) :: [%Credential{}]
+  @spec list_credentials(Project.t()) :: [Credential.t()]
   def list_credentials(%Project{} = project) do
     Ecto.assoc(project, :credentials)
     |> preload([
@@ -99,7 +100,7 @@ defmodule Lightning.Credentials do
     |> Enum.map(&Credential.with_oauth/1)
   end
 
-  @spec list_credentials(%User{id: integer()}) :: [%Credential{}]
+  @spec list_credentials(User.t()) :: [Credential.t()]
   def list_credentials(%User{id: user_id}) do
     from(c in Credential,
       where: c.user_id == ^user_id,
@@ -167,9 +168,8 @@ defmodule Lightning.Credentials do
 
         Multi.new()
         |> Multi.run(:oauth_token, fn _repo, _changes ->
-          with {:ok, scopes} <-
-                 Lightning.Credentials.OauthToken.extract_scopes(body) do
-            Lightning.Credentials.OauthToken.find_or_create_for_scopes(
+          with {:ok, scopes} <- OauthToken.extract_scopes(body) do
+            OauthToken.find_or_create_for_scopes(
               user_id,
               client_id,
               scopes,
@@ -229,21 +229,23 @@ defmodule Lightning.Credentials do
         |> Multi.run(:oauth_token, fn _repo, _changes ->
           if credential.oauth_token_id do
             credential.oauth_token
-            |> Lightning.Credentials.OauthToken.update_token_changeset(new_body)
+            |> OauthToken.update_token_changeset(new_body)
             |> Repo.update()
           else
-            with {:ok, scopes} <-
-                   Lightning.Credentials.OauthToken.extract_scopes(new_body),
-                 oauth_client_id =
-                   credential.oauth_client_id || attrs["oauth_client_id"] do
-              Lightning.Credentials.OauthToken.find_or_create_for_scopes(
-                credential.user_id,
-                oauth_client_id,
-                scopes,
-                new_body
-              )
-            else
-              :error -> {:error, "Could not extract scopes from OAuth token"}
+            case OauthToken.extract_scopes(new_body) do
+              {:ok, scopes} ->
+                oauth_client_id =
+                  credential.oauth_client_id || attrs["oauth_client_id"]
+
+                OauthToken.find_or_create_for_scopes(
+                  credential.user_id,
+                  oauth_client_id,
+                  scopes,
+                  new_body
+                )
+
+              :error ->
+                {:error, "Could not extract scopes from OAuth token"}
             end
           end
         end)
