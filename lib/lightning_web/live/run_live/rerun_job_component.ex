@@ -20,10 +20,13 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
     workflow = Workflows.get_workflow!(workflow_id)
     workflow_jobs = Jobs.list_jobs_for_workflow(workflow)
 
-    retriable_jobs =
+    disabled_jobs_ids =
       selected_workorders
       |> WorkOrders.get_last_runs_steps_with_dataclips(workflow_jobs)
       |> MapSet.new(& &1.step.job_id)
+      |> then(fn retriable_jobs_ids ->
+        MapSet.difference(MapSet.new(workflow_jobs, & &1.id), retriable_jobs_ids)
+      end)
 
     {:ok,
      socket
@@ -31,7 +34,7 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
        show: false,
        workflow: workflow,
        workflow_jobs: workflow_jobs,
-       retriable_jobs: retriable_jobs,
+       disabled_jobs_ids: disabled_jobs_ids,
        selected_job: hd(workflow_jobs),
        selected_count: Enum.count(selected_workorders)
      )
@@ -113,14 +116,14 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
                                 do: "checked",
                                 else: false
                             }
-                            disabled={not MapSet.member?(@retriable_jobs, job.id)}
+                            disabled={MapSet.member?(@disabled_jobs_ids, job.id)}
                           />
                           <label
                             id={"jobl_#{job.id}"}
                             for={"job_#{job.id}"}
                             class={[
                               "ml-3 block text-sm leading-6 font-medium",
-                              "#{if MapSet.member?(@retriable_jobs, job.id), do: "text-gray-900", else: "text-slate-500"}"
+                              "#{if MapSet.member?(@disabled_jobs_ids, job.id), do: "text-slate-500", else: "text-gray-900"}"
                             ]}
                           >
                             <%= job.name %>
