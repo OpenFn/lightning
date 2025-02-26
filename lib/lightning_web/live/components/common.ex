@@ -9,7 +9,7 @@ defmodule LightningWeb.Components.Common do
   defp select_icon(type) do
     case type do
       "success" -> "hero-check-circle-solid"
-      "warning" -> "hero-exclamation-triangle-solid"
+      "warning" -> "hero-exclamation-triangle"
       "danger" -> "hero-x-circle-solid"
       _info -> "hero-information-circle-solid"
     end

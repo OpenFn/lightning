@@ -17,12 +17,40 @@ and this project adheres to
 
 ### Added
 
+- Allow the billing app to schedule project deletion
+  [#2972](https://github.com/OpenFn/lightning/issues/2972)
+- Enable project level concurrency limit
+  [#2906](https://github.com/OpenFn/lightning/issues/2906)
+- Transfer credentials ownership to a project collaborator
+  [#2820](https://github.com/OpenFn/lightning/issues/2820)
+- Delete unused snapshots on workorders retention cleanup
+  [#1832](https://github.com/OpenFn/lightning/issues/1832)
+- Allow users to configure their preferred log levels
+  [#2206](https://github.com/OpenFn/lightning/issues/2206)
+
+### Changed
+
+- Bumped CI NodeJS and Postgres versions to 22.12.0 and 17.3 respectively
+  [#2938](https://github.com/OpenFn/lightning/pull/2938)
+
+### Fixed
+
+- Creating a dataclip fails on indexing when it's too large
+  [#2682](https://github.com/OpenFn/lightning/issues/2682)
+
+## [v2.10.15] - 2025-02-14
+
 ### Changed
 
 - Allow empty/blank log lines from the worker/jobs
   [#2914](https://github.com/OpenFn/lightning/issues/2914)
+- Only allow `owner` and `admin` users to manage collections
+  [#2923](https://github.com/OpenFn/lightning/issues/2923)
 
 ### Fixed
+
+- Fixed issue where we failed to send failure alerts via email when runs were
+  "lost". [#2921](https://github.com/OpenFn/lightning/issues/2921)
 
 ## [v2.10.14] - 2025-02-06
 

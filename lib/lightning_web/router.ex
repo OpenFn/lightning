@@ -134,6 +134,10 @@ defmodule LightningWeb.Router do
 
     get "/users/send-confirmation-email", UserConfirmationController, :send_email
 
+    get "/credentials/transfer/:credential_id/:receiver_id/:token",
+        CredentialTransferController,
+        :confirm
+
     live_session :auth, on_mount: LightningWeb.InitAssigns do
       live "/auth/confirm_access", ReAuthenticateLive.New, :new
     end

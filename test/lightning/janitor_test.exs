@@ -10,7 +10,14 @@ defmodule Lightning.JanitorTest do
   describe "find_and_update_lost/0" do
     @tag :capture_log
     test "updates lost runs and their steps" do
-      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+      project =
+        insert(:project,
+          project_users: [%{user: build(:user), failure_alert: true}]
+        )
+
+      %{triggers: [trigger]} =
+        workflow = insert(:simple_workflow, project: project, name: "pain perdu")
+
       dataclip = insert(:dataclip)
 
       an_hour_in_seconds = 3600
@@ -93,6 +100,9 @@ defmodule Lightning.JanitorTest do
       # should be marked lost, despite having a long runtime
       reloaded_lost_long_run = Repo.get(Run, lost_long_run.id)
       assert reloaded_lost_long_run.state == :lost
+
+      assert_receive {:email, %Swoosh.Email{subject: "\"pain perdu\" failed."}},
+                     1000
     end
 
     test "updates steps whose run has finished but step hasn't" do

@@ -415,4 +415,54 @@ defmodule Lightning.Accounts.UserNotifier do
 
   defp pluralize_with_s(1, string), do: string
   defp pluralize_with_s(_integer, string), do: "#{string}s"
+
+  @doc """
+  Deliver instructions to confirm a credential transfer.
+  """
+  def deliver_credential_transfer_confirmation_instructions(
+        owner,
+        receiver,
+        credential,
+        token
+      ) do
+    validity_days = Lightning.Config.credential_transfer_token_validity_in_days()
+    validity_text = format_validity_period(validity_days)
+
+    confirmation_url =
+      url(~p"/credentials/transfer/#{credential.id}/#{receiver.id}/#{token}")
+
+    deliver(owner, "Confirm your credential transfer", """
+    Hi #{owner.first_name},
+
+    Confirm your credential transfer to #{receiver.first_name} (#{receiver.email}) by visiting the link below:
+
+    #{confirmation_url}
+
+    Note that this link is only valid for #{validity_text}. If you didn't request this change, please ignore this.
+
+    OpenFn
+    """)
+  end
+
+  defp format_validity_period(days) do
+    "#{days} #{pluralize_with_s(days, "day")}"
+  end
+
+  def deliver_credential_transfer_notification(
+        receiver,
+        owner,
+        credential
+      ) do
+    credentials_url = url(~p"/credentials")
+
+    deliver(receiver, "You have received a credential", """
+    Hi #{receiver.first_name},
+
+    #{owner.first_name} has transferred the credential \"#{credential.name}\" to you.
+
+    You can find it in your list of credentials by following this URL: #{credentials_url}
+
+    OpenFn
+    """)
+  end
 end

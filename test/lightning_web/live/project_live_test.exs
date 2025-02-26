@@ -20,6 +20,7 @@ defmodule LightningWeb.ProjectLiveTest do
   alias Lightning.Auditing.Audit
   alias Lightning.Name
   alias Lightning.Projects
+  alias Lightning.Projects.Project
   alias Lightning.Repo
 
   setup :stub_usage_limiter_ok
@@ -833,6 +834,38 @@ defmodule LightningWeb.ProjectLiveTest do
       assert view
              |> form("#project-settings-form", project: valid_project_attrs)
              |> render_submit() =~ "Project updated successfully"
+
+      assert %{
+               name: "somename",
+               description: "some description"
+             } = Repo.get!(Project, project.id)
+    end
+
+    test "project admin can edit project concurrency with valid data",
+         %{
+           conn: conn,
+           user: user
+         } do
+      project =
+        insert(:project,
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_project_settings_path(conn, :index, project.id)
+        )
+
+      assert html =~ "Project settings"
+
+      assert view
+             |> form("#project-concurrency-form")
+             |> render_submit(%{project: %{concurrency: "1"}}) =~
+               "Project updated successfully"
+
+      assert %{concurrency: 1} = Repo.get!(Project, project.id)
     end
 
     test "only users with admin level on project can edit project details", %{
@@ -4964,7 +4997,7 @@ defmodule LightningWeb.ProjectLiveTest do
     } do
       project = insert(:project)
 
-      for {conn, _user} <- setup_project_users(conn, project, [:viewer]) do
+      for {conn, _user} <- setup_project_users(conn, project, [:viewer, :editor]) do
         {:ok, view, _html} =
           live(
             conn,
@@ -4997,7 +5030,7 @@ defmodule LightningWeb.ProjectLiveTest do
       end
 
       for {conn, _user} <-
-            setup_project_users(conn, project, [:owner, :admin, :editor]) do
+            setup_project_users(conn, project, [:owner, :admin]) do
         {:ok, view, _html} =
           live(
             conn,
@@ -5032,7 +5065,7 @@ defmodule LightningWeb.ProjectLiveTest do
       project = insert(:project)
 
       for {{conn, _user}, index} <-
-            setup_project_users(conn, project, [:owner, :admin, :editor])
+            setup_project_users(conn, project, [:owner, :admin])
             |> Enum.with_index() do
         {:ok, view, _html} =
           live(
@@ -5172,7 +5205,7 @@ defmodule LightningWeb.ProjectLiveTest do
     } do
       project = insert(:project)
 
-      for {conn, _user} <- setup_project_users(conn, project, [:viewer]) do
+      for {conn, _user} <- setup_project_users(conn, project, [:viewer, :editor]) do
         collection = insert(:collection, project: project)
 
         {:ok, view, _html} =
@@ -5216,7 +5249,7 @@ defmodule LightningWeb.ProjectLiveTest do
       project = insert(:project)
 
       for {conn, _user} <-
-            setup_project_users(conn, project, [:owner, :admin, :editor]) do
+            setup_project_users(conn, project, [:owner, :admin]) do
         collection = insert(:collection, project: project)
 
         {:ok, view, _html} =
@@ -5276,7 +5309,7 @@ defmodule LightningWeb.ProjectLiveTest do
     } do
       project = insert(:project)
 
-      for {conn, _user} <- setup_project_users(conn, project, [:viewer]) do
+      for {conn, _user} <- setup_project_users(conn, project, [:viewer, :editor]) do
         collection = insert(:collection, project: project)
 
         {:ok, view, _html} =
@@ -5319,45 +5352,8 @@ defmodule LightningWeb.ProjectLiveTest do
     } do
       project = insert(:project)
 
-      for {conn, _user} <- setup_project_users(conn, project, [:viewer]) do
-        collection = insert(:collection, project: project)
-
-        {:ok, view, _html} =
-          live(
-            conn,
-            ~p"/projects/#{project.id}/settings#collections"
-          )
-
-        button = element(view, "#delete-collection-#{collection.id}-button")
-        assert has_element?(button)
-
-        # modal is not present
-        refute has_element?(view, "#delete-collection-#{collection.id}-modal")
-
-        # try clicking the button
-        assert_raise ArgumentError, ~r/is disabled/, fn ->
-          render_click(button)
-        end
-
-        # send event either way
-        view
-        |> with_target("#collections")
-        |> render_click("toggle_action", %{
-          "action" => "delete",
-          "collection" => collection.name
-        })
-
-        flash =
-          assert_redirected(
-            view,
-            ~p"/projects/#{project.id}/settings#collections"
-          )
-
-        assert flash["error"] == "You are not authorized to perform this action"
-      end
-
       for {conn, _user} <-
-            setup_project_users(conn, project, [:owner, :admin, :editor]) do
+            setup_project_users(conn, project, [:owner, :admin]) do
         collection = insert(:collection, project: project)
 
         {:ok, view, _html} =

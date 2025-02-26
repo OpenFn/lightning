@@ -38,7 +38,7 @@ jobs:
       nodejs_version:
         description: NodeJS version
         type: string
-        default: "18.17.1"
+        default: "22.12.0"
       execute:
         description: What steps to execute after build
         type: steps
@@ -46,7 +46,7 @@ jobs:
     parallelism: 1
     docker:
       - image: elixir:<< parameters.elixir_version >>
-      - image: cimg/postgres:15.3
+      - image: cimg/postgres:17.3
     environment:
       ERL_FLAGS: +S 4:4
       ASSERT_RECEIVE_TIMEOUT: 1000

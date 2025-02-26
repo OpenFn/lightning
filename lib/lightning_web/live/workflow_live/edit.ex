@@ -435,8 +435,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
             cancel_url={@base_url}
           >
             <.workflow_settings
-              form={@workflow_form}
               can_edit_run_settings={@can_edit_run_settings}
+              project_id={@workflow.project_id}
+              project_concurrency_disabled={@workflow.project.concurrency == 1}
+              form={@workflow_form}
             />
           </.panel>
 
@@ -1988,6 +1990,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp get_workflow_by_id(workflow_id) do
     Workflows.get_workflow(workflow_id)
     |> Lightning.Repo.preload([
+      :project,
       :edges,
       triggers: Trigger.with_auth_methods_query(),
       jobs:
@@ -2188,7 +2191,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   defp assign_workflow(socket, workflow) do
     socket
-    |> assign(workflow: workflow)
+    |> assign(workflow: Lightning.Repo.preload(workflow, :project))
     |> apply_params(socket.assigns.workflow_params, :workflow)
   end
 

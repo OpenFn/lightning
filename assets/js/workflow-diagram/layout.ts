@@ -1,4 +1,4 @@
-import Dagre from '../../vendor/dagre.js';
+import Dagre from '../../vendor/dagre.cjs';
 import { timer } from 'd3-timer';
 import { getRectOfNodes, ReactFlowInstance } from 'reactflow';
 
