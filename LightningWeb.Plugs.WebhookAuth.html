@@ -5,16 +5,16 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.34.2">
-    <meta name="project" content="Lightning v2.10.15">
+    <meta name="project" content="Lightning v2.10.16-pre.0">
 
 
-    <title>LightningWeb.Plugs.WebhookAuth — Lightning v2.10.15</title>
+    <title>LightningWeb.Plugs.WebhookAuth — Lightning v2.10.16-pre.0</title>
     <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-C0A11846.js"></script>
+    <script src="dist/sidebar_items-B5609E66.js"></script>
     <script src="docs_config.js"></script>
     <script async src="dist/html-YIPIRHGU.js"></script>
 
@@ -54,7 +54,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.10.15
+          v2.10.16-pre.0
         </div>
       </div>
     </div>
@@ -132,7 +132,7 @@ Pages
       </a>
 
     <span translate="no">LightningWeb.Plugs.WebhookAuth</span> 
-    <small class="app-vsn" translate="no">(Lightning v2.10.15)</small>
+    <small class="app-vsn" translate="no">(Lightning v2.10.16-pre.0)</small>
 
   </h1>
 
@@ -249,11 +249,11 @@ of the above-mentioned conditions.</li></ul><h2 id="call/2-examples" class="sect
   </a>
   <span class="text">Webhook Found and Authenticated</span>
 </h3>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">LightningWeb.Plugs.WebhookAuth</span><span class="o">.</span><span class="n">call</span><span class="p" data-group-id="4351095636-1">(</span><span class="n">conn</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4351095636-2">[</span><span class="p" data-group-id="4351095636-2">]</span><span class="p" data-group-id="4351095636-1">)</span><span class="w">
-</span><span class="p" data-group-id="4351095636-3">%</span><span class="nc" data-group-id="4351095636-3">Plug.Conn</span><span class="p" data-group-id="4351095636-3">{</span><span class="ss">status</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="4351095636-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">LightningWeb.Plugs.WebhookAuth</span><span class="o">.</span><span class="n">call</span><span class="p" data-group-id="2679488576-1">(</span><span class="n">conn</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2679488576-2">[</span><span class="p" data-group-id="2679488576-2">]</span><span class="p" data-group-id="2679488576-1">)</span><span class="w">
+</span><span class="p" data-group-id="2679488576-3">%</span><span class="nc" data-group-id="2679488576-3">Plug.Conn</span><span class="p" data-group-id="2679488576-3">{</span><span class="ss">status</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="2679488576-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="nc">LightningWeb.Plugs.WebhookAuth</span><span class="o">.</span><span class="n">call</span><span class="p" data-group-id="4351095636-4">(</span><span class="n">conn</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4351095636-5">[</span><span class="p" data-group-id="4351095636-5">]</span><span class="p" data-group-id="4351095636-4">)</span><span class="w">
-</span><span class="p" data-group-id="4351095636-6">%</span><span class="nc" data-group-id="4351095636-6">Plug.Conn</span><span class="p" data-group-id="4351095636-6">{</span><span class="ss">status</span><span class="p">:</span><span class="w"> </span><span class="mi">404</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="4351095636-6">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">LightningWeb.Plugs.WebhookAuth</span><span class="o">.</span><span class="n">call</span><span class="p" data-group-id="2679488576-4">(</span><span class="n">conn</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2679488576-5">[</span><span class="p" data-group-id="2679488576-5">]</span><span class="p" data-group-id="2679488576-4">)</span><span class="w">
+</span><span class="p" data-group-id="2679488576-6">%</span><span class="nc" data-group-id="2679488576-6">Plug.Conn</span><span class="p" data-group-id="2679488576-6">{</span><span class="ss">status</span><span class="p">:</span><span class="w"> </span><span class="mi">404</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="2679488576-6">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="init/1">
