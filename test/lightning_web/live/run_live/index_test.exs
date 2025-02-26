@@ -4,6 +4,7 @@ defmodule LightningWeb.RunLive.IndexTest do
   import Phoenix.LiveViewTest
   import Lightning.Factories
 
+  alias Lightning.WorkOrders
   alias Lightning.WorkOrders.SearchParams
 
   setup :register_and_log_in_superuser
@@ -342,6 +343,68 @@ defmodule LightningWeb.RunLive.IndexTest do
       end
     end
 
+    test "a job with a latest step having wiped dataclip is shown disabled", %{
+      workflow: workflow,
+      work_order_1: work_order_1,
+      jobs: jobs
+    } do
+      # disabled job
+      last_job = List.last(jobs)
+      second_last_job = jobs |> List.delete(last_job) |> List.last()
+
+      # get latest run step
+      [%{step: step_last_job}] =
+        WorkOrders.get_last_runs_steps_with_dataclips([work_order_1], [last_job])
+
+      [%{step: step_second_last_job}] =
+        WorkOrders.get_last_runs_steps_with_dataclips([work_order_1], [
+          second_last_job
+        ])
+
+      # these 2 last jobs have steps with a wipe dataclip
+      wiped_dataclip = insert(:dataclip, wiped_at: Timex.now())
+
+      step_last_job
+      |> Ecto.Changeset.change(%{input_dataclip_id: wiped_dataclip.id})
+      |> Repo.update!()
+
+      step_second_last_job
+      |> Ecto.Changeset.change(%{input_dataclip_id: wiped_dataclip.id})
+      |> Repo.update!()
+
+      html =
+        render_component(
+          LightningWeb.RunLive.RerunJobComponent,
+          id: "bulk-rerun-from-start-modal",
+          total_entries: 25,
+          all_selected?: true,
+          selected_workorders: [work_order_1],
+          pages: 2,
+          filters: %SearchParams{},
+          workflow_id: workflow.id
+        )
+
+      Enum.each(jobs, fn job ->
+        label =
+          Floki.find(html, "#jobl_#{job.id}")
+          |> Floki.attribute("class")
+          |> List.first()
+
+        disabled =
+          Floki.find(html, "#job_#{job.id}")
+          |> Floki.attribute("disabled")
+          |> List.first()
+
+        if job.id in [last_job.id, second_last_job.id] do
+          assert disabled
+          assert label =~ "text-slate-500"
+        else
+          refute disabled
+          assert label =~ "text-gray-900"
+        end
+      end)
+    end
+
     test "2 run buttons are present when all entries have been selected", %{
       workflow: workflow,
       selected_workorders: selected_workorders
@@ -359,7 +422,9 @@ defmodule LightningWeb.RunLive.IndexTest do
         )
 
       assert html =~ "Rerun all 25 matching work orders from selected job"
-      assert html =~ "Rerun #{length(selected_workorders)} selected work orders from selected job"
+
+      assert html =~
+               "Rerun #{length(selected_workorders)} selected work orders from selected job"
     end
 
     test "only 1 run button is present when some entries have been selected", %{
@@ -379,7 +444,9 @@ defmodule LightningWeb.RunLive.IndexTest do
         )
 
       refute html =~ "Rerun all 25 matching work orders from selected job"
-      assert html =~ "Rerun #{length(selected_workorders)} selected work orders from selected job"
+
+      assert html =~
+               "Rerun #{length(selected_workorders)} selected work orders from selected job"
     end
 
     test "only 1 run button is present when total pages is 1", %{
@@ -399,7 +466,9 @@ defmodule LightningWeb.RunLive.IndexTest do
         )
 
       refute html =~ "Rerun all 25 matching work orders from selected job"
-      assert html =~ "Rerun #{length(selected_workorders)} selected work orders from selected job"
+
+      assert html =~
+               "Rerun #{length(selected_workorders)} selected work orders from selected job"
     end
   end
 end

@@ -116,6 +116,7 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
                             disabled={not MapSet.member?(@retriable_jobs, job.id)}
                           />
                           <label
+                            id={"jobl_#{job.id}"}
                             for={"job_#{job.id}"}
                             class={[
                               "ml-3 block text-sm leading-6 font-medium",
