@@ -3,7 +3,7 @@ defmodule Lightning.Repo.Migrations.AddEnableJobJobsToWorkflowsTable do
 
   def change do
     alter table("workflows") do
-      add :enable_job_logs, :boolean, default: true
+      add_if_not_exists :enable_job_logs, :boolean, default: true
     end
   end
 end
