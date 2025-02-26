@@ -3717,6 +3717,93 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     end
   end
 
+  describe "run viewer" do
+    test "user can toggle their preferred log levels", %{
+      conn: conn,
+      project: project,
+      user: user
+    } do
+      %{triggers: [trigger], jobs: [job_1 | _rest]} =
+        workflow = insert(:simple_workflow, project: project) |> with_snapshot()
+
+      workflow = Lightning.Repo.reload(workflow)
+
+      snapshot = Lightning.Workflows.Snapshot.get_current_for(workflow)
+
+      dataclip = build(:http_request_dataclip, project: project)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          snapshot: snapshot,
+          dataclip: dataclip
+        )
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          state: "failed",
+          error_type: "CompileError",
+          dataclip: dataclip,
+          steps: [
+            build(:step,
+              job: job_1,
+              snapshot: snapshot,
+              input_dataclip: dataclip,
+              exit_reason: "fail",
+              error_type: "CompileError",
+              started_at: DateTime.utc_now(),
+              finished_at: DateTime.utc_now()
+            )
+          ]
+        )
+
+      insert(:log_line, run: run)
+      insert(:log_line, run: run, step: hd(run.steps))
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{%{a: run.id, m: "expand", s: job_1.id}}"
+        )
+
+      run_view = find_live_child(view, "run-viewer-#{run.id}")
+
+      render_async(run_view)
+      assert render(run_view) =~ "Configure log levels"
+
+      # when the user has not set their preference, we assume they want info
+      assert user.preferences["desired_log_level"] |> is_nil()
+      log_viewer = run_view |> element("#run-log-#{run.id}")
+
+      # info log level is set in the viewer element
+      assert log_viewer_selected_level(log_viewer) == "info"
+
+      # try choosing another level
+      for log_level <- ["debug", "info", "error", "warn"] do
+        run_view
+        |> form("#run-log-#{run.id}-filter-form")
+        |> render_change(%{desired_log_level: log_level})
+
+        # selected level is set in the viewer
+        assert log_viewer_selected_level(log_viewer) == log_level
+
+        # the preference is saved with expected levels
+        updated_user = Repo.reload(user)
+        assert updated_user.preferences["desired_log_level"] == log_level
+      end
+    end
+  end
+
+  defp log_viewer_selected_level(log_viewer) do
+    log_viewer
+    |> render()
+    |> Floki.parse_fragment!()
+    |> Floki.attribute("data-log-level")
+    |> hd()
+  end
+
   defp access_views(
          conn,
          project,

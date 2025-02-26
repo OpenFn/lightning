@@ -40,11 +40,24 @@ defmodule LightningWeb.Components.Viewers do
   attr :logs_empty?, :boolean, required: true
   attr :selected_step_id, :string
 
+  attr :current_user, Lightning.Accounts.User,
+    default: nil,
+    doc: "for checking log filter preference"
+
   attr :class, :string,
     default: nil,
     doc: "Additional classes to add to the log viewer container"
 
   def log_viewer(assigns) do
+    assigns =
+      assign_new(assigns, :selected_log_level, fn ->
+        if assigns[:current_user] do
+          Map.get(assigns.current_user.preferences, "desired_log_level", "info")
+        else
+          "info"
+        end
+      end)
+
     ~H"""
     <%= if @run_state in Lightning.Run.final_states() and @logs_empty? do %>
       <div class={["m-2 relative p-12 text-center col-span-full"]}>
@@ -55,29 +68,121 @@ defmodule LightningWeb.Components.Viewers do
         </span>
       </div>
     <% else %>
-      <div
-        id={@id}
-        class={["flex grow", @class]}
-        phx-hook="LogViewer"
-        phx-update="ignore"
-        data-run-id={@run_id}
-        data-step-id={@selected_step_id}
-        data-loading-el={"#{@id}-nothing-yet"}
-        data-viewer-el={"#{@id}-viewer"}
-      >
-        <div class="relative grow">
-          <div
-            id={"#{@id}-nothing-yet"}
-            class="relative rounded-md p-12 text-center bg-slate-700 font-mono text-gray-200"
-          >
-            <.text_ping_loader>
-              Nothing yet
-            </.text_ping_loader>
+      <div class="relative flex grow">
+        <.log_level_filter
+          :if={@current_user}
+          id={"#{@id}-filter"}
+          selected_level={@selected_log_level}
+        />
+
+        <div
+          id={@id}
+          class={["flex grow", @class]}
+          phx-hook="LogViewer"
+          phx-update="ignore"
+          data-run-id={@run_id}
+          data-step-id={@selected_step_id}
+          data-log-level={@selected_log_level}
+          data-loading-el={"#{@id}-nothing-yet"}
+          data-viewer-el={"#{@id}-viewer"}
+        >
+          <div class="relative grow">
+            <div
+              id={"#{@id}-nothing-yet"}
+              class="relative rounded-md p-12 text-center bg-slate-700 font-mono text-gray-200"
+            >
+              <.text_ping_loader>
+                Nothing yet
+              </.text_ping_loader>
+            </div>
+            <div id={"#{@id}-viewer"} class="hidden absolute inset-0 rounded-md">
+            </div>
           </div>
-          <div id={"#{@id}-viewer"} class="hidden absolute inset-0 rounded-md"></div>
         </div>
       </div>
     <% end %>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :selected_level, :string
+
+  defp log_level_filter(assigns) do
+    assigns =
+      assign(assigns,
+        log_levels: [
+          {"debug", "Show all logs"},
+          {"info", "Standard logging, excluding low-level debug logs (default)"},
+          {"warn", "Only show warnings, errors and key logs"},
+          {"error", "Only show errors and key logs"}
+        ]
+      )
+
+    ~H"""
+    <div id={@id} class="absolute top-0 right-4 z-50">
+      <.modal
+        id={"#{@id}-modal"}
+        close_on_click_away={false}
+        close_on_keydown={false}
+      >
+        <:title>
+          <div class="flex justify-between gap-2">
+            <span class="font-bold">
+              Configure log levels
+            </span>
+
+            <button
+              phx-click={hide_modal("#{@id}-modal")}
+              type="button"
+              class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
+              aria-label={gettext("close")}
+            >
+              <span class="sr-only">Close</span>
+              <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
+            </button>
+          </div>
+        </:title>
+        <.form id={"#{@id}-form"} for={to_form(%{})} phx-change="save-log-filter">
+          <fieldset>
+            <p class="mt-1 text-sm/6 text-gray-600">
+              Which logs do you prefer to see?
+            </p>
+            <div class="mt-6 space-y-4">
+              <%= for {level, description} <- @log_levels do %>
+                <div class="relative flex items-start">
+                  <div class="flex h-6 items-center">
+                    <.input
+                      type="radio"
+                      id={"desired_level_#{level}"}
+                      name="desired_log_level"
+                      value={level}
+                      checked={level == @selected_level}
+                      class="relative size-4 appearance-none rounded-full border border-gray-300 bg-white before:absolute before:inset-1 before:rounded-full before:bg-white checked:border-indigo-600 checked:bg-indigo-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:border-gray-300 disabled:bg-gray-100 disabled:before:bg-gray-400 forced-colors:appearance-auto forced-colors:before:hidden [&:not(:checked)]:before:hidden"
+                    />
+                  </div>
+                  <div class="ml-3 text-sm/6">
+                    <.label
+                      for={"desired_level_#{level}"}
+                      class="font-medium text-gray-900 uppercase"
+                    >
+                      <%= level %>
+                    </.label>
+                    <p class="text-gray-500"><%= description %></p>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          </fieldset>
+        </.form>
+      </.modal>
+      <button
+        phx-click={show_modal("#{@id}-modal")}
+        type="button"
+        class="rounded-bl-md rounded-br-md p-1 pt-0 opacity-70 hover:opacity-100 content-center bg-blue-500 text-blue-900"
+      >
+        <.icon name="hero-cog-6-tooth" class="h-4 w-4 inline-block align-middle" />
+      </button>
+    </div>
     """
   end
 

@@ -222,7 +222,7 @@ defmodule LightningWeb.RunLive.Show do
                     can_edit_data_retention={@can_edit_data_retention}
                   />
                 </:panel>
-                <:panel hash="log" class="flex-grow">
+                <:panel hash="log" class="flex h-full">
                   <Viewers.log_viewer
                     id={"run-log-#{run.id}"}
                     class="h-full"
@@ -230,6 +230,7 @@ defmodule LightningWeb.RunLive.Show do
                     run_state={@run.result.state}
                     logs_empty?={@log_lines_empty?}
                     selected_step_id={@selected_step_id}
+                    current_user={@current_user}
                   />
                 </:panel>
                 <:panel hash="output" class="flex-1">

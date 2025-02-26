@@ -25,6 +25,8 @@ and this project adheres to
   [#2820](https://github.com/OpenFn/lightning/issues/2820)
 - Delete unused snapshots on workorders retention cleanup
   [#1832](https://github.com/OpenFn/lightning/issues/1832)
+- Allow users to configure their preferred log levels
+  [#2206](https://github.com/OpenFn/lightning/issues/2206)
 
 ### Changed
 

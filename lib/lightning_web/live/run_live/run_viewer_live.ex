@@ -142,6 +142,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                       run_state={@run.result.state}
                       logs_empty?={@log_lines_empty?}
                       selected_step_id={@selected_step_id}
+                      current_user={@current_user}
                     />
                   </div>
                 </div>
@@ -274,7 +275,8 @@ defmodule LightningWeb.RunLive.RunViewerLive do
        selected_step_id: nil,
        job_id: Map.get(session, "job_id"),
        selected_step: nil,
-       steps: []
+       steps: [],
+       current_user: project_user.user
      )
      |> assign(:input_dataclip, nil)
      |> assign(:output_dataclip, nil)
