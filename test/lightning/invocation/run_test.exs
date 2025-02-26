@@ -2,6 +2,7 @@ defmodule Lightning.Invocation.RunTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Run
+  alias Lightning.Runs
 
   describe "changeset/2" do
     test "must have a work_order" do
@@ -38,7 +39,8 @@ defmodule Lightning.Invocation.RunTest do
       run =
         Run.for(trigger, %{
           snapshot: snapshot,
-          dataclip: work_order.dataclip
+          dataclip: work_order.dataclip,
+          options: Runs.get_run_options(workflow.id, workflow.project_id)
         })
         |> put_assoc(:work_order, work_order)
         |> Repo.insert!()
@@ -68,7 +70,8 @@ defmodule Lightning.Invocation.RunTest do
         Run.for(job, %{
           created_by: insert(:user),
           snapshot: snapshot,
-          dataclip: work_order.dataclip
+          dataclip: work_order.dataclip,
+          options: Runs.get_run_options(workflow.id, workflow.project_id)
         })
         |> put_assoc(:work_order, work_order)
         |> Repo.insert!()

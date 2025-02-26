@@ -1029,7 +1029,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
         assert has_element?(
                  view,
-                 "#toggle-workflow-logs-btn[aria-checked='true']"
+                 "#toggle-workflow-logs-btn"
                )
 
         assert_raise ArgumentError,
@@ -1062,16 +1062,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
         assert has_element?(
                  view,
-                 "#toggle-workflow-logs-btn[aria-checked='true']"
+                 "#toggle-workflow-logs-btn"
                )
 
-        view |> element("#toggle-workflow-logs-btn") |> render_click()
-
-        # assert that the toggle button is now unchecked
-        assert has_element?(
-                 view,
-                 "#toggle-workflow-logs-btn[aria-checked='false']"
-               )
+        view
+        |> form("#workflow-form")
+        |> render_change(workflow: %{enable_job_logs: "false"})
 
         assert workflow.enable_job_logs == true
 

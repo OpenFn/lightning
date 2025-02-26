@@ -128,45 +128,32 @@ defmodule LightningWeb.WorkflowLive.Components do
           </span>
         </span>
         <div class="flex items-center justify-between">
-          <span class="text-sm/6 font-medium text-gray-800" id="allow-logs-label">
-            Allow console.log() usage
+          <span class="text-sm/6 font-medium text-gray-800">
+            Allow <code>console.log()</code> usage
           </span>
-          <button
-            id="toggle-workflow-logs-btn"
-            type="button"
-            class={"#{if @form[:enable_job_logs].value, do: "bg-indigo-600", else: "bg-gray-200"} #{if !@can_edit_run_settings, do: "cursor-not-allowed opacity-50", else: "cursor-pointer"} relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"}
-            role="switch"
-            disabled={!@can_edit_run_settings}
-            phx-click={
-              @can_edit_run_settings &&
-                JS.push("validate",
-                  value: %{
-                    workflow: %{enable_job_logs: !@form[:enable_job_logs].value}
-                  }
-                )
-            }
-            aria-checked={to_string(@form[:enable_job_logs].value)}
-            aria-labelledby="allow-logs-label"
-          >
-            <span
-              aria-hidden="true"
-              class={"#{if @form[:enable_job_logs].value, do: "translate-x-5", else: "translate-x-0"} pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"}
-            >
-            </span>
-          </button>
           <.input
-            type="hidden"
+            id="toggle-workflow-logs-btn"
+            type="toggle"
             field={@form[:enable_job_logs]}
-            value={to_string(@form[:enable_job_logs].value)}
+            disabled={!@can_edit_run_settings}
           />
         </div>
       </div>
 
       <div class="col-span-6 @md:col-span-4">
+        <span class="flex grow flex-col mb-3">
+          <span class="text-sm font-semibold leading-6 text-gray-900">
+            Concurrency
+          </span>
+          <span class="text-xs text-gray-500">
+            Control how many of this workflow's <i>Runs</i>
+            are executed at the same time
+          </span>
+        </span>
         <div class="flex grid-cols-3">
           <div class="mt-2">
             <.label for={@form[:concurrency].id}>
-              Maximum Concurrency
+              Max Concurrency
               <Common.tooltip
                 class="inline-block ml-1"
                 id="max-concurrency-tooltip"
