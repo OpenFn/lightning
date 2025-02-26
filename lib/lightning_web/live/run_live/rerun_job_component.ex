@@ -6,26 +6,37 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
   use LightningWeb, :live_component
   alias Lightning.Jobs
   alias Lightning.Workflows
+  alias Lightning.WorkOrders
 
   @impl true
   def update(
         %{
           total_entries: _count,
-          selected_count: _selected_count,
-          workflow_id: workflow_id
+          selected_workorders:
+            [%{workflow_id: workflow_id} | _] = selected_workorders
         } = assigns,
         socket
       ) do
     workflow = Workflows.get_workflow!(workflow_id)
-    jobs = Jobs.list_jobs_for_workflow(workflow)
+    workflow_jobs = Jobs.list_jobs_for_workflow(workflow)
+
+    disabled_jobs_ids =
+      selected_workorders
+      |> WorkOrders.get_last_runs_steps_with_dataclips(workflow_jobs)
+      |> MapSet.new(& &1.step.job_id)
+      |> then(fn retriable_jobs_ids ->
+        MapSet.difference(MapSet.new(workflow_jobs, & &1.id), retriable_jobs_ids)
+      end)
 
     {:ok,
      socket
      |> assign(
        show: false,
        workflow: workflow,
-       workflow_jobs: jobs,
-       selected_job: hd(jobs)
+       workflow_jobs: workflow_jobs,
+       disabled_jobs_ids: disabled_jobs_ids,
+       selected_job: hd(workflow_jobs),
+       selected_count: Enum.count(selected_workorders)
      )
      |> assign(assigns)}
   end
@@ -105,10 +116,15 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
                                 do: "checked",
                                 else: false
                             }
+                            disabled={MapSet.member?(@disabled_jobs_ids, job.id)}
                           />
                           <label
+                            id={"jobl_#{job.id}"}
                             for={"job_#{job.id}"}
-                            class="ml-3 block text-sm font-medium leading-6 text-gray-900"
+                            class={[
+                              "ml-3 block text-sm leading-6 font-medium",
+                              "#{if MapSet.member?(@disabled_jobs_ids, job.id), do: "text-slate-500", else: "text-gray-900"}"
+                            ]}
                           >
                             <%= job.name %>
                           </label>
