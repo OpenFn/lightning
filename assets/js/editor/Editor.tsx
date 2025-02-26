@@ -223,7 +223,6 @@ async function loadDTS(specifier: string): Promise<Lib[]> {
   // This is basically a hack to work around https://github.com/OpenFn/lightning/issues/2641
   // If we find a types.d.ts, append it to every other file
   adaptorDefs = adaptorDefs.map(def => def.replace('{{$TYPES}}', types));
-  console.log(adaptorDefs);
 
   results.push(
     ...adaptorDefs.map(content => ({
