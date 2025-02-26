@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.10.16-pre.0] - 2025-02-26
+
+### Added
+
 - Allow the billing app to schedule project deletion
   [#2972](https://github.com/OpenFn/lightning/issues/2972)
 - Enable project level concurrency limit
