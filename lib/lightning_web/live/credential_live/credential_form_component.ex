@@ -481,38 +481,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
                 <div class="hidden sm:block" aria-hidden="true">
                   <div class="border-t border-secondary-200"></div>
                 </div>
-                <!-- # TODO: Make this part of the fieldset to avoid the if block -->
-                <LightningWeb.CredentialLive.Scopes.scopes_picklist
-                  :if={@schema in ["salesforce_oauth", "googlesheets"]}
-                  id={"scope_selection_#{@credential.id || "new"}"}
-                  target={@myself}
-                  on_change="scopes_changed"
-                  selected_scopes={@scopes}
-                  schema={@schema}
-                />
-                <.input
-                  :if={@schema in ["salesforce_oauth"]}
-                  class="mb-2"
-                  name="sandbox"
-                  type="checkbox"
-                  value={@sandbox_value}
-                  label="Sandbox instance?"
-                  phx-change="check_sandbox"
-                  phx-target={@myself}
-                  id={"salesforce_sandbox_instance_checkbox_#{@credential.id || "new"}"}
-                />
-
-                <.input
-                  :if={@schema in ["salesforce_oauth"]}
-                  type="text"
-                  class="mb-2"
-                  name="api_version"
-                  label="API Version"
-                  value={@api_version}
-                  phx-change="api_version"
-                  phx-target={@myself}
-                  id={"salesforce_api_version_input_#{@credential.id || "new"}"}
-                />
                 <%= fieldset %>
               </div>
 
