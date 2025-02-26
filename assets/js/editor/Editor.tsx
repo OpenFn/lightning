@@ -158,7 +158,7 @@ async function loadDTS(specifier: string): Promise<Lib[]> {
       if (!filePath.startsWith('node_modules')) {
         // Load every common typedef into the common module
         let content = await fetchFile(`${commonSpecifier}${filePath}`);
-        if (!content.startsWith('<!DOCTYPE html>')) {
+        if (!content.match(/<!doctype html>/i)) {
           content = content.replace(/\* +@(.+?)\*\//gs, '*/');
           results.push({
             content: `declare module '@openfn/language-common' { ${content} }`,
