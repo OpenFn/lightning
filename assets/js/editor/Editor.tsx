@@ -158,11 +158,12 @@ async function loadDTS(specifier: string): Promise<Lib[]> {
       if (!filePath.startsWith('node_modules')) {
         // Load every common typedef into the common module
         let content = await fetchFile(`${commonSpecifier}${filePath}`);
-        content = content.replace(/\* +@(.+?)\*\//gs, '*/');
-        console.log(content);
-        results.push({
-          content: `declare module '@openfn/language-common' { ${content} }`,
-        });
+        if (!content.startsWith('<!DOCTYPE html>')) {
+          content = content.replace(/\* +@(.+?)\*\//gs, '*/');
+          results.push({
+            content: `declare module '@openfn/language-common' { ${content} }`,
+          });
+        }
       }
     }
   }
@@ -176,6 +177,13 @@ async function loadDTS(specifier: string): Promise<Lib[]> {
   for await (const filePath of fetchDTSListing(specifier)) {
     if (!filePath.startsWith('node_modules')) {
       let content = await fetchFile(`${specifier}${filePath}`);
+      if (content.match(/<!doctype html>/i)) {
+        continue;
+      }
+      // Convert relative paths
+      content = content
+        .replace(/from '\.\//g, `from '${name}/`)
+        .replace(/import '\.\//g, `import '${name}/`);
 
       // Remove js doc annotations
       // this regex means: find a * then an @ (with 1+ space in between), then match everything up to a closing comment */
@@ -186,9 +194,6 @@ async function loadDTS(specifier: string): Promise<Lib[]> {
 
       // Import the index as the global namespace - but take care to convert all paths to absolute
       if (fileName === 'index' || fileName === 'Adaptor') {
-        content = content.replace(/from '\.\//g, `from '${name}/`);
-        content = content.replace(/import '\.\//g, `import '${name}/`);
-
         // It turns out that "export * as " seems to straight up not work in Monaco
         // So this little hack will refactor import statements in a way that works
         content = content.replace(
@@ -218,6 +223,7 @@ async function loadDTS(specifier: string): Promise<Lib[]> {
   // This is basically a hack to work around https://github.com/OpenFn/lightning/issues/2641
   // If we find a types.d.ts, append it to every other file
   adaptorDefs = adaptorDefs.map(def => def.replace('{{$TYPES}}', types));
+  console.log(adaptorDefs);
 
   results.push(
     ...adaptorDefs.map(content => ({
