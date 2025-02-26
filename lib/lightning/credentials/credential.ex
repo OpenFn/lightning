@@ -5,6 +5,7 @@ defmodule Lightning.Credentials.Credential do
   use Lightning.Schema
 
   alias Lightning.Accounts.User
+  alias Lightning.Credentials
   alias Lightning.Credentials.OauthToken
   alias Lightning.Projects.ProjectCredential
 
@@ -56,6 +57,7 @@ defmodule Lightning.Credentials.Credential do
     |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/,
       message: "credential name has invalid format"
     )
+    |> maybe_validate_oauth_fields(attrs)
   end
 
   @doc """
@@ -90,7 +92,7 @@ defmodule Lightning.Credentials.Credential do
       when not is_nil(token) do
     %{
       credential
-      | body: token.body,
+      | body: assemble_body(credential, token),
         oauth_client: token.oauth_client,
         oauth_client_id: token.oauth_client_id
     }
@@ -98,5 +100,48 @@ defmodule Lightning.Credentials.Credential do
 
   def with_oauth(%__MODULE__{} = credential) do
     credential
+  end
+
+  defp assemble_body(credential, token) do
+    credential_body = credential.body || %{}
+    token_body = token.body || %{}
+    token_body = Map.put(token_body, "updated_at", token.updated_at)
+
+    Map.merge(credential_body, token_body)
+  end
+
+  defp maybe_validate_oauth_fields(changeset, attrs) do
+    if get_field(changeset, :schema) == "oauth" &&
+         !get_field(changeset, :oauth_token_id) do
+      # Extract the body and necessary fields
+      body = get_field(changeset, :body) || %{}
+      user_id = get_field(changeset, :user_id)
+
+      # Get oauth_client_id using shared function
+      oauth_client_id = Credentials.extract_oauth_client_id(attrs, body)
+
+      # Separate token data from credential-specific config using shared function
+      {_credential_data, token_data} = Credentials.separate_oauth_data(body)
+
+      # Extract scopes for token validation
+      scopes =
+        case OauthToken.extract_scopes(token_data) do
+          {:ok, extracted_scopes} -> extracted_scopes
+          :error -> []
+        end
+
+      # Use the shared validation function
+      case Credentials.validate_oauth_token_data(
+             token_data,
+             user_id,
+             oauth_client_id,
+             scopes
+           ) do
+        {:ok, _} -> changeset
+        {:error, reason} -> add_error(changeset, :body, reason)
+      end
+    else
+      changeset
+    end
   end
 end
