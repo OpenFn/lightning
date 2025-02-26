@@ -7,12 +7,14 @@ import * as describe from '@openfn/describe-package';
 import createCompletionProvider from './magic-completion';
 import { initiateSaveAndRun } from '../common';
 
+const LOCAL_ADAPTORS_ROOT = 'http://localhost:5000';
+
 async function* fetchDTSListing(specifier: string) {
   if (specifier.endsWith('@local')) {
     const lang = specifier
       .replace('@local', '')
       .replace('@openfn/language-', '');
-    const url = `http://localhost:5000/packages/${lang}/types`;
+    const url = `${LOCAL_ADAPTORS_ROOT}/packages/${lang}/types`;
     const r = await fetch(url, { headers: { Accept: 'application/json' } });
     const json = await r.json();
     for (const f of json.files) {
@@ -25,7 +27,7 @@ async function* fetchDTSListing(specifier: string) {
 const fetchFile = async (path: string) => {
   if (path.includes('@local')) {
     path = path.replace('@openfn/language-', '').replace('@local', '');
-    const url = `http://localhost:5000/packages/${path}`;
+    const url = `${LOCAL_ADAPTORS_ROOT}/packages/${path}`;
     return fetch(url, { headers: { Accept: 'text/plain' } }).then(r =>
       r.text()
     );
