@@ -17,9 +17,14 @@ and this project adheres to
 
 ### Added
 
+- Support for loading local type definitions when using the adaptors monorepo.
+
 ### Changed
 
 ### Fixed
+
+- Fixed an issue where Monaco editor will fail to list valid suggestions for
+  union types.
 
 ## [v2.10.13] - 2025-01-29
 
