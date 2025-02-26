@@ -8,6 +8,7 @@ defmodule Lightning.Credentials.OauthToken do
   import Ecto.Query
 
   alias Lightning.Accounts.User
+  alias Lightning.Credentials
   alias Lightning.Credentials.Credential
   alias Lightning.Credentials.OauthClient
 
@@ -42,18 +43,16 @@ defmodule Lightning.Credentials.OauthToken do
     oauth_token
     |> cast(attrs, [:body, :scopes, :oauth_client_id, :user_id])
     |> validate_required([:body, :scopes, :oauth_client_id, :user_id])
-    # |> validate_oauth_body()
     |> assoc_constraint(:oauth_client)
     |> assoc_constraint(:user)
+    |> validate_oauth_body()
   end
 
   @doc """
   Creates a changeset for updating token data.
   """
   def update_token_changeset(oauth_token, new_token) do
-    cast(oauth_token, %{body: new_token}, [:body])
-
-    # |> validate_oauth_body()
+    cast(oauth_token, %{body: new_token}, [:body]) |> validate_oauth_body()
   end
 
   @doc """
@@ -71,7 +70,6 @@ defmodule Lightning.Credentials.OauthToken do
           scopes: Enum.sort(scopes),
           body: tokens
         })
-        |> dbg()
         |> Lightning.Repo.insert()
 
       existing ->
@@ -109,37 +107,27 @@ defmodule Lightning.Credentials.OauthToken do
 
   def extract_scopes(_), do: :error
 
-  # Private Functions
+  defp validate_oauth_body(changeset) do
+    with {_, body} <- fetch_field(changeset, :body), true <- is_map(body) do
+      # Check if this is a new token or an update of an existing token
+      oauth_token_id = get_field(changeset, :id)
+      user_id = get_field(changeset, :user_id)
+      oauth_client_id = get_field(changeset, :oauth_client_id)
+      scopes = get_field(changeset, :scopes)
 
-  # defp validate_oauth_body(changeset) do
-  #   with {:ok, body} <- fetch_field(changeset, :body),
-  #        true <- is_map(body) do
-  #         body
-  #     body = Enum.into(body, %{}, fn {k, v} -> {to_string(k), v} end)
-
-  #     required_fields = ["access_token", "refresh_token"]
-  #     expires_fields = ["expires_in", "expires_at"]
-
-  #     cond do
-  #       not Enum.all?(required_fields, &Map.has_key?(body, &1)) ->
-  #         add_error(
-  #           changeset,
-  #           :body,
-  #           "Missing required OAuth fields: access_token, refresh_token"
-  #         )
-
-  #       not Enum.any?(expires_fields, &Map.has_key?(body, &1)) ->
-  #         add_error(
-  #           changeset,
-  #           :body,
-  #           "Missing expiration field: either expires_in or expires_at is required"
-  #         )
-
-  #       true ->
-  #         changeset
-  #     end
-  #   else
-  #     _ -> add_error(changeset, :body, "Invalid OAuth token body")
-  #   end
-  # end
+      # Use the shared validation function
+      case Credentials.validate_oauth_token_data(
+             body,
+             user_id,
+             oauth_client_id,
+             scopes,
+             not is_nil(oauth_token_id)
+           ) do
+        {:ok, _} -> changeset
+        {:error, reason} -> add_error(changeset, :body, reason)
+      end
+    else
+      _ -> add_error(changeset, :body, "Invalid OAuth token body")
+    end
+  end
 end

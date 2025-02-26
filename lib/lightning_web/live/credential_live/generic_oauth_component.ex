@@ -163,6 +163,10 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
         {:noreply, updated_socket |> assign(:oauth_progress, :missing_required)}
 
       socket.assigns.selected_client.userinfo_endpoint ->
+        Credentials.update_credential(socket.assigns.credential, %{
+          "body" => token
+        })
+
         selected_client = socket.assigns.selected_client
 
         {:noreply,
@@ -172,6 +176,10 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
          end)}
 
       true ->
+        Credentials.update_credential(socket.assigns.credential, %{
+          "body" => token
+        })
+
         {:noreply, updated_socket}
     end
   end
@@ -393,7 +401,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   end
 
   defp refresh_token_or_fetch_userinfo(socket, assigns, selected_client) do
-    case OauthHTTPClient.still_fresh(assigns.credential.body) do
+    case Credentials.still_fresh(assigns.credential.body) do
       true ->
         if selected_client.userinfo_endpoint do
           Logger.info("Fetching user info.")
