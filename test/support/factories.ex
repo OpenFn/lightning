@@ -1,5 +1,6 @@
 defmodule Lightning.Factories do
   use ExMachina.Ecto, repo: Lightning.Repo
+  alias Lightning.Workflows.Snapshot
 
   def webhook_auth_method_factory do
     %Lightning.Workflows.WebhookAuthMethod{
@@ -585,9 +586,16 @@ defmodule Lightning.Factories do
   end
 
   def work_order_for(trigger_or_job, attrs) do
+    attrs = Map.new(attrs)
+    workflow = Map.fetch!(attrs, :workflow)
+
+    snapshot =
+      Snapshot.get_current_for(workflow) ||
+        Snapshot.create(workflow) |> then(fn {:ok, snapshot} -> snapshot end)
+
     Lightning.WorkOrders.build_for(
       trigger_or_job,
-      Map.new(attrs) |> Map.merge(%{actor: insert(:user)})
+      Map.merge(attrs, %{actor: insert(:user), snapshot: snapshot})
     )
     |> Ecto.Changeset.apply_changes()
   end

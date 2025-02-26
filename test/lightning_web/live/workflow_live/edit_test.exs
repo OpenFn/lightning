@@ -1011,6 +1011,78 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert assert_patch(view) == ~p"/projects/#{project.id}/w/#{workflow.id}"
     end
 
+    test "toggling run log settings in the settings panel", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      for {conn, _user} <- setup_project_users(conn, project, [:viewer, :editor]) do
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/w/#{workflow.id}"
+          )
+
+        view
+        |> element("#toggle-settings")
+        |> render_click()
+
+        assert has_element?(
+                 view,
+                 "#toggle-workflow-logs-btn"
+               )
+
+        assert_raise ArgumentError,
+                     ~r/cannot click element "#toggle-workflow-logs-btn" because it is disabled/,
+                     fn ->
+                       view
+                       |> element("#toggle-workflow-logs-btn")
+                       |> render_click()
+                     end
+
+        GenServer.stop(view.pid)
+      end
+
+      for {conn, _user} <- setup_project_users(conn, project, [:admin, :owner]) do
+        workflow =
+          workflow
+          |> Repo.reload()
+          |> Ecto.Changeset.change(%{enable_job_logs: true})
+          |> Repo.update!()
+
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/w/#{workflow.id}"
+          )
+
+        view
+        |> element("#toggle-settings")
+        |> render_click()
+
+        assert has_element?(
+                 view,
+                 "#toggle-workflow-logs-btn"
+               )
+
+        view
+        |> form("#workflow-form")
+        |> render_change(workflow: %{enable_job_logs: "false"})
+
+        assert workflow.enable_job_logs == true
+
+        # submit the form
+        view |> element("#workflow-form") |> render_submit()
+
+        assert assert_patch(view) =~
+                 ~p"/projects/#{project.id}/w/#{workflow.id}?m=settings"
+
+        assert Repo.reload(workflow).enable_job_logs == false
+
+        GenServer.stop(view.pid)
+      end
+    end
+
     test "renders error message when a job has an empty body", %{
       conn: conn,
       project: project,

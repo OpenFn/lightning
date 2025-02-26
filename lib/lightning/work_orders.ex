@@ -204,10 +204,15 @@ defmodule Lightning.WorkOrders do
 
         _any ->
           snapshot = changeset |> get_change(:snapshot)
+          run_options = get_run_options(snapshot, attrs[:dataclip])
 
           changeset
           |> put_assoc(:runs, [
-            Run.for(trigger, %{dataclip: attrs[:dataclip], snapshot: snapshot})
+            Run.for(trigger, %{
+              dataclip: attrs[:dataclip],
+              snapshot: snapshot,
+              options: run_options
+            })
           ])
       end
     end)
@@ -224,6 +229,7 @@ defmodule Lightning.WorkOrders do
     build(attrs)
     |> then(fn changeset ->
       snapshot = changeset |> get_change(:snapshot)
+      run_options = get_run_options(snapshot, attrs[:dataclip])
 
       runs =
         attrs[:runs] ||
@@ -231,7 +237,8 @@ defmodule Lightning.WorkOrders do
             dataclip: attrs[:dataclip],
             created_by: attrs[:created_by],
             priority: attrs[:priority],
-            snapshot: snapshot
+            snapshot: snapshot,
+            options: run_options
           })
           |> List.wrap()
 
@@ -243,6 +250,14 @@ defmodule Lightning.WorkOrders do
     |> assoc_constraint(:workflow)
     |> assoc_constraint(:snapshot)
   end
+
+  defp get_run_options(%{} = snapshot, %{} = dataclip) do
+    workflow_id = snapshot |> change() |> get_field(:workflow_id)
+    project_id = dataclip |> change() |> get_field(:project_id)
+    Runs.get_run_options(workflow_id, project_id)
+  end
+
+  defp get_run_options(_, _), do: nil
 
   @doc """
   Retry a run from a given step.
@@ -589,13 +604,16 @@ defmodule Lightning.WorkOrders do
          steps,
          creating_user
        ) do
+    run_options =
+      Runs.get_run_options(workorder.workflow.id, workorder.workflow.project_id)
+
     Run.new(%{priority: :immediate, dataclip_id: dataclip_id})
     |> put_assoc(:snapshot, snapshot)
     |> put_assoc(:work_order, workorder)
     |> put_assoc(:starting_job, starting_job)
     |> put_assoc(:steps, steps)
     |> put_assoc(:created_by, creating_user)
-    |> Run.add_options(workorder.workflow.project_id)
+    |> put_embed(:options, run_options)
     |> validate_required_assoc(:snapshot)
     |> validate_required_assoc(:work_order)
     |> validate_required_assoc(:created_by)

@@ -7,13 +7,16 @@ defmodule Lightning.Runs do
   import Ecto.Query
 
   alias Ecto.Multi
-
+  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Invocation.LogLine
   alias Lightning.Repo
   alias Lightning.Run
   alias Lightning.Runs.Events
   alias Lightning.Runs.Handlers
+  alias Lightning.Runs.RunOptions
   alias Lightning.Services.RunQueue
+  alias Lightning.Services.UsageLimiter
+  alias Lightning.Workflows.Workflow
 
   require Logger
 
@@ -86,6 +89,23 @@ defmodule Lightning.Runs do
     preloads = opts |> Keyword.get(:include, [])
 
     from(r in Run, where: r.id == ^id, preload: ^preloads)
+  end
+
+  @spec get_run_options(
+          workflow_id :: Ecto.UUID.t(),
+          project_id :: Ecto.UUID.t()
+        ) :: RunOptions.t()
+  def get_run_options(workflow_id, project_id) do
+    workflow_options =
+      Workflow
+      |> where(id: ^workflow_id)
+      |> select([w], map(w, [:enable_job_logs]))
+      |> Repo.one!()
+
+    project_options =
+      UsageLimiter.get_run_options(%Context{project_id: project_id})
+
+    struct(RunOptions, Enum.into(project_options, workflow_options))
   end
 
   @doc """

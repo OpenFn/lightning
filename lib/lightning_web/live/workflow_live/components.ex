@@ -107,6 +107,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   end
 
   attr :form, :map, required: true
+  attr :can_edit_run_settings, :boolean, required: true
   attr :project_concurrency_disabled, :boolean, required: true
   attr :project_id, :string, required: true
 
@@ -118,10 +119,41 @@ defmodule LightningWeb.WorkflowLive.Components do
       </div>
 
       <div class="col-span-6 @md:col-span-4">
+        <span class="flex grow flex-col mb-3">
+          <span class="text-sm font-semibold leading-6 text-gray-900">
+            Log Output
+          </span>
+          <span class="text-xs text-gray-500">
+            Control what's printed in run logs
+          </span>
+        </span>
+        <div class="flex items-center justify-between">
+          <span class="text-sm/6 font-medium text-gray-800">
+            Allow <code>console.log()</code> usage
+          </span>
+          <.input
+            id="toggle-workflow-logs-btn"
+            type="toggle"
+            field={@form[:enable_job_logs]}
+            disabled={!@can_edit_run_settings}
+          />
+        </div>
+      </div>
+
+      <div class="col-span-6 @md:col-span-4">
+        <span class="flex grow flex-col mb-3">
+          <span class="text-sm font-semibold leading-6 text-gray-900">
+            Concurrency
+          </span>
+          <span class="text-xs text-gray-500">
+            Control how many of this workflow's <i>Runs</i>
+            are executed at the same time
+          </span>
+        </span>
         <div class="flex grid-cols-3">
           <div class="mt-2">
             <.label for={@form[:concurrency].id}>
-              Maximum Concurrency
+              Max Concurrency
               <Common.tooltip
                 class="inline-block ml-1"
                 id="max-concurrency-tooltip"

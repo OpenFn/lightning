@@ -27,6 +27,8 @@ and this project adheres to
   [#1832](https://github.com/OpenFn/lightning/issues/1832)
 - Allow users to configure their preferred log levels
   [#2206](https://github.com/OpenFn/lightning/issues/2206)
+- Allow project admins and owners to disable `console.log()` in jobs
+  [#2205](https://github.com/OpenFn/lightning/issues/2205)
 
 ### Changed
 

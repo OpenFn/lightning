@@ -9,11 +9,9 @@ defmodule Lightning.Run do
   import Lightning.Validators
 
   alias Lightning.Accounts.User
-  alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Invocation.LogLine
   alias Lightning.Invocation.Step
   alias Lightning.RunStep
-  alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
@@ -95,7 +93,8 @@ defmodule Lightning.Run do
     |> put_assoc(:starting_trigger, trigger)
     |> put_assoc(:dataclip, attrs[:dataclip])
     |> put_assoc(:snapshot, attrs[:snapshot])
-    |> add_options(attrs.dataclip.project_id)
+    |> put_embed(:options, attrs[:options])
+    |> validate_required(:options)
     |> validate_required_assoc(:dataclip)
     |> validate_required_assoc(:snapshot)
     |> validate_required_assoc(:starting_trigger)
@@ -108,7 +107,8 @@ defmodule Lightning.Run do
     |> put_assoc(:dataclip, attrs[:dataclip])
     |> put_assoc(:snapshot, attrs[:snapshot])
     |> put_assoc(:starting_job, job)
-    |> add_options(attrs.dataclip.project_id)
+    |> put_embed(:options, attrs[:options])
+    |> validate_required(:options)
     |> validate_required_assoc(:created_by)
     |> validate_required_assoc(:dataclip)
     |> validate_required_assoc(:snapshot)
@@ -129,19 +129,6 @@ defmodule Lightning.Run do
     |> validate_required([:work_order_id, :snapshot_id])
     |> assoc_constraint(:work_order)
     |> validate()
-  end
-
-  @doc """
-  Adds options (project-level logging options, resource limits such as timeout
-  and memory usage, etc.) to the run before storing in the DB.
-  """
-  def add_options(changeset, project_id) do
-    put_change(
-      changeset,
-      :options,
-      UsageLimiter.get_run_options(%Context{project_id: project_id})
-      |> Enum.into(%{})
-    )
   end
 
   def start(run, params) do

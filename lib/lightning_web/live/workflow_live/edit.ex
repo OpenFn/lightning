@@ -435,6 +435,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             cancel_url={@base_url}
           >
             <.workflow_settings
+              can_edit_run_settings={@can_edit_run_settings}
               project_id={@workflow.project_id}
               project_concurrency_disabled={@workflow.project.concurrency == 1}
               form={@workflow_form}
@@ -1055,6 +1056,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
               :edit_data_retention,
               current_user,
               project_user
+            ),
+          can_edit_run_settings:
+            Permissions.can?(
+              ProjectUsers,
+              :edit_run_settings,
+              current_user,
+              project_user
             )
         )
 
@@ -1090,6 +1098,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
         Permissions.can?(
           ProjectUsers,
           :edit_data_retention,
+          current_user,
+          project_user
+        ),
+      can_edit_run_settings:
+        Permissions.can?(
+          ProjectUsers,
+          :edit_run_settings,
           current_user,
           project_user
         )
