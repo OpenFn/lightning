@@ -8,27 +8,30 @@ import { initiateSaveAndRun } from '../common';
 
 async function* fetchDTSListing(specifier: string) {
   if (specifier.endsWith('@local')) {
-    const lang = specifier.replace('@local', '').replace('@openfn/language-', '')
-    const url = `http://localhost:5000/packages/${lang}/types`
-    const r = await fetch(url, { headers: { Accept: 'application/json'} })
+    const lang = specifier
+      .replace('@local', '')
+      .replace('@openfn/language-', '');
+    const url = `http://localhost:5000/packages/${lang}/types`;
+    const r = await fetch(url, { headers: { Accept: 'application/json' } });
     const json = await r.json();
     for (const f of json.files) {
       yield `/types/${f.base}`;
     }
-  }
-     else {
-      return describe.fetchDTSListing(specifier)
+  } else {
+    return describe.fetchDTSListing(specifier);
   }
 }
 const fetchFile = async (path: string) => {
   if (path.includes('@local')) {
-    path = path.replace('@openfn/language-', '').replace('@local', '')
-    const url = `http://localhost:5000/packages/${path}`
-    return fetch(url, {  headers: { Accept: 'text/plain'}  }).then(r => r.text())
-  }else {
-    return describe.fetchFile(path)
-}
-}
+    path = path.replace('@openfn/language-', '').replace('@local', '');
+    const url = `http://localhost:5000/packages/${path}`;
+    return fetch(url, { headers: { Accept: 'text/plain' } }).then(r =>
+      r.text()
+    );
+  } else {
+    return describe.fetchFile(path);
+  }
+};
 
 // static imports for core lib
 import dts_es5 from './lib/es5.min.dts';
@@ -133,9 +136,9 @@ async function loadDTS(specifier: string): Promise<Lib[]> {
   // TODO maybe we need other dependencies too? collections?
   if (name !== '@openfn/language-common') {
     const pkg = await fetchFile(`${specifier}/package.json`);
-    const commonVersion = useLocal? 'local' : JSON.parse(pkg || '{}').dependencies?.[
-      '@openfn/language-common'
-    ];
+    const commonVersion = useLocal
+      ? 'local'
+      : JSON.parse(pkg || '{}').dependencies?.['@openfn/language-common'];
 
     if (!useLocal) {
       // jsDeliver doesn't appear to support semver range syntax (^1.0.0, 1.x, ~1.1.0)
@@ -155,11 +158,12 @@ async function loadDTS(specifier: string): Promise<Lib[]> {
       if (!filePath.startsWith('node_modules')) {
         // Load every common typedef into the common module
         let content = await fetchFile(`${commonSpecifier}${filePath}`);
-        content = content.replace(/\* +@(.+?)\*\//gs, '*/');
-        console.log(content)
-        results.push({
-          content: `declare module '@openfn/language-common' { ${content} }`,
-        });
+        if (!content.startsWith('<!DOCTYPE html>')) {
+          content = content.replace(/\* +@(.+?)\*\//gs, '*/');
+          results.push({
+            content: `declare module '@openfn/language-common' { ${content} }`,
+          });
+        }
       }
     }
   }
@@ -173,6 +177,13 @@ async function loadDTS(specifier: string): Promise<Lib[]> {
   for await (const filePath of fetchDTSListing(specifier)) {
     if (!filePath.startsWith('node_modules')) {
       let content = await fetchFile(`${specifier}${filePath}`);
+      if (content.match(/<!doctype html>/i)) {
+        continue;
+      }
+      // Convert relative paths
+      content = content
+        .replace(/from '\.\//g, `from '${name}/`)
+        .replace(/import '\.\//g, `import '${name}/`);
 
       // Remove js doc annotations
       // this regex means: find a * then an @ (with 1+ space in between), then match everything up to a closing comment */
@@ -182,9 +193,6 @@ async function loadDTS(specifier: string): Promise<Lib[]> {
 
       // Import the index as the global namespace - but take care to convert all paths to absolute
       if (fileName === 'index' || fileName === 'Adaptor') {
-        content = content.replace(/from '\.\//g, `from '${name}/`);
-        content = content.replace(/import '\.\//g, `import '${name}/`);
-
         // It turns out that "export * as " seems to straight up not work in Monaco
         // So this little hack will refactor import statements in a way that works
         content = content.replace(
@@ -214,6 +222,7 @@ async function loadDTS(specifier: string): Promise<Lib[]> {
   // This is basically a hack to work around https://github.com/OpenFn/lightning/issues/2641
   // If we find a types.d.ts, append it to every other file
   adaptorDefs = adaptorDefs.map(def => def.replace('{{$TYPES}}', types));
+  console.log(adaptorDefs);
 
   results.push(
     ...adaptorDefs.map(content => ({
