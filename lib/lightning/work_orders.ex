@@ -513,7 +513,7 @@ defmodule Lightning.WorkOrders do
           r.inserted_at == lr.last_inserted_at,
       where: s.job_id in ^job_ids,
       order_by: [asc: wo.inserted_at],
-      select: %{rs | step: s}
+      select: %{rs | step: s, run: r}
     )
     |> then(fn query ->
       if Keyword.get(opts, :non_wiped_dataclip?) do

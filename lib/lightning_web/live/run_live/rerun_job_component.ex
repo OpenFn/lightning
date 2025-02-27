@@ -2,8 +2,10 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
   @moduledoc """
   Rerun job component
   """
-
   use LightningWeb, :live_component
+
+  import LightningWeb.Utils, only: [pluralize_with_s: 2]
+
   alias Lightning.Jobs
   alias Lightning.Workflows
   alias Lightning.WorkOrders
@@ -20,13 +22,24 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
     workflow = Workflows.get_workflow!(workflow_id)
     workflow_jobs = Jobs.list_jobs_for_workflow(workflow)
 
-    disabled_jobs_ids =
+    {retriable_jobs_ids, retriable_count_per_job} =
       selected_workorders
       |> WorkOrders.get_last_runs_steps_with_dataclips(workflow_jobs)
-      |> MapSet.new(& &1.step.job_id)
-      |> then(fn retriable_jobs_ids ->
-        MapSet.difference(MapSet.new(workflow_jobs, & &1.id), retriable_jobs_ids)
+      |> then(fn run_steps ->
+        retriable_jobs_ids = MapSet.new(run_steps, & &1.step.job_id)
+
+        retriable_count_per_job =
+          run_steps
+          |> Enum.group_by(& &1.step.job_id, & &1.run.work_order_id)
+          |> Map.new(fn {job_id, workorder_ids} ->
+            {job_id, Enum.count(workorder_ids)}
+          end)
+
+        {retriable_jobs_ids, retriable_count_per_job}
       end)
+
+    disabled_jobs_ids =
+      MapSet.difference(MapSet.new(workflow_jobs, & &1.id), retriable_jobs_ids)
 
     {:ok,
      socket
@@ -35,9 +48,9 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
        workflow: workflow,
        workflow_jobs: workflow_jobs,
        disabled_jobs_ids: disabled_jobs_ids,
-       selected_job: hd(workflow_jobs),
-       selected_count: Enum.count(selected_workorders)
+       retriable_count_per_job: retriable_count_per_job
      )
+     |> update_selected_job(hd(workflow_jobs).id)
      |> assign(assigns)}
   end
 
@@ -45,12 +58,9 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
   def handle_event(
         "select_job",
         %{"job" => job_id},
-        %{assigns: assigns} = socket
+        socket
       ) do
-    selected_job =
-      Enum.find(assigns.workflow_jobs, fn job -> job.id == job_id end)
-
-    {:noreply, assign(socket, selected_job: selected_job)}
+    {:noreply, update_selected_job(socket, job_id)}
   end
 
   @impl true
@@ -148,10 +158,10 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
                 phx-disable-with="Running..."
                 class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-1"
               >
-                Rerun <%= @selected_count %> selected work order<%= if @selected_count >
-                                                                         1,
-                                                                       do: "s",
-                                                                       else: "" %> from selected job
+                Rerun <%= @retriable_count %> selected work <%= pluralize_with_s(
+                  @retriable_count,
+                  "order"
+                ) %> from selected job
               </button>
               <button
                 id="rerun-all-from-job-trigger"
@@ -195,10 +205,10 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
                 phx-disable-with="Running..."
                 class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2"
               >
-                Rerun <%= @selected_count %> selected work order<%= if @selected_count >
-                                                                         1,
-                                                                       do: "s",
-                                                                       else: "" %> from selected job
+                Rerun <%= @retriable_count %> selected work <%= pluralize_with_s(
+                  @retriable_count,
+                  "order"
+                ) %> from selected job
               </button>
               <button
                 type="button"
@@ -213,5 +223,20 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
       </div>
     </div>
     """
+  end
+
+  defp update_selected_job(socket, job_id) do
+    %{
+      retriable_count_per_job: retriable_count_per_job,
+      workflow_jobs: workflow_jobs
+    } = socket.assigns
+
+    selected_job =
+      Enum.find(workflow_jobs, fn job -> job.id == job_id end)
+
+    assign(socket,
+      selected_job: selected_job,
+      retriable_count: Map.get(retriable_count_per_job, selected_job.id)
+    )
   end
 end

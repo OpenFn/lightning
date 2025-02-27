@@ -11,6 +11,9 @@ defmodule LightningWeb.Utils do
   alias Phoenix.HTML.Form
   alias Plug.Conn.Query
 
+  def pluralize_with_s(n, string) when n <= 1, do: string
+  def pluralize_with_s(_integer, string), do: "#{string}s"
+
   @doc """
   Builds nested parameters for the given `form` field with the specified `value`.
 
