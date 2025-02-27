@@ -1027,6 +1027,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         |> element("#toggle-settings")
         |> render_click()
 
+        assert view
+               |> element("#toggle-control-toggle-workflow-logs-btn")
+               |> render() =~ "opacity-50 cursor-not-allowed"
+
         assert has_element?(
                  view,
                  "#toggle-workflow-logs-btn"
@@ -1059,6 +1063,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         view
         |> element("#toggle-settings")
         |> render_click()
+
+        refute view
+               |> element("#toggle-control-toggle-workflow-logs-btn")
+               |> render() =~ "opacity-50 cursor-not-allowed"
 
         assert has_element?(
                  view,
