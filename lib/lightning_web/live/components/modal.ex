@@ -160,14 +160,4 @@ defmodule LightningWeb.Components.Modal do
     |> JS.hide(to: "##{id}", transition: {"block", "block", "hidden"})
     |> JS.pop_focus()
   end
-
-  # defp push_modal_closed(js, modal_id, nil) do
-  #   js
-  #   |> JS.push("modal_closed", value: %{id: modal_id})
-  # end
-
-  # defp push_modal_closed(js, modal_id, target) do
-  #   js
-  #   |> JS.push("modal_closed", value: %{id: modal_id}, target: target)
-  # end
 end
