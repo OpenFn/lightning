@@ -63,7 +63,7 @@ defmodule Lightning.Credentials.CredentialTest do
 
   defp assert_invalid_oauth_credential(
          body,
-         message \\ "Invalid OAuth token. Missing required fields: access_token, refresh_token, and either expires_in or expires_at."
+         message \\ "Missing refresh_token for new OAuth connection"
        ) do
     errors =
       Credential.changeset(

@@ -137,6 +137,44 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
     "#{client.authorization_endpoint}?#{encoded_params}"
   end
 
+  @doc """
+  Determines if the token data is still considered fresh.
+  ## Parameters
+  - `token`: a map containing token data with `expires_at` or `expires_in` keys.
+  - `threshold`: the number of time units before expiration to consider the token still fresh.
+  - `time_unit`: the unit of time to consider for the threshold comparison.
+  ## Returns
+  - `true` if the token is fresh.
+  - `{:error, reason}` if the token's expiration data is missing or invalid.
+  """
+  @spec still_fresh(map(), integer(), atom()) :: boolean() | {:error, String.t()}
+  def still_fresh(token, threshold \\ 5, time_unit \\ :minute)
+
+  def still_fresh(%{"expires_at" => nil} = _token, _threshold, _time_unit),
+    do: false
+
+  def still_fresh(%{"expires_in" => nil} = _token, _threshold, _time_unit),
+    do: false
+
+  def still_fresh(token, threshold, time_unit) do
+    current_time = DateTime.utc_now()
+
+    expiration_time =
+      case {Map.fetch(token, "expires_at"), Map.fetch(token, "expires_in")} do
+        {{:ok, expires_at}, :error} -> expires_at
+        {:error, {:ok, expires_in}} -> expires_in
+        _ -> {:error, "No valid expiration data found"}
+      end
+
+    if is_integer(expiration_time) do
+      expiration_time = DateTime.from_unix!(expiration_time)
+      time_remaining = DateTime.diff(expiration_time, current_time, time_unit)
+      time_remaining >= threshold
+    else
+      expiration_time
+    end
+  end
+
   defp maybe_introspect({:error, reason}, _client) do
     {:error, reason}
   end

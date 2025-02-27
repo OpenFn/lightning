@@ -5,6 +5,7 @@ defmodule LightningWeb.Components.Credentials do
   import PetalComponents.Table
 
   alias LightningWeb.CredentialLive.JsonSchemaBodyComponent
+  alias LightningWeb.CredentialLive.OauthComponent
   alias LightningWeb.CredentialLive.RawBodyComponent
 
   def delete_credential_modal(assigns) do
@@ -118,6 +119,38 @@ defmodule LightningWeb.Components.Credentials do
   attr :sandbox_changed, :boolean, required: false
   attr :oauth_clients, :list, required: false
   slot :inner_block
+
+  def form_component(%{type: "googlesheets"} = assigns) do
+    ~H"""
+    <OauthComponent.fieldset
+      :let={l}
+      id={@id}
+      form={@form}
+      action={@action}
+      schema={@schema}
+      update_body={@update_body}
+    >
+      <%= render_slot(@inner_block, l) %>
+    </OauthComponent.fieldset>
+    """
+  end
+
+  def form_component(%{type: "salesforce_oauth"} = assigns) do
+    ~H"""
+    <OauthComponent.fieldset
+      :let={l}
+      id={@id}
+      form={@form}
+      action={@action}
+      schema={@schema}
+      update_body={@update_body}
+      scopes_changed={@scopes_changed}
+      sandbox_changed={@sandbox_changed}
+    >
+      <%= render_slot(@inner_block, l) %>
+    </OauthComponent.fieldset>
+    """
+  end
 
   def form_component(%{type: "raw"} = assigns) do
     ~H"""

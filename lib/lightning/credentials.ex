@@ -15,6 +15,7 @@ defmodule Lightning.Credentials do
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserNotifier
   alias Lightning.Accounts.UserToken
+  alias Lightning.AuthProviders.Common
   alias Lightning.AuthProviders.OauthHTTPClient
   alias Lightning.Credentials
   alias Lightning.Credentials.Audit
@@ -160,45 +161,62 @@ defmodule Lightning.Credentials do
   """
   @spec create_credential(map()) :: {:ok, Credential.t()} | {:error, any()}
   def create_credential(attrs \\ %{}) do
-    attrs = normalize_keys(attrs) |> dbg()
-
+    attrs = normalize_keys(attrs)
     changeset = change_credential(%Credential{}, attrs)
 
-    multi =
-      if attrs["schema"] == "oauth" do
-        %{"user_id" => user_id, "oauth_client_id" => client_id, "body" => body} =
-          attrs
-
-        {credential_data, token_data} = Credentials.separate_oauth_data(body)
-
-        Multi.new()
-        |> Multi.run(:oauth_token, fn _repo, _changes ->
-          with {:ok, scopes} <- OauthToken.extract_scopes(token_data) do
-            OauthToken.find_or_create_for_scopes(
-              user_id,
-              client_id,
-              scopes,
-              token_data
-            )
-          else
-            :error -> {:error, "Could not extract scopes from OAuth token"}
-          end
-        end)
-        |> Multi.insert(:credential, fn %{oauth_token: token} ->
-          changeset
-          |> Ecto.Changeset.put_change(:oauth_token_id, token.id)
-          |> Ecto.Changeset.put_change(:body, credential_data)
-        end)
-      else
-        Multi.insert(Multi.new(), :credential, changeset)
-      end
+    multi = build_create_multi(changeset, attrs)
 
     multi
     |> derive_events(changeset)
     |> Repo.transaction()
-    |> case do
-      {:error, _op, error, _changes} -> {:error, error}
-      {:ok, %{credential: credential}} -> {:ok, credential}
+    |> handle_transaction_result()
+  end
+
+  # Helper to build the appropriate Multi for creation
+  defp build_create_multi(changeset, attrs) do
+    if oauth_credential?(attrs) do
+      build_oauth_create_multi(changeset, attrs)
+    else
+      Multi.insert(Multi.new(), :credential, changeset)
+    end
+  end
+
+  # Determines if this is an OAuth credential
+  defp oauth_credential?(attrs) do
+    attrs["schema"] == "oauth"
+  end
+
+  # Builds a Multi for creating OAuth credentials
+  defp build_oauth_create_multi(changeset, attrs) do
+    %{"user_id" => user_id, "oauth_client_id" => client_id, "body" => body} =
+      attrs
+
+    {credential_data, token_data} = Credentials.separate_oauth_data(body)
+
+    Multi.new()
+    |> Multi.run(:oauth_token, fn _repo, _changes ->
+      create_oauth_token(user_id, client_id, token_data)
+    end)
+    |> Multi.insert(:credential, fn %{oauth_token: token} ->
+      changeset
+      |> Ecto.Changeset.put_change(:oauth_token_id, token.id)
+      |> Ecto.Changeset.put_change(:body, credential_data)
+    end)
+  end
+
+  # Creates a new OAuth token with the given parameters
+  defp create_oauth_token(user_id, client_id, token_data) do
+    case OauthToken.extract_scopes(token_data) do
+      {:ok, scopes} ->
+        OauthToken.find_or_create_for_scopes(
+          user_id,
+          client_id,
+          scopes,
+          token_data
+        )
+
+      :error ->
+        {:error, "Could not extract scopes from OAuth token"}
     end
   end
 
@@ -221,60 +239,84 @@ defmodule Lightning.Credentials do
   @spec update_credential(Credential.t(), map()) ::
           {:ok, Credential.t()} | {:error, any()}
   def update_credential(%Credential{} = credential, attrs) do
-    attrs = normalize_keys(attrs) |> dbg()
+    attrs = normalize_keys(attrs)
 
     changeset =
       credential
       |> change_credential(attrs)
       |> cast_body_change()
 
-    multi =
-      if credential.schema == "oauth" && Map.has_key?(attrs, "body") do
-        credential = Repo.preload(credential, :oauth_token)
-        new_body = attrs["body"]
-
-        {new_credential_data, token_data} =
-          Credentials.separate_oauth_data(new_body)
-
-        credential_data = Map.merge(credential.body, new_credential_data)
-
-        Multi.new()
-        |> Multi.run(:oauth_token, fn _repo, _changes ->
-          if credential.oauth_token_id do
-            credential.oauth_token
-            |> OauthToken.update_token_changeset(token_data)
-            |> Repo.update()
-          else
-            case OauthToken.extract_scopes(token_data) do
-              {:ok, scopes} ->
-                oauth_client_id =
-                  credential.oauth_client_id || attrs["oauth_client_id"]
-
-                OauthToken.find_or_create_for_scopes(
-                  credential.user_id,
-                  oauth_client_id,
-                  scopes,
-                  token_data
-                )
-
-              :error ->
-                {:error, "Could not extract scopes from OAuth token"}
-            end
-          end
-        end)
-        |> Multi.update(:credential, fn %{oauth_token: token} ->
-          changeset
-          |> Ecto.Changeset.put_change(:body, credential_data)
-          |> Ecto.Changeset.put_change(:oauth_token_id, token.id)
-        end)
-      else
-        Multi.update(Multi.new(), :credential, changeset)
-      end
+    multi = build_update_multi(credential, changeset, attrs)
 
     multi
     |> derive_events(changeset)
     |> Repo.transaction()
-    |> case do
+    |> handle_transaction_result()
+  end
+
+  # Helper to build the appropriate Multi for the update
+  defp build_update_multi(credential, changeset, attrs) do
+    if should_update_oauth?(credential, attrs) do
+      build_oauth_update_multi(credential, changeset, attrs)
+    else
+      Multi.update(Multi.new(), :credential, changeset)
+    end
+  end
+
+  # Determines if we need to update OAuth data
+  defp should_update_oauth?(credential, attrs) do
+    credential.schema == "oauth" && Map.has_key?(attrs, "body")
+  end
+
+  # Builds a Multi for updating OAuth credentials
+  defp build_oauth_update_multi(credential, changeset, attrs) do
+    credential = Repo.preload(credential, :oauth_token)
+    new_body = attrs["body"]
+
+    {new_credential_data, token_data} =
+      Credentials.separate_oauth_data(new_body)
+
+    credential_data = Map.merge(credential.body, new_credential_data)
+
+    Multi.new()
+    |> Multi.run(:oauth_token, fn _repo, _changes ->
+      update_or_create_oauth_token(credential, token_data, attrs)
+    end)
+    |> Multi.update(:credential, fn %{oauth_token: token} ->
+      changeset
+      |> Ecto.Changeset.put_change(:body, credential_data)
+      |> Ecto.Changeset.put_change(:oauth_token_id, token.id)
+    end)
+  end
+
+  # Updates existing OAuth token or creates a new one
+  defp update_or_create_oauth_token(credential, token_data, attrs) do
+    if credential.oauth_token_id do
+      credential.oauth_token
+      |> OauthToken.update_token_changeset(token_data)
+      |> Repo.update()
+    else
+      case OauthToken.extract_scopes(token_data) do
+        {:ok, scopes} ->
+          oauth_client_id =
+            credential.oauth_client_id || attrs["oauth_client_id"]
+
+          OauthToken.find_or_create_for_scopes(
+            credential.user_id,
+            oauth_client_id,
+            scopes,
+            token_data
+          )
+
+        :error ->
+          {:error, "Could not extract scopes from OAuth token"}
+      end
+    end
+  end
+
+  # Handles the result of the transaction
+  defp handle_transaction_result(transaction_result) do
+    case transaction_result do
       {:error, _op, error, _changes} -> {:error, error}
       {:ok, %{credential: credential}} -> {:ok, credential}
     end
@@ -479,7 +521,7 @@ defmodule Lightning.Credentials do
     case Repo.update(changeset) do
       {:ok, updated_credential} ->
         remove_credential_associations(updated_credential)
-        maybe_revoke_oauth(updated_credential)
+        maybe_revoke_oauth(Credential.with_oauth(updated_credential))
         notify_owner(updated_credential)
         {:ok, updated_credential}
 
@@ -625,7 +667,7 @@ defmodule Lightning.Credentials do
     %{body: body, oauth_client_id: oauth_client_id, oauth_client: oauth_client} =
       credential =
       credential
-      |> preload(oauth_token: :oauth_client)
+      |> Repo.preload(oauth_token: :oauth_client)
       |> Credential.with_oauth()
 
     cond do
@@ -643,6 +685,44 @@ defmodule Lightning.Credentials do
           {:error, error} ->
             {:error, error}
         end
+    end
+  end
+
+  # TODO: Remove this function when deprecating salesforce and googlesheets oauth
+  def maybe_refresh_token(%Credential{schema: schema} = credential)
+      when schema in ["salesforce_oauth", "googlesheets"] do
+    token = Common.TokenBody.new(credential.body)
+
+    if Common.still_fresh(token) do
+      {:ok, credential}
+    else
+      adapter = lookup_adapter(schema)
+      wellknown_url = adapter.wellknown_url(token.sandbox)
+
+      case adapter.refresh_token(token, wellknown_url) do
+        {:ok, refreshed_token} ->
+          updated_body =
+            refreshed_token
+            |> Common.TokenBody.from_oauth2_token()
+            |> Lightning.Helpers.json_safe()
+
+          update_credential(credential, %{body: updated_body})
+
+        {:error, error} ->
+          {:error, error}
+      end
+    end
+  end
+
+  def maybe_refresh_token(%Credential{} = credential) do
+    {:ok, credential}
+  end
+
+  # TODO: Remove this function when deprecating salesforce and googlesheets oauth
+  def lookup_adapter(schema) do
+    case :ets.lookup(:adapter_lookup, schema) do
+      [{^schema, adapter}] -> adapter
+      [] -> nil
     end
   end
 
@@ -1045,46 +1125,37 @@ defmodule Lightning.Credentials do
   def still_fresh(%{"expires_in" => nil} = _token, _threshold, _time_unit),
     do: false
 
-  # Handle expires_at case
   def still_fresh(%{"expires_at" => expires_at} = _token, threshold, time_unit)
       when is_integer(expires_at) do
-    current_time = DateTime.utc_now()
-    expiration_time = DateTime.from_unix!(expires_at)
-    time_remaining = DateTime.diff(expiration_time, current_time, time_unit)
-    time_remaining >= threshold
+    expires_at
+    |> DateTime.from_unix!()
+    |> DateTime.diff(DateTime.utc_now(), time_unit) >= threshold
   end
 
-  # Handle expires_in with updated_at case
   def still_fresh(
         %{"expires_in" => expires_in, "updated_at" => updated_at} = _token,
         threshold,
         time_unit
       )
-      when is_integer(expires_in) and is_struct(updated_at, DateTime) do
-    current_time = DateTime.utc_now()
-    expiration_time = DateTime.add(updated_at, expires_in, :second)
-    time_remaining = DateTime.diff(expiration_time, current_time, time_unit)
-    time_remaining >= threshold
+      when is_integer(expires_in) and is_integer(updated_at) do
+    updated_at
+    |> DateTime.from_unix!()
+    |> DateTime.add(expires_in, :second)
+    |> DateTime.diff(DateTime.utc_now(), time_unit) >= threshold
   end
 
-  # Fallback for invalid token format
   def still_fresh(_token, _threshold, _time_unit) do
     {:error, "No valid expiration data found"}
   end
 
   def normalize_keys(map) when is_map(map) do
-    if Map.has_key?(map, :__struct__) do
-      map
-    else
-      # Process regular maps
-      Enum.reduce(map, %{}, fn
-        {k, v}, acc when is_map(v) ->
-          Map.put(acc, to_string(k), normalize_keys(v))
+    Enum.reduce(map, %{}, fn
+      {k, v}, acc when is_map(v) ->
+        Map.put(acc, to_string(k), normalize_keys(v))
 
-        {k, v}, acc ->
-          Map.put(acc, to_string(k), v)
-      end)
-    end
+      {k, v}, acc ->
+        Map.put(acc, to_string(k), v)
+    end)
   end
 
   def normalize_keys(value), do: value
@@ -1142,55 +1213,85 @@ defmodule Lightning.Credentials do
         is_update \\ false
       ) do
     # Ensure token_data is a map
-    if not is_map(token_data) do
-      {:error, "Invalid OAuth token body"}
-    else
-      normalized_data = normalize_keys(token_data)
-
-      # Access token is always required
-      if not Map.has_key?(normalized_data, "access_token") do
-        {:error, "Missing required OAuth field: access_token"}
-      else
-        # For new tokens: refresh_token is required unless there's an existing token with same scopes
-        # For updates: refresh_token is not strictly required
-        cond do
-          # Case 1: This is an update to an existing token (refresh_token not strictly required)
-          is_update ->
-            validate_expiration_fields(normalized_data)
-
-          # Case 2: No refresh_token but existing token found with same scopes
-          not Map.has_key?(normalized_data, "refresh_token") and
-            not is_nil(user_id) and not is_nil(oauth_client_id) and
-              not is_nil(
-                Lightning.Credentials.OauthToken.find_by_scopes(
-                  user_id,
-                  oauth_client_id,
-                  scopes
-                )
-              ) ->
-            validate_expiration_fields(normalized_data)
-
-          # Case 3: New token with no refresh_token and no existing token
-          not Map.has_key?(normalized_data, "refresh_token") ->
-            {:error, "Missing refresh_token for new OAuth connection"}
-
-          # Case 4: New token with refresh_token (valid case)
-          true ->
-            validate_expiration_fields(normalized_data)
-        end
-      end
+    unless is_map(token_data) do
+      return_error("Invalid OAuth token body")
     end
+
+    normalized_data = normalize_keys(token_data)
+
+    # Verify access token exists
+    unless Map.has_key?(normalized_data, "access_token") do
+      return_error("Missing required OAuth field: access_token")
+    end
+
+    validate_refresh_token_and_expiration(
+      normalized_data,
+      user_id,
+      oauth_client_id,
+      scopes,
+      is_update
+    )
+  end
+
+  # Helper to reduce nesting and improve readability
+  defp return_error(message), do: {:error, message}
+
+  # Helper to check refresh token requirements based on context
+  defp validate_refresh_token_and_expiration(
+         normalized_data,
+         user_id,
+         oauth_client_id,
+         scopes,
+         is_update
+       ) do
+    has_refresh_token = Map.has_key?(normalized_data, "refresh_token")
+    existing_token_exists? = token_exists?(user_id, oauth_client_id, scopes)
+
+    cond do
+      # Case 1: This is an update to an existing token (refresh_token not strictly required)
+      is_update ->
+        validate_expiration_fields(normalized_data)
+
+      # Case 2: Has refresh token (valid case)
+      has_refresh_token ->
+        validate_expiration_fields(normalized_data)
+
+      # Case 3: No refresh token but existing token found with same scopes
+      existing_token_exists? ->
+        validate_expiration_fields(normalized_data)
+
+      # Case 4: New token with no refresh_token and no existing token
+      true ->
+        return_error("Missing refresh_token for new OAuth connection")
+    end
+  end
+
+  # Helper to check if a token with given scopes exists
+  defp token_exists?(nil, _, _), do: false
+  defp token_exists?(_, nil, _), do: false
+  defp token_exists?(_, _, nil), do: false
+
+  defp token_exists?(user_id, oauth_client_id, scopes) do
+    Lightning.Credentials.OauthToken.find_by_scopes(
+      user_id,
+      oauth_client_id,
+      scopes
+    ) != nil
   end
 
   # Helper function to validate expiration fields
   defp validate_expiration_fields(token_data) do
-    expires_fields = ["expires_in", "expires_at"]
-
-    if not Enum.any?(expires_fields, &Map.has_key?(token_data, &1)) do
-      {:error,
-       "Missing expiration field: either expires_in or expires_at is required"}
-    else
+    if has_expiration_field?(token_data) do
       {:ok, token_data}
+    else
+      return_error(
+        "Missing expiration field: either expires_in or expires_at is required"
+      )
     end
+  end
+
+  defp has_expiration_field?(token_data) do
+    expires_fields = ["expires_in", "expires_at"]
+    Enum.any?(expires_fields, &Map.has_key?(token_data, &1))
   end
 end
