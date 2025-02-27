@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix toggle button not visually disabled
+  [#2976](https://github.com/OpenFn/lightning/issues/2976)
+
 ## [v2.10.16-pre.0] - 2025-02-26
 
 ### Added
