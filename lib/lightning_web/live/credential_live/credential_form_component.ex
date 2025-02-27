@@ -501,7 +501,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
                   phx-target={@myself}
                   id={"salesforce_sandbox_instance_checkbox_#{@credential.id || "new"}"}
                 />
-
                 <.input
                   :if={@schema in ["salesforce_oauth"]}
                   type="text"
