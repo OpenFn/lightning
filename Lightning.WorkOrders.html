@@ -14,7 +14,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-B5609E66.js"></script>
+    <script src="dist/sidebar_items-59960F85.js"></script>
     <script src="docs_config.js"></script>
     <script async src="dist/html-YIPIRHGU.js"></script>
 
@@ -235,6 +235,14 @@ Work Order.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#get_last_runs_steps_with_dataclips/2" data-no-tooltip translate="no">get_last_runs_steps_with_dataclips(workorders, jobs)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#retry/3" data-no-tooltip translate="no">retry(run_id, step_id, opts)</a>
 
       </div>
@@ -419,7 +427,7 @@ Work Order.</p>
 
       </div>
 
-<p>Create a new Work Order.</p><p><strong>For a webhook</strong></p><pre><code class="makeup elixir" translate="no"><span class="n">create_for</span><span class="p" data-group-id="7938958451-1">(</span><span class="n">trigger</span><span class="p">,</span><span class="w"> </span><span class="ss">workflow</span><span class="p">:</span><span class="w"> </span><span class="n">workflow</span><span class="p">,</span><span class="w"> </span><span class="ss">dataclip</span><span class="p">:</span><span class="w"> </span><span class="n">dataclip</span><span class="p" data-group-id="7938958451-1">)</span></code></pre>
+<p>Create a new Work Order.</p><p><strong>For a webhook</strong></p><pre><code class="makeup elixir" translate="no"><span class="n">create_for</span><span class="p" data-group-id="5135066160-1">(</span><span class="n">trigger</span><span class="p">,</span><span class="w"> </span><span class="ss">workflow</span><span class="p">:</span><span class="w"> </span><span class="n">workflow</span><span class="p">,</span><span class="w"> </span><span class="ss">dataclip</span><span class="p">:</span><span class="w"> </span><span class="n">dataclip</span><span class="p" data-group-id="5135066160-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="enqueue_many_for_retry/2">
@@ -431,7 +439,7 @@ Work Order.</p>
     </a>
     <h1 class="signature" translate="no">enqueue_many_for_retry(workorders_ids, creating_user_id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L512" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L532" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -455,7 +463,7 @@ Work Order.</p>
     </a>
     <h1 class="signature" translate="no">get(id, opts \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L589" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L609" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -471,7 +479,29 @@ Work Order.</p>
 
       </div>
 
-<p>Get a Work Order by id.</p><p>Optionally preload associations by passing a list of atoms to <code class="inline">:include</code>.</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.WorkOrders</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="0786651925-1">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0786651925-2">[</span><span class="ss">:runs</span><span class="p" data-group-id="0786651925-2">]</span><span class="p" data-group-id="0786651925-1">)</span></code></pre>
+<p>Get a Work Order by id.</p><p>Optionally preload associations by passing a list of atoms to <code class="inline">:include</code>.</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.WorkOrders</span><span class="o">.</span><span class="n">get</span><span class="p" data-group-id="1104398821-1">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1104398821-2">[</span><span class="ss">:runs</span><span class="p" data-group-id="1104398821-2">]</span><span class="p" data-group-id="1104398821-1">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="get_last_runs_steps_with_dataclips/2">
+
+  <div class="detail-header">
+    <a href="#get_last_runs_steps_with_dataclips/2" class="detail-link" data-no-tooltip title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">get_last_runs_steps_with_dataclips(workorders, jobs)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L486" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
   </section>
 </section>
 <section class="detail" id="retry/3">
@@ -518,7 +548,7 @@ this new run, but not executed again.</p>
     </a>
     <h1 class="signature" translate="no">retry_many(workorders, opts)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L443" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L420" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -610,7 +640,7 @@ this new run, but not executed again.</p>
     </a>
     <h1 class="signature" translate="no">update_state(run)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L570" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_orders.ex#L590" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
