@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Disable jobs with non retriable steps
+  [#2925](https://github.com/OpenFn/lightning/issues/2925)
+
 ### Changed
 
 ### Fixed
