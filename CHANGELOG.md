@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Add empty body as default new input on Job inspector
+  [#2952](https://github.com/OpenFn/lightning/issues/2952)
+
 ### Changed
 
 ### Fixed

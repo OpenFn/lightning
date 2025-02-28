@@ -323,7 +323,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
           ~p"/projects/#{p}/w/#{w}?#{[s: job, m: "expand", v: w.lock_version]}"
         )
 
-      assert view
+      refute view
              |> element(
                "button[type='submit'][form='manual_run_form'][disabled]"
              )
@@ -1384,7 +1384,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       refute has_element?(view, "button", "Retry from here")
 
       assert has_element?(view, "button:disabled", "Create New Work Order"),
-             "create new workorder button is disabled"
+             "create new workorder button should be disabled"
 
       # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
       # disconnection warnings.
