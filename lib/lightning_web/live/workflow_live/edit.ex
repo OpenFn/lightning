@@ -1620,14 +1620,23 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("manual_run_change", %{"manual" => params}, socket) do
-    changeset =
-      WorkOrders.Manual.new(
-        params,
+    attrs =
+      %{
         project: socket.assigns.project,
         workflow: socket.assigns.workflow,
         job: socket.assigns.selected_job,
         created_by: socket.assigns.current_user
-      )
+      }
+      |> then(fn attrs ->
+        if params["dataclip_id"] == "" do
+          Map.put(attrs, :body, "{}")
+        else
+          attrs
+        end
+      end)
+
+    changeset =
+      WorkOrders.Manual.new(params, attrs)
       |> Map.put(:action, :validate)
 
     {:noreply, socket |> assign_manual_run_form(changeset)}
@@ -2013,73 +2022,95 @@ defmodule LightningWeb.WorkflowLive.Edit do
     }
   end
 
-  defp maybe_show_manual_run(socket) do
-    case socket.assigns do
-      %{selected_job: nil} ->
-        socket
-        |> assign(
-          manual_run_form: nil,
-          selectable_dataclips: []
+  defp maybe_show_manual_run(%{assigns: %{selected_job: nil}} = socket) do
+    assign(socket,
+      manual_run_form: nil,
+      selectable_dataclips: []
+    )
+  end
+
+  defp maybe_show_manual_run(
+         %{
+           assigns: %{
+             selected_job: selected_job,
+             selection_mode: "expand",
+             current_user: current_user,
+             manual_run_form: manual_run_form,
+             project: project,
+             workflow: workflow,
+             follow_run: follow_run
+           }
+         } = socket
+       ) do
+    dataclip = follow_run && get_selected_dataclip(follow_run, selected_job.id)
+
+    body =
+      new_manual_run_form_body(
+        manual_run_form,
+        selected_job,
+        follow_run,
+        dataclip
+      )
+
+    changeset =
+      %{
+        project: project,
+        workflow: workflow,
+        job: selected_job,
+        user: current_user
+      }
+      |> then(fn attrs ->
+        attrs =
+          if body == "{}" do
+            Map.put(attrs, :created_by, current_user)
+          else
+            attrs
+          end
+
+        WorkOrders.Manual.new(
+          %{dataclip_id: dataclip && dataclip.id, body: body},
+          attrs
+        )
+      end)
+
+    selectable_dataclips =
+      Invocation.list_dataclips_for_job(%Job{id: selected_job.id})
+
+    step =
+      follow_run &&
+        Invocation.get_first_step_for_run_and_job(
+          follow_run.id,
+          selected_job.id
         )
 
-      %{selected_job: job, selection_mode: "expand"} = assigns
-      when not is_nil(job) ->
-        dataclip =
-          assigns[:follow_run] &&
-            get_selected_dataclip(assigns[:follow_run], job.id)
-
-        body =
-          new_manual_run_form_body(
-            assigns.manual_run_form,
-            job,
-            dataclip
-          )
-
-        changeset =
-          WorkOrders.Manual.new(
-            %{dataclip_id: dataclip && dataclip.id, body: body},
-            project: socket.assigns.project,
-            workflow: socket.assigns.workflow,
-            job: socket.assigns.selected_job,
-            user: socket.assigns.current_user
-          )
-
-        selectable_dataclips =
-          Invocation.list_dataclips_for_job(%Job{id: job.id})
-
-        step =
-          assigns[:follow_run] &&
-            Invocation.get_first_step_for_run_and_job(
-              assigns[:follow_run].id,
-              job.id
-            )
-
-        socket
-        |> assign_manual_run_form(changeset)
-        |> assign(step: step)
-        |> assign_dataclips(selectable_dataclips, dataclip)
-
-      _ ->
-        socket
-    end
+    socket
+    |> assign_manual_run_form(changeset)
+    |> assign(step: step)
+    |> assign_dataclips(selectable_dataclips, dataclip)
   end
+
+  defp maybe_show_manual_run(socket), do: socket
 
   defp new_manual_run_form_body(
          prev_manual_run_form,
          selected_job,
+         follow_run,
          selected_dataclip
        ) do
-    prev_job =
-      prev_manual_run_form &&
-        Ecto.Changeset.get_embed(
-          prev_manual_run_form.source,
-          :job,
-          :struct
-        )
+    if is_nil(selected_dataclip) do
+      prev_job =
+        prev_manual_run_form &&
+          Ecto.Changeset.get_embed(
+            prev_manual_run_form.source,
+            :job,
+            :struct
+          )
 
-    if is_nil(selected_dataclip) and is_struct(prev_job) and
-         prev_job.id == selected_job.id do
-      Ecto.Changeset.get_change(prev_manual_run_form.source, :body)
+      if is_struct(prev_job) and prev_job.id == selected_job.id do
+        Ecto.Changeset.get_change(prev_manual_run_form.source, :body)
+      else
+        if is_nil(follow_run), do: "{}"
+      end
     end
   end
 
@@ -2143,12 +2174,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
              ] and Map.get(manual_run_form.params, "dataclip_id") do
             true
           else
-            !Enum.any?(manual_run_form.source.errors)
+            Enum.empty?(manual_run_form.source.errors)
           end
 
-        !form_valid or
-          !changeset.valid? or
-          !(can_edit_workflow or can_run_workflow)
+        not form_valid or
+          not changeset.valid? or
+          not (can_edit_workflow or can_run_workflow)
     end
   end
 
