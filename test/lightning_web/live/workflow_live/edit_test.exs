@@ -1926,6 +1926,50 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                "#toggle-container-workflow[aria-label='This workflow is active (webhook trigger enabled)']"
              )
     end
+
+    test "manual run form body remains unchanged even after save workflow form is submitted",
+         %{conn: conn, project: project, test: test} do
+      %{jobs: [job_1, job_2 | _rest]} =
+        workflow = insert(:complex_workflow, project: project)
+
+      Lightning.Workflows.Snapshot.create(workflow)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1, m: "expand"]}"
+        )
+
+      body = Jason.encode!(%{test: test})
+
+      body_part = to_string(test)
+
+      refute view |> element("#manual_run_form") |> render() =~ body_part
+
+      assert view
+             |> form("#manual_run_form")
+             |> render_change(manual: %{body: body}) =~ body_part
+
+      # submit workflow form
+      view |> form("#workflow-form") |> render_submit()
+
+      workflow = Lightning.Repo.reload(workflow)
+
+      assert_patched(
+        view,
+        ~p"/projects/#{project}/w/#{workflow}?#{[m: "expand", s: job_1.id, v: workflow.lock_version]}"
+      )
+
+      # manual run form still has the body
+      assert view |> element("#manual_run_form") |> render() =~ body_part
+
+      # select another job
+      select_node(view, %{id: job_2.id})
+      click_edit(view, %{id: job_2.id})
+
+      # manual run form body is cleared
+      refute view |> element("#manual_run_form") |> render() =~ body_part
+    end
   end
 
   describe "Tracking Workflow editor metrics" do
