@@ -441,8 +441,6 @@ defmodule LightningWeb.Components.NewInputs do
       |> assign_new(:checked, fn ->
         Form.normalize_value("checkbox", assigns[:value]) == true
       end)
-      |> assign_new(:disabled, fn -> false end)
-      |> assign_new(:required, fn -> false end)
       |> assign_new(:tooltip, fn -> nil end)
 
     ~H"""
@@ -471,13 +469,11 @@ defmodule LightningWeb.Components.NewInputs do
             value="true"
             class="sr-only peer"
             checked={@checked}
-            disabled={@disabled}
-            required={@required}
             {@rest}
           />
 
           <div
-            tabindex={if @disabled, do: "-1", else: "0"}
+            tabindex={if @rest[:disabled], do: "-1", else: "0"}
             role="switch"
             aria-checked={@checked}
             class={[
@@ -485,7 +481,7 @@ defmodule LightningWeb.Components.NewInputs do
               "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500",
               @checked && "bg-indigo-600",
               !@checked && "bg-gray-200",
-              if(@disabled,
+              if(@rest[:disabled],
                 do: "opacity-50 cursor-not-allowed",
                 else: "cursor-pointer"
               )
@@ -523,11 +519,11 @@ defmodule LightningWeb.Components.NewInputs do
             :if={@label}
             class={[
               "ml-3 text-sm font-medium select-none",
-              if(@disabled, do: "text-gray-400", else: "text-gray-900")
+              if(@rest[:disabled], do: "text-gray-400", else: "text-gray-900")
             ]}
           >
             <%= @label %>
-            <span :if={@required} class="text-red-500 ml-1">*</span>
+            <span :if={@rest[:required]} class="text-red-500 ml-1">*</span>
           </span>
         </label>
       </div>

@@ -24,6 +24,8 @@ and this project adheres to
 
 ### Fixed
 
+- Fix toggle button not visually disabled
+  [#2976](https://github.com/OpenFn/lightning/issues/2976)
 - Dont clear dataclip input when user saves workflow
   [#2944](https://github.com/OpenFn/lightning/issues/2944)
 

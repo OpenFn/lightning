@@ -72,7 +72,12 @@ defmodule LightningWeb.DashboardLive.Components do
     <div class="text-xs">
       <.modal
         id={"arcade-modal-#{@resource.id}"}
-        target={"##{@target}"}
+        on_close={
+          JS.push("modal_closed",
+            value: %{id: "arcade-modal-#{@resource.id}"},
+            target: "##{@target}"
+          )
+        }
         with_frame={false}
         show={true}
         width="w-5/6"
