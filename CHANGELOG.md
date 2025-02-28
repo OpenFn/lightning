@@ -24,6 +24,9 @@ and this project adheres to
 
 ### Fixed
 
+- Dont clear dataclip input when user saves workflow
+  [#2944](https://github.com/OpenFn/lightning/issues/2944)
+
 ## [v2.10.16-pre.0] - 2025-02-26
 
 ### Added
