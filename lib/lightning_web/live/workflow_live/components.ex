@@ -136,6 +136,10 @@ defmodule LightningWeb.WorkflowLive.Components do
             type="toggle"
             field={@form[:enable_job_logs]}
             disabled={!@can_edit_run_settings}
+            tooltip={
+              !@can_edit_run_settings &&
+                "You don't have permission to edit this setting."
+            }
           />
         </div>
       </div>
