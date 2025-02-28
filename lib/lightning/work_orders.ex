@@ -402,32 +402,9 @@ defmodule Lightning.WorkOrders do
           | UsageLimiting.error()
           | {:error, :enqueue_error}
   def retry_many([%WorkOrder{} | _rest] = workorders, job_id, opts) do
-    orders_ids = Enum.map(workorders, & &1.id)
-
-    last_runs_query =
-      from(r in Run,
-        where: r.work_order_id in ^orders_ids,
-        group_by: [r.work_order_id],
-        select: %{
-          work_order_id: r.work_order_id,
-          last_inserted_at: max(r.inserted_at)
-        }
-      )
-
-    run_steps_query =
-      from(as in RunStep,
-        join: att in assoc(as, :run),
-        join: wo in assoc(att, :work_order),
-        join: last in subquery(last_runs_query),
-        on:
-          last.work_order_id == att.work_order_id and
-            att.inserted_at == last.last_inserted_at,
-        join: s in assoc(as, :step),
-        on: s.job_id == ^job_id,
-        order_by: [asc: wo.inserted_at]
-      )
-
-    run_steps_query
+    workorders
+    |> Enum.map(& &1.id)
+    |> last_run_steps_query([job_id])
     |> Repo.all()
     |> retry_many(opts)
   end
@@ -504,6 +481,49 @@ defmodule Lightning.WorkOrders do
 
   def retry_many([], _opts) do
     {:ok, 0, 0}
+  end
+
+  def get_last_runs_steps_with_dataclips(workorders, jobs) do
+    job_ids = Enum.map(jobs, & &1.id)
+
+    workorders
+    |> Enum.map(& &1.id)
+    |> last_run_steps_query(job_ids, non_wiped_dataclip?: true)
+    |> Repo.all()
+  end
+
+  defp last_run_steps_query(workorder_ids, job_ids, opts \\ []) do
+    last_runs_query =
+      from(r in Run,
+        where: r.work_order_id in ^workorder_ids,
+        group_by: [r.work_order_id],
+        select: %{
+          work_order_id: r.work_order_id,
+          last_inserted_at: max(r.inserted_at)
+        }
+      )
+
+    from(rs in RunStep,
+      join: r in assoc(rs, :run),
+      join: s in assoc(rs, :step),
+      join: wo in assoc(r, :work_order),
+      join: lr in subquery(last_runs_query),
+      on:
+        r.work_order_id == lr.work_order_id and
+          r.inserted_at == lr.last_inserted_at,
+      where: s.job_id in ^job_ids,
+      order_by: [asc: wo.inserted_at],
+      select: %{rs | step: s, run: r}
+    )
+    |> then(fn query ->
+      if Keyword.get(opts, :non_wiped_dataclip?) do
+        query
+        |> join(:inner, [rs, _r, s, _wo, _lr], d in assoc(s, :input_dataclip))
+        |> where([_rs, _r, _s, _wo, _lr, d], is_nil(d.wiped_at))
+      else
+        query
+      end
+    end)
   end
 
   @doc """

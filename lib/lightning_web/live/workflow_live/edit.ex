@@ -2028,9 +2028,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
           assigns[:follow_run] &&
             get_selected_dataclip(assigns[:follow_run], job.id)
 
+        body =
+          new_manual_run_form_body(
+            assigns.manual_run_form,
+            job,
+            dataclip
+          )
+
         changeset =
           WorkOrders.Manual.new(
-            %{dataclip_id: dataclip && dataclip.id},
+            %{dataclip_id: dataclip && dataclip.id, body: body},
             project: socket.assigns.project,
             workflow: socket.assigns.workflow,
             job: socket.assigns.selected_job,
@@ -2054,6 +2061,25 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       _ ->
         socket
+    end
+  end
+
+  defp new_manual_run_form_body(
+         prev_manual_run_form,
+         selected_job,
+         selected_dataclip
+       ) do
+    prev_job =
+      prev_manual_run_form &&
+        Ecto.Changeset.get_embed(
+          prev_manual_run_form.source,
+          :job,
+          :struct
+        )
+
+    if is_nil(selected_dataclip) and is_struct(prev_job) and
+         prev_job.id == selected_job.id do
+      Ecto.Changeset.get_change(prev_manual_run_form.source, :body)
     end
   end
 

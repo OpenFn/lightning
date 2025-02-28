@@ -17,12 +17,17 @@ and this project adheres to
 
 ### Added
 
+- Disable jobs with non retriable steps
+  [#2925](https://github.com/OpenFn/lightning/issues/2925)
+
 ### Changed
 
 ### Fixed
 
 - Fix toggle button not visually disabled
   [#2976](https://github.com/OpenFn/lightning/issues/2976)
+- Dont clear dataclip input when user saves workflow
+  [#2944](https://github.com/OpenFn/lightning/issues/2944)
 
 ## [v2.10.16-pre.0] - 2025-02-26
 

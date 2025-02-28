@@ -10,6 +10,7 @@ defmodule Lightning.Accounts.UserNotifier do
     max_attempts: 1
 
   import Swoosh.Email
+  import LightningWeb.Utils, only: [pluralize_with_s: 2]
 
   alias Lightning.Accounts.User
   alias Lightning.Helpers
@@ -412,9 +413,6 @@ defmodule Lightning.Accounts.UserNotifier do
   defp alternate_storage_message(false = _alternate_storage_enabled) do
     "THIS LIGHTNING INSTANCE DOES NOT HAVE ALTERNATE STORAGE ENABLED, SO THESE FAILED MESSAGES CANNOT BE RECOVERED WITHOUT MAKING THEM AVAILABLE ON THE KAFKA CLUSTER AGAIN."
   end
-
-  defp pluralize_with_s(1, string), do: string
-  defp pluralize_with_s(_integer, string), do: "#{string}s"
 
   @doc """
   Deliver instructions to confirm a credential transfer.
