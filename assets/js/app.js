@@ -33,6 +33,8 @@ import WorkflowEditor from './workflow-editor';
 import DataclipViewer from './dataclip-viewer';
 import LogViewer from './log-viewer';
 
+import { createMorphdomOptions } from './react/hooks';
+
 let hooks = {
   JobEditor,
   WorkflowEditor,
@@ -46,10 +48,13 @@ let csrfToken = document
   .querySelector("meta[name='csrf-token']")
   .getAttribute('content');
 
+let { childrenOnly: _childrenOnly, ...dom } = createMorphdomOptions();
+
 let liveSocket = new LiveSocket('/live', Socket, {
   params: { _csrf_token: csrfToken },
   hooks,
   dom: {
+    ...dom,
     onBeforeElUpdated(from, to) {
       // If an element has any of the 'lv-keep-*' attributes, copy across
       // the given attribute to maintain various styles and properties
@@ -90,7 +95,8 @@ let liveSocket = new LiveSocket('/live', Socket, {
         });
       }
 
-      return true;
+      // return true;
+      return dom.onBeforeElUpdated(from, to);
     },
   },
 });

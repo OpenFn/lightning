@@ -1,24 +1,7 @@
 {
+  "extends": ["tsconfig/recommended/tsconfig.json", "./tsconfig.base.json"],
   "compilerOptions": {
-    /* Base Options: */
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "target": "es2020",
-    "allowJs": true,
-    "resolveJsonModule": true,
-    "moduleDetection": "force",
-    "isolatedModules": true,
-    "verbatimModuleSyntax": true,
-
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
-
-    "noEmit": true,
-
-    "types": ["@total-typescript/ts-reset"],
-    "rootDir": "../",
-    "checkJs": true,
-    "forceConsistentCasingInFileNames": true
+    "rootDir": "../"
   },
   "files": [],
   "references": [
