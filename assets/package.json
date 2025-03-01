@@ -40,6 +40,7 @@
     "zustand": "^4.3.7"
   },
   "devDependencies": {
+    "@eslint/js": "^9.21.0",
     "@openfn/ws-worker": "^1.11.1",
     "@tsconfig/node-lts": "^22.0.1",
     "@tsconfig/recommended": "^1.0.8",
@@ -54,10 +55,17 @@
     "@types/react-is": "^19.0.0",
     "ava": "^5.1.0",
     "esbuild": "^0.17.18",
+    "eslint": "^9.21.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react": "^7.37.4",
+    "eslint-plugin-react-compiler": "^19.0.0-beta-e1e972c-20250221",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^16.0.0",
     "puppeteer": "^23.0.2",
     "tap-xunit": "^2.4.1",
     "ts-node": "^10.9.2",
-    "type-fest": "^4.34.1"
+    "type-fest": "^4.34.1",
+    "typescript-eslint": "^8.25.0"
   },
   "type": "module",
   "ava": {
