@@ -56,8 +56,6 @@ defmodule React do
           # the data and re-render the React component.
           # The div will be used to actually mount and render the React Component in.
 
-          _ = var!(assigns)
-
           # |> then(fn assigns ->
           #   case assigns do
           #     %{:children => _} ->
@@ -121,7 +119,7 @@ defmodule React do
 
   def json(data),
     do:
-      Jason.encode!(
+      Phoenix.json_library().encode!(
         Map.reject(data, fn {key, _val} ->
           String.starts_with?(to_string(key), "__")
         end),
