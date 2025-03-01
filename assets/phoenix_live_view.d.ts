@@ -1,6 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-empty-object-type */
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @eslint-community/eslint-comments/disable-enable-pair, @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-object-type, @typescript-eslint/no-explicit-any */
 import { Channel } from 'phoenix';
 
 // Empty export is ecessary to treat this file as a module instead of a script.
