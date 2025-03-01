@@ -27,6 +27,7 @@ defmodule Lightning.MixProject do
         coveralls: :test,
         verify: :test
       ],
+      compilers: Mix.compilers() ++ [:react],
 
       # Docs
       name: "Lightning",

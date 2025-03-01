@@ -104,6 +104,21 @@ config :esbuild,
     cd: Path.expand("../assets", __DIR__),
     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
   ],
+  react: [
+    # This esbuild profile is not meant to be used directly, it is used by a
+    # custom Mix compiler. These args are used by it, but the actual entrypoints
+    # are gathered by the compiler.
+    # TODO: cache-busting hashes
+    args:
+      ~w(
+         --format=esm --splitting --bundle
+         --jsx=automatic
+         --target=es2020
+         --outbase=../assets/js/react
+         --outdir=../priv/static/assets/js/react --external:/fonts/* --external:/images/*),
+    cd: Path.expand("../assets", __DIR__),
+    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+  ],
   monaco: [
     args: ~w(
          #{Path.expand("../assets/node_modules/monaco-editor/min/vs/**/*.*", __DIR__) |> Path.wildcard() |> Enum.join(" ")}
