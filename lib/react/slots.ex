@@ -33,19 +33,11 @@ defmodule React.Slots do
   end
 
   @doc false
-  def base_encode_64(assigns) do
-    for {key, value} <- assigns, into: %{}, do: {key, Base.encode64(value)}
-  end
-
-  @doc false
   defp render(assigns) do
     ~H"""
     <%= if assigns[:slot] do %>
       <%= render_slot(@slot) %>
     <% end %>
     """
-    |> Phoenix.HTML.Safe.to_iodata()
-    |> List.to_string()
-    |> String.trim()
   end
 end
