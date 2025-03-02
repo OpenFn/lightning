@@ -14,10 +14,8 @@ defmodule Lightning.CredentialsTest do
   import Mox
 
   import Lightning.{
-    AccountsFixtures,
     CredentialsFixtures,
-    JobsFixtures,
-    ProjectsFixtures
+    JobsFixtures
   }
 
   import Swoosh.TestAssertions
@@ -28,16 +26,15 @@ defmodule Lightning.CredentialsTest do
     @invalid_attrs %{body: nil, name: nil}
 
     test "list_credentials/1 returns all credentials for given user" do
-      user_1 = user_fixture()
-      user_2 = user_fixture()
+      [user_1, user_2] = insert_list(2, :user)
 
       credential_1 =
-        credential_fixture(user_id: user_1.id)
-        |> Repo.preload([:projects, :oauth_client])
+        insert(:credential, user_id: user_1.id)
+        |> Repo.preload([:projects, :user, :oauth_token])
 
       credential_2 =
-        credential_fixture(user_id: user_2.id)
-        |> Repo.preload([:projects, :oauth_client])
+        insert(:credential, user_id: user_2.id)
+        |> Repo.preload([:projects, :user, :oauth_token])
 
       assert Credentials.list_credentials(user_1) == [
                credential_1
@@ -49,18 +46,17 @@ defmodule Lightning.CredentialsTest do
     end
 
     test "list_credentials/1 returns all credentials for a project" do
-      user = user_fixture()
-      project = project_fixture(project_users: [%{user_id: user.id}])
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
 
       credential =
-        credential_fixture(
-          user_id: user.id,
+        insert(:credential,
           user: user,
-          project_credentials: [%{project_id: project.id}]
+          project_credentials: [%{project: project}]
         )
-        |> Repo.preload([:user, :projects, :oauth_client])
 
-      assert Credentials.list_credentials(project) == [credential]
+      assert Credentials.list_credentials(project)
+             |> Enum.map(fn credential -> credential.id end) == [credential.id]
     end
 
     test "get_credential!/1 returns the credential with given id" do
@@ -203,10 +199,10 @@ defmodule Lightning.CredentialsTest do
         insert(:credential,
           name: "My Credential",
           schema: "oauth",
-          body: %{
-            "access_token" => "super_secret_access_token_123",
-            "refresh_token" => "super_secret_refresh_token_123",
-            "expires_in" => 3000
+          oauth_token: %{
+            access_token: "super_secret_access_token_123",
+            refresh_token: "super_secret_refresh_token_123",
+            expires_in: 3000
           },
           user: build(:user),
           oauth_client: build(:oauth_client)
@@ -400,18 +396,21 @@ defmodule Lightning.CredentialsTest do
   describe "update_credential/2" do
     test "updates an Oauth credential with new scopes" do
       credential =
-        credential_fixture(
-          body: %{
-            "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
-            "expires_at" => 10_000,
-            "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
-            "scope" => "email calendar chat"
+        insert(:credential,
+          name: "My Credential",
+          schema: "oauth",
+          oauth_token: %{
+            access_token: "ya29.a0AWY7CknfkidjXaoDTuNi",
+            refresh_token: "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
+            expires_at: 10_000,
+            scope: "email calendar chat"
           },
-          schema: "oauth"
+          user: build(:user),
+          oauth_client: build(:oauth_client)
         )
 
       update_attrs = %{
-        body: %{
+        oauth_token: %{
           "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
           "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
           "expires_at" => 10_000,
@@ -422,9 +421,9 @@ defmodule Lightning.CredentialsTest do
       assert {:ok, %Credential{} = credential} =
                Credentials.update_credential(credential, update_attrs)
 
-      assert credential.body == %{
+      assert credential.oauth_token.body == %{
                "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
-               "expires_at" => 10000,
+               "expires_at" => 10_000,
                "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
                "scope" => "email calendar"
              }
@@ -839,7 +838,7 @@ defmodule Lightning.CredentialsTest do
         insert(:credential,
           schema: "oauth",
           oauth_client: nil,
-          body: rotten_token,
+          oauth_token: rotten_token,
           user: build(:user)
         )
 
@@ -848,12 +847,14 @@ defmodule Lightning.CredentialsTest do
 
       assert fresh_credential == rotten_credential
 
-      assert rotten_credential.body == rotten_token
-      assert fresh_credential.body == rotten_token
-      assert rotten_credential.body == fresh_credential.body
+      assert rotten_credential.oauth_token.body == rotten_token
+      assert fresh_credential.oauth_token.body == rotten_token
 
-      assert fresh_credential.body["expires_at"] ==
-               rotten_credential.body["expires_at"]
+      assert rotten_credential.oauth_token.body ==
+               fresh_credential.oauth_token.body
+
+      assert fresh_credential.oauth_token.body["expires_at"] ==
+               rotten_credential.oauth_token.body["expires_at"]
     end
   end
 

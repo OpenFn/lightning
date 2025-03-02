@@ -127,7 +127,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
        changeset: changeset,
        update_body: update_body,
        projects: projects,
-       selected_oauth_client: assigns.credential.oauth_client,
+       selected_oauth_client: assigns.oauth_client,
        schema: schema,
        selected_project: nil,
        selected_projects: selected_projects,

@@ -52,7 +52,15 @@ defmodule Lightning.Credentials.OauthToken do
   Creates a changeset for updating token data.
   """
   def update_token_changeset(oauth_token, new_token) do
-    cast(oauth_token, %{body: new_token}, [:body]) |> validate_oauth_body()
+    changeset = cast(oauth_token, %{body: new_token}, [:body])
+
+    changeset =
+      case extract_scopes(new_token) do
+        {:ok, scopes} -> put_change(changeset, :scopes, scopes)
+        :error -> add_error(changeset, :body, "Invalid OAuth token body")
+      end
+
+    validate_oauth_body(changeset)
   end
 
   @doc """
@@ -78,7 +86,9 @@ defmodule Lightning.Credentials.OauthToken do
   end
 
   @doc """
-  Finds an OAuth token by user, client ID and exact scope match.
+  Finds an OAuth token by user and exact scope match.
+  Considers all clients with the same client_id/client_secret as the given oauth_client_id.
+  Uses a single query for efficiency.
   """
   def find_by_scopes(user_id, oauth_client_id, scopes)
       when is_list(scopes) do
@@ -86,9 +96,14 @@ defmodule Lightning.Credentials.OauthToken do
 
     Lightning.Repo.one(
       from t in __MODULE__,
+        join: token_client in Lightning.Credentials.OauthClient,
+        on: t.oauth_client_id == token_client.id,
+        join: reference_client in Lightning.Credentials.OauthClient,
+        on: reference_client.id == ^oauth_client_id,
         where:
           t.user_id == ^user_id and
-            t.oauth_client_id == ^oauth_client_id and
+            token_client.client_id == reference_client.client_id and
+            token_client.client_secret == reference_client.client_secret and
             t.scopes == ^sorted_scopes
     )
   end
@@ -101,7 +116,15 @@ defmodule Lightning.Credentials.OauthToken do
     {:ok, String.split(scope, " ")}
   end
 
+  def extract_scopes(%{scope: scope}) when is_binary(scope) do
+    {:ok, String.split(scope, " ")}
+  end
+
   def extract_scopes(%{"scopes" => scopes}) when is_list(scopes) do
+    {:ok, scopes}
+  end
+
+  def extract_scopes(%{scopes: scopes}) when is_list(scopes) do
     {:ok, scopes}
   end
 

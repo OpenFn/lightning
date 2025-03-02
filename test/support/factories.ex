@@ -176,29 +176,106 @@ defmodule Lightning.Factories do
     }
   end
 
+  def oauth_token_factory(attrs \\ %{}) do
+    scopes = Map.get(attrs, :scope, ["read", "write"])
+    unique_id = System.unique_integer([:positive])
+
+    default_token_body = %{
+      "access_token" => "access_token_#{unique_id}",
+      "refresh_token" => "refresh_token_#{unique_id}",
+      "token_type" => "bearer",
+      "expires_in" => 3600
+    }
+
+    %Lightning.Credentials.OauthToken{
+      body:
+        attrs
+        |> Map.get(:body, default_token_body)
+        |> Lightning.Credentials.normalize_keys(),
+      user: Map.get(attrs, :user, build(:user)),
+      oauth_client: Map.get(attrs, :oauth_client),
+      scopes: Enum.sort(scopes),
+      updated_at: DateTime.utc_now()
+    }
+  end
+
   def credential_factory(attrs \\ %{}) do
     schema = Map.get(attrs, :schema, "raw")
 
-    body =
-      case schema do
-        "oauth" ->
-          %{
-            "access_token" => "access_token_#{System.unique_integer()}",
-            "refresh_token" => "refresh_token_#{System.unique_integer()}",
-            "expires_in" => 3600
-          }
-
-        _ ->
-          %{}
+    oauth_token =
+      if schema == "oauth" do
+        create_oauth_token(attrs)
+      else
+        nil
       end
 
+    attrs = attrs |> Map.delete(:oauth_token) |> Map.delete(:oauth_client)
+
     %Lightning.Credentials.Credential{
-      body: body,
+      body: %{},
       schema: schema,
       name: sequence(:credential_name, &"credential#{&1}")
     }
+    |> add_oauth_token(schema, oauth_token)
     |> Map.merge(attrs)
   end
+
+  defp create_oauth_token(attrs) do
+    user = determine_user(attrs)
+    client = determine_client(attrs)
+    token_body = Map.get(attrs, :oauth_token, %{})
+
+    oauth_token_attrs = %{
+      body: token_body,
+      user_id: user.id,
+      user: user,
+      oauth_client_id: client && client.id,
+      oauth_client: client
+    }
+
+    oauth_token_attrs =
+      case Lightning.Credentials.OauthToken.extract_scopes(token_body) do
+        {:ok, scopes} -> Map.put(oauth_token_attrs, :scope, scopes)
+        :error -> oauth_token_attrs
+      end
+
+    insert(:oauth_token, oauth_token_attrs)
+  end
+
+  defp determine_user(%{user: %Lightning.Accounts.User{id: nil} = _user}),
+    do: insert(:user)
+
+  defp determine_user(%{user: %Lightning.Accounts.User{} = user}), do: user
+
+  defp determine_user(%{user_id: id}) when not is_nil(id),
+    do: Lightning.Repo.get!(Lightning.Accounts.User, id)
+
+  defp determine_user(_), do: insert(:user)
+
+  defp determine_client(%{
+         oauth_client: %Lightning.Credentials.OauthClient{id: nil} = _client
+       }),
+       do: insert(:oauth_client)
+
+  defp determine_client(%{
+         oauth_client: %Lightning.Credentials.OauthClient{} = client
+       }),
+       do: client
+
+  defp determine_client(%{oauth_client_id: id}) when not is_nil(id),
+    do: Lightning.Repo.get!(Lightning.Credentials.OauthClient, id)
+
+  defp determine_client(_), do: nil
+
+  defp add_oauth_token(credential, "oauth", oauth_token) do
+    Map.put(
+      credential,
+      :oauth_token,
+      Lightning.Repo.preload(oauth_token, :oauth_client)
+    )
+  end
+
+  defp add_oauth_token(credential, _, _), do: credential
 
   def project_credential_factory do
     %Lightning.Projects.ProjectCredential{

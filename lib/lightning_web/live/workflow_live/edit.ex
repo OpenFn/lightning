@@ -377,6 +377,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             }
           }
           current_user={@current_user}
+          oauth_client={nil}
           oauth_clients={@oauth_clients}
           projects={[]}
           project={@project}

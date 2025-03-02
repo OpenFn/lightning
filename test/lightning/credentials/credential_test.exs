@@ -1,4 +1,5 @@
 defmodule Lightning.Credentials.CredentialTest do
+  alias Lightning.Credentials
   use Lightning.DataCase, async: true
 
   alias Lightning.Credentials.Credential
@@ -16,10 +17,13 @@ defmodule Lightning.Credentials.CredentialTest do
 
       assert_invalid_oauth_credential(%{"access_token" => "access_token_123"})
 
-      assert_invalid_oauth_credential(%{
-        "access_token" => "access_token_123",
-        "refresh_token" => "refresh_token_123"
-      })
+      assert_invalid_oauth_credential(
+        %{
+          "access_token" => "access_token_123",
+          "refresh_token" => "refresh_token_123"
+        },
+        "Missing expiration field: either expires_in or expires_at is required"
+      )
 
       refute_invalid_oauth_credential(%{
         "access_token" => "access_token_123",
@@ -66,23 +70,28 @@ defmodule Lightning.Credentials.CredentialTest do
          message \\ "Missing refresh_token for new OAuth connection"
        ) do
     errors =
-      Credential.changeset(
-        %Credential{name: "oauth credential", schema: "oauth", body: body},
-        %{}
-      )
+      Credentials.change_credential(%Credential{}, %{
+        name: "oauth credential",
+        schema: "oauth",
+        oauth_token: body,
+        user_id: insert(:user).id
+      })
       |> errors_on()
 
-    assert errors[:body] == [message]
+    assert errors[:oauth_token] == [message]
   end
 
   defp refute_invalid_oauth_credential(body) do
     errors =
-      Credential.changeset(
-        %Credential{name: "oauth credential", schema: "oauth", body: body},
-        %{}
-      )
+      Credentials.change_credential(%Credential{}, %{
+        name: "oauth credential",
+        schema: "oauth",
+        body: %{},
+        oauth_token: body,
+        user_id: insert(:user).id
+      })
       |> errors_on()
 
-    refute errors[:body]
+    refute errors[:oauth_token]
   end
 end

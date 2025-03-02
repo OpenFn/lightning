@@ -23,9 +23,6 @@ defmodule Lightning.Credentials.Credential do
     field :scheduled_deletion, :utc_datetime
     field :transfer_status, Ecto.Enum, values: [:pending, :completed]
 
-    field :oauth_client_id, :binary_id, virtual: true
-    field :oauth_client, :any, virtual: true
-
     belongs_to :user, User
     belongs_to :oauth_token, OauthToken
 
@@ -60,80 +57,39 @@ defmodule Lightning.Credentials.Credential do
     |> maybe_validate_oauth_fields(attrs)
   end
 
-  @doc """
-  Transforms a credential by copying OAuth token fields to the credential struct.
-
-  For OAuth credentials with an associated token, this function copies the token's
-  `body`, `oauth_client`, and `oauth_client_id` fields directly to the credential struct,
-  making them accessible without having to navigate the association.
-
-  For non-OAuth credentials or OAuth credentials without a token, this function
-  returns the credential unchanged.
-
-  ## Parameters
-    - credential: The credential struct to transform
-
-  ## Returns
-    - The transformed credential with OAuth fields copied from the token, or
-    - The original credential if it's not an OAuth credential or has no token
-
-  ## Examples
-
-      # For an OAuth credential with a token
-      iex> with_oauth(%Credential{schema: "oauth", oauth_token: %{body: "secret", oauth_client_id: 123}})
-      %Credential{schema: "oauth", body: "secret", oauth_client_id: 123}
-
-      # For a non-OAuth credential
-      iex> with_oauth(%Credential{schema: "basic", body: "password"})
-      %Credential{schema: "basic", body: "password"}
-  """
-  @spec with_oauth(t()) :: t()
-  def with_oauth(%__MODULE__{schema: "oauth", oauth_token: token} = credential)
-      when not is_nil(token) do
-    %{
-      credential
-      | body: assemble_body(credential, token),
-        oauth_client: token.oauth_client,
-        oauth_client_id: token.oauth_client_id
-    }
-  end
-
-  def with_oauth(%__MODULE__{} = credential) do
-    credential
-  end
-
-  defp assemble_body(credential, token) do
-    updated_at = DateTime.to_unix(token.updated_at)
-    token_body = Map.put(token.body || %{}, "updated_at", updated_at)
-    Map.merge(credential.body || %{}, token_body)
-  end
-
   defp maybe_validate_oauth_fields(changeset, attrs) do
     is_oauth = get_field(changeset, :schema) == "oauth"
     oauth_token_id = get_field(changeset, :oauth_token_id)
 
     if is_oauth && !oauth_token_id do
-      body = get_field(changeset, :body) || %{}
       user_id = get_field(changeset, :user_id)
 
-      oauth_client_id = Credentials.extract_oauth_client_id(attrs, body)
+      oauth_client_id = Map.get(attrs, "oauth_client_id")
 
-      {_credential_data, token_data} = Credentials.separate_oauth_data(body)
+      token_data = Map.get(attrs, "oauth_token")
 
-      scopes =
-        case OauthToken.extract_scopes(token_data) do
-          {:ok, extracted_scopes} -> extracted_scopes
-          :error -> []
+      if is_nil(token_data) do
+        add_error(
+          changeset,
+          :oauth_token,
+          "OAuth credentials require token data"
+        )
+      else
+        scopes =
+          case OauthToken.extract_scopes(token_data) do
+            {:ok, extracted_scopes} -> extracted_scopes
+            :error -> []
+          end
+
+        case Credentials.validate_oauth_token_data(
+               token_data,
+               user_id,
+               oauth_client_id,
+               scopes
+             ) do
+          {:ok, _} -> changeset
+          {:error, reason} -> add_error(changeset, :oauth_token, reason)
         end
-
-      case Credentials.validate_oauth_token_data(
-             token_data,
-             user_id,
-             oauth_client_id,
-             scopes
-           ) do
-        {:ok, _} -> changeset
-        {:error, reason} -> add_error(changeset, :body, reason)
       end
     else
       changeset

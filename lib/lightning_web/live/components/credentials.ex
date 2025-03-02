@@ -394,7 +394,7 @@ defmodule LightningWeb.Components.Credentials do
             <.td class="break-words max-w-[15rem]">
               <div class="flex-auto items-center">
                 <%= credential.name %>
-                <%= if credential.schema == "oauth" and !credential.oauth_client_id do %>
+                <%= if credential.schema == "oauth" and !credential.oauth_token.oauth_client_id do %>
                   <span
                     id={"#{credential.id}-client-not-found-tooltip"}
                     phx-hook="Tooltip"
