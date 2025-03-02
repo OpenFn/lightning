@@ -6,7 +6,7 @@ defmodule Lightning.Repo.Migrations.CreateOauthTokensTable do
       add :id, :binary_id, primary_key: true
       add :body, :binary, null: false
       add :scopes, {:array, :string}, null: false
-      add :oauth_client_id, references(:oauth_clients, type: :binary_id)
+      add :oauth_client_id, references(:oauth_clients, type: :binary_id, on_delete: :nilify_all)
       add :user_id, references(:users, type: :binary_id, on_delete: :delete_all), null: false
 
       timestamps()

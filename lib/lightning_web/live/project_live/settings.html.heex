@@ -435,7 +435,9 @@
                 action={:edit}
                 credential_type={nil}
                 credential={credential}
-                selected_oauth_client={credential.oauth_client}
+                oauth_client={
+                  credential.oauth_token && credential.oauth_token.oauth_client
+                }
                 projects={@projects}
                 project={@project}
                 can_create_project_credential={@can_create_project_credential}
@@ -466,6 +468,7 @@
               ]
             }
           }
+          oauth_client={nil}
           oauth_clients={@oauth_clients}
           projects={@projects}
           project={@project}
