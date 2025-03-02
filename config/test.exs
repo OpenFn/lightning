@@ -166,3 +166,5 @@ config :lightning, :github_app,
 config :lightning, LightningWeb.CollectionsController,
   default_stream_limit: 25,
   max_database_limit: 15
+
+config :lightning, LightningWeb.API.StepController, max_page_size: 10
