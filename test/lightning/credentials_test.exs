@@ -4,7 +4,9 @@ defmodule Lightning.CredentialsTest do
   alias Lightning.Accounts.UserToken
   alias Lightning.Auditing
   alias Lightning.Credentials
-  alias Lightning.Credentials.{Audit, Credential}
+  alias Lightning.Credentials.Audit
+  alias Lightning.Credentials.Credential
+  alias Lightning.Credentials.OauthToken
   alias Lightning.CredentialsFixtures
   alias Lightning.Repo
 
@@ -85,7 +87,6 @@ defmodule Lightning.CredentialsTest do
           project_credential: project_credential
         )
 
-      # 1 project_credential created
       assert length(
                Lightning.Projects.list_project_credentials(
                  %Lightning.Projects.Project{
@@ -107,8 +108,6 @@ defmodule Lightning.CredentialsTest do
       assert audit.event == "deleted"
       assert audit.item_id == credential_id
 
-      # previous  audit records are not deleted
-      # a new audit (event: deleted) is added
       assert from(a in Audit.base_query(),
                where: a.item_id == ^credential.id
              )
@@ -122,7 +121,6 @@ defmodule Lightning.CredentialsTest do
         Credentials.get_credential!(credential.id)
       end
 
-      # no more project_credentials
       assert Enum.empty?(
                Lightning.Projects.list_project_credentials(
                  %Lightning.Projects.Project{
@@ -154,7 +152,6 @@ defmodule Lightning.CredentialsTest do
 
       job = insert(:job, project_credential: project_credential)
 
-      # Ensure associations are existent before deletion
       initial_project_credentials =
         Repo.all(assoc(credential, :project_credentials))
 
@@ -172,19 +169,16 @@ defmodule Lightning.CredentialsTest do
       {:ok, updated_credential} =
         Credentials.schedule_credential_deletion(credential)
 
-      # Ensure scheduled_deletion is updated as expected
       assert updated_credential.scheduled_deletion != nil
 
       assert Timex.diff(updated_credential.scheduled_deletion, now, :days) ==
                days
 
-      # Verify project_credential association removal
       retrieved_project_credentials =
         Repo.all(assoc(updated_credential, :project_credentials))
 
       assert Enum.empty?(retrieved_project_credentials)
 
-      # Verify job's credential_id is set to nil
       retrieved_job = Repo.reload!(job)
       assert is_nil(retrieved_job.project_credential_id)
 
@@ -729,7 +723,6 @@ defmodule Lightning.CredentialsTest do
     end
 
     test "doesn't refresh fresh OAuth credentials" do
-      # now + 6 minutes
       expires_at = DateTime.to_unix(DateTime.utc_now()) + 6 * 60
 
       credential =
@@ -804,10 +797,8 @@ defmodule Lightning.CredentialsTest do
             schema: oauth.schema
           )
 
-        # Attempt to refresh the OAuth credentials
         {:ok, refreshed_credential} = Credentials.maybe_refresh_token(credential)
 
-        # Assertions to verify that the credentials were indeed refreshed
         refute refreshed_credential == credential,
                "Expected credentials to be refreshed for #{oauth.provider |> Atom.to_string()}"
 
@@ -921,10 +912,8 @@ defmodule Lightning.CredentialsTest do
     test "deletes other credentials scheduled for deletion", %{
       scheduled_credential: credential
     } do
-      # This mock might be unnecessary if you want to show the credential does NOT have activity, just remove it if that's the case.
       mock_activity(credential)
 
-      # A second scheduled credential without activity
       scheduled_credential_2 =
         insert(:credential,
           name: "Another Scheduled Credential",
@@ -1305,6 +1294,80 @@ defmodule Lightning.CredentialsTest do
 
       assert Lightning.Credentials.get_credential!(credential.id)
              |> Map.get(:name) == credential.name
+    end
+  end
+
+  describe "OAuth token management" do
+    test "maybe_revoke_oauth/1 handles case with nil oauth_client_id" do
+      user = insert(:user)
+      oauth_token = insert(:oauth_token, user: user, oauth_client: nil)
+
+      credential =
+        insert(:credential,
+          schema: "oauth",
+          user: user,
+          oauth_token: oauth_token
+        )
+
+      {:ok, credential} = Credentials.schedule_credential_deletion(credential)
+
+      assert credential.scheduled_deletion
+    end
+
+    test "still_fresh/3 handles token with nil expires_at" do
+      token = %OauthToken{
+        body: %{"expires_at" => nil, "access_token" => "token123"},
+        updated_at: DateTime.utc_now()
+      }
+
+      refute Credentials.still_fresh(token)
+    end
+
+    test "still_fresh/3 handles token with nil expires_in" do
+      token = %OauthToken{
+        body: %{"expires_in" => nil, "access_token" => "token123"},
+        updated_at: DateTime.utc_now()
+      }
+
+      refute Credentials.still_fresh(token)
+    end
+
+    test "still_fresh/3 returns error for token without valid expiration data" do
+      token = %OauthToken{
+        body: %{"access_token" => "token123"},
+        updated_at: DateTime.utc_now()
+      }
+
+      assert {:error, "No valid expiration data found"} =
+               Credentials.still_fresh(token)
+    end
+
+    test "maybe_refresh_token/1 handles OAuth client errors during refresh" do
+      oauth_client = insert(:oauth_client)
+
+      expired_at = DateTime.to_unix(DateTime.utc_now()) - 1000
+
+      credential =
+        insert(:credential,
+          schema: "oauth",
+          oauth_token: %{
+            access_token: "expired_token",
+            refresh_token: "refresh_token",
+            expires_at: expired_at
+          },
+          user: build(:user),
+          oauth_client: oauth_client
+        )
+
+      expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
+        env, _opts
+        when env.method == :post and
+               env.url == oauth_client.token_endpoint ->
+          {:error, "Refresh token expired"}
+      end)
+
+      assert {:error, "\"Refresh token expired\""} =
+               Credentials.maybe_refresh_token(credential)
     end
   end
 end
