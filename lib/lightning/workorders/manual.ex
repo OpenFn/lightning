@@ -29,6 +29,14 @@ defmodule Lightning.WorkOrders.Manual do
   end
 
   def new(params, attrs \\ []) do
+    params = Map.update(params, "body", "{}", fn body ->
+      if is_nil(body) and (params["dataclip_id"] || "") == "" do
+        "{}"
+      else
+        body
+      end
+    end)
+
     struct(__MODULE__, attrs)
     |> cast(params, [:dataclip_id, :body])
     |> validate_required([:project, :job, :created_by, :workflow])

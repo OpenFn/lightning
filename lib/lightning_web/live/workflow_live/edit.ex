@@ -1627,13 +1627,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
         job: socket.assigns.selected_job,
         created_by: socket.assigns.current_user
       }
-      |> then(fn attrs ->
-        if params["dataclip_id"] == "" do
-          Map.put(attrs, :body, "{}")
-        else
-          attrs
-        end
-      end)
 
     changeset =
       WorkOrders.Manual.new(params, attrs)
@@ -2048,30 +2041,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
       new_manual_run_form_body(
         manual_run_form,
         selected_job,
-        follow_run,
         dataclip
       )
 
     changeset =
-      %{
-        project: project,
-        workflow: workflow,
-        job: selected_job,
-        user: current_user
-      }
-      |> then(fn attrs ->
-        attrs =
-          if body == "{}" do
-            Map.put(attrs, :created_by, current_user)
-          else
-            attrs
-          end
-
-        WorkOrders.Manual.new(
-          %{"dataclip_id" => dataclip && dataclip.id, "body" => body},
-          attrs
-        )
-      end)
+      WorkOrders.Manual.new(
+        %{"dataclip_id" => dataclip && dataclip.id, "body" => body},
+        %{
+          project: project,
+          workflow: workflow,
+          job: selected_job,
+          user: current_user,
+          created_by: current_user
+        }
+      )
 
     selectable_dataclips =
       Invocation.list_dataclips_for_job(%Job{id: selected_job.id})
@@ -2094,7 +2077,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp new_manual_run_form_body(
          prev_manual_run_form,
          selected_job,
-         follow_run,
          selected_dataclip
        ) do
     if is_nil(selected_dataclip) do
@@ -2108,8 +2090,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       if is_struct(prev_job) and prev_job.id == selected_job.id do
         Ecto.Changeset.get_change(prev_manual_run_form.source, :body)
-      else
-        if is_nil(follow_run), do: "{}"
       end
     end
   end
@@ -2168,14 +2148,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         can_edit_workflow: can_edit_workflow,
         can_run_workflow: can_run_workflow
       } ->
-        form_valid =
-          if manual_run_form.source.errors == [
-               created_by: {"can't be blank", [validation: :required]}
-             ] and Map.get(manual_run_form.params, "dataclip_id") do
-            true
-          else
-            Enum.empty?(manual_run_form.source.errors)
-          end
+        form_valid = Enum.empty?(manual_run_form.source.errors)
 
         not form_valid or
           not changeset.valid? or
