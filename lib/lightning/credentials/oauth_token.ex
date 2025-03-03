@@ -75,7 +75,7 @@ defmodule Lightning.Credentials.OauthToken do
         |> changeset(%{
           user_id: user_id,
           oauth_client_id: oauth_client_id,
-          scopes: Enum.sort(scopes),
+          scopes: scopes,
           body: tokens
         })
         |> Lightning.Repo.insert()
@@ -86,26 +86,28 @@ defmodule Lightning.Credentials.OauthToken do
   end
 
   @doc """
-  Finds an OAuth token by user and exact scope match.
+  Finds an OAuth token by user and equivalent scope match (same values regardless of order).
   Considers all clients with the same client_id/client_secret as the given oauth_client_id.
-  Uses a single query for efficiency.
+  First filters in SQL, then compares scopes in Elixir.
   """
   def find_by_scopes(user_id, oauth_client_id, scopes)
       when is_list(scopes) do
     sorted_scopes = Enum.sort(scopes)
 
-    Lightning.Repo.one(
-      from t in __MODULE__,
-        join: token_client in Lightning.Credentials.OauthClient,
-        on: t.oauth_client_id == token_client.id,
-        join: reference_client in Lightning.Credentials.OauthClient,
-        on: reference_client.id == ^oauth_client_id,
-        where:
-          t.user_id == ^user_id and
-            token_client.client_id == reference_client.client_id and
-            token_client.client_secret == reference_client.client_secret and
-            t.scopes == ^sorted_scopes
+    from(t in __MODULE__,
+      join: token_client in Lightning.Credentials.OauthClient,
+      on: t.oauth_client_id == token_client.id,
+      join: reference_client in Lightning.Credentials.OauthClient,
+      on: reference_client.id == ^oauth_client_id,
+      where:
+        t.user_id == ^user_id and
+          token_client.client_id == reference_client.client_id and
+          token_client.client_secret == reference_client.client_secret
     )
+    |> Lightning.Repo.all()
+    |> Enum.find(fn token ->
+      Enum.sort(token.scopes) == sorted_scopes
+    end)
   end
 
   @doc """

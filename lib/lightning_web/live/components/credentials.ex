@@ -4,6 +4,7 @@ defmodule LightningWeb.Components.Credentials do
 
   import PetalComponents.Table
 
+  alias Lightning.Credentials.Credential
   alias LightningWeb.CredentialLive.JsonSchemaBodyComponent
   alias LightningWeb.CredentialLive.OauthComponent
   alias LightningWeb.CredentialLive.RawBodyComponent
@@ -407,7 +408,7 @@ defmodule LightningWeb.Components.Credentials do
               </div>
             </.td>
             <.td class="break-words max-w-[10rem] border-">
-              <%= credential.schema %>
+              <%= credential_type(credential) %>
             </.td>
             <.td :if={@show_owner} class="break-words max-w-[15rem]">
               <div class="flex-auto items-center">
@@ -490,5 +491,17 @@ defmodule LightningWeb.Components.Credentials do
       <% end %>
     </div>
     """
+  end
+
+  defp credential_type(%Credential{schema: "oauth", oauth_token: token}) do
+    if token.oauth_client_id && token.oauth_client do
+      String.downcase(token.oauth_client.name)
+    else
+      "oauth"
+    end
+  end
+
+  defp credential_type(%Credential{schema: schema}) do
+    schema
   end
 end
