@@ -204,7 +204,7 @@ defmodule Lightning.Factories do
 
     oauth_token =
       if schema == "oauth" do
-        create_oauth_token(attrs)
+        get_or_create_oauth_token(attrs)
       else
         nil
       end
@@ -220,26 +220,33 @@ defmodule Lightning.Factories do
     |> Map.merge(attrs)
   end
 
-  defp create_oauth_token(attrs) do
-    user = determine_user(attrs)
-    client = determine_client(attrs)
-    token_body = Map.get(attrs, :oauth_token, %{})
+  defp get_or_create_oauth_token(attrs) do
+    oauth_token = Map.get(attrs, :oauth_token, %{})
 
-    oauth_token_attrs = %{
-      body: token_body,
-      user_id: user.id,
-      user: user,
-      oauth_client_id: client && client.id,
-      oauth_client: client
-    }
+    case oauth_token do
+      %Lightning.Credentials.OauthToken{} ->
+        oauth_token
 
-    oauth_token_attrs =
-      case Lightning.Credentials.OauthToken.extract_scopes(token_body) do
-        {:ok, scopes} -> Map.put(oauth_token_attrs, :scope, scopes)
-        :error -> oauth_token_attrs
-      end
+      _ ->
+        user = determine_user(attrs)
+        client = determine_client(attrs)
 
-    insert(:oauth_token, oauth_token_attrs)
+        oauth_token_attrs = %{
+          body: oauth_token,
+          user_id: user.id,
+          user: user,
+          oauth_client_id: client && client.id,
+          oauth_client: client
+        }
+
+        oauth_token_attrs =
+          case Lightning.Credentials.OauthToken.extract_scopes(oauth_token) do
+            {:ok, scopes} -> Map.put(oauth_token_attrs, :scope, scopes)
+            :error -> oauth_token_attrs
+          end
+
+        insert(:oauth_token, oauth_token_attrs)
+    end
   end
 
   defp determine_user(%{user: %Lightning.Accounts.User{id: nil} = _user}),
