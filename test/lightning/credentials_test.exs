@@ -1370,4 +1370,241 @@ defmodule Lightning.CredentialsTest do
                Credentials.maybe_refresh_token(credential)
     end
   end
+
+  describe "helper functions" do
+    test "normalize_keys/1 handles non-map values" do
+      assert Credentials.normalize_keys("string") == "string"
+      assert Credentials.normalize_keys(123) == 123
+      assert Credentials.normalize_keys([1, 2, 3]) == [1, 2, 3]
+      assert Credentials.normalize_keys(nil) == nil
+    end
+
+    test "normalize_keys/1 properly normalizes nested maps" do
+      input = %{
+        key1: "value1",
+        key2: %{
+          nested_key: "nested_value",
+          another_key: 123
+        }
+      }
+
+      expected = %{
+        "key1" => "value1",
+        "key2" => %{
+          "nested_key" => "nested_value",
+          "another_key" => 123
+        }
+      }
+
+      assert Credentials.normalize_keys(input) == expected
+    end
+  end
+
+  describe "OAuth token validation" do
+    test "validate_oauth_token_data/5 handles non-map token data" do
+      user = insert(:user)
+      oauth_client = insert(:oauth_client)
+
+      assert {:error, "Invalid OAuth token body"} =
+               Credentials.validate_oauth_token_data(
+                 "not_a_map",
+                 user.id,
+                 oauth_client.id,
+                 ["read", "write"]
+               )
+    end
+
+    test "validate_oauth_token_data/5 requires access_token" do
+      user = insert(:user)
+      oauth_client = insert(:oauth_client)
+
+      token_data = %{
+        "refresh_token" => "refresh_token",
+        "expires_in" => 3600
+      }
+
+      assert {:error, "Missing required OAuth field: access_token"} =
+               Credentials.validate_oauth_token_data(
+                 token_data,
+                 user.id,
+                 oauth_client.id,
+                 ["read", "write"]
+               )
+    end
+
+    test "validate_oauth_token_data/5 requires refresh_token for new connection" do
+      user = insert(:user)
+      oauth_client = insert(:oauth_client)
+
+      token_data = %{
+        "access_token" => "access_token",
+        "expires_in" => 3600
+      }
+
+      assert {:error, "Missing refresh_token for new OAuth connection"} =
+               Credentials.validate_oauth_token_data(
+                 token_data,
+                 user.id,
+                 oauth_client.id,
+                 ["read", "write"]
+               )
+    end
+
+    test "validate_oauth_token_data/5 requires expiration fields" do
+      user = insert(:user)
+      oauth_client = insert(:oauth_client)
+
+      token_data = %{
+        "access_token" => "access_token",
+        "refresh_token" => "refresh_token"
+      }
+
+      assert {:error,
+              "Missing expiration field: either expires_in or expires_at is required"} =
+               Credentials.validate_oauth_token_data(
+                 token_data,
+                 user.id,
+                 oauth_client.id,
+                 ["read", "write"]
+               )
+    end
+
+    test "validate_oauth_token_data/5 accepts valid token data" do
+      user = insert(:user)
+      oauth_client = insert(:oauth_client)
+
+      token_data = %{
+        "access_token" => "access_token",
+        "refresh_token" => "refresh_token",
+        "expires_in" => 3600
+      }
+
+      assert {:ok, ^token_data} =
+               Credentials.validate_oauth_token_data(
+                 token_data,
+                 user.id,
+                 oauth_client.id,
+                 ["read", "write"]
+               )
+    end
+
+    test "validate_oauth_token_data/5 handles nil parameter cases" do
+      token_data = %{
+        "access_token" => "access_token",
+        "refresh_token" => "refresh_token",
+        "expires_in" => 3600
+      }
+
+      assert {:ok, ^token_data} =
+               Credentials.validate_oauth_token_data(
+                 token_data,
+                 nil,
+                 "client_id",
+                 ["read"]
+               )
+
+      assert {:ok, ^token_data} =
+               Credentials.validate_oauth_token_data(
+                 token_data,
+                 "user_id",
+                 nil,
+                 ["read"]
+               )
+
+      assert {:ok, ^token_data} =
+               Credentials.validate_oauth_token_data(
+                 token_data,
+                 "user_id",
+                 "client_id",
+                 nil
+               )
+    end
+  end
+
+  describe "refresh token logic" do
+    test "maybe_refresh_token/1 keeps original token when there's an oauth client error" do
+      oauth_client = insert(:oauth_client)
+      expired_at = DateTime.to_unix(DateTime.utc_now()) - 1000
+
+      original_token = %{
+        "access_token" => "original_token",
+        "refresh_token" => "original_refresh",
+        "expires_at" => expired_at
+      }
+
+      credential =
+        insert(:credential,
+          schema: "oauth",
+          oauth_token: original_token,
+          user: build(:user),
+          oauth_client: oauth_client
+        )
+
+      credential = Repo.preload(credential, oauth_token: :oauth_client)
+
+      expect(
+        Lightning.AuthProviders.OauthHTTPClient.Mock,
+        :call,
+        fn _client, _token ->
+          {:error, "Network error"}
+        end
+      )
+
+      assert {:error, "\"Network error\""} =
+               Credentials.maybe_refresh_token(credential)
+
+      reloaded =
+        Repo.get!(Credential, credential.id) |> Repo.preload(:oauth_token)
+
+      assert reloaded.oauth_token.body["access_token"] == "original_token"
+      assert reloaded.oauth_token.body["expires_at"] == expired_at
+    end
+
+    test "maybe_refresh_token/1 updates token when refresh is successful" do
+      oauth_client = insert(:oauth_client)
+      expired_at = DateTime.to_unix(DateTime.utc_now()) - 1000
+
+      credential =
+        insert(:credential,
+          schema: "oauth",
+          oauth_token: %{
+            access_token: "expired_token",
+            refresh_token: "refresh_token",
+            expires_at: expired_at
+          },
+          user: build(:user),
+          oauth_client: oauth_client
+        )
+
+      credential = Repo.preload(credential, oauth_token: :oauth_client)
+
+      fresh_token = %{
+        "access_token" => "new_token",
+        "refresh_token" => "new_refresh",
+        "expires_at" => DateTime.to_unix(DateTime.utc_now()) + 3600,
+        "scope" => Enum.join(credential.oauth_token.scopes, " ")
+      }
+
+      expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
+        env, _opts
+        when env.method == :post and
+               env.url == oauth_client.token_endpoint ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: Jason.encode!(fresh_token)
+           }}
+      end)
+
+      assert {:ok, updated_credential} =
+               Credentials.maybe_refresh_token(credential)
+
+      assert updated_credential.oauth_token.body["access_token"] == "new_token"
+
+      assert updated_credential.oauth_token.body["refresh_token"] ==
+               "new_refresh"
+
+      assert updated_credential.oauth_token.body["expires_at"] > expired_at
+    end
+  end
 end

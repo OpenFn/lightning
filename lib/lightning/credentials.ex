@@ -1200,17 +1200,44 @@ defmodule Lightning.Credentials do
         oauth_client_id,
         scopes,
         is_update \\ false
-      ) do
-    unless is_map(token_data) do
-      return_error("Invalid OAuth token body")
-    end
+      )
 
+  def validate_oauth_token_data(
+        token_data,
+        _user_id,
+        _oauth_client_id,
+        _scopes,
+        _is_update
+      )
+      when not is_map(token_data) do
+    return_error("Invalid OAuth token body")
+  end
+
+  def validate_oauth_token_data(
+        token_data,
+        user_id,
+        oauth_client_id,
+        scopes,
+        is_update
+      ) do
     normalized_data = normalize_keys(token_data)
 
-    unless Map.has_key?(normalized_data, "access_token") do
-      return_error("Missing required OAuth field: access_token")
-    end
+    validate_with_access_token(
+      normalized_data,
+      user_id,
+      oauth_client_id,
+      scopes,
+      is_update
+    )
+  end
 
+  defp validate_with_access_token(
+         %{"access_token" => _} = normalized_data,
+         user_id,
+         oauth_client_id,
+         scopes,
+         is_update
+       ) do
     validate_refresh_token_and_expiration(
       normalized_data,
       user_id,
@@ -1218,6 +1245,16 @@ defmodule Lightning.Credentials do
       scopes,
       is_update
     )
+  end
+
+  defp validate_with_access_token(
+         _,
+         _user_id,
+         _oauth_client_id,
+         _scopes,
+         _is_update
+       ) do
+    return_error("Missing required OAuth field: access_token")
   end
 
   defp return_error(message), do: {:error, message}
