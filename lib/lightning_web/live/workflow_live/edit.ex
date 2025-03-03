@@ -2068,7 +2068,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           end
 
         WorkOrders.Manual.new(
-          %{dataclip_id: dataclip && dataclip.id, body: body},
+          %{"dataclip_id" => dataclip && dataclip.id, "body" => body},
           attrs
         )
       end)
