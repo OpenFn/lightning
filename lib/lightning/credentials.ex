@@ -1202,14 +1202,12 @@ defmodule Lightning.Credentials do
         scopes,
         is_update \\ false
       ) do
-    # Ensure token_data is a map
     unless is_map(token_data) do
       return_error("Invalid OAuth token body")
     end
 
     normalized_data = normalize_keys(token_data)
 
-    # Verify access token exists
     unless Map.has_key?(normalized_data, "access_token") do
       return_error("Missing required OAuth field: access_token")
     end
@@ -1223,10 +1221,8 @@ defmodule Lightning.Credentials do
     )
   end
 
-  # Helper to reduce nesting and improve readability
   defp return_error(message), do: {:error, message}
 
-  # Helper to check refresh token requirements based on context
   defp validate_refresh_token_and_expiration(
          normalized_data,
          user_id,
@@ -1240,25 +1236,20 @@ defmodule Lightning.Credentials do
       token_exists?(user_id, oauth_client_id, scopes)
 
     cond do
-      # Case 1: This is an update to an existing token (refresh_token not strictly required)
       is_update ->
         validate_expiration_fields(normalized_data)
 
-      # Case 3: No refresh token but existing token found with same scopes
       existing_token_exists? ->
         validate_expiration_fields(normalized_data)
 
-      # Case 2: Has refresh token (valid case)
       has_refresh_token ->
         validate_expiration_fields(normalized_data)
 
-      # Case 4: New token with no refresh_token and no existing token
       true ->
         return_error("Missing refresh_token for new OAuth connection")
     end
   end
 
-  # Helper to check if a token with given scopes exists
   defp token_exists?(nil, _, _), do: false
   defp token_exists?(_, nil, _), do: false
   defp token_exists?(_, _, nil), do: false
@@ -1271,7 +1262,6 @@ defmodule Lightning.Credentials do
     ) != nil
   end
 
-  # Helper function to validate expiration fields
   defp validate_expiration_fields(token_data) do
     if has_expiration_field?(token_data) do
       {:ok, token_data}
