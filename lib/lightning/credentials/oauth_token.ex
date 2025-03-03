@@ -90,14 +90,13 @@ defmodule Lightning.Credentials.OauthToken do
   Considers all clients with the same client_id/client_secret as the given oauth_client_id.
   First filters in SQL, then compares scopes in Elixir.
   """
-  def find_by_scopes(user_id, oauth_client_id, scopes)
-      when is_list(scopes) do
+  def find_by_scopes(user_id, oauth_client_id, scopes) when is_list(scopes) do
     sorted_scopes = Enum.sort(scopes)
 
     from(t in __MODULE__,
-      join: token_client in Lightning.Credentials.OauthClient,
+      join: token_client in OauthClient,
       on: t.oauth_client_id == token_client.id,
-      join: reference_client in Lightning.Credentials.OauthClient,
+      join: reference_client in OauthClient,
       on: reference_client.id == ^oauth_client_id,
       where:
         t.user_id == ^user_id and
@@ -134,13 +133,13 @@ defmodule Lightning.Credentials.OauthToken do
 
   defp validate_oauth_body(changeset) do
     with {_, body} <- fetch_field(changeset, :body), true <- is_map(body) do
-      # Check if this is a new token or an update of an existing token
-      oauth_token_id = get_field(changeset, :id)
-      user_id = get_field(changeset, :user_id)
-      oauth_client_id = get_field(changeset, :oauth_client_id)
-      scopes = get_field(changeset, :scopes)
+      %{
+        id: oauth_token_id,
+        user_id: user_id,
+        oauth_client_id: oauth_client_id,
+        scopes: scopes
+      } = get_fields(changeset, [:id, :user_id, :oauth_client_id, :scopes])
 
-      # Use the shared validation function
       case Credentials.validate_oauth_token_data(
              body,
              user_id,
@@ -154,5 +153,11 @@ defmodule Lightning.Credentials.OauthToken do
     else
       _ -> add_error(changeset, :body, "Invalid OAuth token body")
     end
+  end
+
+  defp get_fields(changeset, fields) when is_list(fields) do
+    Enum.reduce(fields, %{}, fn field, acc ->
+      Map.put(acc, field, get_field(changeset, field))
+    end)
   end
 end

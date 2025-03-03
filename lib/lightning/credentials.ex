@@ -669,9 +669,8 @@ defmodule Lightning.Credentials do
 
   def maybe_refresh_token(%Credential{schema: "oauth"} = credential) do
     credential =
-      %{
-        oauth_token: oauth_token
-      } = Repo.preload(credential, oauth_token: :oauth_client)
+      %{oauth_token: oauth_token} =
+      Repo.preload(credential, oauth_token: :oauth_client)
 
     cond do
       still_fresh(oauth_token) ->
