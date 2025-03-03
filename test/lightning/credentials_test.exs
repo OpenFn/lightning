@@ -1291,4 +1291,20 @@ defmodule Lightning.CredentialsTest do
                Credentials.update_credential(credential, update_attrs)
     end
   end
+
+  describe "transaction error handling" do
+    test "handle_transaction_result/1 properly handles transaction errors" do
+      user = insert(:user)
+
+      credential = insert(:credential, user: user, name: "Original Name")
+
+      invalid_attrs = %{"name" => nil}
+
+      assert {:error, %Ecto.Changeset{errors: [name: {"can't be blank", _}]}} =
+               Credentials.update_credential(credential, invalid_attrs)
+
+      assert Lightning.Credentials.get_credential!(credential.id)
+             |> Map.get(:name) == credential.name
+    end
+  end
 end
