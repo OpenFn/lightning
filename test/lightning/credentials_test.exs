@@ -1244,4 +1244,51 @@ defmodule Lightning.CredentialsTest do
       assert Ecto.Changeset.get_field(changeset, :email) == "test@example.com"
     end
   end
+
+  describe "OAuth token error handling" do
+    test "create_credential/1 handles failure to extract scopes from OAuth token" do
+      user = insert(:user)
+      oauth_client = insert(:oauth_client)
+
+      attrs = %{
+        "user_id" => user.id,
+        "name" => "Test OAuth Credential",
+        "schema" => "oauth",
+        "oauth_client_id" => oauth_client.id,
+        "body" => %{"key" => "value"},
+        "oauth_token" => %{
+          "access_token" => "test_access_token",
+          "expires_in" => 3600
+        }
+      }
+
+      assert {:error, "Could not extract scopes from OAuth token"} =
+               Credentials.create_credential(attrs)
+    end
+
+    test "update_credential/2 handles failure to extract scopes when updating OAuth token" do
+      user = insert(:user)
+      oauth_client = insert(:oauth_client)
+
+      credential =
+        insert(:credential,
+          schema: "oauth",
+          user: user,
+          oauth_client: oauth_client
+        )
+
+      update_attrs = %{
+        "oauth_token" => %{
+          "access_token" => "new_token",
+          "expires_in" => 3600
+        }
+      }
+
+      assert {
+               :error,
+               %Ecto.Changeset{errors: [body: {"Invalid OAuth token body", []}]}
+             } =
+               Credentials.update_credential(credential, update_attrs)
+    end
+  end
 end
