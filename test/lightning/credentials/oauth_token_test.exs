@@ -65,11 +65,26 @@ defmodule Lightning.Credentials.OauthTokenTest do
     end
 
     test "validates OAuth body format", %{valid_attrs: valid_attrs} do
-      # Test with invalid body type
       invalid_attrs = Map.put(valid_attrs, :body, "not a map")
       changeset = OauthToken.changeset(%OauthToken{}, invalid_attrs)
       refute changeset.valid?
       assert {"Invalid OAuth token body", []} = changeset.errors[:body]
+    end
+
+    test "validates missing required OAuth body parts", %{
+      valid_attrs: valid_attrs
+    } do
+      invalid_attrs =
+        Map.put(valid_attrs, :body, %{
+          "expires_in" => 3600,
+          "scope" => "read write"
+        })
+
+      changeset = OauthToken.changeset(%OauthToken{}, invalid_attrs)
+      refute changeset.valid?
+
+      assert {"Missing required OAuth field: access_token", []} =
+               changeset.errors[:body]
     end
   end
 
