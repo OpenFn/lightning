@@ -25,22 +25,21 @@ defmodule Lightning.WorkOrders.Manual do
     embeds_one :job, Lightning.Workflows.Job
     field :is_persisted, :boolean
     field :dataclip_id, Ecto.UUID
-    field :body, :string
+    field :body, :string, default: "{}"
   end
 
   def new(params, attrs \\ []) do
-    params = Map.update(params, "body", "{}", fn body ->
-      if is_nil(body) and (params["dataclip_id"] || "") == "" do
-        "{}"
-      else
-        body
-      end
-    end)
+    # params = Map.update(params, "body", "{}", fn body ->
+    #   if is_nil(body) and (params["dataclip_id"] || "") == "" do
+    #     "{}"
+    #   else
+    #     body
+    #   end
+    # end)
 
     struct(__MODULE__, attrs)
     |> cast(params, [:dataclip_id, :body])
     |> validate_required([:project, :job, :created_by, :workflow])
-    |> remove_body_if_dataclip_present()
     |> validate_body_or_dataclip()
     |> validate_json(:body)
     |> validate_change(:workflow, fn _field, workflow ->
@@ -52,14 +51,6 @@ defmodule Lightning.WorkOrders.Manual do
           []
       end
     end)
-  end
-
-  defp remove_body_if_dataclip_present(changeset) do
-    if is_nil(get_change(changeset, :dataclip_id)) do
-      changeset
-    else
-      Ecto.Changeset.delete_change(changeset, :body)
-    end
   end
 
   defp validate_json(changeset, field) do
@@ -77,14 +68,10 @@ defmodule Lightning.WorkOrders.Manual do
   end
 
   defp validate_body_or_dataclip(changeset) do
-    changeset
-    |> Validators.validate_one_required(
+    Validators.validate_one_required(
+      changeset,
       [:dataclip_id, :body],
       "Either a dataclip or a custom body must be present."
-    )
-    |> Validators.validate_exclusive(
-      [:dataclip_id, :body],
-      "Dataclip and custom body are mutually exclusive."
     )
   end
 end

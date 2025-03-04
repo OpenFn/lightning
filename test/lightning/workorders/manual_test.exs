@@ -14,7 +14,11 @@ defmodule Lightning.WorkOrders.ManualTest do
   end
 
   test "removes body if dataclip_id is present" do
-    params = %{"dataclip_id" => Ecto.UUID.generate(), "body" => ~s({"foo": "bar"})}
+    params = %{
+      "dataclip_id" => Ecto.UUID.generate(),
+      "body" => ~s({"foo": "bar"})
+    }
+
     changeset = Manual.new(params)
 
     assert get_change(changeset, :body) == nil
