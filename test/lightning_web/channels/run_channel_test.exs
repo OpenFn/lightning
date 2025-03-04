@@ -513,6 +513,44 @@ defmodule LightningWeb.RunChannelTest do
                      "username" => "test"
                    }
     end
+
+    test "fetch:credential for OAuth credential merges body with oauth_token body" do
+      user = insert(:user)
+      oauth_client = insert(:oauth_client)
+
+      oauth_token = %{
+        "access_token" => "test_access_token",
+        "refresh_token" => "test_refresh_token",
+        "expires_at" =>
+          DateTime.utc_now() |> DateTime.add(3600) |> DateTime.to_unix()
+      }
+
+      credential =
+        insert(:credential,
+          name: "OAuth Test",
+          schema: "oauth",
+          body: %{
+            "apiVersion" => 23,
+            "sandbox" => true
+          },
+          oauth_token: oauth_token,
+          oauth_client: oauth_client,
+          user: user
+        )
+
+      %{socket: socket} =
+        create_socket_and_run(%{credential: credential, user: user})
+
+      ref = push(socket, "fetch:credential", %{"id" => credential.id})
+
+      assert_reply ref, :ok, response
+
+      assert response["apiVersion"] == 23
+      assert response["sandbox"] == true
+      assert response["access_token"] == "test_access_token"
+      assert response["refresh_token"] == "test_refresh_token"
+      assert Map.has_key?(response, "expires_at")
+    end
   end
 
   describe "marking steps as started and finished" do
