@@ -52,15 +52,15 @@ defmodule Lightning.Credentials.OauthToken do
   Creates a changeset for updating token data.
   """
   def update_token_changeset(oauth_token, new_token) do
-    changeset = cast(oauth_token, %{body: new_token}, [:body])
-
-    changeset =
+    scopes =
       case extract_scopes(new_token) do
-        {:ok, scopes} -> put_change(changeset, :scopes, scopes)
-        :error -> add_error(changeset, :body, "Invalid OAuth token body")
+        {:ok, scopes} -> scopes
+        :error -> nil
       end
 
-    validate_oauth_body(changeset)
+    cast(oauth_token, %{body: new_token, scopes: scopes}, [:body, :scopes])
+    |> validate_required([:body, :scopes])
+    |> validate_oauth_body()
   end
 
   @doc """

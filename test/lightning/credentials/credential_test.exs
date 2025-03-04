@@ -1,7 +1,7 @@
 defmodule Lightning.Credentials.CredentialTest do
-  alias Lightning.Credentials
   use Lightning.DataCase, async: true
 
+  alias Lightning.Credentials
   alias Lightning.Credentials.Credential
 
   describe "changeset/2" do
