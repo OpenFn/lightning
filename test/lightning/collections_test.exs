@@ -463,26 +463,21 @@ defmodule Lightning.CollectionsTest do
     test "deletes an entry for the given collection" do
       collection = insert(:collection)
 
-      %{key: key1, value: value1} =
-        insert(:collection_item, collection: collection)
+      key1 = "áàâãäéèêëíìîï"
+      key2 = "óòôõöúùûüçñabc"
 
-      %{key: key2, value: value2} =
-        insert(:collection_item, collection: collection)
+      :ok = Collections.put(collection, key1, "12345")
+      :ok = Collections.put(collection, key2, "12345")
 
-      byte_size1 = byte_size(key1) + byte_size(value1)
-      byte_size2 = byte_size(key2) + byte_size(value2)
-
-      _collection =
-        Repo.update!(
-          Ecto.Changeset.change(collection, %{
-            byte_size_sum: byte_size1 + byte_size2
-          })
-        )
+      assert Collections.get(collection, key1)
+      assert Collections.get(collection, key2)
 
       assert :ok = Collections.delete(collection, key1)
 
       refute Collections.get(collection, key1)
       assert Collections.get(collection, key2)
+
+      byte_size2 = byte_size(key2) + byte_size("12345")
 
       assert %{byte_size_sum: ^byte_size2} =
                Repo.get!(Collection, collection.id)
@@ -510,29 +505,60 @@ defmodule Lightning.CollectionsTest do
       assert {:ok, 3} = Collections.delete_all(collection)
 
       refute Enum.any?(items, &Collections.get(collection, &1.key))
+
+      assert %{byte_size_sum: 0} = Repo.get!(Collection, collection.id)
     end
 
     test "deletes matching items of the given collection" do
       collection = insert(:collection)
 
-      item1 =
-        insert(:collection_item, collection: collection, key: "foo:123:bar1")
+      :ok = Collections.put(collection, "foo:111:bär1", "12345")
+      :ok = Collections.put(collection, "foo:222:bär2", "12345")
+      :ok = Collections.put(collection, "foo:333:bär3", "12345")
+      :ok = Collections.put(collection, "foo:444:bár4", "12345")
 
-      item2 =
-        insert(:collection_item, collection: collection, key: "foo:234:bar2")
+      item4_size = byte_size("foo:444:bár4") + byte_size("12345")
 
-      item3 =
-        insert(:collection_item, collection: collection, key: "foo:345:bar3")
+      collection_size =
+        item4_size + 3 * (byte_size("foo:333:bär3") + byte_size("12345"))
 
-      item4 =
-        insert(:collection_item, collection: collection, key: "foo:456:zanzibar")
+      assert %{byte_size_sum: ^collection_size} =
+               Repo.get!(Collection, collection.id)
 
-      assert {:ok, 3} = Collections.delete_all(collection, "foo:*:bar*")
+      assert Collections.get(collection, "foo:111:bär1")
+      assert Collections.get(collection, "foo:222:bär2")
+      assert Collections.get(collection, "foo:333:bär3")
 
-      refute Collections.get(collection, item1.key)
-      refute Collections.get(collection, item2.key)
-      refute Collections.get(collection, item3.key)
-      assert Collections.get(collection, item4.key)
+      assert {:ok, 3} = Collections.delete_all(collection, "foo:*:bär*")
+
+      refute Collections.get(collection, "foo:111:bär1")
+      refute Collections.get(collection, "foo:222:bär2")
+      refute Collections.get(collection, "foo:333:bär3")
+      assert Collections.get(collection, "foo:444:bár4")
+
+      assert %{byte_size_sum: ^item4_size} = Repo.get!(Collection, collection.id)
+    end
+
+    test "deletes all items by matching on the given collection" do
+      collection = insert(:collection)
+
+      :ok = Collections.put(collection, "foo:111:bär1", "12345")
+      :ok = Collections.put(collection, "foo:222:bär2", "12345")
+
+      collection_size = 2 * (byte_size("foo:nnn:bärn") + byte_size("12345"))
+
+      assert %{byte_size_sum: ^collection_size} =
+               Repo.get!(Collection, collection.id)
+
+      assert Collections.get(collection, "foo:111:bär1")
+      assert Collections.get(collection, "foo:222:bär2")
+
+      assert {:ok, 2} = Collections.delete_all(collection, "foo:*:bär*")
+
+      refute Collections.get(collection, "foo:111:bär1")
+      refute Collections.get(collection, "foo:222:bär2")
+
+      assert %{byte_size_sum: 0} = Repo.get!(Collection, collection.id)
     end
 
     test "returns an :error if the collection does not exist" do
