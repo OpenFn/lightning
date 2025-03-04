@@ -97,6 +97,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                 >
                   <.step_item
                     step={step}
+                    workflow_version={@workflow.lock_version}
                     run_id={run.id}
                     job_id={@job_id}
                     is_clone={
@@ -121,6 +122,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                     >
                       <.step_item
                         step={step}
+                        workflow_version={@workflow.lock_version}
                         run_id={run.id}
                         job_id={@job_id}
                         is_clone={
@@ -165,6 +167,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                       >
                         <.step_item
                           step={step}
+                          workflow_version={@workflow.lock_version}
                           run_id={run.id}
                           job_id={@job_id}
                           is_clone={
@@ -213,6 +216,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                       >
                         <.step_item
                           step={step}
+                          workflow_version={@workflow.lock_version}
                           run_id={run.id}
                           job_id={@job_id}
                           is_clone={
