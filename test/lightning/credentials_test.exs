@@ -1275,7 +1275,7 @@ defmodule Lightning.CredentialsTest do
 
       assert {
                :error,
-               %Ecto.Changeset{errors: [body: {"Invalid OAuth token body", []}]}
+               %Ecto.Changeset{errors: [scopes: {"can't be blank", _}]}
              } =
                Credentials.update_credential(credential, update_attrs)
     end
