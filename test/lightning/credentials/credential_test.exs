@@ -1,6 +1,7 @@
 defmodule Lightning.Credentials.CredentialTest do
   use Lightning.DataCase, async: true
 
+  alias Lightning.Credentials
   alias Lightning.Credentials.Credential
 
   describe "changeset/2" do
@@ -14,12 +15,18 @@ defmodule Lightning.Credentials.CredentialTest do
     test "oauth credentials require access_token, refresh_token, and expires_in or expires_at to be valid" do
       assert_invalid_oauth_credential(%{})
 
-      assert_invalid_oauth_credential(%{"access_token" => "access_token_123"})
+      assert_invalid_oauth_credential(
+        %{"access_token" => "access_token_123"},
+        "Missing refresh_token for new OAuth connection"
+      )
 
-      assert_invalid_oauth_credential(%{
-        "access_token" => "access_token_123",
-        "refresh_token" => "refresh_token_123"
-      })
+      assert_invalid_oauth_credential(
+        %{
+          "access_token" => "access_token_123",
+          "refresh_token" => "refresh_token_123"
+        },
+        "Missing expiration field: either expires_in or expires_at is required"
+      )
 
       refute_invalid_oauth_credential(%{
         "access_token" => "access_token_123",
@@ -63,26 +70,31 @@ defmodule Lightning.Credentials.CredentialTest do
 
   defp assert_invalid_oauth_credential(
          body,
-         message \\ "Invalid OAuth token. Missing required fields: access_token, refresh_token, and either expires_in or expires_at."
+         message \\ "Missing required OAuth field: access_token"
        ) do
     errors =
-      Credential.changeset(
-        %Credential{name: "oauth credential", schema: "oauth", body: body},
-        %{}
-      )
+      Credentials.change_credential(%Credential{}, %{
+        name: "oauth credential",
+        schema: "oauth",
+        oauth_token: body,
+        user_id: insert(:user).id
+      })
       |> errors_on()
 
-    assert errors[:body] == [message]
+    assert errors[:oauth_token] == [message]
   end
 
   defp refute_invalid_oauth_credential(body) do
     errors =
-      Credential.changeset(
-        %Credential{name: "oauth credential", schema: "oauth", body: body},
-        %{}
-      )
+      Credentials.change_credential(%Credential{}, %{
+        name: "oauth credential",
+        schema: "oauth",
+        body: %{},
+        oauth_token: body,
+        user_id: insert(:user).id
+      })
       |> errors_on()
 
-    refute errors[:body]
+    refute errors[:oauth_token]
   end
 end

@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Allow the possibility for OAuth Tokens to be associated with multiple
+  credentials [#2908](https://github.com/OpenFn/lightning/issues/2908)
+
 ### Changed
 
 ### Fixed

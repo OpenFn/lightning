@@ -7,6 +7,7 @@ defmodule LightningWeb.RunChannel do
   import LightningWeb.ChannelHelpers
 
   alias Lightning.Credentials
+  alias Lightning.Credentials.Credential
   alias Lightning.Repo
   alias Lightning.Runs
   alias Lightning.Scrubber
@@ -94,7 +95,12 @@ defmodule LightningWeb.RunChannel do
          {:ok, scrubber} <- update_scrubber(scrubber, samples, basic_auth) do
       socket
       |> assign(scrubber: scrubber)
-      |> reply_with({:ok, remove_empty_values(credential.body)})
+      |> reply_with(
+        {:ok,
+         credential
+         |> assemble_body()
+         |> remove_empty_values()}
+      )
     else
       :not_found ->
         reply_with(socket, {:error, %{errors: %{id: ["Credential not found!"]}}})
@@ -218,5 +224,13 @@ defmodule LightningWeb.RunChannel do
 
   defp remove_empty_values(credential_body) do
     Map.reject(credential_body, fn {_key, val} -> val == "" end)
+  end
+
+  defp assemble_body(%Credential{schema: "oauth"} = credential) do
+    Map.merge(credential.body, credential.oauth_token.body)
+  end
+
+  defp assemble_body(%Credential{} = credential) do
+    credential.body
   end
 end
