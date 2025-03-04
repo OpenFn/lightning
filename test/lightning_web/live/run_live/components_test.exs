@@ -116,6 +116,46 @@ defmodule LightningWeb.RunLive.ComponentsTest do
 
     assert has_run_step_link?(html, workflow.project, run, first_step)
 
+    # snapshot version is not included in the link when it is latest
+    assert workflow.lock_version == snapshot.lock_version
+
+    assert html
+           |> Floki.find(
+             ~s{a[href='#{~p"/projects/#{workflow.project}/w/#{workflow}?#{%{a: run.id, m: "expand", s: job_1.id}}"}#log']}
+           )
+           |> Enum.any?()
+
+    refute html
+           |> Floki.find(
+             ~s{a[href='#{~p"/projects/#{workflow.project}/w/#{workflow}?#{%{a: run.id, m: "expand", s: job_1.id, v: snapshot.lock_version}}"}#log']}
+           )
+           |> Enum.any?()
+
+    # if the snapshot version is not latest, the version is included
+
+    html =
+      render_component(&Components.step_list_item/1,
+        step: first_step,
+        run: run,
+        workflow_version: workflow.lock_version + 1,
+        project_id: project_id,
+        can_run_workflow: true,
+        can_edit_data_retention: true
+      )
+      |> Floki.parse_fragment!()
+
+    refute html
+           |> Floki.find(
+             ~s{a[href='#{~p"/projects/#{workflow.project}/w/#{workflow}?#{%{a: run.id, m: "expand", s: job_1.id}}"}#log']}
+           )
+           |> Enum.any?()
+
+    assert html
+           |> Floki.find(
+             ~s{a[href='#{~p"/projects/#{workflow.project}/w/#{workflow}?#{%{a: run.id, m: "expand", s: job_1.id, v: snapshot.lock_version}}"}#log']}
+           )
+           |> Enum.any?()
+
     html =
       render_component(&Components.step_list_item/1,
         step: second_step,
@@ -211,6 +251,94 @@ defmodule LightningWeb.RunLive.ComponentsTest do
            |> Enum.any?()
 
     refute html =~ "This step was originally executed in a previous run"
+  end
+
+  describe "step_item/1" do
+    test "renders link to inspector correctly" do
+      %{triggers: [trigger], jobs: [job_1 | _rest]} =
+        workflow = insert(:complex_workflow)
+
+      {:ok, snapshot} = Workflows.Snapshot.create(workflow)
+
+      dataclip = insert(:dataclip)
+      output_dataclip = insert(:dataclip)
+
+      %{runs: [run]} =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot,
+          runs: [
+            %{
+              state: :failed,
+              dataclip: dataclip,
+              starting_trigger: trigger,
+              snapshot: snapshot,
+              steps: [
+                insert(:step,
+                  job: job_1,
+                  snapshot: snapshot,
+                  input_dataclip: dataclip,
+                  output_dataclip: output_dataclip,
+                  finished_at: build(:timestamp),
+                  exit_reason: "fail"
+                )
+              ]
+            }
+          ]
+        )
+
+      [first_step] = run.steps
+
+      project_id = workflow.project_id
+
+      # snapshot version is not included in the link when it is latest
+      html =
+        render_component(&Components.step_item/1,
+          step: first_step,
+          run_id: run.id,
+          workflow_version: workflow.lock_version,
+          project_id: project_id
+        )
+        |> Floki.parse_fragment!()
+
+      assert workflow.lock_version == snapshot.lock_version
+
+      assert html
+             |> Floki.find(
+               ~s{a[href='#{~p"/projects/#{workflow.project}/w/#{workflow}?#{%{a: run.id, m: "expand", s: job_1.id}}"}#log']}
+             )
+             |> Enum.any?()
+
+      refute html
+             |> Floki.find(
+               ~s{a[href='#{~p"/projects/#{workflow.project}/w/#{workflow}?#{%{a: run.id, m: "expand", s: job_1.id, v: snapshot.lock_version}}"}#log']}
+             )
+             |> Enum.any?()
+
+      # snapshot version is included in the link when it is outdated
+      html =
+        render_component(&Components.step_item/1,
+          step: first_step,
+          run_id: run.id,
+          workflow_version: workflow.lock_version + 1,
+          project_id: project_id
+        )
+        |> Floki.parse_fragment!()
+
+      refute html
+             |> Floki.find(
+               ~s{a[href='#{~p"/projects/#{workflow.project}/w/#{workflow}?#{%{a: run.id, m: "expand", s: job_1.id}}"}#log']}
+             )
+             |> Enum.any?()
+
+      assert html
+             |> Floki.find(
+               ~s{a[href='#{~p"/projects/#{workflow.project}/w/#{workflow}?#{%{a: run.id, m: "expand", s: job_1.id, v: snapshot.lock_version}}"}#log']}
+             )
+             |> Enum.any?()
+    end
   end
 
   test "no rerun button is displayed when user can't rerun a job" do

@@ -168,19 +168,19 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       # Workflow links
       assert view
              |> has_link?(
-               ~p"/projects/#{project.id}/w/#{workflow1.id}?v=#{workflow1.lock_version}",
+               ~p"/projects/#{project.id}/w/#{workflow1.id}",
                "One"
              )
 
       assert view
              |> has_link?(
-               ~p"/projects/#{project.id}/w/#{workflow2.id}?v=#{workflow2.lock_version}",
+               ~p"/projects/#{project.id}/w/#{workflow2.id}",
                "Two"
              )
 
       assert view
              |> has_link?(
-               ~p"/projects/#{project.id}/w/#{new_workflow.id}?v=#{new_workflow.lock_version}",
+               ~p"/projects/#{project.id}/w/#{new_workflow.id}",
                new_workflow.name
              )
 
