@@ -139,10 +139,12 @@ defmodule Lightning.AuthProviders.OauthHTTPClient do
 
   @doc """
   Determines if the token data is still considered fresh.
+
   ## Parameters
   - `token`: a map containing token data with `expires_at` or `expires_in` keys.
   - `threshold`: the number of time units before expiration to consider the token still fresh.
   - `time_unit`: the unit of time to consider for the threshold comparison.
+
   ## Returns
   - `true` if the token is fresh.
   - `{:error, reason}` if the token's expiration data is missing or invalid.
