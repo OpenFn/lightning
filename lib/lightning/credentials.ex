@@ -261,37 +261,15 @@ defmodule Lightning.Credentials do
 
     Multi.new()
     |> Multi.run(:oauth_token, fn _repo, _changes ->
-      update_or_create_oauth_token(credential, attrs["oauth_token"], attrs)
+      credential.oauth_token
+      |> OauthToken.update_token_changeset(attrs["oauth_token"])
+      |> Repo.update()
     end)
     |> Multi.update(:credential, fn %{oauth_token: token} ->
       changeset
       |> Ecto.Changeset.put_change(:body, credential_data)
       |> Ecto.Changeset.put_change(:oauth_token_id, token.id)
     end)
-  end
-
-  defp update_or_create_oauth_token(credential, token_data, attrs) do
-    if credential.oauth_token_id do
-      credential.oauth_token
-      |> OauthToken.update_token_changeset(token_data)
-      |> Repo.update()
-    else
-      case OauthToken.extract_scopes(token_data) do
-        {:ok, scopes} ->
-          oauth_client_id =
-            credential.oauth_client_id || attrs["oauth_client_id"]
-
-          OauthToken.find_or_create_for_scopes(
-            credential.user_id,
-            oauth_client_id,
-            scopes,
-            token_data
-          )
-
-        :error ->
-          {:error, "Could not extract scopes from OAuth token"}
-      end
-    end
   end
 
   defp handle_transaction_result(transaction_result) do
