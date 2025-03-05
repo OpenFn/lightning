@@ -1535,7 +1535,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
           query_params =
             socket.assigns.query_params
-            |> Map.reject(fn {key, value} -> is_nil(value) or key == "v" end)
+            |> Map.reject(fn {_key, value} -> is_nil(value) end)
+            |> Map.drop(["v"])
 
           flash_msg =
             "Workflow saved successfully." <>
@@ -2441,13 +2442,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
     params =
       query_params
       |> Map.put("a", run.id)
-      |> Map.put("v", version)
       |> Map.reject(fn {_k, v} -> is_nil(v) end)
       |> then(fn params ->
         if workflow.lock_version == version do
           Map.drop(params, ["v"])
         else
-          params
+          Map.put(params, "v", version)
         end
       end)
 
