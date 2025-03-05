@@ -226,7 +226,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       click_save(view)
 
       assert %{id: workflow_id} =
-               workflow =
                Lightning.Repo.one(
                  from w in Workflow,
                    where:
@@ -235,7 +234,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert_patched(
         view,
-        ~p"/projects/#{project.id}/w/#{workflow_id}?#{[m: "expand", s: job.id, v: workflow.lock_version]}"
+        ~p"/projects/#{project.id}/w/#{workflow_id}?#{[m: "expand", s: job.id]}"
       )
 
       assert render(view) =~ "Workflow saved"
@@ -1961,11 +1960,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # submit workflow form
       view |> form("#workflow-form") |> render_submit()
 
-      workflow = Lightning.Repo.reload(workflow)
-
       assert_patched(
         view,
-        ~p"/projects/#{project}/w/#{workflow}?#{[m: "expand", s: job_1.id, v: workflow.lock_version]}"
+        ~p"/projects/#{project}/w/#{workflow}?#{[m: "expand", s: job_1.id]}"
       )
 
       # manual run form still has the body
@@ -2209,7 +2206,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert_patched(
         view,
-        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[m: "expand", s: job.id, v: workflow.lock_version]}"
+        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[m: "expand", s: job.id]}"
       )
 
       assert render(view) =~ "Workflow saved and synced to GitHub successfully."
@@ -2276,11 +2273,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       |> form("#workflow-form")
       |> render_submit(%{"github-sync" => %{"commit_message" => "some message"}})
 
-      workflow = Repo.reload!(workflow)
-
       assert_patched(
         view,
-        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: job_2.id, v: workflow.lock_version]}"
+        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: job_2.id]}"
       )
 
       assert render(view) =~

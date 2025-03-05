@@ -132,6 +132,7 @@ defmodule LightningWeb.RunLive.Components do
     """
   end
 
+  attr :workflow_version, :integer, required: true
   attr :step, Lightning.Invocation.Step, required: true
   attr :is_clone, :boolean, default: false
   attr :run_id, :string
@@ -192,7 +193,7 @@ defmodule LightningWeb.RunLive.Components do
             <.link
               class="pl-1"
               patch={
-                ~p"/projects/#{@project_id}/w/#{@step.snapshot.workflow_id}?#{%{v: @step.snapshot.lock_version, a: @run_id, m: "expand", s: @job.id}}" <> "#log"
+                ~p"/projects/#{@project_id}/w/#{@step.snapshot.workflow_id}?#{maybe_add_snapshot_version(%{a: @run_id, m: "expand", s: @job.id}, @step.snapshot.lock_version, @workflow_version)}" <> "#log"
               }
             >
               <.icon
@@ -224,6 +225,14 @@ defmodule LightningWeb.RunLive.Components do
           DateTime.to_unix(@step.started_at, :millisecond) %> ms
     <% end %>
     """
+  end
+
+  defp maybe_add_snapshot_version(params, snapshot_version, workflow_version) do
+    if snapshot_version != workflow_version do
+      Map.merge(params, %{v: snapshot_version})
+    else
+      params
+    end
   end
 
   def loading_filler(assigns) do
@@ -380,8 +389,8 @@ defmodule LightningWeb.RunLive.Components do
               aria-label="Inspect this step"
               class="cursor-pointer"
               navigate={
-                ~p"/projects/#{@project_id}/w/#{@step.snapshot.workflow_id}"
-                  <> "?v=#{@step.snapshot.lock_version}&a=#{@run.id}&m=expand&s=#{@job.id}#log"
+                ~p"/projects/#{@project_id}/w/#{@step.snapshot.workflow_id}?#{maybe_add_snapshot_version(%{a: @run.id, m: "expand", s: @job.id}, @step.snapshot.lock_version, @workflow_version)}"
+                  <> "#log"
               }
             >
               <.icon
