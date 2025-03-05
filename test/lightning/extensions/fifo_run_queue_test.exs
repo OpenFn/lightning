@@ -71,6 +71,198 @@ defmodule Lightning.Extensions.FifoRunQueueTest do
 
       assert {:ok, []} = FifoRunQueue.claim(1)
     end
+
+
+    test "is limited by workflow concurrency" do
+      [id1, id2] =
+        Enum.map(1..2, fn _i -> Ecto.UUID.generate() end)
+        |> Enum.sort()
+
+      [project1, project2] =
+        [
+          insert(:project, id: id1, concurrency: 3),
+          insert(:project, id: id2, concurrency: nil)
+        ]
+
+      workflow1a = insert(:simple_workflow, project: project1, concurrency: 1)
+      workflow1b = insert(:simple_workflow, project: project1, concurrency: 2)
+      workflow2 = insert(:simple_workflow, project: project2)
+
+      [
+        %{id: run1w1a_id},
+        %{id: _run2w1a_id},
+        %{id: run1w1b_id},
+        %{id: run2w1b_id},
+        %{id: _run3w1b_id},
+        %{id: run1w2_id},
+        %{id: run2w2_id},
+        %{id: run3w2_id}
+      ] =
+        Enum.with_index(
+          [
+            workflow1a,
+            workflow1a,
+            workflow1b,
+            workflow1b,
+            workflow1b,
+            workflow2,
+            workflow2,
+            workflow2
+          ],
+          &fixture_for_workflow/2
+        )
+
+        {:ok, [%{id: ^run1w1a_id}]} = FifoRunQueue.claim(1)
+
+        # workflow 1a has max concurrency of 1 runs
+        {:ok, [%{id: ^run1w1b_id}]} = FifoRunQueue.claim(1)
+        {:ok, [%{id: ^run2w1b_id}]} = FifoRunQueue.claim(1)
+
+        # workflow 2a has max concurrency of 1 runs
+        {:ok, [%{id: ^run1w2_id}]} = FifoRunQueue.claim(1)
+        {:ok, [%{id: ^run2w2_id}]} = FifoRunQueue.claim(1)
+        {:ok, [%{id: ^run3w2_id}]} = FifoRunQueue.claim(1)
+
+        {:ok, []} = FifoRunQueue.claim(1)
+    end
+
+    test "is limited by project concurrency" do
+      [id1, id2, id3] =
+        Enum.map(1..3, fn _i -> Ecto.UUID.generate() end)
+        |> Enum.sort()
+
+      [project1, project2, project3] =
+        [
+          insert(:project, id: id1, concurrency: 1),
+          insert(:project, id: id2, concurrency: 2),
+          insert(:project, id: id3, concurrency: nil)
+        ]
+
+      workflow1a = insert(:simple_workflow, project: project1)
+      workflow2a = insert(:simple_workflow, project: project2)
+      workflow3a = insert(:simple_workflow, project: project3)
+      workflow1b = insert(:simple_workflow, project: project1)
+      workflow2b = insert(:simple_workflow, project: project2)
+      workflow3b = insert(:simple_workflow, project: project3)
+
+      [
+        %{id: run1p1_id},
+        %{id: _run2p1_id},
+        %{id: run1p2_id},
+        %{id: run2p2_id},
+        %{id: _run3p2_id},
+        %{id: run1p3_id},
+        %{id: run2p3_id},
+        %{id: run3p3_id}
+      ] =
+        Enum.with_index(
+          [
+            workflow1a,
+            workflow1b,
+            workflow2a,
+            workflow2a,
+            workflow2b,
+            workflow3a,
+            workflow3b,
+            workflow3a
+          ],
+          &fixture_for_workflow/2
+        )
+
+        {:ok, [%{id: ^run1p1_id}]} = FifoRunQueue.claim(1)
+
+        # project 1 has max concurrency of 1 runs
+        {:ok, [%{id: ^run1p2_id}]} = FifoRunQueue.claim(1)
+        {:ok, [%{id: ^run2p2_id}]} = FifoRunQueue.claim(1)
+
+        # project 2 has max concurrency of 2 runs
+        {:ok, [%{id: ^run1p3_id}]} = FifoRunQueue.claim(1)
+        {:ok, [%{id: ^run2p3_id}]} = FifoRunQueue.claim(1)
+        {:ok, [%{id: ^run3p3_id}]} = FifoRunQueue.claim(1)
+
+        {:ok, []} = FifoRunQueue.claim(1)
+    end
+
+    test "can claim multiple runs up to project concurrency limit" do
+      [id1, id2, id3] =
+        Enum.map(1..3, fn _i -> Ecto.UUID.generate() end)
+        |> Enum.sort()
+
+      [project1, project2, project3] =
+        [
+          insert(:project, id: id1, concurrency: 1),
+          insert(:project, id: id2, concurrency: 2),
+          insert(:project, id: id3, concurrency: nil)
+        ]
+
+      workflow1a = insert(:simple_workflow, project: project1)
+      workflow2a = insert(:simple_workflow, project: project2)
+      workflow3a = insert(:simple_workflow, project: project3)
+      workflow1b = insert(:simple_workflow, project: project1)
+      workflow2b = insert(:simple_workflow, project: project2)
+      workflow3b = insert(:simple_workflow, project: project3)
+
+      [
+        %{id: run1p1_id},
+        %{id: _run2p1_id},
+        %{id: run1p2_id},
+        %{id: run2p2_id},
+        %{id: _run3p2_id},
+        %{id: run1p3_id},
+        %{id: run2p3_id},
+        %{id: run3p3_id}
+      ] =
+        Enum.with_index(
+          [
+            workflow1a,
+            workflow1b,
+            workflow2a,
+            workflow2a,
+            workflow2b,
+            workflow3a,
+            workflow3b,
+            workflow3a
+          ],
+          &fixture_for_workflow/2
+        )
+
+        {:ok, [%{id: ^run1p1_id}, %{id: ^run1p2_id}, %{id: ^run2p2_id}]} =
+          FifoRunQueue.claim(3)
+
+        {:ok, [%{id: ^run1p3_id}, %{id: ^run2p3_id}, %{id: ^run3p3_id}]} =
+          FifoRunQueue.claim(3)
+
+        {:ok, []} = FifoRunQueue.claim(1)
+    end
+
+    # defp fixture_for_workflow({workflow, priority}, index) do
+    #   insert_fixtures(workflow, index, priority)
+    # end
+
+    defp fixture_for_workflow(workflow, index) do
+      insert_fixtures(workflow, index, 1)
+    end
+
+    defp insert_fixtures(workflow, index, priority) do
+      %{triggers: [trigger]} = workflow
+
+      dataclip = insert(:dataclip)
+
+      wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          inserted_at: Timex.shift(Timex.now(), milliseconds: index)
+        )
+
+      insert(:run,
+        work_order: wo,
+        dataclip: dataclip,
+        starting_trigger: trigger,
+        priority: priority
+      )
+    end
   end
 
   describe "dequeue" do
