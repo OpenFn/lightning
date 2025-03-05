@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import type { PackageDescription } from '@openfn/describe-package';
 import useDocs from '../hooks/useDocs';
 import Function from './render/Function';

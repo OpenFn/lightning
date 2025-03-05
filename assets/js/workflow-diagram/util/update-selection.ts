@@ -1,6 +1,6 @@
 import { getConnectedEdges } from 'reactflow';
 import { sortOrderForSvg, styleItem } from '../styles';
-import { Flow } from '../types';
+import type { Flow } from '../types';
 
 /**
  * Handling selection change is kind of complex

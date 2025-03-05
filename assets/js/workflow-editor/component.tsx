@@ -1,4 +1,3 @@
-import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { createWorkflowStore } from './store';
 
@@ -19,7 +18,7 @@ export function mount(
   function render(selection?: string | null) {
     componentRoot.render(
       <WorkflowDiagram
-        ref={el}
+        el={el}
         selection={selection || null}
         store={workflowStore}
         onSelectionChange={onSelectionChange}

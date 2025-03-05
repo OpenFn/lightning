@@ -1,5 +1,4 @@
-import React from 'react';
-import { Lightning, Flow, Positions } from '../types';
+import type { Lightning, Flow, Positions } from '../types';
 import {
   sortOrderForSvg,
   styleEdge,
@@ -117,7 +116,7 @@ const fromWorkflow = (
         // trigger to a job, but we want to show it as if it were disabled when
         // the source trigger is disabled. This code does that.
         const source = nodes.find(x => x.id == model.source);
-        if (source.type == 'trigger') {
+        if (source != null && source.type == 'trigger') {
           model.data.enabled = source?.data.enabled;
         }
 

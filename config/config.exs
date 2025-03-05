@@ -88,7 +88,7 @@ config :lightning, :oauth_clients,
 
 # Configure esbuild (the version is required)
 config :esbuild,
-  version: "0.17.13",
+  version: "0.25.0",
   default: [
     args:
       ~w(js/app.js
@@ -97,17 +97,55 @@ config :esbuild,
          fonts/inter.css
          fonts/fira-code.css
          --loader:.woff2=file
+         --loader:.ttf=copy
          --format=esm --splitting --bundle
-         --target=es2020
-         --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
+         --jsx=automatic
+         --tsconfig=tsconfig.browser.json
+         --outdir=../priv/static/assets --external:/fonts/* --external:/images/*)
+      |> then(fn args ->
+        case config_env() do
+          "prod" -> args
+          _ -> args ++ ["--jsx-dev"]
+        end
+      end),
+    cd: Path.expand("../assets", __DIR__),
+    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+  ],
+  react: [
+    # This esbuild profile is not meant to be used directly, it is used by a
+    # custom Mix compiler. These args are used by it, but the actual entrypoints
+    # are gathered by the compiler.
+    # TODO: cache-busting hashes
+    args:
+      ~w(
+         --format=esm --splitting --bundle
+         --outbase=../assets/js/react
+         --tsconfig=tsconfig.browser.json
+         --jsx=automatic
+         --outdir=../priv/static/assets/js/react --external:/fonts/* --external:/images/*)
+      |> then(fn args ->
+        case config_env() do
+          "prod" -> args ++ ["--minify"]
+          _ -> args ++ ["--jsx-dev"]
+        end
+      end),
     cd: Path.expand("../assets", __DIR__),
     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
   ],
   monaco: [
-    args: ~w(
+    args:
+      ~w(
          #{Path.expand("../assets/node_modules/monaco-editor/min/vs/**/*.*", __DIR__) |> Path.wildcard() |> Enum.join(" ")}
          --loader:.ttf=copy
-         --outdir=../priv/static/assets/monaco-editor/vs ),
+         --jsx=automatic
+         --tsconfig=tsconfig.browser.json
+         --outdir=../priv/static/assets/monaco-editor/vs )
+      |> then(fn args ->
+        case config_env() do
+          "prod" -> args
+          _ -> args ++ ["--jsx-dev"]
+        end
+      end),
     cd: Path.expand("../assets", __DIR__),
     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
   ]

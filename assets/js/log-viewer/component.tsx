@@ -1,8 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { useStore } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import { editor as e } from 'monaco-editor';
-import { Monaco, MonacoEditor } from '../monaco';
+import { type Monaco, MonacoEditor } from '../monaco';
 import { createLogStore } from './store';
 
 export function mount(
@@ -25,11 +26,13 @@ const LogViewer = ({
 }: {
   logStore: ReturnType<typeof createLogStore>;
 }) => {
-  const stepId = logStore(state => state.stepId);
-  const highlightedRanges = logStore(
+  const stepId = useStore(logStore, state => state.stepId);
+  const highlightedRanges = useStore(
+    logStore,
     useShallow(state => state.highlightedRanges)
   );
-  const formattedLogLines = logStore(
+  const formattedLogLines = useStore(
+    logStore,
     useShallow(state => state.formattedLogLines)
   );
 

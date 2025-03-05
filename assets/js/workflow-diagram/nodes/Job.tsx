@@ -1,10 +1,10 @@
-import React, { memo } from 'react';
-import { Position, NodeProps } from 'reactflow';
+import { memo } from 'react';
+import { Position, type NodeProps } from 'reactflow';
 import Node from './Node';
 import PlusButton from '../components/PlusButton';
 import PathButton from '../components/PathButton';
 import getAdaptorName from '../util/get-adaptor-name';
-import useAdaptorIcons, { AdaptorIconData } from '../useAdaptorIcons';
+import useAdaptorIcons, { type AdaptorIconData } from '../useAdaptorIcons';
 
 type NodeData = any;
 
