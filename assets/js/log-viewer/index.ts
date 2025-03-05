@@ -1,5 +1,5 @@
-import { PhoenixHook } from '../hooks/PhoenixHook';
-import { createLogStore, LogLine } from './store';
+import { type PhoenixHook } from '../hooks/PhoenixHook';
+import { createLogStore, type LogLine } from './store';
 import { mount } from './component';
 
 type LogViewer = PhoenixHook<{

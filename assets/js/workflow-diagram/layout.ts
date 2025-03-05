@@ -1,9 +1,9 @@
 import Dagre from '../../vendor/dagre.cjs';
 import { timer } from 'd3-timer';
-import { getRectOfNodes, ReactFlowInstance } from 'reactflow';
+import { getRectOfNodes, type ReactFlowInstance } from 'reactflow';
 
 import { FIT_PADDING } from './constants';
-import { Flow, Positions } from './types';
+import type { Flow, Positions } from './types';
 import { getVisibleRect, isPointInRect } from './util/viewport';
 
 export type LayoutOpts = {

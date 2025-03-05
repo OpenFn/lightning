@@ -6,7 +6,8 @@
     "start": "node dev-server.mjs",
     "test": "npx ava ./test/index.test.ts",
     "test-report": "npx ava --tap ./test/index.test.ts | tap-xunit > ../test/reports/ava.xml",
-    "test:snapshots": "TS_NODE_TRANSPILE_ONLY=1 ts-node --project tsconfig.json test/workflow-snapshots.tsx"
+    "test:snapshots": "TS_NODE_TRANSPILE_ONLY=1 ts-node --project tsconfig.json test/workflow-snapshots.tsx",
+    "check": "tsc --build"
   },
   "license": "LGPLv3",
   "dependencies": {
@@ -31,10 +32,14 @@
     "react-dom": "^18.1.0",
     "reactflow": "^11.7.0",
     "tippy.js": "^6.3.7",
+    "typescript": "^5.7.3",
     "zustand": "^4.3.7"
   },
   "devDependencies": {
     "@openfn/ws-worker": "^1.11.1",
+    "@tsconfig/node-lts": "^22.0.1",
+    "@tsconfig/recommended": "^1.0.8",
+    "@tsconfig/strictest": "^2.0.5",
     "@types/marked": "^4.0.8",
     "@types/react": "^18.0.15",
     "@types/react-dom": "^18.0.6",

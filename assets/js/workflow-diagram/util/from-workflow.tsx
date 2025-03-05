@@ -1,5 +1,4 @@
-import React from 'react';
-import { Lightning, Flow, Positions } from '../types';
+import type { Lightning, Flow, Positions } from '../types';
 import {
   sortOrderForSvg,
   styleEdge,

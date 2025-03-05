@@ -1,5 +1,3 @@
-import React from 'react';
-
 type ShapeProps = {
   width: number;
   height: number;

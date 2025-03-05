@@ -1,4 +1,4 @@
-import { PhoenixHook } from '../hooks/PhoenixHook';
+import type { PhoenixHook } from '../hooks/PhoenixHook';
 import type { mount } from './component';
 
 type DataclipViewer = PhoenixHook<

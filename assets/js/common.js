@@ -1,4 +1,3 @@
-// @ts-nocheck
 import pDebounce from 'p-debounce';
 
 export const EDITOR_DEBOUNCE_MS = 300

@@ -88,7 +88,7 @@ config :lightning, :oauth_clients,
 
 # Configure esbuild (the version is required)
 config :esbuild,
-  version: "0.17.13",
+  version: "0.25.0",
   default: [
     args:
       ~w(js/app.js
@@ -97,7 +97,9 @@ config :esbuild,
          fonts/inter.css
          fonts/fira-code.css
          --loader:.woff2=file
+         --loader:.ttf=copy
          --format=esm --splitting --bundle
+         --jsx=automatic
          --target=es2020
          --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
     cd: Path.expand("../assets", __DIR__),

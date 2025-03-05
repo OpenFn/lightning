@@ -1,11 +1,11 @@
-import React, {
-  SyntheticEvent,
+import {
+  type SyntheticEvent,
   memo,
   useCallback,
   useRef,
   useState,
 } from 'react';
-import { Handle, NodeProps, Position } from 'reactflow';
+import { Handle, type NodeProps, Position } from 'reactflow';
 import {
   CheckCircleIcon,
   InformationCircleIcon,
