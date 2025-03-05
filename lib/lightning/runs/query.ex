@@ -69,8 +69,9 @@ defmodule Lightning.Runs.Query do
   - `row_number`, the number of the row in the window, per workflow
   - `concurrency`, the maximum number of runs that can be claimed for the workflow
   """
-  @spec in_progress_window() :: Ecto.Queryable.t()
-  def in_progress_window do
+  @spec in_progress_window(:dynamic | :by_project | :by_workflow) ::
+          Ecto.Queryable.t()
+  def in_progress_window(:dynamic) do
     from(r in Run,
       where: r.state in [:available, :claimed, :started],
       join: wo in assoc(r, :work_order),
@@ -107,6 +108,51 @@ defmodule Lightning.Runs.Query do
     })
   end
 
+  def in_progress_window(:by_project) do
+    from(r in Run,
+      where: r.state in [:available, :claimed, :started],
+      join: wo in assoc(r, :work_order),
+      join: w in assoc(wo, :workflow),
+      join: p in assoc(w, :project)
+    )
+    |> windows([r, _wo, _w, p],
+      row_number: [
+        partition_by: p.id,
+        order_by: [asc: r.inserted_at]
+      ]
+    )
+    |> select([r, _wo, _w, p], %{
+      id: r.id,
+      state: r.state,
+      row_number: row_number() |> over(:row_number),
+      project_id: p.id,
+      concurrency: p.concurrency,
+      inserted_at: r.inserted_at
+    })
+  end
+
+  def in_progress_window(:by_workflow) do
+    from(r in Run,
+      where: r.state in [:available, :claimed, :started],
+      join: wo in assoc(r, :work_order),
+      join: w in assoc(wo, :workflow)
+    )
+    |> windows([r, _wo, w],
+      row_number: [
+        partition_by: w.id,
+        order_by: [asc: r.inserted_at]
+      ]
+    )
+    |> select([r, _wo, w], %{
+      id: r.id,
+      state: r.state,
+      row_number: row_number() |> over(:row_number),
+      project_id: w.project_id,
+      concurrency: w.concurrency,
+      inserted_at: r.inserted_at
+    })
+  end
+
   @doc """
   Query to return runs that are eligible for claiming.
 
@@ -122,10 +168,10 @@ defmodule Lightning.Runs.Query do
   > eligible_for_claim() |> prepend_order_by([:priority])
   > ```
   """
-  @spec eligible_for_claim() :: Ecto.Queryable.t()
-  def eligible_for_claim do
+  @spec eligible_for_claim(atom()) :: Ecto.Queryable.t()
+  def eligible_for_claim(window_partition \\ :dynamic) do
     Run
-    |> with_cte("in_progress_window", as: ^in_progress_window())
+    |> with_cte("in_progress_window", as: ^in_progress_window(window_partition))
     |> join(:inner, [r], ipw in fragment(~s("in_progress_window")),
       on: r.id == ipw.id,
       as: :in_progress_window
