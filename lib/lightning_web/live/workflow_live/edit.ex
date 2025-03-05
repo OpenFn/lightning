@@ -479,6 +479,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     <.expand_job_editor
                       base_url={@base_url}
                       snapshot_lock_version={@snapshot && @snapshot.lock_version}
+                      snapshot_version_tag={@snapshot_version_tag}
                       job={@selected_job}
                       selected_run={@selected_run}
                       form={@workflow_form}
@@ -802,10 +803,19 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     query_string =
       query_params
-      |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+      |> Enum.reject(fn {k, v} ->
+        is_nil(v) or (k == "v" and assigns.snapshot_version_tag == "latest")
+      end)
       |> URI.encode_query()
+      |> then(fn query ->
+        if byte_size(query) > 0 do
+          "?" <> query
+        else
+          query
+        end
+      end)
 
-    "#{assigns[:base_url]}?#{query_string}"
+    "#{assigns[:base_url]}#{query_string}"
   end
 
   defp display_switcher(snapshot, workflow) do
@@ -956,7 +966,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     ~H"""
     <.link
       id={"open-inspector-#{@job.id}"}
-      patch={"#{@base_url}?s=#{@job.id}&m=expand" <> (if @snapshot_lock_version, do: "&v=#{@snapshot_lock_version}", else: "") <> (if @selected_run, do: "&a=#{@selected_run}", else: "")}
+      patch={"#{@base_url}?s=#{@job.id}&m=expand" <> (if @snapshot_lock_version && @snapshot_version_tag != "latest", do: "&v=#{@snapshot_lock_version}", else: "") <> (if @selected_run, do: "&a=#{@selected_run}", else: "")}
       class={@button_classes}
     >
       <.icon name="hero-code-bracket" class="w-4 h-4 text-grey-400" />
@@ -1277,12 +1287,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       patches = WorkflowParams.to_patches(prev_params, next_params)
 
-      lock_version = Ecto.Changeset.get_field(next_changeset, :lock_version)
-
       query_params =
         socket.assigns.query_params
-        |> Map.reject(fn {_k, v} -> is_nil(v) end)
-        |> Map.put("v", lock_version)
+        |> Map.reject(fn {k, v} -> is_nil(v) or k == "v" end)
 
       url = ~p"/projects/#{project.id}/w/#{workflow.id}?#{query_params}"
 
@@ -1317,13 +1324,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     patches = WorkflowParams.to_patches(prev_params, next_params)
 
-    lock_version =
-      Ecto.Changeset.get_field(next_changeset, :lock_version)
-
     query_params =
       socket.assigns.query_params
-      |> Map.reject(fn {_k, v} -> is_nil(v) end)
-      |> Map.put("v", lock_version)
+      |> Map.reject(fn {k, v} -> is_nil(v) or k == "v" end)
 
     url = ~p"/projects/#{project.id}/w/#{workflow.id}?#{query_params}"
 
@@ -1532,8 +1535,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
           query_params =
             socket.assigns.query_params
-            |> Map.put("v", workflow.lock_version)
-            |> Map.reject(fn {_key, value} -> is_nil(value) end)
+            |> Map.reject(fn {key, value} -> is_nil(value) or key == "v" end)
 
           flash_msg =
             "Workflow saved successfully." <>
@@ -2440,7 +2442,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
       query_params
       |> Map.put("a", run.id)
       |> Map.put("v", version)
-      |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+      |> Map.reject(fn {_k, v} -> is_nil(v) end)
+      |> then(fn params ->
+        if workflow.lock_version == version do
+          Map.drop(params, ["v"])
+        else
+          params
+        end
+      end)
 
     socket
     |> push_patch(to: ~p"/projects/#{project}/w/#{workflow}?#{params}")
