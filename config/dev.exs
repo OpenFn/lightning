@@ -34,6 +34,7 @@ config :lightning, LightningWeb.Endpoint,
     esbuild:
       {Esbuild, :install_and_run, [:default, ~w(--sourcemap=inline --watch)]},
     esbuild_monaco: {Esbuild, :install_and_run, [:monaco, ~w(--watch)]},
+    esbuilt_react: {Esbuild, :run, [:react, ~w(--watch)]},
     tailwind: {Tailwind, :install_and_run, [:default, ~w(--watch)]},
     storybook_tailwind: {Tailwind, :install_and_run, [:storybook, ~w(--watch)]}
   ]

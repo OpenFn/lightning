@@ -638,6 +638,32 @@ defmodule Lightning.Config.Bootstrap do
 
     setup_storage()
 
+    app = Mix.Project.config()[:app]
+
+    entry_points = Application.spec(app, :modules)
+    |> Enum.flat_map(fn module ->
+      module.__info__(:attributes)
+      |> Keyword.get_values(:external_resource)
+      |> Enum.flat_map(fn files ->
+        case files do
+          files when is_list(files) ->
+            files
+            |> Enum.filter(fn file ->
+              String.starts_with?(
+                file,
+                Path.join(File.cwd!(), "assets/js/react")
+              )
+            end)
+
+          _ ->
+            []
+        end
+      end)
+    end)
+
+    config :esbuild, :react, args:
+        Utils.get_env([:esbuild, :react, :args]) ++ entry_points
+
     :ok
   end
 

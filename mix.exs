@@ -27,7 +27,7 @@ defmodule Lightning.MixProject do
         coveralls: :test,
         verify: :test
       ],
-      compilers: Mix.compilers() ++ [:react],
+      compilers: Mix.compilers(),
 
       # Docs
       name: "Lightning",
@@ -182,6 +182,7 @@ defmodule Lightning.MixProject do
         "tailwind default --minify",
         "esbuild default --minify",
         "esbuild monaco --minify",
+        "esbuild react --minify",
         "phx.digest"
       ],
       verify: [
