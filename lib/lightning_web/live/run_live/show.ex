@@ -165,6 +165,7 @@ defmodule LightningWeb.RunLive.Show do
                 <.link patch={"?step=#{step.id}"}>
                   <.step_item
                     step={step}
+                    workflow_version={@workflow.lock_version}
                     is_clone={
                       DateTime.compare(step.inserted_at, run.inserted_at) == :lt
                     }

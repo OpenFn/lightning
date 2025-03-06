@@ -292,6 +292,25 @@ defmodule Lightning.Collections do
       handle_delete_items(collection, items_used_mem)
     end)
     |> Multi.delete_all(:delete, query)
+    |> Multi.update_all(
+      :update_collection,
+      fn %{items_used_mem: items_used_mem} ->
+        if key_pattern do
+          increment = [byte_size_sum: -items_used_mem]
+
+          from(c in Collection,
+            where: c.id == ^collection.id,
+            update: [inc: ^increment]
+          )
+        else
+          from(c in Collection,
+            where: c.id == ^collection.id,
+            update: [set: [byte_size_sum: 0]]
+          )
+        end
+      end,
+      []
+    )
     |> Repo.transaction()
     |> case do
       {:ok, %{delete: {count, nil}}} -> {:ok, count}
@@ -438,8 +457,11 @@ defmodule Lightning.Collections do
     end
   end
 
-  defp handle_delete_items(collection, delta_size) do
-    :ok = CollectionHook.handle_delete_items(collection, delta_size)
+  defp handle_delete_items(collection, items_size) do
+    if items_size do
+      :ok = CollectionHook.handle_delete_items(collection, items_size)
+    end
+
     {:ok, nil}
   end
 end

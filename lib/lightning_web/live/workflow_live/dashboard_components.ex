@@ -193,9 +193,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
     <div class="flex flex-1 items-center truncate">
       <.link
         id={"workflow-card-#{@workflow.id}"}
-        navigate={
-          ~p"/projects/#{@project.id}/w/#{@workflow.id}?v=#{@workflow.lock_version}"
-        }
+        navigate={~p"/projects/#{@project.id}/w/#{@workflow.id}"}
         role="button"
       >
         <div class="text-sm">

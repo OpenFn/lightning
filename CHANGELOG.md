@@ -17,8 +17,13 @@ and this project adheres to
 
 ### Added
 
+- Update Collections admin UI storage counter after deleting all
+  [#2986](https://github.com/OpenFn/lightning/issues/2986)
+
 ### Changed
 
+- Do not include `v` param in workflow links when it is latest
+  [#2941](https://github.com/OpenFn/lightning/issues/2941)
 - Use dropdown instead of modal for the log level filter
   [#2980](https://github.com/OpenFn/lightning/issues/2980)
 
