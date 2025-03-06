@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Update Collections admin UI storage counter after deleting all
+  [#2986](https://github.com/OpenFn/lightning/issues/2986)
+
 ### Changed
 
 ### Fixed
