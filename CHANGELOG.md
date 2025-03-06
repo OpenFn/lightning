@@ -19,7 +19,13 @@ and this project adheres to
 
 ### Changed
 
+- Use dropdown instead of modal for the log level filter
+  [#2980](https://github.com/OpenFn/lightning/issues/2980)
+
 ### Fixed
+
+- Fix broken highlighter for selcted step in the log viewer
+  [#2980](https://github.com/OpenFn/lightning/issues/2980)
 
 ## [v2.10.16] - 2025-02-28
 
