@@ -165,9 +165,7 @@ defmodule Lightning.Credentials do
     attrs = normalize_keys(attrs)
     changeset = change_credential(%Credential{}, attrs)
 
-    multi = build_create_multi(changeset, attrs)
-
-    multi
+    build_create_multi(changeset, attrs)
     |> derive_events(changeset)
     |> Repo.transaction()
     |> handle_transaction_result()
@@ -203,7 +201,7 @@ defmodule Lightning.Credentials do
   defp create_oauth_token(user_id, client_id, token_data) do
     case OauthToken.extract_scopes(token_data) do
       {:ok, scopes} ->
-        OauthToken.find_or_create_for_scopes(
+        find_or_create_oauth_token(
           user_id,
           client_id,
           scopes,
@@ -1269,7 +1267,7 @@ defmodule Lightning.Credentials do
   defp token_exists?(_, _, nil), do: false
 
   defp token_exists?(user_id, oauth_client_id, scopes) do
-    Lightning.Credentials.OauthToken.find_by_scopes(
+    find_oauth_token_by_scopes(
       user_id,
       oauth_client_id,
       scopes
@@ -1289,5 +1287,43 @@ defmodule Lightning.Credentials do
   defp has_expiration_field?(token_data) do
     expires_fields = ["expires_in", "expires_at"]
     Enum.any?(expires_fields, &Map.has_key?(token_data, &1))
+  end
+
+  defp find_or_create_oauth_token(user_id, oauth_client_id, scopes, token)
+       when is_list(scopes) do
+    case find_oauth_token_by_scopes(user_id, oauth_client_id, scopes) do
+      nil ->
+        OauthToken.changeset(%{
+          user_id: user_id,
+          oauth_client_id: oauth_client_id,
+          scopes: scopes,
+          body: token
+        })
+        |> Lightning.Repo.insert()
+
+      existing ->
+        {:ok, existing}
+    end
+  end
+
+  defp find_oauth_token_by_scopes(user_id, oauth_client_id, scopes)
+       when is_list(scopes) do
+    sorted_scopes = Enum.sort(scopes)
+
+    Ecto.Query.from(t in OauthToken,
+      join: token_client in OauthClient,
+      on: t.oauth_client_id == token_client.id,
+      join: reference_client in OauthClient,
+      on: reference_client.id == ^oauth_client_id,
+      where:
+        t.user_id == ^user_id and
+          token_client.client_id == reference_client.client_id and
+          token_client.client_secret == reference_client.client_secret
+    )
+    |> Lightning.Repo.all()
+    |> Enum.find(fn token ->
+      sorted_token_scopes = Enum.sort(token.scopes)
+      Enum.all?(sorted_scopes, &Enum.member?(sorted_token_scopes, &1))
+    end)
   end
 end

@@ -59,9 +59,9 @@ defmodule Lightning.Credentials.Credential do
 
   defp maybe_validate_oauth_fields(changeset, attrs) do
     is_oauth = get_field(changeset, :schema) == "oauth"
-    oauth_token_id = get_field(changeset, :oauth_token_id)
+    reusing_token? = !get_field(changeset, :oauth_token_id)
 
-    if is_oauth && !oauth_token_id do
+    if is_oauth && reusing_token? do
       user_id = get_field(changeset, :user_id)
 
       oauth_client_id = Map.get(attrs, "oauth_client_id")

@@ -5,7 +5,6 @@ defmodule Lightning.Credentials.OauthToken do
   when they have identical scope sets.
   """
   use Lightning.Schema
-  import Ecto.Query
 
   alias Lightning.Accounts.User
   alias Lightning.Credentials
@@ -37,8 +36,34 @@ defmodule Lightning.Credentials.OauthToken do
   end
 
   @doc """
-  Creates a changeset for an OAuth token.
+  Creates a changeset for validating and creating an OAuth token.
+
+  ## Parameters
+
+  - `attrs` - A map containing token attributes:
+    - `:body` - The token data (required)
+    - `:scopes` - List of permission scopes for the token (required)
+    - `:oauth_client_id` - Reference to the OAuth client (required)
+    - `:user_id` - Reference to the user (required)
+
+  ## Validations
+
+  - All fields are required
+  - Referenced oauth_client and user must exist
+  - Token body must be valid (via validate_oauth_body/1)
+
+  ## Examples
+
+      iex> OauthToken.changeset(%{
+      ...>   body: %{"access_token" => "abc123", "refresh_token" => "xyz789"},
+      ...>   scopes: ["read", "write"],
+      ...>   oauth_client_id: client.id,
+      ...>   user_id: user.id
+      ...> })
+      #Ecto.Changeset<...>
   """
+  def changeset(attrs), do: changeset(%__MODULE__{}, attrs)
+
   def changeset(oauth_token, attrs) do
     oauth_token
     |> cast(attrs, [:body, :scopes, :oauth_client_id, :user_id])
@@ -64,54 +89,35 @@ defmodule Lightning.Credentials.OauthToken do
   end
 
   @doc """
-  Finds or creates an OAuth token for the given user, client and scope set.
-  Returns {:ok, token} if successful, {:error, changeset} if validation fails.
-  """
-  def find_or_create_for_scopes(user_id, oauth_client_id, scopes, tokens)
-      when is_list(scopes) do
-    case find_by_scopes(user_id, oauth_client_id, scopes) do
-      nil ->
-        %__MODULE__{}
-        |> changeset(%{
-          user_id: user_id,
-          oauth_client_id: oauth_client_id,
-          scopes: scopes,
-          body: tokens
-        })
-        |> Lightning.Repo.insert()
+  Extracts scopes from OAuth token data in various formats.
 
-      existing ->
-        {:ok, existing}
-    end
-  end
+  Handles four common OAuth scope formats:
+  - Maps with string "scope" key containing space-delimited scope strings
+  - Maps with atom :scope key containing space-delimited scope strings
+  - Maps with string "scopes" key containing a list of scope strings
+  - Maps with atom :scopes key containing a list of scope strings
 
-  @doc """
-  Finds an OAuth token by user and equivalent scope match (same values regardless of order).
-  Considers all clients with the same client_id/client_secret as the given oauth_client_id.
-  First filters in SQL, then compares scopes in Elixir.
-  """
-  def find_by_scopes(user_id, oauth_client_id, scopes) when is_list(scopes) do
-    sorted_scopes = Enum.sort(scopes)
+  ## Return values
 
-    from(t in __MODULE__,
-      join: token_client in OauthClient,
-      on: t.oauth_client_id == token_client.id,
-      join: reference_client in OauthClient,
-      on: reference_client.id == ^oauth_client_id,
-      where:
-        t.user_id == ^user_id and
-          token_client.client_id == reference_client.client_id and
-          token_client.client_secret == reference_client.client_secret
-    )
-    |> Lightning.Repo.all()
-    |> Enum.find(fn token ->
-      Enum.sort(token.scopes) == sorted_scopes
-    end)
-  end
+  - `{:ok, scopes}` - List of scope strings if extraction succeeds
+  - `:error` - If scopes cannot be determined from the input
 
-  @doc """
-  Extracts scopes from OAuth token data.
-  Returns {:ok, scopes} if successful, :error if scopes can't be determined.
+  ## Examples
+
+      iex> extract_scopes(%{"scope" => "read write delete"})
+      {:ok, ["read", "write", "delete"]}
+
+      iex> extract_scopes(%{scope: "profile email"})
+      {:ok, ["profile", "email"]}
+
+      iex> extract_scopes(%{"scopes" => ["admin", "user"]})
+      {:ok, ["admin", "user"]}
+
+      iex> extract_scopes(%{scopes: ["read", "write"]})
+      {:ok, ["read", "write"]}
+
+      iex> extract_scopes(%{other_key: "value"})
+      :error
   """
   def extract_scopes(%{"scope" => scope}) when is_binary(scope) do
     {:ok, String.split(scope, " ")}

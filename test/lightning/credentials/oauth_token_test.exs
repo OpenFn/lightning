@@ -93,12 +93,12 @@ defmodule Lightning.Credentials.OauthTokenTest do
       user = insert(:user)
       oauth_client = insert(:oauth_client)
 
-      {:ok, token} =
-        OauthToken.find_or_create_for_scopes(
-          user.id,
-          oauth_client.id,
-          ["read", "write"],
-          %{
+      token =
+        insert(:oauth_token,
+          oauth_client: oauth_client,
+          user: user,
+          scopes: ["read", "write"],
+          body: %{
             "access_token" => "access_token_123",
             "refresh_token" => "refresh_token_123",
             "expires_in" => 3600,
@@ -157,167 +157,6 @@ defmodule Lightning.Credentials.OauthTokenTest do
 
       refute changeset.valid?
       assert {"can't be blank", _} = changeset.errors[:scopes]
-    end
-  end
-
-  describe "find_or_create_for_scopes/4" do
-    setup do
-      user = insert(:user)
-      oauth_client = insert(:oauth_client)
-
-      token_data = %{
-        "access_token" => "access_token_123",
-        "refresh_token" => "refresh_token_123",
-        "expires_in" => 3600,
-        "scope" => "read write"
-      }
-
-      {:ok, user: user, oauth_client: oauth_client, token_data: token_data}
-    end
-
-    test "creates a new token when none exists", %{
-      user: user,
-      oauth_client: oauth_client,
-      token_data: token_data
-    } do
-      {:ok, token} =
-        OauthToken.find_or_create_for_scopes(
-          user.id,
-          oauth_client.id,
-          ["read", "write"],
-          token_data
-        )
-
-      assert token.user_id == user.id
-      assert token.oauth_client_id == oauth_client.id
-      assert token.scopes == ["read", "write"]
-      assert token.body == token_data
-    end
-
-    test "returns existing token with matching scopes", %{
-      user: user,
-      oauth_client: oauth_client,
-      token_data: token_data
-    } do
-      {:ok, created_token} =
-        OauthToken.find_or_create_for_scopes(
-          user.id,
-          oauth_client.id,
-          ["read", "write"],
-          token_data
-        )
-
-      {:ok, found_token} =
-        OauthToken.find_or_create_for_scopes(
-          user.id,
-          oauth_client.id,
-          ["read", "write"],
-          %{"different" => "token"}
-        )
-
-      assert found_token.id == created_token.id
-      assert found_token.body == token_data
-    end
-
-    test "scopes are matched regardless of order", %{
-      user: user,
-      oauth_client: oauth_client,
-      token_data: token_data
-    } do
-      {:ok, created_token} =
-        OauthToken.find_or_create_for_scopes(
-          user.id,
-          oauth_client.id,
-          ["read", "write"],
-          token_data
-        )
-
-      {:ok, found_token} =
-        OauthToken.find_or_create_for_scopes(
-          user.id,
-          oauth_client.id,
-          ["write", "read"],
-          %{"different" => "token"}
-        )
-
-      assert found_token.id == created_token.id
-    end
-  end
-
-  describe "find_by_scopes/3" do
-    setup do
-      user = insert(:user)
-
-      # Create two clients with same client_id/secret
-      client_attrs = %{
-        name: "Shared Client",
-        client_id: "shared_client_id",
-        client_secret: "shared_client_secret",
-        authorization_endpoint: "https://example.com/auth",
-        token_endpoint: "https://example.com/token"
-      }
-
-      oauth_client1 = insert(:oauth_client, client_attrs)
-      oauth_client2 = insert(:oauth_client, client_attrs)
-
-      token_data = %{
-        "access_token" => "access_token_123",
-        "refresh_token" => "refresh_token_123",
-        "expires_in" => 3600,
-        "scope" => "read write"
-      }
-
-      {:ok, token} =
-        OauthToken.find_or_create_for_scopes(
-          user.id,
-          oauth_client1.id,
-          ["read", "write"],
-          token_data
-        )
-
-      {:ok,
-       user: user,
-       oauth_client1: oauth_client1,
-       oauth_client2: oauth_client2,
-       token: token}
-    end
-
-    test "finds token for same client by scopes", %{
-      user: user,
-      oauth_client1: client,
-      token: token
-    } do
-      found_token =
-        OauthToken.find_by_scopes(user.id, client.id, ["read", "write"])
-
-      assert found_token.id == token.id
-    end
-
-    test "finds token for different client with same client_id/secret", %{
-      user: user,
-      oauth_client2: client,
-      token: token
-    } do
-      found_token =
-        OauthToken.find_by_scopes(user.id, client.id, ["read", "write"])
-
-      assert found_token.id == token.id
-    end
-
-    test "scopes must match exactly", %{user: user, oauth_client1: client} do
-      found_token =
-        OauthToken.find_by_scopes(user.id, client.id, ["read", "write", "extra"])
-
-      assert found_token == nil
-    end
-
-    test "returns nil when no matching token exists", %{user: user} do
-      new_client = insert(:oauth_client)
-
-      found_token =
-        OauthToken.find_by_scopes(user.id, new_client.id, ["read", "write"])
-
-      assert found_token == nil
     end
   end
 
