@@ -98,7 +98,7 @@ jobs:
             - v3-plt-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum "mix.lock" }}
             - v3-plt-{{ arch }}-{{ checksum ".elixir_otp_version" }}
 
-      - run: chown -R lightning priv/plts
+      - run: chown -Rf lightning priv/plts
       - run: sudo -u lightning env MIX_ENV=test mix dialyzer --plt
       - save_cache:
           key: v3-plt-{{ arch }}-{{ checksum ".elixir_otp_version" }}-{{ checksum "mix.lock" }}
