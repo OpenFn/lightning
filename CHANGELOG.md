@@ -22,6 +22,9 @@ and this project adheres to
 
 ### Changed
 
+- Do not include `v` param in workflow links when it is latest
+  [#2941](https://github.com/OpenFn/lightning/issues/2941)
+
 ### Fixed
 
 ## [v2.10.16] - 2025-02-28
