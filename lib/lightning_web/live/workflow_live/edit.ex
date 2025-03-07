@@ -2223,8 +2223,19 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp assign_workflow(socket, workflow) do
     workflow = Lightning.Repo.preload(workflow, :project)
 
+    alloted_concurrency =
+      workflow.project_id
+      |> Workflows.list_project_workflows()
+      |> Enum.map(fn %{id: workflow_id, concurrency: concurrency} ->
+        if workflow_id == workflow.id, do: 0, else: concurrency
+      end)
+      |> Enum.sum()
+
     socket
-    |> assign(workflow: workflow, max_concurrency: workflow.project.concurrency)
+    |> assign(
+      workflow: workflow,
+      max_concurrency: workflow.project.concurrency - alloted_concurrency
+    )
     |> apply_params(socket.assigns.workflow_params, :workflow)
   end
 
