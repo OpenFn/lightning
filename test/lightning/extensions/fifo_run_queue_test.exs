@@ -85,28 +85,28 @@ defmodule Lightning.Extensions.FifoRunQueueTest do
 
       workflow1a = insert(:simple_workflow, project: project1, concurrency: 1)
       workflow1b = insert(:simple_workflow, project: project1, concurrency: 2)
-      _workflow2 = insert(:simple_workflow, project: project2)
+      workflow2 = insert(:simple_workflow, project: project2)
 
       [
         %{id: run1w1a_id},
         %{id: _run2w1a_id},
         %{id: run1w1b_id},
-        %{id: run2w1b_id}
-        # %{id: _run3w1b_id},
-        # %{id: run1w2_id},
-        # %{id: run2w2_id},
-        # %{id: run3w2_id}
+        %{id: run2w1b_id},
+        %{id: _run3w1b_id},
+        %{id: run1w2_id},
+        %{id: run2w2_id},
+        %{id: run3w2_id}
       ] =
         Enum.with_index(
           [
             workflow1a,
             workflow1a,
             workflow1b,
-            workflow1b
-            # workflow1b,
-            # workflow2,
-            # workflow2,
-            # workflow2
+            workflow1b,
+            workflow1b,
+            workflow2,
+            workflow2,
+            workflow2
           ],
           &fixture_for_workflow/2
         )
@@ -118,9 +118,9 @@ defmodule Lightning.Extensions.FifoRunQueueTest do
       {:ok, [%{id: ^run2w1b_id}]} = FifoRunQueue.claim(1)
 
       # workflow 2a has max concurrency of 1 runs
-      # {:ok, [%{id: ^run1w2_id}]} = FifoRunQueue.claim(1)
-      # {:ok, [%{id: ^run2w2_id}]} = FifoRunQueue.claim(1)
-      # {:ok, [%{id: ^run3w2_id}]} = FifoRunQueue.claim(1)
+      {:ok, [%{id: ^run1w2_id}]} = FifoRunQueue.claim(1)
+      {:ok, [%{id: ^run2w2_id}]} = FifoRunQueue.claim(1)
+      {:ok, [%{id: ^run3w2_id}]} = FifoRunQueue.claim(1)
 
       {:ok, []} = FifoRunQueue.claim(1)
     end
