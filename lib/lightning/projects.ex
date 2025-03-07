@@ -810,10 +810,18 @@ defmodule Lightning.Projects do
          } = project
        )
        when is_integer(period_days) do
+    latest_snasphot_ids_query =
+      from s in Snapshot,
+        join: w in assoc(s, :workflow),
+        where: s.lock_version == w.lock_version,
+        select: s.id
+
+    latest_snapshot_ids = Repo.all(latest_snasphot_ids_query)
+
     :ok =
       project
       |> project_workorders_query()
-      |> delete_workorders_history(1000, period_days)
+      |> delete_workorders_history(1000, latest_snapshot_ids, period_days)
 
     dataclips_query =
       from d in Dataclip,
@@ -841,6 +849,7 @@ defmodule Lightning.Projects do
   defp delete_workorders_history(
          project_workorders_query,
          batch_size,
+         latest_snapshot_ids \\ [],
          retention_period_days \\ nil
        ) do
     workorders_query =
@@ -903,10 +912,12 @@ defmodule Lightning.Projects do
         |> select([wo], wo.snapshot_id)
         |> Repo.all()
 
+      snapshots_to_remain = snapshot_ids_in_use ++ latest_snapshot_ids
+
       snapshots_to_delete =
         snapshot_ids_on_delete
         |> MapSet.new()
-        |> MapSet.difference(MapSet.new(snapshot_ids_in_use))
+        |> MapSet.difference(MapSet.new(snapshots_to_remain))
         |> MapSet.to_list()
 
       {_count, nil} =

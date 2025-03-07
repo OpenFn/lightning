@@ -27,6 +27,9 @@ and this project adheres to
 
 ### Fixed
 
+- Don't delete latest snapshot when deleting unused snaphots in workorders
+  [#2996](https://github.com/OpenFn/lightning/issues/2996)
+
 ## [v2.10.16] - 2025-02-28
 
 ### Added
