@@ -75,6 +75,8 @@ defmodule Lightning.Credentials.OauthToken do
 
   @doc """
   Creates a changeset for updating token data.
+  Only merges with existing token body if new_token is a map, otherwise uses new_token directly.
+  Preserves the refresh_token from the existing token.
   """
   def update_token_changeset(oauth_token, new_token) do
     scopes =
@@ -83,9 +85,23 @@ defmodule Lightning.Credentials.OauthToken do
         :error -> nil
       end
 
-    cast(oauth_token, %{body: new_token, scopes: scopes}, [:body, :scopes])
+    body = ensure_refresh_token(oauth_token, new_token)
+
+    oauth_token
+    |> cast(%{body: body, scopes: scopes}, [:body, :scopes])
     |> validate_required([:body, :scopes])
     |> validate_oauth_body()
+  end
+
+  defp ensure_refresh_token(oauth_token, new_token) when is_map(new_token) do
+    Map.merge(
+      %{"refresh_token" => oauth_token.body["refresh_token"]},
+      new_token
+    )
+  end
+
+  defp ensure_refresh_token(_oauth_token, new_token) do
+    new_token
   end
 
   @doc """

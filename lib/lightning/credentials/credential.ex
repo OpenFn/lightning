@@ -78,7 +78,7 @@ defmodule Lightning.Credentials.Credential do
         scopes =
           case OauthToken.extract_scopes(token_data) do
             {:ok, extracted_scopes} -> extracted_scopes
-            :error -> []
+            :error -> nil
           end
 
         case Credentials.validate_oauth_token_data(

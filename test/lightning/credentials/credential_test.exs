@@ -13,17 +13,18 @@ defmodule Lightning.Credentials.CredentialTest do
     end
 
     test "oauth credentials require access_token, refresh_token, and expires_in or expires_at to be valid" do
-      assert_invalid_oauth_credential(%{})
+      assert_invalid_oauth_credential(%{}, "Missing required OAuth field: scope")
 
       assert_invalid_oauth_credential(
-        %{"access_token" => "access_token_123"},
+        %{"access_token" => "access_token_123", "scope" => "read write"},
         "Missing refresh_token for new OAuth connection"
       )
 
       assert_invalid_oauth_credential(
         %{
           "access_token" => "access_token_123",
-          "refresh_token" => "refresh_token_123"
+          "refresh_token" => "refresh_token_123",
+          "scope" => "read write"
         },
         "Missing expiration field: either expires_in or expires_at is required"
       )
@@ -31,12 +32,14 @@ defmodule Lightning.Credentials.CredentialTest do
       refute_invalid_oauth_credential(%{
         "access_token" => "access_token_123",
         "refresh_token" => "refresh_token_123",
+        "scope" => "read write",
         "expires_at" => 3245
       })
 
       refute_invalid_oauth_credential(%{
         "access_token" => "access_token_123",
         "refresh_token" => "refresh_token_123",
+        "scope" => "read write",
         "expires_in" => 3245
       })
     end
@@ -68,10 +71,7 @@ defmodule Lightning.Credentials.CredentialTest do
     end
   end
 
-  defp assert_invalid_oauth_credential(
-         body,
-         message \\ "Missing required OAuth field: access_token"
-       ) do
+  defp assert_invalid_oauth_credential(body, message) do
     errors =
       Credentials.change_credential(%Credential{}, %{
         name: "oauth credential",

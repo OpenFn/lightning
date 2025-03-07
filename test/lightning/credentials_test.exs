@@ -1247,11 +1247,13 @@ defmodule Lightning.CredentialsTest do
         "body" => %{"key" => "value"},
         "oauth_token" => %{
           "access_token" => "test_access_token",
-          "expires_in" => 3600
+          "refresh_token" => "test_refresh_token",
+          "expires_in" => 3600,
+          "scopex" => "read write"
         }
       }
 
-      assert {:error, "Could not extract scopes from OAuth token"} =
+      assert {:error, "Missing required OAuth field: scope"} =
                Credentials.create_credential(attrs)
     end
 
@@ -1511,7 +1513,7 @@ defmodule Lightning.CredentialsTest do
                  ["read"]
                )
 
-      assert {:ok, ^token_data} =
+      assert {:error, "Missing required OAuth field: scope"} =
                Credentials.validate_oauth_token_data(
                  token_data,
                  "user_id",

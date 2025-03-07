@@ -187,10 +187,19 @@ defmodule Lightning.Credentials do
          "body" => body,
          "oauth_token" => token
        }) do
-    Multi.new()
-    |> Multi.run(:oauth_token, fn _repo, _changes ->
-      create_oauth_token(user_id, client_id, token)
-    end)
+    base_multi =
+      Multi.new()
+      |> Multi.run(:scopes, fn _repo, _changes ->
+        case OauthToken.extract_scopes(token) do
+          {:ok, scopes} -> {:ok, scopes}
+          :error -> {:error, "Missing required OAuth field: scope"}
+        end
+      end)
+
+    token_multi = build_token_multi(user_id, client_id, token)
+
+    base_multi
+    |> Multi.append(token_multi)
     |> Multi.insert(:credential, fn %{oauth_token: fresh_token} ->
       changeset
       |> Ecto.Changeset.put_change(:oauth_token_id, fresh_token.id)
@@ -198,18 +207,44 @@ defmodule Lightning.Credentials do
     end)
   end
 
-  defp create_oauth_token(user_id, client_id, token_data) do
-    case OauthToken.extract_scopes(token_data) do
-      {:ok, scopes} ->
-        find_or_create_oauth_token(
-          user_id,
-          client_id,
-          scopes,
-          token_data
-        )
+  defp build_token_multi(user_id, client_id, token) do
+    if token["refresh_token"] do
+      Multi.new()
+      |> Multi.insert(:oauth_token, fn %{scopes: scopes} ->
+        OauthToken.changeset(%{
+          user_id: user_id,
+          oauth_client_id: client_id,
+          scopes: scopes,
+          body: token
+        })
+      end)
+    else
+      Multi.new()
+      |> Multi.run(:token_changeset, fn _repo, %{scopes: scopes} ->
+        handle_missing_refresh_token(user_id, client_id, scopes, token)
+      end)
+      |> Multi.insert(:oauth_token, fn %{token_changeset: token_changeset} ->
+        token_changeset
+      end)
+    end
+  end
 
-      :error ->
-        {:error, "Could not extract scopes from OAuth token"}
+  defp handle_missing_refresh_token(user_id, client_id, scopes, token) do
+    case find_oauth_token_by_scopes(user_id, client_id, scopes) do
+      nil ->
+        return_error("Missing required OAuth field: refresh_token")
+
+      oauth_token ->
+        refresh_token = oauth_token.body["refresh_token"]
+        updated_token = Map.put(token, "refresh_token", refresh_token)
+
+        {:ok,
+         OauthToken.changeset(%{
+           user_id: user_id,
+           oauth_client_id: client_id,
+           scopes: scopes,
+           body: updated_token
+         })}
     end
   end
 
@@ -232,7 +267,6 @@ defmodule Lightning.Credentials do
           {:ok, Credential.t()} | {:error, any()}
   def update_credential(%Credential{} = credential, attrs) do
     attrs = normalize_keys(attrs)
-
     changeset = change_credential(credential, attrs)
 
     build_update_multi(credential, changeset, attrs)
@@ -1190,6 +1224,17 @@ defmodule Lightning.Credentials do
   end
 
   def validate_oauth_token_data(
+        _token_data,
+        _user_id,
+        _oauth_client_id,
+        scopes,
+        _is_update
+      )
+      when is_nil(scopes) do
+    return_error("Missing required OAuth field: scope")
+  end
+
+  def validate_oauth_token_data(
         token_data,
         user_id,
         oauth_client_id,
@@ -1242,7 +1287,7 @@ defmodule Lightning.Credentials do
          scopes,
          is_update
        ) do
-    has_refresh_token = Map.has_key?(normalized_data, "refresh_token")
+    has_refresh_token? = Map.has_key?(normalized_data, "refresh_token")
 
     existing_token_exists? =
       token_exists?(user_id, oauth_client_id, scopes)
@@ -1254,7 +1299,7 @@ defmodule Lightning.Credentials do
       existing_token_exists? ->
         validate_expiration_fields(normalized_data)
 
-      has_refresh_token ->
+      has_refresh_token? ->
         validate_expiration_fields(normalized_data)
 
       true ->
@@ -1289,26 +1334,10 @@ defmodule Lightning.Credentials do
     Enum.any?(expires_fields, &Map.has_key?(token_data, &1))
   end
 
-  defp find_or_create_oauth_token(user_id, oauth_client_id, scopes, token)
-       when is_list(scopes) do
-    case find_oauth_token_by_scopes(user_id, oauth_client_id, scopes) do
-      nil ->
-        OauthToken.changeset(%{
-          user_id: user_id,
-          oauth_client_id: oauth_client_id,
-          scopes: scopes,
-          body: token
-        })
-        |> Lightning.Repo.insert()
-
-      existing ->
-        {:ok, existing}
-    end
-  end
-
   defp find_oauth_token_by_scopes(user_id, oauth_client_id, scopes)
        when is_list(scopes) do
-    sorted_scopes = Enum.sort(scopes)
+    incoming_scopes = MapSet.new(scopes)
+    incoming_size = MapSet.size(incoming_scopes)
 
     Ecto.Query.from(t in OauthToken,
       join: token_client in OauthClient,
@@ -1321,9 +1350,26 @@ defmodule Lightning.Credentials do
           token_client.client_secret == reference_client.client_secret
     )
     |> Lightning.Repo.all()
-    |> Enum.find(fn token ->
-      sorted_token_scopes = Enum.sort(token.scopes)
-      Enum.all?(sorted_scopes, &Enum.member?(sorted_token_scopes, &1))
+    |> Enum.filter(fn token ->
+      existing_scopes = MapSet.new(token.scopes)
+      MapSet.intersection(existing_scopes, incoming_scopes) |> MapSet.size() > 0
     end)
+    |> Enum.max_by(
+      fn token ->
+        existing_scopes = MapSet.new(token.scopes)
+
+        common_count =
+          MapSet.intersection(existing_scopes, incoming_scopes) |> MapSet.size()
+
+        extra_count =
+          MapSet.difference(existing_scopes, incoming_scopes) |> MapSet.size()
+
+        exact_match? = common_count == incoming_size && extra_count == 0
+        timestamp = DateTime.to_unix(token.updated_at)
+
+        {if(exact_match?, do: 1, else: 0), common_count, -extra_count, timestamp}
+      end,
+      fn -> nil end
+    )
   end
 end
