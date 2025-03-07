@@ -72,7 +72,6 @@ defmodule Lightning.Extensions.FifoRunQueueTest do
       assert {:ok, []} = FifoRunQueue.claim(1)
     end
 
-
     test "is limited by workflow concurrency" do
       [id1, id2] =
         Enum.map(1..2, fn _i -> Ecto.UUID.generate() end)
@@ -112,18 +111,18 @@ defmodule Lightning.Extensions.FifoRunQueueTest do
           &fixture_for_workflow/2
         )
 
-        {:ok, [%{id: ^run1w1a_id}]} = FifoRunQueue.claim(1)
+      {:ok, [%{id: ^run1w1a_id}]} = FifoRunQueue.claim(1)
 
-        # workflow 1a has max concurrency of 1 runs
-        {:ok, [%{id: ^run1w1b_id}]} = FifoRunQueue.claim(1)
-        {:ok, [%{id: ^run2w1b_id}]} = FifoRunQueue.claim(1)
+      # workflow 1a has max concurrency of 1 runs
+      {:ok, [%{id: ^run1w1b_id}]} = FifoRunQueue.claim(1)
+      {:ok, [%{id: ^run2w1b_id}]} = FifoRunQueue.claim(1)
 
-        # workflow 2a has max concurrency of 1 runs
-        {:ok, [%{id: ^run1w2_id}]} = FifoRunQueue.claim(1)
-        {:ok, [%{id: ^run2w2_id}]} = FifoRunQueue.claim(1)
-        {:ok, [%{id: ^run3w2_id}]} = FifoRunQueue.claim(1)
+      # workflow 2a has max concurrency of 1 runs
+      {:ok, [%{id: ^run1w2_id}]} = FifoRunQueue.claim(1)
+      {:ok, [%{id: ^run2w2_id}]} = FifoRunQueue.claim(1)
+      {:ok, [%{id: ^run3w2_id}]} = FifoRunQueue.claim(1)
 
-        {:ok, []} = FifoRunQueue.claim(1)
+      {:ok, []} = FifoRunQueue.claim(1)
     end
 
     test "is limited by project concurrency" do
@@ -169,18 +168,18 @@ defmodule Lightning.Extensions.FifoRunQueueTest do
           &fixture_for_workflow/2
         )
 
-        {:ok, [%{id: ^run1p1_id}]} = FifoRunQueue.claim(1)
+      {:ok, [%{id: ^run1p1_id}]} = FifoRunQueue.claim(1)
 
-        # project 1 has max concurrency of 1 runs
-        {:ok, [%{id: ^run1p2_id}]} = FifoRunQueue.claim(1)
-        {:ok, [%{id: ^run2p2_id}]} = FifoRunQueue.claim(1)
+      # project 1 has max concurrency of 1 runs
+      {:ok, [%{id: ^run1p2_id}]} = FifoRunQueue.claim(1)
+      {:ok, [%{id: ^run2p2_id}]} = FifoRunQueue.claim(1)
 
-        # project 2 has max concurrency of 2 runs
-        {:ok, [%{id: ^run1p3_id}]} = FifoRunQueue.claim(1)
-        {:ok, [%{id: ^run2p3_id}]} = FifoRunQueue.claim(1)
-        {:ok, [%{id: ^run3p3_id}]} = FifoRunQueue.claim(1)
+      # project 2 has max concurrency of 2 runs
+      {:ok, [%{id: ^run1p3_id}]} = FifoRunQueue.claim(1)
+      {:ok, [%{id: ^run2p3_id}]} = FifoRunQueue.claim(1)
+      {:ok, [%{id: ^run3p3_id}]} = FifoRunQueue.claim(1)
 
-        {:ok, []} = FifoRunQueue.claim(1)
+      {:ok, []} = FifoRunQueue.claim(1)
     end
 
     test "can claim multiple runs up to project concurrency limit" do
@@ -226,13 +225,13 @@ defmodule Lightning.Extensions.FifoRunQueueTest do
           &fixture_for_workflow/2
         )
 
-        {:ok, [%{id: ^run1p1_id}, %{id: ^run1p2_id}, %{id: ^run2p2_id}]} =
-          FifoRunQueue.claim(3)
+      {:ok, [%{id: ^run1p1_id}, %{id: ^run1p2_id}, %{id: ^run2p2_id}]} =
+        FifoRunQueue.claim(3)
 
-        {:ok, [%{id: ^run1p3_id}, %{id: ^run2p3_id}, %{id: ^run3p3_id}]} =
-          FifoRunQueue.claim(3)
+      {:ok, [%{id: ^run1p3_id}, %{id: ^run2p3_id}, %{id: ^run3p3_id}]} =
+        FifoRunQueue.claim(3)
 
-        {:ok, []} = FifoRunQueue.claim(1)
+      {:ok, []} = FifoRunQueue.claim(1)
     end
 
     # defp fixture_for_workflow({workflow, priority}, index) do

@@ -176,11 +176,12 @@
             </div>
             <div class="grid grid-cols md:col-span-2">
               <div class="flex items-center gap-x-4 justify-between">
-                <.input
-                  type="integer-toggle"
+                <.live_component
+                  module={@concurrency_input_component}
+                  id="concucurrency-input-component"
                   field={f[:concurrency]}
-                  disabled={!@can_edit_project}
-                  label=""
+                  project={@project}
+                  disabled={not @can_edit_project}
                 />
                 <span class="flex grow flex-col">
                   <.label>Disable parallel run execution</.label>

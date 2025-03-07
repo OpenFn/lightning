@@ -42,6 +42,10 @@ config :lightning, Lightning.Extensions.Routing,
   session_opts: [on_mount: LightningWeb.InitAssigns],
   routes: [
     {"/projects", LightningWeb.DashboardLive.Index, :index, []},
+    {"/projects/:project_id/settings", LightningWeb.ProjectLive.Settings, :index,
+     metadata: %{
+       concurrency_input: LightningWeb.ProjectLive.ConcurrencyInputComponent
+     }},
     {"/profile", LightningWeb.ProfileLive.Edit, :edit,
      metadata: %{delete_modal: LightningWeb.Components.UserDeletionModal}},
     {"/settings/users", LightningWeb.UserLive.Index, :index, []}

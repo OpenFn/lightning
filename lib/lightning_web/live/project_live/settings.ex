@@ -219,10 +219,20 @@ defmodule LightningWeb.ProjectLive.Settings do
   defp apply_action(socket, :index, _params) do
     project_users = Projects.get_project_users!(socket.assigns.project.id)
 
+    concurrency_input_component =
+      socket.router
+      |> Phoenix.Router.route_info(
+        "GET",
+        ~p"/projects/:project_id/settings",
+        nil
+      )
+      |> Map.get(:concurrency_input)
+
     socket
     |> assign(
       page_title: "Project settings",
       project_users: project_users,
+      concurrency_input_component: concurrency_input_component,
       show_collaborators_modal: false,
       show_invite_collaborators_modal: false
     )
