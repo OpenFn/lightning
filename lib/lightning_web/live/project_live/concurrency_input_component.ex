@@ -13,7 +13,7 @@ defmodule LightningWeb.ProjectLive.ConcurrencyInputComponent do
         field={@field}
         disabled={@disabled}
         label=""
-        max_value={@max_value}
+        max={@max_value}
       />
     </div>
     """

@@ -198,8 +198,6 @@ defmodule LightningWeb.Components.NewInputs do
 
   attr :value_key, :any, default: nil
 
-  attr :max_value, :integer, default: nil
-
   slot :inner_block
 
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
@@ -390,7 +388,7 @@ defmodule LightningWeb.Components.NewInputs do
       |> assign_new(:values, fn ->
         # TODO: placeholder for alternative values, like "0" and "1",
         # or "false" and "true" when this might replace the other toggle component
-        [assigns[:max_value], "1"]
+        [get_in(assigns, [:rest, :max]), "1"]
         |> Enum.map(fn v ->
           Phoenix.HTML.html_escape(v) |> Phoenix.HTML.safe_to_string()
         end)
