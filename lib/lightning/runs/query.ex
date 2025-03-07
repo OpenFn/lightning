@@ -77,29 +77,29 @@ defmodule Lightning.Runs.Query do
       join: w in assoc(wo, :workflow),
       join: p in assoc(w, :project)
     )
-    |> windows([r, _wo, w, p],
-      row_number: [
-        partition_by:
-          fragment(
-            "CASE WHEN ? IS NOT NULL THEN ? ELSE ? END",
-            w.concurrency,
-            w.id,
-            p.id
-          ),
-        order_by: [asc: r.inserted_at]
-      ]
-    )
     |> select([r, _wo, w, p], %{
       id: r.id,
       state: r.state,
       # need to check what performance implications are of using row_number
       # does the subsequent query's limit clause get applied to the row_number
       # calculated here?
-      row_number: row_number() |> over(:row_number),
+      workflow_row_number:
+        row_number() |> over(partition_by: w.id, order_by: r.inserted_at),
+      project_row_number:
+        row_number() |> over(partition_by: p.id, order_by: r.inserted_at),
       project_id: w.project_id,
-      concurrency: coalesce(w.concurrency, p.concurrency),
+      workflow_concurrency: w.concurrency,
+      project_concurrency: p.concurrency,
       inserted_at: r.inserted_at
     })
+    |> tap(fn query ->
+      query =
+        query
+        |> order_by([r], r.inserted_at)
+
+      IO.inspect("NEW QUERY")
+      IO.inspect(Lightning.Repo.all(query))
+    end)
   end
 
   def in_progress_window(:by_project) do
@@ -112,10 +112,10 @@ defmodule Lightning.Runs.Query do
     |> select([r, _wo, _w, p], %{
       id: r.id,
       state: r.state,
-      row_number:
+      project_row_number:
         row_number() |> over(partition_by: p.id, order_by: [asc: r.inserted_at]),
       project_id: p.id,
-      concurrency: p.concurrency,
+      project_concurrency: p.concurrency,
       inserted_at: r.inserted_at
     })
   end
@@ -146,7 +146,10 @@ defmodule Lightning.Runs.Query do
     |> where(
       [r, ipw],
       r.state == :available and
-        (is_nil(ipw.concurrency) or ipw.row_number <= ipw.concurrency)
+        (is_nil(ipw.project_concurrency) or
+           ipw.project_row_number <= ipw.project_concurrency) and
+        (is_nil(ipw.workflow_concurrency) or
+           ipw.workflow_row_number <= ipw.workflow_concurrency)
     )
     |> order_by([r], asc: r.inserted_at)
   end
