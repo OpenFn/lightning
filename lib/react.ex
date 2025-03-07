@@ -2,10 +2,46 @@ defmodule React do
   @moduledoc """
   A way to use React with **Phoenix LiveView**.
   """
-
   use Phoenix.Component
 
   alias React.IOHelper
+
+  # TODO: instead of statically using `assets/js/react`, we could have a
+  # have a `__using__` macro that takes a path to the React components.
+  # And then use that module in the component modules.
+  #
+  # defmodule LightningWeb.React do
+  #   use React, path: "assets/js/react"
+  # end
+  #
+  # defmodule MyComponent do
+  #   use LightningWeb.React
+  #   jsx "components/MyComponent.tsx"
+  # end
+  def get_entry_points do
+    app = Mix.Project.config()[:app]
+
+    Application.spec(app, :modules)
+    |> Enum.flat_map(fn module ->
+      module.__info__(:attributes)
+      |> Keyword.get_values(:external_resource)
+      |> Enum.flat_map(fn files ->
+        case files do
+          files when is_list(files) ->
+            files
+            |> Enum.filter(fn file ->
+              String.starts_with?(
+                file,
+                Path.join(File.cwd!(), "assets/js/react")
+              )
+            end)
+
+          _ ->
+            []
+        end
+      end)
+    end)
+  end
 
   @doc """
   Associates a JSX file with a component.
@@ -110,8 +146,10 @@ defmodule React do
   end
 
   def component_id(name) do
-    # a small trick to avoid collisions of IDs but keep them consistent across dead and live render
-    # id(name) is called only once during the whole LiveView lifecycle because it's not using any assigns
+    # a small trick to avoid collisions of IDs but keep them consistent
+    # across dead and live renders
+    # id(name) is called only once during the whole LiveView lifecycle
+    # because it's not using any assigns
     number = Process.get(:react_counter, 1)
     Process.put(:react_counter, number + 1)
     "#{name}-#{number}"
