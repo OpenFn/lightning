@@ -438,6 +438,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               can_edit_run_settings={@can_edit_run_settings}
               project_id={@workflow.project_id}
               project_concurrency_disabled={@workflow.project.concurrency == 1}
+              max_concurrency={@max_concurrency}
               form={@workflow_form}
             />
           </.panel>
@@ -1163,9 +1164,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
        admin_contacts: Projects.list_project_admin_emails(assigns.project.id),
        show_github_sync_modal: false,
        project_repo_connection:
-         VersionControl.get_repo_connection_for_project(assigns.project.id)
+         VersionControl.get_repo_connection_for_project(assigns.project.id),
+       max_concurrency: assigns.project.concurrency
      )
-     |> assign(initial_presence_summary(socket.assigns.current_user))}
+     |> assign(initial_presence_summary(assigns.current_user))}
   end
 
   @impl true
@@ -2219,8 +2221,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp assign_workflow(socket, workflow) do
+    workflow = Lightning.Repo.preload(workflow, :project)
+
     socket
-    |> assign(workflow: Lightning.Repo.preload(workflow, :project))
+    |> assign(workflow: workflow, max_concurrency: workflow.project.concurrency)
     |> apply_params(socket.assigns.workflow_params, :workflow)
   end
 
