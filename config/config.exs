@@ -87,6 +87,11 @@ config :lightning, :oauth_clients,
   ]
 
 # Configure esbuild (the version is required)
+# TODO: work out how to _NOT_ have this set of entry points try and build
+# monaco-editor, since we already have a separate esbuild task for that.
+# Note the `--external:path` flag, this is to work around a recent change
+# in esbuild causing it to fail when trying to bundle up the @typescript/vfs module
+# but only when minifying.
 config :esbuild,
   version: "0.25.0",
   default: [
@@ -103,7 +108,11 @@ config :esbuild,
          --jsx=automatic
          --tsconfig=tsconfig.browser.json
          --target=es2020
-         --outdir=../priv/static/assets --external:/fonts/* --external:/images/*)
+         --outdir=../priv/static/assets
+         --external:path
+         --external:/fonts/*
+         --external:/images/*
+        )
       |> then(fn args ->
         case config_env() do
           "prod" -> args

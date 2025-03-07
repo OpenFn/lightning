@@ -3,7 +3,7 @@ import ResizeObserver from 'rc-resize-observer';
 import Editor, { type Monaco, loader } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 
-loader.config({ paths: { vs: '/assets/monaco-editor/vs' } });
+loader.config({ paths: { vs: import.meta.resolve('./monaco-editor/vs') } });
 
 export function setTheme(monaco: Monaco) {
   monaco.editor.defineTheme('default', {
