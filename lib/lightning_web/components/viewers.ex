@@ -69,10 +69,10 @@ defmodule LightningWeb.Components.Viewers do
         </span>
       </div>
     <% else %>
-      <div class="flex flex-col grow rounded-md bg-slate-700 font-mono text-gray-200">
+      <div class="flex flex-col grow rounded-md bg-slate-700 font-mono text-gray-200 @container">
         <div class="border-b border-slate-500">
-          <div class="mx-auto px-4">
-            <div class="flex h-8 flex-row-reverse items-center">
+          <div class="mx-auto px-2">
+            <div class="flex h-6 @md:h-8 flex-row-reverse items-center">
               <.log_level_filter
                 :if={@current_user}
                 id={"#{@id}-filter"}
@@ -94,7 +94,10 @@ defmodule LightningWeb.Components.Viewers do
           data-viewer-el={"#{@id}-viewer"}
         >
           <div class="relative grow">
-            <div id={"#{@id}-nothing-yet"} class="relative p-12 text-center">
+            <div
+              id={"#{@id}-nothing-yet"}
+              class="relative text-xs @md:text-base p-12 text-center bg-slate-700 font-mono text-gray-200"
+            >
               <.text_ping_loader>
                 Nothing yet
               </.text_ping_loader>
@@ -127,17 +130,18 @@ defmodule LightningWeb.Components.Viewers do
       <div class="relative">
         <button
           type="button"
-          class="grid w-full cursor-pointer grid-cols-1 bg-inherit text-left sm:text-sm/6 hover:bg-slate-600 border-b border-gray-200"
+          class="grid w-full cursor-pointer grid-cols-1 bg-inherit text-left text-xs/4 @md:text-sm/6 text-inherit opacity-75 hover:opacity-100"
           aria-haspopup="listbox"
           aria-expanded="true"
           phx-click={show_dropdown("#{@id}-dropdown")}
         >
           <span class="col-start-1 row-start-1 truncate pr-6">
-            Level: <%= @selected_level %>
+            <.icon name="hero-adjustments-vertical" class="size-4 @md:size-6" />
+            <%= @selected_level %>
           </span>
           <.icon
             name="hero-chevron-down"
-            class="col-start-1 row-start-1 size-5 self-center justify-self-end"
+            class="col-start-1 row-start-1 size-4 self-center justify-self-end"
             aria-hidden="true"
             data-slot="icon"
           />
@@ -258,7 +262,7 @@ defmodule LightningWeb.Components.Viewers do
             is_nil(@dataclip)
         }
         id={"#{@id}-nothing-yet"}
-        class="relative rounded-md p-12 text-center bg-slate-700 font-mono text-gray-200"
+        class="relative rounded-md text-xs @md:text-base p-12 text-center bg-slate-700 font-mono text-gray-200"
       >
         <.text_ping_loader>
           Nothing yet
