@@ -1,9 +1,43 @@
 import { useRef, useCallback } from 'react';
 import ResizeObserver from 'rc-resize-observer';
-import Editor, { type Monaco, loader } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
+import Editor, { loader, type Monaco } from '@monaco-editor/react';
+import * as monaco from 'monaco-editor';
 
-loader.config({ paths: { vs: import.meta.resolve('./monaco-editor/vs') } });
+// Configure Monaco with ESM workers
+// This needs to be outside of the component to ensure it's only set once
+if (typeof window !== 'undefined') {
+  // @ts-ignore - Monaco global configuration
+  window.MonacoEnvironment = {
+    getWorker(_moduleId: string, label: string) {
+      switch (label) {
+        case 'json':
+          return new Worker(new URL('json.worker.js', import.meta.url), {
+            type: 'module',
+          });
+        case 'css':
+          return new Worker(new URL('css.worker.js', import.meta.url), {
+            type: 'module',
+          });
+        case 'html':
+          return new Worker(new URL('html.worker.js', import.meta.url), {
+            type: 'module',
+          });
+        case 'typescript':
+        case 'javascript':
+          return new Worker(new URL('typescript.worker.js', import.meta.url), {
+            type: 'module',
+          });
+        default:
+          return new Worker(new URL('editor.worker.js', import.meta.url), {
+            type: 'module',
+          });
+      }
+    },
+  };
+}
+
+loader.config({ monaco });
 
 export function setTheme(monaco: Monaco) {
   monaco.editor.defineTheme('default', {
@@ -36,7 +70,7 @@ export const MonacoEditor = ({
   const handleOnMount = useCallback((editor: any, monaco: Monaco) => {
     monacoRef.current = monaco;
     editorRef.current = editor;
-    if (!props.options.enableCommandPalette) {
+    if (!props['options']?.enableCommandPalette) {
       const ctxKey = editor.createContextKey('command-palette-override', true);
 
       editor.addCommand(
