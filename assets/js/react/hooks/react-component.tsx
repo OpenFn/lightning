@@ -9,7 +9,6 @@ import {
   isReactContainerElement,
   isReactHookedElement,
   lazyLoadComponent,
-  renderSlots,
   replaceEqualDeep,
   withProps,
 } from '#/react/lib';
@@ -146,13 +145,9 @@ export const ReactComponent = {
       this.errorMsg('No content in <script> tag!')
     );
 
-    const props = renderSlots({
-      // TODO: Wrap `JSON.parse` in a try/catch, or just let it throw?
-      // If the JSON is malformed, it'll throw a [`SyntaxError`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/JSON_bad_parse)
-      props: JSON.parse(this.el.textContent) as object,
-      view: this.view,
-      cID: this.view.componentID(this.el),
-    });
+    // TODO: Wrap `JSON.parse` in a try/catch, or just let it throw?
+    // If the JSON is malformed, it'll throw a [`SyntaxError`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/JSON_bad_parse)
+    const props = JSON.parse(this.el.textContent) as object;
 
     invariant(
       typeof props === 'object',
