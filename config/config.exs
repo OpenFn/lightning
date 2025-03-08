@@ -99,6 +99,11 @@ config :esbuild,
       ~w(js/app.js
          js/storybook.js
          js/editor/Editor.tsx
+         editor.worker=monaco-editor/esm/vs/editor/editor.worker.js
+         json.worker=monaco-editor/esm/vs/language/json/json.worker.js
+         css.worker=monaco-editor/esm/vs/language/css/css.worker.js
+         html.worker=monaco-editor/esm/vs/language/html/html.worker.js
+         typescript.worker=monaco-editor/esm/vs/language/typescript/ts.worker.js
          fonts/inter.css
          fonts/fira-code.css
          --loader:.woff2=file
@@ -138,24 +143,6 @@ config :esbuild,
       |> then(fn args ->
         case config_env() do
           "prod" -> args ++ ["--minify"]
-          _ -> args ++ ["--jsx-dev"]
-        end
-      end),
-    cd: Path.expand("../assets", __DIR__),
-    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
-  ],
-  monaco: [
-    args:
-      ~w(
-         #{Path.expand("../assets/node_modules/monaco-editor/min/vs/**/*.*", __DIR__) |> Path.wildcard() |> Enum.join(" ")}
-         --loader:.ttf=copy
-         --jsx=automatic
-         --tsconfig=tsconfig.browser.json
-         --target=es2020
-         --outdir=../priv/static/assets/monaco-editor/vs)
-      |> then(fn args ->
-        case config_env() do
-          "prod" -> args
           _ -> args ++ ["--jsx-dev"]
         end
       end),

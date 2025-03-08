@@ -1,7 +1,7 @@
 @import 'tailwindcss/base';
 @import 'tailwindcss/components';
 @import 'tailwindcss/utilities';
-@import './monaco-style-overrides.css';
+@import '../js/monaco/styles.css';
 @import 'reactflow/dist/style.css';
 @import '../../deps/petal_components/assets/default.css';
 /* This file is for your main application CSS */
