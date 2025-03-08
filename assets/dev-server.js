@@ -14,6 +14,10 @@ const ctx = await esbuild.context({
   target: ['es2020'],
   tsconfig: 'tsconfig.browser.json',
   jsx: 'automatic',
+  loader: {
+    '.woff2': 'file',
+    '.ttf': 'copy',
+  },
   plugins: [
     postcss(),
     copy({
