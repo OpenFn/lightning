@@ -11,7 +11,7 @@ import test from 'ava';
 //   FlowElkNode,
 //   FlowNodeEdges,
 // } from '../js/workflow-diagram-old/src/layout/types';
-import { getFixture } from './helpers';
+import { getFixture } from './helpers.js';
 
 test.skip('toElkNode should convert a project space to a workflow', async t => {
   // const projectSpace = await getFixture<ProjectSpace>(

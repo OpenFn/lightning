@@ -1,0 +1,31 @@
+{
+  "extends": ["@tsconfig/strictest/tsconfig.json", "./tsconfig.base.json"],
+  "compilerOptions": {
+    "composite": true,
+    "target": "es2020",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["es2020", "dom", "dom.iterable"],
+    "jsx": "react-jsx",
+    "rootDir": "../",
+    "paths": {
+      "#/*": ["./js/*"],
+      "phoenix_live_view": [
+        "./node_modules/@types/phoenix_live_view/index.d.ts",
+        "../deps/phoenix_live_view"
+      ],
+      "phoenix_live_view/*": [
+        "../deps/phoenix_live_view/assets/js/phoenix_live_view/*"
+      ],
+      "morphdom": ["./node_modules/morphdom"]
+    }
+  },
+  "include": [
+    "js/**/*",
+    "vendor/**/*",
+    "dev-server/**/*",
+    "*.d.ts",
+    "../deps/phoenix_live_view/assets/js/phoenix_live_view/**/*"
+  ],
+  "exclude": ["node_modules/**"]
+}

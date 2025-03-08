@@ -1,7 +1,7 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
-import type { EditorProps as MonacoProps } from '@monaco-editor/react/lib/types';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import type { EditorProps as MonacoProps } from '@monaco-editor/react';
 
-import { MonacoEditor, Monaco } from '../monaco';
+import { MonacoEditor, type Monaco } from '../monaco';
 import { fetchDTSListing, fetchFile } from '@openfn/describe-package';
 import createCompletionProvider from './magic-completion';
 import { initiateSaveAndRun } from '../common';

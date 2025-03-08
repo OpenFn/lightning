@@ -1,8 +1,7 @@
-import React, { FC } from 'react';
-import { BezierEdge, EdgeProps, EdgeLabelRenderer } from 'reactflow';
+import { BezierEdge, type EdgeProps, EdgeLabelRenderer } from 'reactflow';
 import { edgeLabelStyles } from '../styles';
 
-const CustomEdge: FC<EdgeProps> = props => {
+const CustomEdge: React.FC<EdgeProps> = props => {
   const { sourceX, sourceY, targetX, targetY, selected } = props;
   const { label, ...stepEdgeProps } = props;
 

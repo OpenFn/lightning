@@ -1,4 +1,3 @@
-import React from 'react';
 import mapChildren from './map-children';
 import type { ModelNode } from './Model'
 

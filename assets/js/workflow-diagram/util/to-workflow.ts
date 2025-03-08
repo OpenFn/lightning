@@ -1,4 +1,4 @@
-import { Lightning, Flow } from '../types';
+import type { Lightning, Flow } from '../types';
 
 // This converts an internal react flow model back to a Lighting representation
 // Used for diffing when something changes

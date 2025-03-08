@@ -1,6 +1,3 @@
-import React from 'react';
-
-
 export const lockClosedIcon = (
   <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
     <g filter="url(#filter0_dd_365_7433)">

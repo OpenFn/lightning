@@ -1,13 +1,13 @@
 // Hook for Workflow Editor Component
 import { DEFAULT_TEXT } from '../editor/Editor';
-import { PhoenixHook } from '../hooks/PhoenixHook';
-import { Lightning } from '../workflow-diagram/types';
+import type { PhoenixHook } from '../hooks/PhoenixHook';
+import type { Lightning } from '../workflow-diagram/types';
 import { randomUUID } from '../common';
 import type { mount } from './component';
 import {
-  Patch,
-  PendingAction,
-  WorkflowProps,
+  type Patch,
+  type PendingAction,
+  type WorkflowProps,
   createWorkflowStore,
 } from './store';
 

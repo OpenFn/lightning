@@ -1,20 +1,8 @@
 {
-  "compilerOptions": {
-    "target": "ES6",
-    "module": "NodeNext",
-    "moduleResolution": "Node16",
-    "rootDir": "../",
-    "lib": ["dom", "ES2023"],
-    "jsx": "react",
-    "strict": true,
-    "esModuleInterop": true,
-    "allowJs": true,
-    "checkJs": true,
-    "resolveJsonModule": true,
-    "skipLibCheck": true,
-    "noEmit": true,
-    "forceConsistentCasingInFileNames": true
-  },
-  "include": ["js/**/*"],
-  "exclude": ["node_modules"]
+  "include": [],
+  "references": [
+    { "path": "./tsconfig.node.json" },
+    { "path": "./tsconfig.test.json" },
+    { "path": "./tsconfig.browser.json" }
+  ]
 }

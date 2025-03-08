@@ -1,0 +1,23 @@
+{
+  "extends": [
+    "@tsconfig/recommended/tsconfig.json",
+    "@tsconfig/node-lts/tsconfig.json",
+    "./tsconfig.base.json"
+  ],
+  "compilerOptions": {
+    "composite": true,
+    "types": ["node"],
+    "paths": {
+      "tailwindcss": ["./node_modules/tailwindcss/types/index.d.ts"],
+      "tailwindcss/*": ["./node_modules/tailwindcss/*"]
+    }
+  },
+  "include": ["*", "*.d.ts"],
+  "exclude": [
+    "node_modules/**",
+    "js/**",
+    "dev-server/**",
+    "vendor/**",
+    "test/**"
+  ]
+}
