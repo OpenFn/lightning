@@ -178,6 +178,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                 )
               }
               class="w-4 text-right"
+              min="1"
               max={@max_concurrency}
             />
           </div>
