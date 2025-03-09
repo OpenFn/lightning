@@ -1610,177 +1610,352 @@ defmodule Lightning.CredentialsTest do
     end
   end
 
-  # describe "find_or_create_oauth_token/4" do
-  #   setup do
-  #     user = insert(:user)
-  #     oauth_client = insert(:oauth_client)
+  describe "OAuth token selection through create_credential/1" do
+    test "reuses existing token when creating a credential with matching scopes" do
+      user = insert(:user)
+      oauth_client = insert(:oauth_client)
 
-  #     token_data = %{
-  #       "access_token" => "access_token_123",
-  #       "refresh_token" => "refresh_token_123",
-  #       "expires_in" => 3600,
-  #       "scope" => "read write"
-  #     }
+      {:ok, _existing_credential} =
+        Credentials.create_credential(%{
+          "user_id" => user.id,
+          "schema" => "oauth",
+          "oauth_client_id" => oauth_client.id,
+          "name" => "First Credential",
+          "body" => %{},
+          "oauth_token" => %{
+            "access_token" => "original_token",
+            "refresh_token" => "original_refresh",
+            "expires_in" => 3600,
+            "scope" => "read write profile"
+          }
+        })
 
-  #     {:ok, user: user, oauth_client: oauth_client, token_data: token_data}
-  #   end
+      {:ok, new_credential} =
+        Credentials.create_credential(%{
+          "user_id" => user.id,
+          "schema" => "oauth",
+          "oauth_client_id" => oauth_client.id,
+          "name" => "Second Credential",
+          "body" => %{},
+          "oauth_token" => %{
+            "access_token" => "new_token",
+            "expires_in" => 3600,
+            "scope" => "read write"
+          }
+        })
 
-  #   test "creates a new token when none exists", %{
-  #     user: user,
-  #     oauth_client: oauth_client,
-  #     token_data: token_data
-  #   } do
-  #     {:ok, token} =
-  #       Credentials.find_or_create_oauth_token(
-  #         user.id,
-  #         oauth_client.id,
-  #         ["read", "write"],
-  #         token_data
-  #       )
+      assert new_credential.oauth_token.body["refresh_token"] ==
+               "original_refresh"
+    end
 
-  #     assert token.user_id == user.id
-  #     assert token.oauth_client_id == oauth_client.id
-  #     assert token.scopes == ["read", "write"]
-  #     assert token.body == token_data
-  #   end
+    test "prioritizes exact scope matches when multiple tokens exist" do
+      user = insert(:user)
 
-  #   test "returns existing token with matching scopes", %{
-  #     user: user,
-  #     oauth_client: oauth_client,
-  #     token_data: token_data
-  #   } do
-  #     {:ok, created_token} =
-  #       Credentials.find_or_create_oauth_token(
-  #         user.id,
-  #         oauth_client.id,
-  #         ["read", "write"],
-  #         token_data
-  #       )
+      client_attrs = %{
+        client_id: "someclientid",
+        client_secret: "someclientsecret"
+      }
 
-  #     {:ok, found_token} =
-  #       Credentials.find_or_create_oauth_token(
-  #         user.id,
-  #         oauth_client.id,
-  #         ["read", "write"],
-  #         %{"different" => "token"}
-  #       )
+      oauth_client_1 = insert(:oauth_client, client_attrs)
+      oauth_client_2 = insert(:oauth_client, client_attrs)
 
-  #     assert found_token.id == created_token.id
-  #     assert found_token.body == token_data
-  #   end
+      {:ok, _broad_credential} =
+        Credentials.create_credential(%{
+          "user_id" => user.id,
+          "schema" => "oauth",
+          "oauth_client_id" => oauth_client_1.id,
+          "name" => "Broad Scopes",
+          "body" => %{},
+          "oauth_token" => %{
+            "access_token" => "broad_token",
+            "refresh_token" => "broad_refresh",
+            "expires_in" => 3600,
+            "scope" => "read write profile email contacts"
+          }
+        })
 
-  #   test "scopes are matched regardless of order", %{
-  #     user: user,
-  #     oauth_client: oauth_client,
-  #     token_data: token_data
-  #   } do
-  #     {:ok, created_token} =
-  #       Credentials.find_or_create_oauth_token(
-  #         user.id,
-  #         oauth_client.id,
-  #         ["read", "write"],
-  #         token_data
-  #       )
+      {:ok, _exact_credential} =
+        Credentials.create_credential(%{
+          "user_id" => user.id,
+          "schema" => "oauth",
+          "oauth_client_id" => oauth_client_1.id,
+          "name" => "Exact Scopes",
+          "body" => %{},
+          "oauth_token" => %{
+            "access_token" => "exact_token",
+            "refresh_token" => "exact_refresh",
+            "expires_in" => 3600,
+            "scope" => "read write"
+          }
+        })
 
-  #     {:ok, found_token} =
-  #       Credentials.find_or_create_oauth_token(
-  #         user.id,
-  #         oauth_client.id,
-  #         ["write", "read"],
-  #         %{"different" => "token"}
-  #       )
+      {:ok, new_credential} =
+        Credentials.create_credential(%{
+          "user_id" => user.id,
+          "schema" => "oauth",
+          "oauth_client_id" => oauth_client_2.id,
+          "name" => "New Credential",
+          "body" => %{},
+          "oauth_token" => %{
+            "access_token" => "new_token",
+            "expires_in" => 3600,
+            "scope" => "read write"
+          }
+        })
 
-  #     assert found_token.id == created_token.id
-  #   end
-  # end
+      assert new_credential.oauth_token.body["refresh_token"] == "exact_refresh"
+    end
 
-  # describe "find_oauth_token_by_scopes/3" do
-  #   setup do
-  #     user = insert(:user)
+    test "prioritizes token with most scope overlap when no exact match exists" do
+      user = insert(:user)
+      oauth_client = insert(:oauth_client)
 
-  #     # Create two clients with same client_id/secret
-  #     client_attrs = %{
-  #       name: "Shared Client",
-  #       client_id: "shared_client_id",
-  #       client_secret: "shared_client_secret",
-  #       authorization_endpoint: "https://example.com/auth",
-  #       token_endpoint: "https://example.com/token"
-  #     }
+      {:ok, _minimal_credential} =
+        Credentials.create_credential(%{
+          "user_id" => user.id,
+          "schema" => "oauth",
+          "oauth_client_id" => oauth_client.id,
+          "name" => "Minimal Overlap",
+          "body" => %{},
+          "oauth_token" => %{
+            "access_token" => "minimal_token",
+            "refresh_token" => "minimal_refresh",
+            "expires_in" => 3600,
+            "scope" => "read"
+          }
+        })
 
-  #     oauth_client1 = insert(:oauth_client, client_attrs)
-  #     oauth_client2 = insert(:oauth_client, client_attrs)
+      {:ok, _better_credential} =
+        Credentials.create_credential(%{
+          "user_id" => user.id,
+          "schema" => "oauth",
+          "oauth_client_id" => oauth_client.id,
+          "name" => "Better Overlap",
+          "body" => %{},
+          "oauth_token" => %{
+            "access_token" => "better_token",
+            "refresh_token" => "better_refresh",
+            "expires_in" => 3600,
+            "scope" => "read write"
+          }
+        })
 
-  #     token_data = %{
-  #       "access_token" => "access_token_123",
-  #       "refresh_token" => "refresh_token_123",
-  #       "expires_in" => 3600,
-  #       "scope" => "read write"
-  #     }
+      {:ok, new_credential} =
+        Credentials.create_credential(%{
+          "user_id" => user.id,
+          "schema" => "oauth",
+          "oauth_client_id" => oauth_client.id,
+          "name" => "New Credential",
+          "body" => %{},
+          "oauth_token" => %{
+            "access_token" => "new_token",
+            "expires_in" => 3600,
+            "scope" => "read write email"
+          }
+        })
 
-  #     {:ok, token} =
-  #       Credentials.find_or_create_oauth_token(
-  #         user.id,
-  #         oauth_client1.id,
-  #         ["read", "write"],
-  #         token_data
-  #       )
+      assert new_credential.oauth_token.body["refresh_token"] == "better_refresh"
+    end
 
-  #     {:ok,
-  #      user: user,
-  #      oauth_client1: oauth_client1,
-  #      oauth_client2: oauth_client2,
-  #      token: token}
-  #   end
+    test "prioritizes newer token when scope overlap is equal" do
+      user = insert(:user)
+      oauth_client = insert(:oauth_client)
 
-  #   test "finds token for same client by scopes", %{
-  #     user: user,
-  #     oauth_client1: client,
-  #     token: token
-  #   } do
-  #     found_token =
-  #       Credentials.find_oauth_token_by_scopes(user.id, client.id, [
-  #         "read",
-  #         "write"
-  #       ])
+      {:ok, first_credential} =
+        Credentials.create_credential(%{
+          "user_id" => user.id,
+          "schema" => "oauth",
+          "oauth_client_id" => oauth_client.id,
+          "name" => "First Token",
+          "body" => %{},
+          "oauth_token" => %{
+            "access_token" => "first_token",
+            "refresh_token" => "first_refresh",
+            "expires_in" => 3600,
+            "scope" => "read write andmore"
+          }
+        })
 
-  #     assert found_token.id == token.id
-  #   end
+      Credentials.create_credential(%{
+        "user_id" => user.id,
+        "schema" => "oauth",
+        "oauth_client_id" => oauth_client.id,
+        "name" => "Second Token",
+        "body" => %{},
+        "oauth_token" => %{
+          "access_token" => "second_token",
+          "refresh_token" => "second_refresh",
+          "expires_in" => 3600,
+          "scope" => "read write"
+        }
+      })
 
-  #   test "finds token for different client with same client_id/secret", %{
-  #     user: user,
-  #     oauth_client2: client,
-  #     token: token
-  #   } do
-  #     found_token =
-  #       Credentials.find_oauth_token_by_scopes(user.id, client.id, [
-  #         "read",
-  #         "write"
-  #       ])
+      first_token = Repo.get!(OauthToken, first_credential.oauth_token.id)
+      older_timestamp = DateTime.add(DateTime.utc_now(), -3600, :second)
 
-  #     assert found_token.id == token.id
-  #   end
+      Repo.update_all(
+        from(t in OauthToken, where: t.id == ^first_token.id),
+        set: [updated_at: older_timestamp]
+      )
 
-  #   test "scopes must match exactly", %{user: user, oauth_client1: client} do
-  #     found_token =
-  #       Credentials.find_oauth_token_by_scopes(user.id, client.id, [
-  #         "read",
-  #         "write",
-  #         "extra"
-  #       ])
+      # Now create a new credential with scopes that overlap equally with both existing tokens
+      # Both tokens have "read", so they have equal overlap with our new "read execute" token
+      {:ok, new_credential} =
+        Credentials.create_credential(%{
+          "user_id" => user.id,
+          "schema" => "oauth",
+          "oauth_client_id" => oauth_client.id,
+          "name" => "New Token",
+          "body" => %{},
+          "oauth_token" => %{
+            "access_token" => "new_token",
+            "expires_in" => 3600,
+            "scope" => "read execute"
+          }
+        })
 
-  #     assert found_token == nil
-  #   end
+      assert new_credential.oauth_token.body["refresh_token"] == "second_refresh"
+    end
 
-  #   test "returns nil when no matching token exists", %{user: user} do
-  #     new_client = insert(:oauth_client)
+    test "handles case with no tokens matching requested scopes" do
+      user = insert(:user)
+      oauth_client = insert(:oauth_client)
 
-  #     found_token =
-  #       Credentials.find_oauth_token_by_scopes(user.id, new_client.id, [
-  #         "read",
-  #         "write"
-  #       ])
+      {:ok, _existing_credential} =
+        Credentials.create_credential(%{
+          "user_id" => user.id,
+          "schema" => "oauth",
+          "oauth_client_id" => oauth_client.id,
+          "name" => "Existing Token",
+          "body" => %{},
+          "oauth_token" => %{
+            "access_token" => "existing_token",
+            "refresh_token" => "existing_refresh",
+            "expires_in" => 3600,
+            "scope" => "profile email contacts"
+          }
+        })
 
-  #     assert found_token == nil
-  #   end
-  # end
+      result =
+        Credentials.create_credential(%{
+          "user_id" => user.id,
+          "schema" => "oauth",
+          "oauth_client_id" => oauth_client.id,
+          "name" => "New Token",
+          "body" => %{},
+          "oauth_token" => %{
+            "access_token" => "new_token",
+            "expires_in" => 3600,
+            "scope" => "read write"
+          }
+        })
+
+      assert {:error, "Missing required OAuth field: refresh_token"} = result
+    end
+
+    test "selects token with best scope match when new token has multiple scope overlaps" do
+      user = insert(:user)
+      oauth_client = insert(:oauth_client)
+
+      {:ok, token_a} =
+        Credentials.create_credential(%{
+          "user_id" => user.id,
+          "schema" => "oauth",
+          "oauth_client_id" => oauth_client.id,
+          "name" => "Token with Scope A",
+          "body" => %{},
+          "oauth_token" => %{
+            "access_token" => "token_a",
+            "refresh_token" => "refresh_a",
+            "expires_in" => 3600,
+            "scope" => "scope_a"
+          }
+        })
+
+      {:ok, _token_b} =
+        Credentials.create_credential(%{
+          "user_id" => user.id,
+          "schema" => "oauth",
+          "oauth_client_id" => oauth_client.id,
+          "name" => "Token with Scope B",
+          "body" => %{},
+          "oauth_token" => %{
+            "access_token" => "token_b",
+            "refresh_token" => "refresh_b",
+            "expires_in" => 3600,
+            "scope" => "scope_b"
+          }
+        })
+
+      # Make token_b more recent
+      token_a_record = Repo.get!(OauthToken, token_a.oauth_token.id)
+      older_timestamp = DateTime.add(DateTime.utc_now(), -3600, :second)
+
+      Repo.update_all(
+        from(t in OauthToken, where: t.id == ^token_a_record.id),
+        set: [updated_at: older_timestamp]
+      )
+
+      # Create token with both scope A and scope B but no refresh token
+      {:ok, combined_token} =
+        Credentials.create_credential(%{
+          "user_id" => user.id,
+          "schema" => "oauth",
+          "oauth_client_id" => oauth_client.id,
+          "name" => "Token with Scopes A and B",
+          "body" => %{},
+          "oauth_token" => %{
+            "access_token" => "combined_token",
+            "expires_in" => 3600,
+            "scope" => "scope_a scope_b"
+          }
+        })
+
+      # The combined token should use token_b's refresh token since it's more recent
+      # and both tokens have the same scope overlap (1 scope each)
+      assert combined_token.oauth_token.body["refresh_token"] == "refresh_b"
+    end
+  end
+
+  test "finds tokens across different OAuth clients with same client credentials" do
+    user = insert(:user)
+
+    client_attrs = %{
+      client_id: "shared_client_id",
+      client_secret: "shared_client_secret"
+    }
+
+    oauth_client1 = insert(:oauth_client, client_attrs)
+    oauth_client2 = insert(:oauth_client, client_attrs)
+
+    Credentials.create_credential(%{
+      "user_id" => user.id,
+      "schema" => "oauth",
+      "oauth_client_id" => oauth_client1.id,
+      "name" => "First Credential",
+      "body" => %{},
+      "oauth_token" => %{
+        "access_token" => "original_token",
+        "refresh_token" => "original_refresh",
+        "expires_in" => 3600,
+        "scope" => "read write"
+      }
+    })
+
+    {:ok, credential2} =
+      Credentials.create_credential(%{
+        "user_id" => user.id,
+        "schema" => "oauth",
+        "oauth_client_id" => oauth_client2.id,
+        "name" => "Second Credential",
+        "body" => %{},
+        "oauth_token" => %{
+          "access_token" => "new_token",
+          "expires_in" => 3600,
+          "scope" => "read write"
+        }
+      })
+
+    assert credential2.oauth_token.body["refresh_token"] == "original_refresh"
+  end
 end

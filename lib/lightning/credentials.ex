@@ -230,7 +230,7 @@ defmodule Lightning.Credentials do
   end
 
   defp handle_missing_refresh_token(user_id, client_id, scopes, token) do
-    case find_oauth_token_by_scopes(user_id, client_id, scopes) do
+    case find_token_with_overlapping_scopes(user_id, client_id, scopes) do
       nil ->
         return_error("Missing required OAuth field: refresh_token")
 
@@ -1312,7 +1312,7 @@ defmodule Lightning.Credentials do
   defp token_exists?(_, _, nil), do: false
 
   defp token_exists?(user_id, oauth_client_id, scopes) do
-    find_oauth_token_by_scopes(
+    find_token_with_overlapping_scopes(
       user_id,
       oauth_client_id,
       scopes
@@ -1334,41 +1334,68 @@ defmodule Lightning.Credentials do
     Enum.any?(expires_fields, &Map.has_key?(token_data, &1))
   end
 
-  defp find_oauth_token_by_scopes(user_id, oauth_client_id, scopes)
-       when is_list(scopes) do
-    incoming_scopes = MapSet.new(scopes)
-    incoming_size = MapSet.size(incoming_scopes)
+  defp find_token_with_overlapping_scopes(
+         user_id,
+         oauth_client_id,
+         requested_scopes
+       )
+       when is_list(requested_scopes) do
+    fetch_user_tokens_by_client(user_id, oauth_client_id)
+    |> dbg()
+    |> select_best_matching_token(requested_scopes)
+    |> dbg()
+  end
 
-    Ecto.Query.from(t in OauthToken,
+  defp fetch_user_tokens_by_client(user_id, oauth_client_id) do
+    Ecto.Query.from(token in OauthToken,
       join: token_client in OauthClient,
-      on: t.oauth_client_id == token_client.id,
-      join: reference_client in OauthClient,
-      on: reference_client.id == ^oauth_client_id,
+      on: token.oauth_client_id == token_client.id,
+      join: requested_client in OauthClient,
+      on: requested_client.id == ^oauth_client_id,
       where:
-        t.user_id == ^user_id and
-          token_client.client_id == reference_client.client_id and
-          token_client.client_secret == reference_client.client_secret
+        token.user_id == ^user_id and
+          token_client.client_id == requested_client.client_id and
+          token_client.client_secret == requested_client.client_secret
     )
     |> Lightning.Repo.all()
+  end
+
+  defp select_best_matching_token(available_tokens, requested_scopes) do
+    requested_scope_set = MapSet.new(requested_scopes)
+    requested_scope_count = MapSet.size(requested_scope_set)
+
+    available_tokens
     |> Enum.filter(fn token ->
-      existing_scopes = MapSet.new(token.scopes)
-      MapSet.intersection(existing_scopes, incoming_scopes) |> MapSet.size() > 0
+      token_scope_set = MapSet.new(token.scopes)
+
+      # Keep only tokens that have at least one scope in common with the requested scopes
+      MapSet.intersection(token_scope_set, requested_scope_set) |> MapSet.size() >
+        0
     end)
     |> Enum.max_by(
       fn token ->
-        existing_scopes = MapSet.new(token.scopes)
+        token_scope_set = MapSet.new(token.scopes)
 
-        common_count =
-          MapSet.intersection(existing_scopes, incoming_scopes) |> MapSet.size()
+        matching_scope_count =
+          MapSet.intersection(token_scope_set, requested_scope_set)
+          |> MapSet.size()
 
-        extra_count =
-          MapSet.difference(existing_scopes, incoming_scopes) |> MapSet.size()
+        unrequested_scope_count =
+          MapSet.difference(token_scope_set, requested_scope_set)
+          |> MapSet.size()
 
-        exact_match? = common_count == incoming_size && extra_count == 0
-        timestamp = DateTime.to_unix(token.updated_at)
+        exact_match? =
+          matching_scope_count == requested_scope_count &&
+            unrequested_scope_count == 0
 
-        {if(exact_match?, do: 1, else: 0), common_count, -extra_count, timestamp}
+        last_updated = DateTime.to_unix(token.updated_at)
+
+        # Sort priority: exact matches first, then by number of matching scopes,
+        # then fewer unrequested scopes, and finally by most recently updated
+        {if(exact_match?, do: 1, else: 0), matching_scope_count,
+         -unrequested_scope_count, last_updated}
       end,
+      # Return nil if no tokens match
       fn -> nil end
     )
   end
