@@ -15,6 +15,12 @@ defmodule LightningWeb.ProjectLive.ConcurrencyInputComponent do
         label=""
         max={@max_value}
       />
+      <span class="flex grow flex-col">
+        <.label>Disable parallel run execution</.label>
+        <span class="text-sm text-gray-500" id="concurrency-description">
+          Process all runs in this project no more than one at a time.
+        </span>
+      </span>
     </div>
     """
   end
