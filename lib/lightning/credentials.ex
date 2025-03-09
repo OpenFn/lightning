@@ -1341,9 +1341,7 @@ defmodule Lightning.Credentials do
        )
        when is_list(requested_scopes) do
     fetch_user_tokens_by_client(user_id, oauth_client_id)
-    |> dbg()
     |> select_best_matching_token(requested_scopes)
-    |> dbg()
   end
 
   defp fetch_user_tokens_by_client(user_id, oauth_client_id) do
