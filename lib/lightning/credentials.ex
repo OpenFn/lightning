@@ -677,6 +677,38 @@ defmodule Lightning.Credentials do
 
   def basic_auth_for(_credential), do: []
 
+  @doc """
+  Refreshes an OAuth token if it has expired, or returns the credential unchanged.
+
+  This function checks the freshness of a credential's associated OAuth token and refreshes
+  it if necessary. For non-OAuth credentials, it simply returns the credential unchanged.
+
+  ## Refresh Logic
+  The function handles several cases:
+  1. Non-OAuth credentials: Returns the credential unchanged
+  2. OAuth credential with missing token: Returns the credential unchanged
+  3. OAuth credential with missing client: Returns the credential unchanged
+  4. OAuth credential with fresh token: Returns the credential unchanged
+  5. OAuth credential with expired token: Attempts to refresh the token
+
+  ## Parameters
+   - `credential`: The `Credential` struct to check and potentially refresh
+
+  ## Returns
+   - `{:ok, credential}`: If the credential was fresh or successfully refreshed
+   - `{:error, error}`: If refreshing the token failed
+
+  ## Examples
+
+     iex> maybe_refresh_token(non_oauth_credential)
+     {:ok, non_oauth_credential}
+
+     iex> maybe_refresh_token(fresh_oauth_credential)
+     {:ok, fresh_oauth_credential}
+
+     iex> maybe_refresh_token(expired_oauth_credential)
+     {:ok, refreshed_oauth_credential}
+  """
   def maybe_refresh_token(%Credential{schema: "oauth"} = credential) do
     credential
     |> Repo.preload(oauth_token: :oauth_client)
@@ -1183,6 +1215,32 @@ defmodule Lightning.Credentials do
     {:error, "No valid expiration data found"}
   end
 
+  @doc """
+  Normalizes all map keys to strings recursively.
+
+  This function walks through a map and converts all keys to strings using `to_string/1`.
+  If a key's value is also a map, it recursively normalizes the nested map as well.
+  Non-map values are returned unchanged.
+
+  ## Examples
+
+      iex> normalize_keys(%{foo: "bar", baz: %{qux: 123}})
+      %{"foo" => "bar", "baz" => %{"qux" => 123}}
+
+      iex> normalize_keys(%{1 => "one", 2 => "two"})
+      %{"1" => "one", "2" => "two"}
+
+      iex> normalize_keys("not a map")
+      "not a map"
+
+  ## Parameters
+    - `map`: The map whose keys should be normalized to strings
+    - `value`: Any non-map value that should be returned as-is
+
+  ## Returns
+    - A new map with all keys converted to strings (for map inputs)
+    - The original value unchanged (for non-map inputs)
+  """
   def normalize_keys(map) when is_map(map) do
     Enum.reduce(map, %{}, fn
       {k, v}, acc when is_map(v) ->
@@ -1341,6 +1399,35 @@ defmodule Lightning.Credentials do
     Enum.any?(expires_fields, &Map.has_key?(token_data, &1))
   end
 
+  @doc """
+  Finds the most appropriate OAuth token for a user that matches the requested scopes.
+
+  This function implements a sophisticated token matching algorithm that considers:
+  1. Mandatory scopes (required by the OAuth client but not unique to specific services)
+  2. Service-specific scopes (like drive, calendar, mail, etc.)
+
+  ## Matching Algorithm
+
+  The function first fetches all OAuth tokens that belong to the user and match the
+  client's credentials. Then it selects the best matching token based on these rules:
+
+  For requests with only mandatory scopes:
+  - Returns the token with the fewest additional non-mandatory scopes
+  - If tied, selects the most recently updated token
+
+  For requests with service-specific scopes:
+  - Filters to tokens with at least one matching service-specific scope
+  - Ranks by: exact match, most matching scopes, fewest extra scopes, most recent update
+
+  ## Parameters
+    - `user_id`: The ID of the user who owns the tokens
+    - `oauth_client_id`: The ID of the OAuth client to match tokens for
+    - `requested_scopes`: List of OAuth scopes being requested
+
+  ## Returns
+    - The best matching `OauthToken` struct
+    - `nil` if no suitable token is found or no client exists with the given ID
+  """
   def find_token_with_overlapping_scopes(
         user_id,
         oauth_client_id,
@@ -1379,18 +1466,14 @@ defmodule Lightning.Credentials do
          requested_scopes,
          mandatory_scopes_string
        ) do
-    # Parse comma-separated mandatory scopes
     mandatory_scopes = process_scopes(mandatory_scopes_string, ",")
 
-    # Create sets for requested and mandatory scopes
     requested_scope_set = MapSet.new(requested_scopes)
     mandatory_scope_set = MapSet.new(mandatory_scopes)
 
-    # Remove mandatory scopes from the requested scopes
     effective_requested_scopes =
       MapSet.difference(requested_scope_set, mandatory_scope_set)
 
-    # If there are no non-mandatory requested scopes, find token with fewest scopes
     if MapSet.size(effective_requested_scopes) == 0 do
       available_tokens
       |> Enum.min_by(
@@ -1400,14 +1483,12 @@ defmodule Lightning.Credentials do
           effective_token_scopes =
             MapSet.difference(token_scope_set, mandatory_scope_set)
 
-          # Priority: Fewest non-mandatory scopes, then most recent
           {MapSet.size(effective_token_scopes),
            -DateTime.to_unix(token.updated_at)}
         end,
         fn -> nil end
       )
     else
-      # Otherwise find best match based on non-mandatory scopes
       available_tokens
       |> Enum.filter(fn token ->
         token_scope_set = MapSet.new(token.scopes)
@@ -1415,8 +1496,6 @@ defmodule Lightning.Credentials do
         effective_token_scopes =
           MapSet.difference(token_scope_set, mandatory_scope_set)
 
-        # Only consider tokens that have at least one non-mandatory scope
-        # in common with the requested scopes
         non_mandatory_overlap =
           MapSet.intersection(effective_token_scopes, effective_requested_scopes)
           |> MapSet.size()
@@ -1449,8 +1528,6 @@ defmodule Lightning.Credentials do
 
           last_updated = DateTime.to_unix(token.updated_at)
 
-          # Sort priority: exact matches first, then by number of matching scopes,
-          # then fewer unrequested scopes, and finally by most recently updated
           {if(exact_match?, do: 1, else: 0), matching_scope_count,
            -unrequested_scope_count, last_updated}
         end,
@@ -1459,10 +1536,36 @@ defmodule Lightning.Credentials do
     end
   end
 
+  @doc """
+  Processes OAuth scopes with a default space delimiter.
+
+  Convenience function that calls `process_scopes/2` with a space delimiter.
+
+  ## Parameters
+    - `input`: OAuth scope string or token to extract scopes from
+
+  ## Returns
+    - List of normalized scope strings
+  """
   def process_scopes(input) do
     process_scopes(input, " ")
   end
 
+  @doc """
+  Processes OAuth scopes from various input formats into a normalized list.
+
+  This function handles different inputs:
+  - `nil`: Returns an empty list
+  - `OauthToken`: Extracts the scope from the token's body
+  - String: Splits by the specified delimiter, downcases, and removes empty entries
+
+  ## Parameters
+    - `scopes`: OAuth scope string, token, or nil
+    - `delimiter`: Character or string to split the scope string by
+
+  ## Returns
+    - List of normalized scope strings
+  """
   def process_scopes(nil, _delimiter) do
     []
   end

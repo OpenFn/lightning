@@ -17,7 +17,6 @@ alias Lightning.Credentials.OauthToken
 
 Logger.info("Starting OAuth credentials migration")
 
-# Get all OAuth credentials with non-null body
 credentials =
   from(c in Credential,
     where: c.schema == "oauth" and not is_nil(c.body) and is_nil(c.oauth_token_id),
@@ -28,10 +27,8 @@ credentials =
 total = length(credentials)
 Logger.info("Found #{total} OAuth credentials to migrate")
 
-# Track statistics
 stats = %{tokens_created: 0, credentials_updated: 0}
 
-# Helper function to extract apiVersion from credential body
 extract_api_version = fn credential_body ->
   api_version = Map.get(credential_body, "apiVersion")
 
@@ -42,24 +39,19 @@ extract_api_version = fn credential_body ->
   end
 end
 
-# Process each credential
 results =
   Enum.reduce(credentials, stats, fn credential, stats ->
     Logger.info("Processing credential #{credential.id} with client_id #{credential.oauth_client_id || "nil"}")
 
-    # Extract apiVersion from credential body
     preserved_fields = extract_api_version.(credential.body)
 
-    # Process in a transaction for data integrity
     Repo.transaction(fn ->
-      # Extract scopes from credential body
       scopes =
         case OauthToken.extract_scopes(credential.body) |> dbg() do
           {:ok, extracted_scopes} -> extracted_scopes
           :error -> []
         end
 
-      # Find existing token with matching or compatible scopes
       existing_token =
         if credential.oauth_client_id do
           Credentials.find_token_with_overlapping_scopes(credential.user_id, credential.oauth_client_id, scopes) |> dbg()
@@ -67,13 +59,11 @@ results =
           nil
         end
 
-      # Find existing token or create new one
       {token, updated_stats} =
         if existing_token do
           Logger.info("Found existing token #{existing_token.id} with compatible scopes")
           {existing_token, stats}
         else
-          # Create a new token
           case Repo.insert(%OauthToken{} |> OauthToken.changeset(%{
             user_id: credential.user_id,
             oauth_client_id: credential.oauth_client_id,
@@ -90,7 +80,6 @@ results =
           end
         end
 
-      # Update the credential to reference the token and preserve apiVersion if present
       case Ecto.Changeset.change(credential, %{
         oauth_token_id: token.id,
         body: preserved_fields
