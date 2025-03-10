@@ -810,18 +810,10 @@ defmodule Lightning.Projects do
          } = project
        )
        when is_integer(period_days) do
-    latest_snasphot_ids_query =
-      from s in Snapshot,
-        join: w in assoc(s, :workflow),
-        where: s.lock_version == w.lock_version,
-        select: s.id
-
-    latest_snapshot_ids = Repo.all(latest_snasphot_ids_query)
-
     :ok =
       project
       |> project_workorders_query()
-      |> delete_workorders_history(1000, latest_snapshot_ids, period_days)
+      |> delete_workorders_history(1000, period_days)
 
     dataclips_query =
       from d in Dataclip,
@@ -849,7 +841,6 @@ defmodule Lightning.Projects do
   defp delete_workorders_history(
          project_workorders_query,
          batch_size,
-         latest_snapshot_ids \\ [],
          retention_period_days \\ nil
        ) do
     workorders_query =
@@ -882,14 +873,6 @@ defmodule Lightning.Projects do
 
     workorders_count = Repo.aggregate(workorders_query, :count)
 
-    snapshot_ids_on_delete =
-      if retention_period_days do
-        workorders_query
-        |> distinct(true)
-        |> select([wo], wo.snapshot_id)
-        |> Repo.all()
-      end
-
     for _i <- 1..ceil(workorders_count / batch_size) do
       Repo.transaction(
         fn ->
@@ -906,27 +889,46 @@ defmodule Lightning.Projects do
     # Otherwise, it's a cleanup for the whole project when the snapshots are automatically deleted
     # by the workflows deletion.
     if retention_period_days do
-      snapshot_ids_in_use =
-        project_workorders_query
-        |> distinct(true)
-        |> select([wo], wo.snapshot_id)
-        |> Repo.all()
+      {count, _} = delete_unused_snapshots(project_workorders_query)
 
-      snapshots_to_remain = snapshot_ids_in_use ++ latest_snapshot_ids
-
-      snapshots_to_delete =
-        snapshot_ids_on_delete
-        |> MapSet.new()
-        |> MapSet.difference(MapSet.new(snapshots_to_remain))
-        |> MapSet.to_list()
-
-      {_count, nil} =
-        Repo.delete_all(from(s in Snapshot, where: s.id in ^snapshots_to_delete),
-          returning: false
-        )
+      Logger.info("Deleted #{count} unused snapshots")
     end
 
     :ok
+  end
+
+  defp delete_unused_snapshots(project_query) do
+    # Find all snapshots for workflows in this project
+    snapshots_query =
+      from(s in Snapshot,
+        join: w in assoc(s, :workflow),
+        join: wo in subquery(project_query),
+        on: wo.workflow_id == w.id
+      )
+
+    # Find snapshots that are current versions of workflows
+    current_snapshots =
+      from(s in snapshots_query,
+        join: w in assoc(s, :workflow),
+        where: s.lock_version == w.lock_version
+      )
+
+    # Find snapshots still referenced by workorders
+    referenced_snapshots =
+      from(s in snapshots_query,
+        join: wo in WorkOrder,
+        on: wo.snapshot_id == s.id
+      )
+
+    # Delete snapshots that aren't current and aren't referenced
+    delete_query =
+      from(s in snapshots_query,
+        where:
+          s.id not in subquery(current_snapshots |> select([s], s.id)) and
+            s.id not in subquery(referenced_snapshots |> select([s], s.id))
+      )
+
+    Repo.delete_all(delete_query, returning: false)
   end
 
   defp delete_dataclips(dataclips_query, batch_size) do
