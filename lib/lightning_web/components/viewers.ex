@@ -137,7 +137,7 @@ defmodule LightningWeb.Components.Viewers do
         >
           <span class="col-start-1 row-start-1 truncate pr-6">
             <.icon name="hero-adjustments-vertical" class="size-4 @md:size-6" />
-            <%= @selected_level %>
+            <span><%= @selected_level %></span>
           </span>
           <.icon
             name="hero-chevron-down"
