@@ -31,6 +31,8 @@ and this project adheres to
 
 - Fix broken highlighter for selcted step in the log viewer
   [#2980](https://github.com/OpenFn/lightning/issues/2980)
+- Don't delete latest snapshot when deleting unused snaphots in workorders
+  [#2996](https://github.com/OpenFn/lightning/issues/2996)
 
 ## [v2.10.16] - 2025-02-28
 
