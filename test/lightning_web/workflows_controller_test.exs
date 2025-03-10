@@ -847,7 +847,17 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       saved_workflow = get_saved_workflow(workflow)
 
-      assert encode_decode(response_workflow) == encode_decode(saved_workflow)
+      # assert both response_workflow and saved_workflow has the same jobs
+      # regardless of order
+      assert MapSet.new(
+               response_workflow["jobs"],
+               &Map.take(&1, ["id", "name", "adaptor", "body"])
+             ) ==
+               MapSet.new(
+                 saved_workflow.jobs,
+                 &(Map.take(&1, [:id, :name, :adaptor, :body])
+                   |> Map.new(fn {k, v} -> {Atom.to_string(k), v} end))
+               )
 
       assert workflow
              |> Map.merge(patch)

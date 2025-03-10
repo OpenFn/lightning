@@ -54,14 +54,19 @@ function findSelectedRanges(
     marker: number;
   }>(
     ({ ranges, marker }, log) => {
+      // Skip logs that don't match the desired log levels
+      if (!matchesLogFilter(log, desiredLogLevel)) {
+        return { ranges, marker: marker };
+      }
+
       // Get the number of newlines in the message, used to determine the end index.
       const newLineCount = [...possiblyPrettify(log.message).matchAll(/\n/g)]
         .length;
 
       const nextMarker = marker + 1 + newLineCount;
 
-      // Skip logs that don't match the step ID or desired log levels
-      if (log.step_id !== stepId || !matchesLogFilter(log, desiredLogLevel)) {
+      // Skip logs that don't match the step ID
+      if (log.step_id !== stepId) {
         return { ranges, marker: nextMarker };
       }
 
