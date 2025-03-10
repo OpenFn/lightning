@@ -3890,7 +3890,13 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       run_view = find_live_child(view, "run-viewer-#{run.id}")
 
       render_async(run_view)
-      assert render(run_view) =~ "Level: "
+
+      assert run_view
+             |> render()
+             |> Floki.parse_fragment!()
+             |> Floki.find("span.hero-adjustments-vertical + span")
+             |> Floki.text() ==
+               "info"
 
       # when the user has not set their preference, we assume they want info
       assert user.preferences["desired_log_level"] |> is_nil()
