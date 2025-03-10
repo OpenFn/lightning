@@ -1958,4 +1958,177 @@ defmodule Lightning.CredentialsTest do
 
     assert credential2.oauth_token.body["refresh_token"] == "original_refresh"
   end
+
+  describe "find_token_with_overlapping_scopes/3" do
+    test "returns nil when oauth_client_id doesn't exist" do
+      user = insert(:user)
+      non_existent_client_id = Ecto.UUID.generate()
+
+      result =
+        Credentials.find_token_with_overlapping_scopes(
+          user.id,
+          non_existent_client_id,
+          ["read", "write"]
+        )
+
+      assert is_nil(result)
+    end
+
+    test "returns nil when no tokens are available" do
+      user = insert(:user)
+      oauth_client = insert(:oauth_client, mandatory_scopes: "openid,profile")
+
+      result =
+        Credentials.find_token_with_overlapping_scopes(
+          user.id,
+          oauth_client.id,
+          ["read", "write"]
+        )
+
+      assert is_nil(result)
+    end
+
+    test "handles mandatory scopes correctly" do
+      user = insert(:user)
+
+      oauth_client =
+        insert(:oauth_client, mandatory_scopes: "openid,profile,email")
+
+      token1 =
+        insert(:oauth_token, %{
+          user: user,
+          oauth_client: oauth_client,
+          scope: ["openid", "profile", "email", "calendar"],
+          body: %{
+            "access_token" => "token1",
+            "refresh_token" => "refresh1",
+            "expires_in" => 3600
+          }
+        })
+
+      token2 =
+        insert(:oauth_token, %{
+          user: user,
+          oauth_client: oauth_client,
+          scope: ["openid", "profile", "email"],
+          body: %{
+            "access_token" => "token2",
+            "refresh_token" => "refresh2",
+            "expires_in" => 3600
+          }
+        })
+
+      result1 =
+        Credentials.find_token_with_overlapping_scopes(
+          user.id,
+          oauth_client.id,
+          ["openid", "profile", "email", "calendar"]
+        )
+
+      assert result1.id == token1.id
+
+      result2 =
+        Credentials.find_token_with_overlapping_scopes(
+          user.id,
+          oauth_client.id,
+          ["openid", "profile", "email"]
+        )
+
+      assert result2.id == token2.id
+    end
+
+    test "prefers token with fewest additional scopes when requesting only mandatory scopes" do
+      user = insert(:user)
+      oauth_client = insert(:oauth_client, mandatory_scopes: "openid,profile")
+
+      insert(:oauth_token, %{
+        user: user,
+        oauth_client: oauth_client,
+        scope: ["openid", "profile", "calendar", "drive", "mail"],
+        body: %{
+          "access_token" => "token1",
+          "refresh_token" => "refresh1",
+          "expires_in" => 3600
+        }
+      })
+
+      token2 =
+        insert(:oauth_token, %{
+          user: user,
+          oauth_client: oauth_client,
+          scope: ["openid", "profile", "calendar"],
+          body: %{
+            "access_token" => "token2",
+            "refresh_token" => "refresh2",
+            "expires_in" => 3600
+          }
+        })
+
+      token3 =
+        insert(:oauth_token, %{
+          user: user,
+          oauth_client: oauth_client,
+          scope: ["openid", "profile"],
+          body: %{
+            "access_token" => "token3",
+            "refresh_token" => "refresh3",
+            "expires_in" => 3600
+          }
+        })
+
+      result =
+        Credentials.find_token_with_overlapping_scopes(
+          user.id,
+          oauth_client.id,
+          ["openid", "profile"]
+        )
+
+      assert result.id == token3.id
+
+      Repo.delete!(token3)
+
+      result =
+        Credentials.find_token_with_overlapping_scopes(
+          user.id,
+          oauth_client.id,
+          ["openid", "profile"]
+        )
+
+      assert result.id == token2.id
+    end
+
+    test "properly handles cross-client matching" do
+      user = insert(:user)
+
+      client_attrs = %{
+        client_id: "shared_client_id",
+        client_secret: "shared_client_secret",
+        mandatory_scopes: "openid,profile"
+      }
+
+      oauth_client1 = insert(:oauth_client, client_attrs)
+      oauth_client2 = insert(:oauth_client, client_attrs)
+
+      token =
+        insert(:oauth_token, %{
+          user: user,
+          oauth_client: oauth_client1,
+          scope: ["openid", "profile", "calendar"],
+          body: %{
+            "access_token" => "token",
+            "refresh_token" => "refresh",
+            "expires_in" => 3600
+          }
+        })
+
+      result =
+        Credentials.find_token_with_overlapping_scopes(
+          user.id,
+          oauth_client2.id,
+          ["openid", "profile", "calendar"]
+        )
+
+      assert result.id == token.id
+    end
+  end
 end
