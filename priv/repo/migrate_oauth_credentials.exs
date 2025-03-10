@@ -7,7 +7,9 @@
 # while properly handling encryption/decryption through Lightning.Vault.
 
 require Logger
+
 import Ecto.Query
+
 alias Lightning.Repo
 alias Lightning.Credentials
 alias Lightning.Credentials.Credential
@@ -29,60 +31,6 @@ Logger.info("Found #{total} OAuth credentials to migrate")
 
 # Track statistics
 stats = %{tokens_created: 0, credentials_updated: 0}
-
-# Helper function to find token with overlapping scopes (using same logic as in Lightning.Credentials)
-find_token_with_overlapping_scopes = fn user_id, oauth_client_id, requested_scopes ->
-  # Query to get tokens for this user/client combination
-  tokens = from(token in OauthToken,
-    join: token_client in OauthClient,
-    on: token.oauth_client_id == token_client.id,
-    join: requested_client in OauthClient,
-    on: requested_client.id == ^oauth_client_id,
-    where:
-      token.user_id == ^user_id and
-        token_client.client_id == requested_client.client_id and
-        token_client.client_secret == requested_client.client_secret
-  )
-  |> Repo.all()
-
-  # Convert requested scopes to a set for comparison
-  requested_scope_set = MapSet.new(requested_scopes)
-  requested_scope_count = MapSet.size(requested_scope_set)
-
-  # Filter tokens with overlapping scopes
-  tokens
-  |> Enum.filter(fn token ->
-    token_scope_set = MapSet.new(token.scopes)
-    # Keep only tokens that have at least one scope in common with the requested scopes
-    MapSet.intersection(token_scope_set, requested_scope_set) |> MapSet.size() > 0
-  end)
-  |> Enum.max_by(
-    fn token ->
-      token_scope_set = MapSet.new(token.scopes)
-
-      matching_scope_count =
-        MapSet.intersection(token_scope_set, requested_scope_set)
-        |> MapSet.size()
-
-      unrequested_scope_count =
-        MapSet.difference(token_scope_set, requested_scope_set)
-        |> MapSet.size()
-
-      exact_match? =
-        matching_scope_count == requested_scope_count &&
-          unrequested_scope_count == 0
-
-      last_updated = DateTime.to_unix(token.updated_at)
-
-      # Sort priority: exact matches first, then by number of matching scopes,
-      # then fewer unrequested scopes, and finally by most recently updated
-      {if(exact_match?, do: 1, else: 0), matching_scope_count,
-       -unrequested_scope_count, last_updated}
-    end,
-    # Return nil if no tokens match
-    fn -> nil end
-  )
-end
 
 # Helper function to extract apiVersion from credential body
 extract_api_version = fn credential_body ->
@@ -107,7 +55,7 @@ results =
     Repo.transaction(fn ->
       # Extract scopes from credential body
       scopes =
-        case OauthToken.extract_scopes(credential.body) do
+        case OauthToken.extract_scopes(credential.body) |> dbg() do
           {:ok, extracted_scopes} -> extracted_scopes
           :error -> []
         end
@@ -115,7 +63,7 @@ results =
       # Find existing token with matching or compatible scopes
       existing_token =
         if credential.oauth_client_id do
-          find_token_with_overlapping_scopes.(credential.user_id, credential.oauth_client_id, scopes)
+          Credentials.find_token_with_overlapping_scopes(credential.user_id, credential.oauth_client_id, scopes) |> dbg()
         else
           nil
         end

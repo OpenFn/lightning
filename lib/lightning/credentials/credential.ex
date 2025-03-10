@@ -6,6 +6,7 @@ defmodule Lightning.Credentials.Credential do
 
   alias Lightning.Accounts.User
   alias Lightning.Credentials
+  alias Lightning.Credentials.OauthClient
   alias Lightning.Credentials.OauthToken
   alias Lightning.Projects.ProjectCredential
 
@@ -25,6 +26,7 @@ defmodule Lightning.Credentials.Credential do
 
     belongs_to :user, User
     belongs_to :oauth_token, OauthToken
+    belongs_to :oauth_client, OauthClient
 
     has_many :project_credentials, ProjectCredential
     has_many :projects, through: [:project_credentials, :project]

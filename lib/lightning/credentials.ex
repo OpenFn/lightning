@@ -1341,12 +1341,12 @@ defmodule Lightning.Credentials do
     Enum.any?(expires_fields, &Map.has_key?(token_data, &1))
   end
 
-  defp find_token_with_overlapping_scopes(
-         user_id,
-         oauth_client_id,
-         requested_scopes
-       )
-       when is_list(requested_scopes) do
+  def find_token_with_overlapping_scopes(
+        user_id,
+        oauth_client_id,
+        requested_scopes
+      )
+      when is_list(requested_scopes) do
     fetch_user_tokens_by_client(user_id, oauth_client_id)
     |> select_best_matching_token(requested_scopes)
   end
