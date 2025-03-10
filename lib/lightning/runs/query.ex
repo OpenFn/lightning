@@ -70,7 +70,7 @@ defmodule Lightning.Runs.Query do
   - `concurrency`, the maximum number of runs that can be claimed for the workflow
   """
   @spec in_progress_window() :: Ecto.Queryable.t()
-  def in_progress_window() do
+  def in_progress_window do
     from(r in Run,
       where: r.state in [:available, :claimed, :started],
       join: wo in assoc(r, :work_order),
