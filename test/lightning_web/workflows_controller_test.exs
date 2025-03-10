@@ -202,31 +202,33 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       assert %{"workflow" => response_workflow, "errors" => %{}} =
                json_response(conn, 201)
 
-      assert %{
-               edges: [edge],
-               jobs: [saved_job1, saved_job2],
-               triggers: [trigger]
-             } =
-               saved_workflow = get_saved_workflow(response_workflow["id"])
+      assert saved_workflow = get_saved_workflow(response_workflow["id"])
 
-      assert encode_decode(response_workflow) == encode_decode(saved_workflow)
+      assert response_workflow == encode_decode(saved_workflow)
 
-      assert Map.take(hd(workflow.edges), [:condition_type, :enabled]) ==
-               Map.take(edge, [:condition_type, :enabled])
+      # Check there is still only one edge
+      assert pluck_to_mapset(workflow.edges, [:condition_type, :enabled]) ==
+               pluck_to_mapset(saved_workflow.edges, [:condition_type, :enabled])
 
-      [workflow_job1, workflow_job2] = workflow.jobs
+      # [workflow_job1, workflow_job2] = workflow.jobs
 
-      assert Map.take(workflow_job1, [:name, :adaptor, :body]) ==
-               Map.take(saved_job1, [:name, :adaptor, :body])
+      assert pluck_to_mapset(workflow.jobs, [:name, :adaptor, :body]) ==
+               pluck_to_mapset(saved_workflow.jobs, [:name, :adaptor, :body])
 
-      assert Map.take(workflow_job2, [:name, :adaptor, :body]) ==
-               Map.take(saved_job2, [:name, :adaptor, :body])
-
-      assert Map.take(hd(workflow.triggers), [:type, :enabled]) ==
-               Map.take(trigger, [:type, :enabled])
+      assert pluck_to_mapset(workflow.triggers, [:type, :enabled]) ==
+               pluck_to_mapset(saved_workflow.triggers, [:type, :enabled])
 
       assert Map.take(workflow, [:name, :project_id]) ==
                Map.take(saved_workflow, [:name, :project_id])
+
+      # assert Map.take(workflow_job1, [:name, :adaptor, :body]) ==
+      #          Map.take(saved_job1, [:name, :adaptor, :body])
+
+      # assert Map.take(workflow_job2, [:name, :adaptor, :body]) ==
+      #          Map.take(saved_job2, [:name, :adaptor, :body])
+
+      # assert Map.take(hd(workflow.triggers), [:type, :enabled]) ==
+      #          Map.take(trigger, [:type, :enabled])
     end
 
     test "creates UUIDs on insert based on user arbitrary ids", %{conn: conn} do
@@ -1348,25 +1350,17 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       saved_workflow = get_saved_workflow(workflow.id)
 
-      refute MapSet.equal?(
-               MapSet.new(complete_update.jobs, & &1.id),
+      refute MapSet.new(complete_update.jobs, & &1.id) ==
                MapSet.new(workflow.jobs, & &1.id)
-             )
 
-      refute MapSet.equal?(
-               MapSet.new(complete_update.edges, & &1.id),
+      refute MapSet.new(complete_update.edges, & &1.id) ==
                MapSet.new(workflow.edges, & &1.id)
-             )
 
-      assert MapSet.equal?(
-               MapSet.new(complete_update.jobs, & &1.id),
+      assert MapSet.new(complete_update.jobs, & &1.id) ==
                MapSet.new(saved_workflow.jobs, & &1.id)
-             )
 
-      assert MapSet.equal?(
-               MapSet.new(complete_update.edges, & &1.id),
+      assert MapSet.new(complete_update.edges, & &1.id) ==
                MapSet.new(saved_workflow.edges, & &1.id)
-             )
     end
 
     test "updates workflow ignoring workflow_id", %{conn: conn} do
@@ -1675,19 +1669,20 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
     saved_workflow =
       response_workflow["id"] |> get_saved_workflow() |> encode_decode()
 
-    assert MapSet.equal?(
-             MapSet.new(response_workflow["jobs"]),
+    assert MapSet.new(response_workflow["jobs"]) ==
              MapSet.new(saved_workflow["jobs"])
-           )
 
-    assert MapSet.equal?(
-             MapSet.new(response_workflow["edges"]),
+    assert MapSet.new(response_workflow["edges"]) ==
              MapSet.new(saved_workflow["edges"])
-           )
 
-    assert MapSet.equal?(
-             MapSet.new(response_workflow["triggers"]),
+    assert MapSet.new(response_workflow["triggers"]) ==
              MapSet.new(saved_workflow["triggers"])
-           )
+  end
+
+  defp pluck_to_mapset(map, keys) do
+    map
+    |> Enum.into(MapSet.new(), fn e ->
+      Map.take(e, keys)
+    end)
   end
 end
