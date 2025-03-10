@@ -177,7 +177,8 @@
             <div class="grid grid-cols md:col-span-2">
               <div class="flex items-center gap-x-4 justify-between">
                 <.live_component
-                  module={@concurrency_input_component}
+                  :if={assigns[:concurrency_input_component]}
+                  module={assigns[:concurrency_input_component]}
                   id="concucurrency-input-component"
                   field={f[:concurrency]}
                   project={@project}
