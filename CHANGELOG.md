@@ -24,8 +24,15 @@ and this project adheres to
 
 - Do not include `v` param in workflow links when it is latest
   [#2941](https://github.com/OpenFn/lightning/issues/2941)
+- Use dropdown instead of modal for the log level filter
+  [#2980](https://github.com/OpenFn/lightning/issues/2980)
 
 ### Fixed
+
+- Fix broken highlighter for selcted step in the log viewer
+  [#2980](https://github.com/OpenFn/lightning/issues/2980)
+- Don't delete latest snapshot when deleting unused snaphots in workorders
+  [#2996](https://github.com/OpenFn/lightning/issues/2996)
 
 ## [v2.10.16] - 2025-02-28
 

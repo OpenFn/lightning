@@ -804,17 +804,21 @@ defmodule Lightning.ProjectsTest do
       project = insert(:project, history_retention_period: 7)
 
       %{triggers: [trigger], jobs: [job | _rest]} =
-        workflow = insert(:simple_workflow, project: project)
+        workflow = insert(:simple_workflow, project: project, lock_version: 3)
 
       now = Lightning.current_time()
 
       snapshot_to_delete = insert(:snapshot, workflow: workflow, lock_version: 1)
       snapshot_to_keep = insert(:snapshot, workflow: workflow, lock_version: 2)
+      latest_snapshot = insert(:snapshot, workflow: workflow, lock_version: 3)
+
+      all_snapshots = [snapshot_to_delete, snapshot_to_keep, latest_snapshot]
 
       workorders_to_delete =
-        Enum.map(1..10, fn i ->
-          snapshot =
-            if rem(i, 2) == 0, do: snapshot_to_delete, else: snapshot_to_keep
+        Enum.map(1..12, fn i ->
+          # this returns 0, 1 or 2
+          snapshot_index = rem(i, 3)
+          snapshot = Enum.at(all_snapshots, snapshot_index)
 
           insert(:workorder,
             workflow: workflow,
@@ -883,6 +887,10 @@ defmodule Lightning.ProjectsTest do
       # snapshot that is still in use
       assert workorder_to_remain.snapshot_id == snapshot_to_keep.id
       assert Repo.get(Snapshot, snapshot_to_keep.id)
+
+      # latest snapshot is not deleted
+      refute Repo.get_by(WorkOrder, snapshot_id: latest_snapshot.id)
+      assert Repo.get(Snapshot, latest_snapshot.id)
 
       # extra checks. Jobs, Triggers, Workflows are not deleted
       assert Repo.get(Lightning.Workflows.Job, job.id)
