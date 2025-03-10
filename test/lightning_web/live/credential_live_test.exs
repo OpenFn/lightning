@@ -868,13 +868,20 @@ defmodule LightningWeb.CredentialLiveTest do
            user: user,
            token: token
          } do
+      oauth_client = insert(:oauth_client, user: user, userinfo_endpoint: nil)
+
       credential =
         insert(:credential,
           user: user,
           schema: "oauth",
           body: %{"apiVersion" => "v1"},
-          oauth_token: token,
-          oauth_client: insert(:oauth_client, user: user, userinfo_endpoint: nil)
+          oauth_token:
+            build(:oauth_token,
+              body: token,
+              user: user,
+              oauth_client: oauth_client
+            ),
+          oauth_client: oauth_client
         )
 
       Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
@@ -1223,7 +1230,12 @@ defmodule LightningWeb.CredentialLiveTest do
           oauth_client: oauth_client,
           user: user,
           schema: "oauth",
-          oauth_token: oauth_token,
+          oauth_token:
+            build(:oauth_token,
+              body: oauth_token,
+              user: user,
+              oauth_client: oauth_client
+            ),
           project_credentials: [
             %{project: project_1},
             %{project: project_2},
@@ -1321,14 +1333,20 @@ defmodule LightningWeb.CredentialLiveTest do
           name: "my-credential",
           schema: "oauth",
           body: %{"apiVersion" => "v1"},
-          oauth_token: %{
-            "access_token" => "access_token",
-            "refresh_token" => "refresh_token",
-            "expires_at" =>
-              Timex.now() |> Timex.shift(days: 4) |> DateTime.to_unix(),
-            "scope" =>
-              String.split(oauth_client.mandatory_scopes, ",") |> Enum.join(" ")
-          },
+          oauth_token:
+            build(:oauth_token,
+              body: %{
+                "access_token" => "access_token",
+                "refresh_token" => "refresh_token",
+                "expires_at" =>
+                  Timex.now() |> Timex.shift(days: 4) |> DateTime.to_unix(),
+                "scope" =>
+                  String.split(oauth_client.mandatory_scopes, ",")
+                  |> Enum.join(" ")
+              },
+              user: user,
+              oauth_client: oauth_client
+            ),
           user: user,
           oauth_client: oauth_client
         )
@@ -1357,19 +1375,24 @@ defmodule LightningWeb.CredentialLiveTest do
 
       expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
 
-      # Use insert instead of credential_fixture
       credential =
         insert(:credential,
           user: user,
           schema: "oauth",
           body: %{"apiVersion" => "v1"},
-          oauth_token: %{
-            "access_token" => "ya29.a0AVvZ...",
-            "refresh_token" => "1//03vpp6Li...",
-            "expires_at" => expires_at,
-            "scope" =>
-              String.split(oauth_client.mandatory_scopes, ",") |> Enum.join(" ")
-          },
+          oauth_token:
+            build(:oauth_token,
+              body: %{
+                "access_token" => "ya29.a0AVvZ...",
+                "refresh_token" => "1//03vpp6Li...",
+                "expires_at" => expires_at,
+                "scope" =>
+                  String.split(oauth_client.mandatory_scopes, ",")
+                  |> Enum.join(" ")
+              },
+              user: user,
+              oauth_client: oauth_client
+            ),
           oauth_client: oauth_client
         )
 
@@ -1400,13 +1423,19 @@ defmodule LightningWeb.CredentialLiveTest do
           user: user,
           schema: "oauth",
           body: %{"apiVersion" => "v1"},
-          oauth_token: %{
-            access_token: "ya29.a0AVvZ...",
-            refresh_token: "1//03vpp6Li...",
-            expires_at: expires_at,
-            scope:
-              String.split(oauth_client.mandatory_scopes, ",") |> Enum.join(" ")
-          },
+          oauth_token:
+            build(:oauth_token,
+              body: %{
+                access_token: "ya29.a0AVvZ...",
+                refresh_token: "1//03vpp6Li...",
+                expires_at: expires_at,
+                scope:
+                  String.split(oauth_client.mandatory_scopes, ",")
+                  |> Enum.join(" ")
+              },
+              user: user,
+              oauth_client: oauth_client
+            ),
           oauth_client_id: oauth_client.id
         )
 
@@ -1436,12 +1465,17 @@ defmodule LightningWeb.CredentialLiveTest do
           schema: "oauth",
           oauth_client: oauth_client,
           user: user,
-          oauth_token: %{
-            "access_token" => "test_access_token",
-            "refresh_token" => "test_refresh_token",
-            "token_type" => "bearer",
-            "expires_in" => 3600
-          }
+          oauth_token:
+            build(:oauth_token,
+              body: %{
+                "access_token" => "test_access_token",
+                "refresh_token" => "test_refresh_token",
+                "token_type" => "bearer",
+                "expires_in" => 3600
+              },
+              user: user,
+              oauth_client: oauth_client
+            )
         )
 
       {:ok, view, html} = live(conn, ~p"/credentials")

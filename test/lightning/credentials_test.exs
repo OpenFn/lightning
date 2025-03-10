@@ -189,17 +189,25 @@ defmodule Lightning.CredentialsTest do
     end
 
     test "schedule_credential_deletion/1 revokes token for oauth credentials" do
+      user = insert(:user)
+      oauth_client = insert(:oauth_client)
+
       oauth_credential =
         insert(:credential,
           name: "My Credential",
           schema: "oauth",
-          oauth_token: %{
-            access_token: "super_secret_access_token_123",
-            refresh_token: "super_secret_refresh_token_123",
-            expires_in: 3000
-          },
-          user: build(:user),
-          oauth_client: build(:oauth_client)
+          oauth_token:
+            build(:oauth_token,
+              user: user,
+              oauth_client: oauth_client,
+              body: %{
+                access_token: "super_secret_access_token_123",
+                refresh_token: "super_secret_refresh_token_123",
+                expires_in: 3000
+              }
+            ),
+          user: user,
+          oauth_client: oauth_client
         )
 
       refute oauth_credential.scheduled_deletion
@@ -389,18 +397,26 @@ defmodule Lightning.CredentialsTest do
 
   describe "update_credential/2" do
     test "updates an Oauth credential with new scopes" do
+      user = insert(:user)
+      oauth_client = insert(:oauth_client)
+
       credential =
         insert(:credential,
           name: "My Credential",
           schema: "oauth",
-          oauth_token: %{
-            access_token: "ya29.a0AWY7CknfkidjXaoDTuNi",
-            refresh_token: "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
-            expires_at: 10_000,
-            scope: "email calendar chat"
-          },
-          user: build(:user),
-          oauth_client: build(:oauth_client)
+          oauth_token:
+            build(:oauth_token,
+              body: %{
+                access_token: "ya29.a0AWY7CknfkidjXaoDTuNi",
+                refresh_token: "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
+                expires_at: 10_000,
+                scope: "email calendar chat"
+              },
+              user: user,
+              oauth_client: oauth_client
+            ),
+          user: user,
+          oauth_client: oauth_client
         )
 
       update_attrs = %{
@@ -825,12 +841,19 @@ defmodule Lightning.CredentialsTest do
         "token_type" => "Bearer"
       }
 
+      user = insert(:user)
+
       rotten_credential =
         insert(:credential,
           schema: "oauth",
           oauth_client: nil,
-          oauth_token: rotten_token,
-          user: build(:user)
+          oauth_token:
+            build(:oauth_token,
+              body: rotten_token,
+              oauth_client: nil,
+              user: user
+            ),
+          user: user
         )
 
       {:ok, fresh_credential} =
@@ -1264,6 +1287,8 @@ defmodule Lightning.CredentialsTest do
       credential =
         insert(:credential,
           schema: "oauth",
+          oauth_token:
+            build(:oauth_token, user: user, oauth_client: oauth_client),
           user: user,
           oauth_client: oauth_client
         )
@@ -1346,18 +1371,24 @@ defmodule Lightning.CredentialsTest do
 
     test "maybe_refresh_token/1 handles OAuth client errors during refresh" do
       oauth_client = insert(:oauth_client)
+      user = insert(:user)
 
       expired_at = DateTime.to_unix(DateTime.utc_now()) - 1000
 
       credential =
         insert(:credential,
           schema: "oauth",
-          oauth_token: %{
-            access_token: "expired_token",
-            refresh_token: "refresh_token",
-            expires_at: expired_at
-          },
-          user: build(:user),
+          oauth_token:
+            build(:oauth_token,
+              body: %{
+                access_token: "expired_token",
+                refresh_token: "refresh_token",
+                expires_at: expired_at
+              },
+              user: user,
+              oauth_client: oauth_client
+            ),
+          user: user,
           oauth_client: oauth_client
         )
 
@@ -1526,6 +1557,7 @@ defmodule Lightning.CredentialsTest do
   describe "refresh token logic" do
     test "maybe_refresh_token/1 keeps original token when there's an oauth client error" do
       oauth_client = insert(:oauth_client)
+      user = insert(:user)
       expired_at = DateTime.to_unix(DateTime.utc_now()) - 1000
 
       original_token = %{
@@ -1537,8 +1569,13 @@ defmodule Lightning.CredentialsTest do
       credential =
         insert(:credential,
           schema: "oauth",
-          oauth_token: original_token,
-          user: build(:user),
+          oauth_token:
+            build(:oauth_token,
+              body: original_token,
+              user: user,
+              oauth_client: oauth_client
+            ),
+          user: user,
           oauth_client: oauth_client
         )
 
@@ -1566,15 +1603,22 @@ defmodule Lightning.CredentialsTest do
       oauth_client = insert(:oauth_client)
       expired_at = DateTime.to_unix(DateTime.utc_now()) - 1000
 
+      user = insert(:user)
+
       credential =
         insert(:credential,
           schema: "oauth",
-          oauth_token: %{
-            access_token: "expired_token",
-            refresh_token: "refresh_token",
-            expires_at: expired_at
-          },
-          user: build(:user),
+          oauth_token:
+            build(:oauth_token,
+              body: %{
+                access_token: "expired_token",
+                refresh_token: "refresh_token",
+                expires_at: expired_at
+              },
+              user: user,
+              oauth_client: oauth_client
+            ),
+          user: user,
           oauth_client: oauth_client
         )
 
@@ -1959,13 +2003,13 @@ defmodule Lightning.CredentialsTest do
     assert credential2.oauth_token.body["refresh_token"] == "original_refresh"
   end
 
-  describe "find_token_with_overlapping_scopes/3" do
+  describe "find_best_matching_token_for_scopes/3" do
     test "returns nil when oauth_client_id doesn't exist" do
       user = insert(:user)
       non_existent_client_id = Ecto.UUID.generate()
 
       result =
-        Credentials.find_token_with_overlapping_scopes(
+        Credentials.find_best_matching_token_for_scopes(
           user.id,
           non_existent_client_id,
           ["read", "write"]
@@ -1979,7 +2023,7 @@ defmodule Lightning.CredentialsTest do
       oauth_client = insert(:oauth_client, mandatory_scopes: "openid,profile")
 
       result =
-        Credentials.find_token_with_overlapping_scopes(
+        Credentials.find_best_matching_token_for_scopes(
           user.id,
           oauth_client.id,
           ["read", "write"]
@@ -2019,7 +2063,7 @@ defmodule Lightning.CredentialsTest do
         })
 
       result1 =
-        Credentials.find_token_with_overlapping_scopes(
+        Credentials.find_best_matching_token_for_scopes(
           user.id,
           oauth_client.id,
           ["openid", "profile", "email", "calendar"]
@@ -2028,7 +2072,7 @@ defmodule Lightning.CredentialsTest do
       assert result1.id == token1.id
 
       result2 =
-        Credentials.find_token_with_overlapping_scopes(
+        Credentials.find_best_matching_token_for_scopes(
           user.id,
           oauth_client.id,
           ["openid", "profile", "email"]
@@ -2077,7 +2121,7 @@ defmodule Lightning.CredentialsTest do
         })
 
       result =
-        Credentials.find_token_with_overlapping_scopes(
+        Credentials.find_best_matching_token_for_scopes(
           user.id,
           oauth_client.id,
           ["openid", "profile"]
@@ -2088,7 +2132,7 @@ defmodule Lightning.CredentialsTest do
       Repo.delete!(token3)
 
       result =
-        Credentials.find_token_with_overlapping_scopes(
+        Credentials.find_best_matching_token_for_scopes(
           user.id,
           oauth_client.id,
           ["openid", "profile"]
@@ -2122,7 +2166,7 @@ defmodule Lightning.CredentialsTest do
         })
 
       result =
-        Credentials.find_token_with_overlapping_scopes(
+        Credentials.find_best_matching_token_for_scopes(
           user.id,
           oauth_client2.id,
           ["openid", "profile", "calendar"]

@@ -230,7 +230,7 @@ defmodule Lightning.Credentials do
   end
 
   defp handle_missing_refresh_token(user_id, client_id, scopes, token) do
-    case find_token_with_overlapping_scopes(user_id, client_id, scopes) do
+    case find_best_matching_token_for_scopes(user_id, client_id, scopes) do
       nil ->
         return_error("Missing required OAuth field: refresh_token")
 
@@ -1377,7 +1377,7 @@ defmodule Lightning.Credentials do
   defp token_exists?(_, _, nil), do: false
 
   defp token_exists?(user_id, oauth_client_id, scopes) do
-    find_token_with_overlapping_scopes(
+    find_best_matching_token_for_scopes(
       user_id,
       oauth_client_id,
       scopes
@@ -1400,35 +1400,62 @@ defmodule Lightning.Credentials do
   end
 
   @doc """
-  Finds the most appropriate OAuth token for a user that matches the requested scopes.
+    Finds the most appropriate OAuth token for a user that matches the requested scopes.
 
-  This function implements a sophisticated token matching algorithm that considers:
-  1. Mandatory scopes (required by the OAuth client but not unique to specific services)
-  2. Service-specific scopes (like drive, calendar, mail, etc.)
+    This function implements a sophisticated token matching algorithm that considers:
+    1. Mandatory scopes (required by the OAuth client but not unique to specific services)
+    2. Service-specific scopes (like drive, calendar, mail, etc.)
 
-  ## Matching Algorithm
+    ## Matching Algorithm
 
-  The function first fetches all OAuth tokens that belong to the user and match the
-  client's credentials. Then it selects the best matching token based on these rules:
+    The function first fetches all OAuth tokens that belong to the user and match the
+    client's credentials. Then it selects the best matching token based on these rules:
 
-  For requests with only mandatory scopes:
-  - Returns the token with the fewest additional non-mandatory scopes
-  - If tied, selects the most recently updated token
+    For requests with only mandatory scopes:
+    - Returns the token with the fewest additional non-mandatory scopes
+    - If tied, selects the most recently updated token
 
-  For requests with service-specific scopes:
-  - Filters to tokens with at least one matching service-specific scope
-  - Ranks by: exact match, most matching scopes, fewest extra scopes, most recent update
+    For requests with service-specific scopes:
+    - Filters to tokens with at least one matching service-specific scope
+    - Ranks by: exact match, most matching scopes, fewest extra scopes, most recent update
 
-  ## Parameters
-    - `user_id`: The ID of the user who owns the tokens
-    - `oauth_client_id`: The ID of the OAuth client to match tokens for
-    - `requested_scopes`: List of OAuth scopes being requested
+    ## Complexity Analysis
 
-  ## Returns
-    - The best matching `OauthToken` struct
-    - `nil` if no suitable token is found or no client exists with the given ID
+    Time Complexity:
+    - Best case (when oauth_client_id is nil): O(1)
+    - Worst case: O(log N + k × s) where:
+      - N = database table size
+      - k = number of tokens for the user with matching client credentials
+      - s = number of scopes being evaluated
+
+    Space Complexity:
+    - O(k + s) for storing retrieved tokens and scope sets
+
+    In practice, performance is excellent as k and s are typically small values.
+
+    ## Parameters
+      - `user_id`: The ID of the user who owns the tokens
+      - `oauth_client_id`: The ID of the OAuth client to match tokens for
+      - `requested_scopes`: List of OAuth scopes being requested
+
+    ## Returns
+      - The best matching `OauthToken` struct
+      - `nil` if:
+        - `oauth_client_id` is nil
+        - No client exists with the given ID
+        - No tokens match the requested criteria
   """
-  def find_token_with_overlapping_scopes(
+  @spec find_best_matching_token_for_scopes(
+          user_id :: Ecto.UUID.t(),
+          oauth_client_id :: Ecto.UUID.t() | nil,
+          requested_scopes :: [String.t()]
+        ) :: OauthToken.t() | nil
+
+  def find_best_matching_token_for_scopes(_user_id, nil, _requested_scopes) do
+    nil
+  end
+
+  def find_best_matching_token_for_scopes(
         user_id,
         oauth_client_id,
         requested_scopes
@@ -1439,7 +1466,7 @@ defmodule Lightning.Credentials do
         nil
 
       %OauthClient{mandatory_scopes: mandatory_scopes} ->
-        fetch_user_tokens_by_client(user_id, oauth_client_id)
+        fetch_tokens_with_matching_client_credentials(user_id, oauth_client_id)
         |> select_best_matching_token(
           requested_scopes,
           mandatory_scopes
@@ -1447,7 +1474,7 @@ defmodule Lightning.Credentials do
     end
   end
 
-  defp fetch_user_tokens_by_client(user_id, oauth_client_id) do
+  defp fetch_tokens_with_matching_client_credentials(user_id, oauth_client_id) do
     Ecto.Query.from(token in OauthToken,
       join: token_client in OauthClient,
       on: token.oauth_client_id == token_client.id,

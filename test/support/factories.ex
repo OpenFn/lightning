@@ -200,89 +200,13 @@ defmodule Lightning.Factories do
   end
 
   def credential_factory(attrs \\ %{}) do
-    schema = Map.get(attrs, :schema, "raw")
-
-    oauth_token =
-      if schema == "oauth" do
-        get_or_create_oauth_token(attrs)
-      else
-        nil
-      end
-
-    attrs = attrs |> Map.delete(:oauth_token) |> Map.delete(:oauth_client)
-
     %Lightning.Credentials.Credential{
       body: %{},
-      schema: schema,
+      schema: "raw",
       name: sequence(:credential_name, &"credential#{&1}")
     }
-    |> add_oauth_token(schema, oauth_token)
     |> Map.merge(attrs)
   end
-
-  defp get_or_create_oauth_token(attrs) do
-    oauth_token = Map.get(attrs, :oauth_token, %{})
-
-    case oauth_token do
-      %Lightning.Credentials.OauthToken{} ->
-        oauth_token
-
-      _ ->
-        user = determine_user(attrs)
-        client = determine_client(attrs)
-
-        oauth_token_attrs = %{
-          body: oauth_token,
-          user_id: user.id,
-          user: user,
-          oauth_client_id: client && client.id,
-          oauth_client: client
-        }
-
-        oauth_token_attrs =
-          case Lightning.Credentials.OauthToken.extract_scopes(oauth_token) do
-            {:ok, scopes} -> Map.put(oauth_token_attrs, :scope, scopes)
-            :error -> oauth_token_attrs
-          end
-
-        insert(:oauth_token, oauth_token_attrs)
-    end
-  end
-
-  defp determine_user(%{user: %Lightning.Accounts.User{id: nil} = _user}),
-    do: insert(:user)
-
-  defp determine_user(%{user: %Lightning.Accounts.User{} = user}), do: user
-
-  defp determine_user(%{user_id: id}) when not is_nil(id),
-    do: Lightning.Repo.get!(Lightning.Accounts.User, id)
-
-  defp determine_user(_), do: insert(:user)
-
-  defp determine_client(%{
-         oauth_client: %Lightning.Credentials.OauthClient{id: nil} = _client
-       }),
-       do: insert(:oauth_client)
-
-  defp determine_client(%{
-         oauth_client: %Lightning.Credentials.OauthClient{} = client
-       }),
-       do: client
-
-  defp determine_client(%{oauth_client_id: id}) when not is_nil(id),
-    do: Lightning.Repo.get!(Lightning.Credentials.OauthClient, id)
-
-  defp determine_client(_), do: nil
-
-  defp add_oauth_token(credential, "oauth", oauth_token) do
-    Map.put(
-      credential,
-      :oauth_token,
-      Lightning.Repo.preload(oauth_token, :oauth_client)
-    )
-  end
-
-  defp add_oauth_token(credential, _, _), do: credential
 
   def project_credential_factory do
     %Lightning.Projects.ProjectCredential{

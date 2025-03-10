@@ -533,7 +533,12 @@ defmodule LightningWeb.RunChannelTest do
             "apiVersion" => 23,
             "sandbox" => true
           },
-          oauth_token: oauth_token,
+          oauth_token:
+            build(:oauth_token,
+              body: oauth_token,
+              user: user,
+              oauth_client: oauth_client
+            ),
           oauth_client: oauth_client,
           user: user
         )
