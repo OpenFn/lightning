@@ -1380,7 +1380,7 @@ defmodule Lightning.Credentials do
          mandatory_scopes_string
        ) do
     # Parse comma-separated mandatory scopes
-    mandatory_scopes = process_scopes(mandatory_scopes_string)
+    mandatory_scopes = process_scopes(mandatory_scopes_string, ",")
 
     # Create sets for requested and mandatory scopes
     requested_scope_set = MapSet.new(requested_scopes)
@@ -1477,6 +1477,7 @@ defmodule Lightning.Credentials do
     scopes
     |> String.downcase()
     |> String.split(delimiter)
+    |> Enum.map(&String.trim/1)
     |> Enum.reject(&(&1 == ""))
   end
 end
