@@ -47,14 +47,14 @@ results =
 
     Repo.transaction(fn ->
       scopes =
-        case OauthToken.extract_scopes(credential.body) |> dbg() do
+        case OauthToken.extract_scopes(credential.body) do
           {:ok, extracted_scopes} -> extracted_scopes
           :error -> []
         end
 
       existing_token =
         if credential.oauth_client_id do
-          Credentials.find_token_with_overlapping_scopes(credential.user_id, credential.oauth_client_id, scopes) |> dbg()
+          Credentials.find_token_with_overlapping_scopes(credential.user_id, credential.oauth_client_id, scopes)
         else
           nil
         end
