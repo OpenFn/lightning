@@ -2,7 +2,7 @@ defmodule LightningWeb.ProjectLive.ConcurrencyInputComponent do
   use LightningWeb, :live_component
 
   def update(assigns, socket) do
-    {:ok, socket |> assign(assigns) |> assign(:max_value, nil)}
+    {:ok, socket |> assign(assigns)}
   end
 
   def render(assigns) do
@@ -13,7 +13,7 @@ defmodule LightningWeb.ProjectLive.ConcurrencyInputComponent do
         field={@field}
         disabled={@disabled}
         label=""
-        max={@max_value}
+        max={nil}
       />
       <span class="flex grow flex-col">
         <.label>Disable parallel run execution</.label>
