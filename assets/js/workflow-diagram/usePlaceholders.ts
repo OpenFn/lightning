@@ -50,7 +50,7 @@ export const create = (parentNode: Flow.Node) => {
 };
 
 export default (
-  ref: HTMLElement | undefined,
+  el: HTMLElement | null | undefined,
   store: StoreApi<WorkflowState>,
   requestSelectionChange: (id: string | null) => void // TODO more like changeSelection
 ) => {
@@ -91,18 +91,18 @@ export default (
   }, []);
 
   useEffect(() => {
-    if (ref) {
-      ref.addEventListener<any>('commit-placeholder', commit);
-      ref.addEventListener<any>('cancel-placeholder', cancel);
+    if (el) {
+      el.addEventListener<any>('commit-placeholder', commit);
+      el.addEventListener<any>('cancel-placeholder', cancel);
 
       return () => {
-        if (ref) {
-          ref.removeEventListener<any>('commit-placeholder', commit);
-          ref.removeEventListener<any>('cancel-placeholder', cancel);
+        if (el) {
+          el.removeEventListener<any>('commit-placeholder', commit);
+          el.removeEventListener<any>('cancel-placeholder', cancel);
         }
       };
     }
-  }, [commit, cancel, ref]);
+  }, [commit, cancel, el]);
 
   return { placeholders, add, cancel };
 };
