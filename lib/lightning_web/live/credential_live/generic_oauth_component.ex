@@ -6,6 +6,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
   alias Lightning.AuthProviders.OauthHTTPClient
   alias Lightning.Credentials
+  alias Lightning.Credentials.OauthToken
   alias LightningWeb.Components.NewInputs
   alias LightningWeb.CredentialLive.Helpers
   alias Phoenix.LiveView.JS
@@ -44,8 +45,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
   @impl true
   def update(%{selected_client: nil, action: _action} = assigns, socket) do
-    selected_scopes =
-      process_scopes(assigns.credential.oauth_token.body["scope"], " ")
+    selected_scopes = process_scopes(assigns.credential.oauth_token)
 
     {:ok,
      build_assigns(socket, assigns,
@@ -62,8 +62,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
         %{selected_client: selected_client, action: :edit} = assigns,
         socket
       ) do
-    selected_scopes =
-      process_scopes(assigns.credential.oauth_token.body["scope"], " ")
+    selected_scopes = process_scopes(assigns.credential.oauth_token)
 
     mandatory_scopes = process_scopes(selected_client.mandatory_scopes, ",")
     optional_scopes = process_scopes(selected_client.optional_scopes, ",")
@@ -400,9 +399,22 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     |> Enum.into(%{})
   end
 
-  defp process_scopes(scopes_string, delimiter) do
-    scopes_string
-    |> to_string()
+  defp process_scopes(input) do
+    process_scopes(input, " ")
+  end
+
+  defp process_scopes(nil, _delimiter) do
+    []
+  end
+
+  defp process_scopes(%OauthToken{body: body}, delimiter) do
+    body
+    |> Map.get("scope", "")
+    |> process_scopes(delimiter)
+  end
+
+  defp process_scopes(scopes, delimiter) when is_binary(scopes) do
+    scopes
     |> String.downcase()
     |> String.split(delimiter)
     |> Enum.reject(&(&1 == ""))

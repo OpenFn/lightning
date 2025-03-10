@@ -678,29 +678,9 @@ defmodule Lightning.Credentials do
   def basic_auth_for(_credential), do: []
 
   def maybe_refresh_token(%Credential{schema: "oauth"} = credential) do
-    credential =
-      %{oauth_token: oauth_token} =
-      Repo.preload(credential, oauth_token: :oauth_client)
-
-    cond do
-      still_fresh(oauth_token) ->
-        {:ok, credential}
-
-      is_nil(oauth_token.oauth_client_id) ->
-        {:ok, credential}
-
-      true ->
-        case OauthHTTPClient.refresh_token(
-               oauth_token.oauth_client,
-               oauth_token.body
-             ) do
-          {:ok, fresh_token} ->
-            update_credential(credential, %{oauth_token: fresh_token})
-
-          {:error, error} ->
-            {:error, error}
-        end
-    end
+    credential
+    |> Repo.preload(oauth_token: :oauth_client)
+    |> refresh_oauth_token()
   end
 
   # TODO: Remove this function when deprecating salesforce and googlesheets oauth
@@ -731,6 +711,33 @@ defmodule Lightning.Credentials do
 
   def maybe_refresh_token(%Credential{} = credential) do
     {:ok, credential}
+  end
+
+  defp refresh_oauth_token(%Credential{oauth_token: nil} = credential) do
+    {:ok, credential}
+  end
+
+  defp refresh_oauth_token(
+         %Credential{oauth_token: %{oauth_client_id: nil}} = credential
+       ) do
+    {:ok, credential}
+  end
+
+  defp refresh_oauth_token(%Credential{oauth_token: oauth_token} = credential) do
+    if still_fresh(oauth_token) do
+      {:ok, credential}
+    else
+      case OauthHTTPClient.refresh_token(
+             oauth_token.oauth_client,
+             oauth_token.body
+           ) do
+        {:ok, fresh_token} ->
+          update_credential(credential, %{oauth_token: fresh_token})
+
+        {:error, error} ->
+          {:error, error}
+      end
+    end
   end
 
   # TODO: Remove this function when deprecating salesforce and googlesheets oauth

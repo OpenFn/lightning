@@ -395,7 +395,7 @@ defmodule LightningWeb.Components.Credentials do
             <.td class="break-words max-w-[15rem]">
               <div class="flex-auto items-center">
                 <%= credential.name %>
-                <%= if credential.schema == "oauth" and !credential.oauth_token.oauth_client_id do %>
+                <%= if missing_oauth_client?(credential) do %>
                   <span
                     id={"#{credential.id}-client-not-found-tooltip"}
                     phx-hook="Tooltip"
@@ -493,7 +493,8 @@ defmodule LightningWeb.Components.Credentials do
     """
   end
 
-  defp credential_type(%Credential{schema: "oauth", oauth_token: token}) do
+  defp credential_type(%Credential{schema: "oauth", oauth_token: token})
+       when not is_nil(token) do
     if token.oauth_client_id && token.oauth_client do
       String.downcase(token.oauth_client.name)
     else
@@ -503,5 +504,11 @@ defmodule LightningWeb.Components.Credentials do
 
   defp credential_type(%Credential{schema: schema}) do
     schema
+  end
+
+  defp missing_oauth_client?(credential) do
+    credential.schema == "oauth" &&
+      (credential.oauth_token == nil ||
+         credential.oauth_token.oauth_client_id == nil)
   end
 end
