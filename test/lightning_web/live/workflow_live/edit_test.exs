@@ -3890,7 +3890,13 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       run_view = find_live_child(view, "run-viewer-#{run.id}")
 
       render_async(run_view)
-      assert render(run_view) =~ "Configure log levels"
+
+      assert run_view
+             |> render()
+             |> Floki.parse_fragment!()
+             |> Floki.find("span.hero-adjustments-vertical + span")
+             |> Floki.text() ==
+               "info"
 
       # when the user has not set their preference, we assume they want info
       assert user.preferences["desired_log_level"] |> is_nil()
@@ -3902,8 +3908,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # try choosing another level
       for log_level <- ["debug", "info", "error", "warn"] do
         run_view
-        |> form("#run-log-#{run.id}-filter-form")
-        |> render_change(%{desired_log_level: log_level})
+        |> element("#run-log-#{run.id}-filter-dropdown-#{log_level}-option")
+        |> render_click(%{})
 
         # selected level is set in the viewer
         assert log_viewer_selected_level(log_viewer) == log_level
