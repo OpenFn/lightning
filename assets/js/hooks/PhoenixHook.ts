@@ -1,24 +1,55 @@
-export interface LiveSocket {
-  execJS(el: HTMLElement, code: string): void;
-  pushHistoryPatch(url: string, type: string, el?: HTMLElement): void;
-}
+import type { ViewHook, ViewHookInternal } from 'phoenix_live_view';
 
-export type PhoenixHook<T = {}, Dataset = {}, El = HTMLElement> = {
-  mounted(): void;
-  updated(): void;
-  liveSocket: LiveSocket;
+interface PhoenixHookInternal<
+  Dataset extends DOMStringMap = {},
+  El extends HTMLElement = HTMLElement,
+> extends Omit<ViewHookInternal, 'el'> {
   el: El & {
-    dataset: Dataset;
+    readonly dataset: Dataset;
   };
-  destroyed(): void;
-  reconnected(): void;
-  disconnected(): void;
-  handleEvent<T = {}>(eventName: string, callback: (payload: T) => void): void;
-  removeHandleEvent(callbackRef: unknown): void;
-  pushEventTo<P = {}, R = any>(
+  handleEvent<T extends object = {}>(
+    event: string,
+    callback: (payload: T) => void
+  ): void;
+  pushEvent<P extends object = {}, R = any>(
+    event: string,
+    payload: P,
+    onReply?: (reply: R, ref: number) => void
+  ): void;
+  pushEventTo<P extends object = {}, R = any>(
     selectorOrTarget: string | HTMLElement,
     event: string,
     payload: P,
-    callback?: (reply: R, ref: any) => void
+    onReply?: (reply: R, ref: number) => void
   ): void;
-} & T;
+}
+
+type OmitThis<T> = T extends (this: infer _, ...args: any) => any
+  ? OmitThisParameter<T>
+  : T;
+
+type OmitThisInMethods<T extends object = {}> = {
+  [k in keyof T]: OmitThis<T[k]>;
+};
+
+type OmitPrivate<T extends object = {}> = {
+  [k in keyof T as k extends `_${string}` ? never : k]: T[k];
+};
+
+type PhoenixHookInternalThis<
+  T extends object = {},
+  Dataset extends DOMStringMap = {},
+  El extends HTMLElement = HTMLElement,
+> = T & PhoenixHookInternal<Dataset, El>;
+
+export type PhoenixHook<
+  T extends object = {},
+  Dataset extends DOMStringMap = {},
+  El extends HTMLElement = HTMLElement,
+> = OmitThisInMethods<OmitPrivate<T> & ViewHook<T>> &
+  ThisType<PhoenixHookInternalThis<T, Dataset, El>>;
+
+export type GetPhoenixHookInternalThis<T> =
+  T extends PhoenixHook<infer T extends object, infer Dataset, infer El>
+    ? PhoenixHookInternalThis<T, Dataset, El>
+    : never;

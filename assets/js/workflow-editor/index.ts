@@ -1,13 +1,13 @@
 // Hook for Workflow Editor Component
 import { DEFAULT_TEXT } from '../editor/Editor';
-import { PhoenixHook } from '../hooks/PhoenixHook';
-import { Lightning } from '../workflow-diagram/types';
+import type { PhoenixHook } from '../hooks/PhoenixHook';
+import type { Lightning } from '../workflow-diagram/types';
 import { randomUUID } from '../common';
 import type { mount } from './component';
 import {
-  Patch,
-  PendingAction,
-  WorkflowProps,
+  type Patch,
+  type PendingAction,
+  type WorkflowProps,
   createWorkflowStore,
 } from './store';
 
@@ -36,7 +36,7 @@ export type WorkflowEditorEntrypoint = PhoenixHook<
     setupObserver(): void;
     hasLoaded: Promise<URL>;
   },
-  { baseUrl: string | null }
+  { baseUrl?: string | undefined }
 >;
 
 const createNewWorkflow = () => {
@@ -71,7 +71,7 @@ const createNewWorkflow = () => {
 let workflowLoadParamsStart: number | null = null;
 
 export default {
-  mounted(this: WorkflowEditorEntrypoint) {
+  mounted() {
     let setHasLoaded: (href: URL) => void;
 
     this.hasLoaded = new Promise(resolve => {

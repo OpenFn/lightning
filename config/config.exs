@@ -88,7 +88,7 @@ config :lightning, :oauth_clients,
 
 # Configure esbuild (the version is required)
 config :esbuild,
-  version: "0.17.13",
+  version: "0.25.0",
   default: [
     args:
       ~w(js/app.js
@@ -97,7 +97,10 @@ config :esbuild,
          fonts/inter.css
          fonts/fira-code.css
          --loader:.woff2=file
+         --loader:.ttf=copy
          --format=esm --splitting --bundle
+         --jsx=automatic
+         --tsconfig=tsconfig.browser.json
          --target=es2020
          --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
     cd: Path.expand("../assets", __DIR__),
@@ -107,6 +110,8 @@ config :esbuild,
     args: ~w(
          #{Path.expand("../assets/node_modules/monaco-editor/min/vs/**/*.*", __DIR__) |> Path.wildcard() |> Enum.join(" ")}
          --loader:.ttf=copy
+         --jsx=automatic
+         --tsconfig=tsconfig.browser.json
          --outdir=../priv/static/assets/monaco-editor/vs ),
     cd: Path.expand("../assets", __DIR__),
     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
@@ -117,7 +122,7 @@ config :tailwind,
   version: "3.4.13",
   default: [
     args: ~w(
-      --config=tailwind.config.js
+      --config=tailwind.config.ts
       --input=css/app.css
       --output=../priv/static/assets/app.css
     ),
@@ -125,7 +130,7 @@ config :tailwind,
   ],
   storybook: [
     args: ~w(
-      --config=tailwind.config.js
+      --config=tailwind.config.ts
       --input=css/storybook.css
       --output=../priv/static/assets/storybook.css
     ),

@@ -1,5 +1,3 @@
-import React from 'react';
-
 import { ExclamationCircleIcon } from '@heroicons/react/24/outline';
 
 const ErrorMessage: React.FC<React.ComponentProps<any>> = ({ children }) => {

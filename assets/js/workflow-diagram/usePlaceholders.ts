@@ -2,10 +2,10 @@
  * Hook for placeholder management
  */
 import { useState, useCallback, useEffect } from 'react';
-import { useStore, StoreApi } from 'zustand';
+import { useStore, type StoreApi } from 'zustand';
 
 import { styleEdge } from './styles';
-import { Flow } from './types';
+import type { Flow } from './types';
 import toWorkflow from './util/to-workflow';
 import type { WorkflowState } from '../workflow-editor/store';
 import { randomUUID } from '../common';

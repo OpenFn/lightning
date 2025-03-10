@@ -12,13 +12,25 @@ const ctx = await esbuild.context({
   sourcemap: true,
   format: 'esm',
   target: ['es2020'],
+  tsconfig: 'tsconfig.browser.json',
+  jsx: 'automatic',
   plugins: [
     postcss(),
     copy({
-      assets: {
-        from: ['./dev-server/public/*'],
-        to: ['.'],
-      },
+      assets: [
+        {
+          from: ['./dev-server/public/**/*'],
+          to: ['.'],
+        },
+        {
+          from: ['../priv/static/*'],
+          to: ['.'],
+        },
+        {
+          from: ['../priv/static/images/**/*'],
+          to: ['./images'],
+        },
+      ],
     }),
   ],
 });

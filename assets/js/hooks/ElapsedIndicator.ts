@@ -1,4 +1,4 @@
-import { PhoenixHook } from './PhoenixHook';
+import type { PhoenixHook } from './PhoenixHook';
 
 function formatParts(elapsedTimeMs: number): [number, string] {
   if (elapsedTimeMs < 1000) {

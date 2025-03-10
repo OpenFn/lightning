@@ -1,9 +1,9 @@
 import { useCallback, useState } from 'react';
-import { useStore, StoreApi } from 'zustand';
+import { useStore, type StoreApi } from 'zustand';
 import Connection from './edges/Connection';
 import { styleEdge } from './styles';
-import { Flow } from './types';
-import { WorkflowState } from '../workflow-editor/store';
+import type { Flow } from './types';
+import type { WorkflowState } from '../workflow-editor/store';
 import { randomUUID } from '../common'
 import toWorkflow from './util/to-workflow';
 

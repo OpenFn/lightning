@@ -1,13 +1,16 @@
 import pDebounce from 'p-debounce';
 import pRetry from 'p-retry';
-import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { EDITOR_DEBOUNCE_MS } from '../common';
-import { LiveSocket, PhoenixHook } from '../hooks/PhoenixHook';
+import type { LiveSocket } from 'phoenix_live_view';
+import type {
+  PhoenixHook,
+  GetPhoenixHookInternalThis,
+} from '../hooks/PhoenixHook';
 import { sortMetadata } from '../metadata-loader/metadata';
-import { Lightning } from '../workflow-diagram/types';
+import type { Lightning } from '../workflow-diagram/types';
 import type WorkflowEditorEntrypoint from '../workflow-editor';
-import { WorkflowStore } from '../workflow-editor/store';
+import type { WorkflowStore } from '../workflow-editor/store';
 import type JobEditor from './JobEditor';
 
 type JobEditorEntrypoint = PhoenixHook<
@@ -59,7 +62,7 @@ export default {
     console.debug('Reconnected JobEditor');
     // this.handleContentChange(this.currentContent);
   },
-  mounted(this: JobEditorEntrypoint) {
+  mounted() {
     let event = 'editor load';
     let start = instrumentStart(event);
 

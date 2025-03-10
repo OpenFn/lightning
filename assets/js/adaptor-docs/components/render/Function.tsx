@@ -1,4 +1,3 @@
-import React from 'react';
 import type { FunctionDescription } from '@openfn/describe-package';
 import { marked } from 'marked';
 
