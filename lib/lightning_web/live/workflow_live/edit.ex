@@ -2227,14 +2227,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
       workflow.project_id
       |> Workflows.list_project_workflows()
       |> Enum.map(fn %{id: workflow_id, concurrency: concurrency} ->
-        if workflow_id == workflow.id, do: 0, else: concurrency
+        if workflow_id == workflow.id, do: 0, else: concurrency || 0
       end)
       |> Enum.sum()
+
+    project_concurrency = workflow.project.concurrency || 0
 
     socket
     |> assign(
       workflow: workflow,
-      max_concurrency: workflow.project.concurrency - alloted_concurrency
+      max_concurrency: max(0, project_concurrency - alloted_concurrency)
     )
     |> apply_params(socket.assigns.workflow_params, :workflow)
   end
