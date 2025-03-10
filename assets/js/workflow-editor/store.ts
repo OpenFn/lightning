@@ -16,9 +16,9 @@ export type RemoveArgs = {
 export type AddArgs = ChangeArgs;
 
 export type ChangeArgs = {
-  triggers?: (Partial<Lightning.TriggerNode> & { id: string })[];
-  jobs?: (Partial<Lightning.JobNode> & { id: string })[];
-  edges?: (Partial<Lightning.Edge> & { id: string })[];
+  triggers?: t.SetRequired<Partial<Lightning.TriggerNode>, 'id'>[];
+  jobs?: t.SetRequired<Partial<Lightning.JobNode>, 'id'>[];
+  edges?: t.SetRequired<Partial<Lightning.Edge>, 'id'>[];
 };
 
 export type WorkflowProps = {
@@ -34,7 +34,7 @@ export interface WorkflowState extends WorkflowProps {
   remove: (data: RemoveArgs) => void;
   rebase: (data: Partial<WorkflowProps>) => void;
   getById: <T = Lightning.Node | Lightning.Edge | Lightning.TriggerNode>(
-    id: string
+    id?: string | undefined
   ) => T | undefined;
   onChange: (pendingAction: PendingAction) => void;
   applyPatches: (patches: Patch[]) => void;
@@ -113,37 +113,40 @@ export const createWorkflowStore = (
 
       set(state =>
         proposeChanges(state, draft => {
-          ['jobs', 'triggers', 'edges'].forEach(k => {
-            const key = k as keyof WorkflowProps;
-            if (data[key]) {
-              data[key]!.forEach(item => {
-                if (!item.id) {
-                  item.id = randomUUID();
-                }
-                draft[key].push(item as any);
-              });
+          (['jobs', 'triggers', 'edges'] as const).forEach(
+            <K extends 'jobs' | 'triggers' | 'edges'>(key: K) => {
+              const change = data[key];
+              if (change) {
+                change.forEach((item: NonNullable<ChangeArgs[K]>[number]) => {
+                  if (!item.id) {
+                    item.id = randomUUID();
+                  }
+                  draft[key].push(item);
+                });
+              }
             }
-          });
+          );
         })
       );
     },
     remove: data => {
       set(state =>
         proposeChanges(state, draft => {
-          ['jobs', 'triggers', 'edges'].forEach(k => {
-            const key = k as keyof WorkflowProps;
-
-            const idsToRemove = data[key]!;
-            if (idsToRemove) {
-              const nextItems: any[] = [];
-              draft[key].forEach(item => {
-                if (!idsToRemove.includes(item.id)) {
-                  nextItems.push(item);
-                }
-              });
-              draft[key] = nextItems;
+          (['jobs', 'triggers', 'edges'] as const).forEach(
+            <K extends 'jobs' | 'triggers' | 'edges'>(key: K) => {
+              const idsToRemove = data[key];
+              if (idsToRemove) {
+                const currentItems = draft[key];
+                const nextItems: WorkflowState[K] = [];
+                currentItems.forEach((item: WorkflowState[K][number]) => {
+                  if (!idsToRemove.includes(item.id)) {
+                    nextItems.push(item);
+                  }
+                });
+                draft[key] = nextItems;
+              }
             }
-          });
+          );
         })
       );
     },
@@ -166,7 +169,7 @@ export const createWorkflowStore = (
             const type = t as 'jobs' | 'triggers' | 'edges';
             for (const change of changes) {
               const current = draft[type] as Array<
-                Lightning.Node | Lightning.Edge
+                Lightning.TriggerNode | Lightning.JobNode | Lightning.Edge
               >;
 
               const item = current.find(i => i.id === change.id);
@@ -179,6 +182,8 @@ export const createWorkflowStore = (
       );
     },
     getById(id) {
+      if (id == null) return;
+
       const state = get();
 
       for (const items of Object.entries(state).reduce((acc, [k, v]) => {

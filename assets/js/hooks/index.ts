@@ -1,4 +1,7 @@
-import tippy, { type Instance as TippyInstance } from 'tippy.js';
+import tippy, {
+  type Instance as TippyInstance,
+  type Placement,
+} from 'tippy.js';
 import type { PhoenixHook } from './PhoenixHook';
 
 import LogLineHighlight from './LogLineHighlight';
@@ -45,6 +48,8 @@ export const TabIndent = {
         const start = this.el.selectionStart;
         const end = this.el.selectionEnd;
 
+        if (start == null || end == null) return;
+
         this.el.value =
           this.el.value.substring(0, start) +
           indent +
@@ -54,14 +59,14 @@ export const TabIndent = {
       }
     });
   },
-};
+} as PhoenixHook<{}, {}, HTMLInputElement>;
 
 export const Combobox = {
   mounted() {
-    this.input = this.el.querySelector('input');
-    this.dropdown = this.el.querySelector('ul');
+    this.input = this.el.querySelector('input')!;
+    this.dropdown = this.el.querySelector('ul')!;
     this.options = Array.from(this.el.querySelectorAll('li'));
-    this.toggleButton = this.el.querySelector('button');
+    this.toggleButton = this.el.querySelector('button')!;
     this.highlightedIndex = -1;
     this.navigatingWithKeys = false;
     this.navigatingWithMouse = false;
@@ -83,6 +88,7 @@ export const Combobox = {
     });
 
     document.addEventListener('click', e => {
+      if (!(e.target instanceof Node) && e.target !== null) return;
       if (!this.el.contains(e.target)) this.hideDropdown();
     });
 
@@ -94,7 +100,8 @@ export const Combobox = {
     this.input.select();
   },
 
-  handleInput(event) {
+  handleInput(event: Event) {
+    if (!(event.target instanceof HTMLInputElement)) return;
     this.filterOptions(event.target.value);
     this.showDropdown();
     this.highlightFirstMatch();
@@ -102,7 +109,7 @@ export const Combobox = {
     this.navigatingWithMouse = false;
   },
 
-  handleKeydown(event) {
+  handleKeydown(event: KeyboardEvent) {
     if (!this.isDropdownVisible()) {
       if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
         event.preventDefault();
@@ -140,14 +147,14 @@ export const Combobox = {
     }
   },
 
-  handleMouseEnter(index) {
+  handleMouseEnter(index: number) {
     if (!this.navigatingWithKeys) {
       this.navigatingWithMouse = true;
       this.highlightOption(index);
     }
   },
 
-  handleMouseMove(index) {
+  handleMouseMove(index: number) {
     if (this.navigatingWithKeys) {
       this.navigatingWithKeys = false;
       this.navigatingWithMouse = true;
@@ -155,12 +162,12 @@ export const Combobox = {
     }
   },
 
-  filterOptions(searchTerm) {
+  filterOptions(searchTerm: string) {
     const lowercaseSearchTerm = searchTerm.toLowerCase();
     let hasVisibleOptions = false;
 
     this.options.forEach(option => {
-      const text = option.textContent.toLowerCase();
+      const text = (option.textContent ?? '').toLowerCase();
       if (text.includes(lowercaseSearchTerm)) {
         option.style.display = 'block';
         hasVisibleOptions = true;
@@ -184,8 +191,8 @@ export const Combobox = {
     }
   },
 
-  updateNoResultsMessage(show) {
-    let noResultsEl = this.dropdown.querySelector('.no-results');
+  updateNoResultsMessage(show: boolean) {
+    let noResultsEl = this.dropdown.querySelector<HTMLElement>('.no-results');
     if (show) {
       if (!noResultsEl) {
         noResultsEl = document.createElement('li');
@@ -234,23 +241,23 @@ export const Combobox = {
     });
   },
 
-  highlightOption(index) {
+  highlightOption(index: number) {
     const visibleOptions = this.getVisibleOptions();
     this.highlightedIndex = visibleOptions.indexOf(this.options[index]);
     this.updateHighlight();
   },
 
-  selectOption(index) {
+  selectOption(index: number) {
     const selectedOption = this.options[index];
 
     if (selectedOption && selectedOption.style.display !== 'none') {
-      this.input.value = selectedOption.textContent.trim();
+      this.input.value = (selectedOption.textContent ?? '').trim();
       this.hideDropdown();
       this.navigateToItem(selectedOption.dataset.url);
     }
   },
 
-  navigateToItem(url) {
+  navigateToItem(url?: string | undefined) {
     if (url) {
       window.location.href = url;
     }
@@ -287,7 +294,9 @@ export const Combobox = {
   initializeSelectedOption() {
     const selectedOptionIndex = this.getSelectedOptionIndex();
     if (selectedOptionIndex !== -1) {
-      this.input.value = this.options[selectedOptionIndex].textContent.trim();
+      this.input.value = (
+        this.options[selectedOptionIndex].textContent ?? ''
+      ).trim();
     }
   },
 
@@ -304,8 +313,11 @@ export const Combobox = {
     }
   },
 
-  debounce(func, wait) {
-    let timeout;
+  debounce<E extends Event>(
+    func: (event: E) => void,
+    wait: number
+  ): (event: E) => void {
+    let timeout = 0;
     return function executedFunction(...args) {
       const later = () => {
         clearTimeout(timeout);
@@ -315,11 +327,45 @@ export const Combobox = {
       timeout = setTimeout(later, wait);
     };
   },
-};
+} as PhoenixHook<{
+  input: HTMLInputElement;
+  dropdown: HTMLUListElement;
+  options: HTMLLIElement[];
+  toggleButton: HTMLButtonElement;
+  highlightedIndex: number;
+  navigatingWithKeys: boolean;
+  navigatingWithMouse: boolean;
+  handleInputFocus(): void;
+  handleInput(event: Event): void;
+  handleKeydown(event: KeyboardEvent): void;
+  handleMouseEnter(index: number): void;
+  handleMouseMove(index: number): void;
+  filterOptions(searchTerm: string): boolean;
+  highlightFirstMatch(): void;
+  updateNoResultsMessage(show: boolean): void;
+  getVisibleOptions(): HTMLLIElement[];
+  highlightNextOption(): void;
+  highlightPreviousOption(): void;
+  updateHighlight(): void;
+  highlightOption(index: number): void;
+  selectOption(index: number): void;
+  navigateToItem(url?: string | undefined): void;
+  toggleDropdown(): void;
+  showDropdown(): void;
+  hideDropdown(): void;
+  isDropdownVisible(): boolean;
+  initializeSelectedOption(): void;
+  getSelectedOptionIndex(): number;
+  scrollToSelectedOption(): void;
+  debounce<E extends Event>(
+    func: (event: E) => void,
+    wait: number
+  ): (event: E) => void;
+}>;
 
 export const OpenAuthorizeUrl = {
   mounted() {
-    this.handleEvent('open_authorize_url', ({ url }: { url: string }) => {
+    this.handleEvent<{ url: string }>('open_authorize_url', ({ url }) => {
       window.open(url, '_blank');
     });
   },
@@ -346,7 +392,9 @@ export const ClearInput = {
 export const ModalHook = {
   mounted() {
     this.handleEvent('close_modal', () => {
-      this.liveSocket.execJS(this.el, this.el.getAttribute('phx-on-close'));
+      let onClose = this.el.getAttribute('phx-on-close');
+      if (!onClose) return;
+      this.liveSocket.execJS(this.el, onClose);
     });
   },
 } as PhoenixHook;
@@ -354,12 +402,12 @@ export const ModalHook = {
 export const ShowActionsOnRowHover = {
   mounted() {
     this.el.addEventListener('mouseenter', e => {
-      let target = this.el.querySelector('.hover-content');
+      let target = this.el.querySelector<HTMLElement>('.hover-content');
       if (target) target.style.opacity = '1';
     });
 
     this.el.addEventListener('mouseleave', e => {
-      let target = this.el.querySelector('.hover-content');
+      let target = this.el.querySelector<HTMLElement>('.hover-content');
       if (target) target.style.opacity = '0';
     });
   },
@@ -367,8 +415,11 @@ export const ShowActionsOnRowHover = {
 
 export const Flash = {
   mounted() {
-    let hide = () =>
-      this.liveSocket.execJS(this.el, this.el.getAttribute('phx-click'));
+    let hide = () => {
+      const click = this.el.getAttribute('phx-click');
+      if (!click) return;
+      this.liveSocket.execJS(this.el, click);
+    };
     this.timer = setTimeout(() => hide(), 5000);
     this.el.addEventListener('phx:hide-start', () => clearTimeout(this.timer));
     this.el.addEventListener('mouseover', () => {
@@ -379,7 +430,7 @@ export const Flash = {
   destroyed() {
     clearTimeout(this.timer);
   },
-} as PhoenixHook<{ timer: ReturnType<typeof setTimeout> }>;
+} as PhoenixHook<{ timer: number }>;
 
 export const FragmentMatch = {
   mounted() {
@@ -405,7 +456,9 @@ export const TogglePassword = {
     }
 
     this.el.addEventListener('click', () => {
-      let passwordInput = document.getElementById(this.el.dataset.target);
+      let passwordInput = document.querySelector<HTMLInputElement>(
+        `#${this.el.dataset.target}`
+      );
 
       if (passwordInput === null) {
         console.warn('Target password input element was not found', this.el);
@@ -424,7 +477,7 @@ export const TogglePassword = {
       }
     });
   },
-} as PhoenixHook;
+} as PhoenixHook<{}, { target: string }>;
 
 export const Tooltip = {
   mounted() {
@@ -457,7 +510,10 @@ export const Tooltip = {
   destroyed() {
     if (this._tippyInstance) this._tippyInstance.unmount();
   },
-} as PhoenixHook<{ _tippyInstance: TippyInstance | null }>;
+} as PhoenixHook<
+  { _tippyInstance: TippyInstance | null },
+  { placement: Placement }
+>;
 
 export const AssocListChange = {
   mounted() {
@@ -470,7 +526,8 @@ export const AssocListChange = {
 export const CollapsiblePanel = {
   mounted() {
     this.el.addEventListener('click', event => {
-      const target = event.target as HTMLElement;
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
 
       // If the click target smells like a link, expand the panel.
       if (target.closest('a[href]')) {
@@ -482,6 +539,7 @@ export const CollapsiblePanel = {
 
     this.el.addEventListener('collapse', event => {
       const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
       if (target) {
         const collection = this.el.getElementsByClassName('collapsed');
         if (collection.length < 2) {
@@ -491,6 +549,7 @@ export const CollapsiblePanel = {
     });
 
     this.el.addEventListener('expand-panel', event => {
+      if (!(event.target instanceof HTMLElement)) return;
       event.target.classList.remove('collapsed');
     });
   },
@@ -500,7 +559,9 @@ export const BlurDataclipEditor = {
   mounted() {
     this.el.addEventListener('keydown', event => {
       if (event.key === 'Escape') {
-        document.activeElement.blur();
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
         event.stopImmediatePropagation();
       }
     });
@@ -529,7 +590,9 @@ export const Copy = {
     const phxThenAttribute = this.el.getAttribute('phx-then');
     this.el.addEventListener('click', ev => {
       ev.preventDefault();
-      let text = document.querySelector(to).value;
+      let target = document.querySelector(to);
+      if (!(target instanceof HTMLInputElement)) return;
+      let text = target.value;
       let element = this.el;
       navigator.clipboard.writeText(text).then(() => {
         console.log('Copied!');
@@ -556,4 +619,4 @@ export const CheckboxIndeterminate = {
   updated() {
     this.el.indeterminate = this.el.classList.contains('indeterminate');
   },
-} as PhoenixHook;
+} as PhoenixHook<{}, {}, HTMLInputElement>;

@@ -39,7 +39,7 @@ const iconStyle = 'inline cursor-pointer h-6 w-6 mr-1 hover:text-primary-600';
 type TabSpec = {
   label: string;
   id: string;
-  icon: React.ComponentClass<React.SVGProps<SVGSVGElement>>;
+  icon: React.JSXElementConstructor<React.SVGAttributes<SVGSVGElement>>;
 };
 
 type TabsProps = {
@@ -68,7 +68,7 @@ const Tabs = ({
   const horizStyle = 'flex-space-x-2 w-full';
   const vertStyle = 'flex-space-y-2';
 
-  const style = verticalCollapse
+  const style: React.CSSProperties = verticalCollapse
     ? {
         writingMode: 'vertical-rl',
         textOrientation: 'mixed',
