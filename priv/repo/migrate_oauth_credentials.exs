@@ -14,7 +14,6 @@ alias Lightning.Repo
 alias Lightning.Credentials
 alias Lightning.Credentials.Credential
 alias Lightning.Credentials.OauthToken
-alias Lightning.Credentials.OauthClient
 
 Logger.info("Starting OAuth credentials migration")
 

@@ -1347,14 +1347,17 @@ defmodule Lightning.Credentials do
         requested_scopes
       )
       when is_list(requested_scopes) do
-    %OauthClient{mandatory_scopes: mandatory_scopes} =
-      Repo.get!(OauthClient, oauth_client_id)
+    case Repo.get(OauthClient, oauth_client_id) do
+      nil ->
+        nil
 
-    fetch_user_tokens_by_client(user_id, oauth_client_id)
-    |> select_best_matching_token(
-      requested_scopes,
-      mandatory_scopes
-    )
+      %OauthClient{mandatory_scopes: mandatory_scopes} ->
+        fetch_user_tokens_by_client(user_id, oauth_client_id)
+        |> select_best_matching_token(
+          requested_scopes,
+          mandatory_scopes
+        )
+    end
   end
 
   defp fetch_user_tokens_by_client(user_id, oauth_client_id) do
@@ -1374,61 +1377,86 @@ defmodule Lightning.Credentials do
   defp select_best_matching_token(
          available_tokens,
          requested_scopes,
-         mandatory_scopes
+         mandatory_scopes_string
        ) do
-    mandatory_scopes = process_scopes(mandatory_scopes)
+    # Parse comma-separated mandatory scopes
+    mandatory_scopes = process_scopes(mandatory_scopes_string)
 
+    # Create sets for requested and mandatory scopes
     requested_scope_set = MapSet.new(requested_scopes)
     mandatory_scope_set = MapSet.new(mandatory_scopes)
 
+    # Remove mandatory scopes from the requested scopes
     effective_requested_scopes =
       MapSet.difference(requested_scope_set, mandatory_scope_set)
 
-    requested_scope_count = MapSet.size(effective_requested_scopes)
+    # If there are no non-mandatory requested scopes, find token with fewest scopes
+    if MapSet.size(effective_requested_scopes) == 0 do
+      available_tokens
+      |> Enum.min_by(
+        fn token ->
+          token_scope_set = MapSet.new(token.scopes)
 
-    available_tokens
-    |> Enum.filter(fn token ->
-      token_scope_set = MapSet.new(token.scopes)
+          effective_token_scopes =
+            MapSet.difference(token_scope_set, mandatory_scope_set)
 
-      effective_token_scopes =
-        MapSet.difference(token_scope_set, mandatory_scope_set)
-
-      # Keep only tokens that have at least one non-mandatory scope in common with the requested scopes
-      # Or if there are no non-mandatory scopes to match, allow tokens with only mandatory scopes
-      MapSet.intersection(effective_token_scopes, effective_requested_scopes)
-      |> MapSet.size() > 0 ||
-        (MapSet.size(effective_requested_scopes) == 0 &&
-           MapSet.size(effective_token_scopes) == 0)
-    end)
-    |> Enum.max_by(
-      fn token ->
+          # Priority: Fewest non-mandatory scopes, then most recent
+          {MapSet.size(effective_token_scopes),
+           -DateTime.to_unix(token.updated_at)}
+        end,
+        fn -> nil end
+      )
+    else
+      # Otherwise find best match based on non-mandatory scopes
+      available_tokens
+      |> Enum.filter(fn token ->
         token_scope_set = MapSet.new(token.scopes)
 
         effective_token_scopes =
           MapSet.difference(token_scope_set, mandatory_scope_set)
 
-        matching_scope_count =
+        # Only consider tokens that have at least one non-mandatory scope
+        # in common with the requested scopes
+        non_mandatory_overlap =
           MapSet.intersection(effective_token_scopes, effective_requested_scopes)
           |> MapSet.size()
 
-        unrequested_scope_count =
-          MapSet.difference(effective_token_scopes, effective_requested_scopes)
-          |> MapSet.size()
+        non_mandatory_overlap > 0
+      end)
+      |> Enum.max_by(
+        fn token ->
+          token_scope_set = MapSet.new(token.scopes)
 
-        exact_match? =
-          matching_scope_count == requested_scope_count &&
-            unrequested_scope_count == 0
+          effective_token_scopes =
+            MapSet.difference(token_scope_set, mandatory_scope_set)
 
-        last_updated = DateTime.to_unix(token.updated_at)
+          matching_scope_count =
+            MapSet.intersection(
+              effective_token_scopes,
+              effective_requested_scopes
+            )
+            |> MapSet.size()
 
-        # Sort priority: exact matches first, then by number of matching scopes,
-        # then fewer unrequested scopes, and finally by most recently updated
-        {if(exact_match?, do: 1, else: 0), matching_scope_count,
-         -unrequested_scope_count, last_updated}
-      end,
-      # Return nil if no tokens match
-      fn -> nil end
-    )
+          unrequested_scope_count =
+            MapSet.difference(effective_token_scopes, effective_requested_scopes)
+            |> MapSet.size()
+
+          effective_requested_count = MapSet.size(effective_requested_scopes)
+
+          exact_match? =
+            matching_scope_count == effective_requested_count &&
+              unrequested_scope_count == 0
+
+          last_updated = DateTime.to_unix(token.updated_at)
+
+          # Sort priority: exact matches first, then by number of matching scopes,
+          # then fewer unrequested scopes, and finally by most recently updated
+          {if(exact_match?, do: 1, else: 0), matching_scope_count,
+           -unrequested_scope_count, last_updated}
+        end,
+        fn -> nil end
+      )
+    end
   end
 
   def process_scopes(input) do
