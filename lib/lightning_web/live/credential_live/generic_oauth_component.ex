@@ -6,7 +6,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
   alias Lightning.AuthProviders.OauthHTTPClient
   alias Lightning.Credentials
-  alias Lightning.Credentials.OauthToken
   alias LightningWeb.Components.NewInputs
   alias LightningWeb.CredentialLive.Helpers
   alias Phoenix.LiveView.JS
@@ -45,7 +44,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
   @impl true
   def update(%{selected_client: nil, action: _action} = assigns, socket) do
-    selected_scopes = process_scopes(assigns.credential.oauth_token)
+    selected_scopes = Credentials.process_scopes(assigns.credential.oauth_token)
 
     {:ok,
      build_assigns(socket, assigns,
@@ -62,10 +61,13 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
         %{selected_client: selected_client, action: :edit} = assigns,
         socket
       ) do
-    selected_scopes = process_scopes(assigns.credential.oauth_token)
+    selected_scopes = Credentials.process_scopes(assigns.credential.oauth_token)
 
-    mandatory_scopes = process_scopes(selected_client.mandatory_scopes, ",")
-    optional_scopes = process_scopes(selected_client.optional_scopes, ",")
+    mandatory_scopes =
+      Credentials.process_scopes(selected_client.mandatory_scopes, ",")
+
+    optional_scopes =
+      Credentials.process_scopes(selected_client.optional_scopes, ",")
 
     scopes = mandatory_scopes ++ optional_scopes ++ selected_scopes
     scopes = scopes |> Enum.map(&String.downcase/1) |> Enum.uniq()
@@ -93,8 +95,11 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   end
 
   def update(%{action: :new, selected_client: selected_client} = assigns, socket) do
-    mandatory_scopes = process_scopes(selected_client.mandatory_scopes, ",")
-    optional_scopes = process_scopes(selected_client.optional_scopes, ",")
+    mandatory_scopes =
+      Credentials.process_scopes(selected_client.mandatory_scopes, ",")
+
+    optional_scopes =
+      Credentials.process_scopes(selected_client.optional_scopes, ",")
 
     state = build_state(socket.id, __MODULE__, assigns.id)
     stringified_scopes = Enum.join(mandatory_scopes, " ")
@@ -397,27 +402,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     changeset.errors
     |> Enum.map(fn {field, {message, _opts}} -> {field, message} end)
     |> Enum.into(%{})
-  end
-
-  defp process_scopes(input) do
-    process_scopes(input, " ")
-  end
-
-  defp process_scopes(nil, _delimiter) do
-    []
-  end
-
-  defp process_scopes(%OauthToken{body: body}, delimiter) do
-    body
-    |> Map.get("scope", "")
-    |> process_scopes(delimiter)
-  end
-
-  defp process_scopes(scopes, delimiter) when is_binary(scopes) do
-    scopes
-    |> String.downcase()
-    |> String.split(delimiter)
-    |> Enum.reject(&(&1 == ""))
   end
 
   defp build_assigns(socket, assigns, additional_assigns) do

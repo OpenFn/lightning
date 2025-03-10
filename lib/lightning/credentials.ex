@@ -1347,8 +1347,14 @@ defmodule Lightning.Credentials do
         requested_scopes
       )
       when is_list(requested_scopes) do
+    %OauthClient{mandatory_scopes: mandatory_scopes} =
+      Repo.get!(OauthClient, oauth_client_id)
+
     fetch_user_tokens_by_client(user_id, oauth_client_id)
-    |> select_best_matching_token(requested_scopes)
+    |> select_best_matching_token(
+      requested_scopes,
+      mandatory_scopes
+    )
   end
 
   defp fetch_user_tokens_by_client(user_id, oauth_client_id) do
@@ -1365,28 +1371,48 @@ defmodule Lightning.Credentials do
     |> Lightning.Repo.all()
   end
 
-  defp select_best_matching_token(available_tokens, requested_scopes) do
+  defp select_best_matching_token(
+         available_tokens,
+         requested_scopes,
+         mandatory_scopes
+       ) do
+    mandatory_scopes = process_scopes(mandatory_scopes)
+
     requested_scope_set = MapSet.new(requested_scopes)
-    requested_scope_count = MapSet.size(requested_scope_set)
+    mandatory_scope_set = MapSet.new(mandatory_scopes)
+
+    effective_requested_scopes =
+      MapSet.difference(requested_scope_set, mandatory_scope_set)
+
+    requested_scope_count = MapSet.size(effective_requested_scopes)
 
     available_tokens
     |> Enum.filter(fn token ->
       token_scope_set = MapSet.new(token.scopes)
 
-      # Keep only tokens that have at least one scope in common with the requested scopes
-      MapSet.intersection(token_scope_set, requested_scope_set) |> MapSet.size() >
-        0
+      effective_token_scopes =
+        MapSet.difference(token_scope_set, mandatory_scope_set)
+
+      # Keep only tokens that have at least one non-mandatory scope in common with the requested scopes
+      # Or if there are no non-mandatory scopes to match, allow tokens with only mandatory scopes
+      MapSet.intersection(effective_token_scopes, effective_requested_scopes)
+      |> MapSet.size() > 0 ||
+        (MapSet.size(effective_requested_scopes) == 0 &&
+           MapSet.size(effective_token_scopes) == 0)
     end)
     |> Enum.max_by(
       fn token ->
         token_scope_set = MapSet.new(token.scopes)
 
+        effective_token_scopes =
+          MapSet.difference(token_scope_set, mandatory_scope_set)
+
         matching_scope_count =
-          MapSet.intersection(token_scope_set, requested_scope_set)
+          MapSet.intersection(effective_token_scopes, effective_requested_scopes)
           |> MapSet.size()
 
         unrequested_scope_count =
-          MapSet.difference(token_scope_set, requested_scope_set)
+          MapSet.difference(effective_token_scopes, effective_requested_scopes)
           |> MapSet.size()
 
         exact_match? =
@@ -1403,5 +1429,26 @@ defmodule Lightning.Credentials do
       # Return nil if no tokens match
       fn -> nil end
     )
+  end
+
+  def process_scopes(input) do
+    process_scopes(input, " ")
+  end
+
+  def process_scopes(nil, _delimiter) do
+    []
+  end
+
+  def process_scopes(%OauthToken{body: body}, delimiter) do
+    body
+    |> Map.get("scope", "")
+    |> process_scopes(delimiter)
+  end
+
+  def process_scopes(scopes, delimiter) when is_binary(scopes) do
+    scopes
+    |> String.downcase()
+    |> String.split(delimiter)
+    |> Enum.reject(&(&1 == ""))
   end
 end
