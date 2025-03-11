@@ -23,6 +23,8 @@ defmodule Lightning.Credentials.OauthMigration do
   - `:credentials_updated` - Number of credentials updated to reference tokens
   """
   def run do
+    Lightning.Setup.ensure_minimum_setup()
+
     Logger.info("Starting OAuth credentials migration")
 
     credentials = fetch_unmigrated_credentials()
