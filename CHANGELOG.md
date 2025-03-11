@@ -19,8 +19,8 @@ and this project adheres to
 
 - Update Collections admin UI storage counter after deleting all
   [#2986](https://github.com/OpenFn/lightning/issues/2986)
-- Allow the possibility for OAuth Tokens to be associated with multiple
-  credentials [#2908](https://github.com/OpenFn/lightning/issues/2908)
+- Refactor OAuth credentials to reuse existing refresh tokens for same scopes [#2908](https://github.com/OpenFn/lightning/issues/2908) \
+  ⚠️️ Please note that you will need to migrate your existing OAuth credentials. To do that run the following command: `mix run priv/repo/migrate_oauth_credentials.exs` for local setup or `docker exec -it <lightning_container_name> /app/bin/lightning eval "Lightning.Credentials.OauthMigration.run()"` for production environments.
 
 ### Changed
 

@@ -23,21 +23,26 @@ defmodule Lightning.Credentials.OauthMigration do
   - `:credentials_updated` - Number of credentials updated to reference tokens
   """
   def run do
-    Lightning.Setup.ensure_minimum_setup()
+    {:ok, _} = Lightning.Setup.ensure_minimum_setup()
 
-    Logger.info("Starting OAuth credentials migration")
+    {:ok, results, _} =
+      Ecto.Migrator.with_repo(Lightning.Repo, fn _repo ->
+        Logger.info("Starting OAuth credentials migration")
 
-    credentials = fetch_unmigrated_credentials()
-    total = length(credentials)
+        credentials = fetch_unmigrated_credentials()
+        total = length(credentials)
 
-    Logger.info("Found #{total} OAuth credentials to migrate")
+        Logger.info("Found #{total} OAuth credentials to migrate")
 
-    stats = %{tokens_created: 0, credentials_updated: 0}
-    results = Enum.reduce(credentials, stats, &process_credential/2)
+        stats = %{tokens_created: 0, credentials_updated: 0}
+        results = Enum.reduce(credentials, stats, &process_credential/2)
 
-    Logger.info(
-      "Migration completed: Created #{results.tokens_created} tokens, updated #{results.credentials_updated} credentials"
-    )
+        Logger.info(
+          "Migration completed: Created #{results.tokens_created} tokens, updated #{results.credentials_updated} credentials"
+        )
+
+        results
+      end)
 
     results
   end
