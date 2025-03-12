@@ -86,6 +86,9 @@ defmodule React do
         # It also code splits and chunks things nicely
         @external_resource file
 
+        attr :"react-id", :string, default: nil
+        attr :"react-portal-target", :string, default: nil
+
         def unquote(String.to_atom(name))(var!(assigns)) do
           # The script tag will be updated by LiveView and contain the data, as a JSON "DOM turd".
           # When it is updated, the `ReactComponent` client hook will re-parse
@@ -112,8 +115,11 @@ defmodule React do
             |> Map.merge(%{
               :__id__ => var!(assigns)[:id] || unquote(id),
               :__name__ => unquote(name),
-              :__asset__ => unquote(asset)
+              :__asset__ => unquote(asset),
+              :__react_id__ => var!(assigns)[:"react-id"],
+              :__react_portal_target__ => var!(assigns)[:"react-portal-target"]
             })
+            |> Map.drop([:"react-id", :"react-portal-target"])
             |> React.Slots.render_slots()
 
           ~H"""
@@ -122,6 +128,8 @@ defmodule React do
             type="application/json"
             data-react-file={@__asset__}
             data-react-name={@__name__}
+            data-react-id={@__react_id__}
+            data-react-portal-target={@__react_portal_target__}
             phx-hook="ReactComponent"
           >
             <%= raw(React.json(assigns)) %>

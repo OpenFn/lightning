@@ -2,7 +2,7 @@ import type { View } from 'phoenix_live_view';
 
 import { useLayoutEffect, useRef, useState } from 'react';
 
-import { performPatch } from '#/react/lib';
+import { performPatch } from '#/react/lib/perform-patch';
 
 const style: React.CSSProperties = {
   // Don't create a box for this element

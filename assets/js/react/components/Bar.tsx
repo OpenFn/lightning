@@ -1,14 +1,14 @@
-export type BarProps = {
-  before: React.ReactNode;
-  after: React.ReactNode;
-  children: React.ReactNode;
-};
+import { useState, useEffect } from 'react';
 
-export const Bar = ({ before, after, children }: BarProps) => (
-  <>
-    {before}
-    <p>Bar:</p>
-    {children}
-    {after}
-  </>
-);
+import { useFoo } from '#/react/hooks/use-foo';
+
+export const Bar = () => {
+  const foo = useFoo();
+  const [bar, setBar] = useState(0);
+
+  useEffect(() => {
+    setBar(foo + 1);
+  }, [foo]);
+
+  return <p>Bar: {bar}</p>;
+};

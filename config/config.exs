@@ -121,7 +121,8 @@ config :esbuild,
       |> then(fn args ->
         case config_env() do
           "prod" -> args
-          _ -> args ++ ["--jsx-dev"]
+          # _ -> args ++ ["--jsx-dev"]
+          _ -> args
         end
       end),
     cd: Path.expand("../assets", __DIR__),
@@ -143,7 +144,8 @@ config :esbuild,
       |> then(fn args ->
         case config_env() do
           "prod" -> args ++ ["--minify"]
-          _ -> args ++ ["--jsx-dev"]
+          # _ -> args ++ ["--jsx-dev"]
+          _ -> args
         end
       end),
     cd: Path.expand("../assets", __DIR__),

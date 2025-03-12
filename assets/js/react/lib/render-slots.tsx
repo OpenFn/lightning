@@ -2,7 +2,7 @@ import warning from 'tiny-warning';
 
 import type { View } from 'phoenix_live_view';
 
-import { Slot, type SlotProps } from '#/react/components';
+import { Slot, type SlotProps } from '#/react/components/Slot';
 
 // Store named slots here so we don't create a whole bunch of duplicates
 const slots = new Map<string, React.FunctionComponent<SlotProps>>();

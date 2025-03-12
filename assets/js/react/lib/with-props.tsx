@@ -3,6 +3,7 @@ import type { View } from 'phoenix_live_view';
 import { useSyncExternalStore } from 'react';
 
 import { getComponentName } from './get-component-name';
+import { mergeChildren } from './merge-children';
 import { renderPortals } from './render-portals';
 import { renderSlots } from './render-slots';
 
@@ -33,10 +34,15 @@ export const withProps = <const Props = object,>(
     const portals = useSyncExternalStore(subscribe, getPortals);
 
     return (
-      <>
-        <Component {...(props as React.JSX.IntrinsicAttributes & Props)} />
-        {renderPortals(portals)}
-      </>
+      <Component {...(props as React.JSX.IntrinsicAttributes & Props)}>
+        {mergeChildren(
+          (typeof props === 'object' &&
+            props !== null &&
+            'children' in props &&
+            props.children) as React.ReactNode,
+          renderPortals(portals)
+        )}
+      </Component>
     );
   };
 

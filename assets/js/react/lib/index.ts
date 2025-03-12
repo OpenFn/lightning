@@ -1,12 +1,17 @@
-export { getClosestReactContainerElement } from './get-closest-react-container-element';
 export { getComponentName } from './get-component-name';
+
 export { importComponent } from './import-component';
+
 export { isReactContainerElement } from './is-react-container-element';
+
 export { isReactHookedElement } from './is-react-hooked-element';
+
 export { lazyLoadComponent } from './lazy-load-component';
+
+export { mergeChildren } from './merge-children';
+
 export { performPatch } from './perform-patch';
-export { renderSlots } from './render-slots';
-export { replaceEqualDeep } from './replace-equal-deep';
+
 export {
   isClass,
   isFunction,
@@ -26,4 +31,15 @@ export {
   isNamedExotic,
   isIntrinsic,
 } from './react-is-type';
+
+export { renderPortals } from './render-portals';
+
+export { renderSlots } from './render-slots';
+
+export { replaceEqualDeep } from './replace-equal-deep';
+
+export { RootObserver } from './root-observer';
+
+export { createRootStore } from './root-store';
+
 export { withProps } from './with-props';
