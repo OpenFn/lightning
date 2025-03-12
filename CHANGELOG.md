@@ -21,7 +21,7 @@ and this project adheres to
 
 ### Fixed
 
-## [v2.11.0-pre.0] - 2025-03-12
+## [v2.11.0-pre.1] - 2025-03-12
 
 ### Added
 
@@ -36,6 +36,8 @@ and this project adheres to
   [#2941](https://github.com/OpenFn/lightning/issues/2941)
 - Use dropdown instead of modal for the log level filter
   [#2980](https://github.com/OpenFn/lightning/issues/2980)
+- Upgrade esbuild to 0.25.0
+  [#2962](https://github.com/OpenFn/lightning/issues/2962)
 
 ### Fixed
 

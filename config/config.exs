@@ -99,6 +99,7 @@ config :esbuild,
          --loader:.woff2=file
          --loader:.ttf=copy
          --format=esm --splitting --bundle
+         --external:path
          --jsx=automatic
          --tsconfig=tsconfig.browser.json
          --target=es2020
