@@ -78,6 +78,15 @@ defmodule Lightning.Workflows.Edge do
       :condition_expression
     ])
     |> validate()
+    |> enable_if_source_trigger()
+  end
+
+  defp enable_if_source_trigger(changeset) do
+    if changeset.valid? and get_field(changeset, :source_trigger_id) do
+      put_change(changeset, :enabled, true)
+    else
+      changeset
+    end
   end
 
   def validate(changeset) do

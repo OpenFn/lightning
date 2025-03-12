@@ -355,6 +355,48 @@ defmodule Lightning.Projects.ProvisionerTest do
                project_id: ^project_id
              } = collection
     end
+
+    test "trigger->firstjob edge is enabled even if params says disabled" do
+      Mox.verify_on_exit!()
+      user = insert(:user)
+
+      %{body: %{"workflows" => [workflow]} = body, project_id: project_id} =
+        valid_document()
+
+      # disable all edges
+      disabled_edges =
+        Enum.map(workflow["edges"], fn edge ->
+          Map.put(edge, "enabled", false)
+        end)
+
+      new_workflow = Map.put(workflow, "edges", disabled_edges)
+
+      body_with_disabled_edges =
+        Map.put(body, "workflows", [new_workflow])
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      {:ok, project} =
+        Provisioner.import_document(
+          %Lightning.Projects.Project{},
+          user,
+          body_with_disabled_edges
+        )
+
+      assert %{id: ^project_id, workflows: [%{edges: edges}]} = project
+
+      # trigger edge is enabled
+      trigger_edge = Enum.find(edges, & &1.source_trigger_id)
+      assert trigger_edge.enabled
+
+      # job edge is disabled
+      [job_edge] = edges -- [trigger_edge]
+      refute job_edge.enabled
+    end
   end
 
   describe "import_document/2 with an existing project" do
@@ -1132,6 +1174,49 @@ defmodule Lightning.Projects.ProvisionerTest do
                Provisioner.import_document(project, user, body)
 
       assert remaining_collection.id == collection.id
+    end
+
+    test "trigger->firstjob edge is enabled even if params says disabled", %{
+      project: %{id: project_id} = project,
+      user: user
+    } do
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      %{body: %{"workflows" => [workflow]} = body} = valid_document(project.id)
+
+      {:ok, project} = Provisioner.import_document(project, user, body)
+
+      # disable all edges
+      disabled_edges =
+        Enum.map(workflow["edges"], fn edge ->
+          Map.put(edge, "enabled", false)
+        end)
+
+      new_workflow = Map.put(workflow, "edges", disabled_edges)
+
+      body_with_disabled_edges =
+        Map.put(body, "workflows", [new_workflow])
+
+      {:ok, project} =
+        Provisioner.import_document(
+          project,
+          user,
+          body_with_disabled_edges
+        )
+
+      assert %{id: ^project_id, workflows: [%{edges: edges}]} = project
+
+      # trigger edge is enabled
+      trigger_edge = Enum.find(edges, & &1.source_trigger_id)
+      assert trigger_edge.enabled
+
+      # job edge is disabled
+      [job_edge] = edges -- [trigger_edge]
+      refute job_edge.enabled
     end
   end
 
