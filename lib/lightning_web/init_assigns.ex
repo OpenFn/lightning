@@ -16,6 +16,11 @@ defmodule LightningWeb.InitAssigns do
      end)
      |> assign_new(:account_confirmation_required?, fn ->
        confirmation_required?
+     end)
+     |> assign_new(:banner, fn ->
+       if is_nil(current_user.preferences["demo_banner_dismissed_at"]) do
+         %{function: &LightningWeb.LiveHelpers.book_demo_banner/1, attrs: %{}}
+       end
      end)}
   end
 end
