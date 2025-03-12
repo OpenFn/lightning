@@ -232,7 +232,7 @@ defmodule Lightning.Credentials do
   defp handle_missing_refresh_token(user_id, client_id, scopes, token) do
     case find_best_matching_token_for_scopes(user_id, client_id, scopes) do
       nil ->
-        return_error("Missing required OAuth field: refresh_token")
+        {:error, "Missing required OAuth field: refresh_token"}
 
       oauth_token ->
         refresh_token = oauth_token.body["refresh_token"]
@@ -1490,7 +1490,7 @@ defmodule Lightning.Credentials do
          requested_scopes,
          mandatory_scopes_string
        ) do
-    mandatory_scopes = process_scopes(mandatory_scopes_string, ",")
+    mandatory_scopes = normalize_scopes(mandatory_scopes_string, ",")
 
     requested_scope_set = MapSet.new(requested_scopes)
     mandatory_scope_set = MapSet.new(mandatory_scopes)
@@ -1561,9 +1561,9 @@ defmodule Lightning.Credentials do
   end
 
   @doc """
-  Processes OAuth scopes with a default space delimiter.
+  Normalizes OAuth scopes with a default space delimiter.
 
-  Convenience function that calls `process_scopes/2` with a space delimiter.
+  Convenience function that calls `normalize_scopes/2` with a space delimiter.
 
   ## Parameters
     - `input`: OAuth scope string or token to extract scopes from
@@ -1571,12 +1571,12 @@ defmodule Lightning.Credentials do
   ## Returns
     - List of normalized scope strings
   """
-  def process_scopes(input) do
-    process_scopes(input, " ")
+  def normalize_scopes(input) do
+    normalize_scopes(input, " ")
   end
 
   @doc """
-  Processes OAuth scopes from various input formats into a normalized list.
+  Normalizes OAuth scopes from various input formats into a consistent list.
 
   This function handles different inputs:
   - `nil`: Returns an empty list
@@ -1590,17 +1590,17 @@ defmodule Lightning.Credentials do
   ## Returns
     - List of normalized scope strings
   """
-  def process_scopes(nil, _delimiter) do
+  def normalize_scopes(nil, _delimiter) do
     []
   end
 
-  def process_scopes(%OauthToken{body: body}, delimiter) do
+  def normalize_scopes(%OauthToken{body: body}, delimiter) do
     body
     |> Map.get("scope", "")
-    |> process_scopes(delimiter)
+    |> normalize_scopes(delimiter)
   end
 
-  def process_scopes(scopes, delimiter) when is_binary(scopes) do
+  def normalize_scopes(scopes, delimiter) when is_binary(scopes) do
     scopes
     |> String.downcase()
     |> String.split(delimiter)

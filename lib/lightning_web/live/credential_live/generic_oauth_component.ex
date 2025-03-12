@@ -44,7 +44,8 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
   @impl true
   def update(%{selected_client: nil, action: _action} = assigns, socket) do
-    selected_scopes = Credentials.process_scopes(assigns.credential.oauth_token)
+    selected_scopes =
+      Credentials.normalize_scopes(assigns.credential.oauth_token)
 
     {:ok,
      build_assigns(socket, assigns,
@@ -61,13 +62,14 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
         %{selected_client: selected_client, action: :edit} = assigns,
         socket
       ) do
-    selected_scopes = Credentials.process_scopes(assigns.credential.oauth_token)
+    selected_scopes =
+      Credentials.normalize_scopes(assigns.credential.oauth_token)
 
     mandatory_scopes =
-      Credentials.process_scopes(selected_client.mandatory_scopes, ",")
+      Credentials.normalize_scopes(selected_client.mandatory_scopes, ",")
 
     optional_scopes =
-      Credentials.process_scopes(selected_client.optional_scopes, ",")
+      Credentials.normalize_scopes(selected_client.optional_scopes, ",")
 
     scopes = mandatory_scopes ++ optional_scopes ++ selected_scopes
     scopes = scopes |> Enum.map(&String.downcase/1) |> Enum.uniq()
@@ -96,10 +98,10 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
   def update(%{action: :new, selected_client: selected_client} = assigns, socket) do
     mandatory_scopes =
-      Credentials.process_scopes(selected_client.mandatory_scopes, ",")
+      Credentials.normalize_scopes(selected_client.mandatory_scopes, ",")
 
     optional_scopes =
-      Credentials.process_scopes(selected_client.optional_scopes, ",")
+      Credentials.normalize_scopes(selected_client.optional_scopes, ",")
 
     state = build_state(socket.id, __MODULE__, assigns.id)
     stringified_scopes = Enum.join(mandatory_scopes, " ")

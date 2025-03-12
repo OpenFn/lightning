@@ -88,19 +88,14 @@ defmodule LightningWeb.RunChannel do
   def handle_in("fetch:credential", %{"id" => id}, socket) do
     %{run: run, scrubber: scrubber} = socket.assigns
 
-    with credential <- Runs.get_credential(run, id) || :not_found,
+    with credential <- get_credential(run, id) || :not_found,
          {:ok, credential} <- Credentials.maybe_refresh_token(credential),
          samples <- Credentials.sensitive_values_for(credential),
          basic_auth <- Credentials.basic_auth_for(credential),
          {:ok, scrubber} <- update_scrubber(scrubber, samples, basic_auth) do
       socket
       |> assign(scrubber: scrubber)
-      |> reply_with(
-        {:ok,
-         credential
-         |> assemble_body()
-         |> remove_empty_values()}
-      )
+      |> reply_with({:ok, remove_empty_values(credential.body)})
     else
       :not_found ->
         reply_with(socket, {:error, %{errors: %{id: ["Credential not found!"]}}})
@@ -226,11 +221,23 @@ defmodule LightningWeb.RunChannel do
     Map.reject(credential_body, fn {_key, val} -> val == "" end)
   end
 
-  defp assemble_body(%Credential{schema: "oauth"} = credential) do
-    Map.merge(credential.body, credential.oauth_token.body)
+  defp get_credential(run, credential_id) do
+    run
+    |> Runs.get_credential(credential_id)
+    |> Repo.preload(:oauth_token)
+    |> maybe_merge_oauth()
   end
 
-  defp assemble_body(%Credential{} = credential) do
-    credential.body
+  defp maybe_merge_oauth(nil) do
+    nil
+  end
+
+  defp maybe_merge_oauth(%Credential{schema: "oauth"} = credential) do
+    merged_body = Map.merge(credential.body, credential.oauth_token.body)
+    %{credential | body: merged_body}
+  end
+
+  defp maybe_merge_oauth(%Credential{} = credential) do
+    credential
   end
 end
