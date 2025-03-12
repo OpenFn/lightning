@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.11.0-pre.0] - 2025-03-12
+
+### Added
+
 - Update Collections admin UI storage counter after deleting all
   [#2986](https://github.com/OpenFn/lightning/issues/2986)
 - Refactor OAuth credentials to reuse existing refresh tokens for same scopes [#2908](https://github.com/OpenFn/lightning/issues/2908) \
