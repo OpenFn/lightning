@@ -176,25 +176,33 @@ defmodule Lightning.Factories do
     }
   end
 
+  def oauth_token_factory(attrs \\ %{}) do
+    scopes = Map.get(attrs, :scope, ["read", "write"])
+    unique_id = System.unique_integer([:positive])
+
+    default_token_body = %{
+      "access_token" => "access_token_#{unique_id}",
+      "refresh_token" => "refresh_token_#{unique_id}",
+      "token_type" => "bearer",
+      "expires_in" => 3600
+    }
+
+    %Lightning.Credentials.OauthToken{
+      body:
+        attrs
+        |> Map.get(:body, default_token_body)
+        |> Lightning.Credentials.normalize_keys(),
+      user: Map.get(attrs, :user, build(:user)),
+      oauth_client: Map.get(attrs, :oauth_client),
+      scopes: Enum.sort(scopes),
+      updated_at: DateTime.utc_now()
+    }
+  end
+
   def credential_factory(attrs \\ %{}) do
-    schema = Map.get(attrs, :schema, "raw")
-
-    body =
-      case schema do
-        "oauth" ->
-          %{
-            "access_token" => "access_token_#{System.unique_integer()}",
-            "refresh_token" => "refresh_token_#{System.unique_integer()}",
-            "expires_in" => 3600
-          }
-
-        _ ->
-          %{}
-      end
-
     %Lightning.Credentials.Credential{
-      body: body,
-      schema: schema,
+      body: %{},
+      schema: "raw",
       name: sequence(:credential_name, &"credential#{&1}")
     }
     |> Map.merge(attrs)

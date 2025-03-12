@@ -9,7 +9,6 @@ defmodule Lightning.Credentials.OauthClient do
   use Lightning.Schema
 
   alias Lightning.Accounts.User
-  alias Lightning.Credentials.Credential
   alias Lightning.Projects.ProjectOauthClient
   alias Lightning.Validators
 
@@ -35,7 +34,6 @@ defmodule Lightning.Credentials.OauthClient do
 
     belongs_to :user, User
 
-    has_many :credentials, Credential
     has_many :project_oauth_clients, ProjectOauthClient
     has_many :projects, through: [:project_oauth_clients, :project]
 

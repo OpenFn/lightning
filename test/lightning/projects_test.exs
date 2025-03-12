@@ -2,7 +2,6 @@ defmodule Lightning.ProjectsTest do
   use Lightning.DataCase, async: true
 
   import Lightning.AccountsFixtures
-  import Lightning.CredentialsFixtures
   import Lightning.Factories
   import Lightning.ProjectsFixtures
   import Mox
@@ -35,11 +34,11 @@ defmodule Lightning.ProjectsTest do
     end
 
     test "list_project_credentials/1 returns all project_credentials for a project" do
-      user = user_fixture()
-      project = project_fixture(project_users: [%{user_id: user.id}])
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user_id: user.id}])
 
       credential =
-        credential_fixture(
+        insert(:credential,
           user_id: user.id,
           project_credentials: [%{project_id: project.id}]
         )

@@ -44,7 +44,8 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
   @impl true
   def update(%{selected_client: nil, action: _action} = assigns, socket) do
-    selected_scopes = process_scopes(assigns.credential.body["scope"], " ")
+    selected_scopes =
+      Credentials.normalize_scopes(assigns.credential.oauth_token)
 
     {:ok,
      build_assigns(socket, assigns,
@@ -61,9 +62,14 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
         %{selected_client: selected_client, action: :edit} = assigns,
         socket
       ) do
-    selected_scopes = process_scopes(assigns.credential.body["scope"], " ")
-    mandatory_scopes = process_scopes(selected_client.mandatory_scopes, ",")
-    optional_scopes = process_scopes(selected_client.optional_scopes, ",")
+    selected_scopes =
+      Credentials.normalize_scopes(assigns.credential.oauth_token)
+
+    mandatory_scopes =
+      Credentials.normalize_scopes(selected_client.mandatory_scopes, ",")
+
+    optional_scopes =
+      Credentials.normalize_scopes(selected_client.optional_scopes, ",")
 
     scopes = mandatory_scopes ++ optional_scopes ++ selected_scopes
     scopes = scopes |> Enum.map(&String.downcase/1) |> Enum.uniq()
@@ -91,8 +97,11 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   end
 
   def update(%{action: :new, selected_client: selected_client} = assigns, socket) do
-    mandatory_scopes = process_scopes(selected_client.mandatory_scopes, ",")
-    optional_scopes = process_scopes(selected_client.optional_scopes, ",")
+    mandatory_scopes =
+      Credentials.normalize_scopes(selected_client.mandatory_scopes, ",")
+
+    optional_scopes =
+      Credentials.normalize_scopes(selected_client.optional_scopes, ",")
 
     state = build_state(socket.id, __MODULE__, assigns.id)
     stringified_scopes = Enum.join(mandatory_scopes, " ")
@@ -105,7 +114,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
     {:ok,
      build_assigns(socket, assigns,
-       api_version: nil,
        mandatory_scopes: mandatory_scopes,
        optional_scopes: optional_scopes,
        selected_scopes: mandatory_scopes,
@@ -142,12 +150,8 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
   @impl true
   def handle_async(:token, {:ok, {:ok, token}}, socket) do
-    token =
-      socket.assigns.changeset.params
-      |> Map.get("body", %{})
-      |> Map.merge(token)
+    params = Map.put(socket.assigns.changeset.params, "oauth_token", token)
 
-    params = Map.put(socket.assigns.changeset.params, "body", token)
     changeset = Credentials.change_credential(socket.assigns.credential, params)
 
     errors = changeset_errors(changeset)
@@ -159,7 +163,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
       |> assign(:changeset, changeset)
 
     cond do
-      errors[:body] ->
+      errors[:oauth_token] ->
         {:noreply, updated_socket |> assign(:oauth_progress, :missing_required)}
 
       socket.assigns.selected_client.userinfo_endpoint ->
@@ -199,44 +203,21 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     {:noreply, assign(socket, :oauth_progress, :userinfo_failed)}
   end
 
-  defp maybe_update_body(nil, _additional_params) do
-    nil
-  end
-
-  defp maybe_update_body(body, additional_params) do
-    Map.merge(body, additional_params)
-  end
-
-  defp prepare_params(credential_params, additional_params) do
-    Map.merge(credential_params, additional_params)
-  end
-
   @impl true
   def handle_event(
         "validate",
         %{"credential" => credential_params} = _params,
         socket
       ) do
-    changeset = socket.assigns.changeset
-    body = Ecto.Changeset.get_field(changeset, :body, %{})
-    user_id = Ecto.Changeset.get_field(changeset, :user_id)
-    api_version = Map.get(credential_params, "api_version")
-    selected_client_id = socket.assigns.selected_client.id
-
-    updated_body = maybe_update_body(body, %{"apiVersion" => api_version})
-
-    updated_credential_params =
-      prepare_params(credential_params, %{
-        "user_id" => user_id,
-        "schema" => "oauth",
-        "body" => updated_body,
-        "oauth_client_id" => selected_client_id
-      })
+    params =
+      socket.assigns.changeset.params
+      |> Map.merge(credential_params)
+      |> Map.put("body", %{"apiVersion" => credential_params["api_version"]})
 
     changeset =
       Credentials.change_credential(
         socket.assigns.credential,
-        updated_credential_params
+        params
       )
       |> Map.put(:action, :validate)
 
@@ -249,9 +230,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     {:noreply,
      assign(socket,
        changeset: changeset,
-       api_version: api_version,
        available_projects: available_projects,
-       selected_client: socket.assigns.selected_client,
        selected_project: nil
      )}
   end
@@ -323,7 +302,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
         scope: stringified_scopes
       )
 
-    saved_scopes = get_scopes(socket.assigns.credential)
+    saved_scopes = get_scopes(socket.assigns.credential.oauth_token)
     diff_scopes = Enum.sort(selected_scopes) == Enum.sort(saved_scopes)
 
     {:noreply,
@@ -356,10 +335,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
         %{"project_id" => project_id},
         socket
       ) do
-    {:noreply,
-     socket
-     |> assign(selected_project: project_id)
-     |> assign(api_version: socket.assigns.api_version)}
+    {:noreply, assign(socket, selected_project: project_id)}
   end
 
   def handle_event("add_selected_project", %{"project_id" => project_id}, socket) do
@@ -393,7 +369,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   end
 
   defp refresh_token_or_fetch_userinfo(socket, assigns, selected_client) do
-    case OauthHTTPClient.still_fresh(assigns.credential.body) do
+    case Credentials.still_fresh(assigns.credential.oauth_token) do
       true ->
         if selected_client.userinfo_endpoint do
           Logger.info("Fetching user info.")
@@ -401,7 +377,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
           start_async(socket, :userinfo, fn ->
             OauthHTTPClient.fetch_userinfo(
               selected_client,
-              assigns.credential.body
+              assigns.credential.oauth_token.body
             )
           end)
         else
@@ -412,7 +388,10 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
         Logger.info("Refreshing token.")
 
         start_async(socket, :token, fn ->
-          OauthHTTPClient.refresh_token(selected_client, assigns.credential.body)
+          OauthHTTPClient.refresh_token(
+            selected_client,
+            assigns.credential.oauth_token.body
+          )
         end)
 
       {:error, reason} ->
@@ -425,14 +404,6 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
     changeset.errors
     |> Enum.map(fn {field, {message, _opts}} -> {field, message} end)
     |> Enum.into(%{})
-  end
-
-  defp process_scopes(scopes_string, delimiter) do
-    scopes_string
-    |> to_string()
-    |> String.downcase()
-    |> String.split(delimiter)
-    |> Enum.reject(&(&1 == ""))
   end
 
   defp build_assigns(socket, assigns, additional_assigns) do
@@ -448,15 +419,19 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
         selected_projects
       )
 
+    client_id = assigns.selected_client && assigns.selected_client.id
+
+    params = Map.put(assigns.changeset.params, "oauth_client_id", client_id)
+    changeset = Credentials.change_credential(assigns.credential, params)
+
     assign(socket,
       id: assigns.id,
       action: assigns.action,
       selected_client: assigns.selected_client,
-      changeset: assigns.changeset,
+      changeset: changeset,
       credential: assigns.credential,
       projects: assigns.projects,
       users: assigns.users,
-      api_version: assigns.credential.body["apiVersion"],
       selected_projects: selected_projects,
       available_projects: available_projects,
       on_save: assigns.on_save
@@ -470,15 +445,10 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
   defp save_credential(socket, :new, params) do
     if socket.assigns.changeset.valid? do
       user_id = Ecto.Changeset.fetch_field!(socket.assigns.changeset, :user_id)
-      body = Ecto.Changeset.fetch_field!(socket.assigns.changeset, :body)
 
-      body = Map.put(body, "apiVersion", socket.assigns.api_version)
-
-      params
+      socket.assigns.changeset.params
+      |> Map.merge(params)
       |> Map.put("user_id", user_id)
-      |> Map.put("schema", "oauth")
-      |> Map.put("body", body)
-      |> Map.put("oauth_client_id", socket.assigns.selected_client.id)
       |> Credentials.create_credential()
       |> case do
         {:ok, credential} ->
@@ -494,21 +464,17 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
 
   defp save_credential(socket, :edit, params) do
     if socket.assigns.changeset.valid? do
-      body =
-        Ecto.Changeset.fetch_field!(socket.assigns.changeset, :body)
-        |> Map.put("apiVersion", socket.assigns.api_version)
+      user_id = Ecto.Changeset.fetch_field!(socket.assigns.changeset, :user_id)
 
-      params =
-        Map.put(params, "body", body)
+      update_params =
+        socket.assigns.changeset.params
+        |> Map.merge(params)
+        |> Map.put("user_id", user_id)
 
-      params =
-        if socket.assigns.selected_client do
-          Map.put(params, "oauth_client_id", socket.assigns.selected_client.id)
-        else
-          params
-        end
-
-      case Credentials.update_credential(socket.assigns.credential, params) do
+      case Credentials.update_credential(
+             socket.assigns.credential,
+             update_params
+           ) do
         {:ok, _credential} ->
           {:noreply,
            socket
@@ -589,7 +555,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
             <NewInputs.input
               type="text"
               field={f[:api_version]}
-              value={@api_version}
+              value={Ecto.Changeset.get_field(@changeset, :body)["apiVersion"]}
               label="API Version"
             />
           </div>
