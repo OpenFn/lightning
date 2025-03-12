@@ -81,13 +81,8 @@ defmodule Lightning.Runs.Query do
       row_number: [
         partition_by:
           fragment(
-            """
-            CASE
-              WHEN ? IS NULL THEN ?
-              ELSE ?
-            END
-            """,
-            p.concurrency,
+            "CASE WHEN ? IS NOT NULL THEN ? ELSE ? END",
+            w.concurrency,
             w.id,
             p.id
           ),
@@ -102,7 +97,7 @@ defmodule Lightning.Runs.Query do
       # calculated here?
       row_number: row_number() |> over(:row_number),
       project_id: w.project_id,
-      concurrency: coalesce(p.concurrency, w.concurrency),
+      concurrency: coalesce(w.concurrency, p.concurrency),
       inserted_at: r.inserted_at
     })
   end

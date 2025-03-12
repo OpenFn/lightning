@@ -184,7 +184,6 @@ defmodule LightningWeb.Router do
       scope "/projects/:project_id", as: :project do
         live "/jobs", JobLive.Index, :index
 
-        live "/settings", ProjectLive.Settings, :index
         live "/settings/delete", ProjectLive.Settings, :delete
 
         live "/history", RunLive.Index, :index

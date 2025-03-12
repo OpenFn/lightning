@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Allow workflow and project concurrency progress windows
+  [#2995](https://github.com/OpenFn/lightning/issues/2995)
 - Update Collections admin UI storage counter after deleting all
   [#2986](https://github.com/OpenFn/lightning/issues/2986)
 - Refactor OAuth credentials to reuse existing refresh tokens for same scopes [#2908](https://github.com/OpenFn/lightning/issues/2908) \
