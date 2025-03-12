@@ -88,8 +88,9 @@ defmodule LightningWeb.RunChannel do
   def handle_in("fetch:credential", %{"id" => id}, socket) do
     %{run: run, scrubber: scrubber} = socket.assigns
 
-    with credential <- get_credential(run, id) || :not_found,
+    with credential <- Runs.get_credential(run, id) || :not_found,
          {:ok, credential} <- Credentials.maybe_refresh_token(credential),
+         credential <- maybe_merge_oauth(credential),
          samples <- Credentials.sensitive_values_for(credential),
          basic_auth <- Credentials.basic_auth_for(credential),
          {:ok, scrubber} <- update_scrubber(scrubber, samples, basic_auth) do
@@ -219,17 +220,6 @@ defmodule LightningWeb.RunChannel do
 
   defp remove_empty_values(credential_body) do
     Map.reject(credential_body, fn {_key, val} -> val == "" end)
-  end
-
-  defp get_credential(run, credential_id) do
-    run
-    |> Runs.get_credential(credential_id)
-    |> Repo.preload(:oauth_token)
-    |> maybe_merge_oauth()
-  end
-
-  defp maybe_merge_oauth(nil) do
-    nil
   end
 
   defp maybe_merge_oauth(%Credential{schema: "oauth"} = credential) do
