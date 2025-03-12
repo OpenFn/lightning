@@ -1285,7 +1285,7 @@ defmodule Lightning.Credentials do
         _is_update
       )
       when not is_map(token_data) do
-    return_error("Invalid OAuth token body")
+    {:error, "Invalid OAuth token body"}
   end
 
   def validate_oauth_token_data(
@@ -1296,7 +1296,7 @@ defmodule Lightning.Credentials do
         _is_update
       )
       when is_nil(scopes) do
-    return_error("Missing required OAuth field: scope")
+    {:error, "Missing required OAuth field: scope"}
   end
 
   def validate_oauth_token_data(
@@ -1340,10 +1340,8 @@ defmodule Lightning.Credentials do
          _scopes,
          _is_update
        ) do
-    return_error("Missing required OAuth field: access_token")
+    {:error, "Missing required OAuth field: access_token"}
   end
-
-  defp return_error(message), do: {:error, message}
 
   defp validate_refresh_token_and_expiration(
          normalized_data,
@@ -1368,7 +1366,7 @@ defmodule Lightning.Credentials do
         validate_expiration_fields(normalized_data)
 
       true ->
-        return_error("Missing refresh_token for new OAuth connection")
+        {:error, "Missing refresh_token for new OAuth connection"}
     end
   end
 
@@ -1388,9 +1386,8 @@ defmodule Lightning.Credentials do
     if has_expiration_field?(token_data) do
       {:ok, token_data}
     else
-      return_error(
-        "Missing expiration field: either expires_in or expires_at is required"
-      )
+      {:error,
+       "Missing expiration field: either expires_in or expires_at is required"}
     end
   end
 
