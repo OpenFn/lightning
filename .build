@@ -42,6 +42,8 @@ Lightning.Credentials.Audit.html
 Lightning.Credentials.Credential.html
 Lightning.Credentials.OauthClient.html
 Lightning.Credentials.OauthClientAudit.html
+Lightning.Credentials.OauthMigration.html
+Lightning.Credentials.OauthToken.html
 Lightning.Credentials.Schema.html
 Lightning.Credentials.SchemaDocument.html
 Lightning.Credentials.SensitiveValues.html
@@ -358,8 +360,8 @@ dist/lato-latin-ext-300-normal-VPGGJKJL.woff2
 dist/lato-latin-ext-400-normal-N27NCBWW.woff2
 dist/lato-latin-ext-700-normal-Q2L5DVMW.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-122C30BE.js
-dist/sidebar_items-FB744940.js
+dist/search_data-CE68620A.js
+dist/sidebar_items-355E8730.js
 index.html
 provisioning.html
 readme.html
