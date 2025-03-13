@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Reintroduce steps (old runs) API based on GovStack spec.
+  [#1656](https://github.com/OpenFn/lightning/issues/1656)
+
 ### Changed
 
 ### Fixed
