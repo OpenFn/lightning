@@ -94,7 +94,7 @@ defmodule LightningWeb.Pagination do
   attr :url, :any, required: true
   attr :help_text, :string, default: nil
 
-  slot :action, optional: true
+  slot :action, required: false
 
   def pagination_bar(assigns) do
     ~H"""
