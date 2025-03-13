@@ -64,11 +64,13 @@ npm-debug.log
 benchmarking/*.csv
 monitoring
 
+.DS_Store
 tmp
 exports
 priv/openfn
 
 .elixir_ls
+.elixir-tools
 
 .env
 .env.dev
