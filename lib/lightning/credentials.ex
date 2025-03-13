@@ -97,13 +97,15 @@ defmodule Lightning.Credentials do
       oauth_token: :oauth_client
     ])
     |> Repo.all()
+    |> Enum.sort_by(&String.downcase(&1.name))
   end
 
   @spec list_credentials(User.t()) :: [Credential.t()]
   def list_credentials(%User{id: user_id}) do
     from(c in Credential,
       where: c.user_id == ^user_id,
-      preload: [:projects, :user, oauth_token: :oauth_client]
+      preload: [:projects, :user, oauth_token: :oauth_client],
+      order_by: [asc: fragment("lower(?)", c.name)]
     )
     |> Repo.all()
   end
