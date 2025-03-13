@@ -143,10 +143,10 @@ stream_match_trigram =
 # Process.exit(self(), :normal)
 
 IO.puts("\n### Round record count ({microsecs, count}):")
-:timer.tc(fn -> stream_all.() |> Enum.count() end) |> IO.inspect(label: "stream_all")
-:timer.tc(fn -> stream_match_all.() |> Enum.count() end) |> IO.inspect(label: "stream_match_all")
-:timer.tc(fn -> stream_match_prefix.() |> Enum.count() end) |> IO.inspect(label: "stream_match_prefix")
-:timer.tc(fn -> stream_match_trigram.() |> Enum.count() end) |> IO.inspect(label: "stream_match_trigram")
+:timer.tc(fn -> stream_all.() |> Enum.count() end) |> then(&IO.puts("stream_all: #{&1}"))
+:timer.tc(fn -> stream_match_all.() |> Enum.count() end) |> then(&IO.puts("stream_match_all: #{&1}"))
+:timer.tc(fn -> stream_match_prefix.() |> Enum.count() end) |> then(&IO.puts("stream_match_prefix: #{&1}"))
+:timer.tc(fn -> stream_match_trigram.() |> Enum.count() end) |> then(&IO.puts("stream_match_trigram: #{&1}"))
 IO.puts("\n")
 
 Benchee.run(
