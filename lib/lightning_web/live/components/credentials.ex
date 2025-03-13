@@ -394,13 +394,8 @@ defmodule LightningWeb.Components.Credentials do
           >
             <.td class="break-words max-w-[15rem]">
               <div class="flex-auto items-center">
-<<<<<<< HEAD
-                <%= credential.name %>
-                <%= if missing_oauth_client?(credential) do %>
-=======
                 {credential.name}
-                <%= if credential.schema == "oauth" and !credential.oauth_client_id do %>
->>>>>>> fb66ebb7d (Refactor CSS and HTML structure for Tailwind 4.0 Compatibility)
+                <%= if missing_oauth_client?(credential) do %>
                   <span
                     id={"#{credential.id}-client-not-found-tooltip"}
                     phx-hook="Tooltip"
@@ -413,11 +408,7 @@ defmodule LightningWeb.Components.Credentials do
               </div>
             </.td>
             <.td class="break-words max-w-[10rem] border-">
-<<<<<<< HEAD
-              <%= credential_type(credential) %>
-=======
-              {credential.schema}
->>>>>>> fb66ebb7d (Refactor CSS and HTML structure for Tailwind 4.0 Compatibility)
+              {credential_type(credential)}
             </.td>
             <.td :if={@show_owner} class="break-words max-w-[15rem]">
               <div class="flex-auto items-center">

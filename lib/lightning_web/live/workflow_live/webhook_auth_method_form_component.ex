@@ -295,7 +295,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
           </p>
           <%= if @error_msg do %>
             <div class="alert alert-danger" role="alert">
-              <%= @error_msg %>
+              {@error_msg}
             </div>
           <% end %>
 

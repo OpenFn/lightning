@@ -26,7 +26,7 @@ defmodule LightningWeb.Components.Oauth do
           />
         </div>
         <div :if={@doc_url} class="flex flex-row text-xs mt-1">
-          Learn more about <%= @provider %> permissions
+          Learn more about {@provider} permissions
           <a
             target="_blank"
             href={@doc_url}
@@ -65,7 +65,7 @@ defmodule LightningWeb.Components.Oauth do
       target="_blank"
       class="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
     >
-      <span class="text-normal">Sign in with <%= @provider %></span>
+      <span class="text-normal">Sign in with {@provider}</span>
     </.link>
     """
   end
@@ -86,10 +86,10 @@ defmodule LightningWeb.Components.Oauth do
         />
         <div class="ml-4">
           <h3 class="text-base font-semibold leading-6 text-gray-900">
-            <%= @userinfo["name"] %>
+            {@userinfo["name"]}
           </h3>
           <p class="text-sm text-gray-500">
-            <a href="#"><%= @userinfo["email"] %></a>
+            <a href="#">{@userinfo["email"]}</a>
           </p>
         </div>
       </div>
@@ -111,7 +111,7 @@ defmodule LightningWeb.Components.Oauth do
       phx-click="re_authorize_click"
       class={@button_class}
     >
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </button>
     """
   end

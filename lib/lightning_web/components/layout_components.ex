@@ -15,11 +15,11 @@ defmodule LightningWeb.LayoutComponents do
 
     ~H"""
     <%= if @custom_menu_items do %>
-      <%= Phoenix.LiveView.TagEngine.component(
+      {Phoenix.LiveView.TagEngine.component(
         @custom_menu_items.component,
         Map.take(assigns, @custom_menu_items.assigns_keys),
         {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
-      ) %>
+      )}
     <% else %>
       <Common.combobox
         items={assigns[:projects] || []}
@@ -43,14 +43,14 @@ defmodule LightningWeb.LayoutComponents do
   def page_content(assigns) do
     ~H"""
     <div class="flex h-full w-full flex-col">
-      <%= if assigns[:banner], do: render_slot(@banner) %>
-      <%= if assigns[:header], do: render_slot(@header) %>
+      {if assigns[:banner], do: render_slot(@banner)}
+      {if assigns[:header], do: render_slot(@header)}
       <div class="flex-auto bg-secondary-100 relative">
         <section
           id="inner_content"
           class="overflow-y-auto absolute top-0 bottom-0 left-0 right-0"
         >
-          <%= render_slot(@inner_block) %>
+          {render_slot(@inner_block)}
         </section>
       </div>
     </div>
@@ -130,32 +130,32 @@ defmodule LightningWeb.LayoutComponents do
                   <:label>Projects</:label>
                 </.breadcrumb>
                 <.breadcrumb path={"/projects/#{@project.id}/w"}>
-                  <:label><%= @project.name %></:label>
+                  <:label>{@project.name}</:label>
                 </.breadcrumb>
               <% end %>
 
               <%!-- If breamcrumbs are passed manually, we generate those --%>
               <%= for {label, path} <- @breadcrumbs do %>
                 <.breadcrumb path={path}>
-                  <:label><%= label %></:label>
+                  <:label>{label}</:label>
                 </.breadcrumb>
               <% end %>
 
               <%!-- And finally, we always show the page title --%>
               <.breadcrumb>
                 <:label>
-                  <%= if assigns[:title], do: render_slot(@title) %>
+                  {if assigns[:title], do: render_slot(@title)}
                 </:label>
               </.breadcrumb>
             </ol>
           </nav>
         <% else %>
           <h1 class="text-3xl font-bold text-secondary-900 flex items-center">
-            <%= if assigns[:title], do: render_slot(@title) %>
+            {if assigns[:title], do: render_slot(@title)}
           </h1>
         <% end %>
         <div class="grow"></div>
-        <%= if assigns[:inner_block], do: render_slot(@inner_block) %>
+        {if assigns[:inner_block], do: render_slot(@inner_block)}
         <%= if assigns[:current_user] do %>
           <div class="w-5" />
           <.dropdown js_lib="live_view_js">
@@ -206,7 +206,7 @@ defmodule LightningWeb.LayoutComponents do
   def centered(assigns) do
     ~H"""
     <div class={["max-w-7xl mx-auto py-6 sm:px-6 lg:px-8", @class]}>
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </div>
     """
   end
@@ -256,11 +256,11 @@ defmodule LightningWeb.LayoutComponents do
             class="flex ml-2 text-sm font-medium text-gray-500 hover:text-gray-700"
             aria-current="page"
           >
-            <%= if assigns[:label], do: render_slot(@label) %>
+            {if assigns[:label], do: render_slot(@label)}
           </.link>
         <% else %>
           <span class="flex items-center ml-2 text-sm font-medium text-gray-500">
-            <%= if assigns[:label], do: render_slot(@label) %>
+            {if assigns[:label], do: render_slot(@label)}
           </span>
         <% end %>
       </div>

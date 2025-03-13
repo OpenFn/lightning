@@ -1,16 +1,16 @@
 <LayoutComponents.page_content>
   <:banner>
     <%= if assigns[:banner] do %>
-      <%= Phoenix.LiveView.TagEngine.component(
+      {Phoenix.LiveView.TagEngine.component(
         @banner.function,
         @banner.attrs,
         {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
-      ) %>
+      )}
     <% end %>
   </:banner>
   <:header>
     <LayoutComponents.header current_user={@current_user} project={@project}>
-      <:title><%= @page_title %></:title>
+      <:title>{@page_title}</:title>
     </LayoutComponents.header>
   </:header>
   <LayoutComponents.centered>
@@ -560,7 +560,7 @@
                   show_modal("display_linked_triggers_#{auth_method.id}_modal")
                 }
               >
-                <%= Enum.count(auth_method.triggers) %>
+                {Enum.count(auth_method.triggers)}
               </a>
               <span
                 :if={auth_method.triggers == []}
@@ -808,11 +808,11 @@
         </div>
         <div>
           <%= if assigns[:mfa_banner] do %>
-            <%= Phoenix.LiveView.TagEngine.component(
+            {Phoenix.LiveView.TagEngine.component(
               @mfa_banner.function,
               @mfa_banner.attrs,
               {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
-            ) %>
+            )}
           <% end %>
         </div>
         <div class="bg-white p-4 rounded-md">
@@ -887,11 +887,11 @@
         </div>
         <div>
           <%= if assigns[:github_banner] do %>
-            <%= Phoenix.LiveView.TagEngine.component(
+            {Phoenix.LiveView.TagEngine.component(
               @github_banner.function,
               @github_banner.attrs,
               {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
-            ) %>
+            )}
           <% end %>
         </div>
         <%= if  @github_enabled do %>
@@ -1038,14 +1038,14 @@
                   <div class="text-xs">
                     <%= case assigns[:data_retention_limit_message] do %>
                       <% %{function: func} when is_function(func) -> %>
-                        <%= Phoenix.LiveView.TagEngine.component(
+                        {Phoenix.LiveView.TagEngine.component(
                           @data_retention_limit_message.function,
                           @data_retention_limit_message.attrs,
                           {__ENV__.module, __ENV__.function, __ENV__.file,
                            __ENV__.line}
-                        ) %>
+                        )}
                       <% %{text: text} when is_binary(text) -> %>
-                        <span><%= text %></span>
+                        <span>{text}</span>
                       <% _other -> %>
                         <span></span>
                     <% end %>
@@ -1093,7 +1093,7 @@
                       </div>
                       <div class="ml-3 leading-6">
                         <label for={value} class="text-sm text-neutral-950">
-                          <%= text %>
+                          {text}
                         </label>
                       </div>
                     </div>
@@ -1193,8 +1193,8 @@
               label_class="text-gray-700 uppercase"
               label="Export Date"
             >
-              <%= file.inserted_at
-              |> Lightning.Helpers.format_date() %>
+              {file.inserted_at
+              |> Lightning.Helpers.format_date()}
             </:col>
             <:col
               :let={file}
@@ -1202,7 +1202,7 @@
               label="Filename"
             >
               <%= if file.path do %>
-                <%= Path.basename(file.path) %>
+                {Path.basename(file.path)}
               <% else %>
                 <em>Pending</em>
               <% end %>
@@ -1212,14 +1212,14 @@
               label_class="text-gray-700 uppercase"
               label="Export Requested By"
             >
-              <%= file.created_by.first_name <> " " <> file.created_by.last_name %>
+              {file.created_by.first_name <> " " <> file.created_by.last_name}
             </:col>
             <:col
               :let={file}
               label_class="text-gray-700 uppercase"
               label="Status"
             >
-              <%= format_export_status(file.status) %>
+              {format_export_status(file.status)}
             </:col>
             <:col :let={file}>
               <%= if file.status == :completed do %>

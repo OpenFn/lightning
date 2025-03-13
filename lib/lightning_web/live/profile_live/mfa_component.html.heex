@@ -152,7 +152,7 @@
           Use an authenticator app or browser extension to scan.
         </p>
         <div>
-          <%= generate_qrcode(@qrcode_uri) %>
+          {generate_qrcode(@qrcode_uri)}
         </div>
         <p class="mt-2 max-w-4xl text-sm text-gray-500">
           Unable to scan? You can use
@@ -259,7 +259,7 @@
                   <div class="mt-2">
                     <p class="text-sm text-gray-500">
                       <code>
-                        <%= Base.encode32(@editing_totp.secret, padding: false) %>
+                        {Base.encode32(@editing_totp.secret, padding: false)}
                       </code>
                     </p>
                   </div>

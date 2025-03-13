@@ -36,17 +36,17 @@ defmodule LightningWeb.WorkflowLive.Index do
     <LayoutComponents.page_content>
       <:banner>
         <%= if assigns[:banner] do %>
-          <%= TagEngine.component(
+          {TagEngine.component(
             @banner.function,
             @banner.attrs,
             {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
-          ) %>
+          )}
         <% end %>
       </:banner>
       <:header>
         <LayoutComponents.header current_user={@current_user} project={@project}>
-          <:title><%= @page_title %></:title>
-          <:period><%= @dashboard_period %></:period>
+          <:title>{@page_title}</:title>
+          <:period>{@dashboard_period}</:period>
         </LayoutComponents.header>
       </:header>
       <LayoutComponents.centered>

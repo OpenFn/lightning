@@ -35,7 +35,7 @@ defmodule LightningWeb.RunLive.Components do
       role="list"
       class={["flex-1 @5xl/viewer:flex-none", "divide-y divide-gray-200", @class]}
     >
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </ul>
     """
   end
@@ -52,11 +52,11 @@ defmodule LightningWeb.RunLive.Components do
       <div class="flex justify-between items-baseline text-sm @md/viewer:text-base">
         <%= for label <- @label do %>
           <dt class={["font-medium items-center", label[:class]]}>
-            <%= render_slot(label) %>
+            {render_slot(label)}
           </dt>
         <% end %>
         <dd class="text-gray-900">
-          <%= render_slot(@value) %>
+          {render_slot(@value)}
         </dd>
       </div>
     </li>
@@ -96,7 +96,7 @@ defmodule LightningWeb.RunLive.Components do
     ~H"""
     <span class={["my-auto whitespace-nowrap rounded-full
     py-2 px-4 text-center align-baseline text-xs font-medium leading-none", @classes]}>
-      <%= @text %>
+      {@text}
     </span>
     """
   end
@@ -126,7 +126,7 @@ defmodule LightningWeb.RunLive.Components do
     ~H"""
     <ul {@rest} role="list" class="-mb-8">
       <li :for={step <- @steps} data-step-id={step.id} class="group p-2">
-        <%= render_slot(@inner_block, step) %>
+        {render_slot(@inner_block, step)}
       </li>
     </ul>
     """
@@ -188,7 +188,7 @@ defmodule LightningWeb.RunLive.Components do
           </div>
         <% end %>
         <div class="flex text-sm space-x-1 items-center">
-          <span><%= @job.name %></span>
+          <span>{@job.name}</span>
           <%= unless @job_id == @job.id do %>
             <.link
               class="pl-1"
@@ -221,8 +221,8 @@ defmodule LightningWeb.RunLive.Components do
       <% is_nil(@step.finished_at) -> %>
         Running...
       <% true -> %>
-        <%= DateTime.to_unix(@step.finished_at, :millisecond) -
-          DateTime.to_unix(@step.started_at, :millisecond) %> ms
+        {DateTime.to_unix(@step.finished_at, :millisecond) -
+          DateTime.to_unix(@step.started_at, :millisecond)} ms
     <% end %>
     """
   end
@@ -272,7 +272,7 @@ defmodule LightningWeb.RunLive.Components do
   def async_filler(assigns) do
     ~H"""
     <div data-entity="work_order" class={["bg-gray-50", @class]}>
-      <div class="py-3 text-center text-gray-500"><%= @message %></div>
+      <div class="py-3 text-center text-gray-500">{@message}</div>
     </div>
     """
   end
@@ -358,7 +358,7 @@ defmodule LightningWeb.RunLive.Components do
               }
               class="link text-gray-800 font-normal no-underline"
             >
-              <span><%= @job.name %></span>
+              <span>{@job.name}</span>
             </.link>
 
             <%= if @is_clone do %>
@@ -423,7 +423,7 @@ defmodule LightningWeb.RunLive.Components do
         />
       </div>
       <div class="ml-3 py-2 px-4 text-xs text-gray-500 font-mono" role="cell">
-        <%= @step.exit_reason %><%= if @step.error_type, do: ":#{@step.error_type}" %>
+        {@step.exit_reason}{if @step.error_type, do: ":#{@step.error_type}"}
       </div>
     </div>
     """
@@ -520,22 +520,22 @@ defmodule LightningWeb.RunLive.Components do
       >
         <%= case @style do %>
           <% :default -> %>
-            <%= Timex.format!(
+            {Timex.format!(
               @timestamp,
               "%d/%b/%y, %H:%M:%S",
               :strftime
-            ) %>
+            )}
           <% :wrapped -> %>
-            <%= Timex.format!(
+            {Timex.format!(
               @timestamp,
               "%d/%b/%y",
               :strftime
-            ) %><br />
+            )}<br />
             <span class="font-medium text-gray-700">
-              <%= Timex.format!(@timestamp, "%H:%M:%S", :strftime) %>
+              {Timex.format!(@timestamp, "%H:%M:%S", :strftime)}
             </span>
           <% :time_only -> %>
-            <%= Timex.format!(@timestamp, "%H:%M:%S", :strftime) %>
+            {Timex.format!(@timestamp, "%H:%M:%S", :strftime)}
         <% end %>
       </Common.wrapper_tooltip>
     <% end %>
@@ -643,12 +643,12 @@ defmodule LightningWeb.RunLive.Components do
               <div class="mt-2">
                 <p class="text-sm text-gray-500">
                   <%= if @all_selected? do %>
-                    You've selected all <%= @selected_count %> work orders from page <%= @page_number %> of <%= @pages %>. There are a total of <%= @total_entries %> that match your current query: <%= humanize_search_params(
+                    You've selected all {@selected_count} work orders from page {@page_number} of {@pages}. There are a total of {@total_entries} that match your current query: {humanize_search_params(
                       @filters,
                       @workflows
-                    ) %>.
+                    )}.
                   <% else %>
-                    You've selected <%= @selected_count %> work orders to rerun from the start. This will create a new run for each selected work order.
+                    You've selected {@selected_count} work orders to rerun from the start. This will create a new run for each selected work order.
                   <% end %>
                 </p>
               </div>
@@ -664,10 +664,10 @@ defmodule LightningWeb.RunLive.Components do
                 phx-disable-with="Running..."
                 class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-1"
               >
-                Rerun <%= @selected_count %> selected work order<%= if @selected_count >
-                                                                         1,
-                                                                       do: "s",
-                                                                       else: "" %> from start
+                Rerun {@selected_count} selected work order{if @selected_count >
+                                                                 1,
+                                                               do: "s",
+                                                               else: ""} from start
               </button>
               <button
                 type="button"
@@ -676,7 +676,7 @@ defmodule LightningWeb.RunLive.Components do
                 phx-disable-with="Running..."
                 class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2"
               >
-                Rerun all <%= @total_entries %> matching work orders from start
+                Rerun all {@total_entries} matching work orders from start
               </button>
               <div class="relative col-start-1 col-end-3">
                 <div class="absolute inset-0 flex items-center" aria-hidden="true">
@@ -707,10 +707,10 @@ defmodule LightningWeb.RunLive.Components do
                 phx-disable-with="Running..."
                 class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2"
               >
-                Rerun <%= @selected_count %> selected work order<%= if @selected_count >
-                                                                         1,
-                                                                       do: "s",
-                                                                       else: "" %> from start
+                Rerun {@selected_count} selected work order{if @selected_count >
+                                                                 1,
+                                                               do: "s",
+                                                               else: ""} from start
               </button>
               <button
                 type="button"

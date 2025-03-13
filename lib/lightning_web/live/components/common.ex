@@ -59,13 +59,13 @@ defmodule LightningWeb.Components.Common do
           assigns[:link_right] && "flex-1 md:flex md:justify-between"
         ]}>
           <%= if @header do %>
-            <h3 class={"text-sm font-medium text-#{@color}-800"}><%= @header %></h3>
+            <h3 class={"text-sm font-medium text-#{@color}-800"}>{@header}</h3>
             <div class={"mt-2 text-sm text-#{@color}-700"}>
-              <%= render_slot(@message) %>
+              {render_slot(@message)}
             </div>
           <% else %>
             <div class={"text-sm text-#{@color}-700"}>
-              <%= render_slot(@message) %>
+              {render_slot(@message)}
             </div>
           <% end %>
           <%= if assigns[:link_right] do %>
@@ -74,7 +74,7 @@ defmodule LightningWeb.Components.Common do
                 href={@link_right.target}
                 class={"whitespace-nowrap font-medium text-#{@color}-700 hover:text-#{@color}-600"}
               >
-                <%= @link_right.text %>
+                {@link_right.text}
                 <span aria-hidden="true"> &rarr;</span>
               </a>
             </p>
@@ -92,10 +92,10 @@ defmodule LightningWeb.Components.Common do
                         phx-target={target}
                         class={"rounded-md bg-#{@color}-50 px-2 py-1.5 text-sm font-medium text-#{@color}-800 hover:bg-#{@color}-100 focus:outline-none focus:ring-2 focus:ring-#{@color}-600 focus:ring-offset-2 focus:ring-offset-#{@color}-50"}
                       >
-                        <%= text %>
+                        {text}
                       </button>
                     <% element -> %>
-                      <%= element %>
+                      {element}
                   <% end %>
                 <% end %>
               </div>
@@ -144,10 +144,10 @@ defmodule LightningWeb.Components.Common do
         <%= if @icon == true do %>
           <.icon name={@icon_name} class="h-5 w-5 align-middle mr-1" />
         <% end %>
-        <%= @message %>
+        {@message}
         <%= if assigns[:action] do %>
           <a href={@action.target} class="whitespace-nowrap font-semibold">
-            <%= @action.text %>
+            {@action.text}
             <span aria-hidden="true"> &rarr;</span>
           </a>
         <% end %>
@@ -180,7 +180,7 @@ defmodule LightningWeb.Components.Common do
         {if @has_tooltip?, do: ["phx-hook": "Tooltip", "data-placement": "bottom", "aria-label": @tooltip], else: []}
         class={"inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium #{@styles}"}
       >
-        <%= @version %>
+        {@version}
       </span>
     </div>
     """
@@ -237,7 +237,7 @@ defmodule LightningWeb.Components.Common do
         ]}
         title={"OpenFn/Lightning #{@display}"}
       >
-        <%= @display %>
+        {@display}
       </code>
     </div>
     """
@@ -274,7 +274,7 @@ defmodule LightningWeb.Components.Common do
       aria-label={@tooltip}
       data-allow-html="true"
     >
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </span>
     """
   end
@@ -302,9 +302,9 @@ defmodule LightningWeb.Components.Common do
 
     ~H"""
     <button type={@type} class={@class} {@rest}>
-      <%= if assigns.inner_block |> Enum.any?(),
+      {if assigns.inner_block |> Enum.any?(),
         do: render_slot(@inner_block),
-        else: @text %>
+        else: @text}
     </button>
     """
   end
@@ -332,7 +332,7 @@ defmodule LightningWeb.Components.Common do
 
     ~H"""
     <button type="button" class={@class} onclick={@onclick} title={@title} {@extra}>
-      <%= if assigns[:inner_block], do: render_slot(@inner_block), else: @text %>
+      {if assigns[:inner_block], do: render_slot(@inner_block), else: @text}
     </button>
     """
   end
@@ -399,7 +399,7 @@ defmodule LightningWeb.Components.Common do
       <div class="flex justify-between items-center space-x-3 text-red-900">
         <Heroicons.exclamation_circle solid class="w-5 h-5" />
         <p class="flex-1 text-sm font-medium" role="alert">
-          <%= @msg %>
+          {@msg}
         </p>
         <button
           type="button"
@@ -434,7 +434,7 @@ defmodule LightningWeb.Components.Common do
       <div class="flex justify-between items-center space-x-3 text-blue-900">
         <Heroicons.check_circle solid class="w-5 h-5" />
         <p class="flex-1 text-sm font-medium" role="alert">
-          <%= @msg %>
+          {@msg}
         </p>
         <button
           type="button"
@@ -483,7 +483,7 @@ defmodule LightningWeb.Components.Common do
 
     ~H"""
     <div class={@class}>
-      <%= @type %>
+      {@type}
     </div>
     """
   end
@@ -535,7 +535,7 @@ defmodule LightningWeb.Components.Common do
             "font-normal truncate flex-grow mr-6",
             "group-data-[item-selected]:font-semibold"
           ]}>
-            <%= item.name %>
+            {item.name}
           </span>
           <span class={[
             "flex-shrink-0 ml-auto",
@@ -560,7 +560,7 @@ defmodule LightningWeb.Components.Common do
   def sortable_table_header(assigns) do
     ~H"""
     <.link class="group inline-flex" {@rest}>
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
       <span class={[
         "ml-2 flex-none rounded",
         if(@active,

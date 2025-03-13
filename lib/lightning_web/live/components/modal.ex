@@ -81,11 +81,11 @@ defmodule LightningWeb.Components.Modal do
                   id={"#{@id}-title"}
                   class="text-lg font-semibold leading-5 text-zinc-800"
                 >
-                  <%= render_slot(@title) %>
+                  {render_slot(@title)}
                 </h1>
                 <%= for subtitle <- @subtitle do %>
                   <p class="mt-2 text-sm leading-4.5 text-zinc-600">
-                    <%= render_slot(subtitle) %>
+                    {render_slot(subtitle)}
                   </p>
                 <% end %>
               </header>
@@ -95,11 +95,11 @@ defmodule LightningWeb.Components.Modal do
               >
               </div>
               <section class={if(@with_frame, do: "pl-[24px] pr-[24px]", else: "")}>
-                <%= render_slot(@inner_block) %>
+                {render_slot(@inner_block)}
               </section>
               <%= for footer <- @footer do %>
                 <.modal_footer :if={@with_frame} class={footer |> Map.get(:class)}>
-                  <%= render_slot(footer) %>
+                  {render_slot(footer)}
                 </.modal_footer>
               <% end %>
             </.focus_wrap>
@@ -117,7 +117,7 @@ defmodule LightningWeb.Components.Modal do
     ~H"""
     <div class="flex-grow bg-gray-100 h-0.5 mt-[16px]"></div>
     <footer class={@class}>
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </footer>
     """
   end

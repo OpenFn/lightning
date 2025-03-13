@@ -235,14 +235,14 @@ defmodule LightningWeb.AuthProvidersLive.FormComponent do
                     id="redirect-uri-preview"
                     class="font-mono border rounded-md mt-4 p-2 text-secondary-700 bg-gray-200 border-slate-300 shadow-xs"
                   >
-                    <%= Phoenix.HTML.Form.input_value(f, :redirect_uri) %>
+                    {Phoenix.HTML.Form.input_value(f, :redirect_uri)}
                   </div>
                 <% else %>
                   <div
                     id="redirect-uri-preview"
                     class="font-mono border rounded-md mt-4 p-2 text-gray-400 bg-gray-200 border-slate-300 shadow-xs cursor-not-allowed"
                   >
-                    <%= Phoenix.HTML.Form.input_value(f, :redirect_host) %>&hellip;
+                    {Phoenix.HTML.Form.input_value(f, :redirect_host)}&hellip;
                   </div>
                 <% end %>
                 <p class="mt-2 text-sm text-secondary-700">

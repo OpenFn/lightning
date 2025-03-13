@@ -107,9 +107,9 @@ defmodule LightningWeb.CollectionLive.CollectionCreationModal do
         <:title>
           <div class="flex justify-between">
             <span class="font-bold">
-              <%= if @mode == :create,
+              {if @mode == :create,
                 do: "Create Collection",
-                else: "Edit Collection" %>
+                else: "Edit Collection"}
             </span>
             <button
               id={"close-collection-#{@collection.id || "new"}-creation-modal"}

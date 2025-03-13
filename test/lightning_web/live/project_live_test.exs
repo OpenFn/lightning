@@ -1524,7 +1524,7 @@ defmodule LightningWeb.ProjectLiveTest do
           attrs: %{text: banner_message},
           function: fn assigns ->
             ~H"""
-            <%= @text %>
+            {@text}
             """
           end
         }
@@ -3918,7 +3918,7 @@ defmodule LightningWeb.ProjectLiveTest do
           {:error, :disabled,
            %{
              function: fn assigns ->
-               ~H"<p>I am an error message that says: <%= @error %></p>"
+               ~H"<p>I am an error message that says: {@error}</p>"
              end,
              attrs: %{error: error_msg}
            }}
@@ -4845,7 +4845,7 @@ defmodule LightningWeb.ProjectLiveTest do
           {:error, :disabled,
            %{
              function: fn assigns ->
-               ~H"<p>I am an error message that says: <%= @error %></p>"
+               ~H"<p>I am an error message that says: {@error}</p>"
              end,
              attrs: %{error: error_msg}
            }}
@@ -4969,7 +4969,7 @@ defmodule LightningWeb.ProjectLiveTest do
             {:error, :disabled,
              %{
                function: fn assigns ->
-                 ~H"<p>I am an error message that says: <%= @error %></p>"
+                 ~H"<p>I am an error message that says: {@error}</p>"
                end,
                attrs: %{error: error_msg}
              }}

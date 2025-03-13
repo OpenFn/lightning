@@ -43,7 +43,7 @@
         </div>
         <div class="ml-3">
           <p class="text-sm text-red-700">
-            <%= translate_error(hd(f[:owner].errors)) %>
+            {translate_error(hd(f[:owner].errors))}
           </p>
         </div>
       </div>
@@ -63,9 +63,9 @@
             }
           >
             <:col :let={form} label="NAME">
-              <%= @users
+              {@users
               |> find_user_by_id(form[:user_id].value)
-              |> full_user_name() %>
+              |> full_user_name()}
               <.input :if={form.data.id} type="hidden" field={form[:id]} />
               <.input type="hidden" field={form[:user_id]} />
               <input
@@ -75,7 +75,7 @@
               />
             </:col>
             <:col :let={form} label="EMAIL">
-              <%= find_user_by_id(@users, form[:user_id].value).email %>
+              {find_user_by_id(@users, form[:user_id].value).email}
             </:col>
             <:col :let={form} label="NO ACCESS" label_class="text-center">
               <div class="text-center">

@@ -47,7 +47,7 @@ defmodule LightningWeb.Components.NewInputs do
       ]}
       {@rest}
     >
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </.simple_button_with_tooltip>
     """
   end
@@ -62,7 +62,7 @@ defmodule LightningWeb.Components.NewInputs do
     ~H"""
     <.tooltip_when_disabled id={@id} tooltip={@tooltip} disabled={@rest[:disabled]}>
       <button id={@id} {@rest}>
-        <%= render_slot(@inner_block) %>
+        {render_slot(@inner_block)}
       </button>
     </.tooltip_when_disabled>
     """
@@ -82,14 +82,14 @@ defmodule LightningWeb.Components.NewInputs do
       aria-label={@tooltip}
       data-allow-html="true"
     >
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </span>
     """
   end
 
   defp tooltip_when_disabled(assigns) do
     ~H"""
-    <%= render_slot(@inner_block) %>
+    {render_slot(@inner_block)}
     """
   end
 
@@ -220,12 +220,9 @@ defmodule LightningWeb.Components.NewInputs do
     <div phx-feedback-for={@name}>
       <label class="flex items-center gap-2 text-sm leading-6 text-slate-600">
         <.checkbox_element {assigns} />
-        <%= @label %><span
-          :if={Map.get(@rest, :required, false)}
-          class="text-red-500"
-        > *</span>
+        {@label}<span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
       </label>
-      <.error :for={msg <- @errors} :if={@display_errors}><%= msg %></.error>
+      <.error :for={msg <- @errors} :if={@display_errors}>{msg}</.error>
     </div>
     """
   end
@@ -234,10 +231,7 @@ defmodule LightningWeb.Components.NewInputs do
     ~H"""
     <div phx-feedback-for={@name}>
       <.label :if={@label} class="mb-2" for={@id}>
-        <%= @label %><span
-          :if={Map.get(@rest, :required, false)}
-          class="text-red-500"
-        > *</span>
+        {@label}<span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
         <.tooltip_for_label :if={@tooltip} id={"#{@id}-tooltip"} tooltip={@tooltip} />
       </.label>
       <div class="flex w-full">
@@ -248,7 +242,7 @@ defmodule LightningWeb.Components.NewInputs do
             class={[
               "block w-full rounded-lg border border-secondary-300 bg-white",
               "sm:text-sm shadow-xs",
-              "focus:border-primary-300 focus:ring focus:ring-primary-200/50",
+              "focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-primary-200/50",
               "disabled:cursor-not-allowed",
               @button_placement == "right" && "rounded-r-none",
               @button_placement == "left" && "rounded-l-none",
@@ -257,15 +251,15 @@ defmodule LightningWeb.Components.NewInputs do
             multiple={@multiple}
             {@rest}
           >
-            <option :if={@prompt} value=""><%= @prompt %></option>
-            <%= Phoenix.HTML.Form.options_for_select(@options, @value) %>
+            <option :if={@prompt} value="">{@prompt}</option>
+            {Phoenix.HTML.Form.options_for_select(@options, @value)}
           </select>
         </div>
         <div class="relative ronded-l-none">
-          <%= render_slot(@inner_block) %>
+          {render_slot(@inner_block)}
         </div>
       </div>
-      <.error :for={msg <- @errors} :if={@display_errors}><%= msg %></.error>
+      <.error :for={msg <- @errors} :if={@display_errors}>{msg}</.error>
     </div>
     """
   end
@@ -274,10 +268,7 @@ defmodule LightningWeb.Components.NewInputs do
     ~H"""
     <div phx-feedback-for={@name} class={@stretch && "h-full"}>
       <.label :if={@label} for={@id}>
-        <%= @label %><span
-          :if={Map.get(@rest, :required, false)}
-          class="text-red-500"
-        > *</span>
+        {@label}<span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
       </.label>
       <textarea
         id={@id}
@@ -295,7 +286,7 @@ defmodule LightningWeb.Components.NewInputs do
         ]}
         {@rest}
       ><%= Form.normalize_value("textarea", @value) %></textarea>
-      <.error :for={msg <- @errors} :if={@display_errors}><%= msg %></.error>
+      <.error :for={msg <- @errors} :if={@display_errors}>{msg}</.error>
     </div>
     """
   end
@@ -304,10 +295,7 @@ defmodule LightningWeb.Components.NewInputs do
     ~H"""
     <div phx-feedback-for={@name}>
       <.label :if={@label} for={@id}>
-        <%= @label %><span
-          :if={Map.get(@rest, :required, false)}
-          class="text-red-500"
-        > *</span>
+        {@label}<span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
       </.label>
       <div class="relative mt-2 rounded-lg shadow-xs">
         <input
@@ -353,7 +341,7 @@ defmodule LightningWeb.Components.NewInputs do
         </div>
       </div>
       <div :if={Enum.any?(@errors) and @display_errors} class="error-space">
-        <.error :for={msg <- @errors}><%= msg %></.error>
+        <.error :for={msg <- @errors}>{msg}</.error>
       </div>
     </div>
     """
@@ -522,7 +510,7 @@ defmodule LightningWeb.Components.NewInputs do
               if(@rest[:disabled], do: "text-gray-400", else: "text-gray-900")
             ]}
           >
-            <%= @label %>
+            {@label}
             <span :if={@rest[:required]} class="text-red-500 ml-1">*</span>
           </span>
         </label>
@@ -547,7 +535,7 @@ defmodule LightningWeb.Components.NewInputs do
     ~H"""
     <div phx-feedback-for={@name}>
       <.label :if={@label} for={@id} class="mb-2">
-        <%= @label %>
+        {@label}
         <span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
       </.label>
       <.input_element
@@ -559,7 +547,7 @@ defmodule LightningWeb.Components.NewInputs do
         {@rest}
       />
       <div :if={Enum.any?(@errors) and @display_errors} class="error-space">
-        <.error :for={msg <- @errors}><%= msg %></.error>
+        <.error :for={msg <- @errors}>{msg}</.error>
       </div>
     </div>
     """
@@ -710,7 +698,7 @@ defmodule LightningWeb.Components.NewInputs do
       class={["text-sm/6 font-medium text-slate-800", @class]}
       {@rest}
     >
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </label>
     """
   end
@@ -733,7 +721,7 @@ defmodule LightningWeb.Components.NewInputs do
 
     ~H"""
     <div :if={Enum.any?(@errors)} class="error-space">
-      <.error :for={msg <- @errors}><%= msg %></.error>
+      <.error :for={msg <- @errors}>{msg}</.error>
     </div>
     """
   end
@@ -750,7 +738,7 @@ defmodule LightningWeb.Components.NewInputs do
       class="phx-no-feedback:hidden mt-1 inline-flex items-center gap-x-1.5 text-xs text-danger-600"
     >
       <.icon name="hero-exclamation-circle" class="h-4 w-4" />
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </p>
     """
   end

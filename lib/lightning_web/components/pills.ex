@@ -12,7 +12,7 @@ defmodule LightningWeb.Components.Pills do
       my-auto whitespace-nowrap rounded-full
       py-2 px-4 text-center align-baseline text-xs font-medium leading-none
     ]}>
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </span>
     """
   end

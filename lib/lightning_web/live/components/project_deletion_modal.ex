@@ -111,13 +111,13 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
         >
           <div class="">
             <p>
-              Enter the project name to confirm deletion: <b><%= @project.name %></b>
+              Enter the project name to confirm deletion: <b>{@project.name}</b>
             </p>
 
             <p class="my-2">
               Deleting this project will disable access
               for all users, and disable all jobs in the project. The whole project will be deleted
-              along with all workflows and work order history, <%= human_readable_grace_period() %>.
+              along with all workflows and work order history, {human_readable_grace_period()}.
             </p>
 
             <.input

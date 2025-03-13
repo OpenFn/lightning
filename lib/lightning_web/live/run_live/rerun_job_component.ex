@@ -133,7 +133,7 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
                               "#{if MapSet.member?(@disabled_jobs_ids, job.id), do: "text-slate-500", else: "text-gray-900"}"
                             ]}
                           >
-                            <%= job.name %>
+                            {job.name}
                           </label>
                         </div>
                       <% end %>
@@ -155,10 +155,10 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
                 phx-disable-with="Running..."
                 class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-1"
               >
-                Rerun <%= @retriable_count %> selected work <%= pluralize_with_s(
+                Rerun {@retriable_count} selected work {pluralize_with_s(
                   @retriable_count,
                   "order"
-                ) %> from selected job
+                )} from selected job
               </button>
               <button
                 id="rerun-all-from-job-trigger"
@@ -169,7 +169,7 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
                 phx-disable-with="Running..."
                 class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2"
               >
-                Rerun all <%= @total_entries %> matching work orders from selected job
+                Rerun all {@total_entries} matching work orders from selected job
               </button>
               <div class="relative col-start-1 col-end-3">
                 <div class="absolute inset-0 flex items-center" aria-hidden="true">
@@ -202,10 +202,10 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
                 phx-disable-with="Running..."
                 class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2"
               >
-                Rerun <%= @retriable_count %> selected work <%= pluralize_with_s(
+                Rerun {@retriable_count} selected work {pluralize_with_s(
                   @retriable_count,
                   "order"
-                ) %> from selected job
+                )} from selected job
               </button>
               <button
                 type="button"

@@ -1,16 +1,16 @@
 <LayoutComponents.page_content>
   <:banner>
     <%= if assigns[:banner] do %>
-      <%= Phoenix.LiveView.TagEngine.component(
+      {Phoenix.LiveView.TagEngine.component(
         @banner.function,
         @banner.attrs,
         {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
-      ) %>
+      )}
     <% end %>
   </:banner>
   <:header>
     <LayoutComponents.header current_user={@current_user} project={@project}>
-      <:title><%= @page_title %></:title>
+      <:title>{@page_title}</:title>
     </LayoutComponents.header>
   </:header>
   <.live_component
@@ -49,7 +49,7 @@
                     >
                       <span>
                         <%= if workflow_id = get_change(@filters_changeset, :workflow_id) do %>
-                          <%= find_workflow_name(@workflows, workflow_id) %>
+                          {find_workflow_name(@workflows, workflow_id)}
                         <% else %>
                           Any
                         <% end %>
@@ -92,7 +92,7 @@
                           tabindex="-1"
                           id={"select-workflow-#{workflow_id}"}
                         >
-                          <%= workflow_name %>
+                          {workflow_name}
                         </a>
                       <% end %>
                     </div>
@@ -114,9 +114,9 @@
                     >
                       <span>
                         <%= if Enum.any?(@statuses, fn status -> checked?(@filters_changeset, status.id) end) do %>
-                          <%= Enum.count(@statuses, fn status ->
+                          {Enum.count(@statuses, fn status ->
                             checked?(@filters_changeset, status.id)
-                          end) %> Selected
+                          end)} Selected
                         <% else %>
                           Any
                         <% end %>
@@ -174,7 +174,7 @@
                       phx-click={show_dropdown("time_filter_dropdown")}
                     >
                       <%= if get_change(@filters_changeset, :wo_date_after) || get_change(@filters_changeset, :wo_date_before) || get_change(@filters_changeset, :date_after) || get_change(@filters_changeset, :date_before) do %>
-                        <%= Enum.reject(
+                        {Enum.reject(
                           [
                             get_change(@filters_changeset, :wo_date_after) ||
                               get_change(@filters_changeset, :wo_date_before),
@@ -183,7 +183,7 @@
                           ],
                           &is_nil/1
                         )
-                        |> Enum.count() %> Selected
+                        |> Enum.count()} Selected
                       <% else %>
                         <span>Any</span>
                       <% end %>
@@ -306,7 +306,7 @@
         <div class="mt-2">
           <%= if workflow_id = get_change(@filters_changeset, :workflow_id) do %>
             <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
-              Workflow: <%= find_workflow_name(@workflows, workflow_id) %>
+              Workflow: {find_workflow_name(@workflows, workflow_id)}
               <.form
                 :let={f}
                 for={@filters_changeset}
@@ -340,7 +340,7 @@
 
           <%= for status <- Enum.filter(@statuses, fn status -> checked?(@filters_changeset, status.id) end)  do %>
             <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
-              Work order status: <%= status.label %>
+              Work order status: {status.label}
               <.form
                 :let={f}
                 for={@filters_changeset}
@@ -373,11 +373,11 @@
 
           <%= if get_change(@filters_changeset, :wo_date_after) || get_change(@filters_changeset, :wo_date_before) do %>
             <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
-              <%= @filters_changeset
+              {@filters_changeset
               |> get_change(:wo_date_after)
-              |> maybe_humanize_date() || "*" %> - <%= @filters_changeset
+              |> maybe_humanize_date() || "*"} - {@filters_changeset
               |> get_change(:wo_date_before)
-              |> maybe_humanize_date() || "*" %>
+              |> maybe_humanize_date() || "*"}
               <.form
                 :let={f}
                 for={@filters_changeset}
@@ -417,11 +417,11 @@
 
           <%= if get_change(@filters_changeset, :date_after) || get_change(@filters_changeset, :date_before) do %>
             <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
-              Last Activity: <%= @filters_changeset
+              Last Activity: {@filters_changeset
               |> get_change(:date_after)
-              |> maybe_humanize_date() || "*" %> - <%= @filters_changeset
+              |> maybe_humanize_date() || "*"} - {@filters_changeset
               |> get_change(:date_before)
-              |> maybe_humanize_date() || "*" %>
+              |> maybe_humanize_date() || "*"}
               <.form
                 :let={f}
                 for={@filters_changeset}
@@ -466,9 +466,9 @@
             <div class="flex justify-between items-end">
               <div class="text-md text-gray-500 font-medium truncate w-full">
                 <%= if search = get_change(@filters_changeset, :search_term) do %>
-                  <%= @page.total_entries %><%= if @page.total_entries >=
-                                                     @string_search_limit,
-                                                   do: "+" %> work orders with runs matching "<%= search %>"
+                  {@page.total_entries}{if @page.total_entries >=
+                                             @string_search_limit,
+                                           do: "+"} work orders with runs matching "{search}"
                   <%= if @page.total_entries >= @string_search_limit do %>
                     <span class="text-xs text-gray">
                       (try more specific filters)

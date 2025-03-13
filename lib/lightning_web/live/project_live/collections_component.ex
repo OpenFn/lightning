@@ -219,10 +219,10 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
         <%= for collection <- @collections do %>
           <.tr id={"collection-row-#{collection.id}"}>
             <.td>
-              <%= collection.name %>
+              {collection.name}
             </.td>
             <.td>
-              <%= div(collection.byte_size_sum, 1_000_000) %>
+              {div(collection.byte_size_sum, 1_000_000)}
             </.td>
             <.td>
               <div class="text-right">
@@ -271,7 +271,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
       <:title>
         <div class="flex justify-between">
           <span class="font-bold">
-            <%= @title %>
+            {@title}
           </span>
           <button
             id={"close-modal-#{@id}"}
@@ -359,7 +359,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
       <div class="px-6">
         <p class="text-sm text-gray-500">
           Are you sure you want to delete the collection
-          <span class="font-medium"><%= @collection.name %></span>
+          <span class="font-medium">{@collection.name}</span>
           ?
           If you wish to proceed with this action, click on the delete button. To cancel click on the cancel button.<br /><br />
         </p>

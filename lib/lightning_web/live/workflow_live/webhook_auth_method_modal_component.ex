@@ -352,7 +352,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
     ~H"""
     <div class="space-y-4 ml-[24px] mr-[24px]">
       <p class="mb-4">
-        You have <%= length(assigns.webhook_auth_method.triggers) %>
+        You have {length(assigns.webhook_auth_method.triggers)}
         <span class="font-semibold">Workflows</span>
         associated with the "<span class="font-semibold">My Auth</span>" authentication method:
       </p>
@@ -368,7 +368,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
               role="button"
               target="_blank"
             >
-              <%= trigger.workflow.name %>
+              {trigger.workflow.name}
             </.link>
           </li>
         <% end %>
@@ -416,7 +416,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
               phx-value-id={auth_method.id}
               phx-target={@myself}
             >
-              <%= Enum.count(auth_method.triggers) %>
+              {Enum.count(auth_method.triggers)}
             </a>
             <span
               :if={auth_method.triggers == []}

@@ -45,7 +45,7 @@
             </div>
             <div class="ml-3">
               <p class="text-sm text-red-700">
-                <%= @error %>
+                {@error}
               </p>
             </div>
           </div>
@@ -127,10 +127,10 @@
             phx-disable-with="Adding..."
             disabled={!@changeset.valid? || !is_nil(@error)}
           >
-            Invite new user<%= if(
+            Invite new user{if(
               Enum.count(f[:invited_collaborators].value) > 1,
               do: "s"
-            ) %>
+            )}
           </.button>
           <button
             type="button"

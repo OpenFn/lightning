@@ -159,28 +159,28 @@
             target="_blank"
             class="link"
           >
-            <%= @project_repo_connection.repo %>
+            {@project_repo_connection.repo}
           </.link>
         </span>
 
         <span>
           Branch:
           <span class="text-xs font-mono bg-gray-200 rounded-md p-1">
-            <%= @project_repo_connection.branch %>
+            {@project_repo_connection.branch}
           </span>
         </span>
 
         <span>
           GitHub Installation ID:
           <span class="text-xs font-mono bg-gray-200 rounded-md p-1">
-            <%= @project_repo_connection.github_installation_id %>
+            {@project_repo_connection.github_installation_id}
           </span>
         </span>
 
         <span>
           Path to config:
           <span class="text-xs font-mono bg-gray-200 rounded-md p-1">
-            <%= ProjectRepoConnection.config_path(@project_repo_connection) %>
+            {ProjectRepoConnection.config_path(@project_repo_connection)}
           </span>
         </span>
 

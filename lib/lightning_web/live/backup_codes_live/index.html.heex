@@ -1,7 +1,7 @@
 <LayoutComponents.page_content>
   <:header>
     <LayoutComponents.header current_user={@current_user}>
-      <:title><%= @page_title %></:title>
+      <:title>{@page_title}</:title>
     </LayoutComponents.header>
   </:header>
   <LayoutComponents.centered>
@@ -96,7 +96,7 @@
               <%= if backup_code.used_at do %>
                 <span class="text-sm text-gray-300">
                   <span class="line-through">
-                    <%= backup_code.code %>
+                    {backup_code.code}
                   </span>
                   <Common.tooltip
                     id="backup-code-last-used-tooltip"
@@ -105,7 +105,7 @@
                   />
                 </span>
               <% else %>
-                <%= backup_code.code %>
+                {backup_code.code}
               <% end %>
             </div>
           </div>
