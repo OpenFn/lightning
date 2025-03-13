@@ -87,6 +87,11 @@ config :lightning, :oauth_clients,
   ]
 
 # Configure esbuild (the version is required)
+# TODO: work out how to _NOT_ have this set of entry points try and build
+# monaco-editor, since we already have a separate esbuild task for that.
+# Note the `--external:path` flag, this is to work around a recent change
+# in esbuild causing it to fail when trying to bundle up the @typescript/vfs module
+# but only when minifying.
 config :esbuild,
   version: "0.25.0",
   default: [
@@ -94,6 +99,11 @@ config :esbuild,
       ~w(js/app.js
          js/storybook.js
          js/editor/Editor.tsx
+         editor.worker=monaco-editor/esm/vs/editor/editor.worker.js
+         json.worker=monaco-editor/esm/vs/language/json/json.worker.js
+         css.worker=monaco-editor/esm/vs/language/css/css.worker.js
+         html.worker=monaco-editor/esm/vs/language/html/html.worker.js
+         typescript.worker=monaco-editor/esm/vs/language/typescript/ts.worker.js
          fonts/inter.css
          fonts/fira-code.css
          --loader:.woff2=file
@@ -103,17 +113,41 @@ config :esbuild,
          --jsx=automatic
          --tsconfig=tsconfig.browser.json
          --target=es2020
-         --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
+         --outdir=../priv/static/assets
+         --external:path
+         --external:/fonts/*
+         --external:/images/*
+        )
+      |> then(fn args ->
+        case config_env() do
+          "prod" -> args
+          # _ -> args ++ ["--jsx-dev"]
+          _ -> args
+        end
+      end),
     cd: Path.expand("../assets", __DIR__),
     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
   ],
-  monaco: [
-    args: ~w(
-         #{Path.expand("../assets/node_modules/monaco-editor/min/vs/**/*.*", __DIR__) |> Path.wildcard() |> Enum.join(" ")}
-         --loader:.ttf=copy
-         --jsx=automatic
+  react: [
+    # This esbuild profile is not meant to be used directly, it is used by a
+    # custom Mix compiler. These args are used by it, but the actual entrypoints
+    # are gathered by the compiler.
+    # TODO: cache-busting hashes
+    args:
+      ~w(
+         --format=esm --splitting --bundle
+         --outbase=../assets/js/react
          --tsconfig=tsconfig.browser.json
-         --outdir=../priv/static/assets/monaco-editor/vs ),
+         --jsx=automatic
+         --target=es2020
+         --outdir=../priv/static/assets/js/react --external:/fonts/* --external:/images/*)
+      |> then(fn args ->
+        case config_env() do
+          "prod" -> args ++ ["--minify"]
+          # _ -> args ++ ["--jsx-dev"]
+          _ -> args
+        end
+      end),
     cd: Path.expand("../assets", __DIR__),
     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
   ]

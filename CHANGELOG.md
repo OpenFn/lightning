@@ -32,6 +32,7 @@ and this project adheres to
 
 ### Changed
 
+- Changed the way Monaco workers are loaded, using ESM modules instead.
 - Do not include `v` param in workflow links when it is latest
   [#2941](https://github.com/OpenFn/lightning/issues/2941)
 - Use dropdown instead of modal for the log level filter
