@@ -31,16 +31,26 @@ defmodule Lightning.CredentialsTest do
       [user_1, user_2] = insert_list(2, :user)
 
       credential_1 =
-        insert(:credential, user_id: user_1.id)
+        insert(:credential, user_id: user_1.id, name: "a good cred")
         |> Repo.preload([:projects, :user, :oauth_token])
 
       credential_2 =
         insert(:credential, user_id: user_2.id)
         |> Repo.preload([:projects, :user, :oauth_token])
 
-      assert Credentials.list_credentials(user_1) == [
-               credential_1
+      credential_3 =
+        insert(:credential, user_id: user_1.id, name: "better cred")
+        |> Repo.preload([:projects, :user, :oauth_token])
+
+      credentials = Credentials.list_credentials(user_1)
+
+      assert credentials == [
+               credential_1,
+               credential_3
              ]
+
+      names = Enum.map(credentials, & &1.name)
+      assert names == Enum.sort_by(names, &String.downcase/1)
 
       assert Credentials.list_credentials(user_2) == [
                credential_2
@@ -51,14 +61,25 @@ defmodule Lightning.CredentialsTest do
       user = insert(:user)
       project = insert(:project, project_users: [%{user: user}])
 
-      credential =
+      credential_1 =
         insert(:credential,
           user: user,
+          name: "bbb",
+          project_credentials: [%{project: project}]
+        )
+
+      credential_2 =
+        insert(:credential,
+          user: user,
+          name: "aaa",
           project_credentials: [%{project: project}]
         )
 
       assert Credentials.list_credentials(project)
-             |> Enum.map(fn credential -> credential.id end) == [credential.id]
+             |> Enum.map(fn credential -> credential.id end) == [
+               credential_2.id,
+               credential_1.id
+             ]
     end
 
     test "get_credential!/1 returns the credential with given id" do

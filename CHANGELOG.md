@@ -19,6 +19,10 @@ and this project adheres to
 
 ### Changed
 
+- Added alphabetical sort to credential and Oauth2 client lists.
+
+- [#2994](https://github.com/OpenFn/lightning/issues/2994)
+
 ### Fixed
 
 ## [v2.11.0-pre.1] - 2025-03-12
@@ -27,8 +31,12 @@ and this project adheres to
 
 - Update Collections admin UI storage counter after deleting all
   [#2986](https://github.com/OpenFn/lightning/issues/2986)
-- Refactor OAuth credentials to reuse existing refresh tokens for same scopes [#2908](https://github.com/OpenFn/lightning/issues/2908) \
-  ⚠️️ Please note that you will need to migrate your existing OAuth credentials. To do that run the following command: `mix run priv/repo/migrate_oauth_credentials.exs` for local setup or `docker exec -it <lightning_container_name> /app/bin/lightning eval "Lightning.Credentials.OauthMigration.run()"` for production environments.
+- Refactor OAuth credentials to reuse existing refresh tokens for same scopes
+  [#2908](https://github.com/OpenFn/lightning/issues/2908) \
+  ⚠️️ Please note that you will need to migrate your existing OAuth credentials.
+  To do that run the following command: `mix run priv/repo/migrate_oauth_credentials.exs`
+  for local setup or `docker exec -it <lightning_container_name> /app/bin/lightning eval "Lightning.Credentials.OauthMigration.run()"`
+  for production environments.
 
 ### Changed
 

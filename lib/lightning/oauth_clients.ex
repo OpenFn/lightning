@@ -76,12 +76,14 @@ defmodule Lightning.OauthClients do
       )
 
     Repo.all(clients_query)
+    |> Enum.sort_by(&String.downcase(&1.name))
   end
 
   def list_clients(%User{id: user_id}) do
     from(c in OauthClient,
       where: c.user_id == ^user_id or c.global,
-      preload: :projects
+      preload: :projects,
+      order_by: [asc: fragment("lower(?)", c.name)]
     )
     |> Repo.all()
   end
