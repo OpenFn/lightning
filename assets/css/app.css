@@ -10,7 +10,7 @@
 @source '../lib/**/*.{ex,exs}';
 @source '../deps/petal_components/**/*.{ex,exs}';
 
-@theme inline {
+@theme {
   --font-sans: 'Inter var', ui-sans-serif, system-ui, sans-serif,
     'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   --font-mono: 'Fira Code VF', ui-monospace, SFMono-Regular, Menlo, Monaco,
@@ -93,6 +93,16 @@
   --color-warning-800: var(--color-yellow-800);
   --color-warning-900: var(--color-yellow-900);
   --color-warning-950: var(--color-yellow-950);
+}
+
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentColor);
+  }
 }
 
 @import './monaco-style-overrides.css' layer(utilities);
@@ -242,7 +252,7 @@
 
     input#combobox {
       background-color: white;
-      color: rgb(var(--color-gray-900));
+      color: var(--color-gray-900);
       --tw-ring-color: var(--primary-ring);
 
       &:focus {
@@ -254,7 +264,7 @@
         --tw-ring-color: var(--primary-ring-focus);
 
         > li {
-          color: rgb(var(--color-gray-900));
+          color: var(--color-gray-900);
           .hero-check {
             color: var(--primary-bg-lighter);
           }

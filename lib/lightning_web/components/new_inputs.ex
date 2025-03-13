@@ -39,7 +39,7 @@ defmodule LightningWeb.Components.NewInputs do
       type={@type}
       class={[
         "inline-flex justify-center items-center py-2 px-4 border border-transparent",
-        "shadow-sm text-sm font-medium rounded-md focus:outline-none",
+        "shadow-xs text-sm font-medium rounded-md focus:outline-none",
         "focus:ring-2 focus:ring-offset-2",
         "phx-submit-loading:opacity-75",
         @color_class,
@@ -247,8 +247,8 @@ defmodule LightningWeb.Components.NewInputs do
             name={@name}
             class={[
               "block w-full rounded-lg border border-secondary-300 bg-white",
-              "sm:text-sm shadow-sm",
-              "focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50",
+              "sm:text-sm shadow-xs",
+              "focus:border-primary-300 focus:ring focus:ring-primary-200/50",
               "disabled:cursor-not-allowed",
               @button_placement == "right" && "rounded-r-none",
               @button_placement == "left" && "rounded-l-none",
@@ -283,7 +283,7 @@ defmodule LightningWeb.Components.NewInputs do
         id={@id}
         name={@name}
         class={[
-          "focus:outline focus:outline-2 focus:outline-offset-1 rounded-md shadow-sm text-sm",
+          "focus:outline focus:outline-2 focus:outline-offset-1 rounded-md shadow-xs text-sm",
           "mt-2 block w-full focus:ring-0",
           "sm:text-sm sm:leading-6",
           "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 overflow-y-auto",
@@ -309,7 +309,7 @@ defmodule LightningWeb.Components.NewInputs do
           class="text-red-500"
         > *</span>
       </.label>
-      <div class="relative mt-2 rounded-lg shadow-sm">
+      <div class="relative mt-2 rounded-lg shadow-xs">
         <input
           type={@type}
           name={@name}

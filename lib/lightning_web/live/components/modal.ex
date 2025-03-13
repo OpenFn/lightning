@@ -41,7 +41,7 @@ defmodule LightningWeb.Components.Modal do
     >
       <div
         id={"#{@id}-bg"}
-        class="fixed inset-0 bg-black bg-opacity-60 transition-opacity"
+        class="fixed inset-0 bg-black/60 transition-opacity"
         aria-hidden="true"
         phx-click={
           @close_on_click_away &&

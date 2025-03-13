@@ -380,7 +380,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
           type="button"
           phx-click="close_webhook_modal"
           phx-target={@myself}
-          class="mt-3 inline-flex w-full rounded-md bg-indigo-600 hover:bg-indigo-500 px-4 py-2 text-sm font-normal text-white shadow-sm sm:mt-0 sm:w-auto"
+          class="mt-3 inline-flex w-full rounded-md bg-indigo-600 hover:bg-indigo-500 px-4 py-2 text-sm font-normal text-white shadow-xs sm:mt-0 sm:w-auto"
         >
           Close
         </button>
@@ -471,7 +471,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
             type="button"
             phx-click="save"
             phx-target={@myself}
-            class="inline-flex w-full justify-center rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
+            class="inline-flex w-full justify-center rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 sm:ml-3 sm:w-auto"
           >
             Save
           </button>
@@ -479,7 +479,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
             type="button"
             phx-click="close_webhook_modal"
             phx-target={@myself}
-            class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+            class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
           >
             Cancel
           </button>
@@ -500,7 +500,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
       phx-target={@myself}
     >
       <div class="space-y-4 ml-[24px] mr-[24px]">
-        <label class="relative block cursor-pointer rounded-lg border bg-white px-[8px] py-2 text-sm shadow-sm">
+        <label class="relative block cursor-pointer rounded-lg border bg-white px-[8px] py-2 text-sm shadow-xs">
           <.input
             type="radio"
             id={f[:auth_type].id <> "_basic"}
@@ -525,7 +525,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
           </span>
         </label>
 
-        <label class="relative block cursor-pointer rounded-lg border bg-white px-[8px] py-2 text-sm shadow-sm focus:outline-none">
+        <label class="relative block cursor-pointer rounded-lg border bg-white px-[8px] py-2 text-sm shadow-xs focus:outline-none">
           <.input
             type="radio"
             id={f[:auth_type].id <> "_api"}
@@ -554,7 +554,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
         <button
           type="submit"
           disabled={f[:auth_type].value != :api and f[:auth_type].value != :basic}
-          class="inline-flex w-full justify-center rounded-md bg-primary-600 disabled:bg-primary-300 py-4 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:outline-0 focus:outline-2 focus:outline-indigo-600 focus:outline-offset-2 active:outlin-2 active:outline-indigo-600 active:outline-offset-2"
+          class="inline-flex w-full justify-center rounded-md bg-primary-600 disabled:bg-primary-300 py-4 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 disabled:outline-0 focus:outline-2 focus:outline-indigo-600 focus:outline-offset-2 active:outlin-2 active:outline-indigo-600 active:outline-offset-2"
         >
           Next
         </button>

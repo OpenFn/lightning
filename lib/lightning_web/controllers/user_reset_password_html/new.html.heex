@@ -14,7 +14,7 @@
         action={Routes.user_reset_password_path(@conn, :create)}
       >
         <div class="grid grid-cols-6 gap-6">
-          <div class="col-span-6 md:col-span-3 sm:col-span-4 border rounded-md shadow-sm bg-white p-6">
+          <div class="col-span-6 md:col-span-3 sm:col-span-4 border rounded-md shadow-xs bg-white p-6">
             <%= if error = Phoenix.Flash.get(@flash, :error) do %>
               <div class="alert alert-danger" role="alert">
                 <%= error %>

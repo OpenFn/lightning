@@ -754,7 +754,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
     ~H"""
     <div class="row-span-full flex flex-col">
-      <div class="bg-white border-b border-gray-200 px-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+      <div class="bg-white border-b border-gray-200 px-4 flex items-center justify-between sticky top-0 z-10 shadow-xs">
         <span class="font-medium text-gray-900 px-1 truncate max-w-[300px]">
           <%= maybe_show_ellipsis(@session.title) %>
         </span>
@@ -777,7 +777,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             class="flex flex-row-reverse items-end gap-x-3 mr-3"
           >
             <.user_avatar user={message.user} size_class="min-w-10 h-10 w-10" />
-            <div class="bg-blue-300 bg-opacity-50 p-2 mb-0.5 rounded-lg break-words max-w-[70%]">
+            <div class="bg-blue-300/50 p-2 mb-0.5 rounded-lg break-words max-w-[70%]">
               <%= message.content %>
             </div>
             <div

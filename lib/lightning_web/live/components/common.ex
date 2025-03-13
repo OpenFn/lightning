@@ -312,7 +312,7 @@ defmodule LightningWeb.Components.Common do
   def button_white(assigns) do
     class = ~w[
       inline-flex items-center justify-center px-4 py-2 border
-      border-gray-300 rounded-md shadow-sm
+      border-gray-300 rounded-md shadow-xs
       text-sm font-medium text-gray-700
       bg-white hover:bg-gray-50
       focus:outline-none
@@ -345,7 +345,7 @@ defmodule LightningWeb.Components.Common do
       px-4
       border
       border-transparent
-      shadow-sm
+      shadow-xs
       text-sm
       font-medium
       rounded-md
@@ -497,7 +497,7 @@ defmodule LightningWeb.Components.Common do
         spellcheck="false"
         placeholder={@placeholder || "Search..."}
         value={@selected_item && @selected_item.name}
-        class="w-full rounded-md border-0 py-1.5 pl-3 pr-12 shadow-sm ring-1 ring-inset focus:ring-2 sm:text-sm sm:leading-6"
+        class="w-full rounded-md border-0 py-1.5 pl-3 pr-12 shadow-xs ring-1 ring-inset focus:ring-2 sm:text-sm sm:leading-6"
         role="combobox"
         aria-controls="options"
         aria-expanded="false"
@@ -514,7 +514,7 @@ defmodule LightningWeb.Components.Common do
       <ul
         class={[
           "absolute z-10 mt-1 max-h-60 py-1 w-full overflow-auto rounded-md",
-          "shadow-lg ring-1 ring-opacity-5",
+          "shadow-lg ring-1 ring-black/5",
           "text-base sm:text-sm hidden focus:outline-none"
         ]}
         id="options"

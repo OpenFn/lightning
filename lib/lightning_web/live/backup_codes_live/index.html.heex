@@ -16,7 +16,7 @@
           class="rounded-lg bg-white px-4 pb-4 pt-5 text-left sm:my-8 sm:w-full sm:max-w-lg sm:p-6"
         >
           <div class="sm:flex sm:items-start">
-            <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+            <div class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
               <svg
                 class="h-6 w-6 text-red-600"
                 fill="none"
@@ -47,14 +47,14 @@
           <div class="mt-5 sm:mt-4">
             <button
               type="button"
-              class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 sm:ml-3 sm:w-auto"
+              class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 sm:ml-3 sm:w-auto"
             >
               Back to profile
             </button>
           </div>
         </div>
 
-        <div class="bg-white shadow-sm ring-1 ring-gray-900/5 rounded-md">
+        <div class="bg-white shadow-xs ring-1 ring-gray-900/5 rounded-md">
           <div class="border-b border-gray-200 bg-white px-4 py-5 sm:px-6 rounded-t-md">
             <h3 class="text-base font-semibold leading-6 text-gray-900">
               Backup Codes
@@ -66,7 +66,7 @@
           </div>
           <div class="rounded-md bg-yellow-50 p-4">
             <div class="flex">
-              <div class="flex-shrink-0">
+              <div class="shrink-0">
                 <svg
                   class="h-5 w-5 text-yellow-400"
                   viewBox="0 0 20 20"
@@ -114,7 +114,7 @@
               <button
                 type="button"
                 onclick={"window.open('#{~p"/profile/auth/backup_codes/print"}',  '_blank')"}
-                class="inline-flex items-center gap-x-2 rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+                class="inline-flex items-center gap-x-2 rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -140,7 +140,7 @@
                 phx-then={JS.show(%JS{}, to: "#codes-copied-alert")}
                 data-to="#backup-codes"
                 type="button"
-                class="inline-flex items-center gap-x-2 rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+                class="inline-flex items-center gap-x-2 rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -181,7 +181,7 @@
                 phx-hook="Flash"
               >
                 <div class="flex">
-                  <div class="flex-shrink-0">
+                  <div class="shrink-0">
                     <svg
                       class="h-5 w-5 text-green-400"
                       viewBox="0 0 20 20"
@@ -213,7 +213,7 @@
               <button
                 type="button"
                 phx-click="regenerate-backup-codes"
-                class="inline-flex items-center gap-x-2 rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto rounded-b-md"
+                class="inline-flex items-center gap-x-2 rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto rounded-b-md"
               >
                 Generate new backup codes
               </button>

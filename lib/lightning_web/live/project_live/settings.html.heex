@@ -109,7 +109,7 @@
                   field={f[:description]}
                   disabled={!@can_edit_project}
                   label="Project description"
-                  class="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
+                  class="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-xs sm:text-sm border-secondary-300 rounded-md"
                 />
                 <small class="mt-2 block text-xs text-gray-600">
                   A short description of a project [max 240 characters]
@@ -245,7 +245,7 @@
             <a
               href={~p"/download/yaml?id=#{@project.id}"}
               target="_blank"
-              class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 "
+              class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-xs text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 "
             >
               Export project
             </a>
@@ -273,7 +273,7 @@
               }>
                 <button
                   type="button"
-                  class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-danger-500 hover:bg-danger-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger-500"
+                  class="inline-flex justify-center py-2 px-4 border border-transparent shadow-xs text-sm font-medium rounded-md text-white bg-danger-500 hover:bg-danger-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger-500"
                 >
                   Delete project
                 </button>
@@ -755,7 +755,7 @@
                       type="button"
                       phx-click={show_modal("remove_#{project_user.id}_modal")}
                       color_class="bg-white text-gray-900 hover:bg-gray-50 disabled:bg-gray-100"
-                      class="gap-x-2 rounded-md  px-3.5 py-2.5 text-sm shadow-sm ring-1 ring-inset ring-gray-300 disabled:cursor-not-allowed"
+                      class="gap-x-2 rounded-md px-3.5 py-2.5 text-sm shadow-xs ring-1 ring-inset ring-gray-300 disabled:cursor-not-allowed"
                       tooltip={
                         remove_user_tooltip(
                           project_user,
@@ -842,7 +842,7 @@
               <button
                 id="toggle-mfa-switch"
                 type="button"
-                class={"#{if @project.requires_mfa, do: "bg-indigo-600", else: "bg-gray-200"} #{if !@can_edit_project, do: "cursor-not-allowed opacity-50", else: "cursor-pointer"} relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"}
+                class={"#{if @project.requires_mfa, do: "bg-indigo-600", else: "bg-gray-200"} #{if !@can_edit_project, do: "cursor-not-allowed opacity-50", else: "cursor-pointer"} relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"}
                 role="switch"
                 disabled={!@can_require_mfa}
                 phx-click="toggle-mfa"
@@ -1117,7 +1117,7 @@
                 <div class="w-full border-t border-gray-300"></div>
               </div>
               <div>
-                <div class={"text-black text-sm #{if to_string(f[:history_retention_period].value) == "" or checked?(@project_changeset, :erase_all), do: "text-opacity-30"}"}>
+                <div class={"text-black text-sm #{if to_string(f[:history_retention_period].value) == "" or checked?(@project_changeset, :erase_all), do: "text-black/30"}"}>
                   <div class="font-medium">
                     Input/Output Data Retention Period
                   </div>
@@ -1150,7 +1150,7 @@
                 <button
                   type="button"
                   disabled={!@can_edit_data_retention}
-                  class="mt-3 mr-1 inline-flex w-full justify-center rounded-md px-3 py-2 text-sm font-semibold shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto bg-white text-gray-900"
+                  class="mt-3 mr-1 inline-flex w-full justify-center rounded-md px-3 py-2 text-sm font-semibold shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto bg-white text-gray-900"
                   phx-click="cancel-retention-change"
                 >
                   Cancel

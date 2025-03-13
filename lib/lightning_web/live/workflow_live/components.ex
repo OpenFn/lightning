@@ -349,7 +349,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             <label class="block text-sm font-semibold leading-6 text-slate-800">
               Webhook URL
             </label>
-            <div class="mt-2 flex rounded-md shadow-sm">
+            <div class="mt-2 flex rounded-md shadow-xs">
               <input
                 type="text"
                 id="webhookUrlInput"
@@ -750,7 +750,7 @@ defmodule LightningWeb.WorkflowLive.Components do
       <:footer class="mx-6 mt-6">
         <div class="flex gap-x-5 justify-end relative">
           <.link
-            class="justify-center rounded-md bg-white px-4 py-3 text-sm font-semibold text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+            class="justify-center rounded-md bg-white px-4 py-3 text-sm font-semibold text-gray-500 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
             phx-click={hide_modal("workflow_modal")}
           >
             Cancel
@@ -761,7 +761,7 @@ defmodule LightningWeb.WorkflowLive.Components do
               id="workflow_button"
               form={@form.id}
               type="submit"
-              class=" justify-center rounded-md bg-primary-600 disabled:bg-primary-300 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:outline-0 focus:outline-2 focus:outline-indigo-600 focus:outline-offset-2 active:outlin-2 active:outline-indigo-600 active:outline-offset-2"
+              class=" justify-center rounded-md bg-primary-600 disabled:bg-primary-300 px-6 py-3 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 disabled:outline-0 focus:outline-2 focus:outline-indigo-600 focus:outline-offset-2 active:outlin-2 active:outline-indigo-600 active:outline-offset-2"
             >
               Create Workflow
             </button>

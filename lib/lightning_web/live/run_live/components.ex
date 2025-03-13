@@ -617,10 +617,7 @@ defmodule LightningWeb.RunLive.Components do
       phx-mounted={@show && show_modal(@id)}
       phx-remove={hide_modal(@id)}
     >
-      <div
-        id={"#{@id}-bg"}
-        class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-      >
+      <div id={"#{@id}-bg"} class="fixed inset-0 bg-gray-500/75 transition-opacity">
       </div>
 
       <div
@@ -665,7 +662,7 @@ defmodule LightningWeb.RunLive.Components do
                 phx-click="bulk-rerun"
                 phx-value-type="selected"
                 phx-disable-with="Running..."
-                class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-1"
+                class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-1"
               >
                 Rerun <%= @selected_count %> selected work order<%= if @selected_count >
                                                                          1,
@@ -677,7 +674,7 @@ defmodule LightningWeb.RunLive.Components do
                 phx-click="bulk-rerun"
                 phx-value-type="all"
                 phx-disable-with="Running..."
-                class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2"
+                class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2"
               >
                 Rerun all <%= @total_entries %> matching work orders from start
               </button>
@@ -693,7 +690,7 @@ defmodule LightningWeb.RunLive.Components do
               </div>
               <button
                 type="button"
-                class="mt-3 inline-flex w-full justify-center items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:col-end-3 sm:mt-0"
+                class="mt-3 inline-flex w-full justify-center items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:col-end-3 sm:mt-0"
                 phx-click={hide_modal(@id)}
               >
                 Cancel
@@ -708,7 +705,7 @@ defmodule LightningWeb.RunLive.Components do
                 phx-click="bulk-rerun"
                 phx-value-type="selected"
                 phx-disable-with="Running..."
-                class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2"
+                class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2"
               >
                 Rerun <%= @selected_count %> selected work order<%= if @selected_count >
                                                                          1,
@@ -717,7 +714,7 @@ defmodule LightningWeb.RunLive.Components do
               </button>
               <button
                 type="button"
-                class="mt-3 inline-flex w-full justify-center items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:mt-0"
+                class="mt-3 inline-flex w-full justify-center items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:mt-0"
                 phx-click={hide_modal(@id)}
               >
                 Cancel

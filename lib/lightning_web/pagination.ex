@@ -132,7 +132,7 @@ defmodule LightningWeb.Pagination do
         </div>
       </div>
       <nav
-        class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+        class="relative z-0 inline-flex rounded-md shadow-xs -space-x-px"
         aria-label="Pagination"
       >
         <%= for {kind, page_number} <- LightningWeb.Pagination.raw_pagination_links(@page) do %>

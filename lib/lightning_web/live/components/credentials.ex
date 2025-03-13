@@ -31,7 +31,7 @@ defmodule LightningWeb.Components.Credentials do
       </:title>
       <div class="px-6">
         <p class="text-sm text-gray-500">
-          You are about the delete the credential "<%= @credential.name %>" which may be used in other projects. All jobs using this credential will fail.
+          You are about the delete the credential "{@credential.name}" which may be used in other projects. All jobs using this credential will fail.
           <br /><br />Do you want to proceed with this action?
         </p>
       </div>
@@ -50,7 +50,7 @@ defmodule LightningWeb.Components.Credentials do
         <button
           type="button"
           phx-click={hide_modal(@id)}
-          class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+          class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
         >
           Cancel
         </button>
@@ -81,7 +81,7 @@ defmodule LightningWeb.Components.Credentials do
       </:title>
       <div class="px-6">
         <p class="text-sm text-gray-500">
-          You are about the delete the Oauth client "<%= @client.name %>" which may be used in other projects. All jobs dependent on this client will fail.
+          You are about the delete the Oauth client "{@client.name}" which may be used in other projects. All jobs dependent on this client will fail.
           <br /><br />Do you want to proceed with this action?
         </p>
       </div>
@@ -100,7 +100,7 @@ defmodule LightningWeb.Components.Credentials do
         <button
           type="button"
           phx-click={hide_modal(@id)}
-          class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+          class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
         >
           Cancel
         </button>
@@ -131,7 +131,7 @@ defmodule LightningWeb.Components.Credentials do
       schema={@schema}
       update_body={@update_body}
     >
-      <%= render_slot(@inner_block, l) %>
+      {render_slot(@inner_block, l)}
     </OauthComponent.fieldset>
     """
   end
@@ -148,7 +148,7 @@ defmodule LightningWeb.Components.Credentials do
       scopes_changed={@scopes_changed}
       sandbox_changed={@sandbox_changed}
     >
-      <%= render_slot(@inner_block, l) %>
+      {render_slot(@inner_block, l)}
     </OauthComponent.fieldset>
     """
   end
@@ -156,7 +156,7 @@ defmodule LightningWeb.Components.Credentials do
   def form_component(%{type: "raw"} = assigns) do
     ~H"""
     <RawBodyComponent.fieldset :let={l} form={@form}>
-      <%= render_slot(@inner_block, l) %>
+      {render_slot(@inner_block, l)}
     </RawBodyComponent.fieldset>
     """
   end
@@ -164,7 +164,7 @@ defmodule LightningWeb.Components.Credentials do
   def form_component(%{type: _schema} = assigns) do
     ~H"""
     <JsonSchemaBodyComponent.fieldset :let={l} form={@form}>
-      <%= render_slot(@inner_block, l) %>
+      {render_slot(@inner_block, l)}
     </JsonSchemaBodyComponent.fieldset>
     """
   end
@@ -216,18 +216,18 @@ defmodule LightningWeb.Components.Credentials do
               name={:project_id}
               class={[
                 "block w-full rounded-lg border border-secondary-300 bg-white",
-                "sm:text-sm shadow-sm",
-                "focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50",
+                "sm:text-sm shadow-xs",
+                "focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-primary-200/50",
                 "disabled:cursor-not-allowed "
               ]}
               phx-change="select_project"
               phx-target={@phx_target}
             >
-              <option value=""><%= @prompt %></option>
-              <%= Phoenix.HTML.Form.options_for_select(
+              <option value="">{@prompt}</option>
+              {Phoenix.HTML.Form.options_for_select(
                 map_projects_for_select(@available_projects),
                 @selected
-              ) %>
+              )}
             </select>
           </div>
 
@@ -249,7 +249,7 @@ defmodule LightningWeb.Components.Credentials do
             :for={project <- @selected_projects}
             class="inline-flex items-center gap-1 rounded-md bg-blue-100 px-4 mr-1 py-2 mb-2 text-gray-600"
           >
-            <%= project.name %>
+            {project.name}
             <button
               id={"#{@remove_project_id}-#{project.id}"}
               phx-target={@phx_target}
@@ -309,7 +309,7 @@ defmodule LightningWeb.Components.Credentials do
 
   def options_menu_button(assigns) do
     ~H"""
-    <div id={@id} class="inline-flex rounded-md shadow-sm">
+    <div id={@id} class="inline-flex rounded-md shadow-xs">
       <.button
         type="button"
         phx-click={show_dropdown("menu")}
@@ -318,12 +318,12 @@ defmodule LightningWeb.Components.Credentials do
         aria-haspopup="true"
         disabled={@disabled}
       >
-        <%= render_slot(@inner_block) %>
+        {render_slot(@inner_block)}
         <Heroicons.chevron_down class="ml-1 h-5 w-5" />
       </.button>
       <div class="relative -ml-px block">
         <div
-          class="hidden absolute right-0 z-10 -mr-1 mt-12 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+          class="hidden absolute right-0 z-10 -mr-1 mt-12 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none"
           role="menu"
           aria-orientation="vertical"
           aria-labelledby="option-menu-button"
@@ -342,7 +342,7 @@ defmodule LightningWeb.Components.Credentials do
               phx-click={show_modal(target)}
               disabled={@disabled}
             >
-              <%= name %><span
+              {name}<span
                 :if={Map.get(option, :badge)}
                 class="ml-2 inline-flex items-center rounded-md bg-gray-50 px-1.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10"
               ><%= Map.get(option, :badge) %></span>
@@ -370,10 +370,10 @@ defmodule LightningWeb.Components.Credentials do
     ~H"""
     <div id={"#{@id}-table-container"}>
       <div :if={@display_table_title} class="py-4 leading-loose">
-        <h6 class="font-normal text-black"><%= @title %></h6>
+        <h6 class="font-normal text-black">{@title}</h6>
       </div>
       <%= if Enum.empty?(@credentials) do %>
-        <%= render_slot(@empty_state) %>
+        {render_slot(@empty_state)}
       <% else %>
         <.table id={"#{@id}-table"}>
           <.tr>
@@ -394,8 +394,13 @@ defmodule LightningWeb.Components.Credentials do
           >
             <.td class="break-words max-w-[15rem]">
               <div class="flex-auto items-center">
+<<<<<<< HEAD
                 <%= credential.name %>
                 <%= if missing_oauth_client?(credential) do %>
+=======
+                {credential.name}
+                <%= if credential.schema == "oauth" and !credential.oauth_client_id do %>
+>>>>>>> fb66ebb7d (Refactor CSS and HTML structure for Tailwind 4.0 Compatibility)
                   <span
                     id={"#{credential.id}-client-not-found-tooltip"}
                     phx-hook="Tooltip"
@@ -408,17 +413,21 @@ defmodule LightningWeb.Components.Credentials do
               </div>
             </.td>
             <.td class="break-words max-w-[10rem] border-">
+<<<<<<< HEAD
               <%= credential_type(credential) %>
+=======
+              {credential.schema}
+>>>>>>> fb66ebb7d (Refactor CSS and HTML structure for Tailwind 4.0 Compatibility)
             </.td>
             <.td :if={@show_owner} class="break-words max-w-[15rem]">
               <div class="flex-auto items-center">
-                <%= credential.user.email %>
+                {credential.user.email}
               </div>
             </.td>
             <.td class="break-words max-w-[25rem]">
               <%= for project_name <- credential.project_names do %>
                 <span class="inline-flex items-center rounded-md bg-primary-50 p-1 my-0.5 text-xs font-medium ring-1 ring-inset ring-gray-500/10">
-                  <%= project_name %>
+                  {project_name}
                 </span>
               <% end %>
             </.td>
@@ -431,7 +440,7 @@ defmodule LightningWeb.Components.Credentials do
               <% end %>
             </.td>
             <.td class="text-right py-0.5">
-              <%= render_slot(@actions, credential) %>
+              {render_slot(@actions, credential)}
             </.td>
           </.tr>
         </.table>
@@ -454,10 +463,10 @@ defmodule LightningWeb.Components.Credentials do
     ~H"""
     <div id={"#{@id}-table-container"}>
       <div class="py-4 leading-loose">
-        <h6 class="font-normal text-black"><%= @title %></h6>
+        <h6 class="font-normal text-black">{@title}</h6>
       </div>
       <%= if Enum.empty?(@clients) do %>
-        <%= render_slot(@empty_state) %>
+        {render_slot(@empty_state)}
       <% else %>
         <.table id={"#{@id}-table"}>
           <.tr>
@@ -472,19 +481,19 @@ defmodule LightningWeb.Components.Credentials do
             id={"#{@id}-#{client.id}"}
             class="hover:bg-gray-100 transition-colors duration-200"
           >
-            <.td class="break-words max-w-[15rem]"><%= client.name %></.td>
+            <.td class="break-words max-w-[15rem]">{client.name}</.td>
             <.td class="break-words max-w-[20rem]">
               <%= for project_name <- client.project_names do %>
                 <span class="inline-flex items-center rounded-md bg-primary-50 p-1 my-0.5 text-xs font-medium ring-1 ring-inset ring-gray-500/10">
-                  <%= project_name %>
+                  {project_name}
                 </span>
               <% end %>
             </.td>
             <.td class="break-words max-w-[21rem]">
-              <%= client.authorization_endpoint %>
+              {client.authorization_endpoint}
             </.td>
             <.td class="text-right py-0.5">
-              <%= render_slot(@actions, client) %>
+              {render_slot(@actions, client)}
             </.td>
           </.tr>
         </.table>

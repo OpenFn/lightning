@@ -252,7 +252,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
               id="delete_trigger_auth_methods_button"
               type="submit"
               phx-disable-with="Deleting..."
-              class="inline-flex w-full justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
+              class="inline-flex w-full justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-xs hover:bg-red-500 sm:ml-3 sm:w-auto focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
               disabled={!@delete_confirmation_changeset.valid?}
             >
               Delete authentication method
@@ -260,7 +260,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
             <button
               type="button"
               phx-click={JS.navigate(@return_to)}
-              class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+              class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
             >
               Cancel
             </button>
@@ -314,7 +314,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
           <div class="sm:flex sm:flex-row-reverse">
             <button
               type="submit"
-              class="inline-flex w-full justify-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
+              class="inline-flex w-full justify-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 sm:ml-3 sm:w-auto"
             >
               Done
             </button>
@@ -322,7 +322,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
               type="button"
               phx-click="toggle-2fa"
               phx-target={@myself}
-              class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+              class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
             >
               Cancel
             </button>
@@ -408,7 +408,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
             <button
               type="submit"
               disabled={!@changeset.valid?}
-              class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
+              class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 sm:ml-3 sm:w-auto"
             >
               <%= if @action == :new do %>
                 Create auth method
@@ -433,7 +433,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
       <button
         type="button"
         phx-click={JS.navigate(@return_to)}
-        class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+        class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
       >
         Cancel
       </button>
@@ -447,7 +447,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
           |> JS.push("close_webhook_modal")
         }
         phx-target="#webhooks_auth_method_modal-container"
-        class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+        class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
       >
         Cancel
       </button>
@@ -462,7 +462,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
   defp maybe_mask_password_field(assigns) do
     ~H"""
     <div>
-      <div class="mt-2 flex rounded-md shadow-sm">
+      <div class="mt-2 flex rounded-md shadow-xs">
         <input
           type="password"
           id={@field.id}
@@ -508,7 +508,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
   defp maybe_mask_api_key_field(assigns) do
     ~H"""
     <div>
-      <div class="mt-2 flex rounded-md shadow-sm">
+      <div class="mt-2 flex rounded-md shadow-xs">
         <input
           type="text"
           id={@field.id}

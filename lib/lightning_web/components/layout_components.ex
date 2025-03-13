@@ -99,7 +99,7 @@ defmodule LightningWeb.LayoutComponents do
         }
       }
     />
-    <div class="flex-none bg-white shadow-sm">
+    <div class="flex-none bg-white shadow-xs">
       <div class={[@title_class, @title_height]}>
         <%= if @current_user do %>
           <nav class="flex" aria-label="Breadcrumb">

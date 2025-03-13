@@ -28,10 +28,7 @@ defmodule LightningWeb.Components.Table do
 
   def table(assigns) do
     ~H"""
-    <div
-      id={@id}
-      class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg"
-    >
+    <div id={@id} class="overflow-hidden shadow ring-1 ring-black/5 sm:rounded-lg">
       <table class="min-w-full divide-y divide-gray-300">
         <thead class="">
           <tr>
