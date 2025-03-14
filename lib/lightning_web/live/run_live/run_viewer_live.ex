@@ -42,7 +42,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                         }
                         class="link-uuid"
                       >
-                        <%= display_short_uuid(run.work_order_id) %>
+                        {display_short_uuid(run.work_order_id)}
                       </.link>
                     </:value>
                   </.list_item>
@@ -55,7 +55,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                         }
                         class="link-uuid"
                       >
-                        <%= display_short_uuid(run.id) %>
+                        {display_short_uuid(run.id)}
                       </.link>
                     </:value>
                   </.list_item>
@@ -67,10 +67,10 @@ defmodule LightningWeb.RunLive.RunViewerLive do
                           id={run.id <> "start-tip"}
                           tooltip={DateTime.to_iso8601(run.started_at)}
                         >
-                          <%= Timex.Format.DateTime.Formatters.Relative.format!(
+                          {Timex.Format.DateTime.Formatters.Relative.format!(
                             run.started_at,
                             "{relative}"
-                          ) %>
+                          )}
                         </Common.wrapper_tooltip>
                       <% end %>
                     </:value>

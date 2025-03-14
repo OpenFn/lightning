@@ -99,7 +99,7 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
             Created at
           </div>
           <div class="basis-1/2 text-right">
-            <%= Lightning.Helpers.format_date(@selected_dataclip.inserted_at) %>
+            {Lightning.Helpers.format_date(@selected_dataclip.inserted_at)}
           </div>
         </div>
       <% end %>

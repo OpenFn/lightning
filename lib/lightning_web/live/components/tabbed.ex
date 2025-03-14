@@ -43,13 +43,13 @@ defmodule LightningWeb.Components.Tabbed do
             disabled={tab[:disabled]}
             disabled_msg={tab[:disabled_msg]}
           >
-            <%= render_slot(tab) %>
+            {render_slot(tab)}
           </.tab>
         <% end %>
       </div>
       <%= for panel <- @panel do %>
         <.panel hash={panel[:hash]} class={panel[:class]}>
-          <%= render_slot(panel) %>
+          {render_slot(panel)}
         </.panel>
       <% end %>
     </div>
@@ -82,14 +82,14 @@ defmodule LightningWeb.Components.Tabbed do
             disabled_msg={tab[:disabled_msg]}
             class="px-4"
           >
-            <%= render_slot(tab) %>
+            {render_slot(tab)}
           </.tab>
         <% end %>
       </div>
       <div class="flex-grow">
         <%= for panel <- @panel do %>
           <.panel hash={panel[:hash]} class={panel[:class]}>
-            <%= render_slot(panel) %>
+            {render_slot(panel)}
           </.panel>
         <% end %>
       </div>
@@ -126,7 +126,7 @@ defmodule LightningWeb.Components.Tabbed do
           disabled={tab[:disabled]}
           disabled_msg={tab[:disabled_msg]}
         >
-          <%= render_slot(tab) %>
+          {render_slot(tab)}
         </.tab>
       <% end %>
     </div>
@@ -155,7 +155,7 @@ defmodule LightningWeb.Components.Tabbed do
         data-allow-html="true"
         lv-keep-aria
       >
-        <%= render_slot(@inner_block) %>
+        {render_slot(@inner_block)}
       </span>
     <% else %>
       <a
@@ -168,7 +168,7 @@ defmodule LightningWeb.Components.Tabbed do
         href={"##{@hash}"}
         lv-keep-aria
       >
-        <%= render_slot(@inner_block) %>
+        {render_slot(@inner_block)}
       </a>
     <% end %>
     """
@@ -191,7 +191,7 @@ defmodule LightningWeb.Components.Tabbed do
       tabindex="0"
       lv-keep-class
     >
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </div>
     """
   end
@@ -215,7 +215,7 @@ defmodule LightningWeb.Components.Tabbed do
     >
       <%= for panel <- @panel do %>
         <.panel hash={panel[:hash]} class={panel[:class]}>
-          <%= render_slot(panel) %>
+          {render_slot(panel)}
         </.panel>
       <% end %>
     </div>

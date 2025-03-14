@@ -178,7 +178,7 @@ defmodule LightningWeb.Components.Icon do
       stroke-width="2"
       {@attrs}
     >
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </svg>
     """
   end

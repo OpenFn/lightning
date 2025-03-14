@@ -1,16 +1,16 @@
 <LayoutComponents.page_content>
   <:banner>
     <%= if assigns[:banner] do %>
-      <%= Phoenix.LiveView.TagEngine.component(
+      {Phoenix.LiveView.TagEngine.component(
         @banner.function,
         @banner.attrs,
         {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
-      ) %>
+      )}
     <% end %>
   </:banner>
   <:header>
     <LayoutComponents.header current_user={@current_user} project={@project}>
-      <:title><%= @page_title %></:title>
+      <:title>{@page_title}</:title>
     </LayoutComponents.header>
   </:header>
   <LayoutComponents.centered>
@@ -109,7 +109,7 @@
                   field={f[:description]}
                   disabled={!@can_edit_project}
                   label="Project description"
-                  class="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
+                  class="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-xs sm:text-sm border-secondary-300 rounded-md"
                 />
                 <small class="mt-2 block text-xs text-gray-600">
                   A short description of a project [max 240 characters]
@@ -245,7 +245,7 @@
             <a
               href={~p"/download/yaml?id=#{@project.id}"}
               target="_blank"
-              class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 "
+              class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-xs text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 "
             >
               Export project
             </a>
@@ -273,7 +273,7 @@
               }>
                 <button
                   type="button"
-                  class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-danger-500 hover:bg-danger-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger-500"
+                  class="inline-flex justify-center py-2 px-4 border border-transparent shadow-xs text-sm font-medium rounded-md text-white bg-danger-500 hover:bg-danger-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger-500"
                 >
                   Delete project
                 </button>
@@ -560,7 +560,7 @@
                   show_modal("display_linked_triggers_#{auth_method.id}_modal")
                 }
               >
-                <%= Enum.count(auth_method.triggers) %>
+                {Enum.count(auth_method.triggers)}
               </a>
               <span
                 :if={auth_method.triggers == []}
@@ -617,7 +617,7 @@
               <a
                 id={"edit_auth_method_link_#{auth_method.id}"}
                 href="#"
-                class="table-action"
+                class="table-action cursor-not-allowed"
               >
                 Edit
               </a>
@@ -651,7 +651,7 @@
               </div>
             <% else %>
               <a
-                id={"edit_auth_method_link_#{auth_method.id}"}
+                id={"delete_auth_method_link_#{auth_method.id}"}
                 href="#"
                 class="ml-1 cursor-not-allowed text-indigo-300"
               >
@@ -755,7 +755,7 @@
                       type="button"
                       phx-click={show_modal("remove_#{project_user.id}_modal")}
                       color_class="bg-white text-gray-900 hover:bg-gray-50 disabled:bg-gray-100"
-                      class="gap-x-2 rounded-md  px-3.5 py-2.5 text-sm shadow-sm ring-1 ring-inset ring-gray-300 disabled:cursor-not-allowed"
+                      class="gap-x-2 rounded-md px-3.5 py-2.5 text-sm shadow-xs ring-1 ring-inset ring-gray-300 disabled:cursor-not-allowed"
                       tooltip={
                         remove_user_tooltip(
                           project_user,
@@ -808,11 +808,11 @@
         </div>
         <div>
           <%= if assigns[:mfa_banner] do %>
-            <%= Phoenix.LiveView.TagEngine.component(
+            {Phoenix.LiveView.TagEngine.component(
               @mfa_banner.function,
               @mfa_banner.attrs,
               {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
-            ) %>
+            )}
           <% end %>
         </div>
         <div class="bg-white p-4 rounded-md">
@@ -842,7 +842,7 @@
               <button
                 id="toggle-mfa-switch"
                 type="button"
-                class={"#{if @project.requires_mfa, do: "bg-indigo-600", else: "bg-gray-200"} #{if !@can_edit_project, do: "cursor-not-allowed opacity-50", else: "cursor-pointer"} relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"}
+                class={"#{if @project.requires_mfa, do: "bg-indigo-600", else: "bg-gray-200"} #{if !@can_edit_project, do: "cursor-not-allowed opacity-50", else: "cursor-pointer"} relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"}
                 role="switch"
                 disabled={!@can_require_mfa}
                 phx-click="toggle-mfa"
@@ -887,11 +887,11 @@
         </div>
         <div>
           <%= if assigns[:github_banner] do %>
-            <%= Phoenix.LiveView.TagEngine.component(
+            {Phoenix.LiveView.TagEngine.component(
               @github_banner.function,
               @github_banner.attrs,
               {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
-            ) %>
+            )}
           <% end %>
         </div>
         <%= if  @github_enabled do %>
@@ -1038,14 +1038,14 @@
                   <div class="text-xs">
                     <%= case assigns[:data_retention_limit_message] do %>
                       <% %{function: func} when is_function(func) -> %>
-                        <%= Phoenix.LiveView.TagEngine.component(
+                        {Phoenix.LiveView.TagEngine.component(
                           @data_retention_limit_message.function,
                           @data_retention_limit_message.attrs,
                           {__ENV__.module, __ENV__.function, __ENV__.file,
                            __ENV__.line}
-                        ) %>
+                        )}
                       <% %{text: text} when is_binary(text) -> %>
-                        <span><%= text %></span>
+                        <span>{text}</span>
                       <% _other -> %>
                         <span></span>
                     <% end %>
@@ -1093,7 +1093,7 @@
                       </div>
                       <div class="ml-3 leading-6">
                         <label for={value} class="text-sm text-neutral-950">
-                          <%= text %>
+                          {text}
                         </label>
                       </div>
                     </div>
@@ -1117,7 +1117,7 @@
                 <div class="w-full border-t border-gray-300"></div>
               </div>
               <div>
-                <div class={"text-black text-sm #{if to_string(f[:history_retention_period].value) == "" or checked?(@project_changeset, :erase_all), do: "text-opacity-30"}"}>
+                <div class={"text-black text-sm #{if to_string(f[:history_retention_period].value) == "" or checked?(@project_changeset, :erase_all), do: "text-black/30"}"}>
                   <div class="font-medium">
                     Input/Output Data Retention Period
                   </div>
@@ -1150,7 +1150,7 @@
                 <button
                   type="button"
                   disabled={!@can_edit_data_retention}
-                  class="mt-3 mr-1 inline-flex w-full justify-center rounded-md px-3 py-2 text-sm font-semibold shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto bg-white text-gray-900"
+                  class="mt-3 mr-1 inline-flex w-full justify-center rounded-md px-3 py-2 text-sm font-semibold shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto bg-white text-gray-900"
                   phx-click="cancel-retention-change"
                 >
                   Cancel
@@ -1193,8 +1193,8 @@
               label_class="text-gray-700 uppercase"
               label="Export Date"
             >
-              <%= file.inserted_at
-              |> Lightning.Helpers.format_date() %>
+              {file.inserted_at
+              |> Lightning.Helpers.format_date()}
             </:col>
             <:col
               :let={file}
@@ -1202,7 +1202,7 @@
               label="Filename"
             >
               <%= if file.path do %>
-                <%= Path.basename(file.path) %>
+                {Path.basename(file.path)}
               <% else %>
                 <em>Pending</em>
               <% end %>
@@ -1212,14 +1212,14 @@
               label_class="text-gray-700 uppercase"
               label="Export Requested By"
             >
-              <%= file.created_by.first_name <> " " <> file.created_by.last_name %>
+              {file.created_by.first_name <> " " <> file.created_by.last_name}
             </:col>
             <:col
               :let={file}
               label_class="text-gray-700 uppercase"
               label="Status"
             >
-              <%= format_export_status(file.status) %>
+              {format_export_status(file.status)}
             </:col>
             <:col :let={file}>
               <%= if file.status == :completed do %>

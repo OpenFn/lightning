@@ -74,9 +74,9 @@ defmodule LightningWeb.AuditLive.Index do
     ~H"""
     <.td colspan="4" class="font-mono text-xs break-all">
       <%= for {field, old, new} <- @changes do %>
-        <li><%= field %>&nbsp; <%= old %>
+        <li>{field}&nbsp; {old}
           <.icon name="hero-arrow-right" class="h-5 w-5 inline-block mr-2" />
-          <%= new %></li>
+          {new}</li>
       <% end %>
     </.td>
     """

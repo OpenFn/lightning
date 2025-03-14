@@ -231,7 +231,7 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
         type="button"
         phx-target={@myself}
         phx-click="close-modal"
-        class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+        class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
       >
         Cancel
       </button>
@@ -255,7 +255,7 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
         type="button"
         phx-target={@myself}
         phx-click="close-modal"
-        class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+        class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
       >
         Cancel
       </button>

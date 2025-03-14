@@ -192,14 +192,14 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
 
             <div class="ml-3 py-2">
               <h1 class={"text-sm mb-1 #{unless @show_details, do: "truncate"}"}>
-                <%= @workflow_name %>
+                {@workflow_name}
               </h1>
               <span class="mt-2 text-gray-700">
                 <.link navigate={
                   ~p"/projects/#{@work_order.workflow.project_id}/history?filters[workorder_id]=#{@work_order.id}"
                 }>
                   <span class="link-uuid" title={@work_order.id}>
-                    <%= display_short_uuid(@work_order.id) %>
+                    {display_short_uuid(@work_order.id)}
                   </span>
                 </.link>
                 &bull;
@@ -258,13 +258,13 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                   Run
                   <.link navigate={~p"/projects/#{@project.id}/runs/#{run.id}"}>
                     <span title={run.id} class="link font-mono">
-                      <%= display_short_uuid(run.id) %>
+                      {display_short_uuid(run.id)}
                     </span>
                   </.link>
                   <%= if Enum.count(@runs) > 1 do %>
-                    (<%= index %>/<%= Enum.count(@runs) %><%= if index !=
-                                                                   Enum.count(@runs),
-                                                                 do: ")" %>
+                    ({index}/{Enum.count(@runs)}{if index !=
+                                                      Enum.count(@runs),
+                                                    do: ")"}
                     <%= if index == Enum.count(@runs) do %>
                       <span>
                         &bull; <a
@@ -308,7 +308,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                   <% end %>
                 </div>
                 <div role="columnheader" class="ml-3 col-span-1 px-4">
-                  <%= run.state %>
+                  {run.state}
                 </div>
               </div>
               <.run_item
@@ -337,7 +337,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
         class="link-uuid"
       >
         <span title={@work_order.dataclip_id}>
-          <%= display_short_uuid(@work_order.dataclip_id) %>
+          {display_short_uuid(@work_order.dataclip_id)}
         </span>
       </.link>
     <% else %>
@@ -352,7 +352,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           wiped_dataclip_tooltip_message(@project.id, @can_edit_data_retention)
         }
       >
-        <%= display_short_uuid(@work_order.dataclip_id) %>
+        {display_short_uuid(@work_order.dataclip_id)}
       </span>
     <% end %>
     """

@@ -467,10 +467,10 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
                   <%= case failure do %>
                     <% {:error, %Lightning.VersionControl.GithubError{message: message}} -> %>
                       <p>There was a problem connecting to github</p>
-                      <p><code>Github Error: <%= message %></code></p>
+                      <p><code>Github Error: {message}</code></p>
                     <% {:error, %{"message" => message}} -> %>
                       <p>There was a problem connecting to github</p>
-                      <p><code>Github Error: <%= message %></code></p>
+                      <p><code>Github Error: {message}</code></p>
                     <% _other -> %>
                       <p>There was a problem connecting to github</p>
                   <% end %>
@@ -566,7 +566,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         <button
           type="button"
           phx-click={hide_modal(@id)}
-          class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+          class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
         >
           Cancel
         </button>
@@ -733,24 +733,24 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
           <li>
             <.icon name="hero-document-plus" class="h-4 w-4" />
             <code>
-              .github/workflows/openfn-pull.yml -> <%= @default_branch %>
+              .github/workflows/openfn-pull.yml -> {@default_branch}
             </code>
           </li>
           <li>
             <.icon name="hero-document-plus" class="h-4 w-4" />
             <code>
-              .github/workflows/openfn-<%= @project.id %>-deploy.yml -> <%= @form[
+              .github/workflows/openfn-{@project.id}-deploy.yml -> {@form[
                 :branch
-              ].value %>
+              ].value}
             </code>
           </li>
           <%= if to_string(@form[:config_path].value) == "" do %>
             <li>
               <.icon name="hero-document-plus" class="h-4 w-4" />
               <code>
-                ./openfn-<%= @project.id %>-config.json -> <%= @form[
+                ./openfn-{@project.id}-config.json -> {@form[
                   :branch
-                ].value %>
+                ].value}
               </code>
             </li>
           <% end %>

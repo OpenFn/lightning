@@ -50,7 +50,8 @@ defmodule LightningWeb.JobLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?step=1&j=1"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?step=1&j=1",
+          on_error: :raise
         )
 
       # Trigger tooltip
@@ -63,7 +64,7 @@ defmodule LightningWeb.JobLiveTest do
       assert view
              |> element("#adaptor_name-tooltip")
              |> tooltip_text() ==
-               "Choose an adaptor to perform operations (via helper functions) in a specific application. Pick ‘http’ for generic REST APIs or the 'common' adaptor if this job only performs data manipulation."
+               "Choose an adaptor to perform operations (via helper functions) in a specific application. Pick 'http' for generic REST APIs or the 'common' adaptor if this job only performs data manipulation."
 
       # Credential tooltip
       assert view

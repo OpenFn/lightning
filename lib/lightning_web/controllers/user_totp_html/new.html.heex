@@ -15,7 +15,7 @@
         <.title authentication_type={@authentication_type} />
         <%= if @error_message do %>
           <div class="alert alert-danger" role="alert">
-            <%= @error_message %>
+            {@error_message}
           </div>
         <% end %>
         <.form

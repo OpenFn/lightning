@@ -94,7 +94,7 @@ defmodule LightningWeb.Pagination do
   attr :url, :any, required: true
   attr :help_text, :string, default: nil
 
-  slot :action, optional: true
+  slot :action, required: false
 
   def pagination_bar(assigns) do
     ~H"""
@@ -113,13 +113,13 @@ defmodule LightningWeb.Pagination do
               <p class="text-sm text-secondary-700">
                 Showing
                 <span class="font-medium">
-                  <%= @page.page_number * @page.page_size - @page.page_size + 1 %>
+                  {@page.page_number * @page.page_size - @page.page_size + 1}
                 </span>
                 to
                 <span class="font-medium">
-                  <%= min(@page.page_number * @page.page_size, @page.total_entries) %>
+                  {min(@page.page_number * @page.page_size, @page.total_entries)}
                 </span>
-                of <span class="font-medium"><%= @page.total_entries %></span>
+                of <span class="font-medium">{@page.total_entries}</span>
                 total results
               </p>
             <% end %>
@@ -127,12 +127,12 @@ defmodule LightningWeb.Pagination do
         </div>
         <div class="flex items-center">
           <%= for action <- @action do %>
-            <%= render_slot(action) %>
+            {render_slot(action)}
           <% end %>
         </div>
       </div>
       <nav
-        class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+        class="relative z-0 inline-flex rounded-md shadow-xs -space-x-px"
         aria-label="Pagination"
       >
         <%= for {kind, page_number} <- LightningWeb.Pagination.raw_pagination_links(@page) do %>
@@ -203,7 +203,7 @@ defmodule LightningWeb.Pagination do
 
     ~H"""
     <.link patch={assigns.url.(page: assigns.page_number)} class={@patch_class}>
-      <%= assigns.page_number %>
+      {assigns.page_number}
     </.link>
     """
   end

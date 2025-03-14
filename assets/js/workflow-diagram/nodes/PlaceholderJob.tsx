@@ -117,7 +117,7 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
         'h-full',
         'p-1',
         'rounded-md',
-        'shadow-sm',
+        'shadow-xs',
         'text-center',
         'text-xs',
         'border-dashed',
@@ -125,7 +125,7 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
         validationResult.isValid
           ? 'border-indigo-500'
           : 'border-red-500 text-red-500',
-        selected ? 'border-opacity-70' : 'border-opacity-30',
+        selected ? 'border-indigo-500/70' : 'border-indigo-500/30',
       ].join(' ')}
       style={{
         width: '180px',

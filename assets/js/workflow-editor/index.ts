@@ -180,7 +180,11 @@ export default {
       if (
         currentUrl.searchParams.toString() !== nextUrl.searchParams.toString()
       ) {
-        this.liveSocket.pushHistoryPatch(nextUrl.toString(), 'push', this.el);
+        // This looks awkward, but is at least a public API
+        this.liveSocket.execJS(
+          this.el,
+          '[["patch",{"replace":false,"href":"' + nextUrl.toString() + '"}]]'
+        );
       }
     })();
   },

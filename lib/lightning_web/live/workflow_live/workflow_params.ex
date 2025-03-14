@@ -137,13 +137,14 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
        when is_list(fields) do
     model = changeset |> Ecto.Changeset.apply_changes()
 
+    required_fields = changeset.required |> Enum.map(&to_string/1)
+
     # validate_required drops changes when they invalid, we need to maintain
     # them so that our form doesn't forget the changes made by the user.
     fields_dropped_by_required =
       (changeset.params || %{})
       |> Map.filter(fn {skey, _val} ->
-        key = String.to_existing_atom(skey)
-        key in changeset.required
+        skey in required_fields
       end)
 
     to_serializable(model, fields)

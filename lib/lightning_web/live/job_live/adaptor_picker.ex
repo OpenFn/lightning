@@ -64,11 +64,11 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
             <span class="text-xs">
               The current adaptor
               <code>
-                (<%= @adaptor_name |> display_name_for_adaptor() |> elem(0) %>)
+                ({@adaptor_name |> display_name_for_adaptor() |> elem(0)})
               </code>
-              is not available <%= if @local_adaptors_enabled?,
+              is not available {if @local_adaptors_enabled?,
                 do: "locally",
-                else: "in NPM" %>
+                else: "in NPM"}
             </span>
           </div>
         </div>

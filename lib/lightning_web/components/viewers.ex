@@ -137,7 +137,7 @@ defmodule LightningWeb.Components.Viewers do
         >
           <span class="col-start-1 row-start-1 truncate pr-6">
             <.icon name="hero-adjustments-vertical" class="size-4 @md:size-6" />
-            <span><%= @selected_level %></span>
+            <span>{@selected_level}</span>
           </span>
           <.icon
             name="hero-chevron-down"
@@ -170,7 +170,7 @@ defmodule LightningWeb.Components.Viewers do
                 else: "font-normal"
               )
             ]}>
-              <%= log_level %>
+              {log_level}
             </span>
             <span
               :if={log_level == @selected_level}
@@ -251,7 +251,7 @@ defmodule LightningWeb.Components.Viewers do
       >
         <span class="relative inline-flex">
           <div class="inline-flex">
-            No <%= @input_or_output %> state could be saved for this run.
+            No {@input_or_output} state could be saved for this run.
           </div>
         </span>
       </div>
@@ -303,10 +303,10 @@ defmodule LightningWeb.Components.Viewers do
       </div>
       <div class="text-center mb-4 text-gray-500">
         <h3 class="font-bold text-lg">
-          <span class="capitalize">No <%= @input_or_output %> Data</span> here!
+          <span class="capitalize">No {@input_or_output} Data</span> here!
         </h3>
         <p class="text-sm">
-          <span class="capitalize"><%= @input_or_output %></span>
+          <span class="capitalize">{@input_or_output}</span>
           data for this step has not been retained in accordance
           with your project's data storage policy.
         </p>
@@ -324,7 +324,7 @@ defmodule LightningWeb.Components.Viewers do
         <% else %>
           Contact one of your
           <span
-            id="zero-persistence-admins-tooltip"
+            id={"zero-persistence-admins-tooltip-#{@id}"}
             phx-hook="Tooltip"
             class="link inline-block"
             aria-label={Enum.join(@admin_contacts, ", ")}
@@ -334,7 +334,7 @@ defmodule LightningWeb.Components.Viewers do
           for more information.
         <% end %>
       </div>
-      <%= render_slot(@footer) %>
+      {render_slot(@footer)}
     </div>
     """
   end
@@ -360,7 +360,7 @@ defmodule LightningWeb.Components.Viewers do
       ]}
     >
       <div class="hidden group-hover:block font-mono text-white text-xs">
-        type: <%= @type %>
+        type: {@type}
       </div>
       <div class={[
         "rounded-bl-md rounded-tr-md p-1 pt-0 opacity-70 group-hover:opacity-100 content-center",

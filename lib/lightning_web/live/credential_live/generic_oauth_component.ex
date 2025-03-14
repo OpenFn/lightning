@@ -575,9 +575,9 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
             <.text_ping_loader :if={@display_loader}>
               <%= case @oauth_progress do %>
                 <% :started  -> %>
-                  Authenticating with <%= @selected_client.name %>
+                  Authenticating with {@selected_client.name}
                 <% _ -> %>
-                  Fetching user data from <%= @selected_client.name %>
+                  Fetching user data from {@selected_client.name}
               <% end %>
             </.text_ping_loader>
             <.authorize_button
@@ -656,14 +656,14 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
                 }
                   type="submit"
                   disabled={!@changeset.valid? || @scopes_changed}
-                  class="inline-flex justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3"
+                  class="inline-flex justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 sm:ml-3"
                 >
                   Save
                 </button>
                 <button
                   type="button"
                   phx-click={JS.navigate(@return_to)}
-                  class="inline-flex justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                  class="inline-flex justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
                 >
                   Cancel
                 </button>

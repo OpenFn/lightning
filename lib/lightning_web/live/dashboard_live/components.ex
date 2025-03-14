@@ -11,7 +11,7 @@ defmodule LightningWeb.DashboardLive.Components do
     <div class="pb-6">
       <div class="flex justify-between items-center pt-6">
         <h1 class="text-2xl font-medium">
-          Good day, <%= @user.first_name %>!
+          Good day, {@user.first_name}!
         </h1>
         <button
           phx-click="toggle-welcome-banner"
@@ -58,10 +58,10 @@ defmodule LightningWeb.DashboardLive.Components do
       phx-click="select-arcade-resource"
       phx-target={@target}
       phx-value-resource={@resource.id}
-      class="relative flex items-end h-[150px] bg-gradient-to-r from-primary-800 to-primary-500 text-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 p-4 text-left"
+      class="relative flex items-end h-[150px] bg-gradient-to-r from-primary-800 to-primary-500 text-white rounded-lg shadow-xs hover:shadow-md transition-shadow duration-300 p-4 text-left"
     >
       <h2 class="text-lg font-semibold absolute bottom-4 left-4">
-        <%= @resource.title %>
+        {@resource.title}
       </h2>
     </button>
     """
@@ -124,7 +124,7 @@ defmodule LightningWeb.DashboardLive.Components do
     <h3 class="text-3xl font-bold">
       Projects
       <span class="text-base font-normal">
-        (<%= @count %>)
+        ({@count})
       </span>
     </h3>
     """
@@ -139,12 +139,12 @@ defmodule LightningWeb.DashboardLive.Components do
 
     ~H"""
     <%= if @empty? do %>
-      <%= render_slot(@empty_state) %>
+      {render_slot(@empty_state)}
     <% else %>
       <div class="mt-5 flex justify-between mb-3">
         <.table_title count={@projects_count} />
         <div>
-          <%= render_slot(@create_project_button) %>
+          {render_slot(@create_project_button)}
         </div>
       </div>
       <div id="projects-table">
@@ -183,15 +183,15 @@ defmodule LightningWeb.DashboardLive.Components do
             phx-click={JS.navigate(~p"/projects/#{project.id}/w")}
           >
             <.td>
-              <%= project.name %>
+              {project.name}
             </.td>
             <.td class="break-words max-w-[25rem]">
-              <%= project.role
+              {project.role
               |> Atom.to_string()
-              |> String.capitalize() %>
+              |> String.capitalize()}
             </.td>
             <.td class="break-words max-w-[10rem]">
-              <%= project.workflows_count %>
+              {project.workflows_count}
             </.td>
             <.td class="break-words max-w-[5rem]">
               <.link
@@ -199,12 +199,12 @@ defmodule LightningWeb.DashboardLive.Components do
                 href={~p"/projects/#{project.id}/settings#collaboration"}
                 onclick="event.stopPropagation()"
               >
-                <%= project.collaborators_count %>
+                {project.collaborators_count}
               </.link>
             </.td>
             <.td>
               <%= if project.last_updated_at do %>
-                <%= Lightning.Helpers.format_date(project.last_updated_at) %>
+                {Lightning.Helpers.format_date(project.last_updated_at)}
               <% else %>
                 N/A
               <% end %>
@@ -240,7 +240,7 @@ defmodule LightningWeb.DashboardLive.Components do
       active={@current_sort_key == @target_sort_key}
       sort_direction={@current_sort_direction}
     >
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </Common.sortable_table_header>
     """
   end

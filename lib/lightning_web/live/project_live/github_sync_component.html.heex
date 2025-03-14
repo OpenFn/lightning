@@ -159,28 +159,28 @@
             target="_blank"
             class="link"
           >
-            <%= @project_repo_connection.repo %>
+            {@project_repo_connection.repo}
           </.link>
         </span>
 
         <span>
           Branch:
           <span class="text-xs font-mono bg-gray-200 rounded-md p-1">
-            <%= @project_repo_connection.branch %>
+            {@project_repo_connection.branch}
           </span>
         </span>
 
         <span>
           GitHub Installation ID:
           <span class="text-xs font-mono bg-gray-200 rounded-md p-1">
-            <%= @project_repo_connection.github_installation_id %>
+            {@project_repo_connection.github_installation_id}
           </span>
         </span>
 
         <span>
           Path to config:
           <span class="text-xs font-mono bg-gray-200 rounded-md p-1">
-            <%= ProjectRepoConnection.config_path(@project_repo_connection) %>
+            {ProjectRepoConnection.config_path(@project_repo_connection)}
           </span>
         </span>
 
@@ -200,7 +200,7 @@
             phx-click="initiate-sync"
             phx-disable-with="Syncing.."
             phx-target={@myself}
-            class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-xs text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
           >
             Initiate Sync to Branch
           </.button>

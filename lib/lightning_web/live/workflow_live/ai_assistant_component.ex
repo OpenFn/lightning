@@ -289,7 +289,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         </.button>
         <blockquote class="text-gray-700 font-medium mb-6 w-2/3 text-center absolute bottom-4 sm:hidden md:block">
           <div class="inline-block pl-4 border-l-4 border-blue-500">
-            <p class="italic"><%= @ai_quote.quote %></p>
+            <p class="italic">{@ai_quote.quote}</p>
             <p class="text-sm font-semibold">
               -
               <.link
@@ -299,7 +299,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
                 target="_blank"
                 {if(@ai_quote[:source_attribute], do: ["phx-hook": "Tooltip", "aria-label": @ai_quote.source_attribute], else: [])}
               >
-                <%= @ai_quote.author %>
+                {@ai_quote.author}
               </.link>
             </p>
           </div>
@@ -586,7 +586,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             role="alert"
             phx-click={JS.hide()}
           >
-            <div><%= @error_message %></div>
+            <div>{@error_message}</div>
             <.icon name="hero-x-mark" class="h-5 w-5" />
           </div>
           <.chat_input
@@ -709,7 +709,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             phx-target={@target}
             class="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
           >
-            <%= if @sort_direction == :desc, do: "Latest", else: "Oldest" %>
+            {if @sort_direction == :desc, do: "Latest", else: "Oldest"}
             <%= if @sort_direction == :desc do %>
               <.icon name="hero-chevron-down" class="size-5" />
             <% else %>
@@ -729,11 +729,11 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
               <div class="flex items-center space-x-3 min-w-0">
                 <.user_avatar user={session.user} />
                 <span class="text-sm truncate">
-                  <%= maybe_show_ellipsis(session.title) %>
+                  {maybe_show_ellipsis(session.title)}
                 </span>
               </div>
               <span class="text-xs text-gray-500 group-hover:text-gray-700 whitespace-nowrap">
-                <%= time_ago(session.updated_at) %>
+                {time_ago(session.updated_at)}
               </span>
             </.link>
           <% end %>
@@ -754,9 +754,9 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
 
     ~H"""
     <div class="row-span-full flex flex-col">
-      <div class="bg-white border-b border-gray-200 px-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+      <div class="bg-white border-b border-gray-200 px-4 flex items-center justify-between sticky top-0 z-10 shadow-xs">
         <span class="font-medium text-gray-900 px-1 truncate max-w-[300px]">
-          <%= maybe_show_ellipsis(@session.title) %>
+          {maybe_show_ellipsis(@session.title)}
         </span>
         <.link
           patch={redirect_url(@base_url, Map.put(@query_params, "chat", nil))}
@@ -777,8 +777,8 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             class="flex flex-row-reverse items-end gap-x-3 mr-3"
           >
             <.user_avatar user={message.user} size_class="min-w-10 h-10 w-10" />
-            <div class="bg-blue-300 bg-opacity-50 p-2 mb-0.5 rounded-lg break-words max-w-[70%]">
-              <%= message.content %>
+            <div class="bg-blue-300/50 p-2 mb-0.5 rounded-lg break-words max-w-[70%]">
+              {message.content}
             </div>
             <div
               :if={message.role == :user and message.status == :error}
@@ -820,11 +820,11 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             <div class="break-words max-w-[80%]">
               <.formatted_content content={message.content} />
               <div :if={@ai_feedback} class="flex justify-start mt-4">
-                <%= Phoenix.LiveView.TagEngine.component(
+                {Phoenix.LiveView.TagEngine.component(
                   @ai_feedback.component,
                   %{session_id: @session.id, message_id: message.id},
                   {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
-                ) %>
+                )}
               </div>
             </div>
           </div>
@@ -865,7 +865,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
                   name="hero-exclamation-triangle"
                   class="h-5 w-5 flex-shrink-0 text-red-400"
                 />
-                <span class="text-red-700"><%= error_message(failure) %></span>
+                <span class="text-red-700">{error_message(failure)}</span>
               </div>
             </div>
           </:failed>
@@ -910,7 +910,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
       |> then(&assign(assigns, :content, &1))
 
     ~H"""
-    <article><%= @content %></article>
+    <article>{@content}</article>
     """
   end
 
@@ -942,7 +942,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         class="text-sm leading-none text-black uppercase select-none"
         title={"#{@user.first_name} #{@user.last_name}"}
       >
-        <%= String.first(@user.first_name) %><%= String.first(@user.last_name) %>
+        {String.first(@user.first_name)}{String.first(@user.last_name)}
       </span>
     </span>
     """

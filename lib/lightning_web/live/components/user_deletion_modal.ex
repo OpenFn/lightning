@@ -107,7 +107,7 @@ defmodule LightningWeb.Components.UserDeletionModal do
         </:title>
         <div class="">
           <p class="text-sm text-gray-500">
-            <%= if @is_current_user, do: "Your account", else: "This user" %> cannot be deleted until their auditable activities have also been purged.
+            {if @is_current_user, do: "Your account", else: "This user"} cannot be deleted until their auditable activities have also been purged.
             <br /><br />Audit trails are removed on a project-basis and may be controlled by the project owner or a superuser.
           </p>
         </div>
@@ -117,7 +117,7 @@ defmodule LightningWeb.Components.UserDeletionModal do
             type="button"
             phx-click="close_modal"
             phx-target={@myself}
-            class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+            class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
           >
             Cancel
           </button>
@@ -159,12 +159,12 @@ defmodule LightningWeb.Components.UserDeletionModal do
         >
           <div class="">
             <p class="">
-              <%= if @is_current_user, do: "Your", else: "This user's" %> account and credential data will be deleted. Please make sure none of these credentials are used in production workflows.
+              {if @is_current_user, do: "Your", else: "This user's"} account and credential data will be deleted. Please make sure none of these credentials are used in production workflows.
             </p>
             <p :if={@has_activity_in_projects?} class="mt-2">
-              *Note that <%= if @is_current_user,
+              *Note that {if @is_current_user,
                 do: "you still have",
-                else: "this user still has" %> activity related to active projects. We may not be able to delete them entirely from the app until those projects are deleted.
+                else: "this user still has"} activity related to active projects. We may not be able to delete them entirely from the app until those projects are deleted.
             </p>
             <br />
             <.input
@@ -189,7 +189,7 @@ defmodule LightningWeb.Components.UserDeletionModal do
               type="button"
               phx-click="close_modal"
               phx-target={@myself}
-              class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+              class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
             >
               Cancel
             </button>

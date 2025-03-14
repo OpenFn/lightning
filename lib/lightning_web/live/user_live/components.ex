@@ -35,16 +35,16 @@ defmodule LightningWeb.UserLive.Components do
       </.tr>
       <%= for user <- @users do %>
         <.tr id={"user-#{user.id}"}>
-          <.td><%= user.first_name %></.td>
-          <.td><%= user.last_name %></.td>
-          <.td><%= user.email %></.td>
-          <.td><%= user.role %></.td>
+          <.td>{user.first_name}</.td>
+          <.td>{user.last_name}</.td>
+          <.td>{user.email}</.td>
+          <.td>{user.role}</.td>
           <.td>
             <%= if !user.disabled do %>
               <Heroicons.check_circle solid class="w-6 h-6 text-gray-500" />
             <% end %>
           </.td>
-          <.td><%= user.scheduled_deletion %></.td>
+          <.td>{user.scheduled_deletion}</.td>
           <.td class="py-0.5">
             <span>
               <.link

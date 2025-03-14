@@ -123,14 +123,14 @@ defmodule LightningWeb.WorkflowLive.GithubSyncModal do
               target="_blank"
               class="link"
             >
-              <%= @project_repo_connection.repo %>
+              {@project_repo_connection.repo}
             </.link>
           </span>
 
           <span>
             Branch:
             <span class="text-xs font-mono bg-gray-200 rounded-md p-1">
-              <%= @project_repo_connection.branch %>
+              {@project_repo_connection.branch}
             </span>
           </span>
         </div>
@@ -168,7 +168,7 @@ defmodule LightningWeb.WorkflowLive.GithubSyncModal do
             <button
               type="button"
               phx-click="toggle_github_sync_modal"
-              class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+              class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
             >
               Cancel
             </button>

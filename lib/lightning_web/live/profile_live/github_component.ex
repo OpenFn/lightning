@@ -32,7 +32,7 @@ defmodule LightningWeb.ProfileLive.GithubComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2 mb-4">
+    <div class="bg-white shadow-xs ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2 mb-4">
       <div class="px-4 py-6 sm:p-8">
         <div class="flex items-center justify-between mb-5 gap-5">
           <span class="flex flex-grow flex-col">
@@ -129,7 +129,7 @@ defmodule LightningWeb.ProfileLive.GithubComponent do
         <button
           type="button"
           phx-click={hide_modal(@id)}
-          class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+          class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
         >
           Cancel
         </button>

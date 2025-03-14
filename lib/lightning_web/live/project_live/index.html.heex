@@ -1,7 +1,7 @@
 <LayoutComponents.page_content>
   <:header>
     <LayoutComponents.header current_user={@current_user}>
-      <:title><%= @page_title %></:title>
+      <:title>{@page_title}</:title>
       <.link patch={~p"/settings/projects/new"}>
         <Common.button>
           <div class="h-full">
@@ -41,11 +41,11 @@
           <.th><span class="sr-only">Actions</span></.th>
         </.tr>
         <%= for project <- @projects do %>
-          <.tr id={"project-#{project.id}"}>
-            <.td><%= project.name %></.td>
-            <.td><%= project.inserted_at %></.td>
-            <.td><%= project.description %></.td>
-            <.td><%= project.scheduled_deletion %></.td>
+          <.tr id={"project-row-#{project.id}"}>
+            <.td>{project.name}</.td>
+            <.td>{project.inserted_at}</.td>
+            <.td>{project.description}</.td>
+            <.td>{project.scheduled_deletion}</.td>
             <.td class="text-right py-0.5">
               <span>
                 <.link

@@ -3,11 +3,13 @@ defmodule LightningWeb.FirstSetupLiveTest do
 
   import Phoenix.LiveViewTest
 
-  describe "show" do
+  describe "First setup" do
     @tag create_initial_user: false
     test "requires a user to create an initial superuser", %{conn: conn} do
       {:ok, show_live, _html} =
-        live(conn, Routes.first_setup_superuser_path(conn, :show))
+        live(conn, Routes.first_setup_superuser_path(conn, :show),
+          on_error: :raise
+        )
 
       assert show_live |> element("h2", "Setup")
 
@@ -52,7 +54,9 @@ defmodule LightningWeb.FirstSetupLiveTest do
 
     test "will redirect with a warning when a user already exists", %{conn: conn} do
       assert {:error, {:redirect, %{flash: %{}, to: "/projects"}}} ==
-               live(conn, Routes.first_setup_superuser_path(conn, :show))
+               live(conn, Routes.first_setup_superuser_path(conn, :show),
+                 on_error: :raise
+               )
     end
   end
 end

@@ -1,6 +1,6 @@
 <ul>
   <%= if @current_user do %>
-    <li><%= @current_user.email %></li>
+    <li>{@current_user.email}</li>
     <li>
       <.link href={Routes.profile_edit_path(@conn, :edit)}>
         Settings

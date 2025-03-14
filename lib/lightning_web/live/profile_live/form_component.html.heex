@@ -7,7 +7,7 @@
     phx-target={@myself}
     phx-change="validate_basic_info"
     phx-submit="update_basic_info"
-    class="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2 mb-4 px-4 py-6 sm:p-8"
+    class="bg-white shadow-xs ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2 mb-4 px-4 py-6 sm:p-8"
   >
     <div class="text-xl mb-8">Change basic information</div>
     <div class="space-y-6">
@@ -47,7 +47,7 @@
         !@user_info_changeset.valid? ||
           Enum.empty?(@user_info_changeset.changes)
       }
-      class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:w-auto"
+      class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 sm:w-auto"
     >
       Save
     </button>
@@ -60,7 +60,7 @@
     phx-submit="change_email"
     phx-target={@myself}
     id="email-form"
-    class="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2 mb-4 px-4 py-6 sm:p-8"
+    class="bg-white shadow-xs ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2 mb-4 px-4 py-6 sm:p-8"
   >
     <div class="text-xl mb-8">Change email</div>
     <div class="space-y-6">
@@ -90,7 +90,7 @@
       type="submit"
       disabled={!@email_changeset.valid?}
       phx-disable-with="Sending confirmation email..."
-      class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:w-auto"
+      class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 sm:w-auto"
     >
       Update email
     </button>
@@ -103,7 +103,7 @@
     phx-submit="save_password"
     phx-target={@myself}
     id="password-form"
-    class="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2 mb-4 px-4 py-6 sm:p-8"
+    class="bg-white shadow-xs ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2 mb-4 px-4 py-6 sm:p-8"
   >
     <div class="text-xl mb-8">Change password</div>
     <div class="space-y-6">
@@ -139,7 +139,7 @@
       type="submit"
       disabled={!@password_changeset.valid?}
       phx-disable-with="Saving..."
-      class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:w-auto"
+      class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 sm:w-auto"
     >
       Update password
     </button>

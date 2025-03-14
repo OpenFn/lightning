@@ -27,7 +27,8 @@ defmodule LightningWeb.DataclipLiveTest do
             :show,
             project_scoped.id,
             dataclip.id
-          )
+          ),
+          on_error: :raise
         )
 
       assert html =~ dataclip.id
@@ -51,7 +52,8 @@ defmodule LightningWeb.DataclipLiveTest do
             :show,
             project_unscoped.id,
             dataclip.id
-          )
+          ),
+          on_error: :raise
         )
 
       assert error ==

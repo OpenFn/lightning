@@ -38,8 +38,8 @@ defmodule LightningWeb.ErrorView do
             class="mt-4 p-4 text-xs font-mono text-gray-600 border rounded-md bg-gray-200 grid grid-cols-2 gap-2"
           >
             <%= for {k,v} <- @error do %>
-              <div class="text-right font-bold"><%= k %></div>
-              <div><%= v %></div>
+              <div class="text-right font-bold">{k}</div>
+              <div>{v}</div>
             <% end %>
           </div>
         </div>

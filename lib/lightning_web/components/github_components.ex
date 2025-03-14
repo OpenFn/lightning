@@ -7,7 +7,7 @@ defmodule LightningWeb.Components.GithubComponents do
 
   attr :class, :string,
     default:
-      "text-center py-2 px-4 shadow-sm text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 bg-primary-600 hover:bg-primary-700 text-white"
+      "text-center py-2 px-4 shadow-xs text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 bg-primary-600 hover:bg-primary-700 text-white"
 
   attr :user, Lightning.Accounts.User, required: true
   attr :github_query_params, :map
@@ -25,7 +25,7 @@ defmodule LightningWeb.Components.GithubComponents do
       class={[@class, "#{if @disabled, do: "bg-primary-300 cursor-not-allowed"}"]}
       {if @user.github_oauth_token, do: ["phx-hook": "Tooltip", "aria-label": "Your token has expired"], else: []}
     >
-      <%= if @user.github_oauth_token, do: "Reconnect", else: "Connect" %> your Github Account
+      {if @user.github_oauth_token, do: "Reconnect", else: "Connect"} your Github Account
     </.link>
     """
   end

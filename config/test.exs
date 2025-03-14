@@ -115,6 +115,7 @@ config :logger, level: :warning
 
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
+config :phoenix, :logger, false
 
 config :junit_formatter,
   report_file: "elixir_test_report.xml",

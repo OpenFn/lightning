@@ -82,7 +82,7 @@ defmodule LightningWeb.ProjectLive.NewCollaboratorComponent do
           &LightningWeb.CoreComponents.translate_error(&1)
         )
     }>
-      <%= msg %>
+      {msg}
     </.error>
     """
   end

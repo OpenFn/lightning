@@ -10,14 +10,14 @@ defmodule LightningWeb.CredentialLive.RawBodyComponent do
     assigns = assigns |> assign(valid?: changeset.valid?)
 
     ~H"""
-    <%= render_slot(
+    {render_slot(
       @inner_block,
       {Phoenix.LiveView.TagEngine.component(
          &inner/1,
          [form: @form],
          {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
        ), @valid?}
-    ) %>
+    )}
     """
   end
 

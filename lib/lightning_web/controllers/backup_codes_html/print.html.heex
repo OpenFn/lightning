@@ -16,7 +16,7 @@
           <p class="text-center">
             Account:
             <span class="font-bold">
-              <%= @current_user.email %>
+              {@current_user.email}
             </span>
           </p>
         </div>
@@ -34,7 +34,7 @@
             :for={backup_code <- @backup_codes}
             class="text-center tracking-widest"
           >
-            <%= backup_code.code %>
+            {backup_code.code}
           </div>
         </div>
       </div>

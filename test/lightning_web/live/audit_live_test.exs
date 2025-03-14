@@ -14,7 +14,8 @@ defmodule LightningWeb.AuditLiveTest do
 
     test "cannot access the audit trail", %{conn: conn} do
       {:ok, _index_live, html} =
-        live(conn, ~p"/settings/audit") |> follow_redirect(conn, "/projects")
+        live(conn, ~p"/settings/audit", on_error: :raise)
+        |> follow_redirect(conn, "/projects")
 
       assert html =~ "Sorry, you don&#39;t have access to that."
     end
@@ -44,7 +45,7 @@ defmodule LightningWeb.AuditLiveTest do
       Repo.delete!(user_to_be_deleted)
 
       {:ok, _index_live, html} =
-        live(conn, Routes.audit_index_path(conn, :index))
+        live(conn, Routes.audit_index_path(conn, :index), on_error: :raise)
 
       assert html =~ "Audit"
       # Assert that the table works for users that still exist.

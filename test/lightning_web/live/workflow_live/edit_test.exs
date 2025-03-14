@@ -44,7 +44,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{job.workflow_id}?s=#{job.id}&v=#{workflow.lock_version}"
+          ~p"/projects/#{project.id}/w/#{job.workflow_id}?s=#{job.id}&v=#{workflow.lock_version}",
+          on_error: :raise
         )
 
       assert has_element?(view, "#job-pane-#{job.id}")
@@ -65,7 +66,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{job.workflow_id}?s=#{job.id}&v=#{workflow.lock_version}"
+          ~p"/projects/#{project.id}/w/#{job.workflow_id}?s=#{job.id}&v=#{workflow.lock_version}",
+          on_error: :raise
         )
 
       view |> CredentialLiveHelpers.select_credential_type("raw")
@@ -93,7 +95,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
   describe "new" do
     test "builds a new workflow", %{conn: conn, project: project} do
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new", on_error: :raise)
 
       # Naively add a job via the editor (calling the push-change event)
       assert view
@@ -139,7 +142,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       Mox.verify_on_exit!()
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/new?m=settings")
+        live(conn, ~p"/projects/#{project.id}/w/new?m=settings",
+          on_error: :raise
+        )
 
       assert view |> push_patches_to_view(initial_workflow_patchset(project))
 
@@ -252,7 +257,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       user: %{id: user_id}
     } do
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/new?m=settings")
+        live(conn, ~p"/projects/#{project.id}/w/new?m=settings",
+          on_error: :raise
+        )
 
       assert view |> push_patches_to_view(initial_workflow_patchset(project))
 
@@ -304,7 +311,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     @tag role: :viewer
     test "viewers can't create new workflows", %{conn: conn, project: project} do
       {:ok, _view, html} =
-        live(conn, ~p"/projects/#{project.id}/w/new")
+        live(conn, ~p"/projects/#{project.id}/w/new", on_error: :raise)
         |> follow_redirect(conn, ~p"/projects/#{project.id}/w")
 
       assert html =~ "You are not authorized to perform this action."
@@ -324,7 +331,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       refute Presence.has_any_presence?(workflow)
 
       {:ok, _view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}",
+          on_error: :raise
+        )
 
       user = Map.put(user, :password, nil)
 
@@ -338,7 +347,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       workflow: workflow
     } do
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}",
+          on_error: :raise
+        )
 
       select_trigger(view)
 
@@ -378,7 +389,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       assert snapshot.lock_version == workflow.lock_version
@@ -499,7 +511,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: snapshot.lock_version]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: snapshot.lock_version]}",
+          on_error: :raise
         )
 
       assert view
@@ -636,7 +649,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       view |> fill_workflow_name("#{workflow.name} v2")
@@ -673,7 +687,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: snapshot.lock_version]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: snapshot.lock_version]}",
+          on_error: :raise
         )
 
       last_edge = List.last(snapshot.edges)
@@ -759,7 +774,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[a: run_1, s: job_1, m: "expand", v: run_1.snapshot.lock_version]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[a: run_1, s: job_1, m: "expand", v: run_1.snapshot.lock_version]}",
+          on_error: :raise
         )
 
       run_1_version = String.slice(run_1.snapshot.id, 0..6)
@@ -862,7 +878,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[a: run, s: job_to_delete, m: "expand", v: run.snapshot.lock_version]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[a: run, s: job_to_delete, m: "expand", v: run.snapshot.lock_version]}",
+          on_error: :raise
         )
 
       assert view
@@ -886,7 +903,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, m: "settings"]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, m: "settings"]}",
+          on_error: :raise
         )
 
       assert view |> has_element?(~s(input[name="workflow[name]"]))
@@ -920,7 +938,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}",
+          on_error: :raise
         )
 
       refute has_element?(view, "#workflow-settings-#{workflow.id}")
@@ -1019,7 +1038,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         {:ok, view, _html} =
           live(
             conn,
-            ~p"/projects/#{project.id}/w/#{workflow.id}"
+            ~p"/projects/#{project.id}/w/#{workflow.id}",
+            on_error: :raise
           )
 
         view
@@ -1056,7 +1076,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         {:ok, view, _html} =
           live(
             conn,
-            ~p"/projects/#{project.id}/w/#{workflow.id}"
+            ~p"/projects/#{project.id}/w/#{workflow.id}",
+            on_error: :raise
           )
 
         view
@@ -1098,7 +1119,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       job = workflow.jobs |> Enum.at(1)
@@ -1126,7 +1148,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       assert view |> page_title() =~ workflow.name
@@ -1157,7 +1180,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       job_1 = hd(workflow.jobs)
@@ -1194,7 +1218,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       job_1 = hd(workflow.jobs)
@@ -1224,7 +1249,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       assert view |> page_title() =~ workflow.name
@@ -1244,7 +1270,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       form_html =
@@ -1316,7 +1343,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[v: workflow.lock_version]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       [job_1, job_2] = workflow.jobs
@@ -1356,7 +1384,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[v: workflow.lock_version]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       [trigger_edge, other_edge] = workflow.edges
@@ -1380,7 +1409,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[v: workflow.lock_version]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       [_trigger_edge, other_edge] = workflow.edges
@@ -1413,7 +1443,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[v: workflow.lock_version]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       [_trigger_edge, other_edge] = workflow.edges
@@ -1458,7 +1489,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[v: workflow.lock_version]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       view |> select_node(job, workflow.lock_version)
@@ -1493,7 +1525,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[v: workflow.lock_version]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       view |> select_node(job_b, workflow.lock_version)
@@ -1543,7 +1576,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?s=#{job_a}&v=#{workflow.lock_version}"
+          ~p"/projects/#{project}/w/#{workflow}?s=#{job_a}&v=#{workflow.lock_version}",
+          on_error: :raise
         )
 
       assert view |> delete_job_button_is_disabled?(job_a)
@@ -1557,7 +1591,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?s=#{job_b}&v=#{workflow.lock_version}"
+          ~p"/projects/#{project}/w/#{workflow}?s=#{job_b}&v=#{workflow.lock_version}",
+          on_error: :raise
         )
 
       assert view |> delete_job_button_is_disabled?(job_b)
@@ -1578,7 +1613,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       view |> select_node(workflow.triggers |> Enum.at(0), workflow.lock_version)
@@ -1638,7 +1674,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{edge.id}&v=#{workflow.lock_version}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?s=#{edge.id}&v=#{workflow.lock_version}",
+          on_error: :raise
         )
 
       idx = get_index_of_edge(view, edge)
@@ -1678,7 +1715,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       # We expect zero calls
@@ -1720,7 +1758,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       # We expect 1 call
@@ -1755,7 +1794,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       project = insert(:project, project_users: [%{user: user, role: :editor}])
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project}/w/new?m=settings")
+        live(conn, ~p"/projects/#{project}/w/new?m=settings", on_error: :raise)
 
       push_patches_to_view(view, initial_workflow_patchset(project))
 
@@ -1789,7 +1828,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       project = insert(:project, project_users: [%{user: user, role: :editor}])
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project}/w/new?m=settings")
+        live(conn, ~p"/projects/#{project}/w/new?m=settings", on_error: :raise)
 
       push_patches_to_view(view, initial_workflow_patchset(project))
 
@@ -1830,7 +1869,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}",
+          on_error: :raise
         )
 
       assert workflow.triggers |> Enum.all?(& &1.enabled)
@@ -1854,7 +1894,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}",
+          on_error: :raise
         )
 
       assert workflow.triggers |> Enum.all?(& &1.enabled)
@@ -1905,7 +1946,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{cron_workflow.id}"
+          ~p"/projects/#{project.id}/w/#{cron_workflow.id}",
+          on_error: :raise
         )
 
       assert view
@@ -1925,7 +1967,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{webhook_workflow.id}"
+          ~p"/projects/#{project.id}/w/#{webhook_workflow.id}",
+          on_error: :raise
         )
 
       assert view
@@ -1944,7 +1987,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1, m: "expand"]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1, m: "expand"]}",
+          on_error: :raise
         )
 
       body = Jason.encode!(%{test: test})
@@ -2014,7 +2058,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       refute Presence.has_any_presence?(workflow)
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}",
+          on_error: :raise
+        )
 
       fun = fn ->
         view
@@ -2054,7 +2100,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       Repo.delete!(repo_connection)
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}",
+          on_error: :raise
+        )
 
       refute view |> has_element?("button[phx-click='toggle_github_sync_modal']")
     end
@@ -2066,7 +2114,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       repo_connection: repo_connection
     } do
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/new?m=settings")
+        live(conn, ~p"/projects/#{project.id}/w/new?m=settings",
+          on_error: :raise
+        )
 
       assert view |> push_patches_to_view(initial_workflow_patchset(project))
 
@@ -2221,7 +2271,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       assert view |> page_title() =~ workflow.name
@@ -2294,7 +2345,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       assert view |> page_title() =~ workflow.name
@@ -2362,7 +2414,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}",
+          on_error: :raise
         )
 
       render_async(view)
@@ -2387,7 +2440,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}",
+          on_error: :raise
         )
 
       render_async(view)
@@ -2405,7 +2459,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}",
+          on_error: :raise
         )
 
       render_async(view)
@@ -2433,7 +2488,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}",
+          on_error: :raise
         )
 
       render_async(view)
@@ -2473,7 +2529,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}",
+          on_error: :raise
         )
 
       render_async(view)
@@ -3285,7 +3342,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}",
+          on_error: :raise
         )
 
       render_async(view)
@@ -3390,7 +3448,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}",
+          on_error: :raise
         )
 
       render_async(view)
@@ -3455,7 +3514,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand", chat: session.id]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand", chat: session.id]}",
+          on_error: :raise
         )
 
       render_async(view)
@@ -3546,7 +3606,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand", chat: session.id]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand", chat: session.id]}",
+          on_error: :raise
         )
 
       render_async(view)
@@ -3605,7 +3666,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand", chat: single_message_session.id]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand", chat: single_message_session.id]}",
+          on_error: :raise
         )
 
       render_async(view)
@@ -3678,7 +3740,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[v: workflow.lock_version, s: job_1.id, m: "expand"]}",
+          on_error: :raise
         )
 
       view |> element("#get-started-with-ai-btn") |> render_click()
@@ -3884,7 +3947,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{%{a: run.id, m: "expand", s: job_1.id}}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{%{a: run.id, m: "expand", s: job_1.id}}",
+          on_error: :raise
         )
 
       run_view = find_live_child(view, "run-viewer-#{run.id}")
@@ -3941,13 +4005,15 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     {:ok, high_priority_view, _html} =
       live(
         log_in_user(conn, high_priority_user),
-        ~p"/projects/#{project}/w/#{workflow}?#{[a: run, s: job, m: "expand"]}"
+        ~p"/projects/#{project}/w/#{workflow}?#{[a: run, s: job, m: "expand"]}",
+        on_error: :raise
       )
 
     {:ok, low_priority_view, _html} =
       live(
         log_in_user(conn, low_priority_user),
-        ~p"/projects/#{project}/w/#{workflow}?#{[a: run, s: job, m: "expand"]}"
+        ~p"/projects/#{project}/w/#{workflow}?#{[a: run, s: job, m: "expand"]}",
+        on_error: :raise
       )
 
     {high_priority_view, low_priority_view}
