@@ -17,7 +17,8 @@ defmodule LightningWeb.HooksTest do
     } do
       workflow = insert(:workflow, project: project, name: "One")
 
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w", on_error: :raise)
 
       query =
         from t in Lightning.Accounts.UserToken, where: t.user_id == ^user.id

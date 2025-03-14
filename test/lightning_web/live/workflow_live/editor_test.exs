@@ -311,7 +311,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
              |> render_submit()
              |> Floki.parse_fragment!()
 
-      assert view |> has_element?("#flash p", "Runs limit exceeded")
+      assert view
+             |> has_element?("[data-flash-kind='error']", "Runs limit exceeded")
     end
 
     test "can run a job", %{conn: conn, project: p, workflow: w} do
@@ -417,7 +418,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       assert render(element) =~ "selected"
 
       refute view
-             |> element("save-and-run", ~c"Create New Work Order")
+             |> element("save-and-run", "Create New Work Order")
              |> has_element?()
 
       # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
@@ -450,7 +451,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[v: workflow.lock_version]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       # add a job to it but don't save
@@ -500,7 +502,11 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       job_name = "my job"
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project}/w/new?#{%{name: workflow_name}}")
+        live(
+          conn,
+          ~p"/projects/#{project}/w/new?#{%{name: workflow_name}}",
+          on_error: :raise
+        )
 
       # add a job to the workflow
       %{"value" => %{"id" => job_id}} = job_patch = add_job_patch(job_name)
@@ -613,7 +619,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand", v: workflow.lock_version]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand", v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       view
@@ -766,7 +773,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand", v: workflow.lock_version]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand", v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       # the step dataclip is different from the run dataclip.
@@ -852,7 +860,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand", v: workflow.lock_version]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand", v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       # the form has the dataclip
@@ -929,7 +938,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand", v: workflow.lock_version]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand", v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
@@ -943,7 +953,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       path = assert_patch(view)
 
-      {:ok, view, _html} = live(conn, path)
+      {:ok, view, _html} = live(conn, path, on_error: :raise)
 
       # the run input dataclip is selected
       element =
@@ -967,9 +977,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
       # disconnection warnings.
-      [run_viewer_live] = live_children(view)
-      render_async(run_viewer_live)
-      render_async(run_viewer_live)
+      live_children(view) |> Enum.each(&render_async/1)
     end
 
     test "does not show the dataclip select input if the step dataclip is not available",
@@ -1009,7 +1017,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand", v: workflow.lock_version]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand", v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       # notice that we haven't wiped the run dataclip.
@@ -1087,7 +1096,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand", v: workflow.lock_version]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand", v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       # the form contains the dataclip
@@ -1161,7 +1171,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand", v: workflow.lock_version]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand", v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       # the form exists
@@ -1210,7 +1221,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand", v: workflow.lock_version]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand", v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       # user gets option to rerun
@@ -1264,7 +1276,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand", v: workflow.lock_version]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand", v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       # user gets option to rerun
@@ -1302,7 +1315,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand", v: workflow.lock_version]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand", v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       live_children(view) |> Enum.each(&render_async/1)
@@ -1377,7 +1391,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand", v: workflow.lock_version]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_2.id, a: run.id, m: "expand", v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       # user cannot rerun
@@ -1426,7 +1441,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand", v: workflow.lock_version]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand", v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       # dataclip body is displayed
@@ -1501,7 +1517,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[v: workflow.lock_version]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       # add a job to it but don't save
@@ -1564,7 +1581,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand", v: workflow.lock_version]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand", v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       # user cannot rerun
@@ -1595,7 +1613,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, m: "expand", v: workflow.lock_version]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, m: "expand", v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       # action button is rendered correctly
@@ -1711,7 +1730,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand", v: workflow.lock_version]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand", v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       assert has_element?(view, "#job-editor-pane-#{job.id}")
@@ -1786,7 +1806,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand", v: workflow.lock_version]}"
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand", v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       fun = fn ->
@@ -1859,7 +1880,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         {:ok, view, _html} =
           live(
             conn,
-            ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand", v: workflow.lock_version]}"
+            ~p"/projects/#{project}/w/#{workflow}?#{[s: job_1.id, a: run.id, m: "expand", v: workflow.lock_version]}",
+            on_error: :raise
           )
 
         run_view = find_live_child(view, "run-viewer-#{run.id}")

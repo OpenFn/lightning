@@ -134,7 +134,7 @@ defmodule LightningWeb.AuthProvidersLive.FormComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div id={"project-#{@id}"}>
+    <div id={"auth-provider-form-#{@id}"}>
       <.form
         :let={f}
         as={:auth_provider}

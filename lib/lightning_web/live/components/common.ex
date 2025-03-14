@@ -382,17 +382,22 @@ defmodule LightningWeb.Components.Common do
   attr :flash, :map, required: true
 
   def flash(%{kind: :error} = assigns) do
-    assigns = assign(assigns, msg: Phoenix.Flash.get(assigns[:flash], :error))
+    assigns =
+      assign(assigns, msg: Phoenix.Flash.get(assigns[:flash], :error))
+      |> assign_new(:id, fn ->
+        "flash-" <> Base.encode16(:crypto.strong_rand_bytes(3))
+      end)
 
     ~H"""
     <div
       :if={@msg}
-      id="flash"
+      id={@id}
+      data-flash-kind={@kind}
       class="rounded-md bg-red-200 border-red-300 p-4 fixed w-fit mx-auto flex justify-center bottom-3 right-0 left-0 z-[100]"
       phx-click={
         JS.push("lv:clear-flash")
-        |> JS.remove_class("fade-in-scale", to: "#flash")
-        |> hide("#flash")
+        |> JS.remove_class("fade-in-scale", to: @id)
+        |> hide(@id)
       }
       phx-hook="Flash"
     >
@@ -416,17 +421,22 @@ defmodule LightningWeb.Components.Common do
   end
 
   def flash(%{kind: :info} = assigns) do
-    assigns = assign(assigns, msg: Phoenix.Flash.get(assigns[:flash], :info))
+    assigns =
+      assign(assigns, msg: Phoenix.Flash.get(assigns[:flash], :info))
+      |> assign_new(:id, fn ->
+        "flash-" <> Base.encode16(:crypto.strong_rand_bytes(3))
+      end)
 
     ~H"""
     <div
       :if={@msg}
-      id="flash"
+      id={@id}
+      data-flash-kind={@kind}
       class="rounded-md bg-blue-200 border-blue-300 rounded-md p-4 fixed w-fit mx-auto flex justify-center bottom-3 right-0 left-0 z-[100]"
       phx-click={
         JS.push("lv:clear-flash")
         |> JS.remove_class("fade-in-scale")
-        |> hide("#flash")
+        |> hide(@id)
       }
       phx-value-key="info"
       phx-hook="Flash"

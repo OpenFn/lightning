@@ -360,7 +360,6 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
         <%= for trigger <- assigns.webhook_auth_method.triggers do %>
           <li class="mb-2">
             <.link
-              id={"linked-trigger-#{trigger.id}"}
               navigate={
                 ~p"/projects/#{assigns.webhook_auth_method.project_id}/w/#{trigger.workflow.id}?s=#{trigger.id}"
               }

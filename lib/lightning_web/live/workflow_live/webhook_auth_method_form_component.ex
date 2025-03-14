@@ -249,7 +249,6 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
         <.modal_footer class="mx-6 mt-6">
           <div class="sm:flex sm:flex-row-reverse">
             <button
-              id="delete_trigger_auth_methods_button"
               type="submit"
               phx-disable-with="Deleting..."
               class="inline-flex w-full justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-xs hover:bg-red-500 sm:ml-3 sm:w-auto focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
@@ -335,7 +334,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
 
   def render(assigns) do
     ~H"""
-    <div id="write_webhook_auth_method">
+    <div id={"write_webhook_auth_method_#{@id}"}>
       <%!-- <%= if @webhook_auth_method.auth_type do %> --%>
       <.form
         :let={f}

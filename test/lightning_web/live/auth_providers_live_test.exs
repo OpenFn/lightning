@@ -13,7 +13,7 @@ defmodule LightningWeb.AuthProvidersLiveTest do
       conn: conn
     } do
       {:ok, _index_live, html} =
-        live(conn, ~p"/settings/authentication")
+        live(conn, ~p"/settings/authentication", on_error: :raise)
         |> follow_redirect(conn, ~p"/settings/authentication/new")
 
       assert html =~ "Users"
@@ -28,7 +28,7 @@ defmodule LightningWeb.AuthProvidersLiveTest do
       conn: conn
     } do
       {:ok, _index_live, html} =
-        live(conn, ~p"/settings/authentication")
+        live(conn, ~p"/settings/authentication", on_error: :raise)
         |> follow_redirect(conn, "/projects")
 
       assert html =~ "Sorry, you don&#39;t have access to that."
@@ -68,7 +68,9 @@ defmodule LightningWeb.AuthProvidersLiveTest do
       handler_name: handler_name
     } do
       {:ok, view, _html} =
-        live(conn, Routes.auth_providers_index_path(conn, :edit))
+        live(conn, Routes.auth_providers_index_path(conn, :edit),
+          on_error: :raise
+        )
         |> follow_redirect(conn, Routes.auth_providers_index_path(conn, :new))
 
       assert view
@@ -160,7 +162,9 @@ defmodule LightningWeb.AuthProvidersLiveTest do
       {:ok, _handler} = AuthProviders.get_handler(handler_name)
 
       {:ok, view, _html} =
-        live(conn, Routes.auth_providers_index_path(conn, :edit))
+        live(conn, Routes.auth_providers_index_path(conn, :edit),
+          on_error: :raise
+        )
 
       assert view |> element("button#test-button", "Test") |> render_click() =~
                "Success"

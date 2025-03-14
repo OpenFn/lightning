@@ -148,7 +148,11 @@ defmodule LightningWeb.RunLive.Components do
         job.id == assigns.step.job_id
       end)
 
-    assigns = assign(assigns, job: job)
+    assigns =
+      assign(assigns, job: job)
+      |> assign_new(:tooltip_id, fn ->
+        "tooltip-" <> Base.encode16(:crypto.strong_rand_bytes(3))
+      end)
 
     ~H"""
     <div
@@ -173,7 +177,7 @@ defmodule LightningWeb.RunLive.Components do
           <div class="flex">
             <span
               class="cursor-pointer"
-              id={"clone_" <> @step.id}
+              id={@tooltip_id}
               aria-label="This step was originally executed in a previous run.
                     It was skipped in this run; the original output has been
                     used as the starting point for downstream jobs."
@@ -501,6 +505,11 @@ defmodule LightningWeb.RunLive.Components do
   attr :tooltip_prefix, :string, default: ""
 
   def timestamp(assigns) do
+    assigns =
+      assign_new(assigns, :tooltip_id, fn ->
+        "tooltip-" <> Base.encode16(:crypto.strong_rand_bytes(3))
+      end)
+
     ~H"""
     <%= if is_nil(@timestamp) do %>
       <%= case @style do %>
@@ -515,7 +524,7 @@ defmodule LightningWeb.RunLive.Components do
       <% end %>
     <% else %>
       <Common.wrapper_tooltip
-        id={DateTime.to_unix(@timestamp, :microsecond)}
+        id={@tooltip_id}
         tooltip={"#{@tooltip_prefix} #{DateTime.to_iso8601(@timestamp)}"}
       >
         <%= case @style do %>

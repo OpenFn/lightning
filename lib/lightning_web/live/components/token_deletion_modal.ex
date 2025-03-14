@@ -35,7 +35,7 @@ defmodule LightningWeb.Components.TokenDeletionModal do
   def render(assigns) do
     ~H"""
     <div>
-      <.modal id={"delete-token-#{@id}"} width="max-w-md" show={true}>
+      <.modal id={"delete-token-modal-#{@id}"} width="max-w-md" show={true}>
         <:title>
           <div class="flex justify-between">
             <span class="font-bold">

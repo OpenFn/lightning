@@ -324,7 +324,7 @@ defmodule LightningWeb.Components.Viewers do
         <% else %>
           Contact one of your
           <span
-            id="zero-persistence-admins-tooltip"
+            id={"zero-persistence-admins-tooltip-#{@id}"}
             phx-hook="Tooltip"
             class="link inline-block"
             aria-label={Enum.join(@admin_contacts, ", ")}

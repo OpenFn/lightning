@@ -82,7 +82,7 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
   def render(assigns) do
     ~H"""
     <div>
-      <.modal id={"project-#{@id}"} show={true} width="max-w-md">
+      <.modal id={"delete-project-#{@id}"} show={true} width="max-w-md">
         <:title>
           <div class="flex justify-between">
             <span class="font-bold">

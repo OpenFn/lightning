@@ -41,7 +41,7 @@
           <.th><span class="sr-only">Actions</span></.th>
         </.tr>
         <%= for project <- @projects do %>
-          <.tr id={"project-#{project.id}"}>
+          <.tr id={"project-row-#{project.id}"}>
             <.td>{project.name}</.td>
             <.td>{project.inserted_at}</.td>
             <.td>{project.description}</.td>
