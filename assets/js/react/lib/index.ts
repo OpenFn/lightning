@@ -4,6 +4,7 @@ export { importComponent } from './import-component';
 export { isReactContainerElement } from './is-react-container-element';
 export { isReactHookedElement } from './is-react-hooked-element';
 export { lazyLoadComponent } from './lazy-load-component';
+export { mergeChildren } from './merge-children';
 export { performPatch } from './perform-patch';
 export { renderPortals } from './render-portals';
 export { renderSlots } from './render-slots';

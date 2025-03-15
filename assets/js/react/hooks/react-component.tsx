@@ -135,7 +135,7 @@ export const ReactComponent = {
 
   _onBoundary(element) {
     this.__view.liveSocket.requestDOMUpdate(() => {
-      if (element == null || !element.isConnected || this._boundaryMounted) {
+      if (element == null || this._boundaryMounted) {
         return;
       }
       this.__view.execNewMounted();
