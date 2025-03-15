@@ -5,6 +5,7 @@ export { isReactContainerElement } from './is-react-container-element';
 export { isReactHookedElement } from './is-react-hooked-element';
 export { lazyLoadComponent } from './lazy-load-component';
 export { performPatch } from './perform-patch';
+export { renderPortals } from './render-portals';
 export { renderSlots } from './render-slots';
 export { replaceEqualDeep } from './replace-equal-deep';
 export {

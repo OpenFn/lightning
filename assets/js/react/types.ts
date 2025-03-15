@@ -21,7 +21,7 @@ export type ReactContainerElement = HTMLElement & {
 
 export type Portals = Map<
   string,
-  [container: Element | DocumentFragment, children: React.ReactNode]
+  [container: Element | DocumentFragment, render: () => React.ReactNode]
 >;
 
 export type ReactComponentHook<Props = object> = PhoenixHook<
@@ -79,7 +79,7 @@ export type ReactComponentHook<Props = object> = PhoenixHook<
      * Add a portal and re-render.
      */
     addPortal(
-      children: React.ReactNode,
+      render: () => React.ReactNode,
       container: Element | DocumentFragment,
       key: string
     ): void;

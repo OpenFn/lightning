@@ -102,7 +102,7 @@ export const ReactComponent = {
     return this._props;
   },
 
-  addPortal(children, container, key) {
+  addPortal(render, container, key) {
     warning(
       !this._portals.has(key),
       this._errorMsg('Portal has already been added! Overwriting!')
@@ -110,7 +110,7 @@ export const ReactComponent = {
 
     // Immutably update the map
     // See https://zustand.docs.pmnd.rs/guides/maps-and-sets-usage#map-and-set-usage
-    this._portals = new Map(this._portals).set(key, [container, children]);
+    this._portals = new Map(this._portals).set(key, [container, render]);
 
     this._rerender();
   },
@@ -286,14 +286,16 @@ export const ReactComponent = {
     this._setProps();
 
     this._containerComponentHook.addPortal(
-      <Boundary
-        ref={
-          // eslint-disable-next-line @typescript-eslint/unbound-method -- bound using `Function.prototype.bind`
-          this._onBoundary
-        }
-      >
-        <this._Component />
-      </Boundary>,
+      () => (
+        <Boundary
+          ref={
+            // eslint-disable-next-line @typescript-eslint/unbound-method -- bound using `Function.prototype.bind`
+            this._onBoundary
+          }
+        >
+          <this._Component />
+        </Boundary>
+      ),
       this._containerEl,
       this._getKey()
     );
