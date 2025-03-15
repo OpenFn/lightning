@@ -9,7 +9,12 @@ export type ReactHookedElement = HTMLElement & {
   readonly attributes: {
     [index: `${number & {}}`]: { name: 'phx-hook'; value: 'ReactComponent' };
   };
-  readonly dataset: { reactName: string; reactFile: string };
+  readonly dataset: {
+    reactName: string;
+    reactFile: string;
+    reactId: string | undefined;
+    reactPortalTarget: string | undefined;
+  };
 };
 
 export type ReactContainerElement = HTMLElement & {
@@ -32,14 +37,20 @@ export type ReactComponentHook<Props = object> = PhoenixHook<
     /** The React component's name */
     _name: string;
 
+    /** The *React* instance id, used by `ReactComponentHook`s to find each other */
+    _id?: string | undefined;
+
+    /** The React instance id to portal into */
+    _portalTarget?: string | undefined;
+
     /** The [React component](https://react.dev/learn/your-first-component) that will actually be rendered */
     _Component: React.ComponentType<t.EmptyObject>;
 
     /** The [React root](https://react.dev/reference/react-dom/client/createRoot) */
     _root: ReactDOMClient.Root | undefined;
 
-    /** The containing React component's `ViewHook` instance */
-    _containerComponentHook: ReactComponentHook | null | undefined;
+    /** The portal target React component's `ViewHook` instance */
+    _portalHook: ReactComponentHook | null | undefined;
 
     /** The DOM element React will use to mount its root or portal into */
     _containerEl: ReactContainerElement;
@@ -118,6 +129,15 @@ export type ReactComponentHook<Props = object> = PhoenixHook<
     /** [Unmount](https://react.dev/reference/react-dom/client/createRoot#root-unmount) the React component, destroying its React tree */
     _unmount(): void;
 
+    /** Before unmount callbacks */
+    _beforeUnmountCallbacks: Set<() => void>;
+
+    /** Register a function to be called before  */
+    _onBeforeUnmount(callback: () => void): void;
+
+    /** Run any before unmount callbacks */
+    _beforeUnmount(): void;
+
     /** Unmount a React root */
     _unmountRoot(): void;
 
@@ -130,3 +150,7 @@ export type ReactComponentHook<Props = object> = PhoenixHook<
   ReactHookedElement['dataset'],
   ReactHookedElement
 >;
+
+export type RootMessage =
+  | { type: 'mounted'; hook: ReactComponentHook }
+  | { type: 'beforeUnmount' };

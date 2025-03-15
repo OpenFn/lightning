@@ -96,17 +96,7 @@ config :esbuild,
   version: "0.25.0",
   default: [
     args:
-      ~w(js/app.js
-         js/storybook.js
-         js/editor/Editor.tsx
-         editor.worker=monaco-editor/esm/vs/editor/editor.worker.js
-         json.worker=monaco-editor/esm/vs/language/json/json.worker.js
-         css.worker=monaco-editor/esm/vs/language/css/css.worker.js
-         html.worker=monaco-editor/esm/vs/language/html/html.worker.js
-         typescript.worker=monaco-editor/esm/vs/language/typescript/ts.worker.js
-         fonts/inter.css
-         fonts/fira-code.css
-         --loader:.woff2=file
+      ~w(--loader:.woff2=file
          --loader:.ttf=copy
          --format=esm --splitting --bundle
          --external:path
@@ -117,32 +107,20 @@ config :esbuild,
          --external:path
          --external:/fonts/*
          --external:/images/*
+         js/app.js
+         js/storybook.js
+         js/editor/Editor.tsx
+         editor.worker=monaco-editor/esm/vs/editor/editor.worker.js
+         json.worker=monaco-editor/esm/vs/language/json/json.worker.js
+         css.worker=monaco-editor/esm/vs/language/css/css.worker.js
+         html.worker=monaco-editor/esm/vs/language/html/html.worker.js
+         typescript.worker=monaco-editor/esm/vs/language/typescript/ts.worker.js
+         fonts/inter.css
+         fonts/fira-code.css
         )
       |> then(fn args ->
         case config_env() do
           "prod" -> args
-          _ -> args ++ ["--jsx-dev"]
-        end
-      end),
-    cd: Path.expand("../assets", __DIR__),
-    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
-  ],
-  react: [
-    # This esbuild profile is not meant to be used directly, it is used by a
-    # custom Mix compiler. These args are used by it, but the actual entrypoints
-    # are gathered by the compiler.
-    # TODO: cache-busting hashes
-    args:
-      ~w(
-         --format=esm --splitting --bundle
-         --outbase=../assets/js/react
-         --tsconfig=tsconfig.browser.json
-         --jsx=automatic
-         --target=es2020
-         --outdir=../priv/static/assets/js/react --external:/fonts/* --external:/images/*)
-      |> then(fn args ->
-        case config_env() do
-          "prod" -> args ++ ["--minify"]
           _ -> args ++ ["--jsx-dev"]
         end
       end),

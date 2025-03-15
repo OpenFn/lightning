@@ -642,8 +642,8 @@ defmodule Lightning.Config.Bootstrap do
 
     entry_points = React.get_entry_points()
 
-    config :esbuild, :react,
-      args: Utils.get_env([:esbuild, :react, :args]) ++ entry_points
+    config :esbuild, :default,
+      args: Utils.get_env([:esbuild, :default, :args]) ++ entry_points
 
     :ok
   end

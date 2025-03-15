@@ -181,7 +181,6 @@ defmodule Lightning.MixProject do
       "assets.deploy": [
         "tailwind default --minify",
         "esbuild default --minify",
-        "esbuild react --minify",
         "phx.digest"
       ],
       verify: [

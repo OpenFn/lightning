@@ -8,43 +8,28 @@ defmodule LightningWeb.Dev.ReactLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    socket = assign(socket, :baz, 0)
+    socket = assign(socket, :foo, 0)
     {:ok, socket}
   end
 
   @impl true
   def handle_event("inc", _params, socket) do
-    {:noreply, update(socket, :baz, &(&1 + 1))}
+    {:noreply, update(socket, :foo, &(&1 + 1))}
   end
 
   attr :foo, :integer
-  slot :inner_block
-  jsx("components/Foo.tsx")
+  jsx("assets/js/react/components/Foo.tsx")
 
-  slot :before
-  slot :inner_block, required: true
-  slot :after, required: true
-  jsx("components/Bar.tsx")
+  jsx("assets/js/react/components/Bar.tsx")
 
-  attr :baz, :integer, default: 0
-  jsx("components/Baz.tsx")
+  jsx("assets/js/react/components/Baz.tsx")
 
   @impl true
   def render(assigns) do
-    assigns = assign(assigns, foo: 42)
-
     ~H"""
-    <.Foo foo={@foo}>
-      <.Bar>
-        <:before>
-          <p style="color: blue">Bar before slot</p>
-        </:before>
-        <.Baz baz={@baz} />
-        <:after>
-          <p style="color: red">Bar after slot</p>
-        </:after>
-      </.Bar>
-    </.Foo>
+    <.Bar react-portal-target="foo" react-id="bar" />
+    <.Foo foo={@foo} react-id="foo" />
+    <.Baz react-portal-target="bar" />
     <button
       phx-click="inc"
       class="inline-flex justify-center items-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 phx-submit-loading:opacity-75 bg-primary-600 hover:bg-primary-700 text-white focus:ring-primary-500 disabled:bg-primary-300 rounded-md"

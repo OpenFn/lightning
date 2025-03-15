@@ -1,11 +1,14 @@
-export type BazProps = {
-  baz: number;
-  children: React.ReactNode;
-};
+import { useState, useEffect } from 'react';
 
-export const Baz = ({ baz, children }: BazProps) => (
-  <>
-    <p>Baz: {baz}</p>
-    {children}
-  </>
-);
+import { useFoo } from '#/react/hooks/use-foo';
+
+export const Baz = () => {
+  const foo = useFoo();
+  const [baz, setBaz] = useState(foo + 2);
+
+  useEffect(() => {
+    setBaz(foo + 2);
+  }, [foo]);
+
+  return <p>Baz: {baz}</p>;
+};

@@ -4,13 +4,13 @@ import warning from 'tiny-warning';
 import ReactDOMClient from 'react-dom/client';
 
 import {
-  getClosestReactContainerElement,
   importComponent,
   isReactContainerElement,
   isReactHookedElement,
   lazyLoadComponent,
   replaceEqualDeep,
   withProps,
+  RootObserver,
 } from '#/react/lib';
 
 import { Boundary } from '#/react/components';
@@ -21,14 +21,28 @@ import type { ViewHook } from 'phoenix_live_view';
 
 import type { GetPhoenixHookInternalThis } from '#/hooks/PhoenixHook';
 
+const rootObserver = new RootObserver();
+
 export const ReactComponent = {
   mounted() {
     this._name = this.el.dataset.reactName;
     this._file = this.el.dataset.reactFile;
+
+    const id = this.el.dataset.reactId;
+    if (id != null) {
+      this._id = id;
+    }
+
+    const portalTarget = this.el.dataset.reactPortalTarget;
+    if (portalTarget != null) {
+      this._portalTarget = portalTarget;
+    }
+
     this._onBoundary = this._onBoundary.bind(this);
     this._subscribe = this._subscribe.bind(this);
     this._getProps = this._getProps.bind(this);
     this._getPortals = this._getPortals.bind(this);
+    this._beforeUnmountCallbacks = new Set();
     this._portals = new Map();
     this._listeners = new Set();
     this._boundaryMounted = false;
@@ -135,11 +149,19 @@ export const ReactComponent = {
 
   _onBoundary(element) {
     this.__view.liveSocket.requestDOMUpdate(() => {
-      if (element == null || this._boundaryMounted) {
-        return;
-      }
+      if (element == null) return;
+
       this.__view.execNewMounted();
       this._boundaryMounted = true;
+
+      if (this._id != null) {
+        const beforeUnmount = rootObserver.mounted(
+          this._id,
+          this as unknown as ReactComponentHook
+        );
+
+        this._onBeforeUnmount(beforeUnmount);
+      }
     });
   },
 
@@ -177,48 +199,22 @@ export const ReactComponent = {
   },
 
   _mount() {
-    const reactContainerElement = getClosestReactContainerElement(
-      this.el,
-      this.__view.root.el
-    );
-
-    if (reactContainerElement == null) {
+    if (this._portalTarget == null) {
       this._mountRoot();
     } else {
-      const reactContainerHookedElement =
-        reactContainerElement.previousElementSibling;
-
-      invariant(
-        isReactContainerElement(reactContainerElement) &&
-          reactContainerHookedElement instanceof HTMLElement &&
-          reactContainerHookedElement.id ===
-            reactContainerElement.dataset.reactContainer,
-        this._errorMsg(
-          `Missing React container element's sibling <script> element!`
-        )
-      );
-
-      this.liveSocket.owner(reactContainerHookedElement, view => {
-        this._containerComponentHook = (() => {
-          const hook = view.getHook(reactContainerHookedElement);
-
-          if (
-            hook == null ||
-            reactContainerHookedElement.dataset['phxHook'] !==
-              this.el.dataset['phxHook']
-          ) {
-            invariant(
-              false,
-              this._errorMsg('Could not find `ReactComponent` hook!')
-            );
-          }
-
-          return hook as unknown as ReactComponentHook;
-        })();
-
-        this._mountPortal();
-      });
+      this._mountPortal();
     }
+  },
+
+  _onBeforeUnmount(callback) {
+    this._beforeUnmountCallbacks.add(callback);
+  },
+
+  _beforeUnmount() {
+    for (const callback of this._beforeUnmountCallbacks) {
+      callback();
+    }
+    this._beforeUnmountCallbacks.clear();
   },
 
   _getKey() {
@@ -278,38 +274,58 @@ export const ReactComponent = {
   },
 
   _mountPortal() {
-    invariant(
-      this._containerComponentHook != null,
-      this._errorMsg('No container React component ViewHook instance!')
-    );
+    invariant(this._portalTarget != null, this._errorMsg('No `portalTarget`!'));
 
     this._setProps();
 
-    this._containerComponentHook.addPortal(
-      () => (
-        <Boundary
-          ref={
-            // eslint-disable-next-line @typescript-eslint/unbound-method -- bound using `Function.prototype.bind`
-            this._onBoundary
-          }
-        >
-          <this._Component />
-        </Boundary>
-      ),
-      this._containerEl,
-      this._getKey()
-    );
+    // If the target is already mounted our callback will be called right away
+    const unsubscribe = rootObserver.subscribe(this._portalTarget, message => {
+      switch (message.type) {
+        case 'mounted': {
+          this._portalHook = message.hook;
+          this._portalHook.addPortal(
+            () => (
+              <Boundary
+                ref={
+                  // eslint-disable-next-line @typescript-eslint/unbound-method -- bound using `Function.prototype.bind`
+                  this._onBoundary
+                }
+              >
+                <this._Component />
+              </Boundary>
+            ),
+            this._containerEl,
+            this._getKey()
+          );
+          break;
+        }
+
+        case 'beforeUnmount': {
+          this._unmount();
+          break;
+        }
+
+        default: {
+          message satisfies never;
+          invariant(message, 'Unhandled React root observer message!');
+        }
+      }
+    });
+
+    this._onBeforeUnmount(unsubscribe);
   },
 
   _unmount() {
     invariant(
-      this._root || this._containerComponentHook,
+      this._root != null || this._portalHook != null,
       this._errorMsg('No React root or portal to unmount!')
     );
 
+    this._beforeUnmount();
+
     if (this._root) {
       this._unmountRoot();
-    } else if (this._containerComponentHook) {
+    } else if (this._portalHook) {
       this._unmountPortal();
     }
   },
@@ -321,11 +337,11 @@ export const ReactComponent = {
 
   _unmountPortal() {
     invariant(
-      this._containerComponentHook != null,
+      this._portalHook != null,
       this._errorMsg('No container React component ViewHook instance!')
     );
 
-    this._containerComponentHook.removePortal(this._getKey());
+    this._portalHook.removePortal(this._getKey());
   },
 
   _errorMsg(str) {

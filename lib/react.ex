@@ -29,12 +29,7 @@ defmodule React do
         case files do
           files when is_list(files) ->
             files
-            |> Enum.filter(fn file ->
-              String.starts_with?(
-                file,
-                Path.join(File.cwd!(), "assets/js/react")
-              )
-            end)
+            |> Enum.filter(fn file -> String.ends_with?(file, ".tsx") end)
 
           _ ->
             []
@@ -65,15 +60,13 @@ defmodule React do
     # a Plug.Static setting could change it?
     file =
       Path.dirname(__DIR__)
-      |> Path.join("assets/js/react")
       |> Path.join(relative_file)
 
     if File.exists?(file) do
       name = file |> Path.rootname() |> Path.basename()
 
       asset =
-        "/assets/js/react"
-        |> Path.join(relative_file)
+        Path.join("/", relative_file)
         |> Path.rootname()
         |> Kernel.<>(".js")
 
@@ -85,6 +78,9 @@ defmodule React do
         # points for actual entry points, and not every single React component.
         # It also code splits and chunks things nicely
         @external_resource file
+
+        attr :"react-id", :string, default: nil
+        attr :"react-portal-target", :string, default: nil
 
         def unquote(String.to_atom(name))(var!(assigns)) do
           # The script tag will be updated by LiveView and contain the data, as a JSON "DOM turd".
@@ -112,8 +108,11 @@ defmodule React do
             |> Map.merge(%{
               :__id__ => var!(assigns)[:id] || unquote(id),
               :__name__ => unquote(name),
-              :__asset__ => unquote(asset)
+              :__asset__ => unquote(asset),
+              :__react_id__ => var!(assigns)[:"react-id"],
+              :__react_portal_target__ => var!(assigns)[:"react-portal-target"]
             })
+            |> Map.drop([:"react-id", :"react-portal-target"])
             |> React.Slots.render_slots()
 
           ~H"""
@@ -122,6 +121,8 @@ defmodule React do
             type="application/json"
             data-react-file={@__asset__}
             data-react-name={@__name__}
+            data-react-id={@__react_id__}
+            data-react-portal-target={@__react_portal_target__}
             phx-hook="ReactComponent"
           >
             <%= raw(React.json(assigns)) %>
