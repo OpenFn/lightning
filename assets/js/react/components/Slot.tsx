@@ -44,12 +44,12 @@ export const Slot = ({ view, name, html, cID = null }: SlotProps) => {
     unpatchedRef.current = false;
   }, [name, el, innerHTML.__html, view, html, cID]);
 
-  return useState(() => (
+  return (
     <div
       ref={setEl}
       data-react-slot={name}
       dangerouslySetInnerHTML={innerHTML}
       style={style}
     />
-  ))[0];
+  );
 };

@@ -203,7 +203,10 @@ export const ReactComponent = {
             reactContainerHookedElement.dataset['phxHook'] !==
               this.el.dataset['phxHook']
           ) {
-            invariant(false);
+            invariant(
+              false,
+              this._errorMsg('Could not find `ReactComponent` hook!')
+            );
           }
 
           return hook as unknown as ReactComponentHook;
