@@ -19,58 +19,63 @@ import type { ReactComponentHook } from '#/react/types';
 import { StrictMode } from 'react';
 import type { ViewHook } from 'phoenix_live_view';
 
+import type { GetPhoenixHookInternalThis } from '#/hooks/PhoenixHook';
+
 export const ReactComponent = {
   mounted() {
+    this._name = this.el.dataset.reactName;
+    this._file = this.el.dataset.reactFile;
+    this._onBoundary = this._onBoundary.bind(this);
+    this._subscribe = this._subscribe.bind(this);
+    this._getProps = this._getProps.bind(this);
+    this._getPortals = this._getPortals.bind(this);
+    this._portals = new Map();
+    this._listeners = new Set();
+    this._boundaryMounted = false;
+
     invariant(
       isReactHookedElement(this.el),
-      this.errorMsg('Element is not valid for this hook!')
+      this._errorMsg('Element is not valid for this hook!')
     );
+
     invariant(
       isReactContainerElement(this.el.nextElementSibling) &&
         this.el.nextElementSibling.dataset.reactContainer === this.el.id,
-      this.errorMsg(`Missing valid React container element!`)
+      this._errorMsg(`Missing valid React container element!`)
     );
 
-    this.onBoundary = this.onBoundary.bind(this);
-    this.subscribe = this.subscribe.bind(this);
-    this.getProps = this.getProps.bind(this);
-    this.getPortals = this.getPortals.bind(this);
-    this.portals = new Map();
+    this._containerEl = this.el.nextElementSibling;
 
-    this.liveSocket.owner(this.el, view => {
-      this.view = view;
-    });
-    this.name = this.el.dataset.reactName;
-    this.file = this.el.dataset.reactFile;
-    this.containerEl = this.el.nextElementSibling;
-    this.Component = withProps(
-      lazyLoadComponent(() => importComponent(this.file, this.name), this.name),
+    this._Component = withProps(
+      lazyLoadComponent(
+        () => importComponent(this._file, this._name),
+        this._name
+      ),
       /* eslint-disable @typescript-eslint/unbound-method -- bound using `Function.prototype.bind` */
-      this.subscribe,
-      this.getProps,
-      this.getPortals,
+      this._subscribe,
+      this._getProps,
+      this._getPortals,
       /* eslint-enable */
-      this.view,
-      this.view.componentID(this.el)
+      this.__view,
+      this.__view.componentID(this.el)
     );
-    this.listeners = new Set();
-    this.boundaryMounted = false;
-    this.mount();
+
+    this._mount();
   },
 
   updated() {
-    this.setProps();
+    this._setProps();
   },
 
   beforeDestroy() {
-    this.unmount();
+    this._unmount();
   },
 
   destroyed() {
     window.addEventListener(
       'phx:page-loading-stop',
       () => {
-        this.unmount();
+        this._unmount();
       },
       {
         once: true,
@@ -78,71 +83,70 @@ export const ReactComponent = {
     );
   },
 
-  subscribe(onPropsChange: () => void): () => void {
-    this.listeners.add(onPropsChange);
+  _subscribe(onPropsChange) {
+    this._listeners.add(onPropsChange);
 
     const unsubscribe = () => {
-      this.listeners.delete(onPropsChange);
+      this._listeners.delete(onPropsChange);
     };
 
     return unsubscribe;
   },
 
-  getProps() {
-    invariant(this.props !== undefined, this.errorMsg('Uninitialized props!'));
+  _getProps() {
+    invariant(
+      this._props !== undefined,
+      this._errorMsg('Uninitialized props!')
+    );
 
-    return this.props;
+    return this._props;
   },
 
-  addPortal(
-    children: React.ReactNode,
-    container: Element | DocumentFragment,
-    key: string
-  ) {
+  addPortal(children, container, key) {
     warning(
-      !this.portals.has(key),
-      this.errorMsg('Portal has already been added! Overwriting!')
+      !this._portals.has(key),
+      this._errorMsg('Portal has already been added! Overwriting!')
     );
 
     // Immutably update the map
     // See https://zustand.docs.pmnd.rs/guides/maps-and-sets-usage#map-and-set-usage
-    this.portals = new Map(this.portals).set(key, [container, children]);
+    this._portals = new Map(this._portals).set(key, [container, children]);
 
-    this.rerender();
+    this._rerender();
   },
 
-  removePortal(key: string) {
+  removePortal(key) {
     warning(
-      this.portals.has(key),
-      this.errorMsg('Cannot remove missing portal!')
+      this._portals.has(key),
+      this._errorMsg('Cannot remove missing portal!')
     );
 
     // Immutably update the map
     // See https://zustand.docs.pmnd.rs/guides/maps-and-sets-usage#map-and-set-usage
-    this.portals = new Map(this.portals);
-    this.portals.delete(key);
+    this._portals = new Map(this._portals);
+    this._portals.delete(key);
 
-    this.rerender();
+    this._rerender();
   },
 
-  getPortals() {
-    return this.portals;
+  _getPortals() {
+    return this._portals;
   },
 
-  onBoundary(element: HTMLDivElement | null) {
-    this.view.liveSocket.requestDOMUpdate(() => {
-      if (element == null || !element.isConnected || this.boundaryMounted) {
+  _onBoundary(element) {
+    this.__view.liveSocket.requestDOMUpdate(() => {
+      if (element == null || !element.isConnected || this._boundaryMounted) {
         return;
       }
-      this.view.execNewMounted();
-      this.boundaryMounted = true;
+      this.__view.execNewMounted();
+      this._boundaryMounted = true;
     });
   },
 
-  setProps() {
+  _setProps() {
     invariant(
       this.el.textContent != null && this.el.textContent !== '',
-      this.errorMsg('No content in <script> tag!')
+      this._errorMsg('No content in <script> tag!')
     );
 
     // TODO: Wrap `JSON.parse` in a try/catch, or just let it throw?
@@ -151,7 +155,7 @@ export const ReactComponent = {
 
     invariant(
       typeof props === 'object',
-      this.errorMsg(
+      this._errorMsg(
         'Invalid `props` type! It should either be an object or `null`.'
       )
     );
@@ -161,25 +165,25 @@ export const ReactComponent = {
     // to work correctly.
     // TODO: use [https://github.com/Miserlou/live_json](live_json) instead?
     // https://github.com/woutdp/live_svelte/blob/master/README.md#live_json
-    this.props = replaceEqualDeep(this.props, props);
+    this._props = replaceEqualDeep(this._props, props);
 
-    this.rerender();
+    this._rerender();
   },
 
-  rerender() {
-    for (const listener of this.listeners) {
+  _rerender() {
+    for (const listener of this._listeners) {
       listener();
     }
   },
 
-  mount() {
+  _mount() {
     const reactContainerElement = getClosestReactContainerElement(
       this.el,
-      this.view.root.el
+      this.__view.root.el
     );
 
     if (reactContainerElement == null) {
-      this.mountRoot();
+      this._mountRoot();
     } else {
       const reactContainerHookedElement =
         reactContainerElement.previousElementSibling;
@@ -189,13 +193,13 @@ export const ReactComponent = {
           reactContainerHookedElement instanceof HTMLElement &&
           reactContainerHookedElement.id ===
             reactContainerElement.dataset.reactContainer,
-        this.errorMsg(
+        this._errorMsg(
           `Missing React container element's sibling <script> element!`
         )
       );
 
       this.liveSocket.owner(reactContainerHookedElement, view => {
-        this.containerComponentHook = (() => {
+        this._containerComponentHook = (() => {
           const hook = view.getHook(reactContainerHookedElement);
 
           if (
@@ -212,12 +216,12 @@ export const ReactComponent = {
           return hook as unknown as ReactComponentHook;
         })();
 
-        this.mountPortal();
+        this._mountPortal();
       });
     }
   },
 
-  getKey(): string {
+  _getKey() {
     // Access the `ViewHook` class so we can access its static methods
     const ViewHook = (Object.getPrototypeOf(this) as ViewHook).constructor;
 
@@ -230,16 +234,19 @@ export const ReactComponent = {
     const viewHookId = ViewHook.elementID(this.el);
 
     // Nevertheless, also incorporate the LiveView's id for good measure, can't hurt
-    const key = `${this.view.id}-${String(viewHookId)}`;
+    const key = `${this.__view.id}-${String(viewHookId)}`;
 
     return key;
   },
 
-  mountRoot() {
-    invariant(this.root == null, this.errorMsg('React root already created!'));
+  _mountRoot() {
+    invariant(
+      this._root == null,
+      this._errorMsg('React root already created!')
+    );
 
-    this.root = ReactDOMClient.createRoot(this.containerEl, {
-      identifierPrefix: this.getKey(),
+    this._root = ReactDOMClient.createRoot(this._containerEl, {
+      identifierPrefix: this._getKey(),
       // TODO: [error handling](https://18.react.dev/reference/react-dom/client/createRoot#displaying-a-dialog-for-recoverable-errors)?
       onRecoverableError: (error, errorInfo) => {
         console.error(
@@ -251,84 +258,84 @@ export const ReactComponent = {
       },
     });
 
-    this.setProps();
+    this._setProps();
 
     // We'll only call `render` this once because updates are triggered using
     // `useSyncExternalStore`, and so we don't need to manually trigger re-renders.
-    this.root.render(
+    this._root.render(
       // Find common bugs early in development with [`StrictMode`](https://react.dev/reference/react/StrictMode)
       <StrictMode>
         <Boundary
           ref={
             // eslint-disable-next-line @typescript-eslint/unbound-method -- bound using `Function.prototype.bind`
-            this.onBoundary
+            this._onBoundary
           }
         >
-          <this.Component />
+          <this._Component />
         </Boundary>
       </StrictMode>
     );
   },
 
-  mountPortal() {
+  _mountPortal() {
     invariant(
-      this.containerComponentHook != null,
-      this.errorMsg('No container React component ViewHook instance!')
+      this._containerComponentHook != null,
+      this._errorMsg('No container React component ViewHook instance!')
     );
 
-    this.setProps();
+    this._setProps();
 
-    this.containerComponentHook.addPortal(
+    this._containerComponentHook.addPortal(
       <Boundary
         ref={
           // eslint-disable-next-line @typescript-eslint/unbound-method -- bound using `Function.prototype.bind`
-          this.onBoundary
+          this._onBoundary
         }
       >
-        <this.Component />
+        <this._Component />
       </Boundary>,
-      this.containerEl,
-      this.getKey()
+      this._containerEl,
+      this._getKey()
     );
   },
 
-  unmount() {
+  _unmount() {
     invariant(
-      this.root || this.containerComponentHook,
-      this.errorMsg('No React root or portal to unmount!')
+      this._root || this._containerComponentHook,
+      this._errorMsg('No React root or portal to unmount!')
     );
 
-    if (this.root) {
-      this.unmountRoot();
-    } else if (this.containerComponentHook) {
-      this.unmountPortal();
+    if (this._root) {
+      this._unmountRoot();
+    } else if (this._containerComponentHook) {
+      this._unmountPortal();
     }
   },
 
-  unmountRoot() {
-    invariant(this.root != null, this.errorMsg('No React root to unmount!'));
-    this.root.unmount();
+  _unmountRoot() {
+    invariant(this._root != null, this._errorMsg('No React root to unmount!'));
+    this._root.unmount();
   },
 
-  unmountPortal() {
+  _unmountPortal() {
     invariant(
-      this.containerComponentHook != null,
-      this.errorMsg('No container React component ViewHook instance!')
+      this._containerComponentHook != null,
+      this._errorMsg('No container React component ViewHook instance!')
     );
 
-    this.containerComponentHook.removePortal(this.getKey());
+    this._containerComponentHook.removePortal(this._getKey());
   },
 
-  errorMsg(str: string): string {
+  _errorMsg(str) {
     return (
       str +
       '\n' +
       'In `ReactComponent` hook with ' +
       [
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-        this.name != null &&
+        this._name != null &&
           // prettier-ignore -- the above supression should not leak down
-          `name \`${this.name}\``,
+          `name \`${this._name}\``,
         `id \`${this.el.id}\``,
       ]
         .filter(Boolean)
@@ -336,4 +343,11 @@ export const ReactComponent = {
       '.'
     );
   },
-} as ReactComponentHook;
+
+  /*
+   * Because of the way Phoenix LiveView typed their hooks we need to make
+   * type it like this, this allows us to use the "internal" typedef for the
+   * definition but will not expose the "internal" methods and properties
+   * (those starting with `_`).
+   */
+} as GetPhoenixHookInternalThis<ReactComponentHook> as unknown as ReactComponentHook;
