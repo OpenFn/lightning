@@ -901,13 +901,11 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "Project settings"
 
       assert view
-             |> has_element?(
-               "input[disabled='disabled'][id='project-settings-form_name']"
-             )
+             |> has_element?("input[disabled='disabled'][name='project[name]']")
 
       assert view
              |> has_element?(
-               "textarea[disabled='disabled'][id='project-settings-form_description']"
+               "textarea[disabled='disabled'][name='project[description]']"
              )
 
       assert view |> has_element?("button[disabled][type=submit]")
@@ -1946,7 +1944,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       html =
         view
-        |> element("select#retention-settings-form_history_retention_period")
+        |> element("select[name='project[history_retention_period]']")
         |> render()
 
       for option <- expected_options do
@@ -1981,7 +1979,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert has_element?(
                view,
-               "#retention-settings-form_history_retention_period:disabled"
+               "select[name='project[history_retention_period]']:disabled"
              )
     end
 
@@ -2002,7 +2000,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert has_element?(
                view,
-               "#retention-settings-form_dataclip_retention_period:disabled"
+               "select[name='project[dataclip_retention_period]']:disabled"
              )
 
       view
@@ -2015,12 +2013,12 @@ defmodule LightningWeb.ProjectLiveTest do
 
       refute has_element?(
                view,
-               "#retention-settings-form_dataclip_retention_period:disabled"
+               "select[name='project[dataclip_retention_period]']:disabled"
              )
 
       assert has_element?(
                view,
-               "#retention-settings-form_dataclip_retention_period"
+               "select[name='project[dataclip_retention_period]']"
              )
     end
 
@@ -2039,7 +2037,7 @@ defmodule LightningWeb.ProjectLiveTest do
       selected_dataclip_option =
         element(
           view,
-          "#retention-settings-form_dataclip_retention_period option[selected]"
+          "select[name='project[dataclip_retention_period]'] option[selected]"
         )
 
       # nothing has been selected for the dataclip period
@@ -2057,7 +2055,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       refute has_element?(
                view,
-               "#retention-settings-form_dataclip_retention_period:disabled"
+               "#retention-settings-form select[name='project[dataclip_retention_period]']:disabled"
              )
 
       # 7 Days has been selected for the dataclip period
@@ -2074,7 +2072,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert has_element?(
                view,
-               "#retention-settings-form_dataclip_retention_period:disabled"
+               "#retention-settings-form select[name='project[dataclip_retention_period]']:disabled"
              )
 
       # 7 days gets cleared. Nothing is now selected

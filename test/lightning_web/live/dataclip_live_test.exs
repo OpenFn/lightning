@@ -34,7 +34,7 @@ defmodule LightningWeb.DataclipLiveTest do
       assert html =~ dataclip.id
 
       dataclip_text =
-        element(view, "#dataclip-form_body")
+        element(view, "textarea[name='dataclip[body]']")
         |> render()
         |> Floki.parse_fragment!()
         |> Floki.text()

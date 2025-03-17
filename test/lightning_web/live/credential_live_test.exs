@@ -290,7 +290,10 @@ defmodule LightningWeb.CredentialLiveTest do
       index_live |> select_credential_type("raw")
       index_live |> click_continue()
 
-      assert index_live |> has_element?("#credential-form-new_body")
+      assert index_live
+             |> has_element?(
+               "#credential-form-new textarea[name='credential[body]']"
+             )
 
       index_live
       |> element("#project-credentials-list-new")
@@ -2783,7 +2786,9 @@ defmodule LightningWeb.CredentialLiveTest do
     } do
       html =
         view
-        |> element("#transfer-credential-#{credential.id}-modal-form_email")
+        |> element(
+          "#transfer-credential-#{credential.id}-modal-form input[name='receiver[email]']"
+        )
         |> render_blur(%{"value" => "not-an-email"})
 
       assert html =~ "Email address not valid"
@@ -2799,7 +2804,9 @@ defmodule LightningWeb.CredentialLiveTest do
     } do
       html =
         view
-        |> element("#transfer-credential-#{credential.id}-modal-form_email")
+        |> element(
+          "#transfer-credential-#{credential.id}-modal-form input[name='receiver[email]']"
+        )
         |> render_blur(%{"value" => owner.email})
 
       refute html =~ "Email address not valid"
@@ -2813,7 +2820,9 @@ defmodule LightningWeb.CredentialLiveTest do
     } do
       html =
         view
-        |> element("#transfer-credential-#{credential.id}-modal-form_email")
+        |> element(
+          "#transfer-credential-#{credential.id}-modal-form input[name='receiver[email]']"
+        )
         |> render_blur(%{"value" => "nonexistent@example.com"})
 
       refute html =~ "Email address not valid"
@@ -2829,7 +2838,9 @@ defmodule LightningWeb.CredentialLiveTest do
 
       html =
         view
-        |> element("#transfer-credential-#{credential.id}-modal-form_email")
+        |> element(
+          "#transfer-credential-#{credential.id}-modal-form input[name='receiver[email]']"
+        )
         |> render_blur(%{"value" => receiver.email})
 
       refute html =~ "Email address not valid"
@@ -2848,7 +2859,9 @@ defmodule LightningWeb.CredentialLiveTest do
 
       html =
         view
-        |> element("#transfer-credential-#{credential.id}-modal-form_email")
+        |> element(
+          "#transfer-credential-#{credential.id}-modal-form input[name='receiver[email]']"
+        )
         |> render_blur(%{"value" => receiver.email})
 
       refute html =~ "Email address not valid"

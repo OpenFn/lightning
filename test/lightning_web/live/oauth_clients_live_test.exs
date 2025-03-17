@@ -109,7 +109,7 @@ defmodule LightningWeb.OauthClientsLiveTest do
 
       assert view
              |> element(
-               ~s{#oauth-client-form-new_#{scope_type}_scopes[value="#{scope_value}"]}
+               ~s{#oauth-client-form-new input[name='oauth_client[#{scope_type}_scopes]'][value="#{scope_value}"]}
              )
              |> has_element?()
     end)

@@ -412,7 +412,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       element =
         view
         |> element(
-          "select#manual_run_form_dataclip_id option[value='#{new_dataclip.id}']"
+          "select[name='manual[dataclip_id]'] option[value='#{new_dataclip.id}']"
         )
 
       assert render(element) =~ "selected"
@@ -791,7 +791,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       element =
         view
         |> element(
-          "select#manual_run_form_dataclip_id  option[value='#{output_dataclip.id}']"
+          "select[name='manual[dataclip_id]'] option[value='#{output_dataclip.id}']"
         )
 
       assert render(element) =~ "selected"
@@ -872,7 +872,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       element =
         view
         |> element(
-          "select#manual_run_form_dataclip_id  option[value='#{input_dataclip.id}']"
+          "select[name='manual[dataclip_id]'] option[value='#{input_dataclip.id}']"
         )
 
       assert render(element) =~ "selected"
@@ -959,7 +959,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       element =
         view
         |> element(
-          "select#manual_run_form_dataclip_id  option[value='#{output_dataclip.id}']"
+          "select[name='manual[dataclip_id]'] option[value='#{output_dataclip.id}']"
         )
 
       assert render(element) =~ "selected"
@@ -1041,12 +1041,12 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       view |> element("#toggle_dataclip_selector_button") |> render_click()
 
       # the select input now exists
-      assert has_element?(view, "select#manual_run_form_dataclip_id")
+      assert has_element?(view, "select[name='manual[dataclip_id]']")
 
       # the wiped message is nolonger displayed
       refute render(form) =~ "data for this step has not been retained"
 
-      assert has_element?(view, "textarea#manual_run_form_body")
+      assert has_element?(view, "textarea[name='manual[body]']")
 
       # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
       # disconnection warnings.
@@ -1105,19 +1105,19 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       assert render(form) =~ input_dataclip.id
 
       # the select input exists
-      assert has_element?(view, "select#manual_run_form_dataclip_id")
+      assert has_element?(view, "select[name='manual[dataclip_id]']")
 
       # the body says that it was wiped
       assert render(form) =~ "data for this step has not been retained"
 
-      refute has_element?(view, "textarea#manual_run_form_body"),
+      refute has_element?(view, "textarea[name='manual[body]']"),
              "dataclip body input is missing"
 
       # lets select the create new dataclip option
       form |> render_change(manual: %{dataclip_id: nil})
 
       # the dataclip textarea input now exists
-      assert has_element?(view, "textarea#manual_run_form_body"),
+      assert has_element?(view, "textarea[name='manual[body]']"),
              "dataclip body input exists"
 
       # the wiped message is nolonger displayed
@@ -1180,9 +1180,9 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       assert has_element?(form)
 
       # the select input is not present
-      refute has_element?(view, "select#manual_run_form_dataclip_id")
+      refute has_element?(view, "select[name='manual[dataclip_id]']")
       # the textarea doesn not exist
-      refute has_element?(view, "textarea#manual_run_form_body")
+      refute has_element?(view, "textarea[name='manual[body]']")
 
       # the body says that the step wasn't run
       assert render(form) =~ "This job was not/is not yet included in this Run"
@@ -1190,14 +1190,14 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       # the body does not say that it was wiped
       refute render(form) =~ "data for this step has not been retained"
 
-      refute has_element?(view, "textarea#manual_run_form_body"),
+      refute has_element?(view, "textarea[name='manual[body]']"),
              "dataclip body input is missing"
 
       # lets click the button to show the editor
       view |> element("#toggle_dataclip_selector_button") |> render_click()
 
       # the dataclip textarea input now exists
-      assert has_element?(view, "textarea#manual_run_form_body"),
+      assert has_element?(view, "textarea[name='manual[body]']"),
              "dataclip body input exists"
 
       # the job not run message is nolonger displayed

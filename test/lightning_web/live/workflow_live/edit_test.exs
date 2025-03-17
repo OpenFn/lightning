@@ -152,7 +152,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert workflow_name == ""
 
-      assert view |> element("#workflow_name") |> render() =~ workflow_name
+      assert view
+             |> element("input[name='workflow[name]']")
+             |> render() =~ workflow_name
 
       assert view |> save_is_disabled?()
 
@@ -533,14 +535,16 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         view |> select_node(job, workflow.lock_version)
 
         assert view
-               |> has_element?("[id='snapshot_jobs_#{idx}_name'][disabled]")
+               |> has_element?(
+                 "input[name='snapshot[jobs][#{idx}][name]'][disabled]"
+               )
 
         assert view |> has_element?("[id='adaptor-name'][disabled]")
         assert view |> has_element?("[id='adaptor-version'][disabled]")
 
         assert view
                |> has_element?(
-                 "[id='snapshot_jobs_#{idx}_project_credential_id'][disabled]"
+                 "select[name='snapshot[jobs][#{idx}][project_credential_id]'][disabled]"
                )
 
         view |> click_edit(job)
@@ -576,7 +580,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
         assert view
                |> has_element?(
-                 "[id='snapshot_edges_#{idx}_condition_type'][disabled]"
+                 "select[name='snapshot[edges][#{idx}][condition_type]'][disabled]"
                )
       end)
 
@@ -590,7 +594,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
         assert view
                |> has_element?(
-                 "[id='snapshot_triggers_#{idx}_enabled'][disabled]"
+                 "input[name='snapshot[triggers][#{idx}][enabled]'][disabled]"
                )
       end)
 
@@ -797,7 +801,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                "[id='job-editor-#{job_1.id}'][data-disabled='true'][data-source='#{job_1.body}'][data-disabled-message=\"You can't edit while viewing a snapshot, switch to the latest version.\"]"
              )
 
-      assert view |> has_element?("[id='manual_run_form_dataclip_id'][disabled]")
+      assert view
+             |> has_element?("select[name='manual[dataclip_id]'][disabled]")
 
       assert view |> has_element?("div", job_1.name)
 
@@ -822,7 +827,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
                "[id='job-editor-#{job_1.id}'][data-disabled-message=''][data-disabled='false'][data-source='#{job_2.body}']"
              )
 
-      refute view |> has_element?("[id='manual_run_form_dataclip_id'][disabled]")
+      refute view
+             |> has_element?("select[name='manual[dataclip_id]'][disabled]")
 
       assert view |> has_element?("div", job_2.name)
     end
@@ -1683,7 +1689,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert html =~ "Enabled"
 
       assert view
-             |> element("#workflow_edges_#{idx}_enabled")
+             |> element("input[name='workflow[edges][#{idx}][enabled]']")
              |> has_element?()
 
       view
@@ -1701,7 +1707,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       refute edge.enabled
 
       refute view
-             |> element("#workflow_edges_#{idx}_enabled[checked]")
+             |> element(
+               "input[name='workflow[edges][#{idx}][enabled]'][checked]"
+             )
              |> has_element?()
     end
 
