@@ -17,13 +17,13 @@ defmodule LightningWeb.UserLive.Components do
     <.live_component
       :if={@live_action == :delete}
       module={@user_deletion_modal}
-      id={@delete_user.id}
+      id={"user-details-#{@delete_user.id}"}
       user={@delete_user}
       is_current_user={false}
       logout={false}
       return_to={Routes.user_index_path(@socket, :index)}
     />
-    <.table id="users">
+    <.table>
       <.tr>
         <.th>First name</.th>
         <.th>Last name</.th>

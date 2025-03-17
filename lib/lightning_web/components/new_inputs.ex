@@ -203,7 +203,7 @@ defmodule LightningWeb.Components.NewInputs do
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
     assigns
     |> maybe_assign_radio_checked()
-    |> assign(field: nil, id: assigns.id || field.id)
+    |> assign(field: nil)
     |> assign(
       :errors,
       Enum.map(field.errors, &LightningWeb.CoreComponents.translate_error(&1))
