@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Allow users to book for demo sessions
+  [PR#3035](https://github.com/OpenFn/lightning/pull/3035)
+
 ### Changed
 
 ### Fixed
