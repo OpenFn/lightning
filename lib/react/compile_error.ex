@@ -39,17 +39,17 @@ defmodule React.CompileError do
     defp format_message(file, line, column, description, hint) do
       message =
         if File.exists?(file) do
-          {lineCode, _} =
+          {line_code, _} =
             File.stream!(file) |> Stream.with_index() |> Enum.at(line - 1)
 
-          lineCode = String.trim_trailing(lineCode)
+          line_code = String.trim_trailing(line_code)
 
           :elixir_errors.format_snippet(
             :error,
             {line, column},
             file,
             description,
-            lineCode,
+            line_code,
             %{}
           )
         else

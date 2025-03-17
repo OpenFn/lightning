@@ -18,24 +18,19 @@ defmodule React do
   #   use LightningWeb.React
   #   jsx "components/MyComponent.tsx"
   # end
-  def get_entry_points do
-    app = Mix.Project.config()[:app]
 
+  @doc """
+  Returns a list of React components that are defined in the given app.
+  """
+  @spec get_entry_points(atom()) :: [String.t()]
+  def get_entry_points(app) do
     Application.spec(app, :modules)
     |> Enum.flat_map(fn module ->
       module.__info__(:attributes)
       |> Keyword.get_values(:external_resource)
-      |> Enum.flat_map(fn files ->
-        case files do
-          files when is_list(files) ->
-            files
-            |> Enum.filter(fn file -> String.ends_with?(file, ".tsx") end)
-
-          _ ->
-            []
-        end
-      end)
+      |> List.flatten()
     end)
+    |> Enum.filter(fn file -> String.ends_with?(file, ".tsx") end)
   end
 
   @doc """
@@ -146,6 +141,10 @@ defmodule React do
     end
   end
 
+  @doc """
+  Generates a unique ID for a React component.
+  """
+  @spec component_id(String.t()) :: String.t()
   def component_id(name) do
     # a small trick to avoid collisions of IDs but keep them consistent
     # across dead and live renders

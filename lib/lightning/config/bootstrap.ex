@@ -638,9 +638,7 @@ defmodule Lightning.Config.Bootstrap do
 
     setup_storage()
 
-    # app = Mix.Project.config()[:app]
-
-    entry_points = React.get_entry_points()
+    entry_points = React.get_entry_points(:lightning)
 
     config :esbuild, :default,
       args: Utils.get_env([:esbuild, :default, :args]) ++ entry_points

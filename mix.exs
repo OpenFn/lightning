@@ -180,7 +180,7 @@ defmodule Lightning.MixProject do
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
       "assets.deploy": [
         "tailwind default --minify",
-        "esbuild default --minify",
+        "esbuild --runtime-config default --minify",
         "phx.digest"
       ],
       verify: [
