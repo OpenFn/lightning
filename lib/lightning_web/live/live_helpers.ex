@@ -4,8 +4,6 @@ defmodule LightningWeb.LiveHelpers do
   """
   use Phoenix.Component
 
-  import LightningWeb.Components.Icons
-
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Services.UsageLimiter
 
@@ -150,26 +148,16 @@ defmodule LightningWeb.LiveHelpers do
     """
   end
 
+  attr :current_user, Lightning.Accounts.User, required: true
+
   def book_demo_banner(assigns) do
     ~H"""
-    <div class="flex items-center gap-x-6 bg-indigo-600 px-6 py-2.5 sm:px-3.5 sm:before:flex-1">
-      <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <p class="text-sm/6 text-gray-900">
-          What problem are you trying to solve with OpenFn?
-        </p>
-        <a
-          href="#"
-          class="flex-none rounded-full bg-gray-900 px-3.5 py-1 text-sm font-semibold text-white shadow-sm hover:bg-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900"
-        >
-          Book demo <span aria-hidden="true">&rarr;</span>
-        </a>
-      </div>
-      <div class="flex flex-1 justify-end">
-        <button type="button" class="-m-3 p-3 focus-visible:outline-offset-[-4px]">
-          <span class="sr-only">Dismiss</span>
-          <.icon name="hero-x-mark" class="size-5 text-white" />
-        </button>
-      </div>
+    <div>
+      <.live_component
+        id="book-demo-banner"
+        module={LightningWeb.BookDemoBanner}
+        current_user={@current_user}
+      />
     </div>
     """
   end
