@@ -292,6 +292,13 @@ defmodule LightningWeb.Components.NewInputs do
   end
 
   def input(%{type: "password"} = assigns) do
+    assigns =
+      assign_new(assigns, :reveal_id, fn ->
+        :crypto.strong_rand_bytes(5)
+        |> Base.encode16(case: :lower)
+        |> binary_part(0, 5)
+      end)
+
     ~H"""
     <div phx-feedback-for={@name}>
       <.label :if={@label} for={@id}>
@@ -302,6 +309,7 @@ defmodule LightningWeb.Components.NewInputs do
           type={@type}
           name={@name}
           id={@id}
+          data-reveal-id={@reveal_id}
           value={Form.normalize_value(@type, @value)}
           lv-keep-type
           class={[
@@ -319,24 +327,13 @@ defmodule LightningWeb.Components.NewInputs do
           <.icon
             name="hero-eye-slash"
             class="h-5 w-5 cursor-pointer"
-            id={"show_password_#{@id}"}
-            phx-hook="TogglePassword"
-            data-target={@id}
-            phx-then={
-              JS.toggle(to: "#hide_password_#{@id}")
-              |> JS.toggle(to: "#show_password_#{@id}")
+            phx-click={
+              JS.toggle_class("hero-eye-slash")
+              |> JS.toggle_class("hero-eye")
+              |> JS.toggle_attribute({"type", "password", "text"},
+                to: "input[data-reveal-id='#{@reveal_id}']"
+              )
             }
-          />
-          <.icon
-            name="hero-eye"
-            class="h-5 w-5 cursor-pointer hidden"
-            phx-hook="TogglePassword"
-            data-target={@id}
-            phx-then={
-              JS.toggle(to: "#hide_password_#{@id}")
-              |> JS.toggle(to: "#show_password_#{@id}")
-            }
-            id={"hide_password_#{@id}"}
           />
         </div>
       </div>
