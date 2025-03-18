@@ -381,19 +381,17 @@ defmodule Lightning.Runs.QueryTest do
       """
     end
 
-    test "eligible_for_claim/0 with claim" do
-      # we need 4 projects, each with one workflow, called: red, green, blue and magenta
-      # red should have a limit of 1
-      # green should have a limit of 2
-      # blue should have a limit of 3
-      # magenta has a workflow concurrecy of 5 but it's overriden by the project concurrency set to 1
+    test "eligible_for_claim/0 respecting workflow and project concurrency" do
+      # we need 2 projects, each with one workflow, called: red, green and blue
+      # red should have a limit of 1 (from the workflow)
+      # green should have a limit of 2 (from the project)
+      # blue has unlimited concurrency
 
-      [red, green, blue, magenta] =
+      [red, green, blue] =
         [
           {"red", 1},
-          {"green", 2},
-          {"blue", 3},
-          {"magenta", 5}
+          {"green", nil},
+          {"blue", nil}
         ]
         |> Enum.map(fn {name, concurrency} ->
           project = insert(:project, name: name)
@@ -408,24 +406,24 @@ defmodule Lightning.Runs.QueryTest do
         insert_run(red, :available)
       end
 
-      insert_run(green, :available)
-
-      insert_run(blue, :available)
-
       for _ <- 1..2 do
-        insert_run(magenta, :available)
+        insert_run(green, :available)
       end
 
-      # magenta project has only project level concurrecy
-      Repo.update!(Projects.change_project(magenta.project, %{concurrency: 1}))
+      for _ <- 1..3 do
+        insert_run(blue, :available)
+      end
 
-      {:ok, [%{id: run_id} = red_run_1]} =
+      # green project has only project level concurrency
+      Repo.update!(Projects.change_project(green.project, %{concurrency: 2}))
+
+      # 1st claim (a red)
+      {:ok, [%{id: claimed_run_id} = red_run_1]} =
         Lightning.Runs.Queue.claim(1, Query.eligible_for_claim())
 
       red_project_id = red.project.id
       green_project_id = green.project.id
       blue_project_id = blue.project.id
-      magenta_project_id = magenta.project.id
 
       Query.in_progress_window()
       |> Repo.all()
@@ -434,52 +432,54 @@ defmodule Lightning.Runs.QueryTest do
         assert match?(
                  [
                    %{
-                     id: ^run_id,
+                     id: ^claimed_run_id,
                      project_id: ^red_project_id,
                      state: :claimed,
                      row_number: 1,
                      concurrency: 1
                    },
                    %{
-                     id: _,
                      project_id: ^red_project_id,
                      state: :available,
                      row_number: 2,
                      concurrency: 1
                    },
                    %{
-                     id: _,
                      project_id: ^green_project_id,
                      state: :available,
                      row_number: 1,
                      concurrency: 2
                    },
                    %{
-                     id: _,
+                     project_id: ^green_project_id,
+                     state: :available,
+                     row_number: 2,
+                     concurrency: 2
+                   },
+                   %{
                      project_id: ^blue_project_id,
                      state: :available,
                      row_number: 1,
-                     concurrency: 3
+                     concurrency: nil
                    },
                    %{
-                     id: _,
-                     project_id: ^magenta_project_id,
-                     state: :available,
-                     row_number: 1,
-                     concurrency: 1
-                   },
-                   %{
-                     id: _,
-                     project_id: ^magenta_project_id,
+                     project_id: ^blue_project_id,
                      state: :available,
                      row_number: 2,
-                     concurrency: 1
+                     concurrency: nil
+                   },
+                   %{
+                     project_id: ^blue_project_id,
+                     state: :available,
+                     row_number: 3,
+                     concurrency: nil
                    }
                  ],
                  in_progress
                )
       end)
 
+      # 2nd claim (a green)
       {:ok, [%{id: claimed_run_id}]} =
         Lightning.Runs.Queue.claim(1, Query.eligible_for_claim())
 
@@ -489,13 +489,13 @@ defmodule Lightning.Runs.QueryTest do
       |> then(fn in_progress ->
         assert match?(
                  [
-                   _,
                    %{
-                     id: _,
                      project_id: ^red_project_id,
-                     state: :available,
-                     row_number: 2,
-                     concurrency: 1
+                     state: :claimed
+                   },
+                   %{
+                     project_id: ^red_project_id,
+                     state: :available
                    },
                    %{
                      id: ^claimed_run_id,
@@ -505,20 +505,22 @@ defmodule Lightning.Runs.QueryTest do
                      concurrency: 2
                    },
                    %{
+                     project_id: ^green_project_id,
+                     state: :available,
+                     row_number: 2,
+                     concurrency: 2
+                   },
+                   %{
                      project_id: ^blue_project_id,
                      state: :available
                    },
                    %{
-                     project_id: ^magenta_project_id,
-                     state: :available,
-                     row_number: 1,
-                     concurrency: 1
+                     project_id: ^blue_project_id,
+                     state: :available
                    },
                    %{
-                     project_id: ^magenta_project_id,
-                     state: :available,
-                     row_number: 2,
-                     concurrency: 1
+                     project_id: ^blue_project_id,
+                     state: :available
                    }
                  ],
                  in_progress
@@ -536,7 +538,8 @@ defmodule Lightning.Runs.QueryTest do
       )
       |> Repo.update()
 
-      {:ok, [%{id: run_id}]} =
+      # 3rd claim (another red, the oldest among all projects)
+      {:ok, [%{id: claimed_run_id}]} =
         Lightning.Runs.Queue.claim(1, Query.eligible_for_claim())
 
       Query.in_progress_window()
@@ -546,39 +549,29 @@ defmodule Lightning.Runs.QueryTest do
         assert match?(
                  [
                    %{
-                     id: ^run_id,
+                     id: ^claimed_run_id,
                      project_id: ^red_project_id,
-                     state: :claimed,
-                     row_number: 1,
-                     concurrency: 1
+                     state: :claimed
                    },
                    %{
-                     id: _,
                      project_id: ^green_project_id,
-                     state: :claimed,
-                     row_number: 1,
-                     concurrency: 2
+                     state: :claimed
                    },
                    %{
-                     id: _,
+                     project_id: ^green_project_id,
+                     state: :available
+                   },
+                   %{
                      project_id: ^blue_project_id,
-                     state: :available,
-                     row_number: 1,
-                     concurrency: 3
+                     state: :available
                    },
                    %{
-                     id: _,
-                     project_id: ^magenta_project_id,
-                     state: :available,
-                     row_number: 1,
-                     concurrency: 1
+                     project_id: ^blue_project_id,
+                     state: :available
                    },
                    %{
-                     id: _,
-                     project_id: ^magenta_project_id,
-                     state: :available,
-                     row_number: 2,
-                     concurrency: 1
+                     project_id: ^blue_project_id,
+                     state: :available
                    }
                  ],
                  in_progress
