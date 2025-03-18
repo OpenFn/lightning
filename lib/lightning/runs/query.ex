@@ -81,11 +81,23 @@ defmodule Lightning.Runs.Query do
       row_number: [
         partition_by:
           fragment(
-            "CASE WHEN ? IS NOT NULL THEN ? ELSE ? END",
+            "CASE
+              WHEN ? IS NOT NULL AND ? IS NULL THEN ?
+              WHEN ? IS NOT NULL AND ? IS NULL THEN ?
+              WHEN ? < ? THEN ?
+              ELSE ?
+             END",
             w.concurrency,
+            p.concurrency,
+            w.id,
+            w.concurrency,
+            p.concurrency,
+            p.id,
+            w.concurrency,
+            p.concurrency,
             w.id,
             p.id
-          ),
+            ),
         order_by: [asc: r.inserted_at]
       ]
     )
@@ -97,7 +109,24 @@ defmodule Lightning.Runs.Query do
       # calculated here?
       row_number: row_number() |> over(:row_number),
       project_id: w.project_id,
-      concurrency: coalesce(w.concurrency, p.concurrency),
+      concurrency: fragment(
+        "CASE
+          WHEN ? IS NOT NULL AND ? IS NULL THEN ?
+          WHEN ? IS NOT NULL AND ? IS NULL THEN ?
+          WHEN ? < ? THEN ?
+          ELSE ?
+         END",
+        w.concurrency,
+        p.concurrency,
+        w.concurrency,
+        w.concurrency,
+        p.concurrency,
+        p.concurrency,
+        w.concurrency,
+        p.concurrency,
+        w.concurrency,
+        p.concurrency
+        ),
       inserted_at: r.inserted_at
     })
   end
