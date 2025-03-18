@@ -776,20 +776,27 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       assert status_filters
              |> Enum.all?(fn f ->
+               input_selector =
+                 "input[name='#{Phoenix.HTML.Form.input_name(:filters, f)}']"
+
                view
-               |> element("input#workorder-filter-form_#{f}")
+               |> element("#workorder-filter-form #{input_selector}")
                |> has_element?()
              end)
 
       assert status_filters
              |> Enum.any?(fn f ->
                view
-               |> element("input#workorder-filter-form_#{f}[checked]")
+               |> element(
+                 "#workorder-filter-form input[name='#{Phoenix.HTML.Form.input_name(:filters, f)}'][checked]"
+               )
                |> has_element?()
              end) == false
 
       assert view
-             |> element("input#run-search-form_search_term")
+             |> element(
+               "form#run-search-form input[name='#{Phoenix.HTML.Form.input_name(:filters, :search_term)}']"
+             )
              |> has_element?()
 
       ## id, log and body select
