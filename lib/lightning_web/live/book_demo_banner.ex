@@ -164,7 +164,7 @@ defmodule LightningWeb.BookDemoBanner do
               field={f[:message]}
               label="What problem are you trying to solve with OpenFn?
           What specific task, process, or program would you like to automate?"
-              placeholder="E.g., Every time a new person is registered in my clinic system, I must initiate a mobile money payment to a caregiver. This takes time & money. I'd like to use OpenFn to automate the process."
+              placeholder="E.g. Every time a new person is registered in my clinic system, I must initiate a mobile money payment to a caregiver. This takes time & money. I'd like to use OpenFn to automate the process."
               rows="5"
               required={true}
             />
