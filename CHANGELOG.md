@@ -21,14 +21,18 @@ and this project adheres to
 
 ### Fixed
 
-## [v2.11.0-pre.1] - 2025-03-12
+## [v2.11.0] - 2025-03-19
 
 ### Added
 
 - Update Collections admin UI storage counter after deleting all
   [#2986](https://github.com/OpenFn/lightning/issues/2986)
-- Refactor OAuth credentials to reuse existing refresh tokens for same scopes [#2908](https://github.com/OpenFn/lightning/issues/2908) \
-  ⚠️️ Please note that you will need to migrate your existing OAuth credentials. To do that run the following command: `mix run priv/repo/migrate_oauth_credentials.exs` for local setup or `docker exec -it <lightning_container_name> /app/bin/lightning eval "Lightning.Credentials.OauthMigration.run()"` for production environments.
+- Refactor OAuth credentials to reuse existing refresh tokens for same scopes
+  [#2908](https://github.com/OpenFn/lightning/issues/2908) \
+  ⚠️️ Please note that you will need to migrate your existing OAuth credentials.
+  To do that run the following command: `mix run priv/repo/migrate_oauth_credentials.exs`
+  for local setup or `docker exec -it <lightning_container_name> /app/bin/lightning eval "Lightning.Credentials.OauthMigration.run()"`
+  for production environments.
 
 ### Changed
 
