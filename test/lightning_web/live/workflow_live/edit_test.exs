@@ -2209,7 +2209,17 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         ~p"/projects/#{project.id}/w/#{workflow.id}?#{[m: "expand", s: job.id]}"
       )
 
-      assert render(view) =~ "Workflow saved and synced to GitHub successfully."
+      assert render(view) =~ "Workflow saved and sync requested. Check the"
+
+      link_to_actions =
+        "https://www.github.com/" <> repo_connection.repo <> "/actions"
+
+      assert has_element?(
+               view,
+               ~s{#flash [href="#{link_to_actions}"][target="_blank"]},
+               "Github actions"
+             )
+
       refute has_element?(view, "#github-sync-modal")
     end
 

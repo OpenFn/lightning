@@ -397,16 +397,24 @@ defmodule LightningWeb.Components.Common do
       phx-hook="Flash"
     >
       <div class="flex justify-between items-center space-x-3 text-red-900">
-        <Heroicons.exclamation_circle solid class="w-5 h-5" />
+        <.icon name="hero-exclamation-circle-solid" class="w-5 h-5" />
         <p class="flex-1 text-sm font-medium" role="alert">
-          <%= @msg %>
+          <%= if is_map(@msg) do %>
+            <%= Phoenix.LiveView.TagEngine.component(
+              @msg.function,
+              @msg.attrs,
+              {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
+            ) %>
+          <% else %>
+            <%= @msg %>
+          <% end %>
         </p>
         <button
           type="button"
           class="inline-flex bg-red-200 rounded-md p-1.5 text-red-500 hover:bg-red-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-50 focus:ring-red-800"
         >
-          <Heroicons.x_mark
-            solid
+          <.icon
+            name="hero-x-mark-solid"
             class="w-4 h-4 ml-1 mr-1 text-white-400 dark:text-white-100"
           />
         </button>
@@ -432,16 +440,24 @@ defmodule LightningWeb.Components.Common do
       phx-hook="Flash"
     >
       <div class="flex justify-between items-center space-x-3 text-blue-900">
-        <Heroicons.check_circle solid class="w-5 h-5" />
+        <.icon name="hero-check-circle-solid" class="w-5 h-5" />
         <p class="flex-1 text-sm font-medium" role="alert">
-          <%= @msg %>
+          <%= if is_map(@msg) do %>
+            <%= Phoenix.LiveView.TagEngine.component(
+              @msg.function,
+              @msg.attrs,
+              {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
+            ) %>
+          <% else %>
+            <%= @msg %>
+          <% end %>
         </p>
         <button
           type="button"
           class="inline-flex bg-blue-200 rounded-md p-1.5 text-blue-500 hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-blue-200 focus:ring-blue-800"
         >
-          <Heroicons.x_mark
-            solid
+          <.icon
+            name="hero-x-mark-solid"
             class="w-4 h-4 ml-1 mr-1 text-white-400 dark:text-white-100"
           />
         </button>
