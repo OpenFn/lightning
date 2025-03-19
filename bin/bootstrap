@@ -52,12 +52,14 @@ if [[ "$(uname)" == "Darwin" && "$(uname -m)" == "arm64" ]]; then
   mix compile.rambo
 fi
 
-mix ecto.create
-mix ecto.migrate
+npm install --prefix assets
+
+mix do esbuild.install, tailwind.install
+
+mix do ecto.create, ecto.migrate
 
 mix lightning.install_runtime
 mix lightning.install_schemas
 mix lightning.install_adaptor_icons
-npm install --prefix assets
 
 echo "✅ All dependencies installed"
