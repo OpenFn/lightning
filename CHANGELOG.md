@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Update flash message to contain link to github actions after save & sync
+  [#2989](https://github.com/OpenFn/lightning/issues/2989)
+
 ### Fixed
 
 ## [v2.11.0-pre.1] - 2025-03-12
