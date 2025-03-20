@@ -89,15 +89,20 @@ defmodule Lightning.Credentials do
   """
   @spec list_credentials(Project.t()) :: [Credential.t()]
   def list_credentials(%Project{} = project) do
-    Ecto.assoc(project, :credentials)
-    |> preload([
-      :user,
-      :project_credentials,
-      :projects,
-      oauth_token: :oauth_client
-    ])
-    |> Repo.all()
-    |> Enum.sort_by(&String.downcase(&1.name))
+    query =
+      from c in Credential,
+        join: pc in assoc(c, :project_credentials),
+        on: pc.project_id == ^project.id,
+        preload: [
+          :user,
+          :project_credentials,
+          :projects,
+          oauth_token: :oauth_client
+        ],
+        order_by: [asc: fragment("lower(?)", c.name)],
+        group_by: c.id
+
+    Repo.all(query)
   end
 
   @spec list_credentials(User.t()) :: [Credential.t()]

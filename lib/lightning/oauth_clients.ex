@@ -72,11 +72,11 @@ defmodule Lightning.OauthClients do
           poc.project_id == ^project.id or
             c.id in subquery(global_clients_subquery),
         preload: [:user, :project_oauth_clients, :projects],
-        distinct: true
+        order_by: [asc: fragment("lower(?)", c.name)],
+        group_by: c.id
       )
 
     Repo.all(clients_query)
-    |> Enum.sort_by(&String.downcase(&1.name))
   end
 
   def list_clients(%User{id: user_id}) do
