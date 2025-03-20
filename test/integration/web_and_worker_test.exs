@@ -251,7 +251,7 @@ defmodule Lightning.WebAndWorkerTest do
         end)
 
       assert version_logs =~ "▸ node.js                  22.12"
-      assert version_logs =~ "▸ worker                   1.11"
+      assert version_logs =~ "▸ worker                   1.13"
       assert version_logs =~ "▸ @openfn/language-http    3.1.12"
 
       expected_lines =
