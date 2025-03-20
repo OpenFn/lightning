@@ -68,12 +68,10 @@ defmodule Lightning.WebAndWorkerTest do
       assert %{runs: [run]} =
                WorkOrders.get(wo_id, include: [:runs])
 
-      assert %{steps: []} = Runs.get(run.id, include: [:steps])
-
       # wait to complete
       Events.subscribe(run)
 
-      run_id = run.id
+      assert %{id: run_id, steps: []} = Runs.get(run.id, include: [:steps])
 
       assert_receive %Events.RunUpdated{
                        run: %{id: ^run_id, state: :success}
