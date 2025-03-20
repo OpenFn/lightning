@@ -83,17 +83,17 @@ defmodule LightningWeb.Components.Menu do
       <%= if assigns[:href] do %>
         <.link href={@href} target={@target} class={@class}>
           <%= if assigns[:inner_block] do %>
-            <%= render_slot(@inner_block) %>
+            {render_slot(@inner_block)}
           <% else %>
-            <%= @text %>
+            {@text}
           <% end %>
         </.link>
       <% else %>
         <.link navigate={@to} class={@class}>
           <%= if assigns[:inner_block] do %>
-            <%= render_slot(@inner_block) %>
+            {render_slot(@inner_block)}
           <% else %>
-            <%= @text %>
+            {@text}
           <% end %>
         </.link>
       <% end %>

@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Update Phoenix LiveView to 1.0.5, Petal Components to 2.9.0 and TailwindCSS to
+  v4 [#3033](https://github.com/OpenFn/lightning/pull/3033)
+
 ### Fixed
 
 ## [v2.11.0] - 2025-03-19

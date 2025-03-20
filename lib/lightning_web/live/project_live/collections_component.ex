@@ -219,10 +219,10 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
         <%= for collection <- @collections do %>
           <.tr id={"collection-row-#{collection.id}"}>
             <.td>
-              <%= collection.name %>
+              {collection.name}
             </.td>
             <.td>
-              <%= div(collection.byte_size_sum, 1_000_000) %>
+              {div(collection.byte_size_sum, 1_000_000)}
             </.td>
             <.td>
               <div class="text-right">
@@ -232,7 +232,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
                   phx-value-action="edit"
                   phx-value-collection={collection.name}
                   phx-target={@myself}
-                  class="shadow-sm ring-1 ring-inset ring-gray-300 disabled:cursor-not-allowed"
+                  class="shadow-xs ring-1 ring-inset ring-gray-300 disabled:cursor-not-allowed"
                   color_class="bg-white text-gray-900 hover:bg-gray-50 disabled:bg-gray-100"
                   disabled={!@can_create_collection}
                 >
@@ -245,7 +245,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
                   phx-value-action="delete"
                   phx-value-collection={collection.name}
                   phx-target={@myself}
-                  class="shadow-sm ring-1 ring-inset ring-gray-300 disabled:cursor-not-allowed"
+                  class="shadow-xs ring-1 ring-inset ring-gray-300 disabled:cursor-not-allowed"
                   color_class="bg-white text-gray-900 hover:bg-gray-50 disabled:bg-gray-100"
                   disabled={!@can_create_collection}
                 >
@@ -271,7 +271,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
       <:title>
         <div class="flex justify-between">
           <span class="font-bold">
-            <%= @title %>
+            {@title}
           </span>
           <button
             id={"close-modal-#{@id}"}
@@ -311,7 +311,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
               id={"submit-btn-#{@id}"}
               type="submit"
               disabled={!@changeset.valid?}
-              class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
+              class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 sm:ml-3 sm:w-auto"
             >
               Save
             </button>
@@ -320,7 +320,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
               type="button"
               phx-click="reset_action"
               phx-target={@myself}
-              class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+              class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
             >
               Cancel
             </button>
@@ -359,7 +359,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
       <div class="px-6">
         <p class="text-sm text-gray-500">
           Are you sure you want to delete the collection
-          <span class="font-medium"><%= @collection.name %></span>
+          <span class="font-medium">{@collection.name}</span>
           ?
           If you wish to proceed with this action, click on the delete button. To cancel click on the cancel button.<br /><br />
         </p>
@@ -380,7 +380,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
           type="button"
           phx-click="reset_action"
           phx-target={@myself}
-          class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+          class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
         >
           Cancel
         </button>

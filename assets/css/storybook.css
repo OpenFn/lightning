@@ -1,7 +1,5 @@
 /* This is your custom storybook stylesheet. */
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
-@import 'tailwindcss/utilities';
+@import 'tailwindcss';
 
 /*
  * Put your component styling within the Tailwind utilities layer. 
