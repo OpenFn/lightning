@@ -76,7 +76,6 @@ defmodule Lightning.Projects.Project do
     |> validate_required([:name])
     |> validate_format(:name, ~r/^[a-z\-\d]+$/)
     |> validate_dataclip_retention_period()
-    |> validate_inclusion(:concurrency, [1, nil])
     |> validate_inclusion(:history_retention_period, data_retention_options())
     |> validate_inclusion(:dataclip_retention_period, data_retention_options())
   end
@@ -125,7 +124,7 @@ defmodule Lightning.Projects.Project do
 
   def project_with_users_changeset(project, attrs) do
     project
-    |> cast(attrs, [:id, :name, :description])
+    |> cast(attrs, [:id, :name, :description, :concurrency])
     |> cast_assoc(:project_users,
       required: true,
       sort_param: :users_sort

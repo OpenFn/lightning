@@ -373,7 +373,7 @@ defmodule LightningWeb.Components.NewInputs do
       |> assign_new(:values, fn ->
         # TODO: placeholder for alternative values, like "0" and "1",
         # or "false" and "true" when this might replace the other toggle component
-        [nil, "1"]
+        [get_in(assigns, [:rest, :max]), "1"]
         |> Enum.map(fn v ->
           Phoenix.HTML.html_escape(v) |> Phoenix.HTML.safe_to_string()
         end)

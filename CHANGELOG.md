@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Allow workflow and project concurrency progress windows
+  [#2995](https://github.com/OpenFn/lightning/issues/2995)
+
 ### Changed
 
 - Added alphabetical sort to credential and Oauth2 client lists.

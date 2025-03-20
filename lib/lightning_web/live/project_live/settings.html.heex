@@ -176,21 +176,14 @@
             </div>
             <div class="grid grid-cols md:col-span-2">
               <div class="flex items-center gap-x-4 justify-between">
-                <.input
-                  type="integer-toggle"
+                <.live_component
+                  :if={assigns[:concurrency_input_component]}
+                  module={assigns[:concurrency_input_component]}
+                  id="concucurrency-input-component"
                   field={f[:concurrency]}
-                  disabled={!@can_edit_project}
-                  label=""
+                  project={@project}
+                  disabled={not @can_edit_project}
                 />
-                <span class="flex grow flex-col">
-                  <.label>Disable parallel run execution</.label>
-                  <span
-                    class="text-sm text-gray-500"
-                    id="concurrency-description"
-                  >
-                    Process all runs in this project no more than one at a time.
-                  </span>
-                </span>
               </div>
               <div></div>
               <div class="ml-2 mt-1"></div>

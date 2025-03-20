@@ -110,6 +110,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :can_edit_run_settings, :boolean, required: true
   attr :project_concurrency_disabled, :boolean, required: true
   attr :project_id, :string, required: true
+  attr :max_concurrency, :integer, required: true
 
   def workflow_settings(assigns) do
     ~H"""
@@ -177,6 +178,8 @@ defmodule LightningWeb.WorkflowLive.Components do
                 )
               }
               class="w-4 text-right"
+              min="1"
+              max={@max_concurrency}
             />
           </div>
         </div>
