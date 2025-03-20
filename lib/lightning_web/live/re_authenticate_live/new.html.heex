@@ -26,7 +26,7 @@
         <p class="text-center">
           Signed in as:
           <span class="font-bold">
-            <%= "#{@current_user.first_name} #{@current_user.last_name}" %>
+            {"#{@current_user.first_name} #{@current_user.last_name}"}
           </span>
         </p>
       </div>
@@ -43,7 +43,7 @@
         </h1>
         <%= if @error_message do %>
           <div class="alert alert-danger" role="alert">
-            <%= @error_message %>
+            {@error_message}
           </div>
         <% end %>
         <.form

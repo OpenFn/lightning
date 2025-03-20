@@ -19,15 +19,44 @@ and this project adheres to
 
 - Allow workflow and project concurrency progress windows
   [#2995](https://github.com/OpenFn/lightning/issues/2995)
+
+### Changed
+
+- Update Phoenix LiveView to 1.0.5, Petal Components to 2.9.0 and TailwindCSS to
+  v4 [#3033](https://github.com/OpenFn/lightning/pull/3033)
+
+### Fixed
+
+## [v2.11.0] - 2025-03-19
+
+### Added
+
 - Update Collections admin UI storage counter after deleting all
   [#2986](https://github.com/OpenFn/lightning/issues/2986)
+- Refactor OAuth credentials to reuse existing refresh tokens for same scopes
+  [#2908](https://github.com/OpenFn/lightning/issues/2908) \
+  ⚠️️ Please note that you will need to migrate your existing OAuth credentials.
+  To do that run the following command: `mix run priv/repo/migrate_oauth_credentials.exs`
+  for local setup or `docker exec -it <lightning_container_name> /app/bin/lightning eval "Lightning.Credentials.OauthMigration.run()"`
+  for production environments.
 
 ### Changed
 
 - Do not include `v` param in workflow links when it is latest
   [#2941](https://github.com/OpenFn/lightning/issues/2941)
+- Use dropdown instead of modal for the log level filter
+  [#2980](https://github.com/OpenFn/lightning/issues/2980)
+- Upgrade esbuild to 0.25.0
+  [#2962](https://github.com/OpenFn/lightning/issues/2962)
 
 ### Fixed
+
+- Fix broken highlighter for selected step in the log viewer
+  [#2980](https://github.com/OpenFn/lightning/issues/2980)
+- Don't delete latest snapshot when deleting unused snaphots in workorders
+  [#2996](https://github.com/OpenFn/lightning/issues/2996)
+- Don't allow users to disable edges coming from a trigger
+  [#3008](https://github.com/OpenFn/lightning/issues/3008)
 
 ## [v2.10.16] - 2025-02-28
 

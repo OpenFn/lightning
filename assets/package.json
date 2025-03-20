@@ -3,10 +3,12 @@
   "name": "lightning",
   "main": "js/app.js",
   "scripts": {
-    "start": "node dev-server.mjs",
-    "test": "npx ava ./test/index.test.ts",
-    "test-report": "npx ava --tap ./test/index.test.ts | tap-xunit > ../test/reports/ava.xml",
-    "test:snapshots": "TS_NODE_TRANSPILE_ONLY=1 ts-node --project tsconfig.json test/workflow-snapshots.tsx"
+    "start": "node dev-server.js",
+    "test": "NODE_OPTIONS=\"--loader=ts-node/esm --no-warnings\" TS_NODE_PROJECT=tsconfig.test.json ava ./test/index.test.ts",
+    "test-report": "NODE_OPTIONS=\"--loader=ts-node/esm --no-warnings\" TS_NODE_PROJECT=tsconfig.test.json ava --tap ./test/index.test.ts | tap-xunit > ../test/reports/ava.xml",
+    "test:snapshots": "NODE_OPTIONS=\"--loader=ts-node/esm --no-warnings\" TS_NODE_PROJECT=tsconfig.test.json node test/workflow-snapshots.tsx",
+    "check": "tsc --build",
+    "lint": "eslint"
   },
   "license": "LGPLv3",
   "dependencies": {
@@ -34,29 +36,44 @@
     "zustand": "^4.3.7"
   },
   "devDependencies": {
+    "@eslint-community/eslint-plugin-eslint-comments": "^4.4.1",
+    "@eslint/js": "^9.21.0",
     "@openfn/ws-worker": "^1.11.1",
+    "@total-typescript/ts-reset": "^0.6.1",
+    "@tsconfig/node-lts": "^22.0.1",
+    "@tsconfig/recommended": "^1.0.8",
+    "@tsconfig/strictest": "^2.0.5",
+    "@types/jsonpath": "^0.2.4",
     "@types/marked": "^4.0.8",
+    "@types/node": "^18.0.0",
+    "@types/phoenix": "^1.6.6",
+    "@types/phoenix_live_view": "^0.20.0",
     "@types/react": "^18.0.15",
     "@types/react-dom": "^18.0.6",
-    "ava": "^5.1.0",
+    "@typescript-eslint/parser": "^8.26.0",
+    "ava": "^6.2.0",
     "esbuild": "^0.17.18",
+    "eslint": "^9.21.0",
+    "eslint-import-resolver-typescript": "^3.8.3",
+    "eslint-plugin-compat": "^6.0.2",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-promise": "^7.2.1",
+    "eslint-plugin-react": "^7.37.4",
+    "eslint-plugin-react-compiler": "^19.0.0-beta-40c6c23-20250301",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^16.0.0",
     "puppeteer": "^23.0.2",
     "tap-xunit": "^2.4.1",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "tslib": "^2.8.1",
+    "type-fest": "^4.37.0",
+    "typescript": "^5.8.2",
+    "typescript-eslint": "^8.26.0"
   },
   "type": "module",
-  "ava": {
-    "extensions": {
-      "ts": "module"
-    },
-    "environmentVariables": {
-      "TS_NODE_TRANSPILE_ONLY": "true"
-    },
-    "nodeArguments": [
-      "--loader=ts-node/esm"
-    ],
-    "files": [
-      "test/**/*test.ts"
-    ]
-  }
+  "browserslist": [
+    "defaults",
+    "not op_mini all"
+  ]
 }

@@ -7,6 +7,7 @@ defmodule LightningWeb.RunChannel do
   import LightningWeb.ChannelHelpers
 
   alias Lightning.Credentials
+  alias Lightning.Credentials.Credential
   alias Lightning.Repo
   alias Lightning.Runs
   alias Lightning.Scrubber
@@ -89,6 +90,7 @@ defmodule LightningWeb.RunChannel do
 
     with credential <- Runs.get_credential(run, id) || :not_found,
          {:ok, credential} <- Credentials.maybe_refresh_token(credential),
+         credential <- maybe_merge_oauth(credential),
          samples <- Credentials.sensitive_values_for(credential),
          basic_auth <- Credentials.basic_auth_for(credential),
          {:ok, scrubber} <- update_scrubber(scrubber, samples, basic_auth) do
@@ -218,5 +220,14 @@ defmodule LightningWeb.RunChannel do
 
   defp remove_empty_values(credential_body) do
     Map.reject(credential_body, fn {_key, val} -> val == "" end)
+  end
+
+  defp maybe_merge_oauth(%Credential{schema: "oauth"} = credential) do
+    merged_body = Map.merge(credential.body, credential.oauth_token.body)
+    %{credential | body: merged_body}
+  end
+
+  defp maybe_merge_oauth(%Credential{} = credential) do
+    credential
   end
 end

@@ -39,7 +39,8 @@ defmodule LightningWeb.CollectionLiveTest do
           project: build(:project, name: "Project B")
         )
 
-      {:ok, view, _html} = live(conn, ~p"/settings/collections")
+      {:ok, view, _html} =
+        live(conn, ~p"/settings/collections", on_error: :raise)
 
       assert has_element?(view, "tr#collections-table-row-#{collection_1.id}")
       assert has_element?(view, "tr#collections-table-row-#{collection_2.id}")
@@ -49,7 +50,8 @@ defmodule LightningWeb.CollectionLiveTest do
       insert(:collection, name: "B Collection")
       insert(:collection, name: "A Collection")
 
-      {:ok, view, _html} = live(conn, ~p"/settings/collections")
+      {:ok, view, _html} =
+        live(conn, ~p"/settings/collections", on_error: :raise)
 
       sorted_names = get_sorted_collection_names(view)
       assert sorted_names == ["A Collection", "B Collection"]
@@ -62,7 +64,8 @@ defmodule LightningWeb.CollectionLiveTest do
     test "Superuser can delete a collection", %{conn: conn} do
       collection = insert(:collection, name: "Delete Me")
 
-      {:ok, view, _html} = live(conn, ~p"/settings/collections")
+      {:ok, view, _html} =
+        live(conn, ~p"/settings/collections", on_error: :raise)
 
       assert has_element?(view, "tr#collections-table-row-#{collection.id}")
 
@@ -82,7 +85,9 @@ defmodule LightningWeb.CollectionLiveTest do
       user: user
     } do
       project = insert(:project, project_users: [%{user: user}])
-      {:ok, view, _html} = live(conn, ~p"/settings/collections")
+
+      {:ok, view, _html} =
+        live(conn, ~p"/settings/collections", on_error: :raise)
 
       assert has_element?(view, "#collection-form-new")
 

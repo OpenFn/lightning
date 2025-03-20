@@ -27,13 +27,14 @@ defmodule LightningWeb.DataclipLiveTest do
             :show,
             project_scoped.id,
             dataclip.id
-          )
+          ),
+          on_error: :raise
         )
 
       assert html =~ dataclip.id
 
       dataclip_text =
-        element(view, "#dataclip-form_body")
+        element(view, "textarea[name='dataclip[body]']")
         |> render()
         |> Floki.parse_fragment!()
         |> Floki.text()
@@ -51,7 +52,8 @@ defmodule LightningWeb.DataclipLiveTest do
             :show,
             project_unscoped.id,
             dataclip.id
-          )
+          ),
+          on_error: :raise
         )
 
       assert error ==

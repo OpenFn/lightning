@@ -33,7 +33,7 @@ defmodule LightningWeb.BackupCodesLiveTest do
     conn = log_in_user(conn, user)
 
     assert {:error, {:redirect, %{to: "/auth/confirm_access"}}} =
-             live(conn, ~p"/profile/auth/backup_codes")
+             live(conn, ~p"/profile/auth/backup_codes", on_error: :raise)
   end
 
   test "user with sudo_mode? enabled can view backup codes", %{
@@ -59,7 +59,8 @@ defmodule LightningWeb.BackupCodesLiveTest do
     project_3 =
       insert(:project, project_users: [%{user: build(:user), role: :owner}])
 
-    {:ok, view, _html} = live(conn, ~p"/profile/auth/backup_codes")
+    {:ok, view, _html} =
+      live(conn, ~p"/profile/auth/backup_codes", on_error: :raise)
 
     assert view
            |> has_element?(
@@ -84,7 +85,8 @@ defmodule LightningWeb.BackupCodesLiveTest do
     conn: conn,
     user: user
   } do
-    {:ok, view, _html} = live(conn, ~p"/profile/auth/backup_codes")
+    {:ok, view, _html} =
+      live(conn, ~p"/profile/auth/backup_codes", on_error: :raise)
 
     render_click(view, "regenerate-backup-codes", %{})
 

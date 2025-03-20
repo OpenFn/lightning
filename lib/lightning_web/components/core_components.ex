@@ -47,7 +47,7 @@ defmodule LightningWeb.CoreComponents do
       assigns |> assign(:errors, Enum.map(field.errors, &translate_error(&1)))
 
     ~H"""
-    <.error :for={msg <- @errors}><%= msg %></.error>
+    <.error :for={msg <- @errors}>{msg}</.error>
     """
   end
 
@@ -56,7 +56,7 @@ defmodule LightningWeb.CoreComponents do
       assigns |> assign(:errors, Enum.map(errors, &translate_error(&1)))
 
     ~H"""
-    <.error :for={msg <- @errors}><%= msg %></.error>
+    <.error :for={msg <- @errors}>{msg}</.error>
     """
   end
 

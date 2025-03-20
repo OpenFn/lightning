@@ -5,7 +5,9 @@ defmodule Lightning.Credentials.Credential do
   use Lightning.Schema
 
   alias Lightning.Accounts.User
+  alias Lightning.Credentials
   alias Lightning.Credentials.OauthClient
+  alias Lightning.Credentials.OauthToken
   alias Lightning.Projects.ProjectCredential
 
   @type t :: %__MODULE__{
@@ -23,6 +25,7 @@ defmodule Lightning.Credentials.Credential do
     field :transfer_status, Ecto.Enum, values: [:pending, :completed]
 
     belongs_to :user, User
+    belongs_to :oauth_token, OauthToken
     belongs_to :oauth_client, OauthClient
 
     has_many :project_credentials, ProjectCredential
@@ -39,7 +42,7 @@ defmodule Lightning.Credentials.Credential do
       :body,
       :production,
       :user_id,
-      :oauth_client_id,
+      :oauth_token_id,
       :schema,
       :scheduled_deletion,
       :transfer_status
@@ -50,33 +53,45 @@ defmodule Lightning.Credentials.Credential do
       message: "you have another credential with the same name"
     )
     |> assoc_constraint(:user)
-    |> assoc_constraint(:oauth_client)
     |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/,
       message: "credential name has invalid format"
     )
-    |> validate_oauth()
+    |> maybe_validate_oauth_fields(attrs)
   end
 
-  defp validate_oauth(changeset) do
-    if get_field(changeset, :schema) == "oauth" do
-      body = get_field(changeset, :body) || %{}
+  defp maybe_validate_oauth_fields(changeset, attrs) do
+    is_oauth = get_field(changeset, :schema) == "oauth"
+    reusing_token? = !get_field(changeset, :oauth_token_id)
 
-      body = Enum.into(body, %{}, fn {k, v} -> {to_string(k), v} end)
+    if is_oauth && reusing_token? do
+      user_id = get_field(changeset, :user_id)
 
-      required_fields = ["access_token", "refresh_token"]
-      expires_fields = ["expires_in", "expires_at"]
+      oauth_client_id = Map.get(attrs, "oauth_client_id")
 
-      has_required_fields? = Enum.all?(required_fields, &Map.has_key?(body, &1))
-      has_expires_field? = Enum.any?(expires_fields, &Map.has_key?(body, &1))
+      token_data = Map.get(attrs, "oauth_token")
 
-      if has_required_fields? and has_expires_field? do
-        changeset
-      else
+      if is_nil(token_data) do
         add_error(
           changeset,
-          :body,
-          "Invalid OAuth token. Missing required fields: access_token, refresh_token, and either expires_in or expires_at."
+          :oauth_token,
+          "OAuth credentials require token data"
         )
+      else
+        scopes =
+          case OauthToken.extract_scopes(token_data) do
+            {:ok, extracted_scopes} -> extracted_scopes
+            :error -> nil
+          end
+
+        case Credentials.validate_oauth_token_data(
+               token_data,
+               user_id,
+               oauth_client_id,
+               scopes
+             ) do
+          {:ok, _} -> changeset
+          {:error, reason} -> add_error(changeset, :oauth_token, reason)
+        end
       end
     else
       changeset

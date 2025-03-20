@@ -1,4 +1,4 @@
-import { PhoenixHook } from './PhoenixHook';
+import type { PhoenixHook } from './PhoenixHook';
 
 const LogLineHighlight = {
   mounted() {
@@ -19,6 +19,9 @@ const LogLineHighlight = {
       }
     });
   },
-} as PhoenixHook<{ highlightRows: () => void }, { highlightId: null | string }>;
+} as PhoenixHook<
+  { highlightRows: () => void },
+  { highlightId?: undefined | string }
+>;
 
 export default LogLineHighlight;

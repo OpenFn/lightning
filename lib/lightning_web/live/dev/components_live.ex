@@ -83,9 +83,9 @@ defmodule LightningWeb.Dev.ComponentsLive do
     ~H"""
     <li class="px-6 py-4 flex flex-col gap-y-4">
       <div class="text-right font-bold">
-        <%= @title %>
+        {@title}
       </div>
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </li>
     """
   end

@@ -1,4 +1,4 @@
-import { PhoenixHook } from '../hooks/PhoenixHook';
+import type { PhoenixHook } from '../hooks/PhoenixHook';
 import type { mount } from './component';
 
 type DataclipViewer = PhoenixHook<
@@ -10,7 +10,7 @@ type DataclipViewer = PhoenixHook<
 >;
 
 export default {
-  mounted(this: DataclipViewer) {
+  mounted() {
     const editorContainer = document.getElementById(this.el.dataset.target);
     this.componentModule = import('./component.js');
 

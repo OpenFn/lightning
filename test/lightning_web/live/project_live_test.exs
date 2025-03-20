@@ -303,7 +303,7 @@ defmodule LightningWeb.ProjectLiveTest do
           Routes.project_index_path(conn, :index)
         )
 
-      assert has_element?(index_live, "#project-#{project.id}")
+      assert has_element?(index_live, "#delete-#{project.id}")
     end
 
     test "allows a superuser to cancel scheduled deletion on a project", %{
@@ -313,10 +313,10 @@ defmodule LightningWeb.ProjectLiveTest do
         project_fixture(scheduled_deletion: Timex.now() |> Timex.shift(days: 7))
 
       {:ok, index_live, _html} =
-        live(conn, Routes.project_index_path(conn, :index))
+        live(conn, Routes.project_index_path(conn, :index), on_error: :raise)
 
       assert index_live
-             |> element("#project-#{project.id} a", "Cancel deletion")
+             |> element("#cancel-deletion-#{project.id}", "Cancel deletion")
              |> render_click() =~ "Project deletion canceled"
     end
 
@@ -328,11 +328,11 @@ defmodule LightningWeb.ProjectLiveTest do
         project_fixture(scheduled_deletion: Timex.now() |> Timex.shift(days: 7))
 
       {:ok, index_live, _html} =
-        live(conn, Routes.project_index_path(conn, :index))
+        live(conn, Routes.project_index_path(conn, :index), on_error: :raise)
 
       {:ok, form_live, _html} =
         index_live
-        |> element("#project-#{project.id} a", "Delete now")
+        |> element("#delete-now-#{project.id}", "Delete now")
         |> render_click()
         |> follow_redirect(
           conn,
@@ -362,7 +362,8 @@ defmodule LightningWeb.ProjectLiveTest do
       project =
         insert(:project, project_users: [%{role: :owner, user_id: user1.id}])
 
-      {:ok, view, _html} = live(conn, ~p"/settings/projects/#{project.id}")
+      {:ok, view, _html} =
+        live(conn, ~p"/settings/projects/#{project.id}", on_error: :raise)
 
       view
       |> form("#project-form",
@@ -493,7 +494,8 @@ defmodule LightningWeb.ProjectLiveTest do
           project_users: [%{user_id: another_user.id}]
         )
 
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project_1}/w")
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project_1}/w", on_error: :raise)
 
       assert view
              |> element(
@@ -516,7 +518,8 @@ defmodule LightningWeb.ProjectLiveTest do
              )
              |> has_element?()
 
-      {:ok, view, html} = live(conn, ~p"/projects/#{project_1}/w")
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project_1}/w", on_error: :raise)
 
       assert html =~ project_1.name
 
@@ -532,7 +535,8 @@ defmodule LightningWeb.ProjectLiveTest do
              |> element("#option-#{project_3.id}")
              |> has_element?()
 
-      {:ok, view, html} = live(conn, ~p"/projects/#{project_2}/w")
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project_2}/w", on_error: :raise)
 
       assert html =~ project_2.name
 
@@ -548,7 +552,7 @@ defmodule LightningWeb.ProjectLiveTest do
              |> element("#option-#{project_3.id}")
              |> has_element?()
 
-      assert live(conn, ~p"/projects/#{project_3}/w") ==
+      assert live(conn, ~p"/projects/#{project_3}/w", on_error: :raise) ==
                {:error,
                 {:redirect, %{flash: %{"nav" => :not_found}, to: "/projects"}}}
     end
@@ -560,10 +564,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
     test "access project settings page", %{conn: conn, project: project} do
       {:ok, _view, html} =
-        live(
-          conn,
-          ~p"/projects/#{project}/settings"
-        )
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
       assert html =~ "Project settings"
     end
@@ -578,10 +579,7 @@ defmodule LightningWeb.ProjectLiveTest do
         |> List.first()
 
       {:ok, _view, html} =
-        live(
-          conn,
-          ~p"/projects/#{project}/settings"
-        )
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
       assert html =~ "Collaborator"
       assert html =~ "Role"
@@ -622,10 +620,8 @@ defmodule LightningWeb.ProjectLiveTest do
       credential = Lightning.Repo.preload(credential, :user)
 
       {:ok, _view, html} =
-        live(
-          conn,
-          ~p"/projects/#{project}/settings" <>
-            "#credentials"
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
         )
 
       assert html =~ "Name"
@@ -655,10 +651,8 @@ defmodule LightningWeb.ProjectLiveTest do
           )
 
         {:ok, view, html} =
-          live(
-            conn,
-            ~p"/projects/#{project}/settings" <>
-              "#credentials"
+          live(conn, ~p"/projects/#{project}/settings#credentials",
+            on_error: :raise
           )
 
         credential_name = Lightning.Name.generate()
@@ -702,10 +696,8 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       {:ok, view, html} =
-        live(
-          conn,
-          ~p"/projects/#{project}/settings" <>
-            "#credentials"
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
         )
 
       credential_name = "My Credential"
@@ -750,10 +742,8 @@ defmodule LightningWeb.ProjectLiveTest do
       credential_name = "My Credential"
 
       {:ok, view, html} =
-        live(
-          conn,
-          ~p"/projects/#{project}/settings" <>
-            "#credentials"
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
         )
 
       refute html =~ credential_name
@@ -775,10 +765,7 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       {:ok, view, html} =
-        live(
-          conn,
-          ~p"/projects/#{project}/settings"
-        )
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
       assert html =~ "Project settings"
 
@@ -819,10 +806,7 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       {:ok, view, html} =
-        live(
-          conn,
-          ~p"/projects/#{project}/settings"
-        )
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
       assert html =~ "Project settings"
 
@@ -853,10 +837,7 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       {:ok, view, html} =
-        live(
-          conn,
-          ~p"/projects/#{project}/settings"
-        )
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
       assert html =~ "Project settings"
 
@@ -879,21 +860,16 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       {:ok, view, html} =
-        live(
-          conn,
-          ~p"/projects/#{project}/settings"
-        )
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
       assert html =~ "Project settings"
 
       assert view
-             |> has_element?(
-               "input[disabled='disabled'][id='project-settings-form_name']"
-             )
+             |> has_element?("input[disabled='disabled'][name='project[name]']")
 
       assert view
              |> has_element?(
-               "textarea[disabled='disabled'][id='project-settings-form_description']"
+               "textarea[disabled='disabled'][name='project[description]']"
              )
 
       assert view |> has_element?("button[disabled][type=submit]")
@@ -924,10 +900,8 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project}/settings" <>
-            "#collaboration"
+        live(conn, ~p"/projects/#{project}/settings" <> "#collaboration",
+          on_error: :raise
         )
 
       authenticated_user_project_user =
@@ -963,7 +937,7 @@ defmodule LightningWeb.ProjectLiveTest do
              )
 
       view
-      |> element("#flash")
+      |> element("[data-flash-kind='info']")
       |> render_hook("lv:clear-flash")
 
       form_id = "#digest-#{authenticated_user_project_user.id}"
@@ -995,10 +969,7 @@ defmodule LightningWeb.ProjectLiveTest do
         {conn, _user} = setup_project_user(conn, project, role)
 
         {:ok, view, html} =
-          live(
-            conn,
-            ~p"/projects/#{project}/settings"
-          )
+          live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
         assert has_element?(view, "#security-tab")
         assert html =~ "Multi-Factor Authentication"
@@ -1016,10 +987,7 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       {:ok, view, html} =
-        live(
-          conn,
-          ~p"/projects/#{project}/settings"
-        )
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
       assert html =~ "Project settings"
 
@@ -1042,10 +1010,7 @@ defmodule LightningWeb.ProjectLiveTest do
         {conn, _user} = setup_project_user(conn, project, role)
 
         {:ok, view, html} =
-          live(
-            conn,
-            ~p"/projects/#{project}/settings"
-          )
+          live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
         assert html =~ "Project settings"
 
@@ -1073,10 +1038,7 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       {:ok, _view, html} =
-        live(
-          conn,
-          ~p"/projects/#{project}/settings"
-        )
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
       assert html =~ "Project settings"
 
@@ -1087,7 +1049,8 @@ defmodule LightningWeb.ProjectLiveTest do
         assert {:error, {:redirect, %{to: "/mfa_required"}}} =
                  live(
                    conn,
-                   ~p"/projects/#{project}/settings"
+                   ~p"/projects/#{project}/settings",
+                   on_error: :raise
                  )
       end)
     end
@@ -1099,10 +1062,7 @@ defmodule LightningWeb.ProjectLiveTest do
       for conn <-
             build_project_user_conns(project, [:editor, :admin, :owner, :viewer]) do
         {:ok, _view, html} =
-          live(
-            conn,
-            ~p"/projects/#{project}/settings"
-          )
+          live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
         for auth_method <- auth_methods do
           assert html =~ auth_method.name
@@ -1120,7 +1080,8 @@ defmodule LightningWeb.ProjectLiveTest do
         {:ok, view, _html} =
           live(
             conn,
-            settings_path
+            settings_path,
+            on_error: :raise
           )
 
         assert view |> element("button#add_new_auth_method") |> has_element?()
@@ -1168,7 +1129,8 @@ defmodule LightningWeb.ProjectLiveTest do
         {:ok, _view, html} =
           live(
             conn,
-            settings_path
+            settings_path,
+            on_error: :raise
           )
 
         assert html =~ credential_name
@@ -1178,7 +1140,8 @@ defmodule LightningWeb.ProjectLiveTest do
         {:ok, view, _html} =
           live(
             conn,
-            settings_path
+            settings_path,
+            on_error: :raise
           )
 
         assert view
@@ -1206,10 +1169,7 @@ defmodule LightningWeb.ProjectLiveTest do
       conn = log_in_user(conn, project_user.user)
 
       {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project}/settings"
-        )
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
       assert view
              |> element("button#add_new_auth_method:disabled")
@@ -1234,7 +1194,8 @@ defmodule LightningWeb.ProjectLiveTest do
         {:ok, view, _html} =
           live(
             conn,
-            settings_path
+            settings_path,
+            on_error: :raise
           )
 
         assert view
@@ -1276,7 +1237,8 @@ defmodule LightningWeb.ProjectLiveTest do
         {:ok, view, _html} =
           live(
             conn,
-            settings_path
+            settings_path,
+            on_error: :raise
           )
 
         assert view
@@ -1311,7 +1273,8 @@ defmodule LightningWeb.ProjectLiveTest do
 
       conn = log_in_user(conn, project_user.user)
 
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project}/settings")
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
       assert view
              |> element(
@@ -1347,10 +1310,7 @@ defmodule LightningWeb.ProjectLiveTest do
       conn = log_in_user(conn, project_user.user)
 
       {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project}/settings"
-        )
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
       assert view
              |> element("a#edit_auth_method_link_#{auth_method.id}")
@@ -1514,7 +1474,7 @@ defmodule LightningWeb.ProjectLiveTest do
           attrs: %{text: banner_message},
           function: fn assigns ->
             ~H"""
-            <%= @text %>
+            {@text}
             """
           end
         }
@@ -1619,15 +1579,15 @@ defmodule LightningWeb.ProjectLiveTest do
           settings_path
         )
 
-      refute view
-             |> element("a#delete_auth_method_link_#{auth_method.id}")
-             |> has_element?()
+      assert view
+             |> has_element?(
+               "a#delete_auth_method_link_#{auth_method.id}.cursor-not-allowed"
+             )
 
       modal_id = "delete_auth_#{auth_method.id}_modal"
 
       refute view
-             |> element("#delete_auth_method_#{modal_id}_#{auth_method.id}")
-             |> has_element?()
+             |> has_element?("#delete_auth_method_#{modal_id}_#{auth_method.id}")
     end
   end
 
@@ -1903,7 +1863,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       html =
         view
-        |> element("select#retention-settings-form_history_retention_period")
+        |> element("select[name='project[history_retention_period]']")
         |> render()
 
       for option <- expected_options do
@@ -1938,7 +1898,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert has_element?(
                view,
-               "#retention-settings-form_history_retention_period:disabled"
+               "select[name='project[history_retention_period]']:disabled"
              )
     end
 
@@ -1959,7 +1919,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert has_element?(
                view,
-               "#retention-settings-form_dataclip_retention_period:disabled"
+               "select[name='project[dataclip_retention_period]']:disabled"
              )
 
       view
@@ -1972,12 +1932,12 @@ defmodule LightningWeb.ProjectLiveTest do
 
       refute has_element?(
                view,
-               "#retention-settings-form_dataclip_retention_period:disabled"
+               "select[name='project[dataclip_retention_period]']:disabled"
              )
 
       assert has_element?(
                view,
-               "#retention-settings-form_dataclip_retention_period"
+               "select[name='project[dataclip_retention_period]']"
              )
     end
 
@@ -1996,7 +1956,7 @@ defmodule LightningWeb.ProjectLiveTest do
       selected_dataclip_option =
         element(
           view,
-          "#retention-settings-form_dataclip_retention_period option[selected]"
+          "select[name='project[dataclip_retention_period]'] option[selected]"
         )
 
       # nothing has been selected for the dataclip period
@@ -2014,7 +1974,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       refute has_element?(
                view,
-               "#retention-settings-form_dataclip_retention_period:disabled"
+               "#retention-settings-form select[name='project[dataclip_retention_period]']:disabled"
              )
 
       # 7 Days has been selected for the dataclip period
@@ -2031,7 +1991,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert has_element?(
                view,
-               "#retention-settings-form_dataclip_retention_period:disabled"
+               "#retention-settings-form select[name='project[dataclip_retention_period]']:disabled"
              )
 
       # 7 days gets cleared. Nothing is now selected
@@ -3908,7 +3868,7 @@ defmodule LightningWeb.ProjectLiveTest do
           {:error, :disabled,
            %{
              function: fn assigns ->
-               ~H"<p>I am an error message that says: <%= @error %></p>"
+               ~H"<p>I am an error message that says: {@error}</p>"
              end,
              attrs: %{error: error_msg}
            }}
@@ -4835,7 +4795,7 @@ defmodule LightningWeb.ProjectLiveTest do
           {:error, :disabled,
            %{
              function: fn assigns ->
-               ~H"<p>I am an error message that says: <%= @error %></p>"
+               ~H"<p>I am an error message that says: {@error}</p>"
              end,
              attrs: %{error: error_msg}
            }}
@@ -4959,7 +4919,7 @@ defmodule LightningWeb.ProjectLiveTest do
             {:error, :disabled,
              %{
                function: fn assigns ->
-                 ~H"<p>I am an error message that says: <%= @error %></p>"
+                 ~H"<p>I am an error message that says: {@error}</p>"
                end,
                attrs: %{error: error_msg}
              }}

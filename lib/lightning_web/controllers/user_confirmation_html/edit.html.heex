@@ -14,15 +14,15 @@
         action={Routes.user_confirmation_path(@conn, :update, @token)}
       >
         <div class="grid grid-cols-6 gap-6">
-          <div class="col-span-6 md:col-span-3 sm:col-span-4 border rounded-md shadow-sm bg-white p-6">
+          <div class="col-span-6 md:col-span-3 sm:col-span-4 border rounded-md shadow-xs bg-white p-6">
             <%= if error = Phoenix.Flash.get(@flash, :error) do %>
               <div class="alert alert-danger" role="alert">
-                <%= error %>
+                {error}
               </div>
             <% end %>
             <%= if info = Phoenix.Flash.get(@flash, :info) do %>
               <p class="alert alert-info" role="alert">
-                <%= info %>
+                {info}
               </p>
             <% end %>
             <div class="grid grid-flow-row gap-4 auto-rows-max">

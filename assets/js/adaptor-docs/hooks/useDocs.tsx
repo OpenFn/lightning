@@ -1,12 +1,15 @@
 import { useState, useEffect, useMemo } from 'react';
-import { describePackage, PackageDescription } from '@openfn/describe-package';
+import {
+  describePackage,
+  type PackageDescription,
+} from '@openfn/describe-package';
 
 // Describe package is slow right now even if data is available
 // This in-mamory cache will help when switching tabs etc
 const cache: Record<string, PackageDescription | null | false> = {};
 
 const useDocs = (specifier: string) => {
-  const [docs, setDocs] = useState<PackageDescription | false>(null);
+  const [docs, setDocs] = useState<PackageDescription | null | false>(null);
 
   useEffect(() => {
     if (cache.hasOwnProperty(specifier)) {

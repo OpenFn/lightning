@@ -1,11 +1,11 @@
-import React, {
-  SyntheticEvent,
+import {
+  type SyntheticEvent,
   memo,
   useCallback,
   useRef,
   useState,
 } from 'react';
-import { Handle, NodeProps, Position } from 'reactflow';
+import { Handle, type NodeProps, Position } from 'reactflow';
 import {
   CheckCircleIcon,
   InformationCircleIcon,
@@ -40,7 +40,7 @@ const dispatch = (
 };
 
 const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
-  const textRef = useRef<HTMLInputElement>();
+  const textRef = useRef<HTMLInputElement>(null);
 
   const [validationResult, setValidationResult] = useState<ValidationResult>({
     isValid: true,
@@ -52,7 +52,7 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
       handleCancel();
       return;
     }
-    if (evt.target.value.trim() === '') {
+    if (evt.currentTarget.value.trim() === '') {
       setValidationResult({
         isValid: false,
         message: 'Name cannot be empty.',
@@ -92,28 +92,22 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
   };
 
   // TODO what if a name hasn't been entered?
-  const handleCommit = useCallback(
-    (evt?: SyntheticEvent) => {
-      if (textRef.current) {
-        dispatch(textRef.current, 'commit-placeholder', {
-          id,
-          name: textRef.current.value,
-        });
-      }
-      evt?.stopPropagation();
-    },
-    [textRef]
-  );
+  const handleCommit = useCallback((evt?: SyntheticEvent) => {
+    if (textRef.current) {
+      dispatch(textRef.current, 'commit-placeholder', {
+        id,
+        name: textRef.current.value,
+      });
+    }
+    evt?.stopPropagation();
+  }, []);
 
-  const handleCancel = useCallback(
-    (evt?: SyntheticEvent) => {
-      if (textRef.current) {
-        dispatch(textRef.current, 'cancel-placeholder', { id });
-      }
-      evt?.stopPropagation();
-    },
-    [textRef]
-  );
+  const handleCancel = useCallback((evt?: SyntheticEvent) => {
+    if (textRef.current) {
+      dispatch(textRef.current, 'cancel-placeholder', { id });
+    }
+    evt?.stopPropagation();
+  }, []);
 
   return (
     <div
@@ -123,7 +117,7 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
         'h-full',
         'p-1',
         'rounded-md',
-        'shadow-sm',
+        'shadow-xs',
         'text-center',
         'text-xs',
         'border-dashed',
@@ -131,7 +125,7 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
         validationResult.isValid
           ? 'border-indigo-500'
           : 'border-red-500 text-red-500',
-        selected ? 'border-opacity-70' : 'border-opacity-30',
+        selected ? 'border-indigo-500/70' : 'border-indigo-500/30',
       ].join(' ')}
       style={{
         width: '180px',

@@ -127,7 +127,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
        changeset: changeset,
        update_body: update_body,
        projects: projects,
-       selected_oauth_client: assigns.credential.oauth_client,
+       selected_oauth_client: assigns.oauth_client,
        schema: schema,
        selected_project: nil,
        selected_projects: selected_projects,
@@ -362,7 +362,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
               disabled={!@schema}
               phx-click="change_page"
               phx-target={@myself}
-              class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
+              class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 sm:ml-3 sm:w-auto"
             >
               Configure credential
             </button>
@@ -371,7 +371,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
               type="button"
               phx-click="close_modal"
               phx-target={@myself}
-              class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+              class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
             >
               Cancel
             </button>
@@ -501,7 +501,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
                   phx-target={@myself}
                   id={"salesforce_sandbox_instance_checkbox_#{@credential.id || "new"}"}
                 />
-
                 <.input
                   :if={@schema in ["salesforce_oauth"]}
                   type="text"
@@ -513,7 +512,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
                   phx-target={@myself}
                   id={"salesforce_api_version_input_#{@credential.id || "new"}"}
                 />
-                <%= fieldset %>
+                {fieldset}
               </div>
 
               <div class="space-y-4">
@@ -559,14 +558,14 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
                 }
                 type="submit"
                 disabled={!@changeset.valid? or @scopes_changed or @sandbox_changed}
-                class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
+                class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 sm:ml-3 sm:w-auto"
               >
                 Save
               </button>
               <button
                 type="button"
                 phx-click={JS.navigate(@return_to)}
-                class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+                class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
               >
                 Cancel
               </button>

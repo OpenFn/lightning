@@ -1,4 +1,4 @@
-import React, {
+import {
   useState,
   useEffect,
   useCallback,
@@ -173,7 +173,7 @@ export default () => {
           </select>
           <button
             id="next-workflow"
-            className="bg-primary-500 mx-2 py-2 px-4 border border-transparent shadow-sm rounded-md text-white"
+            className="bg-primary-500 mx-2 py-2 px-4 border border-transparent shadow-xs rounded-md text-white"
             onClick={() => next()}
             disabled={!hasMoreWorkflows}
           >
@@ -181,14 +181,14 @@ export default () => {
           </button>
           <button
             id="reload-workflow"
-            className="bg-primary-500 mx-2 py-2 px-4 border border-transparent shadow-sm rounded-md text-white"
+            className="bg-primary-500 mx-2 py-2 px-4 border border-transparent shadow-xs rounded-md text-white"
             onClick={() => rerunLayout()}
             disabled={!hasMoreWorkflows}
           >
             Re-run
           </button>
           <button
-            className="bg-primary-500 mx-2 py-2 px-4 border border-transparent shadow-sm rounded-md text-white"
+            className="bg-primary-500 mx-2 py-2 px-4 border border-transparent shadow-xs rounded-md text-white"
             onClick={() => addJob()}
           >
             Add Job

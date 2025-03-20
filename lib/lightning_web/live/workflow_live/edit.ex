@@ -76,7 +76,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         >
           <:title>
             <div class="flex gap-2">
-              <%= @page_title %>
+              {@page_title}
 
               <LightningWeb.Components.Common.snapshot_version_chip
                 id="canvas-workflow-version"
@@ -310,7 +310,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   />
 
                   <.save_is_blocked_error :if={is_empty}>
-                    <%= error_message %>
+                    {error_message}
                   </.save_is_blocked_error>
 
                   <.icon
@@ -377,6 +377,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             }
           }
           current_user={@current_user}
+          oauth_client={nil}
           oauth_clients={@oauth_clients}
           projects={[]}
           project={@project}
@@ -666,7 +667,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   def run_buttons(assigns) do
     ~H"""
-    <div id="run-buttons" class="inline-flex rounded-md shadow-sm">
+    <div id="run-buttons" class="inline-flex rounded-md shadow-xs">
       <.save_and_run_button {assigns} />
       <.create_new_work_order_dropdown
         :if={step_retryable?(@step, @manual_run_form, @selectable_dataclips)}
@@ -759,7 +760,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           class={[
             "hidden absolute right-0 bottom-9 z-10 mb-2 w-max",
             "rounded-md bg-white px-4 py-2 text-sm font-semibold",
-            "text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+            "text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
           ]}
           disabled={@save_and_run_disabled || @snapshot_version_tag != "latest"}
         >
@@ -897,7 +898,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     >
       <span class="flex flex-grow flex-col">
         <span class="inline-flex items-center px-2 py-1 font-medium mr-1 text-gray-700">
-          <%= @label %>
+          {@label}
         </span>
       </span>
       <button
@@ -949,7 +950,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     button_base_classes =
       ~w(
-        inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset hover:bg-gray-50)
+        inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset hover:bg-gray-50)
 
     button_classes =
       button_base_classes ++
@@ -974,7 +975,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     </.link>
 
     <.save_is_blocked_error :if={@is_empty}>
-      <%= @error_message %>
+      {@error_message}
     </.save_is_blocked_error>
     """
   end
@@ -983,7 +984,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     ~H"""
     <span class="flex items-center font-medium text-sm text-red-600 ml-1 mr-4 gap-x-1.5">
       <.icon name="hero-exclamation-circle" class="h-5 w-5" />
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </span>
     """
   end
@@ -1008,7 +1009,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     ~H"""
     <%= for f <- @forms do %>
-      <%= render_slot(@inner_block, {f}) %>
+      {render_slot(@inner_block, {f})}
     <% end %>
     """
   end
@@ -1026,7 +1027,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     ~H"""
     <%= for f <- @forms do %>
-      <%= render_slot(@inner_block, f) %>
+      {render_slot(@inner_block, f)}
     <% end %>
     """
   end
@@ -2544,7 +2545,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         data-is-dirty="true"
       >
       </div>
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </div>
     """
   end
@@ -2593,7 +2594,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       )
 
     ~H"""
-    <div class="inline-flex rounded-md shadow-sm z-5">
+    <div class="inline-flex rounded-md shadow-xs z-5">
       <.button
         id={@id}
         phx-disable-with="Saving..."
@@ -2645,7 +2646,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               if(@dropdown_position == :top, do: "bottom-9 mb-2"),
               if(@dropdown_position == :bottom, do: "top-9 mt-2"),
               "rounded-md bg-white px-4 py-2 text-sm font-semibold",
-              "text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+              "text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
             ]}
             disabled={@disabled}
             phx-hook="OpenSyncModalViaCtrlShiftS"

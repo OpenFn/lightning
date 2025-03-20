@@ -5,7 +5,7 @@
  * This is supposed to make changing simple styles easier. Nore sure
  * if it's going to help yet
  */
-import { Flow } from './types';
+import type { Flow } from './types';
 
 export const EDGE_COLOR = '#b1b1b7';
 export const EDGE_COLOR_DISABLED = '#E1E1E1';
@@ -14,7 +14,7 @@ export const EDGE_COLOR_SELECTED_DISABLED = '#bdbaf3';
 
 export const ERROR_COLOR = '#ef4444';
 
-export const edgeLabelIconStyles = (type: string) => ({
+export const edgeLabelIconStyles = (type?: string | undefined) => ({
   fontSize: 24,
   fontWeight: 700,
   display: 'flex',
@@ -44,8 +44,11 @@ export const edgeLabelTextStyles = {
   borderLeft: 'solid 2px white',
 };
 
-export const edgeLabelStyles = (selected?: boolean, data) => {
-  const { label, enabled } = data;
+export const edgeLabelStyles = (
+  selected: boolean | undefined,
+  data?: { enabled?: boolean }
+) => {
+  const { enabled } = data ?? {};
   const primaryColor = (selected?: boolean, enabled?: boolean) => {
     if (enabled) return selected ? EDGE_COLOR_SELECTED : EDGE_COLOR;
     return selected ? EDGE_COLOR_SELECTED_DISABLED : EDGE_COLOR_DISABLED;

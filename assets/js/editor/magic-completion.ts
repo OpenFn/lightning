@@ -1,30 +1,38 @@
 import jp from 'jsonpath';
-import { ModelNode } from '../metadata-explorer/Model';
+import type ts from 'typescript';
+import { languages, editor } from 'monaco-editor';
+import type { Monaco } from '@monaco-editor/react';
+import type { ModelNode } from '../metadata-explorer/Model';
 
 const ensureArray = (x: any) => (Array.isArray(x) ? x : [x]);
 
-const createCompletionProvider = (monaco, metadata) => {
+const createCompletionProvider = (
+  monaco: Monaco,
+  metadata: object | undefined
+): languages.CompletionItemProvider => {
   const query = (jsonPath: string) => ensureArray(jp.query(metadata, jsonPath));
 
   // Run a jsonpath query and return the results
   const lookupTextSuggestions = (jsonPath: string) => {
-    const suggestions = query(jsonPath).map((s: string) => {
-      let label;
-      let insertText;
-      if (typeof s === 'string') {
-        insertText = label = `"${s}"`;
-      } else {
-        label = s.label || s.name;
-        insertText = `"${s.name}"`; // presumptuous - need a better system for this
+    const suggestions = query(jsonPath).map(
+      (s: string | ModelNode): languages.CompletionItem => {
+        let label: string;
+        let insertText: string;
+        if (typeof s === 'string') {
+          insertText = label = `"${s}"`;
+        } else {
+          label = s.label || s.name;
+          insertText = `"${s.name}"`; // presumptuous - need a better system for this
+        }
+        return {
+          label,
+          kind: monaco.languages.CompletionItemKind.Text,
+          insertText,
+          // Boost this up the autocomplete list
+          sortText: `00-${label}`,
+        };
       }
-      return {
-        label,
-        kind: monaco.languages.CompletionItemKind.Text,
-        insertText,
-        // Boost this up the autocomplete list
-        sortText: `00-${label}`,
-      };
-    });
+    );
 
     return {
       // https://microsoft.github.io/monaco-editor/api/interfaces/monaco.languages.CompletionItem.html
@@ -33,28 +41,30 @@ const createCompletionProvider = (monaco, metadata) => {
   };
 
   const lookupValueSuggestions = (jsonPath: string) => {
-    const suggestions = query(jsonPath).map((s: string | ModelNode) => {
-      let label;
-      let insertText;
-      let detail = '';
-      if (typeof s === 'string') {
-        insertText = label = `"${s}"`;
-      } else {
-        label = s.label || s.name;
-        // For DHIS2 it might be nice to comment in the original value
-        // is this a user preferece? Language preference? Should we always do this?
-        insertText = `"${s.name}" /*${s.label}*/`; // presumptuous - need a better system for this
-        detail = s.label ? s.name : '';
+    const suggestions = query(jsonPath).map(
+      (s: string | ModelNode): languages.CompletionItem => {
+        let label: string;
+        let insertText: string;
+        let detail = '';
+        if (typeof s === 'string') {
+          insertText = label = `"${s}"`;
+        } else {
+          label = s.label || s.name;
+          // For DHIS2 it might be nice to comment in the original value
+          // is this a user preferece? Language preference? Should we always do this?
+          insertText = `"${s.name}" /*${s.label}*/`; // presumptuous - need a better system for this
+          detail = s.label ? s.name : '';
+        }
+        return {
+          label,
+          kind: monaco.languages.CompletionItemKind.Value,
+          insertText,
+          detail,
+          // Boost this up the autocomplete list
+          sortText: `00-${label}`,
+        };
       }
-      return {
-        label,
-        kind: monaco.languages.CompletionItemKind.Value,
-        insertText,
-        detail,
-        // Boost this up the autocomplete list
-        sortText: `00-${label}`,
-      };
-    });
+    );
 
     return {
       // https://microsoft.github.io/monaco-editor/api/interfaces/monaco.languages.CompletionItem.html
@@ -63,18 +73,20 @@ const createCompletionProvider = (monaco, metadata) => {
   };
 
   const lookupPropertySuggestions = (jsonPath: string) => {
-    const suggestions = query(jsonPath).map((prop: ModelNode) => {
-      const label = `${prop.label || prop.name}`;
-      return {
-        // https://microsoft.github.io/monaco-editor/api/interfaces/monaco.languages.CompletionItem.html#kind
-        label,
-        kind: monaco.languages.CompletionItemKind.Property,
-        insertText: `"${prop.name}":`,
-        detail: `${prop.name} (${prop.datatype})`,
-        // Boost this up the autocomplete list
-        sortText: `00-${label}`,
-      };
-    });
+    const suggestions = query(jsonPath).map(
+      (prop: ModelNode): languages.CompletionItem => {
+        const label = `${prop.label || prop.name}`;
+        return {
+          // https://microsoft.github.io/monaco-editor/api/interfaces/monaco.languages.CompletionItem.html#kind
+          label,
+          kind: monaco.languages.CompletionItemKind.Property,
+          insertText: `"${prop.name}":`,
+          detail: `${prop.name} (${prop.datatype})`,
+          // Boost this up the autocomplete list
+          sortText: `00-${label}`,
+        };
+      }
+    );
 
     return {
       // https://microsoft.github.io/monaco-editor/api/interfaces/monaco.languages.CompletionItem.html
@@ -85,7 +97,10 @@ const createCompletionProvider = (monaco, metadata) => {
   // Returns an indexed object of argument names with known values
   // help is the parameter help object
   // model is the text model
-  const extractArguments = (help, model) => {
+  const extractArguments = (
+    help: ts.SignatureHelpItems,
+    model: editor.ITextModel
+  ) => {
     const allArgs = model
       .getValue()
       .substring(
@@ -95,7 +110,7 @@ const createCompletionProvider = (monaco, metadata) => {
     return allArgs
       .split(',')
       .map(a => a.trim())
-      .reduce((acc, arg, index) => {
+      .reduce<{ [param: string]: string }>((acc, arg, index) => {
         // Only return string literal values (for now at least)
         if (arg.startsWith("'") || arg.startsWith('"')) {
           const param = help.items[0].parameters[index];
@@ -105,7 +120,10 @@ const createCompletionProvider = (monaco, metadata) => {
       }, {});
   };
 
-  const replacePlaceholders = (args, expression) => {
+  const replacePlaceholders = (
+    args: { [param: string]: string },
+    expression: string
+  ) => {
     const placeholders = expression.match(/{{.+}}/);
     let newExpression = expression;
     if (placeholders) {
@@ -130,8 +148,13 @@ const createCompletionProvider = (monaco, metadata) => {
 
   // find lookups for a parameter based on its lookup
   // (this is basically the original logic)
-  const getParameterValueLookup = async (worker, model, offset) => {
-    const help = await worker.getSignatureHelpItems('file:///job.js', offset);
+  const getParameterValueLookup = async (
+    worker: languages.typescript.TypeScriptWorker,
+    model: editor.ITextModel,
+    offset: number
+  ) => {
+    const help: ts.SignatureHelpItems | undefined =
+      await worker.getSignatureHelpItems('file:///job.js', offset, {});
 
     if (help && help.items.length) {
       const param = help.items[0].parameters[help.argumentIndex];
@@ -159,7 +182,8 @@ const createCompletionProvider = (monaco, metadata) => {
           const args = extractArguments(help, model);
           const finalExpression = replacePlaceholders(args, expression).trim();
 
-          const { text, kind } = param.displayParts.at(-1);
+          const { text, kind } =
+            param.displayParts[param.displayParts.length - 1];
           if (kind === 'keyword' && text === 'object') {
             // TODO I still wonder if we're better off generating a dts for this
             return lookupPropertySuggestions(finalExpression);
@@ -176,7 +200,11 @@ const createCompletionProvider = (monaco, metadata) => {
   // This is quite robust now: find the symbol to the left, if it's a property,
   // try to finda  matching lookup
   // (this will even work outside of the signature if there's a type definition)
-  const getPropertyValueLookup = async (worker, model, offset) => {
+  const getPropertyValueLookup = async (
+    worker: languages.typescript.TypeScriptWorker,
+    model: editor.ITextModel,
+    offset: number
+  ) => {
     // find the word to the left
     const pos = findleftWord(model, offset);
     if (pos) {
@@ -195,9 +223,9 @@ const createCompletionProvider = (monaco, metadata) => {
   // Find the word to the left of the offset
   // TODO: this should abort if it hits a closing delimiter ]})
   // TODO surely the text model can just get us the previous token, word or delimiter??
-  const findleftWord = (model, offset: number) => {
+  const findleftWord = (model: editor.ITextModel, offset: number) => {
     let pos = offset;
-    let word;
+    let word: editor.IWordAtPosition | null = null;
     while (pos > 0 && !word) {
       word = model.getWordAtPosition(model.getPositionAt(pos));
       if (word) {

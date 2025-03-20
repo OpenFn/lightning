@@ -47,6 +47,7 @@ adaptor_registry_cache.json
 # In case you use Node.js/npm, you want to ignore these.
 npm-debug.log
 /assets/node_modules/
+/assets/**/*.tsbuildinfo
 /examples/**/node_modules/
 
 # coveralls output file
@@ -63,11 +64,13 @@ npm-debug.log
 benchmarking/*.csv
 monitoring
 
+.DS_Store
 tmp
 exports
 priv/openfn
 
 .elixir_ls
+.elixir-tools
 
 .env
 .env.dev

@@ -544,9 +544,9 @@ defmodule LightningWeb.ProjectLive.Settings do
         </.form>
       <% @can_receive_failure_alerts -> %>
         <span id={"failure-alert-status-#{@project_user.id}"}>
-          <%= if @project_user.failure_alert,
+          {if @project_user.failure_alert,
             do: "Enabled",
-            else: "Disabled" %>
+            else: "Disabled"}
         </span>
       <% true -> %>
         <span id={"failure-alert-status-#{@project_user.id}"}>Unavailable</span>
@@ -588,25 +588,25 @@ defmodule LightningWeb.ProjectLive.Settings do
         />
       </.form>
     <% else %>
-      <%= @project_user.digest
+      {@project_user.digest
       |> Atom.to_string()
-      |> String.capitalize() %>
+      |> String.capitalize()}
     <% end %>
     """
   end
 
   def role(assigns) do
     ~H"""
-    <%= @project_user.role |> Atom.to_string() |> String.capitalize() %>
+    {@project_user.role |> Atom.to_string() |> String.capitalize()}
     """
   end
 
   def user(assigns) do
     ~H"""
     <div>
-      <%= @project_user.user.first_name %> <%= @project_user.user.last_name %>
+      {@project_user.user.first_name} {@project_user.user.last_name}
     </div>
-    <span class="text-xs"><%= @project_user.user.email %></span>
+    <span class="text-xs">{@project_user.user.email}</span>
     """
   end
 
@@ -637,7 +637,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   def permissions_message(assigns) do
     ~H"""
     <small class="mt-2 text-red-700">
-      Role based permissions: You cannot modify this project's <%= @section %>
+      Role based permissions: You cannot modify this project's {@section}
     </small>
     """
   end
@@ -648,7 +648,7 @@ defmodule LightningWeb.ProjectLive.Settings do
       <:title>
         <div class="flex justify-between">
           <span class="font-bold">
-            Remove <%= @project_user.user.first_name %> <%= @project_user.user.last_name %>
+            Remove {@project_user.user.first_name} {@project_user.user.last_name}
           </span>
 
           <button
@@ -664,7 +664,7 @@ defmodule LightningWeb.ProjectLive.Settings do
       </:title>
       <div class="px-6">
         <p class="text-sm text-gray-500">
-          Are you sure you want to remove "<%= @project_user.user.first_name %> <%= @project_user.user.last_name %>" from this project?
+          Are you sure you want to remove "{@project_user.user.first_name} {@project_user.user.last_name}" from this project?
           They will nolonger have access.
           Do you wish to proceed with this action?
         </p>
@@ -683,7 +683,7 @@ defmodule LightningWeb.ProjectLive.Settings do
         <button
           type="button"
           phx-click={hide_modal(@id)}
-          class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+          class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
         >
           Cancel
         </button>

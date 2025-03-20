@@ -1,9 +1,10 @@
 import { useCallback, useState } from 'react';
-import { useStore, StoreApi } from 'zustand';
+import { useStore, type StoreApi } from 'zustand';
 import Connection from './edges/Connection';
 import { styleEdge } from './styles';
-import { Flow } from './types';
-import { WorkflowState } from '../workflow-editor/store';
+import type { Flow } from './types';
+import type * as F from 'reactflow';
+import type { WorkflowState } from '../workflow-editor/store';
 import { randomUUID } from '../common'
 import toWorkflow from './util/to-workflow';
 
@@ -125,21 +126,21 @@ const resetModel = (model: Flow.Model) => ({
 
 export default (
   model: Flow.Model,
-  setModel,
+  setModel: React.Dispatch<React.SetStateAction<Flow.Model>>,
   store: StoreApi<WorkflowState>
 ) => {
   const [dragActive, setDragActive] = useState<string | false>(false);
 
   const addToStore = useStore(store!, state => state.add);
 
-  const onConnect = useCallback(args => {
+  const onConnect: F.OnConnect = useCallback(args => {
     const newModel = generateEdgeDiff(args.source, args.target);
     const wf = toWorkflow(newModel);
 
     addToStore(wf);
   }, []);
 
-  const onConnectStart = useCallback(
+  const onConnectStart: F.OnConnectStart = useCallback(
     (_evt, args) => {
       setDragActive(args.nodeId);
       setModel(setValidDropTargets(model, args.nodeId));
@@ -147,15 +148,15 @@ export default (
     [model]
   );
 
-  const onConnectEnd = useCallback(
-    (evt, args) => {
+  const onConnectEnd: F.OnConnectEnd = useCallback(
+    evt => {
       setDragActive(false);
       setModel(resetModel(model));
     },
     [model]
   );
 
-  const onNodeMouseEnter = useCallback(
+  const onNodeMouseEnter: F.NodeMouseHandler = useCallback(
     (evt, args) => {
       if (dragActive) {
         setModel(setActiveDropTarget(model, args.id));
@@ -164,7 +165,7 @@ export default (
     [model]
   );
 
-  const onNodeMouseLeave = useCallback(
+  const onNodeMouseLeave: F.NodeMouseHandler = useCallback(
     (evt, args) => {
       if (dragActive) {
         setModel(setActiveDropTarget(model, ''));
@@ -174,7 +175,7 @@ export default (
   );
 
   const isValidConnection = useCallback(
-    ({ source, target }: { target: string }) => {
+    ({ source, target }: F.Connection): boolean => {
       // this is accessing a stale model :( why?
       // const targetNode = model.nodes.find(e => e.id === target);
       // return targetNode?.data.isValidDropTarget;

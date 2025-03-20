@@ -1,14 +1,15 @@
 // Hook for Workflow Editor Component
 import { DEFAULT_TEXT } from '../editor/Editor';
-import { PhoenixHook } from '../hooks/PhoenixHook';
-import { Lightning } from '../workflow-diagram/types';
+import type { PhoenixHook } from '../hooks/PhoenixHook';
+import type { Lightning } from '../workflow-diagram/types';
 import { randomUUID } from '../common';
 import type { mount } from './component';
 import {
-  Patch,
-  PendingAction,
-  WorkflowProps,
+  type Patch,
+  type PendingAction,
+  type WorkflowProps,
   createWorkflowStore,
+  type ChangeArgs,
 } from './store';
 
 export type WorkflowEditorEntrypoint = PhoenixHook<
@@ -36,14 +37,14 @@ export type WorkflowEditorEntrypoint = PhoenixHook<
     setupObserver(): void;
     hasLoaded: Promise<URL>;
   },
-  { baseUrl: string | null }
+  { baseUrl?: string | undefined }
 >;
 
-const createNewWorkflow = () => {
+const createNewWorkflow = (): Required<ChangeArgs> => {
   const triggers = [
     {
       id: randomUUID(),
-      type: 'webhook',
+      type: 'webhook' as 'webhook',
     },
   ];
   const jobs = [
@@ -71,7 +72,7 @@ const createNewWorkflow = () => {
 let workflowLoadParamsStart: number | null = null;
 
 export default {
-  mounted(this: WorkflowEditorEntrypoint) {
+  mounted() {
     let setHasLoaded: (href: URL) => void;
 
     this.hasLoaded = new Promise(resolve => {
@@ -136,7 +137,9 @@ export default {
       this.workflowStore.getState().rebase(response['workflow_params']);
     });
   },
-  getItem(id?: string) {
+  getItem(
+    id?: string
+  ): Lightning.TriggerNode | Lightning.JobNode | Lightning.Edge | undefined {
     if (id) {
       const { jobs, triggers, edges } = this.workflowStore.getState();
       const everything = [...jobs, ...triggers, ...edges];
@@ -147,7 +150,7 @@ export default {
       }
     }
   },
-  onSelectionChange(id?: string | null) {
+  onSelectionChange(id?: string) {
     (async () => {
       console.debug('onSelectionChange', id);
 
@@ -177,7 +180,11 @@ export default {
       if (
         currentUrl.searchParams.toString() !== nextUrl.searchParams.toString()
       ) {
-        this.liveSocket.pushHistoryPatch(nextUrl.toString(), 'push', this.el);
+        // This looks awkward, but is at least a public API
+        this.liveSocket.execJS(
+          this.el,
+          '[["patch",{"replace":false,"href":"' + nextUrl.toString() + '"}]]'
+        );
       }
     })();
   },
@@ -205,7 +212,10 @@ export default {
       }
     });
   },
-  pushPendingChange(pendingChange, abortController?) {
+  pushPendingChange(
+    pendingChange: PendingAction,
+    abortController: AbortController
+  ): Promise<boolean> {
     return new Promise((resolve, reject) => {
       console.debug('pushing change', pendingChange);
       // How do we _undo_ the change if it fails?
@@ -232,7 +242,11 @@ export default {
     console.time('workflow-params load');
     this.pushEventTo(this.el, 'get-initial-state', {});
   },
-  handleWorkflowParams({ workflow_params: payload }) {
+  handleWorkflowParams({
+    workflow_params: payload,
+  }: {
+    workflow_params: WorkflowProps;
+  }) {
     this.workflowStore.setState(_state => payload);
 
     if (!payload.triggers.length && !payload.jobs.length) {

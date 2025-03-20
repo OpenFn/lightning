@@ -1,4 +1,4 @@
-<div class="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2 mb-4">
+<div class="bg-white shadow-xs ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2 mb-4">
   <div class="px-4 py-6 sm:p-8">
     <div class="flex items-center justify-between mb-5">
       <span class="flex flex-grow flex-col">
@@ -15,7 +15,7 @@
       <button
         id="toggle-mfa-switch"
         type="button"
-        class={"#{if @show, do: "bg-indigo-600", else: "bg-gray-200"} relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 ml-5"}
+        class={"#{if @show, do: "bg-indigo-600", else: "bg-gray-200"} relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 ml-5"}
         role="switch"
         phx-click={toggle_btn_event(assigns)}
         phx-target={@myself}
@@ -61,7 +61,7 @@
     >
       <div
         id="disable-mfa-modal-bg"
-        class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+        class="fixed inset-0 bg-gray-500/75 transition-opacity"
       >
       </div>
 
@@ -76,7 +76,7 @@
             class="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6"
           >
             <div class="sm:flex sm:items-start">
-              <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+              <div class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
                 <svg
                   class="h-6 w-6 text-red-600"
                   fill="none"
@@ -117,14 +117,14 @@
                 phx-click="disable_mfa"
                 phx-target={@myself}
                 phx_disable_with="Disabling..."
-                class="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto"
+                class="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-red-500 sm:ml-3 sm:w-auto"
               >
                 Disable
               </button>
               <button
                 phx-click={hide_modal("disable-mfa-modal")}
                 type="button"
-                class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+                class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
               >
                 Cancel
               </button>
@@ -152,7 +152,7 @@
           Use an authenticator app or browser extension to scan.
         </p>
         <div>
-          <%= generate_qrcode(@qrcode_uri) %>
+          {generate_qrcode(@qrcode_uri)}
         </div>
         <p class="mt-2 max-w-4xl text-sm text-gray-500">
           Unable to scan? You can use
@@ -185,7 +185,7 @@
                 <.link
                   phx-click="hide-mfa-options"
                   phx-target={@myself}
-                  class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500"
+                  class="inline-flex justify-center py-2 px-4 border border-transparent shadow-xs text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500"
                 >
                   Cancel
                 </.link>
@@ -209,7 +209,7 @@
       >
         <div
           id="mfa-secret-modal-bg"
-          class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+          class="fixed inset-0 bg-gray-500/75 transition-opacity"
         >
         </div>
 
@@ -259,7 +259,7 @@
                   <div class="mt-2">
                     <p class="text-sm text-gray-500">
                       <code>
-                        <%= Base.encode32(@editing_totp.secret, padding: false) %>
+                        {Base.encode32(@editing_totp.secret, padding: false)}
                       </code>
                     </p>
                   </div>
@@ -285,7 +285,7 @@
       </div>
       <a
         href={~p"/profile/auth/backup_codes"}
-        class="rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 ml-5"
+        class="rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 ml-5"
       >
         View
       </a>
