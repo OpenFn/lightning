@@ -20,6 +20,8 @@ defmodule LightningWeb.Components.Viewers do
 
   require Lightning.Run
 
+  import React
+
   @doc """
   Renders out a log line stream
 
@@ -191,21 +193,14 @@ defmodule LightningWeb.Components.Viewers do
   end
 
   attr :id, :string, required: true
-  attr :dataclip, :map, required: true
+  attr :dataclipId, :map, required: true
+
+  # react imports
+  jsx("assets/js/react/components/DataclipViewer.tsx")
 
   def dataclip_viewer(assigns) do
     ~H"""
-    <div
-      id={@id}
-      class="h-full relative"
-      phx-hook="DataclipViewer"
-      phx-update="ignore"
-      data-id={@dataclip.id}
-      data-target={"#{@id}-viewer"}
-    >
-      <.dataclip_type id={"#{@id}-type"} type={@dataclip.type} />
-      <div id={"#{@id}-viewer"} class="h-full"></div>
-    </div>
+    <.DataclipViewer id={@id} dataclipId={@dataclip.id} />
     """
   end
 
