@@ -14,7 +14,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-D1113715.js"></script>
+    <script src="dist/sidebar_items-CD585A4F.js"></script>
     <script src="docs_config.js"></script>
     <script async src="dist/html-YIPIRHGU.js"></script>
 
@@ -218,7 +218,7 @@ still incomplete.</p></div>
     </a>
     <h1 class="signature" translate="no">eligible_for_claim()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/query.ex#L126" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/query.ex#L129" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -243,7 +243,7 @@ available state and have not reached the concurrency limit for their workflow.</
 </h3>
 <p>This query does not currently take into account the priority of the run.
 To allow for prioritization, the query should be updated to order by
-priority.</p><pre><code class="makeup elixir" translate="no"><span class="n">eligible_for_claim</span><span class="p" data-group-id="9720521753-1">(</span><span class="p" data-group-id="9720521753-1">)</span><span class="w"> </span><span class="o">|&gt;</span><span class="w"> </span><span class="n">prepend_order_by</span><span class="p" data-group-id="9720521753-2">(</span><span class="p" data-group-id="9720521753-3">[</span><span class="ss">:priority</span><span class="p" data-group-id="9720521753-3">]</span><span class="p" data-group-id="9720521753-2">)</span></code></pre></blockquote>
+priority.</p><pre><code class="makeup elixir" translate="no"><span class="n">eligible_for_claim</span><span class="p" data-group-id="0876189822-1">(</span><span class="p" data-group-id="0876189822-1">)</span><span class="w"> </span><span class="o">|&gt;</span><span class="w"> </span><span class="n">prepend_order_by</span><span class="p" data-group-id="0876189822-2">(</span><span class="p" data-group-id="0876189822-3">[</span><span class="ss">:priority</span><span class="p" data-group-id="0876189822-3">]</span><span class="p" data-group-id="0876189822-2">)</span></code></pre></blockquote>
   </section>
 </section>
 <section class="detail" id="in_progress_window/0">
@@ -255,7 +255,7 @@ priority.</p><pre><code class="makeup elixir" translate="no"><span class="n">eli
     </a>
     <h1 class="signature" translate="no">in_progress_window()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/query.ex#L73" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/query.ex#L81" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -272,7 +272,11 @@ priority.</p><pre><code class="makeup elixir" translate="no"><span class="n">eli
       </div>
 
 <p>Query to return a list of runs that are either in progress (started or claimed)
-or available.</p><p>The select clause includes:</p><ul><li><code class="inline">id</code>, the id of the run</li><li><code class="inline">state</code>, the state of the run</li><li><code class="inline">row_number</code>, the number of the row in the window, per workflow</li><li><code class="inline">concurrency</code>, the maximum number of runs that can be claimed for the workflow</li></ul>
+or available.</p><p>It returns a row_number (sequential number) for each run partitioned (grouped by) workflow or project.
+If workflow concurrency is set it takes precedence over project concurrency.</p><p>Note that this query does NOT consider the smaller concurrency once it's not enough to assure that
+project concurrency is always respected (e.g when 2 workflows of same project have concurrency 3 on a project
+with concurrency 5, 3 is less than 5 but still project concurrency wouldn't be respected).
+Instead the LV makes sure that a workflow concurrency sum does not exceed the project concurrency.</p><p>The select clause includes:</p><ul><li><code class="inline">id</code>, the id of the run</li><li><code class="inline">state</code>, the state of the run</li><li><code class="inline">row_number</code>, the number of the row in the window, per workflow or per project</li><li><code class="inline">concurrency</code>, the maximum number of runs that can be claimed for the workflow</li></ul>
   </section>
 </section>
 <section class="detail" id="lost/0">
