@@ -47,7 +47,7 @@ defmodule LightningWeb.ProfileLiveTest do
 
     test "load edit page", %{conn: conn} do
       {:ok, _profile_live, html} =
-        live(conn, Routes.profile_edit_path(conn, :edit))
+        live(conn, Routes.profile_edit_path(conn, :edit), on_error: :raise)
 
       assert html =~ "Change email"
       assert html =~ "Change password"
@@ -55,7 +55,7 @@ defmodule LightningWeb.ProfileLiveTest do
 
     test "update basic information", %{conn: conn, user: user} do
       {:ok, profile_live, _html} =
-        live(conn, ~p"/profile")
+        live(conn, ~p"/profile", on_error: :raise)
 
       assert profile_live
              |> has_element?("h2", "#{user.first_name} #{user.last_name}")
@@ -101,7 +101,7 @@ defmodule LightningWeb.ProfileLiveTest do
 
     test "save password", %{conn: conn} do
       {:ok, profile_live, _html} =
-        live(conn, Routes.profile_edit_path(conn, :edit))
+        live(conn, Routes.profile_edit_path(conn, :edit), on_error: :raise)
 
       assert profile_live
              |> form("#password-form", user: @invalid_empty_password_attrs)
@@ -145,7 +145,7 @@ defmodule LightningWeb.ProfileLiveTest do
 
     test "validate password confirmation", %{conn: conn} do
       {:ok, profile_live, _html} =
-        live(conn, Routes.profile_edit_path(conn, :edit))
+        live(conn, Routes.profile_edit_path(conn, :edit), on_error: :raise)
 
       assert profile_live
              |> form("#email-form",
@@ -159,7 +159,7 @@ defmodule LightningWeb.ProfileLiveTest do
 
     test "validate email", %{conn: conn, user: user} do
       {:ok, profile_live, _html} =
-        live(conn, Routes.profile_edit_path(conn, :edit))
+        live(conn, Routes.profile_edit_path(conn, :edit), on_error: :raise)
 
       assert profile_live
              |> form("#email-form", user: %{email: user.email})
@@ -168,7 +168,7 @@ defmodule LightningWeb.ProfileLiveTest do
 
     test "a user can change their email address", %{conn: conn} do
       {:ok, profile_live, _html} =
-        live(conn, Routes.profile_edit_path(conn, :edit))
+        live(conn, Routes.profile_edit_path(conn, :edit), on_error: :raise)
 
       assert profile_live
              |> form("#email-form", user: @invalid_email_update_attrs)
@@ -188,7 +188,7 @@ defmodule LightningWeb.ProfileLiveTest do
       user: user
     } do
       {:ok, profile_live, html} =
-        live(conn, Routes.profile_edit_path(conn, :edit))
+        live(conn, Routes.profile_edit_path(conn, :edit), on_error: :raise)
 
       assert html =~ "Delete my account"
 
@@ -233,7 +233,7 @@ defmodule LightningWeb.ProfileLiveTest do
       another_user = user_fixture()
 
       {:ok, _profile_live, html} =
-        live(conn, ~p"/profile/#{another_user.id}/delete")
+        live(conn, ~p"/profile/#{another_user.id}/delete", on_error: :raise)
         |> follow_redirect(conn)
 
       assert html =~ "You can&#39;t perform this action"
@@ -244,7 +244,7 @@ defmodule LightningWeb.ProfileLiveTest do
       user: user
     } do
       {:ok, profile_live, html} =
-        live(conn, Routes.profile_edit_path(conn, :edit))
+        live(conn, Routes.profile_edit_path(conn, :edit), on_error: :raise)
 
       assert html =~ "Delete my account"
 
@@ -277,7 +277,8 @@ defmodule LightningWeb.ProfileLiveTest do
     setup :register_and_log_in_user
 
     test "on clicking the toggle button a QR code is generated", %{conn: conn} do
-      {:ok, view, html} = live(conn, Routes.profile_edit_path(conn, :edit))
+      {:ok, view, html} =
+        live(conn, Routes.profile_edit_path(conn, :edit), on_error: :raise)
 
       refute html =~
                "You have configured an authentication app to get two-factor authentication codes"
@@ -300,7 +301,8 @@ defmodule LightningWeb.ProfileLiveTest do
     } do
       Application.put_env(:lightning, :totp_client, LightningTest.TOTP)
 
-      {:ok, view, _html} = live(conn, Routes.profile_edit_path(conn, :edit))
+      {:ok, view, _html} =
+        live(conn, Routes.profile_edit_path(conn, :edit), on_error: :raise)
 
       refute view |> form("#set_totp_form") |> has_element?()
 
@@ -349,7 +351,8 @@ defmodule LightningWeb.ProfileLiveTest do
     test "the user sees an option to setup another device", %{
       conn: conn
     } do
-      {:ok, view, html} = live(conn, Routes.profile_edit_path(conn, :edit))
+      {:ok, view, html} =
+        live(conn, Routes.profile_edit_path(conn, :edit), on_error: :raise)
 
       assert html =~
                "You have configured an authentication app to get two-factor authentication codes"
@@ -364,7 +367,8 @@ defmodule LightningWeb.ProfileLiveTest do
     end
 
     test "user can disable MFA from their account", %{conn: conn} do
-      {:ok, view, _html} = live(conn, Routes.profile_edit_path(conn, :edit))
+      {:ok, view, _html} =
+        live(conn, Routes.profile_edit_path(conn, :edit), on_error: :raise)
 
       result = view |> element("#disable_mfa_button") |> render_click()
 
@@ -378,7 +382,8 @@ defmodule LightningWeb.ProfileLiveTest do
     test "user can successfully setup another device", %{conn: conn} do
       Application.put_env(:lightning, :totp_client, LightningTest.TOTP)
 
-      {:ok, view, _html} = live(conn, Routes.profile_edit_path(conn, :edit))
+      {:ok, view, _html} =
+        live(conn, Routes.profile_edit_path(conn, :edit), on_error: :raise)
 
       refute view |> form("#set_totp_form") |> has_element?()
 
@@ -412,7 +417,7 @@ defmodule LightningWeb.ProfileLiveTest do
           {:ok, %Tesla.Env{body: expected_token}}
       end)
 
-      {:ok, view, _html} = live(conn, ~p"/profile")
+      {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
       assert has_element?(view, "#connect-github-link")
       refute has_element?(view, "#disconnect-github-button")
 
@@ -423,7 +428,7 @@ defmodule LightningWeb.ProfileLiveTest do
 
       assert flash["info"] == "Github account linked successfully"
 
-      {:ok, view, _html} = live(conn, ~p"/profile")
+      {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
 
       refute has_element?(view, "#connect-github-link")
       assert has_element?(view, "#disconnect-github-button")
@@ -439,7 +444,7 @@ defmodule LightningWeb.ProfileLiveTest do
           {:ok, %Tesla.Env{body: expected_resp}}
       end)
 
-      {:ok, view, _html} = live(conn, ~p"/profile")
+      {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
       assert has_element?(view, "#connect-github-link")
       refute has_element?(view, "#disconnect-github-button")
 
@@ -472,7 +477,7 @@ defmodule LightningWeb.ProfileLiveTest do
       |> Ecto.Changeset.change(%{github_oauth_token: expired_token})
       |> Repo.update!()
 
-      {:ok, view, _html} = live(conn, ~p"/profile")
+      {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
       refute has_element?(view, "#connect-github-link")
       assert has_element?(view, "#disconnect-github-button")
 
@@ -488,7 +493,7 @@ defmodule LightningWeb.ProfileLiveTest do
       |> Ecto.Changeset.change(%{github_oauth_token: expired_token})
       |> Repo.update!()
 
-      {:ok, view, _html} = live(conn, ~p"/profile")
+      {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
       connect_button = element(view, "#connect-github-link")
       assert has_element?(connect_button)
       assert render(connect_button) =~ "Reconnect your Github Account"
@@ -518,7 +523,7 @@ defmodule LightningWeb.ProfileLiveTest do
           {:ok, %Tesla.Env{status: 204}}
       end)
 
-      {:ok, view, _html} = live(conn, ~p"/profile")
+      {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
       refute has_element?(view, "#connect-github-link")
       assert has_element?(view, "#disconnect-github-button")
 
@@ -572,7 +577,7 @@ defmodule LightningWeb.ProfileLiveTest do
           {:ok, %Tesla.Env{status: 204}}
       end)
 
-      {:ok, view, _html} = live(conn, ~p"/profile")
+      {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
       refute has_element?(view, "#connect-github-link")
       assert has_element?(view, "#disconnect-github-button")
 
@@ -614,7 +619,7 @@ defmodule LightningWeb.ProfileLiveTest do
           {:ok, %Tesla.Env{status: 403}}
       end)
 
-      {:ok, view, _html} = live(conn, ~p"/profile")
+      {:ok, view, _html} = live(conn, ~p"/profile", on_error: :raise)
       refute has_element?(view, "#connect-github-link")
       assert has_element?(view, "#disconnect-github-button")
 

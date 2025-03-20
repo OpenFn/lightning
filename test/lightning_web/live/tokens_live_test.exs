@@ -13,7 +13,7 @@ defmodule LightningWeb.TokensLiveTest do
 
   describe "Index" do
     test "Access API Tokens page", %{conn: conn} do
-      {:ok, token_live, html} = live(conn, ~p"/profile/tokens")
+      {:ok, token_live, html} = live(conn, ~p"/profile/tokens", on_error: :raise)
 
       assert token_live
              |> element("nav#side-menu a", "API Tokens")
@@ -28,7 +28,8 @@ defmodule LightningWeb.TokensLiveTest do
     end
 
     test "Generate new token", %{conn: conn} do
-      {:ok, token_live, _html} = live(conn, ~p"/profile/tokens")
+      {:ok, token_live, _html} =
+        live(conn, ~p"/profile/tokens", on_error: :raise)
 
       assert token_live
              |> element("#generate_new_token", "Generate New Token")
@@ -53,7 +54,8 @@ defmodule LightningWeb.TokensLiveTest do
     end
 
     test "See a list of tokens", %{conn: conn} do
-      {:ok, token_live, _html} = live(conn, ~p"/profile/tokens")
+      {:ok, token_live, _html} =
+        live(conn, ~p"/profile/tokens", on_error: :raise)
 
       assert token_live
              |> element("#generate_new_token", "Generate New Token")
@@ -73,7 +75,8 @@ defmodule LightningWeb.TokensLiveTest do
     setup :create_api_token
 
     test "Delete an existing token", %{conn: conn, api_token: api_token} do
-      {:ok, token_live, _html} = live(conn, ~p"/profile/tokens")
+      {:ok, token_live, _html} =
+        live(conn, ~p"/profile/tokens", on_error: :raise)
 
       # find a <tr> that has id of `token-<id>`
       assert token_live
@@ -114,7 +117,9 @@ defmodule LightningWeb.TokensLiveTest do
       another_user_token = api_token_fixture(user_fixture())
 
       {:ok, _tokens_live, html} =
-        live(conn, ~p"/profile/tokens/#{another_user_token.id}/delete")
+        live(conn, ~p"/profile/tokens/#{another_user_token.id}/delete",
+          on_error: :raise
+        )
         |> follow_redirect(conn)
 
       assert html =~ "You can&#39;t perform this action"

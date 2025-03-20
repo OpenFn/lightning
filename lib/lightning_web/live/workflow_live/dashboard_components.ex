@@ -17,7 +17,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
         <h3 class="text-3xl font-bold">
           Workflows
           <span class="text-base font-normal">
-            (<%= length(assigns.workflows_stats) %>)
+            ({length(assigns.workflows_stats)})
           </span>
         </h3>
         <.create_workflow_card
@@ -95,13 +95,13 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                   ~p"/projects/#{@project.id}/history?#{%{filters: Map.merge(@wo_filters, %{workflow_id: workflow.id})}}"
                 }
               >
-                <%= workflow.workorders_count %>
+                {workflow.workorders_count}
               </.link>
             </div>
             <div class="text-gray-500 text-xs">
-              (<%= workflow.step_count %> steps,
+              ({workflow.step_count} steps,
               <span>
-                <%= workflow.step_success_rate %>% success
+                {workflow.step_success_rate}% success
               </span>
               )
             </div>
@@ -130,12 +130,12 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                     ~p"/projects/#{@project.id}/history?#{%{filters: Map.merge(@failed_wo_filters, %{workflow_id: workflow.id})}}"
                   }
                 >
-                  <%= workflow.failed_workorders_count %>
+                  {workflow.failed_workorders_count}
                 </.link>
               </div>
               <div class="text-gray-500 text-xs">
-                Latest failure <%= workflow.last_failed_workorder.updated_at
-                |> Relative.format!("{relative}") %>
+                Latest failure {workflow.last_failed_workorder.updated_at
+                |> Relative.format!("{relative}")}
               </div>
             <% else %>
               <div class="text-gray-400 text-lg">
@@ -202,12 +202,12 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
               class="flex-shrink truncate text-gray-900 hover:text-gray-600 font-medium ml-3"
               style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
             >
-              <%= @workflow.name %>
+              {@workflow.name}
             </span>
           </div>
           <%= if @trigger_enabled do %>
             <p class="text-gray-500 text-xs ml-3 mt-1">
-              Updated <%= @relative_updated_at %>
+              Updated {@relative_updated_at}
             </p>
           <% else %>
             <div class="flex items-center ml-3 mt-1">
@@ -282,7 +282,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
     ~H"""
     <div class="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
       <.metric_card title="Work Orders">
-        <:value><%= @metrics.work_order_metrics.total %></:value>
+        <:value>{@metrics.work_order_metrics.total}</:value>
         <:suffix>
           <.link
             navigate={
@@ -290,26 +290,26 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
             }
             class="link"
           >
-            (<%= @metrics.work_order_metrics.pending %> pending)
+            ({@metrics.work_order_metrics.pending} pending)
           </.link>
         </:suffix>
       </.metric_card>
       <.metric_card title="Runs">
-        <:value><%= @metrics.run_metrics.total %></:value>
+        <:value>{@metrics.run_metrics.total}</:value>
         <:suffix>
-          (<%= @metrics.run_metrics.pending %> pending)
+          ({@metrics.run_metrics.pending} pending)
         </:suffix>
       </.metric_card>
       <.metric_card title="Successful Runs">
-        <:value><%= @metrics.run_metrics.success %></:value>
+        <:value>{@metrics.run_metrics.success}</:value>
         <:suffix>
-          (<%= @metrics.run_metrics.success_rate %>%)
+          ({@metrics.run_metrics.success_rate}%)
         </:suffix>
       </.metric_card>
       <.metric_card title="Work Orders in failed state">
-        <:value><%= @metrics.work_order_metrics.failed %></:value>
+        <:value>{@metrics.work_order_metrics.failed}</:value>
         <:suffix>
-          (<%= @metrics.work_order_metrics.failed_percentage %>%)
+          ({@metrics.work_order_metrics.failed_percentage}%)
         </:suffix>
         <:link>
           <.link
@@ -339,15 +339,15 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
         class="text-sm text-gray-500"
         style="font-weight: 500; font-size: 13px; margin-bottom: 8px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
       >
-        <%= @title %>
+        {@title}
       </h2>
       <div class="flex space-x-1 items-baseline text-3xl font-bold text-gray-800">
-        <div><%= render_slot(@value) %></div>
+        <div>{render_slot(@value)}</div>
         <div class="text-xs font-normal grow">
-          <%= render_slot(@suffix) %>
+          {render_slot(@suffix)}
         </div>
         <div class="text-xs font-normal">
-          <%= render_slot(@link) %>
+          {render_slot(@link)}
         </div>
       </div>
     </div>
@@ -370,7 +370,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       <%= if is_nil(@state) do %>
         <div class="flex items-center gap-x-2">
           <span class="inline-block h-2 w-2 bg-gray-200 rounded-full"></span>
-          <span class="text-grey-200 italic">Nothing <%= @period %></span>
+          <span class="text-grey-200 italic">Nothing {@period}</span>
         </div>
       <% else %>
         <.status_card state={@state} time={@time} />
@@ -426,10 +426,10 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
           <span class={["relative inline-flex rounded-full h-2 w-2", @dot_color]}>
           </span>
         </span>
-        <span class={[@font_color, "font-medium"]}><%= @text %></span>
+        <span class={[@font_color, "font-medium"]}>{@text}</span>
       </div>
       <span class="block text-left text-gray-500 text-xs ml-4 mt-1">
-        <%= @time %>
+        {@time}
       </span>
     </div>
     """

@@ -45,7 +45,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
       )
 
     ~H"""
-    <%= render_slot(
+    {render_slot(
       @inner_block,
       {Phoenix.LiveView.TagEngine.component(
          &live_component/1,
@@ -62,7 +62,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
          ],
          {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
        ), @valid?}
-    ) %>
+    )}
     """
   end
 
@@ -75,7 +75,7 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
           No Client Configured
         </div>
         <span class="text-sm">
-          <%= @provider %> authorization has not been set up on this instance.
+          {@provider} authorization has not been set up on this instance.
         </span>
       </div>
     </div>
@@ -135,9 +135,9 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
       <.text_ping_loader :if={@display_loader}>
         <%= case @oauth_progress do %>
           <% :started  -> %>
-            Authenticating with <%= @provider %>
+            Authenticating with {@provider}
           <% _ -> %>
-            Fetching user data from <%= @provider %>
+            Fetching user data from {@provider}
         <% end %>
       </.text_ping_loader>
       <.authorize_button

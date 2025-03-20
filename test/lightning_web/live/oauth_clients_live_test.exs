@@ -109,7 +109,7 @@ defmodule LightningWeb.OauthClientsLiveTest do
 
       assert view
              |> element(
-               ~s{#oauth-client-form-new_#{scope_type}_scopes[value="#{scope_value}"]}
+               ~s{#oauth-client-form-new input[name='oauth_client[#{scope_type}_scopes]'][value="#{scope_value}"]}
              )
              |> has_element?()
     end)
@@ -141,7 +141,7 @@ defmodule LightningWeb.OauthClientsLiveTest do
       _urls =
         [~p"/credentials", ~p"/projects/#{project}/settings#credentials"]
         |> Enum.each(fn url ->
-          {:ok, _view, html} = live(conn, url)
+          {:ok, _view, html} = live(conn, url, on_error: :raise)
 
           assert html =~ "Oauth Clients"
           assert html =~ "Projects With Access"
@@ -171,7 +171,7 @@ defmodule LightningWeb.OauthClientsLiveTest do
       _urls =
         [~p"/credentials", ~p"/projects/#{project}/settings#credentials"]
         |> Enum.each(fn url ->
-          {:ok, view, html} = live(conn, url)
+          {:ok, view, html} = live(conn, url, on_error: :raise)
 
           assert html =~ "Create a new OAuth client"
 
@@ -213,7 +213,7 @@ defmodule LightningWeb.OauthClientsLiveTest do
     } do
       [~p"/credentials", ~p"/projects/#{project}/settings#credentials"]
       |> Enum.each(fn url ->
-        {:ok, view, _html} = live(conn, url)
+        {:ok, view, _html} = live(conn, url, on_error: :raise)
 
         view |> element("#close-oauth-client-modal-form-new") |> render_click()
 
@@ -230,7 +230,7 @@ defmodule LightningWeb.OauthClientsLiveTest do
       _urls =
         [~p"/credentials", ~p"/projects/#{project}/settings#credentials"]
         |> Enum.each(fn url ->
-          {:ok, view, _html} = live(conn, url)
+          {:ok, view, _html} = live(conn, url, on_error: :raise)
 
           html =
             view
@@ -289,7 +289,7 @@ defmodule LightningWeb.OauthClientsLiveTest do
 
       [~p"/credentials", ~p"/projects/#{project}/settings#credentials"]
       |> Enum.each(fn url ->
-        {:ok, view, html} = live(conn, url)
+        {:ok, view, html} = live(conn, url, on_error: :raise)
 
         new_authorization_endpoint = "https://openfn.org/oauth2/authorize"
 
@@ -333,7 +333,7 @@ defmodule LightningWeb.OauthClientsLiveTest do
 
       assert Lightning.Repo.all(audit_events_query) == []
 
-      {:ok, view, _html} = live(conn, ~p"/credentials")
+      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
       view
       |> element("#project-oauth-clients-list-#{client.id}")
@@ -385,7 +385,7 @@ defmodule LightningWeb.OauthClientsLiveTest do
 
       assert Lightning.Repo.all(audit_events_query) == []
 
-      {:ok, view, _html} = live(conn, ~p"/credentials")
+      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
       view
       |> element(
@@ -425,7 +425,7 @@ defmodule LightningWeb.OauthClientsLiveTest do
 
       insert(:project_oauth_client, project: project, oauth_client: client)
 
-      {:ok, view, _html} = live(conn, ~p"/credentials")
+      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
       view
       |> element("#project-oauth-clients-list-#{client.id}")
@@ -516,7 +516,7 @@ defmodule LightningWeb.OauthClientsLiveTest do
     end
 
     defp perform_oauth_client_deletion_test(conn, url, client) do
-      {:ok, view, html} = live(conn, url)
+      {:ok, view, html} = live(conn, url, on_error: :raise)
 
       assert html =~ client.name
 
@@ -524,7 +524,7 @@ defmodule LightningWeb.OauthClientsLiveTest do
       |> element("#delete_oauth_client_#{client.id}_modal_confirm_button")
       |> render_click()
 
-      {:ok, _view, html} = live(conn, url)
+      {:ok, _view, html} = live(conn, url, on_error: :raise)
 
       refute html =~ client.name
       refute Lightning.Repo.get(Lightning.Credentials.OauthClient, client.id)

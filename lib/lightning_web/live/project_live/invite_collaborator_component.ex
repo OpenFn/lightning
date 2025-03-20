@@ -80,7 +80,7 @@ defmodule LightningWeb.ProjectLive.InviteCollaboratorComponent do
           &LightningWeb.CoreComponents.translate_error(&1)
         )
     }>
-      <%= msg %>
+      {msg}
     </.error>
     """
   end

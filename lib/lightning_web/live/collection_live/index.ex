@@ -81,7 +81,7 @@ defmodule LightningWeb.CollectionLive.Index do
     <LayoutComponents.page_content>
       <:header>
         <LayoutComponents.header current_user={@current_user}>
-          <:title><%= @page_title %></:title>
+          <:title>{@page_title}</:title>
         </LayoutComponents.header>
       </:header>
       <LayoutComponents.centered>

@@ -27,7 +27,7 @@ defmodule LightningWeb.RunLive.ExportConfirmationModal do
           </div>
         </:title>
         <div class="container mx-auto px-6 space-y-6 bg-white text-sm text-slate-900">
-          Exporting history will download all <%= @count_work_orders %> work orders and associated runs, steps, and I/O data clips that match your query.<br />
+          Exporting history will download all {@count_work_orders} work orders and associated runs, steps, and I/O data clips that match your query.<br />
           The export will happen in the background and you'll receive an email when it is complete.
         </div>
         <.modal_footer class="mt-6 mx-6">
@@ -36,7 +36,7 @@ defmodule LightningWeb.RunLive.ExportConfirmationModal do
               id="confirm-export"
               type="button"
               phx-click="confirm-export"
-              class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
+              class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 sm:ml-3 sm:w-auto"
             >
               Export history
             </button>
@@ -44,7 +44,7 @@ defmodule LightningWeb.RunLive.ExportConfirmationModal do
               id="cancel-export"
               type="button"
               phx-click="close-export-modal"
-              class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+              class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
             >
               Cancel
             </button>

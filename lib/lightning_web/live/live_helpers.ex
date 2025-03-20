@@ -34,7 +34,7 @@ defmodule LightningWeb.LiveHelpers do
         phx-value-key="info"
         phx-target={@myself}
       >
-        <%= @msg %>
+        {@msg}
       </p>
     </div>
     """
@@ -63,7 +63,7 @@ defmodule LightningWeb.LiveHelpers do
         phx-value-key="error"
         phx-target={@myself}
       >
-        <%= @msg %>
+        {@msg}
       </p>
     </div>
     """
@@ -117,11 +117,11 @@ defmodule LightningWeb.LiveHelpers do
                   class="text-lg leading-6 font-medium text-secondary-900"
                   id="modal-title"
                 >
-                  <%= @heading %>
+                  {@heading}
                 </h3>
                 <div class="mt-2">
                   <p class="text-sm text-secondary-500">
-                    <%= @blurb %>
+                    {@blurb}
                   </p>
                 </div>
               </div>
@@ -143,7 +143,7 @@ defmodule LightningWeb.LiveHelpers do
         </div>
       </div>
     <% else %>
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     <% end %>
     """
   end
