@@ -44,11 +44,11 @@ defmodule LightningWeb.LayoutComponents do
     ~H"""
     <div class="flex h-full w-full flex-col">
       <%= if assigns[:banner] do %>
-        <%= Phoenix.LiveView.TagEngine.component(
+        {Phoenix.LiveView.TagEngine.component(
           @banner.function,
           @banner.attrs,
           {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
-        ) %>
+        )}
       <% end %>
       {if assigns[:header], do: render_slot(@header)}
       <div class="flex-auto bg-secondary-100 relative">
