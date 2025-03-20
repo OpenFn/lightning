@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Reintroduce steps (old runs) API based on GovStack spec.
+  [#1656](https://github.com/OpenFn/lightning/issues/1656)
+
 ### Changed
 
 - Update Phoenix LiveView to 1.0.5, Petal Components to 2.9.0 and TailwindCSS to
