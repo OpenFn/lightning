@@ -164,11 +164,24 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
         %{"adaptor_picker" => %{"adaptor_name" => value}},
         socket
       ) do
+    # Get versions for this adaptor
+    {_module_name, _version, _adaptors, versions} =
+      get_adaptor_version_options("#{value}@latest")
+
+    # Get the first specific version if available
+    version_str =
+      if length(versions) > 1 do
+        [_latest | specific_versions] = versions
+        List.first(specific_versions)[:value]
+      else
+        "#{value}@latest"
+      end
+
     params =
       LightningWeb.Utils.build_params_for_field(
         socket.assigns.form,
         :adaptor,
-        "#{value}@latest"
+        version_str
       )
 
     socket.assigns.on_change.(params)
