@@ -36,8 +36,8 @@ defmodule LightningWeb.WorkflowLive.Index do
     <LayoutComponents.page_content banner={assigns[:banner]}>
       <:header>
         <LayoutComponents.header current_user={@current_user} project={@project}>
-          <:title><%= @page_title %></:title>
-          <:period><%= @dashboard_period %></:period>
+          <:title>{@page_title}</:title>
+          <:period>{@dashboard_period}</:period>
         </LayoutComponents.header>
       </:header>
       <LayoutComponents.centered>

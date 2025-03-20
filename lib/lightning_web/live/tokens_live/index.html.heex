@@ -1,7 +1,7 @@
 <LayoutComponents.page_content banner={assigns[:banner]}>
   <:header>
     <LayoutComponents.header current_user={@current_user}>
-      <:title><%= @page_title %></:title>
+      <:title>{@page_title}</:title>
 
       <Common.button phx-click="generate_new_token">
         <div class="h-full">
@@ -45,7 +45,7 @@
             phx-click="copy"
             phx-then={%JS{}}
             data-to="#new_token"
-            class="rounded-full bg-blue-100 p-2 text-indigo-700 shadow-sm hover:opacity-75"
+            class="rounded-full bg-blue-100 p-2 text-indigo-700 shadow-xs hover:opacity-75"
           >
             <.icon name="hero-clipboard" class="h-5 w-5" />
             <span class="sr-only">Copy</span>
@@ -57,23 +57,23 @@
       <:col :let={token} label="Token">
         <code class="my-auto whitespace-nowrap align-baseline leading-none">
           <span>
-            <%= mask_token(token) %>
+            {mask_token(token)}
           </span>
         </code>
       </:col>
       <:col :let={token} label="Created on">
         <span class="my-auto whitespace-nowrap text-center align-baseline font-medium leading-none">
-          <%= Lightning.Helpers.format_date_long(token.inserted_at) %>
+          {Lightning.Helpers.format_date_long(token.inserted_at)}
         </span>
       </:col>
       <:col :let={token} label="Last Used at">
         <div class="flex content-center justify-between">
           <span class="my-auto whitespace-nowrap text-center align-baseline font-medium leading-none">
             <%= if token.last_used_at do %>
-              <%= Timex.Format.DateTime.Formatters.Relative.format!(
+              {Timex.Format.DateTime.Formatters.Relative.format!(
                 token.last_used_at,
                 "{relative}"
-              ) %>
+              )}
             <% else %>
               Never used
             <% end %>

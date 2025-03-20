@@ -514,11 +514,9 @@ defmodule LightningWeb.WorkOrderLiveTest do
         )
 
       claimed_at = format_timestamp(run_1.claimed_at)
-      claimed_unix = DateTime.to_unix(run_1.claimed_at, :microsecond)
       claimed_iso = DateTime.to_iso8601(run_1.claimed_at)
 
       started_at = format_timestamp(run_2.started_at)
-      started_unix = DateTime.to_unix(run_2.started_at, :microsecond)
       started_iso = DateTime.to_iso8601(run_2.started_at)
 
       {:ok, view, _html} =
@@ -530,11 +528,21 @@ defmodule LightningWeb.WorkOrderLiveTest do
       assert rendered =~ run_1.id
       assert rendered =~ run_2.id
 
-      assert rendered =~
-               "claimed @\n                  \n  <span id=\"#{claimed_unix}-tooltip\" phx-hook=\"Tooltip\" aria-label=\"Run claimed by worker at #{claimed_iso}\" data-allow-html=\"true\">\n  \n    \n        #{claimed_at}"
+      claimed_at_element =
+        view
+        |> element("div[role='columnheader']", "claimed @")
+        |> render()
 
-      assert rendered =~
-               "started @\n                  \n  <span id=\"#{started_unix}-tooltip\" phx-hook=\"Tooltip\" aria-label=\"Run started at #{started_iso}\" data-allow-html=\"true\">\n  \n    \n        #{started_at}"
+      assert claimed_at_element =~ claimed_at
+      assert claimed_at_element =~ "Run claimed by worker at #{claimed_iso}"
+
+      started_at_element =
+        view
+        |> element("div[role='columnheader']", "started @")
+        |> render()
+
+      assert started_at_element =~ started_at
+      assert started_at_element =~ "Run started at #{started_iso}"
     end
 
     test "lists all workorders", %{
@@ -768,20 +776,27 @@ defmodule LightningWeb.WorkOrderLiveTest do
 
       assert status_filters
              |> Enum.all?(fn f ->
+               input_selector =
+                 "input[name='#{Phoenix.HTML.Form.input_name(:filters, f)}']"
+
                view
-               |> element("input#workorder-filter-form_#{f}")
+               |> element("#workorder-filter-form #{input_selector}")
                |> has_element?()
              end)
 
       assert status_filters
              |> Enum.any?(fn f ->
                view
-               |> element("input#workorder-filter-form_#{f}[checked]")
+               |> element(
+                 "#workorder-filter-form input[name='#{Phoenix.HTML.Form.input_name(:filters, f)}'][checked]"
+               )
                |> has_element?()
              end) == false
 
       assert view
-             |> element("input#run-search-form_search_term")
+             |> element(
+               "form#run-search-form input[name='#{Phoenix.HTML.Form.input_name(:filters, :search_term)}']"
+             )
              |> has_element?()
 
       ## id, log and body select
@@ -1887,7 +1902,8 @@ defmodule LightningWeb.WorkOrderLiveTest do
         "step_id" => step.id
       })
 
-      assert view |> has_element?("#flash p", "Runs limit exceeded")
+      assert view
+             |> has_element?("[data-flash-kind='error']", "Runs limit exceeded")
     end
 
     @tag role: :viewer

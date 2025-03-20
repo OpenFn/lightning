@@ -1,7 +1,7 @@
 <LayoutComponents.page_content banner={assigns[:banner]}>
   <:header>
     <LayoutComponents.header current_user={@current_user} project={@project}>
-      <:title><%= @page_title %></:title>
+      <:title>{@page_title}</:title>
     </LayoutComponents.header>
   </:header>
   <.live_component
@@ -33,14 +33,14 @@
                   <div>
                     <button
                       type="button"
-                      class="inline-flex w-full justify-between gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                      class="inline-flex w-full justify-between gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
                       aria-expanded="true"
                       aria-haspopup="true"
                       phx-click={show_dropdown("workflow_filter_dropdown")}
                     >
                       <span>
                         <%= if workflow_id = get_change(@filters_changeset, :workflow_id) do %>
-                          <%= find_workflow_name(@workflows, workflow_id) %>
+                          {find_workflow_name(@workflows, workflow_id)}
                         <% else %>
                           Any
                         <% end %>
@@ -61,7 +61,7 @@
                   </div>
 
                   <div
-                    class="hidden absolute right-0 z-10 mt-2 w-60 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+                    class="hidden absolute right-0 z-10 mt-2 w-60 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none"
                     role="menu"
                     aria-orientation="vertical"
                     tabindex="-1"
@@ -83,7 +83,7 @@
                           tabindex="-1"
                           id={"select-workflow-#{workflow_id}"}
                         >
-                          <%= workflow_name %>
+                          {workflow_name}
                         </a>
                       <% end %>
                     </div>
@@ -98,16 +98,16 @@
                   <div>
                     <button
                       type="button"
-                      class="inline-flex w-full justify-between gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                      class="inline-flex w-full justify-between gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
                       aria-expanded="true"
                       aria-haspopup="true"
                       phx-click={show_dropdown("status_filter_dropdown")}
                     >
                       <span>
                         <%= if Enum.any?(@statuses, fn status -> checked?(@filters_changeset, status.id) end) do %>
-                          <%= Enum.count(@statuses, fn status ->
+                          {Enum.count(@statuses, fn status ->
                             checked?(@filters_changeset, status.id)
-                          end) %> Selected
+                          end)} Selected
                         <% else %>
                           Any
                         <% end %>
@@ -128,7 +128,7 @@
                   </div>
 
                   <div
-                    class="hidden absolute right-0 z-10 mt-2 w-44 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+                    class="hidden absolute right-0 z-10 mt-2 w-44 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none"
                     role="menu"
                     aria-orientation="vertical"
                     tabindex="-1"
@@ -159,13 +159,13 @@
                   <div>
                     <button
                       type="button"
-                      class="inline-flex w-full justify-between gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                      class="inline-flex w-full justify-between gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
                       aria-expanded="true"
                       aria-haspopup="true"
                       phx-click={show_dropdown("time_filter_dropdown")}
                     >
                       <%= if get_change(@filters_changeset, :wo_date_after) || get_change(@filters_changeset, :wo_date_before) || get_change(@filters_changeset, :date_after) || get_change(@filters_changeset, :date_before) do %>
-                        <%= Enum.reject(
+                        {Enum.reject(
                           [
                             get_change(@filters_changeset, :wo_date_after) ||
                               get_change(@filters_changeset, :wo_date_before),
@@ -174,7 +174,7 @@
                           ],
                           &is_nil/1
                         )
-                        |> Enum.count() %> Selected
+                        |> Enum.count()} Selected
                       <% else %>
                         <span>Any</span>
                       <% end %>
@@ -194,7 +194,7 @@
                   </div>
 
                   <div
-                    class="hidden absolute right-0 z-10 mt-2 w-44 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+                    class="hidden absolute right-0 z-10 mt-2 w-44 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none"
                     role="menu"
                     aria-orientation="vertical"
                     tabindex="-1"
@@ -223,7 +223,7 @@
                           phx-click-away={
                             hide_dropdown("wo_date_received_filter")
                           }
-                          class="hidden absolute top-0 left-full ml-1.5 z-10 mt-2 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+                          class="hidden absolute top-0 left-full ml-1.5 z-10 mt-2 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none"
                         >
                           <div class="py-3" role="none">
                             <div class="px-4 py-1 text-gray-500 text-sm">
@@ -263,7 +263,7 @@
                           phx-click-away={
                             hide_dropdown("wo_last_activity_filter")
                           }
-                          class="hidden absolute top-0 left-full ml-1.5 z-10 mt-2 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+                          class="hidden absolute top-0 left-full ml-1.5 z-10 mt-2 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none"
                         >
                           <div class="py-3" role="none">
                             <div class="px-4 py-1 text-gray-500 text-sm">
@@ -297,7 +297,7 @@
         <div class="mt-2">
           <%= if workflow_id = get_change(@filters_changeset, :workflow_id) do %>
             <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
-              Workflow: <%= find_workflow_name(@workflows, workflow_id) %>
+              Workflow: {find_workflow_name(@workflows, workflow_id)}
               <.form
                 :let={f}
                 for={@filters_changeset}
@@ -331,7 +331,7 @@
 
           <%= for status <- Enum.filter(@statuses, fn status -> checked?(@filters_changeset, status.id) end)  do %>
             <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
-              Work order status: <%= status.label %>
+              Work order status: {status.label}
               <.form
                 :let={f}
                 for={@filters_changeset}
@@ -364,11 +364,11 @@
 
           <%= if get_change(@filters_changeset, :wo_date_after) || get_change(@filters_changeset, :wo_date_before) do %>
             <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
-              <%= @filters_changeset
+              {@filters_changeset
               |> get_change(:wo_date_after)
-              |> maybe_humanize_date() || "*" %> - <%= @filters_changeset
+              |> maybe_humanize_date() || "*"} - {@filters_changeset
               |> get_change(:wo_date_before)
-              |> maybe_humanize_date() || "*" %>
+              |> maybe_humanize_date() || "*"}
               <.form
                 :let={f}
                 for={@filters_changeset}
@@ -408,11 +408,11 @@
 
           <%= if get_change(@filters_changeset, :date_after) || get_change(@filters_changeset, :date_before) do %>
             <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
-              Last Activity: <%= @filters_changeset
+              Last Activity: {@filters_changeset
               |> get_change(:date_after)
-              |> maybe_humanize_date() || "*" %> - <%= @filters_changeset
+              |> maybe_humanize_date() || "*"} - {@filters_changeset
               |> get_change(:date_before)
-              |> maybe_humanize_date() || "*" %>
+              |> maybe_humanize_date() || "*"}
               <.form
                 :let={f}
                 for={@filters_changeset}
@@ -457,9 +457,9 @@
             <div class="flex justify-between items-end">
               <div class="text-md text-gray-500 font-medium truncate w-full">
                 <%= if search = get_change(@filters_changeset, :search_term) do %>
-                  <%= @page.total_entries %><%= if @page.total_entries >=
-                                                     @string_search_limit,
-                                                   do: "+" %> work orders with runs matching "<%= search %>"
+                  {@page.total_entries}{if @page.total_entries >=
+                                             @string_search_limit,
+                                           do: "+"} work orders with runs matching "{search}"
                   <%= if @page.total_entries >= @string_search_limit do %>
                     <span class="text-xs text-gray">
                       (try more specific filters)
@@ -478,7 +478,7 @@
                     as={:filters}
                     phx-submit="apply_filters"
                   >
-                    <div class="relative rounded-md shadow-sm flex grow">
+                    <div class="relative rounded-md shadow-xs flex grow">
                       <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                         <Heroicons.magnifying_glass class="h-5 w-5 text-gray-400" />
                       </div>
@@ -517,7 +517,7 @@
                       for={@filters_changeset}
                       as={:filters}
                       phx-change="apply_filters"
-                      class="isolate inline-flex rounded-md shadow-sm"
+                      class="isolate inline-flex rounded-md shadow-xs"
                       id="run-toggle-form"
                     >
                       <%= for {search_field, index} <- Enum.with_index(@search_fields) do %>
@@ -555,7 +555,7 @@
                       type="submit"
                       form="run-search-form"
                       class="rounded-md bg-indigo-600 px-5 py-2 text-sm font-semibold
-                      text-white shadow-sm hover:bg-indigo-500 focus-visible:outline
+                      text-white shadow-xs hover:bg-indigo-500
                       focus-visible:outline-2 focus-visible:outline-offset-2
                       focus-visible:outline-indigo-600 truncate"
                     >
@@ -622,7 +622,7 @@
                         <% else %>
                           <button
                             type="button"
-                            class="rounded bg-white px-2 py-1 text-xs font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                            class="rounded bg-white px-2 py-1 text-xs font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
                             phx-click={
                               with :ok <-
                                      validate_bulk_rerun(
@@ -641,7 +641,7 @@
                             }
                             id="bulk-rerun-from-job-modal-trigger"
                             type="button"
-                            class="rounded bg-white px-2 py-1 text-xs font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                            class="rounded bg-white px-2 py-1 text-xs font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
                             phx-click={
                               with :ok <-
                                      validate_bulk_rerun(

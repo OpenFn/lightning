@@ -28,10 +28,7 @@ defmodule LightningWeb.Components.Table do
 
   def table(assigns) do
     ~H"""
-    <div
-      id={@id}
-      class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg"
-    >
+    <div id={@id} class="overflow-hidden shadow ring-1 ring-black/5 sm:rounded-lg">
       <table class="min-w-full divide-y divide-gray-300">
         <thead class="">
           <tr>
@@ -41,7 +38,7 @@ defmodule LightningWeb.Components.Table do
               class="px-3 py-3.5 text-left text-sm font-semibold text-gray-500"
             >
               <div class={col[:label_class]}>
-                <%= col[:label] %>
+                {col[:label]}
               </div>
             </th>
             <th
@@ -67,7 +64,7 @@ defmodule LightningWeb.Components.Table do
                 @row_click && "hover:cursor-pointer"
               ]}
             >
-              <%= render_slot(col, row) %>
+              {render_slot(col, row)}
             </td>
             <td :if={@action != []} class="p-0 w-14">
               <div class="relative whitespace-nowrap py-2 text-right text-sm font-medium">
@@ -75,7 +72,7 @@ defmodule LightningWeb.Components.Table do
                   :for={action <- @action}
                   class="relative ml-4 font-semibold leading-6 text-zinc-900 hover:text-zinc-700"
                 >
-                  <%= render_slot(action, row) %>
+                  {render_slot(action, row)}
                 </span>
               </div>
             </td>

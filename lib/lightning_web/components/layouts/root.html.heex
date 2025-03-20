@@ -15,7 +15,7 @@
     <meta name="theme-color" content="#ffffff" />
     <meta name="csrf-token" content={get_csrf_token()} />
     <.live_title suffix=" · OpenFn Lightning">
-      <%= assigns[:page_title] || "Lightning" %>
+      {assigns[:page_title] || "Lightning"}
     </.live_title>
     <link
       phx-track-static
@@ -39,12 +39,12 @@
       src={Routes.static_path(@conn, "/assets/js/app.js")}
     >
     </script>
-    <%= render_slot(@header_tags) %>
+    {render_slot(@header_tags)}
   </head>
   <body class="h-full">
-    <%= render_slot(@body_tags) %>
+    {render_slot(@body_tags)}
     <div class="min-h-full">
-      <%= @inner_content %>
+      {@inner_content}
     </div>
   </body>
 </html>

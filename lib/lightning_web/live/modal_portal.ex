@@ -78,7 +78,7 @@ defmodule LightningWeb.ModalPortal do
           <div class="flex-none px-5 py-3 border-b border-gray-100 dark:border-gray-700">
             <div class="flex items-center justify-between">
               <div class="font-semibold text-gray-800 dark:text-gray-200">
-                <%= @title %>
+                {@title}
               </div>
 
               <button
@@ -92,7 +92,7 @@ defmodule LightningWeb.ModalPortal do
           </div>
           <!-- Content -->
           <div class="grow w-full p-5 overflow-y-auto">
-            <%= render_slot(@inner_block) %>
+            {render_slot(@inner_block)}
           </div>
         </div>
       </div>
