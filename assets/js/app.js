@@ -30,13 +30,11 @@ import topbar from '../vendor/topbar.cjs';
 import * as Hooks from './hooks';
 import JobEditor from './job-editor';
 import WorkflowEditor from './workflow-editor';
-import DataclipViewer from './dataclip-viewer';
 import LogViewer from './log-viewer';
 
 let hooks = {
   JobEditor,
   WorkflowEditor,
-  DataclipViewer,
   LogViewer,
   ...Hooks,
 };
@@ -123,6 +121,6 @@ window.liveSocket = liveSocket;
 
 // Testing helper to simulate a reconnect
 window.triggerReconnect = function triggerReconnect(timeout = 5000) {
-  liveSocket.disconnect(() => {});
+  liveSocket.disconnect(() => { });
   setTimeout(liveSocket.connect.bind(liveSocket), timeout);
 };
