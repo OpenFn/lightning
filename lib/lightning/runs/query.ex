@@ -85,27 +85,19 @@ defmodule Lightning.Runs.Query do
       join: w in assoc(wo, :workflow),
       join: p in assoc(w, :project)
     )
-    |> windows([r, _wo, w, p],
-      row_number: [
-        partition_by:
-          fragment(
-            "CASE WHEN ? IS NOT NULL THEN ? ELSE ? END",
-            w.concurrency,
-            w.id,
-            p.id
-          ),
-        order_by: [asc: r.inserted_at]
-      ]
-    )
     |> select([r, _wo, w, p], %{
       id: r.id,
       state: r.state,
       # need to check what performance implications are of using row_number
       # does the subsequent query's limit clause get applied to the row_number
       # calculated here?
-      row_number: row_number() |> over(:row_number),
+      w_row_number:
+        row_number() |> over(partition_by: w.id, order_by: r.inserted_at),
+      p_row_number:
+        row_number() |> over(partition_by: p.id, order_by: r.inserted_at),
       project_id: w.project_id,
-      concurrency: coalesce(w.concurrency, p.concurrency),
+      w_concurrency: coalesce(w.concurrency, p.concurrency),
+      p_concurrency: coalesce(p.concurrency, 100),
       inserted_at: r.inserted_at
     })
   end
@@ -136,7 +128,9 @@ defmodule Lightning.Runs.Query do
     |> where(
       [r, ipw],
       r.state == :available and
-        (is_nil(ipw.concurrency) or ipw.row_number <= ipw.concurrency)
+        (is_nil(ipw.w_concurrency) or
+           (ipw.w_row_number <= ipw.w_concurrency and
+              ipw.p_row_number <= ipw.p_concurrency))
     )
     |> order_by([r], asc: r.inserted_at)
   end

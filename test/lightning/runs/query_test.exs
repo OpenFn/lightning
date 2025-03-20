@@ -158,7 +158,7 @@ defmodule Lightning.Runs.QueryTest do
       # The contiguous runs for the same project are added so that we
       # can ensure the sorting order for eligible_for_claim is reliable,
       # i.e. items are processed in order of insertion, not by their
-      # position in a given project (i.e. `row_number`)
+      # position in a given workflow (`w_row_number`) or project (`p_row_number`).
       [red, green, green, green, blue, yellow, magenta, cyan, red, blue, blue]
       |> Stream.cycle()
       |> Stream.take(60)
@@ -224,9 +224,9 @@ defmodule Lightning.Runs.QueryTest do
             select: [
               type(ipw.id, :string),
               run.state,
-              ipw.row_number,
+              ipw.w_row_number,
               ipw.project_id,
-              ipw.concurrency
+              ipw.w_concurrency
             ]
           )
           |> Repo.all()
@@ -245,13 +245,14 @@ defmodule Lightning.Runs.QueryTest do
     end
 
     test "in_progress_window/0" do
-      [red, _green, blue, cyan, magenta] =
+      [red, _green, blue, cyan, magenta, indigo] =
         [
           {"red", 1},
           {"green", 2},
           {"blue", 3},
           {"cyan", nil},
-          {"magenta", nil}
+          {"magenta", nil},
+          {"indigo", 5}
         ]
         |> Enum.map(fn {name, concurrency} ->
           project = insert(:project, name: name)
@@ -265,13 +266,19 @@ defmodule Lightning.Runs.QueryTest do
       # magenta project has only project level concurrecy
       Repo.update!(Projects.change_project(magenta.project, %{concurrency: 1}))
 
+      # indigo project has project level concurrecy (serial execution). It overrides the workflow level one.
+      Repo.update!(Projects.change_project(indigo.project, %{concurrency: 1}))
+
       runs_in_order =
         [
           insert_run(red, :available),
-          for _ <- 1..10 do
+          for _ <- 1..4 do
             insert_run(cyan, :available)
           end,
           insert_run(magenta, :available),
+          for _ <- 1..5 do
+            insert_run(indigo, :available)
+          end,
           insert_run(blue, :claimed),
           insert_run(blue, :claimed),
           insert_run(blue, :available)
@@ -279,21 +286,104 @@ defmodule Lightning.Runs.QueryTest do
         |> List.flatten()
         |> Enum.zip_with(
           [
-            %{project_id: red.project.id, row_number: 1, concurrency: 1},
-            %{project_id: cyan.project.id, row_number: 1, concurrency: nil},
-            %{project_id: cyan.project.id, row_number: 2, concurrency: nil},
-            %{project_id: cyan.project.id, row_number: 3, concurrency: nil},
-            %{project_id: cyan.project.id, row_number: 4, concurrency: nil},
-            %{project_id: cyan.project.id, row_number: 5, concurrency: nil},
-            %{project_id: cyan.project.id, row_number: 6, concurrency: nil},
-            %{project_id: cyan.project.id, row_number: 7, concurrency: nil},
-            %{project_id: cyan.project.id, row_number: 8, concurrency: nil},
-            %{project_id: cyan.project.id, row_number: 9, concurrency: nil},
-            %{project_id: cyan.project.id, row_number: 10, concurrency: nil},
-            %{project_id: magenta.project.id, row_number: 1, concurrency: 1},
-            %{project_id: blue.project.id, row_number: 1, concurrency: 3},
-            %{project_id: blue.project.id, row_number: 2, concurrency: 3},
-            %{project_id: blue.project.id, row_number: 3, concurrency: 3}
+            %{
+              project_id: red.project.id,
+              w_row_number: 1,
+              w_concurrency: 1,
+              p_concurrency: 100,
+              p_row_number: 1
+            },
+            %{
+              project_id: cyan.project.id,
+              w_row_number: 1,
+              w_concurrency: nil,
+              p_concurrency: 100,
+              p_row_number: 1
+            },
+            %{
+              project_id: cyan.project.id,
+              w_row_number: 2,
+              w_concurrency: nil,
+              p_concurrency: 100,
+              p_row_number: 2
+            },
+            %{
+              project_id: cyan.project.id,
+              w_row_number: 3,
+              w_concurrency: nil,
+              p_concurrency: 100,
+              p_row_number: 3
+            },
+            %{
+              project_id: cyan.project.id,
+              w_row_number: 4,
+              w_concurrency: nil,
+              p_concurrency: 100,
+              p_row_number: 4
+            },
+            %{
+              project_id: magenta.project.id,
+              w_row_number: 1,
+              w_concurrency: 1,
+              p_concurrency: 1,
+              p_row_number: 1
+            },
+            %{
+              project_id: indigo.project.id,
+              w_row_number: 1,
+              w_concurrency: 5,
+              p_concurrency: 1,
+              p_row_number: 1
+            },
+            %{
+              project_id: indigo.project.id,
+              w_row_number: 2,
+              w_concurrency: 5,
+              p_concurrency: 1,
+              p_row_number: 2
+            },
+            %{
+              project_id: indigo.project.id,
+              w_row_number: 3,
+              w_concurrency: 5,
+              p_concurrency: 1,
+              p_row_number: 3
+            },
+            %{
+              project_id: indigo.project.id,
+              w_row_number: 4,
+              w_concurrency: 5,
+              p_concurrency: 1,
+              p_row_number: 4
+            },
+            %{
+              project_id: indigo.project.id,
+              w_row_number: 5,
+              w_concurrency: 5,
+              p_concurrency: 1,
+              p_row_number: 5
+            },
+            %{
+              project_id: blue.project.id,
+              w_row_number: 1,
+              w_concurrency: 3,
+              p_concurrency: 100,
+              p_row_number: 1
+            },
+            %{
+              project_id: blue.project.id,
+              w_row_number: 2,
+              w_concurrency: 3,
+              p_concurrency: 100,
+              p_row_number: 2
+            },
+            %{
+              project_id: blue.project.id,
+              w_row_number: 3,
+              w_concurrency: 3,
+              p_concurrency: 100,
+              p_row_number: 3
+            }
           ],
           fn run, extra ->
             Map.take(run, [:id, :state, :inserted_at]) |> Map.merge(extra)
@@ -321,7 +411,7 @@ defmodule Lightning.Runs.QueryTest do
                 where:
                   r.state == :available and
                     wf.project_id in ^[red.project.id, cyan.project.id],
-                limit: 7,
+                limit: 4,
                 select: r,
                 update: []
               )
@@ -349,16 +439,16 @@ defmodule Lightning.Runs.QueryTest do
                fn item ->
                  item.state == :claimed and item.project_id == cyan.project.id
                end
-             ) == 6,
-             "there should be 6 claimed runs for project cyan"
+             ) == 3,
+             "there should be 3 claimed runs for project cyan"
 
       num_runs = length(runs_in_order)
 
       runs_in_order_match =
         runs_in_order
         |> Enum.zip_with(
-          List.duplicate(%{state: :claimed}, 7) ++
-            List.duplicate(%{}, num_runs - 7),
+          List.duplicate(%{state: :claimed}, 4) ++
+            List.duplicate(%{}, num_runs - 4),
           &Map.merge(&1, &2)
         )
 
@@ -423,44 +513,46 @@ defmodule Lightning.Runs.QueryTest do
                      id: ^claimed_run_id,
                      project_id: ^red_project_id,
                      state: :claimed,
-                     row_number: 1,
-                     concurrency: 1
+                     w_row_number: 1,
+                     w_concurrency: 1
                    },
                    %{
                      project_id: ^red_project_id,
                      state: :available,
-                     row_number: 2,
-                     concurrency: 1
+                     w_row_number: 2,
+                     w_concurrency: 1
                    },
                    %{
                      project_id: ^green_project_id,
                      state: :available,
-                     row_number: 1,
-                     concurrency: 2
+                     w_row_number: 1,
+                     w_concurrency: 2,
+                     p_concurrency: 2
                    },
                    %{
                      project_id: ^green_project_id,
                      state: :available,
-                     row_number: 2,
-                     concurrency: 2
+                     w_row_number: 2,
+                     w_concurrency: 2,
+                     p_concurrency: 2
                    },
                    %{
                      project_id: ^blue_project_id,
                      state: :available,
-                     row_number: 1,
-                     concurrency: nil
+                     w_row_number: 1,
+                     w_concurrency: nil
                    },
                    %{
                      project_id: ^blue_project_id,
                      state: :available,
-                     row_number: 2,
-                     concurrency: nil
+                     w_row_number: 2,
+                     w_concurrency: nil
                    },
                    %{
                      project_id: ^blue_project_id,
                      state: :available,
-                     row_number: 3,
-                     concurrency: nil
+                     w_row_number: 3,
+                     w_concurrency: nil
                    }
                  ],
                  in_progress
@@ -489,14 +581,14 @@ defmodule Lightning.Runs.QueryTest do
                      id: ^claimed_run_id,
                      project_id: ^green_project_id,
                      state: :claimed,
-                     row_number: 1,
-                     concurrency: 2
+                     w_row_number: 1,
+                     w_concurrency: 2
                    },
                    %{
                      project_id: ^green_project_id,
                      state: :available,
-                     row_number: 2,
-                     concurrency: 2
+                     w_row_number: 2,
+                     w_concurrency: 2
                    },
                    %{
                      project_id: ^blue_project_id,
@@ -571,11 +663,9 @@ defmodule Lightning.Runs.QueryTest do
       end)
     end
 
-    # As per commit 16294834 the query gets unecessarily complex
-    # once the LV does NOT allow a worfklow concurrency sum to be greater than the project concurrency.
     test "eligible_for_claim/0 respects serial project concurrency" do
       # these are the projects
-      # red: has a workflow concurrecy of 2 runs and takes precedence over project concurrency
+      # red: has a workflow concurrecy of 2 runs but it's enforced to the project concurrency set to 1 (serial execution)
       # orange: has only project concurrency set to 1
       # green: has workflow concurrency of 2 runs
 
@@ -603,16 +693,18 @@ defmodule Lightning.Runs.QueryTest do
         end)
 
       insert_run(red, :available, red.workflow1)
+      insert_run(red, :available, red.workflow1)
       insert_run(red, :available, red.workflow2)
 
       insert_run(orange, :available, orange.workflow1)
       insert_run(orange, :available, orange.workflow2)
 
+      # same workflow
       insert_run(green, :available, green.workflow1)
       insert_run(green, :available, green.workflow1)
 
-      # red workflow concurrency takes precedence over project
-      Repo.update!(Projects.change_project(red.project, %{concurrency: 3}))
+      # red workflow concurrency is overriden by serial project concurrency
+      Repo.update!(Projects.change_project(red.project, %{concurrency: 1}))
       # orange project has only project level concurrecy
       Repo.update!(Projects.change_project(orange.project, %{concurrency: 1}))
 
@@ -633,45 +725,57 @@ defmodule Lightning.Runs.QueryTest do
                      id: ^claimed_run_id,
                      project_id: ^red_project_id,
                      state: :claimed,
-                     row_number: 1,
-                     concurrency: 2
+                     w_row_number: 1,
+                     w_concurrency: 2,
+                     p_concurrency: 1,
+                     p_row_number: 1
                    },
                    %{
                      project_id: ^red_project_id,
                      state: :available,
-                     row_number: 1,
-                     concurrency: 2
+                     w_row_number: 2,
+                     w_concurrency: 2,
+                     p_concurrency: 1,
+                     p_row_number: 2
+                   },
+                   %{
+                     project_id: ^red_project_id,
+                     state: :available,
+                     w_row_number: 1,
+                     w_concurrency: 2,
+                     p_concurrency: 1,
+                     p_row_number: 3
                    },
                    %{
                      project_id: ^orange_project_id,
                      state: :available,
-                     row_number: 1,
-                     concurrency: 1
+                     w_row_number: 1,
+                     w_concurrency: 1
                    },
                    %{
                      project_id: ^orange_project_id,
                      state: :available,
-                     row_number: 2,
-                     concurrency: 1
+                     w_row_number: 1,
+                     w_concurrency: 1
                    },
                    %{
                      project_id: ^green_project_id,
                      state: :available,
-                     row_number: 1,
-                     concurrency: 2
+                     w_row_number: 1,
+                     w_concurrency: 2
                    },
                    %{
                      project_id: ^green_project_id,
                      state: :available,
-                     row_number: 2,
-                     concurrency: 2
+                     w_row_number: 2,
+                     w_concurrency: 2
                    }
                  ],
                  in_progress
                )
       end)
 
-      {:ok, [%{id: claimed_run_id} = _red_workflow2]} =
+      {:ok, [%{id: claimed_run_id} = _orange_run]} =
         Lightning.Runs.Queue.claim(1, Query.eligible_for_claim())
 
       Query.in_progress_window()
@@ -685,13 +789,17 @@ defmodule Lightning.Runs.QueryTest do
                      state: :claimed
                    },
                    %{
-                     id: ^claimed_run_id,
                      project_id: ^red_project_id,
-                     state: :claimed
+                     state: :available
                    },
                    %{
-                     project_id: ^orange_project_id,
+                     project_id: ^red_project_id,
                      state: :available
+                   },
+                   %{
+                     id: ^claimed_run_id,
+                     project_id: ^orange_project_id,
+                     state: :claimed
                    },
                    %{
                      project_id: ^orange_project_id,
@@ -721,6 +829,7 @@ defmodule Lightning.Runs.QueryTest do
       )
       |> Repo.update()
 
+      # More red to go
       {:ok, [%{id: claimed_run_id}]} =
         Lightning.Runs.Queue.claim(1, Query.eligible_for_claim())
 
@@ -731,11 +840,15 @@ defmodule Lightning.Runs.QueryTest do
         assert match?(
                  [
                    %{
+                     id: ^claimed_run_id,
                      project_id: ^red_project_id,
                      state: :claimed
                    },
                    %{
-                     id: ^claimed_run_id,
+                     project_id: ^red_project_id,
+                     state: :available
+                   },
+                   %{
                      project_id: ^orange_project_id,
                      state: :claimed
                    },
@@ -772,6 +885,10 @@ defmodule Lightning.Runs.QueryTest do
                    %{
                      project_id: ^red_project_id,
                      state: :claimed
+                   },
+                   %{
+                     project_id: ^red_project_id,
+                     state: :available
                    },
                    %{
                      project_id: ^orange_project_id,
@@ -811,6 +928,10 @@ defmodule Lightning.Runs.QueryTest do
                    %{
                      project_id: ^red_project_id,
                      state: :claimed
+                   },
+                   %{
+                     project_id: ^red_project_id,
+                     state: :available
                    },
                    %{
                      project_id: ^orange_project_id,
@@ -897,64 +1018,64 @@ defmodule Lightning.Runs.QueryTest do
                      id: ^red_run_1_id,
                      project_id: ^red_project_id,
                      state: :claimed,
-                     row_number: 1,
-                     concurrency: 1
+                     w_row_number: 1,
+                     w_concurrency: 1
                    },
                    %{
                      id: ^red_run_2_id,
                      project_id: ^red_project_id,
                      state: :available,
-                     row_number: 2,
-                     concurrency: 1
+                     w_row_number: 2,
+                     w_concurrency: 1
                    },
                    %{
                      id: ^green_run_1_id,
                      project_id: ^green_project_id,
                      state: :claimed,
-                     row_number: 1,
-                     concurrency: 2
+                     w_row_number: 1,
+                     w_concurrency: 2
                    },
                    %{
                      id: ^green_run_2_id,
                      project_id: ^green_project_id,
                      state: :claimed,
-                     row_number: 2,
-                     concurrency: 2
+                     w_row_number: 2,
+                     w_concurrency: 2
                    },
                    %{
                      id: ^green_run_3_id,
                      project_id: ^green_project_id,
                      state: :available,
-                     row_number: 3,
-                     concurrency: 2
+                     w_row_number: 3,
+                     w_concurrency: 2
                    },
                    %{
                      id: ^blue_run_1_id,
                      project_id: ^blue_project_id,
                      state: :claimed,
-                     row_number: 1,
-                     concurrency: 3
+                     w_row_number: 1,
+                     w_concurrency: 3
                    },
                    %{
                      id: ^blue_run_2_id,
                      project_id: ^blue_project_id,
                      state: :claimed,
-                     row_number: 2,
-                     concurrency: 3
+                     w_row_number: 2,
+                     w_concurrency: 3
                    },
                    %{
                      id: ^blue_run_3_id,
                      project_id: ^blue_project_id,
                      state: :claimed,
-                     row_number: 3,
-                     concurrency: 3
+                     w_row_number: 3,
+                     w_concurrency: 3
                    },
                    %{
                      id: ^blue_run_4_id,
                      project_id: ^blue_project_id,
                      state: :available,
-                     row_number: 4,
-                     concurrency: 3
+                     w_row_number: 4,
+                     w_concurrency: 3
                    }
                  ],
                  in_progress
