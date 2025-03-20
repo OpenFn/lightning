@@ -162,8 +162,6 @@ config :tesla, adapter: {Tesla.Adapter.Finch, name: Lightning.Finch}
 config :lightning, :is_resettable_demo, false
 config :lightning, :default_retention_period, nil
 
-config :lightning, Lightning.Runtime.RuntimeManager, start: false
-
 config :lightning, LightningWeb.CollectionsController,
   default_stream_limit: 1_000,
   max_database_limit: 500
