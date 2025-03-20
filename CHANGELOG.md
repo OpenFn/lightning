@@ -20,8 +20,7 @@ and this project adheres to
 ### Changed
 
 - Added alphabetical sort to credential and Oauth2 client lists.
-
-- [#2994](https://github.com/OpenFn/lightning/issues/2994)
+  [#2994](https://github.com/OpenFn/lightning/issues/2994)
 
 ### Fixed
 
