@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Allow users to book for demo sessions
+  [PR#3035](https://github.com/OpenFn/lightning/pull/3035)
+
 ### Changed
 
 - Update Phoenix LiveView to 1.0.5, Petal Components to 2.9.0 and TailwindCSS to

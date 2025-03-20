@@ -265,6 +265,25 @@ defmodule Lightning.Config do
     def credential_transfer_token_validity_in_days do
       2
     end
+
+    @impl true
+    def book_demo_banner_enabled? do
+      Keyword.get(book_demo_banner_config(), :enabled, false)
+    end
+
+    @impl true
+    def book_demo_calendly_url do
+      Keyword.get(book_demo_banner_config(), :calendly_url)
+    end
+
+    @impl true
+    def book_demo_openfn_workflow_url do
+      Keyword.get(book_demo_banner_config(), :openfn_workflow_url)
+    end
+
+    defp book_demo_banner_config do
+      Application.get_env(:lightning, :book_demo_banner, [])
+    end
   end
 
   @callback apollo(key :: atom() | nil) :: map()
@@ -306,6 +325,9 @@ defmodule Lightning.Config do
   @callback worker_token_signer() :: Joken.Signer.t()
   @callback adaptor_registry() :: Keyword.t()
   @callback credential_transfer_token_validity_in_days() :: integer()
+  @callback book_demo_banner_enabled?() :: boolean()
+  @callback book_demo_calendly_url() :: String.t()
+  @callback book_demo_openfn_workflow_url() :: String.t()
 
   @doc """
   Returns the configuration for the `Lightning.AdaptorRegistry` service
@@ -482,6 +504,18 @@ defmodule Lightning.Config do
 
   def credential_transfer_token_validity_in_days do
     impl().credential_transfer_token_validity_in_days()
+  end
+
+  def book_demo_banner_enabled? do
+    impl().book_demo_banner_enabled?()
+  end
+
+  def book_demo_calendly_url do
+    impl().book_demo_calendly_url()
+  end
+
+  def book_demo_openfn_workflow_url do
+    impl().book_demo_openfn_workflow_url()
   end
 
   defp impl do
