@@ -72,7 +72,8 @@ defmodule Lightning.OauthClients do
           poc.project_id == ^project.id or
             c.id in subquery(global_clients_subquery),
         preload: [:user, :project_oauth_clients, :projects],
-        distinct: true
+        order_by: [asc: fragment("lower(?)", c.name)],
+        group_by: c.id
       )
 
     Repo.all(clients_query)
@@ -81,7 +82,8 @@ defmodule Lightning.OauthClients do
   def list_clients(%User{id: user_id}) do
     from(c in OauthClient,
       where: c.user_id == ^user_id or c.global,
-      preload: :projects
+      preload: :projects,
+      order_by: [asc: fragment("lower(?)", c.name)]
     )
     |> Repo.all()
   end
