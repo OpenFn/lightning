@@ -109,18 +109,16 @@ async function loadDTS(specifier: string): Promise<Lib[]> {
   // TODO maybe we need other dependencies too? collections?
   if (name !== '@openfn/language-common') {
     const pkg = await fetchFile(`${specifier}/package.json`);
-    const commonVersion = useLocal
-      ? 'local'
-      : JSON.parse(pkg || '{}').dependencies?.['@openfn/language-common'];
+    const commonVersion = JSON.parse(pkg || '{}').dependencies?.[
+      '@openfn/language-common'
+    ];
 
-    if (!useLocal) {
-      // jsDeliver doesn't appear to support semver range syntax (^1.0.0, 1.x, ~1.1.0)
-      const commonVersionMatch = commonVersion?.match(/^\d+\.\d+\.\d+/);
-      if (!commonVersionMatch) {
-        console.warn(
-          `@openfn/language-common@${commonVersion} contains semver range syntax.`
-        );
-      }
+    // jsDeliver doesn't appear to support semver range syntax (^1.0.0, 1.x, ~1.1.0)
+    const commonVersionMatch = commonVersion?.match(/^\d+\.\d+\.\d+/);
+    if (!commonVersionMatch) {
+      console.warn(
+        `@openfn/language-common@${commonVersion} contains semver range syntax.`
+      );
     }
 
     const commonSpecifier = `@openfn/language-common@${commonVersion.replace(
@@ -131,12 +129,10 @@ async function loadDTS(specifier: string): Promise<Lib[]> {
       if (!filePath.startsWith('node_modules')) {
         // Load every common typedef into the common module
         let content = await fetchFile(`${commonSpecifier}${filePath}`);
-        if (!content.match(/<!doctype html>/i)) {
-          content = content.replace(/\* +@(.+?)\*\//gs, '*/');
-          results.push({
-            content: `declare module '@openfn/language-common' { ${content} }`,
-          });
-        }
+        content = content.replace(/\* +@(.+?)\*\//gs, '*/');
+        results.push({
+          content: `declare module '@openfn/language-common' { ${content} }`,
+        });
       }
     }
   }
