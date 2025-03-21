@@ -95,8 +95,6 @@ type Lib = {
 };
 
 async function loadDTS(specifier: string): Promise<Lib[]> {
-  const useLocal = specifier.endsWith('@local');
-
   // Work out the module name from the specifier
   // (his gets a bit tricky with @openfn/ module names)
   const nameParts = specifier.split('@');
@@ -146,9 +144,6 @@ async function loadDTS(specifier: string): Promise<Lib[]> {
   for await (const filePath of fetchDTSListing(specifier)) {
     if (!filePath.startsWith('node_modules')) {
       let content = await fetchFile(`${specifier}${filePath}`);
-      if (content.match(/<!doctype html>/i)) {
-        continue;
-      }
       // Convert relative paths
       content = content
         .replace(/from '\.\//g, `from '${name}/`)
