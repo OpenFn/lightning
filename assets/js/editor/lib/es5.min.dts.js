@@ -1,7 +1,6 @@
 // Super minimal array definition to support typings
 export default `
   interface Array<T> {
-    copyWithin(target: number, start: number, end?: number): this;
     [n: number]: T;
   }
 
