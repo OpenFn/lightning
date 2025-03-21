@@ -144,19 +144,19 @@ async function loadDTS(specifier: string): Promise<Lib[]> {
   for await (const filePath of fetchDTSListing(specifier)) {
     if (!filePath.startsWith('node_modules')) {
       let content = await fetchFile(`${specifier}${filePath}`);
+      // Convert relative paths
+      content = content
+        .replace(/from '\.\//g, `from '${name}/`)
+        .replace(/import '\.\//g, `import '${name}/`);
 
       // Remove js doc annotations
       // this regex means: find a * then an @ (with 1+ space in between), then match everything up to a closing comment */
       // content = content.replace(/\* +@(.+?)\*\//gs, '*/');
 
-      let fileName: string[] | string = filePath.split('/');
-      fileName = fileName[fileName.length - 1].replace('.d.ts', '');
+      let fileName = filePath.split('/').at(-1).replace('.d.ts', '');
 
       // Import the index as the global namespace - but take care to convert all paths to absolute
       if (fileName === 'index' || fileName === 'Adaptor') {
-        content = content.replace(/from '\.\//g, `from '${name}/`);
-        content = content.replace(/import '\.\//g, `import '${name}/`);
-
         // It turns out that "export * as " seems to straight up not work in Monaco
         // So this little hack will refactor import statements in a way that works
         content = content.replace(

@@ -1,5 +1,7 @@
 // https://github.com/microsoft/TypeScript/blob/main/lib/lib.es5.d.ts
 export default `
+
+
 interface Array<T> {
   /**
    * Gets or sets the length of the array. This is a number one higher than the highest index in the array.
@@ -178,6 +180,8 @@ interface Array<T> {
    */
   reduceRight<U>(callbackfn: (previousValue: U, currentValue: T, currentIndex: number, array: T[]) => U, initialValue: U): U;
 
+  copyWithin(target: number, start: number, end?: number): this;
+  
   // JC note that this is the only thing we actually need to get the types to track
   // we could ditch the rest of the definition (if no-one wants to code-complete array.length)
   [n: number]: T;
