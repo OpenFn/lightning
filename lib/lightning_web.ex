@@ -110,6 +110,7 @@ defmodule LightningWeb do
       import LightningWeb.LiveHelpers
       import LightningWeb.CoreComponents
       import LightningWeb.Components.Modal
+      import LightningWeb.DynamicComponent
       alias LightningWeb.LayoutComponents
 
       # Import basic rendering functionality (render, render_layout, etc)
@@ -129,6 +130,7 @@ defmodule LightningWeb do
       alias LightningWeb.Components.Icon
       alias LightningWeb.Components.Layout
       alias LightningWeb.Components.Menu
+      alias LightningWeb.DynamicComponent
       alias LightningWeb.Router.Helpers, as: Routes
 
       import LightningWeb.Components.Pills
