@@ -180,7 +180,6 @@ interface Array<T> {
    */
   reduceRight<U>(callbackfn: (previousValue: U, currentValue: T, currentIndex: number, array: T[]) => U, initialValue: U): U;
 
-  // JC copied out of VSC core. Needed to support union types apparently
   copyWithin(target: number, start: number, end?: number): this;
   
   // JC note that this is the only thing we actually need to get the types to track
