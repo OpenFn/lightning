@@ -23,7 +23,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
     <div class="relative h-full flex bg-white" id={@id}>
       <div class="grow flex h-full flex-col">
         <div class="">
-          <%= render_slot(@top) %>
+          {render_slot(@top)}
         </div>
         <!-- 3 column wrapper -->
         <div
@@ -31,10 +31,10 @@ defmodule LightningWeb.WorkflowLive.JobView do
           phx-hook="CollapsiblePanel"
           id="collapsibles"
         >
-          <%= render_slot(@inner_block) %>
+          {render_slot(@inner_block)}
         </div>
         <div class="flex p-2 justify-end">
-          <%= render_slot(@bottom) %>
+          {render_slot(@bottom)}
         </div>
       </div>
     </div>
@@ -48,7 +48,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
   defp column(assigns) do
     ~H"""
     <div id={@id} class={["flex-1 px-2 pt-2 collapsible-panel", @class]}>
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </div>
     """
   end
@@ -96,7 +96,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
                 class="align-middle w-4 h-4 mr-1 text-indigo-500"
               />
             </span>
-            <%= @job.name %>
+            {@job.name}
           </div>
           <.adaptor_block adaptor={@job.adaptor} />
           <.credential_block credential={
@@ -148,10 +148,10 @@ defmodule LightningWeb.WorkflowLive.JobView do
           panel_title={slot[:panel_title]}
           class={"#{slot[:class]} h-full border border-l-0"}
         >
-          <%= render_slot(slot) %>
+          {render_slot(slot)}
         </.collapsible_panel>
       <% end %>
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
       <.collapsible_panel
         id="job-editor-panel"
         class="h-full border border-l-0 job-editor-panel"
@@ -190,7 +190,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
         </:tabs>
 
         <%= if @follow_run_id do %>
-          <%= live_render(
+          {live_render(
             @socket,
             LightningWeb.RunLive.RunViewerLive,
             id: "run-viewer-#{@follow_run_id}",
@@ -202,7 +202,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
               "socket_id" => @socket.id
             },
             container: {:div, class: "h-full p-2"}
-          ) %>
+          )}
         <% else %>
           <div class="w-1/2 h-16 text-center m-auto p-4">
             <div class="text-gray-500 pb-2">
@@ -212,7 +212,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
         <% end %>
       </.collapsible_panel>
       <:bottom>
-        <%= render_slot(@footer) %>
+        {render_slot(@footer)}
       </:bottom>
     </.container>
     """
@@ -244,7 +244,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
           icon="hero-lock-closed-mini"
         />
         <span class="text-xs text-gray-500 font-semibold">
-          <%= @credential.name %>
+          {@credential.name}
         </span>
       <% else %>
         <Common.tooltip
@@ -283,7 +283,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
         icon="hero-cube-mini"
       />
       <code class="text-xs text-gray-500 font-semibold">
-        <%= @package_name %>@<%= @version %>
+        {@package_name}@{@version}
       </code>
     </div>
     """

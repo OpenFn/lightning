@@ -58,9 +58,9 @@ defmodule LightningWeb.RunLive.Show do
           breadcrumbs={[{"History", ~p"/projects/#{@project}/history"}]}
         >
           <:title>
-            <%= @page_title %>
+            {@page_title}
             <span class="pl-2 font-light">
-              <%= display_short_uuid(@id) %>
+              {display_short_uuid(@id)}
             </span>
             <div class="mx-2"></div>
             <.async_result :let={run} assign={@run}>
@@ -95,7 +95,7 @@ defmodule LightningWeb.RunLive.Show do
                       }
                       class="link text-ellipsis"
                     >
-                      <%= @workflow.name %>
+                      {@workflow.name}
                     </.link>
                   </:value>
                 </.list_item>
@@ -108,7 +108,7 @@ defmodule LightningWeb.RunLive.Show do
                       }
                       class="link font-mono"
                     >
-                      <%= display_short_uuid(run.work_order_id) %>
+                      {display_short_uuid(run.work_order_id)}
                     </.link>
                   </:value>
                 </.list_item>
@@ -120,10 +120,10 @@ defmodule LightningWeb.RunLive.Show do
                         id={run.id <> "start-tip"}
                         tooltip={DateTime.to_iso8601(run.started_at)}
                       >
-                        <%= Timex.Format.DateTime.Formatters.Relative.format!(
+                        {Timex.Format.DateTime.Formatters.Relative.format!(
                           run.started_at,
                           "{relative}"
-                        ) %>
+                        )}
                       </Common.wrapper_tooltip>
                     <% end %>
                   </:value>
@@ -136,10 +136,10 @@ defmodule LightningWeb.RunLive.Show do
                         id={run.id <> "finish-tip"}
                         tooltip={DateTime.to_iso8601(run.finished_at)}
                       >
-                        <%= Timex.Format.DateTime.Formatters.Relative.format!(
+                        {Timex.Format.DateTime.Formatters.Relative.format!(
                           run.finished_at,
                           "{relative}"
-                        ) %>
+                        )}
                       </Common.wrapper_tooltip>
                     <% end %>
                   </:value>

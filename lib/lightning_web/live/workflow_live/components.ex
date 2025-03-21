@@ -74,7 +74,7 @@ defmodule LightningWeb.WorkflowLive.Components do
       <div class="divide-y divide-gray-200 rounded-lg bg-white shadow">
         <div class="flex px-4 py-5 sm:px-6">
           <div class="grow font-bold">
-            <%= @title %>
+            {@title}
           </div>
           <div class="flex-none">
             <.link
@@ -89,14 +89,14 @@ defmodule LightningWeb.WorkflowLive.Components do
         </div>
         <div class="px-4 py-5 sm:p-6">
           <div class="md:gap-4">
-            <%= render_slot(@inner_block) %>
+            {render_slot(@inner_block)}
           </div>
         </div>
         <div :if={Enum.any?(@footer)} class="p-3">
           <div class="md:grid md:grid-cols-6 md:gap-4 @container">
             <div class="col-span-6">
               <%= for item <- @footer do %>
-                <%= render_slot(item) %>
+                {render_slot(item)}
               <% end %>
             </div>
           </div>
@@ -110,6 +110,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :can_edit_run_settings, :boolean, required: true
   attr :project_concurrency_disabled, :boolean, required: true
   attr :project_id, :string, required: true
+  attr :max_concurrency, :integer, required: true
 
   def workflow_settings(assigns) do
     ~H"""
@@ -177,6 +178,8 @@ defmodule LightningWeb.WorkflowLive.Components do
                 )
               }
               class="w-4 text-right"
+              min="1"
+              max={@max_concurrency}
             />
           </div>
         </div>
@@ -189,11 +192,11 @@ defmodule LightningWeb.WorkflowLive.Components do
             }
             class="text-xs text-slate-500 italic"
           >
-            <%= case @form[:concurrency].value || "" do
+            {case @form[:concurrency].value || "" do
               "" -> "Unlimited (up to max available)"
               1 -> "No more than one run at a time"
               value -> "No more than #{value} runs at a time"
-            end %>
+            end}
           </div>
           <div
             :if={
@@ -349,7 +352,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             <label class="block text-sm font-semibold leading-6 text-slate-800">
               Webhook URL
             </label>
-            <div class="mt-2 flex rounded-md shadow-sm">
+            <div class="mt-2 flex rounded-md shadow-xs">
               <input
                 type="text"
                 id="webhookUrlInput"
@@ -419,11 +422,11 @@ defmodule LightningWeb.WorkflowLive.Components do
                       get_webhook_auth_methods_from_trigger(@selected_trigger)
                   }>
                     <%= if auth_method.name |> String.length <= 50 do %>
-                      <%= auth_method.name %> (<.humanized_auth_method_type auth_method={
+                      {auth_method.name} (<.humanized_auth_method_type auth_method={
                         auth_method
                       } />)
                     <% else %>
-                      <%= auth_method.name |> String.slice(0..50) %> ... (<.humanized_auth_method_type auth_method={
+                      {auth_method.name |> String.slice(0..50)} ... (<.humanized_auth_method_type auth_method={
                         auth_method
                       } />)
                     <% end %>
@@ -466,7 +469,7 @@ defmodule LightningWeb.WorkflowLive.Components do
       )
 
     ~H"""
-    <span><%= @humanized_type %></span>
+    <span>{@humanized_type}</span>
     """
   end
 
@@ -606,9 +609,9 @@ defmodule LightningWeb.WorkflowLive.Components do
           class="text-center font-semibold text-secondary-700 panel-header-title text-xs"
         >
           <%= for tabs <- @tabs do %>
-            <%= render_slot(tabs) %>
+            {render_slot(tabs)}
           <% end %>
-          <div><%= @panel_title %></div>
+          <div>{@panel_title}</div>
         </div>
         <div class="close-button">
           <a
@@ -639,7 +642,7 @@ defmodule LightningWeb.WorkflowLive.Components do
         id={"#{@id}-panel-content"}
         class="panel-content min-h-0 min-w-0 flex-1 bg-white"
       >
-        <%= render_slot(@inner_block) %>
+        {render_slot(@inner_block)}
       </div>
     </div>
     """
@@ -700,20 +703,20 @@ defmodule LightningWeb.WorkflowLive.Components do
         <.td class={
           "whitespace-nowrap py-2.5 text-sm text-gray-900 text-ellipsis
           overflow-hidden max-w-[15rem] pr-5 #{!@on_row_select && "pl-4"}"}>
-          <%= auth_method.name %>
+          {auth_method.name}
         </.td>
         <.td class="whitespace-nowrap text-sm text-gray-900">
           <.humanized_auth_method_type auth_method={auth_method} />
         </.td>
         <.td class="whitespace-nowrap text-sm text-gray-900">
-          <%= render_slot(@linked_triggers, auth_method) %>
+          {render_slot(@linked_triggers, auth_method)}
         </.td>
         <.td
           :if={@action != []}
           class="text-right px-4 hover-content font-normal opacity-0 transition-opacity duration-300 whitespace-nowrap py-0.5"
         >
           <div :for={action <- @action} class="flex items-center inline-flex gap-x-2">
-            <%= render_slot(action, auth_method) %>
+            {render_slot(action, auth_method)}
           </div>
         </.td>
       </.tr>
@@ -750,7 +753,7 @@ defmodule LightningWeb.WorkflowLive.Components do
       <:footer class="mx-6 mt-6">
         <div class="flex gap-x-5 justify-end relative">
           <.link
-            class="justify-center rounded-md bg-white px-4 py-3 text-sm font-semibold text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+            class="justify-center rounded-md bg-white px-4 py-3 text-sm font-semibold text-gray-500 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
             phx-click={hide_modal("workflow_modal")}
           >
             Cancel
@@ -761,7 +764,7 @@ defmodule LightningWeb.WorkflowLive.Components do
               id="workflow_button"
               form={@form.id}
               type="submit"
-              class=" justify-center rounded-md bg-primary-600 disabled:bg-primary-300 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:outline-0 focus:outline-2 focus:outline-indigo-600 focus:outline-offset-2 active:outlin-2 active:outline-indigo-600 active:outline-offset-2"
+              class=" justify-center rounded-md bg-primary-600 disabled:bg-primary-300 px-6 py-3 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 disabled:outline-0 focus:outline-2 focus:outline-indigo-600 focus:outline-offset-2 active:outlin-2 active:outline-indigo-600 active:outline-offset-2"
             >
               Create Workflow
             </button>
@@ -784,7 +787,7 @@ defmodule LightningWeb.WorkflowLive.Components do
         </div>
         <div class="ml-2">
           <p class="text-sm text-yellow-700">
-            <%= @message %>
+            {@message}
           </p>
         </div>
       </div>
@@ -826,7 +829,7 @@ defmodule LightningWeb.WorkflowLive.Components do
       class={"inline-flex #{@avatar_icon_size} items-center justify-center rounded-full border-2 #{if @prior, do: "border-green-400 bg-green-500", else: "border-gray-400 bg-gray-500"}"}
     >
       <span class={"#{@avatar_font_size} font-normal leading-none text-white"}>
-        <%= user_name(@user) %>
+        {user_name(@user)}
       </span>
     </span>
     """

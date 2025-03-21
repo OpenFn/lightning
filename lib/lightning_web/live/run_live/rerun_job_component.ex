@@ -75,10 +75,7 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
       phx-mounted={@show && show_modal(@id)}
       phx-remove={hide_modal(@id)}
     >
-      <div
-        id={"#{@id}-bg"}
-        class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-      >
+      <div id={"#{@id}-bg"} class="fixed inset-0 bg-gray-500/75 transition-opacity">
       </div>
 
       <div
@@ -136,7 +133,7 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
                               "#{if MapSet.member?(@disabled_jobs_ids, job.id), do: "text-slate-500", else: "text-gray-900"}"
                             ]}
                           >
-                            <%= job.name %>
+                            {job.name}
                           </label>
                         </div>
                       <% end %>
@@ -156,12 +153,12 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
                 phx-value-type="selected"
                 phx-value-job={@selected_job.id}
                 phx-disable-with="Running..."
-                class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-1"
+                class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-1"
               >
-                Rerun <%= @retriable_count %> selected work <%= pluralize_with_s(
+                Rerun {@retriable_count} selected work {pluralize_with_s(
                   @retriable_count,
                   "order"
-                ) %> from selected job
+                )} from selected job
               </button>
               <button
                 id="rerun-all-from-job-trigger"
@@ -170,9 +167,9 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
                 phx-value-type="all"
                 phx-value-job={@selected_job.id}
                 phx-disable-with="Running..."
-                class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2"
+                class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2"
               >
-                Rerun all <%= @total_entries %> matching work orders from selected job
+                Rerun all {@total_entries} matching work orders from selected job
               </button>
               <div class="relative col-start-1 col-end-3">
                 <div class="absolute inset-0 flex items-center" aria-hidden="true">
@@ -186,7 +183,7 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
               </div>
               <button
                 type="button"
-                class="mt-3 inline-flex w-full justify-center items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:col-end-3 sm:mt-0"
+                class="mt-3 inline-flex w-full justify-center items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:col-end-3 sm:mt-0"
                 phx-click={hide_modal(@id)}
               >
                 Cancel
@@ -203,16 +200,16 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
                 phx-value-type="selected"
                 phx-value-job={@selected_job.id}
                 phx-disable-with="Running..."
-                class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2"
+                class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2"
               >
-                Rerun <%= @retriable_count %> selected work <%= pluralize_with_s(
+                Rerun {@retriable_count} selected work {pluralize_with_s(
                   @retriable_count,
                   "order"
-                ) %> from selected job
+                )} from selected job
               </button>
               <button
                 type="button"
-                class="mt-3 inline-flex w-full justify-center items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:mt-0"
+                class="mt-3 inline-flex w-full justify-center items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:mt-0"
                 phx-click={hide_modal(@id)}
               >
                 Cancel

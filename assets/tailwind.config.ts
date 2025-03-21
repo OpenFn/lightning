@@ -6,19 +6,9 @@ import type { Config } from 'tailwindcss';
 // See the Tailwind configuration guide for advanced usage
 // https://tailwindcss.com/docs/configuration
 import plugin from 'tailwindcss/plugin.js';
-import defaultTheme from 'tailwindcss/defaultTheme.js';
-import colors from 'tailwindcss/colors.js';
-import forms from '@tailwindcss/forms';
-import containerQueries from '@tailwindcss/container-queries';
 
 export default {
   darkMode: 'class',
-  content: [
-    './js/**/*.{js,jsx,ts,tsx}',
-    '../lib/*_web.ex',
-    '../lib/*_web/**/*.*ex',
-    '../deps/petal_components/**/*.*ex',
-  ],
   theme: {
     minWidth: {
       0: '0',
@@ -31,19 +21,6 @@ export default {
       max: 'max-content',
     },
     extend: {
-      colors: {
-        primary: colors.indigo,
-        secondary: colors.gray,
-        success: colors.green,
-        danger: colors.red,
-        warning: colors.yellow,
-        info: colors.sky,
-        gray: colors.gray,
-      },
-      fontFamily: {
-        sans: ['Inter var', ...defaultTheme.fontFamily.sans],
-        mono: ['Fira Code VF', ...defaultTheme.fontFamily.mono],
-      },
       animation: {
         'spin-pause': 'spin-pause 2s infinite ease',
         'fill-up': 'fill-up 2s infinite ease-in',
@@ -67,7 +44,6 @@ export default {
     },
   },
   plugins: [
-    forms,
     // Allows prefixing tailwind classes with LiveView classes to add rules
     // only when LiveView classes are applied, for example:
     //
@@ -140,7 +116,6 @@ export default {
         },
         { values }
       );
-    }),
-    containerQueries,
+    })
   ],
 } satisfies Config;

@@ -64,7 +64,7 @@ defmodule Storybook.MyPage do
       </a>
     </p>
     <div class="lsb-welcome-page lsb-border-t lsb-border-gray-200 lsb-pt-4">
-      <%= Phoenix.HTML.raw(@guide_content) %>
+      {Phoenix.HTML.raw(@guide_content)}
     </div>
     """
   end
@@ -77,7 +77,7 @@ defmodule Storybook.MyPage do
           <%= for {dt, link} <- @items do %>
             <div class="lsb-py-4 sm:lsb-grid sm:lsb-grid-cols-3 sm:lsb-gap-4 sm:lsb-py-5 sm:lsb-px-6 lsb-max-w-full">
               <dt class="lsb-text-base lsb-font-medium lsb-text-indigo-700">
-                <%= dt %>
+                {dt}
               </dt>
               <dd class="lsb-mt-1 lsb-text-base lsb-text-slate-400 sm:lsb-col-span-2 sm:lsb-mt-0 lsb-group lsb-cursor-pointer lsb-max-w-full">
                 <a
@@ -85,7 +85,7 @@ defmodule Storybook.MyPage do
                   href={link}
                   target="_blank"
                 >
-                  <%= link %>
+                  {link}
                 </a>
               </dd>
             </div>

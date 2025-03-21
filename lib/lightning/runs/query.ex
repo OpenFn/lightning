@@ -63,10 +63,18 @@ defmodule Lightning.Runs.Query do
   Query to return a list of runs that are either in progress (started or claimed)
   or available.
 
+  It returns a row_number (sequential number) for each run partitioned (grouped by) workflow or project.
+  If workflow concurrency is set it takes precedence over project concurrency.
+
+  Note that this query does NOT consider the smaller concurrency once it's not enough to assure that
+  project concurrency is always respected (e.g when 2 workflows of same project have concurrency 3 on a project
+  with concurrency 5, 3 is less than 5 but still project concurrency wouldn't be respected).
+  Instead the LV makes sure that a workflow concurrency sum does not exceed the project concurrency.
+
   The select clause includes:
   - `id`, the id of the run
   - `state`, the state of the run
-  - `row_number`, the number of the row in the window, per workflow
+  - `row_number`, the number of the row in the window, per workflow or per project
   - `concurrency`, the maximum number of runs that can be claimed for the workflow
   """
   @spec in_progress_window() :: Ecto.Queryable.t()
@@ -81,13 +89,8 @@ defmodule Lightning.Runs.Query do
       row_number: [
         partition_by:
           fragment(
-            """
-            CASE
-              WHEN ? IS NULL THEN ?
-              ELSE ?
-            END
-            """,
-            p.concurrency,
+            "CASE WHEN ? IS NOT NULL THEN ? ELSE ? END",
+            w.concurrency,
             w.id,
             p.id
           ),
@@ -102,7 +105,7 @@ defmodule Lightning.Runs.Query do
       # calculated here?
       row_number: row_number() |> over(:row_number),
       project_id: w.project_id,
-      concurrency: coalesce(p.concurrency, w.concurrency),
+      concurrency: coalesce(w.concurrency, p.concurrency),
       inserted_at: r.inserted_at
     })
   end

@@ -37,7 +37,7 @@ defmodule LightningWeb.CredentialLive.Scopes do
           />
         </div>
         <div class="flex flex-row text-xs mt-1">
-          Learn more about <%= @provider %> permissions
+          Learn more about {@provider} permissions
           <a
             target="_blank"
             href={@doc_url}
