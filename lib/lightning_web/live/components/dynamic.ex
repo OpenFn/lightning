@@ -7,8 +7,8 @@ defmodule LightningWeb.DynamicComponent do
   defstruct [:function, :args]
 
   @doc "Checks whether the given value can be rendered as a dynamic component"
-  @spec is_dynamic_component?(any()) :: boolean()
-  def is_dynamic_component?(val) do
+  @spec is_dynamic_component(any()) :: boolean()
+  def is_dynamic_component(val) do
     is_struct(val, __MODULE__)
   end
 end

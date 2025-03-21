@@ -417,7 +417,7 @@ defmodule LightningWeb.Components.Common do
       <div class="flex justify-between items-center space-x-3 text-red-900">
         <.icon name="hero-exclamation-circle-solid" class="w-5 h-5" />
         <p class="flex-1 text-sm font-medium" role="alert">
-          <%= if is_dynamic_component?(@msg) do %>
+          <%= if is_dynamic_component(@msg) do %>
             <.dynamic_component function={@msg.function} args={@msg.args} />
           <% else %>
             {@msg}
@@ -461,7 +461,7 @@ defmodule LightningWeb.Components.Common do
       <div class="flex justify-between items-center space-x-3 text-blue-900">
         <.icon name="hero-check-circle-solid" class="w-5 h-5" />
         <p class="flex-1 text-sm font-medium" role="alert">
-          <%= if is_dynamic_component?(@msg) do %>
+          <%= if is_dynamic_component(@msg) do %>
             <.dynamic_component function={@msg.function} args={@msg.args} />
           <% else %>
             {@msg}
