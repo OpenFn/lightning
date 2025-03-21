@@ -378,6 +378,19 @@ defmodule LightningWeb.Components.Common do
     end
   end
 
+  attr :function, {:fun, 1}, required: true
+  attr :args, :map, required: true
+
+  def dynamic_component(assigns) do
+    ~H"""
+    {Phoenix.LiveView.TagEngine.component(
+      @function,
+      @args,
+      {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
+    )}
+    """
+  end
+
   attr :kind, :atom, required: true, values: [:error, :info]
   attr :flash, :map, required: true
 
@@ -404,12 +417,8 @@ defmodule LightningWeb.Components.Common do
       <div class="flex justify-between items-center space-x-3 text-red-900">
         <.icon name="hero-exclamation-circle-solid" class="w-5 h-5" />
         <p class="flex-1 text-sm font-medium" role="alert">
-          <%= if is_map(@msg) do %>
-            {Phoenix.LiveView.TagEngine.component(
-              @msg.function,
-              @msg.attrs,
-              {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
-            )}
+          <%= if is_dynamic_component?(@msg) do %>
+            <.dynamic_component function={@msg.function} args={@msg.args} />
           <% else %>
             {@msg}
           <% end %>
@@ -452,12 +461,8 @@ defmodule LightningWeb.Components.Common do
       <div class="flex justify-between items-center space-x-3 text-blue-900">
         <.icon name="hero-check-circle-solid" class="w-5 h-5" />
         <p class="flex-1 text-sm font-medium" role="alert">
-          <%= if is_map(@msg) do %>
-            {Phoenix.LiveView.TagEngine.component(
-              @msg.function,
-              @msg.attrs,
-              {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
-            )}
+          <%= if is_dynamic_component?(@msg) do %>
+            <.dynamic_component function={@msg.function} args={@msg.args} />
           <% else %>
             {@msg}
           <% end %>

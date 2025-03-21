@@ -1947,9 +1947,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
         |> assign(show_github_sync_modal: false)
         |> put_flash(
           :info,
-          %{
+          %DynamicComponent{
             function: &github_sync_successfull_flash/1,
-            attrs: %{link_to_actions: link_to_actions}
+            args: %{link_to_actions: link_to_actions}
           }
         )
 
