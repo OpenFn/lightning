@@ -22,6 +22,8 @@ and this project adheres to
 
 ### Changed
 
+- Update flash message to contain link to github actions after save & sync
+  [#2989](https://github.com/OpenFn/lightning/issues/2989)
 - Added alphabetical sort to credential and Oauth2 client lists.
   [#2994](https://github.com/OpenFn/lightning/issues/2994)
 - Update Phoenix LiveView to 1.0.5, Petal Components to 2.9.0 and TailwindCSS to

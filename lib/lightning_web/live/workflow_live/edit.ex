@@ -1939,9 +1939,19 @@ defmodule LightningWeb.WorkflowLive.Edit do
            commit_message
          ) do
       :ok ->
+        link_to_actions =
+          "https://www.github.com/" <>
+            socket.assigns.project_repo_connection.repo <> "/actions"
+
         socket
         |> assign(show_github_sync_modal: false)
-        |> put_flash(:info, "Workflow saved and synced to GitHub successfully.")
+        |> put_flash(
+          :info,
+          %DynamicComponent{
+            function: &github_sync_successfull_flash/1,
+            args: %{link_to_actions: link_to_actions}
+          }
+        )
 
       {:error, _github_error} ->
         put_flash(

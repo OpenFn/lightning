@@ -841,4 +841,18 @@ defmodule LightningWeb.WorkflowLive.Components do
         do: "",
         else: String.at(user.last_name, 0)
   end
+
+  attr :link_to_actions, :string, required: true
+
+  def github_sync_successfull_flash(assigns) do
+    ~H"""
+    <span>
+      Workflow saved and sync requested. Check the
+      <.link href={@link_to_actions} target="_blank" class="link">
+        Github actions
+      </.link>
+      for result
+    </span>
+    """
+  end
 end
