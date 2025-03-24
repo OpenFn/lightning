@@ -13,9 +13,10 @@ defmodule LightningWeb.CredentialLiveTest do
 
   alias Lightning.Accounts.User
   alias Lightning.Credentials
+  alias Lightning.Credentials.Credential
 
   @create_attrs %{
-    name: "some name",
+    name: "some credential",
     body: Jason.encode!(%{"a" => 1})
   }
 
@@ -283,8 +284,11 @@ defmodule LightningWeb.CredentialLiveTest do
   describe "Clicking new from the list view" do
     test "allows the user to define and save a new raw credential", %{
       conn: conn,
-      project: project
+      user: user,
+      project: project1
     } do
+      project2 = insert(:project, project_users: [%{user: user, role: :admin}])
+
       {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
       index_live |> select_credential_type("raw")
@@ -297,7 +301,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       index_live
       |> element("#project-credentials-list-new")
-      |> render_change(%{"project_id" => project.id})
+      |> render_change(%{"project_id" => project1.id})
 
       index_live
       |> element("#add-project-credential-button-new", "Add")
@@ -311,6 +315,14 @@ defmodule LightningWeb.CredentialLiveTest do
              |> form("#credential-form-new", credential: %{name: "MailChimp'24"})
              |> render_change() =~ "credential name has invalid format"
 
+      index_live
+      |> element("#project-credentials-list-new")
+      |> render_change(%{"project_id" => project2.id})
+
+      index_live
+      |> element("#add-project-credential-button-new", "Add")
+      |> render_click()
+
       {:ok, _index_live, html} =
         index_live
         |> form("#credential-form-new", credential: @create_attrs)
@@ -322,8 +334,17 @@ defmodule LightningWeb.CredentialLiveTest do
       assert flash == %{"info" => "Credential created successfully"}
       assert path == "/credentials"
 
-      assert html =~ project.name
-      assert html =~ "some name"
+      assert html =~ project1.name
+      assert html =~ @create_attrs.name
+
+      credential =
+        Repo.get_by(Credential, name: @create_attrs.name)
+        |> Repo.preload(:projects)
+
+      assert MapSet.equal?(
+               MapSet.new(credential.projects, & &1.id),
+               MapSet.new([project1.id, project2.id])
+             )
     end
 
     test "allows the user to define and save a new dhis2 credential", %{

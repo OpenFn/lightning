@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Fix putting project credentials on a new credential
+  [#2993](https://github.com/OpenFn/lightning/issues/2993)
 - Allow users to book for demo sessions
   [PR#3035](https://github.com/OpenFn/lightning/pull/3035)
 - Allow workflow and project concurrency progress windows

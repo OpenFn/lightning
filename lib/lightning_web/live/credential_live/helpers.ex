@@ -31,8 +31,8 @@ defmodule LightningWeb.CredentialLive.Helpers do
   """
   def prepare_projects_associations(changeset, selected_projects, assoc_key) do
     project_credentials = Ecto.Changeset.fetch_field!(changeset, assoc_key)
-    selected_ids = MapSet.new(Enum.map(selected_projects, & &1.id))
-    project_ids = MapSet.new(Enum.map(project_credentials, & &1.project_id))
+    selected_ids = MapSet.new(selected_projects, & &1.id)
+    project_ids = MapSet.new(project_credentials, & &1.project_id)
 
     {projects_to_keep, projects_to_delete} =
       Enum.split_with(

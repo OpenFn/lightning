@@ -688,16 +688,9 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
        ) do
     user_id = Ecto.Changeset.fetch_field!(changeset, :user_id)
 
-    project_credentials =
-      Ecto.Changeset.fetch_field!(changeset, :project_credentials)
-      |> Enum.map(fn %{project_id: project_id} ->
-        %{"project_id" => project_id}
-      end)
-
     credential_params
     |> Map.put("user_id", user_id)
     |> Map.put("schema", schema_name)
-    |> Map.put("project_credentials", project_credentials)
     |> Credentials.create_credential()
     |> case do
       {:ok, credential} ->
