@@ -105,9 +105,9 @@
   }
 }
 
-@import './monaco-style-overrides.css' layer(utilities);
+@import '../js/monaco/styles.css' layer(utilities);
 @import 'reactflow/dist/style.css' layer(utilities);
-@import "../../deps/petal_components/assets/default.css";
+@import '../../deps/petal_components/assets/default.css';
 
 @utility link {
   @apply cursor-pointer

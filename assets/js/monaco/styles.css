@@ -1,5 +1,19 @@
 @import 'monaco-editor/min/vs/editor/editor.main.css';
 
+/* 
+ * This font override is required to load the codicon font used for editor icons.
+ * The Monaco editor assets are configured in config.exs in the esbuild profile
+ * that includes workers and resources like fonts. The entry points are defined in
+ * the esbuild config section with paths for editor workers (json, css, html, typescript)
+ * and the codicon font used for editor icons.
+ */
+
+@font-face {
+  font-family: codicon;
+  font-display: block;
+  src: url(codicon.ttf) format('truetype');
+}
+
 /* Fixes for curved borders (what a pain!)*/
 .monaco-editor,
 .monaco-editor .overflow-guard {
@@ -9,7 +23,7 @@
 .monaco-editor .margin {
   @apply rounded-l-md;
 }
-.monaco-editor .monaco-scrollable-element  {
+.monaco-editor .monaco-scrollable-element {
   @apply rounded-r-md;
   border-top-right-radius: 0.375rem;
   border-bottom-right-radius: 0.375rem;

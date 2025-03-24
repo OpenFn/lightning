@@ -119,6 +119,7 @@ config :esbuild,
          css.worker=monaco-editor/esm/vs/language/css/css.worker.js
          html.worker=monaco-editor/esm/vs/language/html/html.worker.js
          typescript.worker=monaco-editor/esm/vs/language/typescript/ts.worker.js
+         codicon=monaco-editor/esm/vs/base/browser/ui/codicons/codicon/codicon.ttf
          fonts/inter.css
          fonts/fira-code.css
         )
