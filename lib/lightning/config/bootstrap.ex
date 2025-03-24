@@ -638,6 +638,11 @@ defmodule Lightning.Config.Bootstrap do
 
     setup_storage()
 
+    entry_points = React.get_entry_points(:lightning)
+
+    config :esbuild, :default,
+      args: Utils.get_env([:esbuild, :default, :args]) ++ entry_points
+
     :ok
   end
 
