@@ -76,7 +76,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         >
           <:title>
             <div class="flex gap-2">
-              <%= @page_title %>
+              {@page_title}
 
               <LightningWeb.Components.Common.snapshot_version_chip
                 id="canvas-workflow-version"
@@ -310,7 +310,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   />
 
                   <.save_is_blocked_error :if={is_empty}>
-                    <%= error_message %>
+                    {error_message}
                   </.save_is_blocked_error>
 
                   <.icon
@@ -439,6 +439,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               can_edit_run_settings={@can_edit_run_settings}
               project_id={@workflow.project_id}
               project_concurrency_disabled={@workflow.project.concurrency == 1}
+              max_concurrency={@max_concurrency}
               form={@workflow_form}
             />
           </.panel>
@@ -666,7 +667,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   def run_buttons(assigns) do
     ~H"""
-    <div id="run-buttons" class="inline-flex rounded-md shadow-sm">
+    <div id="run-buttons" class="inline-flex rounded-md shadow-xs">
       <.save_and_run_button {assigns} />
       <.create_new_work_order_dropdown
         :if={step_retryable?(@step, @manual_run_form, @selectable_dataclips)}
@@ -759,7 +760,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           class={[
             "hidden absolute right-0 bottom-9 z-10 mb-2 w-max",
             "rounded-md bg-white px-4 py-2 text-sm font-semibold",
-            "text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+            "text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
           ]}
           disabled={@save_and_run_disabled || @snapshot_version_tag != "latest"}
         >
@@ -897,7 +898,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     >
       <span class="flex flex-grow flex-col">
         <span class="inline-flex items-center px-2 py-1 font-medium mr-1 text-gray-700">
-          <%= @label %>
+          {@label}
         </span>
       </span>
       <button
@@ -949,7 +950,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     button_base_classes =
       ~w(
-        inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset hover:bg-gray-50)
+        inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset hover:bg-gray-50)
 
     button_classes =
       button_base_classes ++
@@ -974,7 +975,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     </.link>
 
     <.save_is_blocked_error :if={@is_empty}>
-      <%= @error_message %>
+      {@error_message}
     </.save_is_blocked_error>
     """
   end
@@ -983,7 +984,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     ~H"""
     <span class="flex items-center font-medium text-sm text-red-600 ml-1 mr-4 gap-x-1.5">
       <.icon name="hero-exclamation-circle" class="h-5 w-5" />
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </span>
     """
   end
@@ -1008,7 +1009,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     ~H"""
     <%= for f <- @forms do %>
-      <%= render_slot(@inner_block, {f}) %>
+      {render_slot(@inner_block, {f})}
     <% end %>
     """
   end
@@ -1026,7 +1027,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     ~H"""
     <%= for f <- @forms do %>
-      <%= render_slot(@inner_block, f) %>
+      {render_slot(@inner_block, f)}
     <% end %>
     """
   end
@@ -1164,9 +1165,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
        admin_contacts: Projects.list_project_admin_emails(assigns.project.id),
        show_github_sync_modal: false,
        project_repo_connection:
-         VersionControl.get_repo_connection_for_project(assigns.project.id)
+         VersionControl.get_repo_connection_for_project(assigns.project.id),
+       max_concurrency: assigns.project.concurrency
      )
-     |> assign(initial_presence_summary(socket.assigns.current_user))}
+     |> assign(initial_presence_summary(assigns.current_user))}
   end
 
   @impl true
@@ -2220,8 +2222,23 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp assign_workflow(socket, workflow) do
+    workflow = Lightning.Repo.preload(workflow, :project)
+
+    alloted_concurrency =
+      workflow.project_id
+      |> Workflows.list_project_workflows()
+      |> Enum.map(fn %{id: workflow_id, concurrency: concurrency} ->
+        if workflow_id == workflow.id, do: 0, else: concurrency || 0
+      end)
+      |> Enum.sum()
+
+    project_concurrency = workflow.project.concurrency || 0
+
     socket
-    |> assign(workflow: Lightning.Repo.preload(workflow, :project))
+    |> assign(
+      workflow: workflow,
+      max_concurrency: max(0, project_concurrency - alloted_concurrency)
+    )
     |> apply_params(socket.assigns.workflow_params, :workflow)
   end
 
@@ -2528,7 +2545,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         data-is-dirty="true"
       >
       </div>
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </div>
     """
   end
@@ -2577,7 +2594,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       )
 
     ~H"""
-    <div class="inline-flex rounded-md shadow-sm z-5">
+    <div class="inline-flex rounded-md shadow-xs z-5">
       <.button
         id={@id}
         phx-disable-with="Saving..."
@@ -2629,7 +2646,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               if(@dropdown_position == :top, do: "bottom-9 mb-2"),
               if(@dropdown_position == :bottom, do: "top-9 mt-2"),
               "rounded-md bg-white px-4 py-2 text-sm font-semibold",
-              "text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+              "text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
             ]}
             disabled={@disabled}
             phx-hook="OpenSyncModalViaCtrlShiftS"

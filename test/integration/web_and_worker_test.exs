@@ -68,12 +68,10 @@ defmodule Lightning.WebAndWorkerTest do
       assert %{runs: [run]} =
                WorkOrders.get(wo_id, include: [:runs])
 
-      assert %{steps: []} = Runs.get(run.id, include: [:steps])
-
       # wait to complete
       Events.subscribe(run)
 
-      run_id = run.id
+      assert %{id: run_id, steps: []} = Runs.get(run.id, include: [:steps])
 
       assert_receive %Events.RunUpdated{
                        run: %{id: ^run_id, state: :success}
@@ -253,7 +251,7 @@ defmodule Lightning.WebAndWorkerTest do
         end)
 
       assert version_logs =~ "▸ node.js                  22.12"
-      assert version_logs =~ "▸ worker                   1.11"
+      assert version_logs =~ "▸ worker                   1.13"
       assert version_logs =~ "▸ @openfn/language-http    3.1.12"
 
       expected_lines =

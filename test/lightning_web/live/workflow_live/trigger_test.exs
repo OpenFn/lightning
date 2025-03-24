@@ -34,7 +34,8 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       assert view |> element("a#addAuthenticationLink") |> has_element?()
@@ -45,7 +46,8 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       assert view
@@ -66,7 +68,8 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, _view, html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       auth_method =
@@ -81,7 +84,8 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, _view, html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       assert html =~ auth_method.name
@@ -100,7 +104,8 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       refute view |> element("##{modal_id}") |> has_element?()
@@ -110,7 +115,8 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       assert view |> element("##{modal_id}") |> has_element?()
@@ -149,7 +155,8 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, _view, html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       assert html =~ auth_method_name
@@ -177,7 +184,8 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       refute view |> element("##{modal_id}") |> has_element?()
@@ -187,7 +195,8 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       assert view |> element("##{modal_id}") |> has_element?()
@@ -226,7 +235,8 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, _view, html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       assert html =~ auth_method_name
@@ -260,7 +270,8 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       refute view |> element("##{modal_id}") |> has_element?()
@@ -270,7 +281,8 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       assert view |> element("##{modal_id}") |> has_element?()
@@ -333,7 +345,8 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       refute view |> element("#webhooks_auth_method_modal") |> has_element?()
@@ -343,7 +356,8 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       assert view |> element("#webhooks_auth_method_modal") |> has_element?()
@@ -371,7 +385,8 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}"
+          ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id, v: workflow.lock_version]}",
+          on_error: :raise
         )
 
       view

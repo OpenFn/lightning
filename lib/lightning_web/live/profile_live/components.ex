@@ -7,17 +7,17 @@ defmodule LightningWeb.ProfileLive.Components do
     ~H"""
     <div class="px-4 sm:px-0">
       <h2 class="text-base font-semibold leading-7 text-gray-900">
-        <%= @current_user.first_name %> <%= @current_user.last_name %>
+        {@current_user.first_name} {@current_user.last_name}
       </h2>
       <p class="mt-1 text-sm leading-6 text-gray-600">
         Change name, email, password, and request deletion.
       </p>
       <div class="border-b border-gray-900/10 mt-6 mb-6" />
       <p class="mt-1 text-sm leading-6 text-gray-600">
-        Created: <%= @current_user.inserted_at |> Lightning.Helpers.format_date() %>
+        Created: {@current_user.inserted_at |> Lightning.Helpers.format_date()}
       </p>
       <p class="mt-1 text-sm leading-6 text-gray-600">
-        Email: <%= @current_user.email %>
+        Email: {@current_user.email}
       </p>
     </div>
     """
@@ -70,14 +70,14 @@ defmodule LightningWeb.ProfileLive.Components do
 
   defp delete_user_card(assigns) do
     ~H"""
-    <div class="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2 mb-4">
+    <div class="bg-white shadow-xs ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2 mb-4">
       <div class="px-4 py-6 sm:p-8">
         <span class="text-xl">Delete account</span>
         <span class="float-right">
           <.link navigate={@url}>
             <button
               type="button"
-              class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-danger-500 hover:bg-danger-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger-500"
+              class="inline-flex justify-center py-2 px-4 border border-transparent shadow-xs text-sm font-medium rounded-md text-white bg-danger-500 hover:bg-danger-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger-500"
             >
               Delete my account
             </button>

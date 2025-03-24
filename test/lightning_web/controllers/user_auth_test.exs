@@ -419,7 +419,7 @@ defmodule LightningWeb.UserAuthTest do
 
       assert updated_socket.assigns.sudo_mode? == false
 
-      assert {:redirect, %{to: ~p"/auth/confirm_access"}} ==
+      assert {:redirect, %{to: ~p"/auth/confirm_access", status: 302}} ==
                updated_socket.redirected
     end
 
@@ -434,7 +434,7 @@ defmodule LightningWeb.UserAuthTest do
 
       assert updated_socket.assigns.sudo_mode? == nil
 
-      assert {:redirect, %{to: ~p"/auth/confirm_access"}} ==
+      assert {:redirect, %{to: ~p"/auth/confirm_access", status: 302}} ==
                updated_socket.redirected
     end
   end

@@ -82,7 +82,7 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
   def render(assigns) do
     ~H"""
     <div>
-      <.modal id={"project-#{@id}"} show={true} width="max-w-md">
+      <.modal id={"delete-project-#{@id}"} show={true} width="max-w-md">
         <:title>
           <div class="flex justify-between">
             <span class="font-bold">
@@ -111,13 +111,13 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
         >
           <div class="">
             <p>
-              Enter the project name to confirm deletion: <b><%= @project.name %></b>
+              Enter the project name to confirm deletion: <b>{@project.name}</b>
             </p>
 
             <p class="my-2">
               Deleting this project will disable access
               for all users, and disable all jobs in the project. The whole project will be deleted
-              along with all workflows and work order history, <%= human_readable_grace_period() %>.
+              along with all workflows and work order history, {human_readable_grace_period()}.
             </p>
 
             <.input
@@ -146,7 +146,7 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
               type="button"
               phx-click="close_modal"
               phx-target={@myself}
-              class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+              class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
             >
               Cancel
             </button>

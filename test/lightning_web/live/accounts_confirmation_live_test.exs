@@ -18,7 +18,8 @@ defmodule LightningWeb.AccountsConfirmationLiveTest do
        %{conn: conn} do
     user = insert(:user, confirmed_at: DateTime.utc_now())
 
-    {:ok, view, _html} = conn |> log_in_user(user) |> live("/projects")
+    {:ok, view, _html} =
+      conn |> log_in_user(user) |> live("/projects", on_error: :raise)
 
     refute view |> has_element?("#account-confirmation-alert")
     refute view |> has_element?("#account-confirmation-modal")
@@ -28,7 +29,8 @@ defmodule LightningWeb.AccountsConfirmationLiveTest do
        %{conn: conn} do
     user = insert(:user, confirmed_at: nil, inserted_at: DateTime.utc_now())
 
-    {:ok, view, _html} = conn |> log_in_user(user) |> live("/projects")
+    {:ok, view, _html} =
+      conn |> log_in_user(user) |> live("/projects", on_error: :raise)
 
     assert view |> has_element?("#account-confirmation-alert")
     refute view |> has_element?("#account-confirmation-modal")
@@ -44,7 +46,8 @@ defmodule LightningWeb.AccountsConfirmationLiveTest do
 
     user = insert(:user, confirmed_at: nil, inserted_at: DateTime.utc_now())
 
-    {:ok, view, _html} = conn |> log_in_user(user) |> live("/projects")
+    {:ok, view, _html} =
+      conn |> log_in_user(user) |> live("/projects", on_error: :raise)
 
     refute view |> has_element?("#account-confirmation-alert")
     refute view |> has_element?("#account-confirmation-modal")
@@ -58,7 +61,8 @@ defmodule LightningWeb.AccountsConfirmationLiveTest do
         inserted_at: DateTime.utc_now() |> Timex.shift(hours: -50)
       )
 
-    {:ok, view, _html} = conn |> log_in_user(user) |> live("/projects")
+    {:ok, view, _html} =
+      conn |> log_in_user(user) |> live("/projects", on_error: :raise)
 
     refute view |> has_element?("#account-confirmation-alert")
     assert view |> has_element?("#account-confirmation-modal")
@@ -78,7 +82,8 @@ defmodule LightningWeb.AccountsConfirmationLiveTest do
         inserted_at: DateTime.utc_now() |> Timex.shift(hours: -50)
       )
 
-    {:ok, view, _html} = conn |> log_in_user(user) |> live("/projects")
+    {:ok, view, _html} =
+      conn |> log_in_user(user) |> live("/projects", on_error: :raise)
 
     refute view |> has_element?("#account-confirmation-alert")
     refute view |> has_element?("#account-confirmation-modal")

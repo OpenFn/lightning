@@ -1,18 +1,18 @@
 <div>
-  <p>Hi <%= @recipient.first_name %>,</p>
+  <p>Hi {@recipient.first_name},</p>
 
   <p>
-    A "<%= @workflow_name %>" run just failed in "<%= @project_name %>". <br />
-    Click <a href={@work_order_url}>here</a>
+    A "{@workflow_name}" run just failed in "{@project_name}". <br /> Click
+    <a href={@work_order_url}>here</a>
     to view the state of the work order and <a href={@run_url}>here</a>
     to inspect the run or view the logs at the bottom of this email.
   </p>
 
   <%= if @count > 1 do %>
     <p>
-      Note that runs for this workflow have failed <%= @count %> times in
-      the last <%= @duration %>. We will only send <%= @rate_limit %> failure
-      alerts for this workflow ("<%= @workflow_name %>") at most every <%= @duration %> to avoid cluttering your inbox.
+      Note that runs for this workflow have failed {@count} times in
+      the last {@duration}. We will only send {@rate_limit} failure
+      alerts for this workflow ("{@workflow_name}") at most every {@duration} to avoid cluttering your inbox.
     </p>
   <% end %>
 

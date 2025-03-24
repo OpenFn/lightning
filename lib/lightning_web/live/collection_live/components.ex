@@ -26,7 +26,7 @@ defmodule LightningWeb.CollectionLive.Components do
       <div class="px-6">
         <p class="text-sm text-gray-500">
           Are you sure you want to delete the collection
-          <span class="font-medium"><%= @collection.name %></span>
+          <span class="font-medium">{@collection.name}</span>
           ?
           If you wish to proceed with this action, click on the delete button. To cancel click on the cancel button.<br /><br />
         </p>
@@ -45,7 +45,7 @@ defmodule LightningWeb.CollectionLive.Components do
         <button
           type="button"
           phx-click={hide_modal(@id)}
-          class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+          class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
         >
           Cancel
         </button>
@@ -59,7 +59,7 @@ defmodule LightningWeb.CollectionLive.Components do
     <h3 class="text-3xl font-bold">
       Collections
       <span class="text-base font-normal">
-        (<%= @count %>)
+        ({@count})
       </span>
     </h3>
     """
@@ -75,12 +75,12 @@ defmodule LightningWeb.CollectionLive.Components do
 
     ~H"""
     <%= if @empty? do %>
-      <%= render_slot(@empty_state) %>
+      {render_slot(@empty_state)}
     <% else %>
       <div class="mt-5 flex justify-between mb-3">
         <.table_title count={@collections_count} />
         <div>
-          <%= render_slot(@create_collection_button) %>
+          {render_slot(@create_collection_button)}
         </div>
       </div>
       <div id="collections-table">
@@ -107,13 +107,13 @@ defmodule LightningWeb.CollectionLive.Components do
             class="hover:bg-gray-100 transition-colors duration-200"
           >
             <.td class="break-words max-w-[15rem] text-gray-800">
-              <%= collection.name %>
+              {collection.name}
             </.td>
             <.td class="break-words max-w-[25rem]">
-              <%= collection.project.name %>
+              {collection.project.name}
             </.td>
             <.td class="break-words max-w-[25rem]">
-              <%= div(collection.byte_size_sum, 1_000_000) %>
+              {div(collection.byte_size_sum, 1_000_000)}
             </.td>
             <.td>
               <div class="text-right">

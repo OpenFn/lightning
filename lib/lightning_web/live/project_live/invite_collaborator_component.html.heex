@@ -40,12 +40,12 @@
       <div class="px-6 space-y-5">
         <div :if={@error} class="bg-red-50 p-4">
           <div class="flex">
-            <div class="flex-shrink-0">
+            <div class="shrink-0">
               <Heroicons.exclamation_triangle class="h-5 w-5 text-red-400" />
             </div>
             <div class="ml-3">
               <p class="text-sm text-red-700">
-                <%= @error %>
+                {@error}
               </p>
             </div>
           </div>
@@ -110,7 +110,7 @@
                 name={"#{f.name}[collaborators_drop][]"}
                 value={cf.index}
                 phx-click={JS.dispatch("change")}
-                class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
               >
                 <Heroicons.minus_circle class="w-5 h-5" />
               </button>
@@ -127,15 +127,15 @@
             phx-disable-with="Adding..."
             disabled={!@changeset.valid? || !is_nil(@error)}
           >
-            Invite new user<%= if(
+            Invite new user{if(
               Enum.count(f[:invited_collaborators].value) > 1,
               do: "s"
-            ) %>
+            )}
           </.button>
           <button
             type="button"
             phx-click="toggle_invite_collaborators_modal"
-            class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+            class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
           >
             Cancel
           </button>
