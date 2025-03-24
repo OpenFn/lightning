@@ -564,11 +564,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
     test "access project settings page", %{conn: conn, project: project} do
       {:ok, _view, html} =
-        live(
-          conn,
-          Routes.project_project_settings_path(conn, :index, project.id),
-          on_error: :raise
-        )
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
       assert html =~ "Project settings"
     end
@@ -583,11 +579,7 @@ defmodule LightningWeb.ProjectLiveTest do
         |> List.first()
 
       {:ok, _view, html} =
-        live(
-          conn,
-          Routes.project_project_settings_path(conn, :index, project.id),
-          on_error: :raise
-        )
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
       assert html =~ "Collaborator"
       assert html =~ "Role"
@@ -628,10 +620,7 @@ defmodule LightningWeb.ProjectLiveTest do
       credential = Lightning.Repo.preload(credential, :user)
 
       {:ok, _view, html} =
-        live(
-          conn,
-          Routes.project_project_settings_path(conn, :index, project.id) <>
-            "#credentials",
+        live(conn, ~p"/projects/#{project}/settings#credentials",
           on_error: :raise
         )
 
@@ -662,10 +651,7 @@ defmodule LightningWeb.ProjectLiveTest do
           )
 
         {:ok, view, html} =
-          live(
-            conn,
-            Routes.project_project_settings_path(conn, :index, project.id) <>
-              "#credentials",
+          live(conn, ~p"/projects/#{project}/settings#credentials",
             on_error: :raise
           )
 
@@ -710,10 +696,7 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       {:ok, view, html} =
-        live(
-          conn,
-          Routes.project_project_settings_path(conn, :index, project.id) <>
-            "#credentials",
+        live(conn, ~p"/projects/#{project}/settings#credentials",
           on_error: :raise
         )
 
@@ -759,10 +742,7 @@ defmodule LightningWeb.ProjectLiveTest do
       credential_name = "My Credential"
 
       {:ok, view, html} =
-        live(
-          conn,
-          Routes.project_project_settings_path(conn, :index, project.id) <>
-            "#credentials",
+        live(conn, ~p"/projects/#{project}/settings#credentials",
           on_error: :raise
         )
 
@@ -785,11 +765,7 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       {:ok, view, html} =
-        live(
-          conn,
-          Routes.project_project_settings_path(conn, :index, project.id),
-          on_error: :raise
-        )
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
       assert html =~ "Project settings"
 
@@ -830,11 +806,7 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       {:ok, view, html} =
-        live(
-          conn,
-          Routes.project_project_settings_path(conn, :index, project.id),
-          on_error: :raise
-        )
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
       assert html =~ "Project settings"
 
@@ -865,11 +837,7 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       {:ok, view, html} =
-        live(
-          conn,
-          Routes.project_project_settings_path(conn, :index, project.id),
-          on_error: :raise
-        )
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
       assert html =~ "Project settings"
 
@@ -892,11 +860,7 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       {:ok, view, html} =
-        live(
-          conn,
-          Routes.project_project_settings_path(conn, :index, project.id),
-          on_error: :raise
-        )
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
       assert html =~ "Project settings"
 
@@ -936,10 +900,7 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       {:ok, view, _html} =
-        live(
-          conn,
-          Routes.project_project_settings_path(conn, :index, project.id) <>
-            "#collaboration",
+        live(conn, ~p"/projects/#{project}/settings" <> "#collaboration",
           on_error: :raise
         )
 
@@ -1008,11 +969,7 @@ defmodule LightningWeb.ProjectLiveTest do
         {conn, _user} = setup_project_user(conn, project, role)
 
         {:ok, view, html} =
-          live(
-            conn,
-            Routes.project_project_settings_path(conn, :index, project.id),
-            on_error: :raise
-          )
+          live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
         assert has_element?(view, "#security-tab")
         assert html =~ "Multi-Factor Authentication"
@@ -1030,11 +987,7 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       {:ok, view, html} =
-        live(
-          conn,
-          Routes.project_project_settings_path(conn, :index, project.id),
-          on_error: :raise
-        )
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
       assert html =~ "Project settings"
 
@@ -1057,11 +1010,7 @@ defmodule LightningWeb.ProjectLiveTest do
         {conn, _user} = setup_project_user(conn, project, role)
 
         {:ok, view, html} =
-          live(
-            conn,
-            Routes.project_project_settings_path(conn, :index, project.id),
-            on_error: :raise
-          )
+          live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
         assert html =~ "Project settings"
 
@@ -1089,11 +1038,7 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       {:ok, _view, html} =
-        live(
-          conn,
-          Routes.project_project_settings_path(conn, :index, project.id),
-          on_error: :raise
-        )
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
       assert html =~ "Project settings"
 
@@ -1104,11 +1049,7 @@ defmodule LightningWeb.ProjectLiveTest do
         assert {:error, {:redirect, %{to: "/mfa_required"}}} =
                  live(
                    conn,
-                   Routes.project_project_settings_path(
-                     conn,
-                     :index,
-                     project.id
-                   ),
+                   ~p"/projects/#{project}/settings",
                    on_error: :raise
                  )
       end)
@@ -1121,11 +1062,7 @@ defmodule LightningWeb.ProjectLiveTest do
       for conn <-
             build_project_user_conns(project, [:editor, :admin, :owner, :viewer]) do
         {:ok, _view, html} =
-          live(
-            conn,
-            Routes.project_project_settings_path(conn, :index, project.id),
-            on_error: :raise
-          )
+          live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
         for auth_method <- auth_methods do
           assert html =~ auth_method.name
@@ -1133,14 +1070,11 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
-    test "owners/admins can add a new project webhook auth method, editors/viewers can't",
-         %{
-           conn: conn
-         } do
+    test "owners/admins can add a new project webhook auth method, editors/viewers can't" do
       project = insert(:project)
 
       settings_path =
-        Routes.project_project_settings_path(conn, :index, project.id)
+        ~p"/projects/#{project}/settings"
 
       for conn <- build_project_user_conns(project, [:owner, :admin]) do
         {:ok, view, _html} =
@@ -1235,11 +1169,7 @@ defmodule LightningWeb.ProjectLiveTest do
       conn = log_in_user(conn, project_user.user)
 
       {:ok, view, _html} =
-        live(
-          conn,
-          Routes.project_project_settings_path(conn, :index, project.id),
-          on_error: :raise
-        )
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
       assert view
              |> element("button#add_new_auth_method:disabled")
@@ -1248,10 +1178,7 @@ defmodule LightningWeb.ProjectLiveTest do
       refute view |> element("#new_auth_method_modal") |> has_element?()
     end
 
-    test "owners/admins can add edit a project webhook auth method, editors/viewers can't",
-         %{
-           conn: conn
-         } do
+    test "owners/admins can add edit a project webhook auth method, editors/viewers can't" do
       project = insert(:project)
 
       auth_method =
@@ -1261,7 +1188,7 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       settings_path =
-        Routes.project_project_settings_path(conn, :index, project.id)
+        ~p"/projects/#{project}/settings"
 
       for conn <- build_project_user_conns(project, [:owner, :admin]) do
         {:ok, view, _html} =
@@ -1347,11 +1274,7 @@ defmodule LightningWeb.ProjectLiveTest do
       conn = log_in_user(conn, project_user.user)
 
       {:ok, view, _html} =
-        live(
-          conn,
-          Routes.project_project_settings_path(conn, :index, project.id),
-          on_error: :raise
-        )
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
       assert view
              |> element(
@@ -1387,11 +1310,7 @@ defmodule LightningWeb.ProjectLiveTest do
       conn = log_in_user(conn, project_user.user)
 
       {:ok, view, _html} =
-        live(
-          conn,
-          Routes.project_project_settings_path(conn, :index, project.id),
-          on_error: :raise
-        )
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
       assert view
              |> element("a#edit_auth_method_link_#{auth_method.id}")
@@ -1467,7 +1386,7 @@ defmodule LightningWeb.ProjectLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          Routes.project_project_settings_path(conn, :index, project.id)
+          ~p"/projects/#{project}/settings"
         )
 
       assert view
@@ -1599,7 +1518,7 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       settings_path =
-        Routes.project_project_settings_path(conn, :index, project.id)
+        ~p"/projects/#{project}/settings"
 
       conn = log_in_user(conn, project_user.user)
 
@@ -1650,7 +1569,7 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       settings_path =
-        Routes.project_project_settings_path(conn, :index, project.id)
+        ~p"/projects/#{project}/settings"
 
       conn = log_in_user(conn, project_user.user)
 

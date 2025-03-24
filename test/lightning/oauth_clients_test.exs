@@ -27,15 +27,23 @@ defmodule Lightning.OauthClientsTest do
 
       client_1 =
         insert(:oauth_client,
+          name: "bbb",
           project_oauth_clients: [%{project: project_1}, %{project: project_2}]
         )
 
       client_2 =
-        insert(:oauth_client, project_oauth_clients: [%{project: project_1}])
+        insert(:oauth_client,
+          name: "aaa",
+          project_oauth_clients: [%{project: project_1}]
+        )
 
       client_3 = insert(:oauth_client)
 
       project_1_clients = OauthClients.list_clients(project_1)
+
+      names = Enum.map(project_1_clients, & &1.name)
+      assert names == Enum.sort_by(names, &String.downcase/1)
+
       project_2_clients = OauthClients.list_clients(project_2)
       project_3_clients = OauthClients.list_clients(project_3)
 

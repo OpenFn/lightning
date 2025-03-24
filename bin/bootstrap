@@ -20,7 +20,7 @@ else
 fi
 
 if [[ "$(uname)" == "Darwin" && "$(uname -m)" == "arm64" ]]; then
-  echo "Running on macOS with ARM64 architecture"
+  echo "ℹ️ Running on macOS with ARM64 architecture"
 
   if command -v brew &>/dev/null; then
     echo "✅ Homebrew is installed"

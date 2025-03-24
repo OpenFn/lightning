@@ -439,6 +439,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               can_edit_run_settings={@can_edit_run_settings}
               project_id={@workflow.project_id}
               project_concurrency_disabled={@workflow.project.concurrency == 1}
+              max_concurrency={@max_concurrency}
               form={@workflow_form}
             />
           </.panel>
@@ -1164,9 +1165,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
        admin_contacts: Projects.list_project_admin_emails(assigns.project.id),
        show_github_sync_modal: false,
        project_repo_connection:
-         VersionControl.get_repo_connection_for_project(assigns.project.id)
+         VersionControl.get_repo_connection_for_project(assigns.project.id),
+       max_concurrency: assigns.project.concurrency
      )
-     |> assign(initial_presence_summary(socket.assigns.current_user))}
+     |> assign(initial_presence_summary(assigns.current_user))}
   end
 
   @impl true
@@ -1937,9 +1939,19 @@ defmodule LightningWeb.WorkflowLive.Edit do
            commit_message
          ) do
       :ok ->
+        link_to_actions =
+          "https://www.github.com/" <>
+            socket.assigns.project_repo_connection.repo <> "/actions"
+
         socket
         |> assign(show_github_sync_modal: false)
-        |> put_flash(:info, "Workflow saved and synced to GitHub successfully.")
+        |> put_flash(
+          :info,
+          %DynamicComponent{
+            function: &github_sync_successfull_flash/1,
+            args: %{link_to_actions: link_to_actions}
+          }
+        )
 
       {:error, _github_error} ->
         put_flash(
@@ -2220,8 +2232,23 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp assign_workflow(socket, workflow) do
+    workflow = Lightning.Repo.preload(workflow, :project)
+
+    alloted_concurrency =
+      workflow.project_id
+      |> Workflows.list_project_workflows()
+      |> Enum.map(fn %{id: workflow_id, concurrency: concurrency} ->
+        if workflow_id == workflow.id, do: 0, else: concurrency || 0
+      end)
+      |> Enum.sum()
+
+    project_concurrency = workflow.project.concurrency || 0
+
     socket
-    |> assign(workflow: Lightning.Repo.preload(workflow, :project))
+    |> assign(
+      workflow: workflow,
+      max_concurrency: max(0, project_concurrency - alloted_concurrency)
+    )
     |> apply_params(socket.assigns.workflow_params, :workflow)
   end
 
