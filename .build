@@ -340,6 +340,9 @@ Mix.Tasks.Lightning.InstallAdaptorIcons.html
 Mix.Tasks.Lightning.InstallRuntime.html
 Mix.Tasks.Lightning.InstallSchemas.html
 ObanPruner.html
+React.CompileError.html
+React.Component.html
+React.html
 api-reference.html
 assets/logo.png
 benchmarking.md.html
@@ -362,8 +365,8 @@ dist/lato-latin-ext-300-normal-VPGGJKJL.woff2
 dist/lato-latin-ext-400-normal-N27NCBWW.woff2
 dist/lato-latin-ext-700-normal-Q2L5DVMW.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_data-8C05E39F.js
-dist/sidebar_items-CC021894.js
+dist/search_data-2628BFC2.js
+dist/sidebar_items-2514A4AF.js
 index.html
 provisioning.html
 readme.html
