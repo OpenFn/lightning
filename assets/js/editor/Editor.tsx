@@ -3,9 +3,38 @@ import type { editor } from 'monaco-editor';
 import type { EditorProps as MonacoProps } from '@monaco-editor/react';
 
 import { MonacoEditor, type Monaco } from '../monaco';
-import { fetchDTSListing, fetchFile } from '@openfn/describe-package';
+import * as describe from '@openfn/describe-package';
 import createCompletionProvider from './magic-completion';
 import { initiateSaveAndRun } from '../common';
+
+const LOCAL_ADAPTORS_ROOT = 'http://localhost:5000';
+
+async function* fetchDTSListing(specifier: string) {
+  if (specifier.endsWith('@local')) {
+    const lang = specifier
+      .replace('@local', '')
+      .replace('@openfn/language-', '');
+    const url = `${LOCAL_ADAPTORS_ROOT}/packages/${lang}/types`;
+    const r = await fetch(url, { headers: { Accept: 'application/json' } });
+    const json = await r.json();
+    for (const f of json.files) {
+      yield `/types/${f.base}`;
+    }
+  } else {
+    return describe.fetchDTSListing(specifier);
+  }
+}
+const fetchFile = async (path: string) => {
+  if (path.includes('@local')) {
+    path = path.replace('@openfn/language-', '').replace('@local', '');
+    const url = `${LOCAL_ADAPTORS_ROOT}/packages/${path}`;
+    return fetch(url, { headers: { Accept: 'text/plain' } }).then(r =>
+      r.text()
+    );
+  } else {
+    return describe.fetchFile(path);
+  }
+};
 
 // static imports for core lib
 import dts_es5 from './lib/es5.min.dts';
@@ -95,6 +124,8 @@ type Lib = {
 };
 
 async function loadDTS(specifier: string): Promise<Lib[]> {
+  const useLocal = specifier.endsWith('@local');
+
   // Work out the module name from the specifier
   // (his gets a bit tricky with @openfn/ module names)
   const nameParts = specifier.split('@');
@@ -107,16 +138,18 @@ async function loadDTS(specifier: string): Promise<Lib[]> {
   // TODO maybe we need other dependencies too? collections?
   if (name !== '@openfn/language-common') {
     const pkg = await fetchFile(`${specifier}/package.json`);
-    const commonVersion = JSON.parse(pkg || '{}').dependencies?.[
-      '@openfn/language-common'
-    ];
+    const commonVersion = useLocal
+      ? 'local'
+      : JSON.parse(pkg || '{}').dependencies?.['@openfn/language-common'];
 
-    // jsDeliver doesn't appear to support semver range syntax (^1.0.0, 1.x, ~1.1.0)
-    const commonVersionMatch = commonVersion?.match(/^\d+\.\d+\.\d+/);
-    if (!commonVersionMatch) {
-      console.warn(
-        `@openfn/language-common@${commonVersion} contains semver range syntax.`
-      );
+    if (!useLocal) {
+      // jsDeliver doesn't appear to support semver range syntax (^1.0.0, 1.x, ~1.1.0)
+      const commonVersionMatch = commonVersion?.match(/^\d+\.\d+\.\d+/);
+      if (!commonVersionMatch) {
+        console.warn(
+          `@openfn/language-common@${commonVersion} contains semver range syntax.`
+        );
+      }
     }
 
     const commonSpecifier = `@openfn/language-common@${commonVersion.replace(
@@ -127,10 +160,12 @@ async function loadDTS(specifier: string): Promise<Lib[]> {
       if (!filePath.startsWith('node_modules')) {
         // Load every common typedef into the common module
         let content = await fetchFile(`${commonSpecifier}${filePath}`);
-        content = content.replace(/\* +@(.+?)\*\//gs, '*/');
-        results.push({
-          content: `declare module '@openfn/language-common' { ${content} }`,
-        });
+        if (!content.match(/<!doctype html>/i)) {
+          content = content.replace(/\* +@(.+?)\*\//gs, '*/');
+          results.push({
+            content: `declare module '@openfn/language-common' { ${content} }`,
+          });
+        }
       }
     }
   }
@@ -144,6 +179,13 @@ async function loadDTS(specifier: string): Promise<Lib[]> {
   for await (const filePath of fetchDTSListing(specifier)) {
     if (!filePath.startsWith('node_modules')) {
       let content = await fetchFile(`${specifier}${filePath}`);
+      if (content.match(/<!doctype html>/i)) {
+        continue;
+      }
+      // Convert relative paths
+      content = content
+        .replace(/from '\.\//g, `from '${name}/`)
+        .replace(/import '\.\//g, `import '${name}/`);
 
       // Remove js doc annotations
       // this regex means: find a * then an @ (with 1+ space in between), then match everything up to a closing comment */
@@ -154,9 +196,6 @@ async function loadDTS(specifier: string): Promise<Lib[]> {
 
       // Import the index as the global namespace - but take care to convert all paths to absolute
       if (fileName === 'index' || fileName === 'Adaptor') {
-        content = content.replace(/from '\.\//g, `from '${name}/`);
-        content = content.replace(/import '\.\//g, `import '${name}/`);
-
         // It turns out that "export * as " seems to straight up not work in Monaco
         // So this little hack will refactor import statements in a way that works
         content = content.replace(
