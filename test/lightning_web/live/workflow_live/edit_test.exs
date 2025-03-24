@@ -2274,7 +2274,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert has_element?(
                view,
-               ~s{#flash [href="#{link_to_actions}"][target="_blank"]},
+               ~s{div[data-flash-kind='info'] [href="#{link_to_actions}"][target="_blank"]},
                "Github actions"
              )
 
