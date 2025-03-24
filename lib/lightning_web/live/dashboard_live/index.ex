@@ -14,7 +14,14 @@ defmodule LightningWeb.DashboardLive.Index do
   @impl true
   def render(assigns) do
     ~H"""
-    <LayoutComponents.page_content banner={assigns[:banner]}>
+    <LayoutComponents.page_content>
+      <:banner>
+        <Common.dynamic_component
+          :if={assigns[:banner]}
+          function={@banner.function}
+          args={@banner.attrs}
+        />
+      </:banner>
       <:header>
         <LayoutComponents.header current_user={@current_user}>
           <:title>{@page_title}</:title>
