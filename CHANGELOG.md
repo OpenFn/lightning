@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Allow users to book for demo sessions
+  [PR#3035](https://github.com/OpenFn/lightning/pull/3035)
 - Allow workflow and project concurrency progress windows
   [#2995](https://github.com/OpenFn/lightning/issues/2995)
 

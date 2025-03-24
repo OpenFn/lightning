@@ -634,6 +634,11 @@ defmodule Lightning.Config.Bootstrap do
     config :lightning, :ui_metrics_tracking,
       enabled: env!("UI_METRICS_ENABLED", &Utils.ensure_boolean/1, false)
 
+    config :lightning, :book_demo_banner,
+      enabled: false,
+      calendly_url: nil,
+      openfn_workflow_url: nil
+
     # # ==============================================================================
 
     setup_storage()

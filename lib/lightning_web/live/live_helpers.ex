@@ -148,6 +148,20 @@ defmodule LightningWeb.LiveHelpers do
     """
   end
 
+  attr :current_user, Lightning.Accounts.User, required: true
+
+  def book_demo_banner(assigns) do
+    ~H"""
+    <div>
+      <.live_component
+        id="book-demo-banner"
+        module={LightningWeb.BookDemoBanner}
+        current_user={@current_user}
+      />
+    </div>
+    """
+  end
+
   @spec display_short_uuid(binary()) :: binary()
   def display_short_uuid(uuid_string) do
     uuid_string |> String.slice(0..7)

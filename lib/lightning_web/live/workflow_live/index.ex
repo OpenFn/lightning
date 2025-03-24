@@ -14,7 +14,7 @@ defmodule LightningWeb.WorkflowLive.Index do
   alias LightningWeb.WorkflowLive.Helpers
   alias LightningWeb.WorkflowLive.NewWorkflowForm
 
-  alias Phoenix.LiveView.TagEngine
+  # alias Phoenix.LiveView.TagEngine
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
@@ -35,13 +35,11 @@ defmodule LightningWeb.WorkflowLive.Index do
     ~H"""
     <LayoutComponents.page_content>
       <:banner>
-        <%= if assigns[:banner] do %>
-          {TagEngine.component(
-            @banner.function,
-            @banner.attrs,
-            {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
-          )}
-        <% end %>
+        <Common.dynamic_component
+          :if={assigns[:banner]}
+          function={@banner.function}
+          args={@banner.attrs}
+        />
       </:banner>
       <:header>
         <LayoutComponents.header current_user={@current_user} project={@project}>

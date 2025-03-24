@@ -1,12 +1,10 @@
 <LayoutComponents.page_content>
   <:banner>
-    <%= if assigns[:banner] do %>
-      {Phoenix.LiveView.TagEngine.component(
-        @banner.function,
-        @banner.attrs,
-        {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
-      )}
-    <% end %>
+    <Common.dynamic_component
+      :if={assigns[:banner]}
+      function={@banner.function}
+      args={@banner.attrs}
+    />
   </:banner>
   <:header>
     <LayoutComponents.header current_user={@current_user} project={@project}>
@@ -564,7 +562,7 @@
                       type="submit"
                       form="run-search-form"
                       class="rounded-md bg-indigo-600 px-5 py-2 text-sm font-semibold
-                      text-white shadow-xs hover:bg-indigo-500 
+                      text-white shadow-xs hover:bg-indigo-500
                       focus-visible:outline-2 focus-visible:outline-offset-2
                       focus-visible:outline-indigo-600 truncate"
                     >
