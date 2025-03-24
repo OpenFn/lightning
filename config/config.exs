@@ -91,33 +91,43 @@ config :lightning, :oauth_clients,
   ]
 
 # Configure esbuild (the version is required)
+# TODO: work out how to _NOT_ have this set of entry points try and build
+# monaco-editor, since we already have a separate esbuild task for that.
+# Note the `--external:path` flag, this is to work around a recent change
+# in esbuild causing it to fail when trying to bundle up the @typescript/vfs module
+# but only when minifying.
 config :esbuild,
   version: "0.25.0",
   default: [
     args:
-      ~w(js/app.js
-         js/storybook.js
-         js/editor/Editor.tsx
-         fonts/inter.css
-         fonts/fira-code.css
-         --loader:.woff2=file
+      ~w(--loader:.woff2=file
          --loader:.ttf=copy
          --format=esm --splitting --bundle
          --external:path
          --jsx=automatic
          --tsconfig=tsconfig.browser.json
          --target=es2020
-         --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
-    cd: Path.expand("../assets", __DIR__),
-    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
-  ],
-  monaco: [
-    args: ~w(
-         #{Path.expand("../assets/node_modules/monaco-editor/min/vs/**/*.*", __DIR__) |> Path.wildcard() |> Enum.join(" ")}
-         --loader:.ttf=copy
-         --jsx=automatic
-         --tsconfig=tsconfig.browser.json
-         --outdir=../priv/static/assets/monaco-editor/vs ),
+         --outdir=../priv/static/assets
+         --external:path
+         --external:/fonts/*
+         --external:/images/*
+         js/app.js
+         js/storybook.js
+         js/editor/Editor.tsx
+         editor.worker=monaco-editor/esm/vs/editor/editor.worker.js
+         json.worker=monaco-editor/esm/vs/language/json/json.worker.js
+         css.worker=monaco-editor/esm/vs/language/css/css.worker.js
+         html.worker=monaco-editor/esm/vs/language/html/html.worker.js
+         typescript.worker=monaco-editor/esm/vs/language/typescript/ts.worker.js
+         fonts/inter.css
+         fonts/fira-code.css
+        )
+      |> then(fn args ->
+        case config_env() do
+          "prod" -> args
+          _ -> args ++ ["--jsx-dev"]
+        end
+      end),
     cd: Path.expand("../assets", __DIR__),
     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
   ]

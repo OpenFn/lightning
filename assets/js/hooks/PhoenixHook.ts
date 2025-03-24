@@ -50,6 +50,6 @@ export type PhoenixHook<
   ThisType<PhoenixHookInternalThis<T, Dataset, El>>;
 
 export type GetPhoenixHookInternalThis<T> =
-  T extends PhoenixHook<infer T extends object, infer Dataset, infer El>
-    ? PhoenixHookInternalThis<T, Dataset, El>
+  T extends PhoenixHook<infer S extends object, infer Dataset, infer El>
+    ? PhoenixHookInternalThis<S, Dataset, El>
     : never;
