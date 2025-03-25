@@ -9,6 +9,14 @@ import { renderSlots } from './render-slots';
 
 import type { Portals } from '#/react/types';
 
+interface ActionProps {
+  pushEvent: (name: string, payload: Record<string, unknown>) => void,
+  pushEventTo: (name: string, payload: Record<string, unknown>) => void,
+  handleEvent: (name: string, callback: (payload: unknown) => void) => void
+}
+
+export type WithActionProps<T> = React.FunctionComponent<ActionProps & T>;
+
 /**
  * Use [`useSyncExternalStore`](https://react.dev/reference/react/useSyncExternalStore)
  * to tell the React component to re-render when its props have changed.
@@ -21,6 +29,7 @@ export const withProps = <const Props = object,>(
   subscribe: (onChange: () => void) => () => void,
   getProps: () => Props,
   getPortals: () => Portals,
+  actions: ActionProps,
   view: View,
   cID: number | null = null
 ): React.FunctionComponent<t.EmptyObject> => {
@@ -32,9 +41,8 @@ export const withProps = <const Props = object,>(
     });
 
     const portals = useSyncExternalStore(subscribe, getPortals);
-
     return (
-      <Component {...(props as React.JSX.IntrinsicAttributes & Props)}>
+      <Component {...(props as React.JSX.IntrinsicAttributes & Props)} pushEvent={actions.pushEvent} pushEventTo={actions.pushEventTo} handleEvent={actions.handleEvent}>
         {mergeChildren(
           (typeof props === 'object' &&
             props !== null &&
