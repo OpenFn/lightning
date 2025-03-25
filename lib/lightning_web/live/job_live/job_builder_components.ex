@@ -11,13 +11,13 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
   attr :source, :string, required: true
   attr :rest, :global
 
-  jsx("assets/js/react/components/JobEditorComponent.tsx")
+  jsx("assets/js/job-editor/JobEditorMain.tsx")
 
   def job_editor_component(assigns) do
     assigns = assigns |> assign(disabled: assigns.disabled |> to_string())
 
     ~H"""
-    <.JobEditorComponent
+    <.JobEditorMain
     job_id={@job_id}
     adaptor={@adaptor}
     source={@source}
