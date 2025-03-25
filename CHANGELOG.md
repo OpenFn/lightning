@@ -33,6 +33,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fixes to some issues with code-complete in the editor
+  [#3052](https://github.com/OpenFn/lightning/pull/3052)
+
 ## [v2.11.0] - 2025-03-19
 
 ### Added
