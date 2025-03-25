@@ -13,14 +13,13 @@ defmodule LightningWeb.Components.Viewers do
   use LightningWeb, :component
 
   import LightningWeb.Components.Icons
+  import React
 
   alias Lightning.Invocation.Dataclip
   alias LightningWeb.Components.Icon
   alias Phoenix.LiveView.JS
 
   require Lightning.Run
-
-  import React
 
   @doc """
   Renders out a log line stream

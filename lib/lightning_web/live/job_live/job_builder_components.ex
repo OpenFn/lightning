@@ -18,12 +18,12 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
 
     ~H"""
     <.JobEditorMain
-    job_id={@job_id}
-    adaptor={@adaptor}
-    source={@source}
-    disabled={@disabled}
-    disabled_message={@disabled_message}
-    class="flex flex-col h-full"
+      job_id={@job_id}
+      adaptor={@adaptor}
+      source={@source}
+      disabled={@disabled}
+      disabled_message={@disabled_message}
+      class="flex flex-col h-full"
     />
     """
   end
