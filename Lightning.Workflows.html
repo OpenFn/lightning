@@ -468,8 +468,8 @@ of the workflow before a snapshot is captured.</p>
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_workflow</span><span class="p" data-group-id="2671784711-1">(</span><span class="n">workflow</span><span class="p" data-group-id="2671784711-1">)</span><span class="w">
-</span><span class="p" data-group-id="2671784711-2">%</span><span class="nc" data-group-id="2671784711-2">Ecto.Changeset</span><span class="p" data-group-id="2671784711-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2671784711-3">%</span><span class="nc" data-group-id="2671784711-3">Workflow</span><span class="p" data-group-id="2671784711-3">{</span><span class="p" data-group-id="2671784711-3">}</span><span class="p" data-group-id="2671784711-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_workflow</span><span class="p" data-group-id="1994876744-1">(</span><span class="n">workflow</span><span class="p" data-group-id="1994876744-1">)</span><span class="w">
+</span><span class="p" data-group-id="1994876744-2">%</span><span class="nc" data-group-id="1994876744-2">Ecto.Changeset</span><span class="p" data-group-id="1994876744-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1994876744-3">%</span><span class="nc" data-group-id="1994876744-3">Workflow</span><span class="p" data-group-id="1994876744-3">{</span><span class="p" data-group-id="1994876744-3">}</span><span class="p" data-group-id="1994876744-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="create_edge/2">
@@ -531,12 +531,12 @@ of the workflow before a snapshot is captured.</p>
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="n">trigger</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="6648500800-1">%</span><span class="nc" data-group-id="6648500800-1">Trigger</span><span class="p" data-group-id="6648500800-1">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="6648500800-1">}</span><span class="w">
-</span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="n">get_edge_by_trigger</span><span class="p" data-group-id="6648500800-2">(</span><span class="n">trigger</span><span class="p" data-group-id="6648500800-2">)</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="n">trigger</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="2500763277-1">%</span><span class="nc" data-group-id="2500763277-1">Trigger</span><span class="p" data-group-id="2500763277-1">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="2500763277-1">}</span><span class="w">
+</span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="n">get_edge_by_trigger</span><span class="p" data-group-id="2500763277-2">(</span><span class="n">trigger</span><span class="p" data-group-id="2500763277-2">)</span><span class="w">
 </span><span class="c1"># =&gt; %Edge{source_trigger: %Trigger{}, target_job: %Job{}, ...}</span><span class="w">
 
-</span><span class="n">non_existent_trigger</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="6648500800-3">%</span><span class="nc" data-group-id="6648500800-3">Trigger</span><span class="p" data-group-id="6648500800-3">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">999</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="6648500800-3">}</span><span class="w">
-</span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="n">get_edge_by_trigger</span><span class="p" data-group-id="6648500800-4">(</span><span class="n">non_existent_trigger</span><span class="p" data-group-id="6648500800-4">)</span><span class="w">
+</span><span class="n">non_existent_trigger</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="2500763277-3">%</span><span class="nc" data-group-id="2500763277-3">Trigger</span><span class="p" data-group-id="2500763277-3">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">999</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="2500763277-3">}</span><span class="w">
+</span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="n">get_edge_by_trigger</span><span class="p" data-group-id="2500763277-4">(</span><span class="n">non_existent_trigger</span><span class="p" data-group-id="2500763277-4">)</span><span class="w">
 </span><span class="c1"># =&gt; nil</span></code></pre>
   </section>
 </section>
@@ -606,10 +606,10 @@ used by the scheduler, which calls this function once every minute.</p>
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="n">get_trigger_by_webhook</span><span class="p" data-group-id="0385712824-1">(</span><span class="s">&quot;some_path_or_id&quot;</span><span class="p" data-group-id="0385712824-1">)</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="n">get_trigger_by_webhook</span><span class="p" data-group-id="0591851623-1">(</span><span class="s">&quot;some_path_or_id&quot;</span><span class="p" data-group-id="0591851623-1">)</span><span class="w">
 </span><span class="c1"># =&gt; %Trigger{id: 1, custom_path: &quot;some_path_or_id&quot;, ...}</span><span class="w">
 
-</span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="n">get_trigger_by_webhook</span><span class="p" data-group-id="0385712824-2">(</span><span class="s">&quot;non_existent_path_or_id&quot;</span><span class="p" data-group-id="0385712824-2">)</span><span class="w">
+</span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="n">get_trigger_by_webhook</span><span class="p" data-group-id="0591851623-2">(</span><span class="s">&quot;non_existent_path_or_id&quot;</span><span class="p" data-group-id="0591851623-2">)</span><span class="w">
 </span><span class="c1"># =&gt; nil</span></code></pre>
   </section>
 </section>
@@ -664,14 +664,14 @@ used by the scheduler, which calls this function once every minute.</p>
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow</span><span class="p" data-group-id="5283225865-1">(</span><span class="mi">123</span><span class="p" data-group-id="5283225865-1">)</span><span class="w">
-</span><span class="p" data-group-id="5283225865-2">%</span><span class="nc" data-group-id="5283225865-2">Workflow</span><span class="p" data-group-id="5283225865-2">{</span><span class="p" data-group-id="5283225865-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow</span><span class="p" data-group-id="8608727895-1">(</span><span class="mi">123</span><span class="p" data-group-id="8608727895-1">)</span><span class="w">
+</span><span class="p" data-group-id="8608727895-2">%</span><span class="nc" data-group-id="8608727895-2">Workflow</span><span class="p" data-group-id="8608727895-2">{</span><span class="p" data-group-id="8608727895-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow</span><span class="p" data-group-id="5283225865-3">(</span><span class="mi">456</span><span class="p" data-group-id="5283225865-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow</span><span class="p" data-group-id="8608727895-3">(</span><span class="mi">456</span><span class="p" data-group-id="8608727895-3">)</span><span class="w">
 </span><span class="no">nil</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow</span><span class="p" data-group-id="5283225865-4">(</span><span class="mi">123</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5283225865-5">[</span><span class="ss">:triggers</span><span class="p" data-group-id="5283225865-5">]</span><span class="p" data-group-id="5283225865-4">)</span><span class="w">
-</span><span class="p" data-group-id="5283225865-6">%</span><span class="nc" data-group-id="5283225865-6">Workflow</span><span class="p" data-group-id="5283225865-6">{</span><span class="ss">triggers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5283225865-7">[</span><span class="n">...</span><span class="p" data-group-id="5283225865-7">]</span><span class="p" data-group-id="5283225865-6">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow</span><span class="p" data-group-id="8608727895-4">(</span><span class="mi">123</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8608727895-5">[</span><span class="ss">:triggers</span><span class="p" data-group-id="8608727895-5">]</span><span class="p" data-group-id="8608727895-4">)</span><span class="w">
+</span><span class="p" data-group-id="8608727895-6">%</span><span class="nc" data-group-id="8608727895-6">Workflow</span><span class="p" data-group-id="8608727895-6">{</span><span class="ss">triggers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8608727895-7">[</span><span class="n">...</span><span class="p" data-group-id="8608727895-7">]</span><span class="p" data-group-id="8608727895-6">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_workflow!/2">
@@ -701,14 +701,14 @@ used by the scheduler, which calls this function once every minute.</p>
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow!</span><span class="p" data-group-id="0761454539-1">(</span><span class="mi">123</span><span class="p" data-group-id="0761454539-1">)</span><span class="w">
-</span><span class="p" data-group-id="0761454539-2">%</span><span class="nc" data-group-id="0761454539-2">Workflow</span><span class="p" data-group-id="0761454539-2">{</span><span class="p" data-group-id="0761454539-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow!</span><span class="p" data-group-id="7206960890-1">(</span><span class="mi">123</span><span class="p" data-group-id="7206960890-1">)</span><span class="w">
+</span><span class="p" data-group-id="7206960890-2">%</span><span class="nc" data-group-id="7206960890-2">Workflow</span><span class="p" data-group-id="7206960890-2">{</span><span class="p" data-group-id="7206960890-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow!</span><span class="p" data-group-id="0761454539-3">(</span><span class="mi">456</span><span class="p" data-group-id="0761454539-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow!</span><span class="p" data-group-id="7206960890-3">(</span><span class="mi">456</span><span class="p" data-group-id="7206960890-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow!</span><span class="p" data-group-id="0761454539-4">(</span><span class="mi">123</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0761454539-5">[</span><span class="ss">:triggers</span><span class="p" data-group-id="0761454539-5">]</span><span class="p" data-group-id="0761454539-4">)</span><span class="w">
-</span><span class="p" data-group-id="0761454539-6">%</span><span class="nc" data-group-id="0761454539-6">Workflow</span><span class="p" data-group-id="0761454539-6">{</span><span class="ss">triggers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0761454539-7">[</span><span class="n">...</span><span class="p" data-group-id="0761454539-7">]</span><span class="p" data-group-id="0761454539-6">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow!</span><span class="p" data-group-id="7206960890-4">(</span><span class="mi">123</span><span class="p">,</span><span class="w"> </span><span class="ss">include</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7206960890-5">[</span><span class="ss">:triggers</span><span class="p" data-group-id="7206960890-5">]</span><span class="p" data-group-id="7206960890-4">)</span><span class="w">
+</span><span class="p" data-group-id="7206960890-6">%</span><span class="nc" data-group-id="7206960890-6">Workflow</span><span class="p" data-group-id="7206960890-6">{</span><span class="ss">triggers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7206960890-7">[</span><span class="n">...</span><span class="p" data-group-id="7206960890-7">]</span><span class="p" data-group-id="7206960890-6">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_workflows_for/1">
@@ -813,8 +813,8 @@ This query orders jobs based on their <code class="inline">inserted_at</code> ti
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_project_workflows</span><span class="p" data-group-id="0271084942-1">(</span><span class="n">project_id</span><span class="p" data-group-id="0271084942-1">)</span><span class="w">
-</span><span class="p" data-group-id="0271084942-2">[</span><span class="p" data-group-id="0271084942-3">%</span><span class="nc" data-group-id="0271084942-3">Workflow</span><span class="p" data-group-id="0271084942-3">{</span><span class="p" data-group-id="0271084942-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="0271084942-2">]</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_project_workflows</span><span class="p" data-group-id="6743270945-1">(</span><span class="n">project_id</span><span class="p" data-group-id="6743270945-1">)</span><span class="w">
+</span><span class="p" data-group-id="6743270945-2">[</span><span class="p" data-group-id="6743270945-3">%</span><span class="nc" data-group-id="6743270945-3">Workflow</span><span class="p" data-group-id="6743270945-3">{</span><span class="p" data-group-id="6743270945-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="6743270945-2">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="list_workflows/0">
@@ -842,8 +842,8 @@ This query orders jobs based on their <code class="inline">inserted_at</code> ti
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_workflows</span><span class="p" data-group-id="5046843887-1">(</span><span class="p" data-group-id="5046843887-1">)</span><span class="w">
-</span><span class="p" data-group-id="5046843887-2">[</span><span class="p" data-group-id="5046843887-3">%</span><span class="nc" data-group-id="5046843887-3">Workflow</span><span class="p" data-group-id="5046843887-3">{</span><span class="p" data-group-id="5046843887-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="5046843887-2">]</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_workflows</span><span class="p" data-group-id="6742889529-1">(</span><span class="p" data-group-id="6742889529-1">)</span><span class="w">
+</span><span class="p" data-group-id="6742889529-2">[</span><span class="p" data-group-id="6742889529-3">%</span><span class="nc" data-group-id="6742889529-3">Workflow</span><span class="p" data-group-id="6742889529-3">{</span><span class="p" data-group-id="6742889529-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="6742889529-2">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="mark_for_deletion/3">
@@ -873,8 +873,8 @@ This query orders jobs based on their <code class="inline">inserted_at</code> ti
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_request_deletion</span><span class="p" data-group-id="6470067565-1">(</span><span class="n">workflow</span><span class="p" data-group-id="6470067565-1">)</span><span class="w">
-</span><span class="p" data-group-id="6470067565-2">%</span><span class="nc" data-group-id="6470067565-2">Ecto.Changeset</span><span class="p" data-group-id="6470067565-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6470067565-3">%</span><span class="nc" data-group-id="6470067565-3">Workflow</span><span class="p" data-group-id="6470067565-3">{</span><span class="p" data-group-id="6470067565-3">}</span><span class="p" data-group-id="6470067565-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_request_deletion</span><span class="p" data-group-id="8464561701-1">(</span><span class="n">workflow</span><span class="p" data-group-id="8464561701-1">)</span><span class="w">
+</span><span class="p" data-group-id="8464561701-2">%</span><span class="nc" data-group-id="8464561701-2">Ecto.Changeset</span><span class="p" data-group-id="8464561701-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8464561701-3">%</span><span class="nc" data-group-id="8464561701-3">Workflow</span><span class="p" data-group-id="8464561701-3">{</span><span class="p" data-group-id="8464561701-3">}</span><span class="p" data-group-id="8464561701-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="publish_kafka_trigger_events/1">
@@ -1055,16 +1055,16 @@ This query orders jobs based on their <code class="inline">inserted_at</code> ti
   </a>
   <span class="text"><strong>Using an <a href="https://hexdocs.pm/ecto/3.12.5/Ecto.Changeset.html"><code class="inline">Ecto.Changeset</code></a></strong></span>
 </h3>
-<pre><code class="makeup elixir" translate="no"><span class="n">changeset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">change</span><span class="p" data-group-id="4199949104-1">(</span><span class="p" data-group-id="4199949104-2">%</span><span class="nc" data-group-id="4199949104-2">Workflow</span><span class="p" data-group-id="4199949104-2">{</span><span class="p" data-group-id="4199949104-2">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4199949104-3">%{</span><span class="ss">triggers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4199949104-4">[</span><span class="p" data-group-id="4199949104-5">%</span><span class="nc" data-group-id="4199949104-5">Trigger</span><span class="p" data-group-id="4199949104-5">{</span><span class="ss">enabled</span><span class="p">:</span><span class="w"> </span><span class="no">false</span><span class="p" data-group-id="4199949104-5">}</span><span class="p" data-group-id="4199949104-4">]</span><span class="p" data-group-id="4199949104-3">}</span><span class="p" data-group-id="4199949104-1">)</span><span class="w">
-</span><span class="n">updated_changeset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">update_triggers_enabled_state</span><span class="p" data-group-id="4199949104-6">(</span><span class="n">changeset</span><span class="p">,</span><span class="w"> </span><span class="no">true</span><span class="p" data-group-id="4199949104-6">)</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="n">changeset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">change</span><span class="p" data-group-id="5951820732-1">(</span><span class="p" data-group-id="5951820732-2">%</span><span class="nc" data-group-id="5951820732-2">Workflow</span><span class="p" data-group-id="5951820732-2">{</span><span class="p" data-group-id="5951820732-2">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5951820732-3">%{</span><span class="ss">triggers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5951820732-4">[</span><span class="p" data-group-id="5951820732-5">%</span><span class="nc" data-group-id="5951820732-5">Trigger</span><span class="p" data-group-id="5951820732-5">{</span><span class="ss">enabled</span><span class="p">:</span><span class="w"> </span><span class="no">false</span><span class="p" data-group-id="5951820732-5">}</span><span class="p" data-group-id="5951820732-4">]</span><span class="p" data-group-id="5951820732-3">}</span><span class="p" data-group-id="5951820732-1">)</span><span class="w">
+</span><span class="n">updated_changeset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">update_triggers_enabled_state</span><span class="p" data-group-id="5951820732-6">(</span><span class="n">changeset</span><span class="p">,</span><span class="w"> </span><span class="no">true</span><span class="p" data-group-id="5951820732-6">)</span><span class="w">
 </span><span class="c1"># The triggers in the changeset will now have `enabled: true`.</span></code></pre><h3 id="update_triggers_enabled_state/2-using-a-workflow-struct" class="section-heading">
   <a href="#update_triggers_enabled_state/2-using-a-workflow-struct" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text"><strong>Using a <code class="inline">Workflow</code> struct</strong></span>
 </h3>
-<pre><code class="makeup elixir" translate="no"><span class="n">workflow</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="4356051226-1">%</span><span class="nc" data-group-id="4356051226-1">Workflow</span><span class="p" data-group-id="4356051226-1">{</span><span class="ss">triggers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4356051226-2">[</span><span class="p" data-group-id="4356051226-3">%</span><span class="nc" data-group-id="4356051226-3">Trigger</span><span class="p" data-group-id="4356051226-3">{</span><span class="ss">enabled</span><span class="p">:</span><span class="w"> </span><span class="no">false</span><span class="p" data-group-id="4356051226-3">}</span><span class="p" data-group-id="4356051226-2">]</span><span class="p" data-group-id="4356051226-1">}</span><span class="w">
-</span><span class="n">updated_changeset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">update_triggers_enabled_state</span><span class="p" data-group-id="4356051226-4">(</span><span class="n">workflow</span><span class="p">,</span><span class="w"> </span><span class="no">true</span><span class="p" data-group-id="4356051226-4">)</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="n">workflow</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="4522719553-1">%</span><span class="nc" data-group-id="4522719553-1">Workflow</span><span class="p" data-group-id="4522719553-1">{</span><span class="ss">triggers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4522719553-2">[</span><span class="p" data-group-id="4522719553-3">%</span><span class="nc" data-group-id="4522719553-3">Trigger</span><span class="p" data-group-id="4522719553-3">{</span><span class="ss">enabled</span><span class="p">:</span><span class="w"> </span><span class="no">false</span><span class="p" data-group-id="4522719553-3">}</span><span class="p" data-group-id="4522719553-2">]</span><span class="p" data-group-id="4522719553-1">}</span><span class="w">
+</span><span class="n">updated_changeset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">update_triggers_enabled_state</span><span class="p" data-group-id="4522719553-4">(</span><span class="n">workflow</span><span class="p">,</span><span class="w"> </span><span class="no">true</span><span class="p" data-group-id="4522719553-4">)</span><span class="w">
 </span><span class="c1"># The returned changeset will have triggers with `enabled: true`.</span></code></pre>
   </section>
 </section>
