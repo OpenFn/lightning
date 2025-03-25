@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Allow possibility to inject components for implementing GDPR compliance
+  [PR#3056](https://github.com/OpenFn/lightning/pull/3056)
 - Allow users to book for demo sessions
   [PR#3035](https://github.com/OpenFn/lightning/pull/3035)
 - Allow workflow and project concurrency progress windows
