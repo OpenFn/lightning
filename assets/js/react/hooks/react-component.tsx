@@ -74,8 +74,8 @@ export const ReactComponent = {
         pushEventTo: this.pushEventTo.bind(this, this.el),
       },
       /* eslint-enable */
-      this.__view,
-      this.__view.componentID(this.el)
+      this.__view(),
+      this.__view().componentID(this.el)
     );
 
     this._mount();
@@ -151,10 +151,10 @@ export const ReactComponent = {
   },
 
   _onBoundary(element) {
-    this.__view.liveSocket.requestDOMUpdate(() => {
+    this.__view().liveSocket.requestDOMUpdate(() => {
       if (element == null) return;
 
-      this.__view.execNewMounted();
+      this.__view().execNewMounted();
       this._boundaryMounted = true;
 
       if (this._id != null) {
@@ -233,7 +233,7 @@ export const ReactComponent = {
     const viewHookId = ViewHook.elementID(this.el);
 
     // Nevertheless, also incorporate the LiveView's id for good measure, can't hurt
-    const key = `${this.__view.id}-${String(viewHookId)}`;
+    const key = `${this.__view().id}-${String(viewHookId)}`;
 
     return key;
   },
