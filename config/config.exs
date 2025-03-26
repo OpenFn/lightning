@@ -213,7 +213,7 @@ config :lightning, :ai_feedback, false
 # To enable the GDPR banner with a custom component:
 #
 # config :lightning, :gdpr_banner, %{
-#   component: ThunderboltWeb.Components.CookieConsentBanner,
+#   component: MyAppWeb.Components.CookieConsentBanner,
 #   id: "cookie-consent-banner"
 # }
 #
@@ -228,7 +228,7 @@ config :lightning, :ai_feedback, false
 # To enable GDPR preferences management with a custom component:
 #
 # config :lightning, :gdpr_preferences, %{
-#   component: ThunderboltWeb.Components.CookiePreferencesComponent,
+#   component: MyAppWeb.Components.CookiePreferencesComponent,
 #   id: "cookie-consent-preferences"
 # }
 #
