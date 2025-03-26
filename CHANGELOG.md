@@ -21,6 +21,8 @@ and this project adheres to
   [PR#3035](https://github.com/OpenFn/lightning/pull/3035)
 - Allow workflow and project concurrency progress windows
   [#2995](https://github.com/OpenFn/lightning/issues/2995)
+- Change edge color in the workflow when there is an error
+  [#2999](https://github.com/OpenFn/lightning/issues/2999)
 
 ### Changed
 
