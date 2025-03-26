@@ -5,16 +5,16 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.34.2">
-    <meta name="project" content="Lightning v2.11.0">
+    <meta name="project" content="Lightning v2.11.1">
 
 
-    <title>Lightning.Helpers — Lightning v2.11.0</title>
+    <title>Lightning.Helpers — Lightning v2.11.1</title>
     <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-7E62851D.js"></script>
+    <script src="dist/sidebar_items-86BA9D9B.js"></script>
     <script src="docs_config.js"></script>
     <script async src="dist/html-YIPIRHGU.js"></script>
 
@@ -54,7 +54,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.11.0
+          v2.11.1
         </div>
       </div>
     </div>
@@ -132,7 +132,7 @@ Pages
       </a>
 
     <span translate="no">Lightning.Helpers</span> 
-    <small class="app-vsn" translate="no">(Lightning v2.11.0)</small>
+    <small class="app-vsn" translate="no">(Lightning v2.11.1)</small>
 
   </h1>
 
@@ -335,10 +335,10 @@ If it cannot be converted, it leaves the original value</p>
   </a>
   <span class="text">Example</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">changeset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="9032924274-1">%</span><span class="nc" data-group-id="9032924274-1">Ecto.Changeset</span><span class="p" data-group-id="9032924274-1">{</span><span class="ss">errors</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9032924274-2">[</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9032924274-3">{</span><span class="s">&quot;has already been taken&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9032924274-4">[</span><span class="p" data-group-id="9032924274-4">]</span><span class="p" data-group-id="9032924274-3">}</span><span class="p" data-group-id="9032924274-2">]</span><span class="p" data-group-id="9032924274-1">}</span><span class="w">
-</span><span class="gp unselectable">iex&gt; </span><span class="n">updated_changeset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Helpers</span><span class="o">.</span><span class="n">copy_error</span><span class="p" data-group-id="9032924274-5">(</span><span class="n">changeset</span><span class="p">,</span><span class="w"> </span><span class="ss">:name</span><span class="p">,</span><span class="w"> </span><span class="ss">:raw_name</span><span class="p" data-group-id="9032924274-5">)</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">changeset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="6927389865-1">%</span><span class="nc" data-group-id="6927389865-1">Ecto.Changeset</span><span class="p" data-group-id="6927389865-1">{</span><span class="ss">errors</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6927389865-2">[</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6927389865-3">{</span><span class="s">&quot;has already been taken&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6927389865-4">[</span><span class="p" data-group-id="6927389865-4">]</span><span class="p" data-group-id="6927389865-3">}</span><span class="p" data-group-id="6927389865-2">]</span><span class="p" data-group-id="6927389865-1">}</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">updated_changeset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Helpers</span><span class="o">.</span><span class="n">copy_error</span><span class="p" data-group-id="6927389865-5">(</span><span class="n">changeset</span><span class="p">,</span><span class="w"> </span><span class="ss">:name</span><span class="p">,</span><span class="w"> </span><span class="ss">:raw_name</span><span class="p" data-group-id="6927389865-5">)</span><span class="w">
 </span><span class="gp unselectable">iex&gt; </span><span class="n">updated_changeset</span><span class="o">.</span><span class="n">errors</span><span class="w">
-</span><span class="p" data-group-id="9032924274-6">[</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9032924274-7">{</span><span class="s">&quot;has already been taken&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9032924274-8">[</span><span class="p" data-group-id="9032924274-8">]</span><span class="p" data-group-id="9032924274-7">}</span><span class="p">,</span><span class="w"> </span><span class="ss">raw_name</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9032924274-9">{</span><span class="s">&quot;has already been taken&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9032924274-10">[</span><span class="p" data-group-id="9032924274-10">]</span><span class="p" data-group-id="9032924274-9">}</span><span class="p" data-group-id="9032924274-6">]</span></code></pre><p>If the <code class="inline">original_key</code> doesn't exist in the errors, or if the <code class="inline">new_key</code> already exists and <code class="inline">overwrite</code> is set to <code class="inline">false</code>, the changeset is returned unchanged.</p>
+</span><span class="p" data-group-id="6927389865-6">[</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6927389865-7">{</span><span class="s">&quot;has already been taken&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6927389865-8">[</span><span class="p" data-group-id="6927389865-8">]</span><span class="p" data-group-id="6927389865-7">}</span><span class="p">,</span><span class="w"> </span><span class="ss">raw_name</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6927389865-9">{</span><span class="s">&quot;has already been taken&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6927389865-10">[</span><span class="p" data-group-id="6927389865-10">]</span><span class="p" data-group-id="6927389865-9">}</span><span class="p" data-group-id="6927389865-6">]</span></code></pre><p>If the <code class="inline">original_key</code> doesn't exist in the errors, or if the <code class="inline">new_key</code> already exists and <code class="inline">overwrite</code> is set to <code class="inline">false</code>, the changeset is returned unchanged.</p>
   </section>
 </section>
 <section class="detail" id="format_date/2">
@@ -479,10 +479,10 @@ percent-encoded in URLs by browsers.</p><h2 id="url_safe_name/1-parameters" clas
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">url_safe_name</span><span class="p" data-group-id="2745006330-1">(</span><span class="s">&quot;My Project!!&quot;</span><span class="p" data-group-id="2745006330-1">)</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">url_safe_name</span><span class="p" data-group-id="9372201292-1">(</span><span class="s">&quot;My Project!!&quot;</span><span class="p" data-group-id="9372201292-1">)</span><span class="w">
 </span><span class="s">&quot;my-project&quot;</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">url_safe_name</span><span class="p" data-group-id="2745006330-2">(</span><span class="no">nil</span><span class="p" data-group-id="2745006330-2">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">url_safe_name</span><span class="p" data-group-id="9372201292-2">(</span><span class="no">nil</span><span class="p" data-group-id="9372201292-2">)</span><span class="w">
 </span><span class="s">&quot;&quot;</span></code></pre>
   </section>
 </section>
