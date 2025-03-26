@@ -121,15 +121,18 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
       can_edit_data_retention={@can_edit_data_retention}
     />
     <div :if={is_nil(@selected_dataclip)} class="grow">
-      <.input
-        type="textarea"
-        field={@form[:body]}
-        disabled={@disabled}
-        class="h-full font-mono proportional-nums text-slate-200 bg-slate-700"
-        stretch={true}
-        phx-debounce="300"
-        phx-hook="BlurDataclipEditor"
-      />
+      <div phx-feedback-for={@form[:body].name} class="h-full">
+        <.errors field={@form[:body]} />
+        <.textarea_element
+          id={@form[:body].id}
+          name={@form[:body].name}
+          value={@form[:body].value}
+          disabled={@disabled}
+          class="h-full font-mono proportional-nums text-slate-200 bg-slate-700"
+          phx-debounce="300"
+          phx-hook="BlurDataclipEditor"
+        />
+      </div>
     </div>
     """
   end
