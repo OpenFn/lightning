@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.11.1-pre.0] - 2025-03-26
+
+### Added
+
 - Fix putting project credentials on a new credential
   [#2993](https://github.com/OpenFn/lightning/issues/2993)
 - Allow users to book for demo sessions
