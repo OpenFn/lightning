@@ -10,6 +10,7 @@ import {
   type WorkflowProps,
   createWorkflowStore,
   type ChangeArgs,
+  store,
 } from './store';
 
 export type WorkflowEditorEntrypoint = PhoenixHook<
@@ -98,11 +99,12 @@ export default {
     // Preload the component
     this.componentModule = import('./component');
 
-    this.workflowStore = createWorkflowStore({}, pendingChange => {
-      this.pendingChanges.push(pendingChange);
+    // this.workflowStore = createWorkflowStore({}, pendingChange => {
+    //   this.pendingChanges.push(pendingChange);
 
-      this.processPendingChanges();
-    });
+    //   this.processPendingChanges();
+    // });
+    console.log('store:', store);
 
     this.handleEvent<{ workflow_params: WorkflowProps }>(
       'current-workflow-params',
@@ -111,11 +113,11 @@ export default {
 
     this.handleEvent('patches-applied', (response: { patches: Patch[] }) => {
       console.debug('patches-applied', response.patches);
-      this.workflowStore.getState().applyPatches(response.patches);
+      // store.getState().applyPatches(response.patches);
     });
 
     this.handleEvent('set-disabled', (response: { disabled: boolean }) => {
-      this.workflowStore.getState().setDisabled(response.disabled);
+      // store.getState().setDisabled(response.disabled);
     });
 
     this.handleEvent<{ href: string; patch: boolean }>('navigate', e => {
@@ -131,17 +133,17 @@ export default {
     // TODO: request the workflow params, but this time create a diff
     // between the current state and the server state and send those diffs
     // to the server.
-    console.log('reconnected', this.workflowStore.getState());
+    console.log('reconnected', store.getState());
     this.pushEventTo(this.el, 'get-current-state', {}, response => {
       console.log('get-current-state response', response);
-      this.workflowStore.getState().rebase(response['workflow_params']);
+      // store.getState().rebase(response['workflow_params']);
     });
   },
   getItem(
     id?: string
   ): Lightning.TriggerNode | Lightning.JobNode | Lightning.Edge | undefined {
     if (id) {
-      const { jobs, triggers, edges } = this.workflowStore.getState();
+      const { jobs, triggers, edges } = store.getState();
       const everything = [...jobs, ...triggers, ...edges];
       for (const i of everything) {
         if (id === i.id) {
@@ -229,7 +231,7 @@ export default {
           );
 
           console.debug('push-change response', response);
-          this.workflowStore.getState().applyPatches(response.patches);
+          // store.getState().applyPatches(response.patches);
           resolve(true);
         }
       );
@@ -247,12 +249,12 @@ export default {
   }: {
     workflow_params: WorkflowProps;
   }) {
-    this.workflowStore.setState(_state => payload);
+    // store.setState(_state => payload);
 
     if (!payload.triggers.length && !payload.jobs.length) {
       // Create a placeholder chart and push it back up to the server
       const diff = createNewWorkflow();
-      this.workflowStore.getState().add(diff);
+      // store.getState().add(diff);
 
       // Select the first job
       // TODO should the workflow name have focus instead?
@@ -277,14 +279,10 @@ export default {
   maybeMountComponent() {
     if (!this._isMounting && !this.component) {
       this._isMounting = true;
-      this.componentModule.then(({ mount }) => {
-        this.component = mount(
-          this.el,
-          this.workflowStore,
-          this.onSelectionChange.bind(this)
-        );
+      void this.componentModule.then(({ mount }) => {
+        this.component = mount(this.el, this.onSelectionChange.bind(this));
 
-        this._isMounting = false;
+        return (this._isMounting = false);
       });
     }
   },

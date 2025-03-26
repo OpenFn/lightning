@@ -1,15 +1,14 @@
 /*
  * Hook for placeholder management
  */
-import { useState, useCallback, useEffect } from 'react';
-import { useStore, type StoreApi } from 'zustand';
+import { useCallback, useEffect, useState } from 'react';
 
+import { randomUUID } from '../common';
+import { DEFAULT_TEXT } from '../editor/Editor';
+import { useWorkflowStore } from '../workflow-editor/store';
 import { styleEdge } from './styles';
 import type { Flow } from './types';
 import toWorkflow from './util/to-workflow';
-import type { WorkflowState } from '../workflow-editor/store';
-import { randomUUID } from '../common';
-import { DEFAULT_TEXT } from '../editor/Editor';
 
 // generates a placeholder node and edge as child of the parent
 export const create = (parentNode: Flow.Node) => {
@@ -51,16 +50,14 @@ export const create = (parentNode: Flow.Node) => {
 
 export default (
   el: HTMLElement | null | undefined,
-  store: StoreApi<WorkflowState>,
   requestSelectionChange: (id: string | null) => void // TODO more like changeSelection
 ) => {
+  const { add: addTo } = useWorkflowStore();
   // TODO in new-workflow, we need to take a placeholder as a prop
   const [placeholders, setPlaceholders] = useState<Flow.Model>({
     nodes: [],
     edges: [],
   });
-
-  const addToStore = useStore(store!, state => state.add);
 
   const add = useCallback((parentNode: Flow.Node) => {
     // Generate a placeholder node and edge
@@ -79,11 +76,11 @@ export default (
 
       // Update the store
       placeholders.nodes[0].data.name = name;
-      addToStore(toWorkflow(placeholders));
+      addTo(toWorkflow(placeholders));
 
       requestSelectionChange(id);
     },
-    [addToStore, placeholders]
+    [placeholders]
   );
 
   const cancel = useCallback((_evt?: CustomEvent<any>) => {

@@ -25,6 +25,7 @@ const rootObserver = new RootObserver();
 
 export const ReactComponent = {
   mounted() {
+    console.log(this)
     this._name = this.el.dataset.reactName;
     this._file = this.el.dataset.reactFile;
 
@@ -46,6 +47,7 @@ export const ReactComponent = {
     this._portals = new Map();
     this._listeners = new Set();
     this._boundaryMounted = false;
+
 
     invariant(
       isReactHookedElement(this.el),
@@ -72,6 +74,10 @@ export const ReactComponent = {
         pushEvent: this.pushEvent.bind(this),
         handleEvent: this.handleEvent.bind(this),
         pushEventTo: this.pushEventTo.bind(this, this.el),
+        el: this.el,
+        navigate: (path) => {
+          this.liveSocket.execJS(this.el, '[["patch",{"replace":false,"href":"' + path + '"}]]')
+        },
       },
       /* eslint-enable */
       this.__view(),

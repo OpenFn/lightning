@@ -29,6 +29,15 @@ export type WorkflowProps = {
 };
 
 export interface WorkflowState extends WorkflowProps {
+  setState: (
+    partial:
+      | WorkflowState
+      | Partial<WorkflowState>
+      | ((state: WorkflowState) => WorkflowState | Partial<WorkflowState>),
+    replace?: boolean
+  ) => void;
+  observer: null | ((v: unknown) => void);
+  subscribe: (cb: (v: unknown) => void) => void;
   add: (data: AddArgs) => void;
   change: (data: ChangeArgs) => void;
   remove: (data: RemoveArgs) => void;
@@ -36,7 +45,9 @@ export interface WorkflowState extends WorkflowProps {
   getById: <T = Lightning.Node | Lightning.Edge | Lightning.TriggerNode>(
     id?: string | undefined
   ) => T | undefined;
-  onChange: (pendingAction: PendingAction) => void;
+  getItem: (
+    id?: string
+  ) => Lightning.TriggerNode | Lightning.JobNode | Lightning.Edge | undefined;
   applyPatches: (patches: Patch[]) => void;
   setDisabled: (value: boolean) => void;
 }
@@ -69,92 +80,100 @@ function toRFC6902Patch(patch: ImmerPatch): Patch {
   return newPatch;
 }
 
-// just trust this singleton - [works on the assumption that workflowEditor will instantiate(currently true) before jobEditor tries to use it]
-let store: StoreApi<WorkflowState>;
+// Calculate the next state using Immer, and then call the onChange callback
+// with the patches resulting from the change.
+function proposeChanges(
+  state: WorkflowState,
+  fn: (draft: WorkflowState) => void,
+  onChange?: (v: unknown) => void
+) {
+  let patches: Patch[] = [];
 
-export const useWorkflowStore = () => {
-  return useStore(store);
+  const nextState = produce(
+    state,
+    draft => {
+      fn(draft);
+    },
+    (p: ImmerPatch[], _inverse: ImmerPatch[]) => {
+      patches = p.map(toRFC6902Patch);
+    }
+  );
+
+  console.debug('Proposing changes', patches);
+
+  if (onChange) onChange({ id: randomUUID(), fn, patches });
+
+  return nextState;
+}
+
+const DEFAULT_PROPS: WorkflowProps = {
+  triggers: [],
+  jobs: [],
+  edges: [],
+  disabled: false,
 };
 
-export const createWorkflowStore = (
-  initProps?: Partial<WorkflowProps>,
-  onChange: (pendingAction: PendingAction) => void = () => {}
-) => {
-  const DEFAULT_PROPS: WorkflowProps = {
-    triggers: [],
-    jobs: [],
-    edges: [],
-    disabled: false,
-  };
-
-  // Calculate the next state using Immer, and then call the onChange callback
-  // with the patches resulting from the change.
-  function proposeChanges(
-    state: WorkflowState,
-    fn: (draft: WorkflowState) => void
-  ) {
-    let patches: Patch[] = [];
-
-    const nextState = produce(
-      state,
-      draft => {
-        fn(draft);
-      },
-      (p: ImmerPatch[], _inverse: ImmerPatch[]) => {
-        patches = p.map(toRFC6902Patch);
-      }
-    );
-
-    console.debug('Proposing changes', patches);
-
-    if (onChange) onChange({ id: randomUUID(), fn, patches });
-
-    return nextState;
-  }
-
-  store = createStore<WorkflowState>()((set, get) => ({
+export type WorkflowStore = StoreApi<WorkflowState>;
+// just trust this singleton - [works on the assumption that workflowEditor will instantiate(currently true) before jobEditor tries to use it]
+export const store: WorkflowStore = createStore<WorkflowState>()(
+  (set, get) => ({
     ...DEFAULT_PROPS,
-    ...initProps,
+    observer: null,
+    subscribe: cb => {
+      if (get().observer) return;
+      set({ observer: cb });
+      return () => {
+        set({ observer: null });
+      };
+    },
     add: data => {
       console.log('add', data);
 
       set(state =>
-        proposeChanges(state, draft => {
-          (['jobs', 'triggers', 'edges'] as const).forEach(
-            <K extends 'jobs' | 'triggers' | 'edges'>(key: K) => {
-              const change = data[key];
-              if (change) {
-                change.forEach((item: NonNullable<ChangeArgs[K]>[number]) => {
-                  if (!item.id) {
-                    item.id = randomUUID();
-                  }
-                  draft[key].push(item);
-                });
+        proposeChanges(
+          state,
+          draft => {
+            (['jobs', 'triggers', 'edges'] as const).forEach(
+              <K extends 'jobs' | 'triggers' | 'edges'>(key: K) => {
+                const change = data[key];
+                if (change) {
+                  change.forEach((item: NonNullable<ChangeArgs[K]>[number]) => {
+                    if (!item.id) {
+                      item.id = randomUUID();
+                    }
+                    draft[key].push(item);
+                  });
+                }
               }
-            }
-          );
-        })
+            );
+          },
+          get().observer
+        )
       );
     },
     remove: data => {
       set(state =>
-        proposeChanges(state, draft => {
-          (['jobs', 'triggers', 'edges'] as const).forEach(
-            <K extends 'jobs' | 'triggers' | 'edges'>(key: K) => {
-              const idsToRemove = data[key];
-              if (idsToRemove) {
-                const currentItems = draft[key];
-                const nextItems: WorkflowState[K] = [];
-                currentItems.forEach((item: WorkflowState[K][number]) => {
-                  if (!idsToRemove.includes(item.id)) {
-                    nextItems.push(item);
-                  }
-                });
-                draft[key] = nextItems;
+        proposeChanges(
+          state,
+          draft => {
+            (['jobs', 'triggers', 'edges'] as const).forEach(
+              <K extends 'jobs' | 'triggers' | 'edges'>(key: K) => {
+                const idsToRemove = data[key];
+                if (idsToRemove) {
+                  const currentItems = draft[key];
+                  const nextItems: WorkflowState[K] = [];
+                  currentItems.forEach((item: WorkflowState[K][number]) => {
+                    if (!idsToRemove.includes(item.id)) {
+                      nextItems.push(item);
+                    }
+                  });
+                  draft[key] = nextItems;
+                }
               }
-            }
-          );
-        })
+            );
+          },
+          get().observer
+        )
       );
     },
     // Change the state of the workflow. The data object should have the
@@ -171,21 +190,25 @@ export const createWorkflowStore = (
     // You can provide as many or as few changes as you like.
     change: data => {
       set(state =>
-        proposeChanges(state, draft => {
-          for (const [t, changes] of Object.entries(data)) {
-            const type = t as 'jobs' | 'triggers' | 'edges';
-            for (const change of changes) {
-              const current = draft[type] as Array<
-                Lightning.TriggerNode | Lightning.JobNode | Lightning.Edge
-              >;
+        proposeChanges(
+          state,
+          draft => {
+            for (const [t, changes] of Object.entries(data)) {
+              const type = t as 'jobs' | 'triggers' | 'edges';
+              for (const change of changes) {
+                const current = draft[type] as Array<
+                  Lightning.TriggerNode | Lightning.JobNode | Lightning.Edge
+                >;
 
-              const item = current.find(i => i.id === change.id);
-              if (item) {
-                Object.assign(item, change);
+                const item = current.find(i => i.id === change.id);
+                if (item) {
+                  Object.assign(item, change);
+                }
               }
             }
-          }
-        })
+          },
+          get().observer
+        )
       );
     },
     getById(id) {
@@ -205,6 +228,15 @@ export const createWorkflowStore = (
         }
       }
     },
+    getItem: id => {
+      const { jobs, triggers, edges } = store.getState();
+      const everything = [...jobs, ...triggers, ...edges];
+      for (const i of everything) {
+        if (id === i.id) {
+          return i;
+        }
+      }
+    },
     // Experimental
     // Used to compare the current state with the state in the browser and
     // calculate the patches to apply to bring the server state in sync with the
@@ -214,14 +246,18 @@ export const createWorkflowStore = (
     // be improved to just the differences.
     rebase: data => {
       const state = get();
-      proposeChanges(data, draft => {
-        for (const [t, changes] of Object.entries(state)) {
-          if (['triggers', 'jobs', 'edges'].includes(t)) {
-            const type = t as 'jobs' | 'triggers' | 'edges';
-            draft[type] = changes;
+      proposeChanges(
+        data,
+        draft => {
+          for (const [t, changes] of Object.entries(state)) {
+            if (['triggers', 'jobs', 'edges'].includes(t)) {
+              const type = t as 'jobs' | 'triggers' | 'edges';
+              draft[type] = changes;
+            }
           }
-        }
-      });
+        },
+        get().observer
+      );
     },
     applyPatches: patches => {
       const immerPatches: ImmerPatch[] = patches.map(patch => ({
@@ -231,15 +267,17 @@ export const createWorkflowStore = (
 
       set(state => applyPatches(state, immerPatches));
     },
-    onChange,
     setDisabled: (value: boolean) => {
       set(state => ({
         ...state,
         disabled: value,
       }));
     },
-  }));
-  return store;
-};
+    setState: set.bind(this),
+  })
+);
 
-export type WorkflowStore = ReturnType<typeof createWorkflowStore>;
+export const useWorkflowStore = (onChange?: (v: unknown) => void) => {
+  store.subscribe(onChange);
+  return useStore(store);
+};
