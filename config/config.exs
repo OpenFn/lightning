@@ -125,7 +125,7 @@ config :esbuild,
         )
       |> then(fn args ->
         case config_env() do
-          "prod" -> args
+          :prod -> args
           _ -> args ++ ["--jsx-dev"]
         end
       end),
