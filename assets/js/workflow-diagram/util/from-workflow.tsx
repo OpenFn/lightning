@@ -108,6 +108,7 @@ const fromWorkflow = (
           condition_type: edge.condition_type,
           // TODO something is up here - ?? true is a hack
           // without it, new edges are marked as disabled
+          errors: edge.errors,
           enabled: edge.enabled ?? true,
           label,
         };
