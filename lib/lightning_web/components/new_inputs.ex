@@ -532,8 +532,8 @@ defmodule LightningWeb.Components.NewInputs do
     ~H"""
     <div phx-feedback-for={@name}>
       <.label :if={@label} for={@id} class="mb-2">
-        {@label}
-        <span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
+        {@label}<span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
+        <.tooltip_for_label :if={@tooltip} id={"#{@id}-tooltip"} tooltip={@tooltip} />
       </.label>
       <.input_element
         type={@type}

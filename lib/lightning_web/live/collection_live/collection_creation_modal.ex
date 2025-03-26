@@ -140,6 +140,7 @@ defmodule LightningWeb.CollectionLive.CollectionCreationModal do
                 value={@name}
                 label="Name"
                 required="true"
+                tooltip="Collection names are instance wide unique. They are used in URLs and as a title."
               />
               <.input type="hidden" field={f[:name]} />
               <small class="mt-2 block text-xs text-gray-600">
