@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Stagger cleanup crons in the hopes that it reduces the imapct on the database.
+  [#3061](https://github.com/OpenFn/lightning/issues/3061)
+
 ### Fixed
 
 ## [v2.11.1-pre.0] - 2025-03-26
