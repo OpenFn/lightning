@@ -391,8 +391,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
             <span class="font-bold"><.modal_title action={@action} /></span>
             <button
               id={"close-credential-modal-form-#{@credential.id || "new"}"}
-              phx-click="close_modal"
-              phx-target={@myself}
+              phx-click={JS.navigate(@return_to)}
               type="button"
               class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
               aria-label={gettext("close")}
