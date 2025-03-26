@@ -20,7 +20,9 @@ export const JobEditorMain: WithActionProps<JobEditorComponentProps> = (props) =
   const [source, setSource] = React.useState('');
 
   // use workflowstore here
-  const { change, getById } = useWorkflowStore();
+  const { change, getById } = useWorkflowStore((v) => {
+    console.log("observer: jobEditor", v)
+  });
 
   // debounce editor content update
   const _debouncedPushChange = pDebounce((content: string) => {

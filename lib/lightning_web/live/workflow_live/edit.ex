@@ -5,6 +5,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   import LightningWeb.Components.NewInputs
   import LightningWeb.Components.Icons
   import LightningWeb.WorkflowLive.Components
+  import React
 
   alias Lightning.AiAssistant
   alias Lightning.Extensions.UsageLimiting.Action
@@ -36,6 +37,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
   require Lightning.Run
 
   on_mount {LightningWeb.Hooks, :project_scope}
+
+  jsx("assets/js/workflow-editor/WorkflowEditor.tsx")
 
   attr :changeset, :map, required: true
   attr :project_user, :map, required: true
@@ -343,23 +346,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           </div>
         </div>
 
-        <div
-          phx-hook="WorkflowEditor"
-          class="grow"
-          id={"editor-#{@workflow.id}"}
-          phx-update="ignore"
-        >
-          <%!-- Before Editor component has mounted --%>
-          <div class="flex place-content-center h-full cursor-wait">
-            <span class="inline-block top-[50%] relative">
-              <div class="flex items-center justify-center">
-                <.button_loader>
-                  Loading workflow
-                </.button_loader>
-              </div>
-            </span>
-          </div>
-        </div>
+        <.WorkflowEditor :if={@selection_mode != "expand"} />
         <.live_component
           :if={@selected_job}
           id="new-credential-modal"
