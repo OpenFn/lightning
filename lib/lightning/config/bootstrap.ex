@@ -228,11 +228,11 @@ defmodule Lightning.Config.Bootstrap do
     cleanup_cron =
       if Application.get_env(:lightning, :purge_deleted_after_days) > 0,
         do: [
-          {"2 2 * * *", Lightning.Accounts, args: %{"type" => "purge_deleted"}},
-          {"3 2 * * *", Lightning.Credentials,
+          {"15 2 * * *", Lightning.Accounts, args: %{"type" => "purge_deleted"}},
+          {"30 2 * * *", Lightning.Credentials,
            args: %{"type" => "purge_deleted"}},
-          {"4 2 * * *", Lightning.Projects, args: %{"type" => "purge_deleted"}},
-          {"5 2 * * *", Lightning.WebhookAuthMethods,
+          {"45 2 * * *", Lightning.Projects, args: %{"type" => "purge_deleted"}},
+          {"0 3 * * *", Lightning.WebhookAuthMethods,
            args: %{"type" => "purge_deleted"}}
         ],
         else: []
