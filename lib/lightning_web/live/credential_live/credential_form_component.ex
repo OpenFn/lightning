@@ -13,25 +13,29 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   alias Phoenix.LiveView.JS
 
   @impl true
-  def mount(socket) do
+  def mount(%{assigns: init_assigns} = socket) do
     allow_credential_transfer =
       Application.fetch_env!(:lightning, LightningWeb)
       |> Keyword.get(:allow_credential_transfer)
 
+    mount_assigns = %{
+      on_save: nil,
+      scopes: [],
+      scopes_changed: false,
+      sandbox_changed: false,
+      schema: false,
+      project: nil,
+      available_projects: [],
+      selected_projects: [],
+      oauth_clients: [],
+      allow_credential_transfer: allow_credential_transfer
+    }
+
     {:ok,
      socket
-     |> assign(
-       on_save: nil,
-       scopes: [],
-       scopes_changed: false,
-       sandbox_changed: false,
-       schema: false,
-       project: nil,
-       available_projects: [],
-       selected_projects: [],
-       oauth_clients: [],
-       allow_credential_transfer: allow_credential_transfer
-     )}
+     |> assign(mount_assigns)
+     |> assign(init_assigns: init_assigns)
+     |> assign(mount_assigns: mount_assigns)}
   end
 
   @impl true
@@ -45,94 +49,12 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
      |> assign(sandbox_changed: false)}
   end
 
-  def update(%{projects: projects} = assigns, socket) do
-    pid = self()
-
-    socket = assign(socket, assigns)
-
-    socket =
-      if changed?(socket, :project) or changed?(socket, :action) do
-        oauth_clients =
-          if socket.assigns.project,
-            do: OauthClients.list_clients(assigns.project),
-            else: OauthClients.list_clients(assigns.current_user)
-
-        type_options =
-          if assigns.action == :new do
-            {:ok, schemas_path} =
-              Application.fetch_env(:lightning, :schemas_path)
-
-            get_type_options(schemas_path)
-            |> Enum.concat(
-              Enum.map(oauth_clients, fn client ->
-                {client.name, client.id, nil, "oauth"}
-              end)
-            )
-            |> Enum.sort_by(& &1, :asc)
-          else
-            []
-          end
-
-        assign(socket,
-          oauth_clients: oauth_clients,
-          type_options: type_options
-        )
-      else
-        socket
-      end
-
-    users =
-      if socket.assigns.allow_credential_transfer do
-        list_users()
-      else
-        []
-      end
-
-    scopes = get_scopes(assigns.credential)
-
-    sandbox_value = get_sandbox_value(assigns.credential)
-
-    api_version = get_api_version(assigns.credential)
-
-    changeset = Credentials.change_credential(assigns.credential)
-
-    update_body = fn body ->
-      update_body(pid, assigns.id, body)
-    end
-
-    page = if assigns.action === :new, do: :first, else: :second
-
-    schema = assigns.credential.schema || false
-
-    selected_projects =
-      changeset
-      |> Ecto.Changeset.get_assoc(:project_credentials, :struct)
-      |> Lightning.Repo.preload(:project)
-      |> Enum.map(fn poc -> poc.project end)
-
-    available_projects =
-      Helpers.filter_available_projects(
-        projects,
-        selected_projects
-      )
-
+  def update(assigns, socket) do
     {:ok,
      socket
-     |> assign(
-       page: page,
-       users: users,
-       scopes: scopes,
-       sandbox_value: sandbox_value,
-       api_version: api_version,
-       changeset: changeset,
-       update_body: update_body,
-       projects: projects,
-       selected_oauth_client: assigns.oauth_client,
-       schema: schema,
-       selected_project: nil,
-       selected_projects: selected_projects,
-       available_projects: available_projects
-     )}
+     |> assign(assigns)
+     |> assigns_for_action()
+     |> assign_new(:component_assigns, fn -> assigns end)}
   end
 
   @impl true
@@ -292,8 +214,25 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     end
   end
 
-  def handle_event("close_modal", _, socket) do
-    {:noreply, push_event(socket, "close_modal", %{})}
+  def handle_event("reset_state", _, socket) do
+    reset_assigns =
+      Map.take(socket.assigns, [
+        :init_assigns,
+        :mount_assigns,
+        :component_assigns
+      ])
+
+    assigns =
+      reset_assigns.init_assigns
+      |> Map.merge(reset_assigns.mount_assigns)
+      |> Map.merge(reset_assigns.component_assigns)
+
+    socket =
+      %{socket | assigns: assigns}
+      |> assign(reset_assigns)
+      |> assigns_for_action(reset: true)
+
+    {:noreply, socket}
   end
 
   @impl true
@@ -312,8 +251,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
             <span class="font-bold"><.modal_title action={@action} /></span>
             <button
               id="close-credential-modal-type-picker"
-              phx-click="close_modal"
-              phx-target={@myself}
+              phx-click={hide_modal(@id) |> JS.push("reset_state", target: @myself)}
               type="button"
               class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
               aria-label={gettext("close")}
@@ -369,8 +307,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
             <button
               id="cancel-credential-type-picker"
               type="button"
-              phx-click="close_modal"
-              phx-target={@myself}
+              phx-click={hide_modal(@id) |> JS.push("reset_state", target: @myself)}
               class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
             >
               Cancel
@@ -391,7 +328,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
             <span class="font-bold"><.modal_title action={@action} /></span>
             <button
               id={"close-credential-modal-form-#{@credential.id || "new"}"}
-              phx-click={JS.navigate(@return_to)}
+              phx-click={hide_modal(@id) |> JS.push("reset_state", target: @myself)}
               type="button"
               class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
               aria-label={gettext("close")}
@@ -431,7 +368,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
             <span class="font-bold"><.modal_title action={@action} /></span>
             <button
               id={"close-credential-modal-form-#{@credential.id || "new"}"}
-              phx-click={JS.navigate(@return_to)}
+              phx-click={hide_modal(@id) |> JS.push("reset_state", target: @myself)}
               type="button"
               class="rounded-md bg-white text-gray-400 hover:text-gray-500 hover:cursor-pointer focus:outline-none"
               aria-label={gettext("close")}
@@ -562,7 +499,9 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
               </button>
               <button
                 type="button"
-                phx-click={JS.navigate(@return_to)}
+                phx-click={
+                  hide_modal(@id) |> JS.push("reset_state", target: @myself)
+                }
                 class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
               >
                 Cancel
@@ -697,5 +636,108 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}
     end
+  end
+
+  defp assigns_for_action(socket, opts \\ []) do
+    page = if socket.assigns.action == :new, do: :first, else: :second
+
+    is_reset? = Keyword.get(opts, :reset, false)
+
+    socket =
+      if changed?(socket, :project) or changed?(socket, :action) or is_reset?,
+        do: assign_oauth_clients_and_type_options(socket),
+        else: socket
+
+    socket
+    |> assigns_for_credential()
+    |> assign(
+      page: page,
+      selected_oauth_client: socket.assigns[:oauth_client]
+    )
+  end
+
+  defp assign_oauth_clients_and_type_options(socket) do
+    %{project: project, current_user: current_user, action: action} =
+      socket.assigns
+
+    oauth_clients =
+      if project,
+        do: OauthClients.list_clients(project),
+        else: OauthClients.list_clients(current_user)
+
+    type_options =
+      if action == :new do
+        {:ok, schemas_path} =
+          Application.fetch_env(:lightning, :schemas_path)
+
+        get_type_options(schemas_path)
+        |> Enum.concat(
+          Enum.map(oauth_clients, fn client ->
+            {client.name, client.id, nil, "oauth"}
+          end)
+        )
+        |> Enum.sort()
+      else
+        []
+      end
+
+    assign(socket, oauth_clients: oauth_clients, type_options: type_options)
+  end
+
+  defp assigns_for_credential(socket) do
+    %{
+      id: component_id,
+      projects: projects,
+      credential: credential,
+      allow_credential_transfer: allow_credential_transfer
+    } = socket.assigns
+
+    scopes = get_scopes(credential)
+
+    sandbox_value = get_sandbox_value(credential)
+
+    api_version = get_api_version(credential)
+
+    changeset = Credentials.change_credential(credential)
+
+    schema = credential.schema || false
+
+    selected_projects =
+      changeset
+      |> Ecto.Changeset.get_assoc(:project_credentials, :struct)
+      |> Lightning.Repo.preload(:project)
+      |> Enum.map(fn poc -> poc.project end)
+
+    available_projects =
+      Helpers.filter_available_projects(
+        projects,
+        selected_projects
+      )
+
+    users =
+      if allow_credential_transfer do
+        list_users()
+      else
+        []
+      end
+
+    pid = self()
+
+    update_body = fn body ->
+      update_body(pid, component_id, body)
+    end
+
+    assign(socket,
+      users: users,
+      update_body: update_body,
+      scopes: scopes,
+      sandbox_value: sandbox_value,
+      api_version: api_version,
+      changeset: changeset,
+      schema: schema,
+      selected_project: nil,
+      selected_projects: selected_projects,
+      available_projects: available_projects
+    )
   end
 end

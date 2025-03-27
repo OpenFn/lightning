@@ -17,8 +17,6 @@ and this project adheres to
 
 ### Added
 
-- Fix putting project credentials on a new credential
-  [#2993](https://github.com/OpenFn/lightning/issues/2993)
 - Restart the credential setup from selecting the credential type
   [#2284](https://github.com/OpenFn/lightning/issues/2284)
 - Allow possibility to inject components for implementing GDPR compliance
