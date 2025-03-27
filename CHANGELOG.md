@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Enable Credential Transfer In Projects Credentials Table
+  [#2978](https://github.com/OpenFn/lightning/issues/2978)
+
 ### Changed
 
 ### Fixed
