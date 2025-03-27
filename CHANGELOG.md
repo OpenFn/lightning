@@ -22,6 +22,9 @@ and this project adheres to
 
 ### Changed
 
+- Default to latest specific version instead of @latest when selecting adaptors
+  [#2843](https://github.com/OpenFn/lightning/issues/2843)
+
 ### Fixed
 
 ## [v2.11.1-pre.1] - 2025-03-26
