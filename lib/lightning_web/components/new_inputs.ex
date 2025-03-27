@@ -601,6 +601,7 @@ defmodule LightningWeb.Components.NewInputs do
   def textarea_element(assigns) do
     ~H"""
     <textarea
+      id={@id}
       name={@name}
       class={[
         "focus:outline focus:outline-2 focus:outline-offset-1 rounded-md shadow-xs text-sm",
@@ -613,7 +614,7 @@ defmodule LightningWeb.Components.NewInputs do
           "border-danger-400 focus:border-danger-400 focus:outline-danger-400",
         @class
       ]}
-      {if(@id, do: Map.merge(%{id: @id}, @rest), else: @rest)}
+      {@rest}
     ><%= Form.normalize_value("textarea", @value) %></textarea>
     """
   end
