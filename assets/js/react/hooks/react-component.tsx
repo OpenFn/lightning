@@ -54,12 +54,11 @@ export const ReactComponent = {
 
     invariant(
       isReactContainerElement(this.el.nextElementSibling) &&
-        this.el.nextElementSibling.dataset.reactContainer === this.el.id,
+      this.el.nextElementSibling.dataset.reactContainer === this.el.id,
       this._errorMsg(`Missing valid React container element!`)
     );
 
     this._containerEl = this.el.nextElementSibling;
-
     this._Component = withProps(
       lazyLoadComponent(
         () => importComponent(this._file, this._name),
@@ -69,9 +68,14 @@ export const ReactComponent = {
       this._subscribe,
       this._getProps,
       this._getPortals,
+      {
+        pushEvent: this.pushEvent.bind(this),
+        handleEvent: this.handleEvent.bind(this),
+        pushEventTo: this.pushEventTo.bind(this, this.el),
+      },
       /* eslint-enable */
-      this.__view,
-      this.__view.componentID(this.el)
+      this.__view(),
+      this.__view().componentID(this.el)
     );
 
     this._mount();
@@ -112,7 +116,6 @@ export const ReactComponent = {
       this._props !== undefined,
       this._errorMsg('Uninitialized props!')
     );
-
     return this._props;
   },
 
@@ -148,10 +151,10 @@ export const ReactComponent = {
   },
 
   _onBoundary(element) {
-    this.__view.liveSocket.requestDOMUpdate(() => {
+    this.__view().liveSocket.requestDOMUpdate(() => {
       if (element == null) return;
 
-      this.__view.execNewMounted();
+      this.__view().execNewMounted();
       this._boundaryMounted = true;
 
       if (this._id != null) {
@@ -230,7 +233,7 @@ export const ReactComponent = {
     const viewHookId = ViewHook.elementID(this.el);
 
     // Nevertheless, also incorporate the LiveView's id for good measure, can't hurt
-    const key = `${this.__view.id}-${String(viewHookId)}`;
+    const key = `${this.__view().id}-${String(viewHookId)}`;
 
     return key;
   },
@@ -352,8 +355,8 @@ export const ReactComponent = {
       [
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         this._name != null &&
-          // prettier-ignore -- the above supression should not leak down
-          `name \`${this._name}\``,
+        // prettier-ignore -- the above supression should not leak down
+        `name \`${this._name}\``,
         `id \`${this.el.id}\``,
       ]
         .filter(Boolean)
