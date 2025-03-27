@@ -121,7 +121,7 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
       can_edit_data_retention={@can_edit_data_retention}
     />
     <div :if={is_nil(@selected_dataclip)} class="grow">
-      <div phx-feedback-for={@form[:body].name} class="h-full">
+      <div phx-feedback-for={@form[:body].name} class="h-full flex flex-col">
         <.errors field={@form[:body]} />
         <.textarea_element
           id={@form[:body].id}
