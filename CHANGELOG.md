@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Remove Credentials for Collaborators Removed from a Project
+  [#2942](https://github.com/OpenFn/lightning/issues/2942)
 - Allow possibility to inject components for implementing GDPR compliance
   [PR#3056](https://github.com/OpenFn/lightning/pull/3056)
 - Change edge color in the workflow when there is an error
