@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Allow possibility to inject components for implementing GDPR compliance
+  [PR#3056](https://github.com/OpenFn/lightning/pull/3056)
+
 ### Changed
 
 ### Fixed
