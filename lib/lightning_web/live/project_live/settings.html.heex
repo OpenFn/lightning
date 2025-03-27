@@ -130,6 +130,34 @@
             </div>
           </.form>
         </div>
+        <div :if={@can_edit_project} class="hidden sm:block" aria-hidden="true">
+          <div class="py-2"></div>
+        </div>
+        <div :if={@can_edit_project} class="bg-white p-4 rounded-md">
+          <div>
+            <h6 class="font-medium text-black">
+              Project Support
+            </h6>
+            <small class="block my-1 text-xs text-gray-600">
+              Grant access to support users so that they can help you on your setup.
+            </small>
+          </div>
+          <div class="hidden sm:block" aria-hidden="true">
+            <div class="py-2"></div>
+          </div>
+          <div class="grid grid-cols gap-6">
+            <div class="md:col-span-2">
+              <.input
+                type="toggle"
+                id="toggle-support-access"
+                name="allow_support_access"
+                checked={@project.allow_support_access}
+                phx-click="toggle_support_access"
+                label="Allow support users access"
+              />
+            </div>
+          </div>
+        </div>
         <div class="hidden sm:block" aria-hidden="true">
           <div class="py-2"></div>
         </div>
@@ -221,6 +249,7 @@
             </div>
           </.form>
         </div>
+
         <div class="hidden sm:block" aria-hidden="true">
           <div class="py-2"></div>
         </div>

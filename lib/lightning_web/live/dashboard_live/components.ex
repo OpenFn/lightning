@@ -164,14 +164,18 @@ defmodule LightningWeb.DashboardLive.Components do
             <.th>Workflows</.th>
             <.th>Collaborators</.th>
             <.th>
-              <.sortable_table_header
-                target_sort_key="last_updated_at"
-                current_sort_key={@sort_key}
-                current_sort_direction={@sort_direction}
-                target={@target}
-              >
+              <%= if @user.support_user do %>
                 Last Updated
-              </.sortable_table_header>
+              <% else %>
+                <.sortable_table_header
+                  target_sort_key="last_updated_at"
+                  current_sort_key={@sort_key}
+                  current_sort_direction={@sort_direction}
+                  target={@target}
+                >
+                  Last Updated
+                </.sortable_table_header>
+              <% end %>
             </.th>
             <.th></.th>
           </.tr>
@@ -186,9 +190,7 @@ defmodule LightningWeb.DashboardLive.Components do
               {project.name}
             </.td>
             <.td class="break-words max-w-[25rem]">
-              {project.role
-              |> Atom.to_string()
-              |> String.capitalize()}
+              {String.capitalize(to_string(project.role))}
             </.td>
             <.td class="break-words max-w-[10rem]">
               {project.workflows_count}

@@ -4,6 +4,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
 
   import LightningWeb.RunLive.Components
 
+  alias Lightning.Accounts
   alias Lightning.Accounts.User
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
@@ -280,7 +281,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
        job_id: Map.get(session, "job_id"),
        selected_step: nil,
        steps: [],
-       current_user: project_user.user
+       current_user: Accounts.get_user(user_id)
      )
      |> assign(:input_dataclip, nil)
      |> assign(:output_dataclip, nil)

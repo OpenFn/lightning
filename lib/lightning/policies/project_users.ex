@@ -49,7 +49,8 @@ defmodule Lightning.Policies.ProjectUsers do
   def authorize(:access_project, %User{} = user, %Project{} = project),
     do:
       is_nil(project.scheduled_deletion) and
-        Projects.member_of?(project, user)
+        (allow_as_support_user?(user, project) or
+           Projects.member_of?(project, user))
 
   def authorize(:delete_project, %User{} = user, %Project{} = project),
     do: Projects.get_project_user_role(user, project) == :owner
@@ -79,18 +80,53 @@ defmodule Lightning.Policies.ProjectUsers do
            ],
       do: project_user.role in [:owner, :admin]
 
-  def authorize(action, %User{}, %ProjectUser{} = project_user)
+  def authorize(action, %User{}, nil)
       when action in [
-             :create_workflow,
-             :edit_workflow,
-             :delete_workflow,
-             :run_workflow,
-             :provision_project,
-             :create_project_credential,
-             :initiate_github_sync
+             :write_webhook_auth_method,
+             :write_github_connection,
+             :edit_project,
+             :edit_data_retention,
+             :add_project_user,
+             :remove_project_user,
+             :edit_run_settings,
+             :create_collection
            ],
+      do: false
+
+  @project_user_actions [
+    :create_workflow,
+    :edit_workflow,
+    :delete_workflow,
+    :run_workflow,
+    :provision_project,
+    :create_project_credential,
+    :initiate_github_sync
+  ]
+
+  def authorize(
+        action,
+        %User{},
+        %ProjectUser{} = project_user
+      )
+      when action in @project_user_actions,
       do: project_user.role in [:owner, :admin, :editor]
+
+  def authorize(
+        action,
+        %User{support_user: support_user},
+        nil
+      )
+      when action in @project_user_actions,
+      do: support_user
 
   def authorize(action, user, %{project_id: project_id}),
     do: authorize(action, user, Projects.get_project(project_id))
+
+  def allow_as_support_user?(user, %Project{
+        allow_support_access: allow_support_access
+      }),
+      do: user.support_user and allow_support_access
+
+  def allow_as_support_user?(user, project_id),
+    do: allow_as_support_user?(user, Projects.get_project!(project_id))
 end
