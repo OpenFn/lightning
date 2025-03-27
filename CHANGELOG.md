@@ -24,6 +24,8 @@ and this project adheres to
 
 ### Changed
 
+- Stagger cleanup crons in the hopes that it reduces the imapct on the database.
+  [#3061](https://github.com/OpenFn/lightning/issues/3061)
 - Default to latest specific version instead of @latest when selecting adaptors
   [#2843](https://github.com/OpenFn/lightning/issues/2843)
 
