@@ -658,9 +658,7 @@ defmodule LightningWeb.ProjectLive.Settings do
           " and their owned credential #{credential.name}"
 
         credentials ->
-          credentials_list =
-            credentials |> Enum.map(& &1.name) |> Enum.join(", ")
-
+          credentials_list = Enum.map_join(credentials, ", ", & &1.name)
           " and their owned credentials #{credentials_list}"
       end
 
