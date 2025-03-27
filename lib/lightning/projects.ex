@@ -248,7 +248,7 @@ defmodule Lightning.Projects do
       join: u in assoc(pu, :user),
       where: pu.project_id == ^id,
       order_by: u.first_name,
-      preload: [user: u]
+      preload: [:project, user: u]
     )
     |> Repo.all()
   end
@@ -431,8 +431,32 @@ defmodule Lightning.Projects do
     Oban.insert_all(Lightning.Oban, emails)
   end
 
+  @doc """
+  Deletes a project user and removes their credentials from the project.
+
+  This function:
+  1. Deletes the association between the user and the project
+  2. Removes any credentials owned by the user from the project
+
+  ## Parameters
+    - `project_user`: The `ProjectUser` struct to be deleted
+
+  ## Returns
+    - The deleted `ProjectUser` struct
+  """
   @spec delete_project_user!(ProjectUser.t()) :: ProjectUser.t()
   def delete_project_user!(%ProjectUser{} = project_user) do
+    project_user =
+      %{user_id: user_id, project_id: project_id} =
+      Repo.preload(project_user, [:user, :project])
+
+    from(pc in Lightning.Projects.ProjectCredential,
+      join: c in Lightning.Credentials.Credential,
+      on: c.id == pc.credential_id,
+      where: c.user_id == ^user_id and pc.project_id == ^project_id
+    )
+    |> Repo.delete_all()
+
     Repo.delete!(project_user)
   end
 

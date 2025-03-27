@@ -643,6 +643,29 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   defp confirm_user_removal_modal(assigns) do
+    user_credentials =
+      get_user_credentials_in_project(
+        assigns.project_user.user,
+        assigns.project_user.project
+      )
+
+    credentials_text =
+      case user_credentials do
+        [] ->
+          ""
+
+        [credential] ->
+          " and their owned credential #{credential.name}"
+
+        credentials ->
+          credentials_list =
+            credentials |> Enum.map(& &1.name) |> Enum.join(", ")
+
+          " and their owned credentials #{credentials_list}"
+      end
+
+    assigns = assign(assigns, :credentials_text, credentials_text)
+
     ~H"""
     <.modal id={@id} width="max-w-md">
       <:title>
@@ -665,7 +688,7 @@ defmodule LightningWeb.ProjectLive.Settings do
       <div class="px-6">
         <p class="text-sm text-gray-500">
           Are you sure you want to remove "{@project_user.user.first_name} {@project_user.user.last_name}" from this project?
-          They will nolonger have access.
+          They will no longer have access{@credentials_text} will be removed from this project.
           Do you wish to proceed with this action?
         </p>
       </div>
@@ -732,5 +755,12 @@ defmodule LightningWeb.ProjectLive.Settings do
     |> Atom.to_string()
     |> String.replace("_", " ")
     |> String.capitalize()
+  end
+
+  defp get_user_credentials_in_project(
+         %User{} = user,
+         %Projects.Project{} = project
+       ) do
+    Credentials.list_user_credentials_in_project(user, project)
   end
 end
