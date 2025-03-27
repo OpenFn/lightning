@@ -19,6 +19,8 @@ and this project adheres to
 
 - Allow possibility to inject components for implementing GDPR compliance
   [PR#3056](https://github.com/OpenFn/lightning/pull/3056)
+- Change edge color in the workflow when there is an error
+  [#2999](https://github.com/OpenFn/lightning/issues/2999)
 
 ### Changed
 
