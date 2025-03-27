@@ -2063,6 +2063,91 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "delete_project_user!/1" do
+    test "deletes the project user and removes their credentials from the project" do
+      user1 = insert(:user)
+      user2 = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [
+            %{user_id: user1.id, role: :owner},
+            %{user_id: user2.id, role: :editor}
+          ]
+        )
+
+      project_user =
+        Enum.find(project.project_users, fn pu -> pu.user_id == user2.id end)
+
+      credential1 =
+        insert(:credential,
+          user: user1,
+          project_credentials: [%{project_id: project.id}]
+        )
+
+      credential2 =
+        insert(:credential,
+          user: user2,
+          project_credentials: [%{project_id: project.id}]
+        )
+
+      other_project = insert(:project)
+
+      credential3 =
+        insert(:credential,
+          user: user2,
+          project_credentials: [%{project_id: other_project.id}]
+        )
+
+      deleted_project_user = Projects.delete_project_user!(project_user)
+
+      assert deleted_project_user.id == project_user.id
+      refute Repo.get(Lightning.Projects.ProjectUser, project_user.id)
+
+      pc1 =
+        Repo.get_by(Lightning.Projects.ProjectCredential,
+          project_id: project.id,
+          credential_id: credential1.id
+        )
+
+      assert pc1 != nil
+
+      pc2 =
+        Repo.get_by(Lightning.Projects.ProjectCredential,
+          project_id: project.id,
+          credential_id: credential2.id
+        )
+
+      assert pc2 == nil
+
+      pc3 =
+        Repo.get_by(Lightning.Projects.ProjectCredential,
+          project_id: other_project.id,
+          credential_id: credential3.id
+        )
+
+      assert pc3 != nil
+
+      assert Repo.get(Lightning.Credentials.Credential, credential1.id)
+      assert Repo.get(Lightning.Credentials.Credential, credential2.id)
+      assert Repo.get(Lightning.Credentials.Credential, credential3.id)
+    end
+
+    test "works when user has no credentials in the project" do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user_id: user.id, role: :editor}])
+
+      project_user = List.first(project.project_users)
+
+      deleted_project_user = Projects.delete_project_user!(project_user)
+
+      assert deleted_project_user.id == project_user.id
+      refute Repo.get(Lightning.Projects.ProjectUser, project_user.id)
+    end
+  end
+
   @spec full_project_fixture(attrs :: Keyword.t()) :: %{optional(any) => any}
   def full_project_fixture(attrs \\ []) when is_list(attrs) do
     %{workflows: [workflow_1, workflow_2]} =
