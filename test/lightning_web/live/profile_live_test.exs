@@ -1,10 +1,14 @@
 defmodule LightningWeb.ProfileLiveTest do
   use LightningWeb.ConnCase, async: true
 
-  import Phoenix.LiveViewTest
   import Lightning.AccountsFixtures
   import Lightning.Factories
+  import Lightning.GDPRHelpers
+  import Mox
+  import Phoenix.LiveViewTest
   import Swoosh.TestAssertions
+
+  setup :verify_on_exit!
 
   @update_password_attrs %{
     current_password: valid_user_password(),
@@ -637,6 +641,38 @@ defmodule LightningWeb.ProfileLiveTest do
 
       updated_user = Lightning.Repo.reload(user)
       assert is_nil(updated_user.github_oauth_token)
+    end
+  end
+
+  describe "GDPR Components" do
+    setup :register_and_log_in_user
+
+    test "the preferences component is shown when enabled in the config", %{
+      conn: conn
+    } do
+      setup_enabled_gdpr_preferences(%{})
+      {:ok, view, _html} = live(conn, ~p"/profile")
+      assert has_element?(view, "#gdpr-preferences")
+    end
+
+    test "the preferences component is not shown when disabled in the config", %{
+      conn: conn
+    } do
+      setup_disabled_gdpr_preferences(%{})
+      {:ok, view, _html} = live(conn, ~p"/profile")
+      refute has_element?(view, "#gdpr-preferences")
+    end
+
+    test "the banner is shown when enabled in the config", %{conn: conn} do
+      setup_enabled_gdpr_banner(%{})
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+      assert has_element?(view, "#gdpr-banner")
+    end
+
+    test "the banner is not shown when disabled in the config", %{conn: conn} do
+      setup_disabled_gdpr_banner(%{})
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+      refute has_element?(view, "#gdpr-banner")
     end
   end
 end

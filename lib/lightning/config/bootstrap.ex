@@ -643,10 +643,13 @@ defmodule Lightning.Config.Bootstrap do
 
     setup_storage()
 
-    entry_points = React.get_entry_points(:lightning)
+    # Commenting this out because the React modules aren't being used in prod
+    # Utils.get_env([:esbuild, :default, :args]) returns nil in prod
+    # We should have uncomment it when we have a proper fix
+    # entry_points = React.get_entry_points(:lightning)
 
-    config :esbuild, :default,
-      args: Utils.get_env([:esbuild, :default, :args]) ++ entry_points
+    # config :esbuild, :default,
+    #   args: Utils.get_env([:esbuild, :default, :args]) ++ entry_points
 
     :ok
   end

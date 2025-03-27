@@ -17,14 +17,21 @@ and this project adheres to
 
 ### Added
 
+- Allow possibility to inject components for implementing GDPR compliance
+  [PR#3056](https://github.com/OpenFn/lightning/pull/3056)
+- Change edge color in the workflow when there is an error
+  [#2999](https://github.com/OpenFn/lightning/issues/2999)
+
 ### Changed
 
 - Stagger cleanup crons in the hopes that it reduces the imapct on the database.
   [#3061](https://github.com/OpenFn/lightning/issues/3061)
+- Default to latest specific version instead of @latest when selecting adaptors
+  [#2843](https://github.com/OpenFn/lightning/issues/2843)
 
 ### Fixed
 
-## [v2.11.1-pre.0] - 2025-03-26
+## [v2.11.1-pre.1] - 2025-03-26
 
 ### Added
 
