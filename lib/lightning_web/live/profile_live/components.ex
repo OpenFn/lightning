@@ -33,6 +33,9 @@ defmodule LightningWeb.ProfileLive.Components do
   attr :delete_user_url, :string, required: true
 
   def action_cards(assigns) do
+    assigns =
+      assign(assigns, gdpr_preferences: Lightning.Config.gdpr_preferences())
+
     ~H"""
     <div id={"user-#{@current_user.id}"} class="md:col-span-2">
       <.live_component
@@ -51,6 +54,13 @@ defmodule LightningWeb.ProfileLive.Components do
         user={@current_user}
         return_to={~p"/profile"}
       />
+      <%= if assigns[:gdpr_preferences] do %>
+        <.live_component
+          module={@gdpr_preferences.component}
+          id={@gdpr_preferences.id}
+          current_user={@current_user}
+        />
+      <% end %>
       <.live_component
         module={LightningWeb.ProfileLive.MfaComponent}
         id={"#{@current_user.id}_mfa_section"}

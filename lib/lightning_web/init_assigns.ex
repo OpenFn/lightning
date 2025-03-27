@@ -25,6 +25,7 @@ defmodule LightningWeb.InitAssigns do
            attrs: %{current_user: current_user}
          }
        end
-     end)}
+     end)
+     |> assign_new(:gdpr_banner, fn -> Lightning.Config.gdpr_banner() end)}
   end
 end

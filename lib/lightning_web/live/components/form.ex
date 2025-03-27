@@ -417,8 +417,7 @@ defmodule LightningWeb.Components.Form do
       rounded-md
       border-secondary-300
       shadow-xs
-      text-md
-      font-medium
+      sm:text-sm
       focus:border-primary-300
       focus:ring
       focus:ring-primary-200/50

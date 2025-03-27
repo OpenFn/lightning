@@ -81,7 +81,7 @@ jobs:
 
       - run: chown -R lightning /home/lightning
       - run: sudo -u lightning mix local.hex --force && mix local.rebar --force
-      - run: cd assets; sudo -u lightning npm install
+      - run: cd assets; sudo -u lightning npm install --force
       - run: sudo -u lightning mix do deps.get --only test, deps.compile, compile
       - run: sudo -u lightning mix lightning.install_runtime
 

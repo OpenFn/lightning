@@ -14,14 +14,14 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="grid grid-cols-4 gap-2 @container items-end">
+    <div class="grid grid-cols-4 md:gap-4 @container items-end">
       <div class="col-span-4 @md:col-span-2">
         <Form.label_field
           form={:adaptor_picker}
           field={:adaptor_name}
           title={"Adaptor" <> if @local_adaptors_enabled?, do: " (local)", else: ""}
           for="adaptor-name"
-          tooltip="Choose an adaptor to perform operations (via helper functions) in a specific application. Pick ‘http’ for generic REST APIs or the 'common' adaptor if this job only performs data manipulation."
+          tooltip="Choose an adaptor to perform operations (via helper functions) in a specific application. Pick 'http' for generic REST APIs or the 'common' adaptor if this job only performs data manipulation."
         />
         <Form.select_field
           form={:adaptor_picker}
@@ -36,12 +36,24 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
         />
       </div>
       <div :if={!@local_adaptors_enabled?} class="col-span-4 @md:col-span-2">
-        <Form.label_field
-          form={@form}
-          field={:adaptor_version}
-          title="Version"
-          for="adaptor-version"
-        />
+        <div class="flex justify-between items-center">
+          <label
+            for="adaptor-version"
+            class="block text-sm font-medium text-secondary-700"
+          >
+            Version
+          </label>
+          <.pill
+            :if={@version == "latest"}
+            color="yellow"
+            aria-label="Breaking changes of future versions may cause your workflow to break. Use with caution."
+            phx-hook="Tooltip"
+            id="latest-version-selected"
+          >
+            <span class="inline-block text-[0.8em] pb-[0.15em]">@</span>
+            latest selected
+          </.pill>
+        </div>
         <.old_error field={@form[:adaptor_version]} />
         <Form.select_field
           form={@form}
@@ -79,21 +91,26 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
 
   @impl true
   def update(%{form: form} = params, socket) do
-    {adaptor_name, _version, adaptors, versions} =
+    {adaptor_name, version, adaptors, versions} =
       get_adaptor_version_options(Phoenix.HTML.Form.input_value(form, :adaptor))
 
     {:ok,
      socket
-     |> assign(:adaptor_name, adaptor_name)
-     |> assign(:adaptor_version, Phoenix.HTML.Form.input_value(form, :adaptor))
-     |> assign(:adaptors, adaptors)
-     |> assign(:versions, versions)
-     |> assign(:on_change, Map.get(params, :on_change))
-     |> assign(:form, form)
-     |> assign(:disabled, Map.get(params, :disabled, false))
      |> assign(
+       adaptor_name: adaptor_name,
+       adaptor_version: Phoenix.HTML.Form.input_value(form, :adaptor),
+       adaptors: adaptors,
+       versions: versions,
+       version: version,
+       on_change: Map.get(params, :on_change),
+       form: form,
+       disabled: Map.get(params, :disabled, false)
+     )
+     |> assign_new(
        :local_adaptors_enabled?,
-       Lightning.AdaptorRegistry.local_adaptors_enabled?()
+       fn ->
+         Lightning.AdaptorRegistry.local_adaptors_enabled?()
+       end
      )}
   end
 
@@ -115,8 +132,6 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
   end
 
   def get_adaptor_version_options(adaptor) do
-    # Gets @openfn/language-foo@1.2.3 or @openfn/language-foo
-
     adaptor_names =
       Lightning.AdaptorRegistry.all()
       |> Enum.map(&display_name_for_adaptor(&1.name))
@@ -138,15 +153,19 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
             build_select_option(module_name, version)
           end)
 
-        key =
+        latest_option =
           if latest do
-            "latest (≥ #{latest})"
+            [
+              [
+                key: "latest (≥ #{latest})",
+                value: "#{module_name}@latest"
+              ]
+            ]
           else
-            ""
+            []
           end
 
-        {module_name, version,
-         [[key: key, value: "#{module_name}@latest"] | versions]}
+        {module_name, version, latest_option ++ versions}
       else
         {nil, nil, []}
       end
@@ -164,11 +183,22 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
         %{"adaptor_picker" => %{"adaptor_name" => value}},
         socket
       ) do
+    # Get the latest specific version instead of using @latest
+    latest_version = Lightning.AdaptorRegistry.latest_for(value)
+
+    adaptor_value =
+      if latest_version do
+        "#{value}@#{latest_version}"
+      else
+        # fallback to @latest if no specific version found
+        "#{value}@latest"
+      end
+
     params =
       LightningWeb.Utils.build_params_for_field(
         socket.assigns.form,
         :adaptor,
-        "#{value}@latest"
+        adaptor_value
       )
 
     socket.assigns.on_change.(params)
