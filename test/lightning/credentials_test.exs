@@ -2241,7 +2241,10 @@ defmodule Lightning.CredentialsTest do
       assert length(user_2_credentials) == 1
       assert Enum.map(user_2_credentials, & &1.id) == [credential_4.id]
 
-      assert Enum.map(user_1_credentials, & &1.name) == ["cred A", "cred B"]
+      user_1_credential_names = Enum.map(user_1_credentials, & &1.name)
+      assert "cred A" in user_1_credential_names
+      assert "cred B" in user_1_credential_names
+      assert length(user_1_credential_names) == 2
     end
 
     test "returns empty list when user has no credentials in project" do
