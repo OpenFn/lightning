@@ -121,6 +121,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
             :enabled,
             :condition_type,
             :condition_label,
+            :condition_expression,
             :target_job_id
           ])
       }

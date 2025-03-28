@@ -70,6 +70,7 @@ export type EdgeData = {
   enabled?: boolean;
   placeholder?: boolean;
   condition_type?: string;
+  errors?: object;
 };
 
 export namespace Flow {
