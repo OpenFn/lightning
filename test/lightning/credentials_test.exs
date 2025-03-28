@@ -1012,7 +1012,7 @@ defmodule Lightning.CredentialsTest do
 
         assert_email_sent(
           to: Swoosh.Email.Recipient.format(receiver),
-          subject: "You have received a credential"
+          subject: "A credential has been transferred to you."
         )
       end)
     end
