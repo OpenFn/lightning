@@ -100,6 +100,67 @@ defmodule LightningWeb.DashboardLiveTest do
       assert_project_listed(view, project_2, user, ~N[2023-10-05 12:00:00])
     end
 
+    test "User's and support projects are listed", %{conn: conn, user: user} do
+      user = Repo.update!(Changeset.change(user, %{support_user: true}))
+
+      project_1 = insert(:project, project_users: [%{user: user, role: :owner}])
+
+      project_2 =
+        insert(:project,
+          project_users: [
+            %{user: user, role: :admin},
+            %{user: build(:user), role: :owner}
+          ]
+        )
+
+      project_3 =
+        insert(:project, project_users: [%{user: build(:user), role: :owner}])
+
+      project_4 =
+        insert(:project,
+          allow_support_access: true,
+          project_users: [%{user: build(:user), role: :owner}]
+        )
+
+      insert(:simple_workflow,
+        project: project_1,
+        updated_at: ~N[2023-10-01 12:00:00]
+      )
+
+      insert(:simple_workflow,
+        project: project_1,
+        updated_at: ~N[2023-10-02 12:00:00]
+      )
+
+      insert(:simple_workflow,
+        project: project_2,
+        updated_at: ~N[2023-10-05 12:00:00]
+      )
+
+      insert(:simple_workflow,
+        project: project_2,
+        updated_at: ~N[2023-10-03 12:00:00]
+      )
+
+      insert(:simple_workflow,
+        project: project_4,
+        updated_at: ~N[2025-03-28 12:00:00]
+      )
+
+      insert(:simple_workflow,
+        project: project_4,
+        updated_at: ~N[2025-03-28 11:00:00]
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/projects")
+
+      refute has_element?(view, "#projects-table-row-#{project_3.id}")
+
+      assert_project_listed(view, project_1, user, ~N[2023-10-02 12:00:00])
+      assert_project_listed(view, project_2, user, ~N[2023-10-05 12:00:00])
+      assert_project_listed(view, project_4, user, ~N[2025-03-28 12:00:00])
+    end
+
     test "User's projects are listed in the project combobox", %{
       conn: conn,
       user: user
@@ -129,6 +190,52 @@ defmodule LightningWeb.DashboardLiveTest do
              |> has_element?(
                "ul[aria-labelledby='combobox'] li#option-#{project_3.id}",
                project_3.name
+             )
+    end
+
+    test "Support user projects are listed in the project combobox", %{
+      conn: conn,
+      user: user
+    } do
+      user = Repo.update!(Changeset.change(user, %{support_user: true}))
+
+      project_1 = insert(:project, project_users: [%{user: user, role: :owner}])
+
+      project_2 = insert(:project, project_users: [%{user: user, role: :admin}])
+
+      project_3 =
+        insert(:project, project_users: [%{user: build(:user), role: :owner}])
+
+      project_4 =
+        insert(:project,
+          allow_support_access: true,
+          project_users: [%{user: build(:user), role: :admin}]
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/projects")
+
+      assert view
+             |> has_element?(
+               "ul[aria-labelledby='combobox'] li#option-#{project_1.id}",
+               project_1.name
+             )
+
+      assert view
+             |> has_element?(
+               "ul[aria-labelledby='combobox'] li#option-#{project_2.id}",
+               project_2.name
+             )
+
+      refute view
+             |> has_element?(
+               "ul[aria-labelledby='combobox'] li#option-#{project_3.id}",
+               project_3.name
+             )
+
+      assert view
+             |> has_element?(
+               "ul[aria-labelledby='combobox'] li#option-#{project_4.id}",
+               project_4.name
              )
     end
 
@@ -215,7 +322,7 @@ defmodule LightningWeb.DashboardLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/projects")
 
-      projects_sorted_by_name = get_sorted_projects_by_name(projects)
+      projects_sorted_by_name = sorted_projects_by_name(projects)
       html = render(view)
       project_names_from_html = extract_project_names_from_html(html)
       assert project_names_from_html == projects_sorted_by_name
@@ -224,7 +331,7 @@ defmodule LightningWeb.DashboardLiveTest do
       |> element("a[phx-click='sort'][phx-value-by='name']")
       |> render_click()
 
-      projects_sorted_by_name_desc = get_sorted_projects_by_name(projects, :desc)
+      projects_sorted_by_name_desc = sorted_projects_by_name(projects, :desc)
       html = render(view)
       project_names_from_html = extract_project_names_from_html(html)
       assert project_names_from_html == projects_sorted_by_name_desc
@@ -233,7 +340,64 @@ defmodule LightningWeb.DashboardLiveTest do
       |> element("a[phx-click='sort'][phx-value-by='name']")
       |> render_click()
 
-      projects_sorted_by_name_asc = get_sorted_projects_by_name(projects, :asc)
+      projects_sorted_by_name_asc = sorted_projects_by_name(projects, :asc)
+      html = render(view)
+      project_names_from_html = extract_project_names_from_html(html)
+      assert project_names_from_html == projects_sorted_by_name_asc
+    end
+
+    test "Support users can sort the project table by name", %{
+      conn: conn,
+      user: user
+    } do
+      user = Repo.update!(Changeset.change(user, %{support_user: true}))
+
+      support_project =
+        insert(:project,
+          allow_support_access: true,
+          project_users: [%{user: build(:user), role: :admin}]
+        )
+
+      projects =
+        insert_list(2, :project,
+          project_users: [%{user_id: user.id, role: :admin}]
+        ) ++
+          [
+            support_project
+          ] ++
+          [
+            insert(:project,
+              project_users: [%{user_id: user.id, role: :viewer}]
+            )
+          ] ++
+          [
+            insert(:project,
+              project_users: [%{user_id: user.id, role: :editor}]
+            )
+          ]
+
+      {:ok, view, _html} = live(conn, ~p"/projects")
+
+      projects_sorted_by_name = sorted_projects_by_name(projects)
+      html = render(view)
+      project_names_from_html = extract_project_names_from_html(html)
+      assert project_names_from_html == projects_sorted_by_name
+      assert html =~ support_project.name
+
+      view
+      |> element("a[phx-click='sort'][phx-value-by='name']")
+      |> render_click()
+
+      projects_sorted_by_name_desc = sorted_projects_by_name(projects, :desc)
+      html = render(view)
+      project_names_from_html = extract_project_names_from_html(html)
+      assert project_names_from_html == projects_sorted_by_name_desc
+
+      view
+      |> element("a[phx-click='sort'][phx-value-by='name']")
+      |> render_click()
+
+      projects_sorted_by_name_asc = sorted_projects_by_name(projects, :asc)
       html = render(view)
       project_names_from_html = extract_project_names_from_html(html)
       assert project_names_from_html == projects_sorted_by_name_asc
@@ -340,15 +504,22 @@ defmodule LightningWeb.DashboardLiveTest do
       project
       |> Repo.preload(:project_users)
       |> Map.get(:project_users)
-      |> Enum.find(fn pu -> pu.user_id == user.id end)
+      |> Enum.find(%{}, fn pu -> pu.user_id == user.id end)
       |> Map.get(:role)
+      |> then(fn role ->
+        if is_nil(role) and user.support_user do
+          "Support"
+        else
+          role
+          |> Atom.to_string()
+          |> String.capitalize()
+        end
+      end)
 
     assert has_element?(
              view,
              "tr#projects-table-row-#{project.id} > td:nth-child(2)",
              role
-             |> Atom.to_string()
-             |> String.capitalize()
            )
 
     workflow_count =
@@ -426,7 +597,7 @@ defmodule LightningWeb.DashboardLiveTest do
     |> Enum.reject(&(&1 == ""))
   end
 
-  defp get_sorted_projects_by_name(projects, order \\ :asc) do
+  defp sorted_projects_by_name(projects, order \\ :asc) do
     projects
     |> Enum.sort_by(fn project -> project.name end, order)
     |> Enum.map(& &1.name)

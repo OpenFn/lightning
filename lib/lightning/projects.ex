@@ -72,7 +72,7 @@ defmodule Lightning.Projects do
     |> union(^regular_user_query)
     |> union_order_by(order_by)
     |> Repo.all()
-    |> Enum.dedup_by(& &1.id)
+    |> Enum.uniq_by(& &1.id)
   end
 
   def get_projects_overview(%User{id: user_id}, opts) do
@@ -638,7 +638,7 @@ defmodule Lightning.Projects do
     )
     |> union(^projects_for_user_query(user))
     |> Repo.all()
-    |> Enum.dedup_by(& &1.id)
+    |> Enum.uniq_by(& &1.id)
   end
 
   def get_projects_for_user(%User{} = user) do
