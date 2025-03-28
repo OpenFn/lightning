@@ -139,6 +139,7 @@ defmodule LightningWeb.Components.NewInputs do
   attr :id, :any, default: nil
   attr :name, :any
   attr :label, :string, default: nil
+  attr :sublabel, :string, default: nil
   attr :value, :any
 
   attr :type, :string,
@@ -520,6 +521,9 @@ defmodule LightningWeb.Components.NewInputs do
         {@label}
         <span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
       </.label>
+      <small :if={@sublabel} class="mb-2 block text-xs text-gray-600">
+        {@sublabel}
+      </small>
       <.input_element
         type={@type}
         name={@name}

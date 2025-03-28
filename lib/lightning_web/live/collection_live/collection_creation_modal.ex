@@ -103,7 +103,7 @@ defmodule LightningWeb.CollectionLive.CollectionCreationModal do
   def render(assigns) do
     ~H"""
     <div class="text-xs">
-      <.modal id={@id} width="xl:min-w-1/3 min-w-1/2 max-w-full">
+      <.modal id={@id} width="xl:min-w-1/3 min-w-1/2 max-w-1/2">
         <:title>
           <div class="flex justify-between">
             <span class="font-bold">
@@ -139,12 +139,13 @@ defmodule LightningWeb.CollectionLive.CollectionCreationModal do
                 field={f[:raw_name]}
                 value={@name}
                 label="Name"
+                sublabel="Collection names must be unique across all projects within this instance. They are used in URLs and as titles, so duplicates are not allowed."
                 required="true"
               />
               <.input type="hidden" field={f[:name]} />
               <small class="mt-2 block text-xs text-gray-600">
                 <%= if to_string(f[:name].value) != "" do %>
-                  Your collection will be named <span class="font-mono border rounded-md p-1 bg-yellow-100 border-slate-300">
+                  This collection will be named <span class="font-mono border rounded-md p-1 bg-yellow-100 border-slate-300">
       <%= @name %></span>.
                 <% end %>
               </small>
