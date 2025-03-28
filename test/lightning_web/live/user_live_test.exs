@@ -134,6 +134,49 @@ defmodule LightningWeb.UserLiveTest do
       assert Repo.reload!(user) |> user_attrs_match?(@update_attrs)
     end
 
+    test "updates user as support user", %{conn: conn} do
+      user = user_fixture()
+
+      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+
+      {:ok, form_live, _} =
+        index_live
+        |> element("#user-#{user.id} a", "Edit")
+        |> render_click()
+        |> follow_redirect(conn, Routes.user_edit_path(conn, :edit, user))
+
+      assert %{support_user: false} = user
+
+      refute has_element?(form_live, "#heads-up-description")
+
+      refute has_element?(
+               form_live,
+               "input[type='checkbox'][name='user[support_user]'][checked]"
+             )
+
+      assert form_live
+             |> element("input[type='checkbox'][phx-click='support_heads_up']")
+             |> render_click() =~
+               "This user will be able to access ALL projects that have support access enabled"
+
+      assert has_element?(form_live, "#heads-up-description")
+
+      assert has_element?(
+               form_live,
+               "input[type='checkbox'][name='user[support_user]'][value='true']"
+             )
+
+      {:ok, _, html} =
+        form_live
+        |> form("#user-form", user: %{support_user: true})
+        |> render_submit()
+        |> follow_redirect(conn, Routes.user_index_path(conn, :index))
+
+      assert html =~ "User updated successfully"
+
+      assert %{support_user: true} = Repo.reload!(user)
+    end
+
     test "provides `Scheduled Deletion` when editing a normal user", %{
       conn: conn
     } do

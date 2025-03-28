@@ -30,6 +30,7 @@ defmodule LightningWeb.UserLive.Components do
         <.th>Email</.th>
         <.th>Role*</.th>
         <.th>Enabled?</.th>
+        <.th>Support?</.th>
         <.th>Scheduled Deletion</.th>
         <.th>Actions</.th>
       </.tr>
@@ -41,6 +42,11 @@ defmodule LightningWeb.UserLive.Components do
           <.td>{user.role}</.td>
           <.td>
             <%= if !user.disabled do %>
+              <Heroicons.check_circle solid class="w-6 h-6 text-gray-500" />
+            <% end %>
+          </.td>
+          <.td>
+            <%= if user.support_user do %>
               <Heroicons.check_circle solid class="w-6 h-6 text-gray-500" />
             <% end %>
           </.td>

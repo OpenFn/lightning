@@ -106,13 +106,35 @@ defmodule Lightning.Credentials do
   end
 
   @spec list_credentials(User.t()) :: [Credential.t()]
+  def list_credentials(%User{id: user_id, support_user: true}) do
+    support_credentials =
+      from(c in Credential,
+        join: pc in assoc(c, :project_credentials),
+        join: p in assoc(pc, :project),
+        where: p.allow_support_access,
+        preload: [:projects, :user, oauth_token: :oauth_client]
+      )
+      |> Repo.all()
+
+    user_credentials = list_credentials_query(user_id) |> Repo.all()
+
+    [support_credentials, user_credentials]
+    |> Enum.concat()
+    |> Enum.uniq_by(& &1.id)
+    |> Enum.sort_by(&String.downcase(&1.name))
+  end
+
   def list_credentials(%User{id: user_id}) do
+    list_credentials_query(user_id)
+    |> order_by([c], asc: fragment("lower(?)", c.name))
+    |> Repo.all()
+  end
+
+  defp list_credentials_query(user_id) do
     from(c in Credential,
       where: c.user_id == ^user_id,
-      preload: [:projects, :user, oauth_token: :oauth_client],
-      order_by: [asc: fragment("lower(?)", c.name)]
+      preload: [:projects, :user, oauth_token: :oauth_client]
     )
-    |> Repo.all()
   end
 
   @doc """
