@@ -367,7 +367,7 @@
             </button>
           </:empty_state>
           <:actions :let={client}>
-            <div :if={client.user_id == @current_user.id}>
+            <div :if={can_edit?(client, @current_user)}>
               <span>
                 <.link
                   class="table-action"
@@ -428,7 +428,7 @@
             </button>
           </:empty_state>
           <:actions :let={credential}>
-            <div :if={credential.user_id == @current_user.id}>
+            <div :if={can_edit?(credential, @current_user)}>
               <span>
                 <.link
                   class="table-action"
@@ -465,7 +465,7 @@
                 return_to={~p"/projects/#{@project.id}/settings#credentials"}
               />
               <LightningWeb.Components.Credentials.delete_credential_modal
-                :if={credential.user_id == @current_user.id}
+                :if={can_edit?(credential, @current_user)}
                 id={"delete_credential_#{credential.id}_modal"}
                 credential={credential}
               />

@@ -155,4 +155,8 @@ defmodule LightningWeb.CredentialLive.Helpers do
       |> Phoenix.LiveView.push_navigate(to: socket.assigns.return_to)
     end
   end
+
+  def can_edit?(client_or_credential, current_user) do
+    client_or_credential.user_id == current_user.id or current_user.support_user
+  end
 end
