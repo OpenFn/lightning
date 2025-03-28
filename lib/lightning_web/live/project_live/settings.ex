@@ -649,19 +649,23 @@ defmodule LightningWeb.ProjectLive.Settings do
         assigns.project_user.project
       )
 
-    credentials_text =
+    {access_text, credentials_text} =
       case user_credentials do
         [] ->
-          ""
+          {"They will no longer have access to this project.", ""}
 
         [credential] ->
-          " and their owned credential #{credential.name}"
+          {"They will no longer have access to this project",
+           " and their owned credential #{credential.name} will be removed from it"}
 
         credentials ->
           credentials_list = Enum.map_join(credentials, ", ", & &1.name)
-          " and their owned credentials #{credentials_list}"
+
+          {"They will no longer have access to this project",
+           " and their owned credentials #{credentials_list} will be removed from it"}
       end
 
+    assigns = assign(assigns, :access_text, access_text)
     assigns = assign(assigns, :credentials_text, credentials_text)
 
     ~H"""
@@ -685,8 +689,7 @@ defmodule LightningWeb.ProjectLive.Settings do
       </:title>
       <div class="px-6">
         <p class="text-sm text-gray-500">
-          Are you sure you want to remove "{@project_user.user.first_name} {@project_user.user.last_name}" from this project?
-          They will no longer have access{@credentials_text} will be removed from this project.
+          Are you sure you want to remove "{@project_user.user.first_name} {@project_user.user.last_name}" from this project? {@access_text}{@credentials_text}.
           Do you wish to proceed with this action?
         </p>
       </div>

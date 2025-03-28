@@ -438,6 +438,8 @@ defmodule Lightning.Projects do
   1. Deletes the association between the user and the project
   2. Removes any credentials owned by the user from the project
 
+  All operations are performed within a transaction for data consistency.
+
   ## Parameters
     - `project_user`: The `ProjectUser` struct to be deleted
 
@@ -450,14 +452,20 @@ defmodule Lightning.Projects do
       %{user_id: user_id, project_id: project_id} =
       Repo.preload(project_user, [:user, :project])
 
-    from(pc in Lightning.Projects.ProjectCredential,
-      join: c in Lightning.Credentials.Credential,
-      on: c.id == pc.credential_id,
-      where: c.user_id == ^user_id and pc.project_id == ^project_id
-    )
-    |> Repo.delete_all()
+    Repo.transaction(fn ->
+      from(pc in Lightning.Projects.ProjectCredential,
+        join: c in Lightning.Credentials.Credential,
+        on: c.id == pc.credential_id,
+        where: c.user_id == ^user_id and pc.project_id == ^project_id
+      )
+      |> Repo.delete_all()
 
-    Repo.delete!(project_user)
+      Repo.delete!(project_user)
+    end)
+    |> case do
+      {:ok, project_user} -> project_user
+      {:error, error} -> raise error
+    end
   end
 
   @doc """
