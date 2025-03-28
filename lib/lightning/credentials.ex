@@ -1614,4 +1614,36 @@ defmodule Lightning.Credentials do
     |> Enum.map(&String.trim/1)
     |> Enum.reject(&(&1 == ""))
   end
+
+  @doc """
+  Returns all credentials owned by a specific user that are also being used in a specific project.
+
+  ## Parameters
+    - `user`: The `User` struct whose credentials we want to find.
+    - `project`: The `Project` struct to check for credential usage.
+
+  ## Returns
+    - A list of `Credential` structs that are owned by the user and used in the project.
+
+  ## Examples
+
+      iex> list_user_credentials_in_project(%User{id: 123}, %Project{id: 456})
+      [%Credential{user_id: 123, ...}, %Credential{user_id: 123, ...}]
+  """
+  @spec list_user_credentials_in_project(User.t(), Project.t()) :: [
+          Credential.t()
+        ]
+  def list_user_credentials_in_project(%User{id: user_id}, %Project{
+        id: project_id
+      }) do
+    query =
+      from c in Credential,
+        join: pc in assoc(c, :project_credentials),
+        on: pc.project_id == ^project_id,
+        where: c.user_id == ^user_id,
+        order_by: [asc: fragment("lower(?)", c.name)],
+        distinct: c.id
+
+    Repo.all(query)
+  end
 end
