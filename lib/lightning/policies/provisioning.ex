@@ -5,6 +5,7 @@ defmodule Lightning.Policies.Provisioning do
   @behaviour Bodyguard.Policy
 
   alias Lightning.Accounts.User
+  alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
   alias Lightning.Projects.Project
   alias Lightning.VersionControl.ProjectRepoConnection
@@ -46,12 +47,13 @@ defmodule Lightning.Policies.Provisioning do
   end
 
   def authorize(:describe_project, %User{} = user, %Project{} = project) do
-    Projects.get_project_user_role(user, project) in [
-      :owner,
-      :admin,
-      :editor,
-      :viewer
-    ] or {:error, :forbidden}
+    ProjectUsers.allow_as_support_user?(user, project) or
+      Projects.get_project_user_role(user, project) in [
+        :owner,
+        :admin,
+        :editor,
+        :viewer
+      ] or {:error, :forbidden}
   end
 
   def authorize(

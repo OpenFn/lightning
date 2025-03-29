@@ -474,6 +474,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 }
                 form={jf}
                 project_user={@project_user}
+                project={@project}
               />
               <:footer>
                 <div class="flex flex-row">

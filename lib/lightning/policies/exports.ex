@@ -5,6 +5,7 @@ defmodule Lightning.Policies.Exports do
   @behaviour Bodyguard.Policy
 
   alias Lightning.Accounts.User
+  alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
   alias Lightning.Projects.File, as: ProjectFile
   alias Lightning.Projects.Project
@@ -14,6 +15,8 @@ defmodule Lightning.Policies.Exports do
   @spec authorize(actions(), User.t(), ProjectFile.t()) ::
           boolean() | {:error, :forbidden}
   def authorize(:download, %User{} = user, %ProjectFile{project_id: project_id}) do
-    Projects.member_of?(%Project{id: project_id}, user) or {:error, :forbidden}
+    Projects.member_of?(%Project{id: project_id}, user) or
+      ProjectUsers.allow_as_support_user?(user, project_id) or
+      {:error, :forbidden}
   end
 end

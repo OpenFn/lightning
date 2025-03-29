@@ -66,6 +66,35 @@
       <div class="py-2"></div>
     </div>
 
+    <div class="grid grid-cols-6 gap-6">
+      <div class="col-span-3">
+        <.input
+          type="toggle"
+          field={f[:support_user]}
+          label="Support User"
+          phx-click="support_heads_up"
+          phx-target={@myself}
+        />
+        <Common.alert
+          :if={@is_support_user}
+          id="heads-up-description"
+          type="warning"
+          header="Heads Up!"
+          class="mt-2"
+        >
+          <:message>
+            <p>
+              This user will be able to access ALL projects that have support access enabled
+            </p>
+          </:message>
+        </Common.alert>
+      </div>
+    </div>
+
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-2"></div>
+    </div>
+
     <%= if @action in [:edit] do %>
       <%= if @role == :user do %>
         <div class="grid grid-cols-6 gap-6">

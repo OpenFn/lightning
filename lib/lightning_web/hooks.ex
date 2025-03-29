@@ -45,8 +45,7 @@ defmodule LightningWeb.Hooks do
       project && Lightning.Projects.get_project_user(project, current_user)
 
     can_access_project =
-      ProjectUsers
-      |> Permissions.can?(:access_project, current_user, project)
+      Permissions.can?(ProjectUsers, :access_project, current_user, project)
 
     cond do
       can_access_project and project.requires_mfa and !current_user.mfa_enabled ->

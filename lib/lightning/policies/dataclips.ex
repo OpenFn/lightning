@@ -6,13 +6,15 @@ defmodule Lightning.Policies.Dataclips do
 
   alias Lightning.Accounts.User
   alias Lightning.Invocation.Dataclip
+  alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
+  alias Lightning.Projects.Project
 
   @type actions :: :view_dataclip
 
   @spec authorize(actions(), User.t(), Dataclip.t()) :: boolean()
   def authorize(:view_dataclip, %User{} = user, %Dataclip{project_id: project_id}) do
-    project = Projects.get_project!(project_id)
-    Projects.member_of?(project, user)
+    ProjectUsers.allow_as_support_user?(user, project_id) or
+      Projects.member_of?(%Project{id: project_id}, user)
   end
 end

@@ -19,6 +19,7 @@ defmodule Lightning.Projects.Project do
 
   schema "projects" do
     field :name, :string
+    field :allow_support_access, :boolean, default: false
     field :concurrency, :integer
     field :description, :string
     field :scheduled_deletion, :utc_datetime
@@ -65,7 +66,8 @@ defmodule Lightning.Projects.Project do
       :requires_mfa,
       :retention_policy,
       :history_retention_period,
-      :dataclip_retention_period
+      :dataclip_retention_period,
+      :allow_support_access
     ])
     |> validate()
   end

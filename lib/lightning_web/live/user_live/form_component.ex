@@ -16,6 +16,7 @@ defmodule LightningWeb.UserLive.FormComponent do
      socket
      |> assign(assigns)
      |> assign(:role, role)
+     |> assign(:is_support_user, user.support_user)
      |> assign(:changeset, changeset)}
   end
 
@@ -34,6 +35,12 @@ defmodule LightningWeb.UserLive.FormComponent do
      |> assign(:changeset, changeset)}
   end
 
+  def handle_event("support_heads_up", params, socket) do
+    {:noreply,
+     socket
+     |> assign(:is_support_user, Map.get(params, "value", false))}
+  end
+
   def handle_event("save", %{"user" => user_params}, socket) do
     save_user(socket, socket.assigns.action, user_params)
   end
@@ -47,9 +54,10 @@ defmodule LightningWeb.UserLive.FormComponent do
 
   defp save_user(socket, :edit, user_params) do
     case Accounts.update_user_details(socket.assigns.user, user_params) do
-      {:ok, _user} ->
+      {:ok, user} ->
         {:noreply,
          socket
+         |> assign(:is_support_user, user.support_user)
          |> put_flash(:info, "User updated successfully")
          |> push_navigate(to: socket.assigns.return_to)}
 
@@ -69,6 +77,7 @@ defmodule LightningWeb.UserLive.FormComponent do
 
         {:noreply,
          socket
+         |> assign(:is_support_user, user.support_user)
          |> put_flash(:info, "User created successfully")
          |> push_navigate(to: socket.assigns.return_to)}
 

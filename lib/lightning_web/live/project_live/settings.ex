@@ -4,6 +4,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   """
   use LightningWeb, :live_view
 
+  import LightningWeb.CredentialLive.Helpers, only: [can_edit?: 2]
   import PetalComponents.Table
 
   alias Lightning.Accounts.User
@@ -300,6 +301,36 @@ defmodule LightningWeb.ProjectLive.Settings do
       {:noreply,
        socket
        |> put_flash(:error, "You are not authorized to perform this action.")}
+    end
+  end
+
+  def handle_event("toggle_support_access", _params, socket) do
+    if socket.assigns.can_edit_project do
+      project = socket.assigns.project
+
+      {:ok, project} =
+        Projects.update_project(project, %{
+          allow_support_access: !project.allow_support_access
+        })
+
+      flash_msg =
+        if project.allow_support_access do
+          "Granted access to support users successfully"
+        else
+          "Revoked access to support users successfully"
+        end
+
+      {:noreply,
+       socket
+       |> assign(:project, project)
+       |> put_flash(:info, flash_msg)}
+    else
+      {:noreply,
+       put_flash(
+         socket,
+         :error,
+         "You are not authorized to perform this action."
+       )}
     end
   end
 
