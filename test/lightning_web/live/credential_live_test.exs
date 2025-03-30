@@ -318,7 +318,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert credential.scheduled_deletion
     end
 
-    test "delete credentials from support project in settings page", %{
+    test "doesn't show delete credential to support user", %{
       conn: conn,
       user: user
     } do
@@ -343,21 +343,10 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert html =~ credential.name
 
-      view
-      |> element("#delete_credential_#{credential.id}_modal_confirm_button")
-      |> render_click() =~ "Credential deleted successfully!"
-
-      {:ok, _view, html} =
-        live(conn, ~p"/projects/#{project}/settings#credentials",
-          on_error: :raise
-        )
-
-      refute html =~ credential.name
-
-      credential =
-        Lightning.Repo.get(Lightning.Credentials.Credential, credential.id)
-
-      assert credential.scheduled_deletion
+      refute view
+             |> has_element?(
+               "#delete_credential_#{credential.id}_modal_confirm_button"
+             )
     end
   end
 
@@ -862,21 +851,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
-      assert has_element?(view, "#project-credentials-list-#{credential.id}")
-
-      view
-      |> element("#project-credentials-list-#{credential.id}")
-      |> render_change(%{"project_id" => project.id})
-
-      view
-      |> element("#add-project-credential-button-#{credential.id}")
-      |> render_click()
-
-      credential = Repo.reload!(credential)
-
-      view |> form("#credential-form-#{credential.id}") |> render_submit()
-
-      assert credential == Repo.reload!(credential)
+      refute has_element?(view, "#project-credentials-list-#{credential.id}")
     end
 
     test "removes project with access", %{

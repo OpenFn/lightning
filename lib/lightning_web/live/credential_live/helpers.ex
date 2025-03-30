@@ -156,7 +156,11 @@ defmodule LightningWeb.CredentialLive.Helpers do
     end
   end
 
-  def can_edit?(client_or_credential, current_user) do
-    client_or_credential.user_id == current_user.id or current_user.support_user
+  # if we want support users to view oauth clients or credentials just extend this condition
+  def can_edit?(
+        %{user_id: user_id},
+        current_user
+      ) do
+    user_id == current_user.id
   end
 end
