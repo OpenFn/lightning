@@ -110,7 +110,7 @@ defmodule LightningWeb.BookDemoBannerTest do
       %{
         "name" => "#{user.first_name} #{user.last_name}",
         "email" => user.email,
-        "message" => expected_message
+        "a4" => expected_message
       }
 
     expected_redirect_url =
@@ -135,14 +135,14 @@ defmodule LightningWeb.BookDemoBannerTest do
 
     form = view |> form("#book-demo-banner-modal form")
 
-    assert render_change(form, demo: %{email: nil, message: expected_message}) =~
+    assert render_change(form, demo: %{email: nil, a4: expected_message}) =~
              "This field can&#39;t be blank"
 
     assert render_submit(form) =~ "This field can&#39;t be blank"
 
     assert {:error, {:redirect, %{to: redirect_to}}} =
              render_submit(form,
-               demo: %{email: user.email, message: expected_message}
+               demo: %{email: user.email, a4: expected_message}
              )
 
     assert redirect_to == expected_redirect_url

@@ -16,10 +16,10 @@ defmodule LightningWeb.BookDemoBanner do
     data = %{
       name: "#{user.first_name} #{user.last_name}",
       email: user.email,
-      message: nil
+      a4: nil
     }
 
-    types = %{name: :string, email: :string, message: :string}
+    types = %{name: :string, email: :string, a4: :string}
 
     {data, types}
     |> Ecto.Changeset.cast(params, Map.keys(types))
@@ -161,7 +161,7 @@ defmodule LightningWeb.BookDemoBanner do
             <.input type="text" field={f[:email]} label="Email" required={true} />
             <.input
               type="textarea"
-              field={f[:message]}
+              field={f[:a4]}
               label="What problem are you trying to solve with OpenFn?
           What specific task, process, or program would you like to automate?"
               placeholder="E.g. Every time a new person is registered in my clinic system, I must initiate a mobile money payment to a caregiver. This takes time & money. I'd like to use OpenFn to automate the process."
