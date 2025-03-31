@@ -656,18 +656,19 @@
       <:panel hash="collaboration">
         <div class="flex flex-col">
           <div>
-          <h6 class="font-medium text-black">Project collaboration</h6>
-          <small class="block my-1 text-xs text-gray-600">
-            View collaborators and manage alert settings for this project.
-          </small>
-          <.permissions_message
-            :if={!@can_edit_project}
-            section="collaboration settings, but you can change your notification preferences."
-          />
+            <h6 class="font-medium text-black">Project collaboration</h6>
+            <small class="block my-1 text-xs text-gray-600">
+              View collaborators and manage alert settings for this project.
+            </small>
+            <.permissions_message
+              :if={!@can_edit_project}
+              section="collaboration settings, but you can change your notification preferences."
+            />
           </div>
           <div class="flex flex-row items-center mt-4 mb-8">
-            <div class="flex-grow">
-            <.input
+            <div class="flex flex-row flex-grow">
+              <div>
+                <.input
                   :if={@can_edit_project}
                   type="toggle"
                   id="toggle-support-access"
@@ -676,6 +677,14 @@
                   phx-click="toggle_support_access"
                   label="Grant support access"
                 />
+              </div>
+              <div>
+                <Common.tooltip
+                  id="toggle-support-tooltip"
+                  title="Granting support access will allow all designated support users for this Lightning instance to access this project with editor permissions."
+                  class="inline-block"
+                />
+              </div>
             </div>
             <div class="sm:ml-16 sm:mt-0">
               <.button

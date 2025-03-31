@@ -47,7 +47,9 @@ defmodule LightningWeb.UserLive.Components do
           </.td>
           <.td>
             <%= if user.support_user do %>
-              <div class="content-center"><Heroicons.check_circle solid class="w-6 h-6 text-gray-500" /></div>
+              <div class="content-center">
+                <Heroicons.check_circle solid class="w-6 h-6 text-gray-500" />
+              </div>
             <% end %>
           </.td>
           <.td>{user.scheduled_deletion}</.td>
