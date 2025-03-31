@@ -1161,7 +1161,7 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       {:ok, view, html} =
-        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+        live(conn, ~p"/projects/#{project}/settings#collaboration", on_error: :raise)
 
       assert html =~ "Project settings"
 
