@@ -6,6 +6,7 @@ defmodule Lightning.Projects.Audit do
     repo: Lightning.Repo,
     item: "project",
     events: [
+      "allow_support_access_updated",
       "dataclip_retention_period_updated",
       "history_retention_period_updated"
     ]
@@ -13,7 +14,11 @@ defmodule Lightning.Projects.Audit do
   alias Ecto.Multi
 
   def derive_events(multi, changeset, user) do
-    [:history_retention_period, :dataclip_retention_period]
+    [
+      :allow_support_access,
+      :history_retention_period,
+      :dataclip_retention_period
+    ]
     |> Enum.reduce(multi, fn field, multi ->
       changeset
       |> filter_change(field)
@@ -36,6 +41,7 @@ defmodule Lightning.Projects.Audit do
 
   defp operation_name(:dataclip_retention_period), do: :audit_dataclip_retention
   defp operation_name(:history_retention_period), do: :audit_history_retention
+  defp operation_name(:allow_support_access), do: :audit_allow_support_access
 
   # Strips out all changes except for the specified field
   # We do this to ensure that we only audit the changes we care about

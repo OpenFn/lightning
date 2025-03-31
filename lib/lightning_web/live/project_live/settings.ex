@@ -309,9 +309,13 @@ defmodule LightningWeb.ProjectLive.Settings do
       project = socket.assigns.project
 
       {:ok, project} =
-        Projects.update_project(project, %{
-          allow_support_access: !project.allow_support_access
-        })
+        Projects.update_project(
+          project,
+          %{
+            allow_support_access: !project.allow_support_access
+          },
+          socket.assigns.current_user
+        )
 
       flash_msg =
         if project.allow_support_access do

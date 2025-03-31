@@ -2020,6 +2020,22 @@ defmodule Lightning.ProjectsTest do
              }
     end
 
+    test "creates audit events when toggling the support user grant", %{
+      user: %{id: user_id} = user
+    } do
+      %{id: project_id} =
+        project = insert(:project, allow_support_access: false)
+
+      Projects.update_project(project, %{allow_support_access: true}, user)
+
+      assert %{
+               item_type: "project",
+               item_id: ^project_id,
+               actor_id: ^user_id,
+               changes: changes
+             } = Repo.get_by!(Audit, event: "allow_project_access_updated")
+    end
+
     test "does not create events if no user was provided" do
       project =
         insert(
