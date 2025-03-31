@@ -120,12 +120,6 @@ defmodule Lightning.Projects do
   defp union_order_by(query, "name_desc"),
     do: order_by(query, fragment("name DESC NULLS LAST"))
 
-  # defp union_order_by(query, "last_updated_at_asc"),
-  #   do: order_by(query, ^{:asc_nulls_last, dynamic([_p, w, _pu, _pu_all], max(w.updated_at))})
-
-  # defp union_order_by(query, "last_updated_at_desc"),
-  #   do: order_by(query, ^{:desc_nulls_last, dynamic([_p, w, _pu, _pu_all], max(w.updated_at))})
-
   @doc """
   Perform, when called with %{"type" => "purge_deleted"}
   will find projects that are ready for permanent deletion and purge them.
