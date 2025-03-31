@@ -27,12 +27,11 @@ defmodule Lightning.Application do
     OpentelemetryEcto.setup([:lightning, :repo])
     OpentelemetryLiveView.setup()
     OpentelemetryOban.setup(trace: [:jobs])
+
     # mnesia startup
     :mnesia.stop()
     :mnesia.create_schema([node()])
     :mnesia.start()
-    Hammer.Backend.Mnesia.create_mnesia_table(disc_copies: [node()])
-    :mnesia.wait_for_tables([:__hammer_backend_mnesia], 60_000)
 
     # Only add the Sentry backend if a dsn is provided.
     if Application.get_env(:sentry, :dsn),
@@ -133,7 +132,9 @@ defmodule Lightning.Application do
         {Lightning.Runtime.RuntimeManager,
          worker_secret: Lightning.Config.worker_secret(),
          endpoint: LightningWeb.Endpoint},
-        {Lightning.KafkaTriggers.Supervisor, type: :supervisor}
+        {Lightning.KafkaTriggers.Supervisor, type: :supervisor},
+        # Start our rate limiter
+        {Lightning.RateLimiters.Mail, clean_period: :timer.minutes(10)}
         # Start a worker by calling: Lightning.Worker.start_link(arg)
         # {Lightning.Worker, arg}
       ]

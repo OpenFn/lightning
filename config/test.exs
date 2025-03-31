@@ -95,11 +95,6 @@ config :lightning, Lightning.Mailer, adapter: Swoosh.Adapters.Test
 config :lightning, Lightning.AdaptorRegistry,
   use_cache: "test/fixtures/adaptor_registry_cache.json"
 
-config :hammer,
-  backend:
-    {Hammer.Backend.ETS,
-     [expiry_ms: 60_000 * 60 * 4, cleanup_interval_ms: 60_000 * 10]}
-
 config :lightning, Lightning.FailureAlerter,
   time_scale: 60_000,
   rate_limit: 3

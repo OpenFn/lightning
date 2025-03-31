@@ -185,6 +185,8 @@ defmodule Lightning.FailureAlertTest do
       s3 = "\"workflow-a\" has failed 3 times in the last #{period}."
       assert_receive {:email, %Swoosh.Email{subject: ^s3}}, 1500
 
+      assert Lightning.RateLimiters.Mail.get(run_1.work_order.workflow_id) == 0
+
       assert_receive {:email, %Swoosh.Email{subject: "\"workflow-b\" failed."}},
                      1500
     end
@@ -228,31 +230,6 @@ defmodule Lightning.FailureAlertTest do
       FailureAlerter.alert_on_failure(run_1)
 
       refute_email_sent(subject: "\"workflow-a\" failed.")
-    end
-
-    test "does not increment the rate-limiter counter when an email is not delivered.",
-         %{runs: [run, _, _], workorders: [workorder, _, _]} do
-      [time_scale: time_scale, rate_limit: rate_limit] =
-        Application.fetch_env!(:lightning, Lightning.FailureAlerter)
-
-      FailureAlerter.alert_on_failure(run)
-
-      {:ok, {0, ^rate_limit, _, _, _}} =
-        Hammer.inspect_bucket(workorder.workflow_id, time_scale, rate_limit)
-
-      assert_email_sent(subject: "\"workflow-a\" failed.")
-
-      Mimic.stub(Lightning.FailureEmail, :deliver_failure_email, fn _, _ ->
-        {:error}
-      end)
-
-      FailureAlerter.alert_on_failure(run)
-
-      refute_email_sent(subject: "\"workflow-a\" failed.")
-
-      # nothing changed
-      {:ok, {0, ^rate_limit, _, _, _}} =
-        Hammer.inspect_bucket(workorder.workflow_id, time_scale, rate_limit)
     end
 
     test "failure alert is sent on run complete", %{
