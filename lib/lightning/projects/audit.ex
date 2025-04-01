@@ -30,10 +30,12 @@ defmodule Lightning.Projects.Audit do
           multi
 
         audit_changeset ->
-          Multi.insert(multi, field, audit_changeset)
+          Multi.insert(multi, operation(field), audit_changeset)
       end
     end)
   end
+
+  defp operation(field), do: "audit_#{field}"
 
   defp event_changeset(%Ecto.Changeset{} = changeset, field, user) do
     project_id = Ecto.Changeset.get_field(changeset, :id)
