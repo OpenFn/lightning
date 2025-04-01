@@ -2033,7 +2033,23 @@ defmodule Lightning.ProjectsTest do
                item_id: ^project_id,
                actor_id: ^user_id,
                changes: changes
-             } = Repo.get_by!(Audit, event: "allow_project_access_updated")
+             } = Repo.get_by!(Audit, event: "allow_support_access_updated")
+    end
+
+    test "creates audit events when toggling MFA", %{
+      user: %{id: user_id} = user
+    } do
+      %{id: project_id} =
+        project = insert(:project, requires_mfa: false)
+
+      Projects.update_project(project, %{requires_mfa: true}, user)
+
+      assert %{
+               item_type: "project",
+               item_id: ^project_id,
+               actor_id: ^user_id,
+               changes: changes
+             } = Repo.get_by!(Audit, event: "requires_mfa_updated")
     end
 
     test "does not create events if no user was provided" do

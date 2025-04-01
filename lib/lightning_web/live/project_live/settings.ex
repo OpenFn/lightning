@@ -340,10 +340,14 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   def handle_event("toggle-mfa", _params, socket) do
     if socket.assigns.can_edit_project && socket.assigns.can_require_mfa do
-      project = socket.assigns.project
+      %{project: project, current_user: current_user} = socket.assigns
 
       {:ok, project} =
-        Projects.update_project(project, %{requires_mfa: !project.requires_mfa})
+        Projects.update_project(
+          project,
+          %{requires_mfa: !project.requires_mfa},
+          current_user
+        )
 
       {:noreply,
        socket

@@ -8,7 +8,8 @@ defmodule Lightning.Projects.Audit do
     events: [
       "allow_support_access_updated",
       "dataclip_retention_period_updated",
-      "history_retention_period_updated"
+      "history_retention_period_updated",
+      "requires_mfa_updated"
     ]
 
   alias Ecto.Multi
@@ -16,8 +17,9 @@ defmodule Lightning.Projects.Audit do
   def derive_events(multi, changeset, user) do
     [
       :allow_support_access,
+      :dataclip_retention_period,
       :history_retention_period,
-      :dataclip_retention_period
+      :requires_mfa
     ]
     |> Enum.reduce(multi, fn field, multi ->
       changeset
@@ -28,7 +30,7 @@ defmodule Lightning.Projects.Audit do
           multi
 
         audit_changeset ->
-          Multi.insert(multi, operation_name(field), audit_changeset)
+          Multi.insert(multi, field, audit_changeset)
       end
     end)
   end
@@ -38,10 +40,6 @@ defmodule Lightning.Projects.Audit do
 
     event("#{field}_updated", project_id, user, changeset)
   end
-
-  defp operation_name(:dataclip_retention_period), do: :audit_dataclip_retention
-  defp operation_name(:history_retention_period), do: :audit_history_retention
-  defp operation_name(:allow_support_access), do: :audit_allow_support_access
 
   # Strips out all changes except for the specified field
   # We do this to ensure that we only audit the changes we care about
