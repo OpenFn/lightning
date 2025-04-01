@@ -52,31 +52,38 @@ defmodule Lightning.Projects do
   def get_projects_overview(user, opts \\ [])
 
   def get_projects_overview(%User{id: user_id, support_user: true}, opts) do
-    order_by = Keyword.get(opts, :order_by, "name_asc")
-    regular_user_query = projects_overview_query(user_id)
+    support_projects =
+      from(p in Project,
+        left_join: w in assoc(p, :workflows),
+        left_join: pu_all in assoc(p, :project_users),
+        where: p.allow_support_access and is_nil(w.deleted_at),
+        group_by: [p.id],
+        select: %ProjectOverviewRow{
+          id: p.id,
+          name: p.name,
+          role: fragment("'support' as role"),
+          workflows_count: count(w.id, :distinct),
+          collaborators_count: count(pu_all.user_id, :distinct),
+          last_updated_at: max(w.updated_at)
+        }
+      )
+      |> Repo.all()
 
-    from(p in Project,
-      left_join: w in assoc(p, :workflows),
-      left_join: pu_all in assoc(p, :project_users),
-      where: p.allow_support_access and is_nil(w.deleted_at),
-      group_by: [p.id],
-      select: %ProjectOverviewRow{
-        id: p.id,
-        name: p.name,
-        role: fragment("'support' as role"),
-        workflows_count: count(w.id, :distinct),
-        collaborators_count: count(pu_all.user_id, :distinct),
-        last_updated_at: max(w.updated_at)
-      }
-    )
-    |> union(^regular_user_query)
-    |> union_order_by(order_by)
-    |> Repo.all()
+    user_projects =
+      user_id
+      |> projects_overview_query()
+      |> Repo.all()
+
+    {sort_key, sort_direction} = Keyword.get(opts, :order_by, {:name, :asc})
+
+    [user_projects, support_projects]
+    |> Enum.concat()
     |> Enum.uniq_by(& &1.id)
+    |> Enum.sort_by(&Map.get(&1, sort_key), sort_direction)
   end
 
   def get_projects_overview(%User{id: user_id}, opts) do
-    order_by = Keyword.get(opts, :order_by, "name_asc")
+    order_by = Keyword.get(opts, :order_by, {:name, :asc})
 
     user_id
     |> projects_overview_query()
@@ -102,23 +109,17 @@ defmodule Lightning.Projects do
     )
   end
 
-  defp dynamic_order_by("name_asc"),
+  defp dynamic_order_by({:name, :asc}),
     do: {:asc_nulls_last, dynamic([p], field(p, :name))}
 
-  defp dynamic_order_by("name_desc"),
+  defp dynamic_order_by({:name, :desc}),
     do: {:desc_nulls_last, dynamic([p], field(p, :name))}
 
-  defp dynamic_order_by("last_updated_at_asc"),
+  defp dynamic_order_by({:last_updated_at, :asc}),
     do: {:asc_nulls_last, dynamic([_p, w, _pu, _pu_all], max(w.updated_at))}
 
-  defp dynamic_order_by("last_updated_at_desc"),
+  defp dynamic_order_by({:last_updated_at, :desc}),
     do: {:desc_nulls_last, dynamic([_p, w, _pu, _pu_all], max(w.updated_at))}
-
-  defp union_order_by(query, "name_asc"),
-    do: order_by(query, fragment("name ASC NULLS LAST"))
-
-  defp union_order_by(query, "name_desc"),
-    do: order_by(query, fragment("name DESC NULLS LAST"))
 
   @doc """
   Perform, when called with %{"type" => "purge_deleted"}

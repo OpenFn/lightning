@@ -1686,7 +1686,7 @@ defmodule Lightning.ProjectsTest do
 
       result =
         Projects.get_projects_overview(user,
-          order_by: "last_updated_at_desc"
+          order_by: {:last_updated_at, :desc}
         )
 
       assert [
@@ -1718,7 +1718,7 @@ defmodule Lightning.ProjectsTest do
 
       result =
         Projects.get_projects_overview(user,
-          order_by: "last_updated_at_asc"
+          order_by: {:last_updated_at, :asc}
         )
 
       assert [
@@ -2028,11 +2028,16 @@ defmodule Lightning.ProjectsTest do
 
       Projects.update_project(project, %{allow_support_access: true}, user)
 
+      changes = %Lightning.Auditing.Audit.Changes{
+        after: %{"allow_support_access" => true},
+        before: %{"allow_support_access" => false}
+      }
+
       assert %{
                item_type: "project",
                item_id: ^project_id,
                actor_id: ^user_id,
-               changes: changes
+               changes: ^changes
              } = Repo.get_by!(Audit, event: "allow_support_access_updated")
     end
 
@@ -2044,11 +2049,16 @@ defmodule Lightning.ProjectsTest do
 
       Projects.update_project(project, %{requires_mfa: true}, user)
 
+      changes = %Lightning.Auditing.Audit.Changes{
+        after: %{"requires_mfa" => true},
+        before: %{"requires_mfa" => false}
+      }
+
       assert %{
                item_type: "project",
                item_id: ^project_id,
                actor_id: ^user_id,
-               changes: changes
+               changes: ^changes
              } = Repo.get_by!(Audit, event: "requires_mfa_updated")
     end
 

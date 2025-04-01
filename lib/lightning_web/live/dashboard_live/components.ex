@@ -164,18 +164,14 @@ defmodule LightningWeb.DashboardLive.Components do
             <.th>Workflows</.th>
             <.th>Collaborators</.th>
             <.th>
-              <%= if @user.support_user do %>
+              <.sortable_table_header
+                target_sort_key="last_updated_at"
+                current_sort_key={@sort_key}
+                current_sort_direction={@sort_direction}
+                target={@target}
+              >
                 Last Updated
-              <% else %>
-                <.sortable_table_header
-                  target_sort_key="last_updated_at"
-                  current_sort_key={@sort_key}
-                  current_sort_direction={@sort_direction}
-                  target={@target}
-                >
-                  Last Updated
-                </.sortable_table_header>
-              <% end %>
+              </.sortable_table_header>
             </.th>
             <.th></.th>
           </.tr>
