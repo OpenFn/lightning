@@ -32,6 +32,8 @@ and this project adheres to
   [#3061](https://github.com/OpenFn/lightning/issues/3061)
 - Default to latest specific version instead of @latest when selecting adaptors
   [#2843](https://github.com/OpenFn/lightning/issues/2843)
+- Remove OpenTelemetry suport as it is not currently in use
+  [#3081](https://github.com/OpenFn/lightning/issues/3081)
 
 ### Fixed
 
