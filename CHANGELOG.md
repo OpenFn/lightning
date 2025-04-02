@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Remove Credentials for Collaborators Removed from a Project
+  [#2942](https://github.com/OpenFn/lightning/issues/2942)
 - Enable Credential Transfer In Projects Credentials Table
   [#2978](https://github.com/OpenFn/lightning/issues/2978)
 - Allow possibility to inject components for implementing GDPR compliance

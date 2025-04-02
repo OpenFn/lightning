@@ -2196,4 +2196,65 @@ defmodule Lightning.CredentialsTest do
       assert result.id == token.id
     end
   end
+
+  describe "list_user_credentials_in_project/2" do
+    test "returns all credentials owned by a user that are used in a project" do
+      user_1 = insert(:user)
+      user_2 = insert(:user)
+
+      project = insert(:project)
+
+      credential_1 =
+        insert(:credential,
+          user: user_1,
+          name: "cred A",
+          project_credentials: [%{project: project}]
+        )
+
+      credential_2 =
+        insert(:credential,
+          user: user_1,
+          name: "cred B",
+          project_credentials: [%{project: project}]
+        )
+
+      _credential_3 = insert(:credential, user: user_1, name: "cred C")
+
+      credential_4 =
+        insert(:credential,
+          user: user_2,
+          name: "cred D",
+          project_credentials: [%{project: project}]
+        )
+
+      user_1_credentials =
+        Credentials.list_user_credentials_in_project(user_1, project)
+
+      assert length(user_1_credentials) == 2
+
+      assert Enum.map(user_1_credentials, & &1.id) |> Enum.sort() ==
+               [credential_1.id, credential_2.id] |> Enum.sort()
+
+      user_2_credentials =
+        Credentials.list_user_credentials_in_project(user_2, project)
+
+      assert length(user_2_credentials) == 1
+      assert Enum.map(user_2_credentials, & &1.id) == [credential_4.id]
+
+      user_1_credential_names = Enum.map(user_1_credentials, & &1.name)
+      assert "cred A" in user_1_credential_names
+      assert "cred B" in user_1_credential_names
+      assert length(user_1_credential_names) == 2
+    end
+
+    test "returns empty list when user has no credentials in project" do
+      user = insert(:user)
+      project = insert(:project)
+
+      insert(:credential, user: user)
+
+      credentials = Credentials.list_user_credentials_in_project(user, project)
+      assert Enum.empty?(credentials)
+    end
+  end
 end
