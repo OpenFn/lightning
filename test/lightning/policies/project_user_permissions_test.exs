@@ -201,6 +201,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
 
     test "have the same worfklow allowance as editor", %{project: project} do
       support_user = insert(:user, support_user: true)
+      editor_project_user = insert(:project_user, project: project)
 
       editor_project_user =
         insert(:project_user,
