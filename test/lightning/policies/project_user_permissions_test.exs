@@ -109,7 +109,6 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
         create_workflow
         delete_workflow
         edit_workflow
-        provision_project
         edit_project
         write_webhook_auth_method
         create_project_credential
@@ -129,7 +128,6 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
         delete_workflow
         edit_workflow
         create_project_credential
-        provision_project
         run_workflow
       )a |> (&assert_can(ProjectUsers, &1, editor, project)).()
     end
@@ -157,7 +155,6 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
           delete_workflow
           edit_workflow
           edit_project
-          provision_project
           write_webhook_auth_method
           create_project_credential
           run_workflow
@@ -176,7 +173,6 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
         delete_workflow
         edit_workflow
         edit_project
-        provision_project
         write_webhook_auth_method
         create_project_credential
         run_workflow
@@ -189,31 +185,58 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
       support_user = insert(:user, support_user: true)
       project = %{project | allow_support_access: true}
 
-      assert ProjectUsers |> Permissions.can?(:access_project, support_user, project)
+      assert ProjectUsers
+             |> Permissions.can?(:access_project, support_user, project)
     end
 
-    test "cannot access projects that don't allow support access", %{project: project} do
+    test "cannot access projects that don't allow support access", %{
+      project: project
+    } do
       support_user = insert(:user, support_user: true)
       project = %{project | allow_support_access: false}
 
-      refute ProjectUsers |> Permissions.can?(:access_project, support_user, project)
+      refute ProjectUsers
+             |> Permissions.can?(:access_project, support_user, project)
     end
 
-    test "cannot perform user actions when subject isn't provided", %{project: _project} do
+    test "have the same worfklow allowance as editor", %{project: project} do
       support_user = insert(:user, support_user: true)
+
+      editor_project_user =
+        insert(:project_user,
+          project: project,
+          user: build(:user),
+          role: :editor
+        )
 
       ~w(
         create_workflow
         edit_workflow
         delete_workflow
         run_workflow
-        provision_project
         create_project_credential
         initiate_github_sync
-      )a |> (&refute_can(ProjectUsers, &1, support_user, nil)).()
+      )a |> (&assert_can(ProjectUsers, &1, support_user, nil)).()
+
+      ~w(
+        create_workflow
+        edit_workflow
+        delete_workflow
+        run_workflow
+        create_project_credential
+        initiate_github_sync
+      )a
+      |> (&assert_can(
+            ProjectUsers,
+            &1,
+            editor_project_user.user,
+            editor_project_user
+          )).()
     end
 
-    test "cannot perform project user actions when not a support user", %{project: _project} do
+    test "cannot perform project user actions when not a support user", %{
+      project: _project
+    } do
       regular_user = insert(:user, support_user: false)
 
       ~w(
@@ -221,7 +244,6 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
         edit_workflow
         delete_workflow
         run_workflow
-        provision_project
         create_project_credential
         initiate_github_sync
       )a |> (&refute_can(ProjectUsers, &1, regular_user, nil)).()

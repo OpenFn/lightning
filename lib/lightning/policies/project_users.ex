@@ -21,7 +21,6 @@ defmodule Lightning.Policies.ProjectUsers do
           | :create_workflow
           | :edit_digest_alerts
           | :edit_failure_alerts
-          | :provision_project
           | :create_project_credential
           | :edit_data_retention
           | :write_webhook_auth_method
@@ -98,7 +97,6 @@ defmodule Lightning.Policies.ProjectUsers do
     :edit_workflow,
     :delete_workflow,
     :run_workflow,
-    :provision_project,
     :create_project_credential,
     :initiate_github_sync
   ]
