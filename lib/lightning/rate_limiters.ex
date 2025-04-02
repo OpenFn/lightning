@@ -22,6 +22,15 @@ defmodule Lightning.RateLimiters do
             | {:deny, non_neg_integer()}
   end
 
+  defmodule Webhook do
+    @moduledoc false
+
+    use Hammer,
+      backend: Hammer.ETS,
+      algorithm: :leaky_bucket,
+      table: :webhook_limiter
+  end
+
   @spec hit({:failure_email, String.t(), String.t()}) :: Mail.hit_result()
   def hit({:failure_email, workflow_id, user_id}) do
     [time_scale: time_scale, rate_limit: rate_limit] =
@@ -35,5 +44,9 @@ defmodule Lightning.RateLimiters do
       {:deny, count} ->
         {:deny, count}
     end
+  end
+
+  def check_rate(project_id) do
+    Webhook.hit("#{project_id}", 1, 4)
   end
 end

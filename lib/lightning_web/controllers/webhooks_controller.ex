@@ -10,6 +10,7 @@ defmodule LightningWeb.WebhooksController do
   alias Lightning.WorkOrders
 
   plug :reject_unfetched when action in [:create]
+  # plug :check_rate when action in [:create]
 
   # Reject requests with unfetched body params, as they are not supported
   # See Plug.Parsers in Endpoint for more information.
@@ -27,7 +28,22 @@ defmodule LightningWeb.WebhooksController do
     end
   end
 
-  @spec create(Plug.Conn.t(), %{path: binary()}) :: Plug.Conn.t()
+  # defp check_rate(conn, _params) do
+  #   # TODO: this may be _after_ the body has been parsed (into body_params), so we may need to
+  #   # may need to move this plug further upstream.
+  #   case Lightning.RateLimiters.check_rate(conn.project_id) do
+  #     {:allow, _} ->
+  #       conn
+  #     {:deny, timeout} ->
+  #       conn
+  #       |> put_status(429)
+  #       |> put_resp_header("retry-after", to_string(timeout))
+  #       |> json(%{"error" => "Too many requests"})
+  #       |> halt()
+  #   end
+  # end
+
+  @spec check(Plug.Conn.t(), %{path: binary()}) :: Plug.Conn.t()
   def check(conn, _params) do
     put_status(conn, :ok)
     |> json(%{
