@@ -666,10 +666,9 @@
             />
           </div>
           <div class="flex flex-row items-center mt-4 mb-8">
-            <div class="flex flex-row flex-grow">
+            <div :if={@can_edit_project} class="flex flex-row">
               <div>
                 <.input
-                  :if={@can_edit_project}
                   type="toggle"
                   id="toggle-support-access"
                   name="allow_support_access"
@@ -686,6 +685,7 @@
                 />
               </div>
             </div>
+            <div class="flex flex-row flex-grow"></div>
             <div class="sm:ml-16 sm:mt-0">
               <.button
                 id="show_collaborators_modal_button"
