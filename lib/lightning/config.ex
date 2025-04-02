@@ -294,6 +294,11 @@ defmodule Lightning.Config do
     def gdpr_preferences do
       Application.get_env(:lightning, :gdpr_preferences)
     end
+
+    @impl true
+    def max_dataclip_size_bytes do
+      Application.get_env(:lightning, :max_dataclip_size_bytes, 10_000_000)
+    end
   end
 
   @callback apollo(key :: atom() | nil) :: map()
@@ -340,6 +345,7 @@ defmodule Lightning.Config do
   @callback book_demo_openfn_workflow_url() :: String.t()
   @callback gdpr_banner() :: map() | false
   @callback gdpr_preferences() :: map() | false
+  @callback max_dataclip_size_bytes() :: integer()
 
   @doc """
   Returns the configuration for the `Lightning.AdaptorRegistry` service
@@ -536,6 +542,10 @@ defmodule Lightning.Config do
 
   def gdpr_preferences do
     impl().gdpr_preferences()
+  end
+
+  def max_dataclip_size_bytes do
+    impl().max_dataclip_size_bytes()
   end
 
   defp impl do
