@@ -25,6 +25,8 @@ and this project adheres to
   [PR#3056](https://github.com/OpenFn/lightning/pull/3056)
 - Change edge color in the workflow when there is an error
   [#2999](https://github.com/OpenFn/lightning/issues/2999)
+- Allow users to view and copy their workflow as a code
+  [#3016](https://github.com/OpenFn/lightning/issues/3016)
 
 ### Changed
 
