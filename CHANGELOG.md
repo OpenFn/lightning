@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.11.2-pre.0] - 2025-04-03
+
+### Added
+
 - Remove Credentials for Collaborators Removed from a Project
   [#2942](https://github.com/OpenFn/lightning/issues/2942)
 - Enable Credential Transfer In Projects Credentials Table
@@ -35,9 +43,7 @@ and this project adheres to
 - Remove OpenTelemetry suport as it is not currently in use
   [#3081](https://github.com/OpenFn/lightning/issues/3081)
 
-### Fixed
-
-## [v2.11.1-pre.1] - 2025-03-26
+## [v2.11.1] - 2025-04-03
 
 ### Added
 
