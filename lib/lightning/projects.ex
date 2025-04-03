@@ -49,12 +49,52 @@ defmodule Lightning.Projects do
     ]
   end
 
-  def get_projects_overview(%User{id: user_id}, opts \\ []) do
-    order_by = Keyword.get(opts, :order_by, "name_asc")
+  def get_projects_overview(user, opts \\ [])
 
+  def get_projects_overview(%User{id: user_id, support_user: true}, opts) do
+    support_projects =
+      from(p in Project,
+        left_join: w in assoc(p, :workflows),
+        left_join: pu_all in assoc(p, :project_users),
+        where: p.allow_support_access and is_nil(w.deleted_at),
+        group_by: [p.id],
+        select: %ProjectOverviewRow{
+          id: p.id,
+          name: p.name,
+          role: fragment("'support' as role"),
+          workflows_count: count(w.id, :distinct),
+          collaborators_count: count(pu_all.user_id, :distinct),
+          last_updated_at: max(w.updated_at)
+        }
+      )
+      |> Repo.all()
+
+    user_projects =
+      user_id
+      |> projects_overview_query()
+      |> Repo.all()
+
+    {sort_key, sort_direction} = Keyword.get(opts, :order_by, {:name, :asc})
+
+    [user_projects, support_projects]
+    |> Enum.concat()
+    |> Enum.uniq_by(& &1.id)
+    |> Enum.sort_by(&Map.get(&1, sort_key), sort_direction)
+  end
+
+  def get_projects_overview(%User{id: user_id}, opts) do
+    order_by = Keyword.get(opts, :order_by, {:name, :asc})
+
+    user_id
+    |> projects_overview_query()
+    |> order_by(^dynamic_order_by(order_by))
+    |> Repo.all()
+  end
+
+  defp projects_overview_query(user_id) do
     from(p in Project,
-      join: pu in assoc(p, :project_users),
       left_join: w in assoc(p, :workflows),
+      inner_join: pu in assoc(p, :project_users),
       left_join: pu_all in assoc(p, :project_users),
       where: pu.user_id == ^user_id and is_nil(w.deleted_at),
       group_by: [p.id, pu.role],
@@ -65,27 +105,21 @@ defmodule Lightning.Projects do
         workflows_count: count(w.id, :distinct),
         collaborators_count: count(pu_all.user_id, :distinct),
         last_updated_at: max(w.updated_at)
-      },
-      order_by: ^dynamic_order_by(order_by)
+      }
     )
-    |> Repo.all()
   end
 
-  defp dynamic_order_by("name_asc") do
-    {:asc_nulls_last, dynamic([p, _pu, _w, _pu_all], field(p, :name))}
-  end
+  defp dynamic_order_by({:name, :asc}),
+    do: {:asc_nulls_last, dynamic([p], field(p, :name))}
 
-  defp dynamic_order_by("name_desc") do
-    {:desc_nulls_last, dynamic([p, _pu, _w, _pu_all], field(p, :name))}
-  end
+  defp dynamic_order_by({:name, :desc}),
+    do: {:desc_nulls_last, dynamic([p], field(p, :name))}
 
-  defp dynamic_order_by("last_updated_at_asc") do
-    {:asc_nulls_last, dynamic([_p, _pu, w, _pu_all], max(w.updated_at))}
-  end
+  defp dynamic_order_by({:last_updated_at, :asc}),
+    do: {:asc_nulls_last, dynamic([_p, w, _pu, _pu_all], max(w.updated_at))}
 
-  defp dynamic_order_by("last_updated_at_desc") do
-    {:desc_nulls_last, dynamic([_p, _pu, w, _pu_all], max(w.updated_at))}
-  end
+  defp dynamic_order_by({:last_updated_at, :desc}),
+    do: {:desc_nulls_last, dynamic([_p, w, _pu, _pu_all], max(w.updated_at))}
 
   @doc """
   Perform, when called with %{"type" => "purge_deleted"}
@@ -605,17 +639,12 @@ defmodule Lightning.Projects do
   ## Returns
     - An Ecto queryable struct to fetch projects.
   """
-  @spec projects_for_user_query(user :: User.t(), opts :: keyword()) ::
+  @spec projects_for_user_query(user :: User.t()) ::
           Ecto.Queryable.t()
-  def projects_for_user_query(%User{id: user_id}, opts \\ []) do
-    include = Keyword.get(opts, :include, [])
-    order_by = Keyword.get(opts, :order_by, asc: :name)
-
+  def projects_for_user_query(%User{id: user_id}) do
     from(p in Project,
       join: pu in assoc(p, :project_users),
-      where: pu.user_id == ^user_id and is_nil(p.scheduled_deletion),
-      order_by: ^order_by,
-      preload: ^include
+      where: pu.user_id == ^user_id and is_nil(p.scheduled_deletion)
     )
   end
 
@@ -629,11 +658,19 @@ defmodule Lightning.Projects do
   ## Returns
   - A list of projects associated with the user.
   """
-  @spec get_projects_for_user(user :: User.t(), opts :: keyword()) :: [
-          Project.t()
-        ]
-  def get_projects_for_user(%User{} = user, opts \\ []) do
-    projects_for_user_query(user, opts)
+  @spec get_projects_for_user(user :: User.t()) :: [Project.t()]
+  def get_projects_for_user(%User{support_user: true} = user) do
+    from(p in Project,
+      where: p.allow_support_access and is_nil(p.scheduled_deletion)
+    )
+    |> union(^projects_for_user_query(user))
+    |> Repo.all()
+    |> Enum.uniq_by(& &1.id)
+  end
+
+  def get_projects_for_user(%User{} = user) do
+    user
+    |> projects_for_user_query()
     |> Repo.all()
   end
 

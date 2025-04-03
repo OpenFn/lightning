@@ -186,9 +186,7 @@ defmodule LightningWeb.DashboardLive.Components do
               {project.name}
             </.td>
             <.td class="break-words max-w-[25rem]">
-              {project.role
-              |> Atom.to_string()
-              |> String.capitalize()}
+              {String.capitalize(to_string(project.role))}
             </.td>
             <.td class="break-words max-w-[10rem]">
               {project.workflows_count}

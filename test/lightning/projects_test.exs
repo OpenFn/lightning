@@ -1686,7 +1686,7 @@ defmodule Lightning.ProjectsTest do
 
       result =
         Projects.get_projects_overview(user,
-          order_by: "last_updated_at_desc"
+          order_by: {:last_updated_at, :desc}
         )
 
       assert [
@@ -1718,7 +1718,7 @@ defmodule Lightning.ProjectsTest do
 
       result =
         Projects.get_projects_overview(user,
-          order_by: "last_updated_at_asc"
+          order_by: {:last_updated_at, :asc}
         )
 
       assert [
@@ -2018,6 +2018,48 @@ defmodule Lightning.ProjectsTest do
                before: %{"dataclip_retention_period" => 7},
                after: %{"dataclip_retention_period" => 14}
              }
+    end
+
+    test "creates audit events when toggling the support user grant", %{
+      user: %{id: user_id} = user
+    } do
+      %{id: project_id} =
+        project = insert(:project, allow_support_access: false)
+
+      Projects.update_project(project, %{allow_support_access: true}, user)
+
+      changes = %Lightning.Auditing.Audit.Changes{
+        after: %{"allow_support_access" => true},
+        before: %{"allow_support_access" => false}
+      }
+
+      assert %{
+               item_type: "project",
+               item_id: ^project_id,
+               actor_id: ^user_id,
+               changes: ^changes
+             } = Repo.get_by!(Audit, event: "allow_support_access_updated")
+    end
+
+    test "creates audit events when toggling MFA", %{
+      user: %{id: user_id} = user
+    } do
+      %{id: project_id} =
+        project = insert(:project, requires_mfa: false)
+
+      Projects.update_project(project, %{requires_mfa: true}, user)
+
+      changes = %Lightning.Auditing.Audit.Changes{
+        after: %{"requires_mfa" => true},
+        before: %{"requires_mfa" => false}
+      }
+
+      assert %{
+               item_type: "project",
+               item_id: ^project_id,
+               actor_id: ^user_id,
+               changes: ^changes
+             } = Repo.get_by!(Audit, event: "requires_mfa_updated")
     end
 
     test "does not create events if no user was provided" do

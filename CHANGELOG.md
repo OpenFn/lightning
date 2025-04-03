@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Enable Support User and adds audit trail for MFA.
+  [#3072](https://github.com/OpenFn/lightning/issues/3072)
+
 ### Changed
 
 ### Fixed
