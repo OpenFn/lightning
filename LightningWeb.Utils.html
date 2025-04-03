@@ -5,16 +5,16 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.34.2">
-    <meta name="project" content="Lightning v2.11.1">
+    <meta name="project" content="Lightning v2.11.2">
 
 
-    <title>LightningWeb.Utils — Lightning v2.11.1</title>
+    <title>LightningWeb.Utils — Lightning v2.11.2</title>
     <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-861A8DB4.js"></script>
+    <script src="dist/sidebar_items-321C7C60.js"></script>
     <script src="docs_config.js"></script>
     <script async src="dist/html-YIPIRHGU.js"></script>
 
@@ -54,7 +54,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.11.1
+          v2.11.2
         </div>
       </div>
     </div>
@@ -132,7 +132,7 @@ Pages
       </a>
 
     <span translate="no">LightningWeb.Utils</span> 
-    <small class="app-vsn" translate="no">(Lightning v2.11.1)</small>
+    <small class="app-vsn" translate="no">(Lightning v2.11.2)</small>
 
   </h1>
 
@@ -227,7 +227,7 @@ Pages
 
   <section class="docstring">
 
-<p>Sets up multiple plugs using <a href="https://hexdocs.pm/replug/0.1.0/Replug.html"><code class="inline">Replug</code></a>.</p><p>Accepts a list of plug configurations, where each configuration is a tuple:</p><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="7254796364-1">{</span><span class="nc">PlugModule</span><span class="p">,</span><span class="w"> </span><span class="n">opts</span><span class="p" data-group-id="7254796364-1">}</span></code></pre><ul><li><code class="inline">PlugModule</code> is the module implementing the plug.</li><li><code class="inline">opts</code> can be a keyword list of options or a tuple like <code class="inline">{module, function}</code>
+<p>Sets up multiple plugs using <a href="https://hexdocs.pm/replug/0.1.0/Replug.html"><code class="inline">Replug</code></a>.</p><p>Accepts a list of plug configurations, where each configuration is a tuple:</p><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="5186752919-1">{</span><span class="nc">PlugModule</span><span class="p">,</span><span class="w"> </span><span class="n">opts</span><span class="p" data-group-id="5186752919-1">}</span></code></pre><ul><li><code class="inline">PlugModule</code> is the module implementing the plug.</li><li><code class="inline">opts</code> can be a keyword list of options or a tuple like <code class="inline">{module, function}</code>
 for dynamic plug configuration.</li></ul><p>This macro will iterate over the provided list, calling <code class="inline">plug Replug, plug: plug, opts: opts</code>
 for each item.</p><h2 id="add_dynamic_plugs/1-examples" class="section-heading">
   <a href="#add_dynamic_plugs/1-examples" class="hover-link">
@@ -235,8 +235,8 @@ for each item.</p><h2 id="add_dynamic_plugs/1-examples" class="section-heading">
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="na">@pre_session_plugs</span><span class="w"> </span><span class="nc">Application</span><span class="o">.</span><span class="n">compile_env</span><span class="p" data-group-id="2418163776-1">(</span><span class="ss">:my_app</span><span class="p">,</span><span class="w"> </span><span class="ss">:pre_session_plugs</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2418163776-2">[</span><span class="p" data-group-id="2418163776-2">]</span><span class="p" data-group-id="2418163776-1">)</span><span class="w">
-</span><span class="n">add_dynamic_plugs</span><span class="p" data-group-id="2418163776-3">(</span><span class="na">@pre_session_plugs</span><span class="p" data-group-id="2418163776-3">)</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="na">@pre_session_plugs</span><span class="w"> </span><span class="nc">Application</span><span class="o">.</span><span class="n">compile_env</span><span class="p" data-group-id="5606140306-1">(</span><span class="ss">:my_app</span><span class="p">,</span><span class="w"> </span><span class="ss">:pre_session_plugs</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5606140306-2">[</span><span class="p" data-group-id="5606140306-2">]</span><span class="p" data-group-id="5606140306-1">)</span><span class="w">
+</span><span class="n">add_dynamic_plugs</span><span class="p" data-group-id="5606140306-3">(</span><span class="na">@pre_session_plugs</span><span class="p" data-group-id="5606140306-3">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="build_params_for_field/3">
@@ -265,8 +265,8 @@ for each item.</p><h2 id="add_dynamic_plugs/1-examples" class="section-heading">
   <span class="text">Examples</span>
 </h2>
 <pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">form</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="c1"># some %Phoenix.HTML.Form{} struct</span><span class="w">
-</span><span class="gp unselectable">iex&gt; </span><span class="nc">LightningWeb.Utils</span><span class="o">.</span><span class="n">build_params_for_field</span><span class="p" data-group-id="2006515961-1">(</span><span class="n">form</span><span class="p">,</span><span class="w"> </span><span class="ss">:username</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;jane_doe&quot;</span><span class="p" data-group-id="2006515961-1">)</span><span class="w">
-</span><span class="p" data-group-id="2006515961-2">%{</span><span class="s">&quot;user&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p" data-group-id="2006515961-3">%{</span><span class="s">&quot;username&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;jane_doe&quot;</span><span class="p" data-group-id="2006515961-3">}</span><span class="p" data-group-id="2006515961-2">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">LightningWeb.Utils</span><span class="o">.</span><span class="n">build_params_for_field</span><span class="p" data-group-id="9986005120-1">(</span><span class="n">form</span><span class="p">,</span><span class="w"> </span><span class="ss">:username</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;jane_doe&quot;</span><span class="p" data-group-id="9986005120-1">)</span><span class="w">
+</span><span class="p" data-group-id="9986005120-2">%{</span><span class="s">&quot;user&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p" data-group-id="9986005120-3">%{</span><span class="s">&quot;username&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;jane_doe&quot;</span><span class="p" data-group-id="9986005120-3">}</span><span class="p" data-group-id="9986005120-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="decode_one/2">
@@ -298,11 +298,11 @@ into <code class="inline">acc</code>. Otherwise, a new map is returned.</p><h2 i
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">LightningWeb.Utils</span><span class="o">.</span><span class="n">decode_one</span><span class="p" data-group-id="6236409559-1">(</span><span class="p" data-group-id="6236409559-2">{</span><span class="s">&quot;user[username]&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;jane_doe&quot;</span><span class="p" data-group-id="6236409559-2">}</span><span class="p" data-group-id="6236409559-1">)</span><span class="w">
-</span><span class="p" data-group-id="6236409559-3">%{</span><span class="s">&quot;user&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p" data-group-id="6236409559-4">%{</span><span class="s">&quot;username&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;jane_doe&quot;</span><span class="p" data-group-id="6236409559-4">}</span><span class="p" data-group-id="6236409559-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">LightningWeb.Utils</span><span class="o">.</span><span class="n">decode_one</span><span class="p" data-group-id="5492662279-1">(</span><span class="p" data-group-id="5492662279-2">{</span><span class="s">&quot;user[username]&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;jane_doe&quot;</span><span class="p" data-group-id="5492662279-2">}</span><span class="p" data-group-id="5492662279-1">)</span><span class="w">
+</span><span class="p" data-group-id="5492662279-3">%{</span><span class="s">&quot;user&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p" data-group-id="5492662279-4">%{</span><span class="s">&quot;username&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;jane_doe&quot;</span><span class="p" data-group-id="5492662279-4">}</span><span class="p" data-group-id="5492662279-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="nc">LightningWeb.Utils</span><span class="o">.</span><span class="n">decode_one</span><span class="p" data-group-id="6236409559-5">(</span><span class="p" data-group-id="6236409559-6">{</span><span class="s">&quot;user[username]&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;jane_doe&quot;</span><span class="p" data-group-id="6236409559-6">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6236409559-7">%{</span><span class="s">&quot;user&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p" data-group-id="6236409559-8">%{</span><span class="s">&quot;admin&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="no">false</span><span class="p" data-group-id="6236409559-8">}</span><span class="p" data-group-id="6236409559-7">}</span><span class="p" data-group-id="6236409559-5">)</span><span class="w">
-</span><span class="p" data-group-id="6236409559-9">%{</span><span class="s">&quot;user&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p" data-group-id="6236409559-10">%{</span><span class="s">&quot;admin&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="no">false</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;username&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;jane_doe&quot;</span><span class="p" data-group-id="6236409559-10">}</span><span class="p" data-group-id="6236409559-9">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="nc">LightningWeb.Utils</span><span class="o">.</span><span class="n">decode_one</span><span class="p" data-group-id="5492662279-5">(</span><span class="p" data-group-id="5492662279-6">{</span><span class="s">&quot;user[username]&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;jane_doe&quot;</span><span class="p" data-group-id="5492662279-6">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5492662279-7">%{</span><span class="s">&quot;user&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p" data-group-id="5492662279-8">%{</span><span class="s">&quot;admin&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="no">false</span><span class="p" data-group-id="5492662279-8">}</span><span class="p" data-group-id="5492662279-7">}</span><span class="p" data-group-id="5492662279-5">)</span><span class="w">
+</span><span class="p" data-group-id="5492662279-9">%{</span><span class="s">&quot;user&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p" data-group-id="5492662279-10">%{</span><span class="s">&quot;admin&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="no">false</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;username&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;jane_doe&quot;</span><span class="p" data-group-id="5492662279-10">}</span><span class="p" data-group-id="5492662279-9">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="pluralize_with_s/2">
