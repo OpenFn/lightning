@@ -9,8 +9,6 @@ defmodule LightningWeb.Plugs.WebhookAuth do
   alias Lightning.Workflows
   alias Lightning.Workflows.WebhookAuthMethod
 
-  require OpenTelemetry.Tracer
-
   @doc """
   Initializes the options.
   """

@@ -22,11 +22,6 @@ defmodule Lightning.Application do
       {"salesforce_oauth", Lightning.AuthProviders.Salesforce}
     )
 
-    :opentelemetry_cowboy.setup()
-    OpentelemetryPhoenix.setup(adapter: :cowboy2)
-    OpentelemetryEcto.setup([:lightning, :repo])
-    OpentelemetryLiveView.setup()
-    OpentelemetryOban.setup(trace: [:jobs])
     # mnesia startup
     :mnesia.stop()
     :mnesia.create_schema([node()])

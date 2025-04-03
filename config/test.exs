@@ -132,13 +132,6 @@ config :lightning, LightningWeb, allow_credential_transfer: true
 
 config :lightning, CLI, child_process_mod: FakeRambo
 
-# https://opentelemetry.io/docs/instrumentation/erlang/testing/
-config :opentelemetry, traces_exporter: :none
-
-config :opentelemetry, :processors, [
-  {:otel_simple_processor, %{}}
-]
-
 config :lightning, :is_resettable_demo, true
 
 config :lightning, :github_app,
