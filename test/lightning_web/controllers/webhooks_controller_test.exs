@@ -12,10 +12,6 @@ defmodule LightningWeb.WebhooksControllerTest do
   alias Lightning.Runs
   alias Lightning.WorkOrders
 
-  require Record
-  @fields Record.extract(:span, from: "deps/opentelemetry/include/otel_span.hrl")
-  Record.defrecordp(:span, @fields)
-
   describe "a POST request to '/i'" do
     setup [:stub_rate_limiter_ok, :stub_usage_limiter_ok]
 

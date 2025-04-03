@@ -19,6 +19,19 @@ and this project adheres to
 
 - Enable Support User and adds audit trail for MFA.
   [#3072](https://github.com/OpenFn/lightning/issues/3072)
+
+### Changed
+
+### Fixed
+
+## [v2.11.2-pre.0] - 2025-04-03
+
+### Added
+
+- Remove Credentials for Collaborators Removed from a Project
+  [#2942](https://github.com/OpenFn/lightning/issues/2942)
+- Enable Credential Transfer In Projects Credentials Table
+  [#2978](https://github.com/OpenFn/lightning/issues/2978)
 - Allow possibility to inject components for implementing GDPR compliance
   [PR#3056](https://github.com/OpenFn/lightning/pull/3056)
 - Change edge color in the workflow when there is an error
@@ -30,10 +43,10 @@ and this project adheres to
   [#3061](https://github.com/OpenFn/lightning/issues/3061)
 - Default to latest specific version instead of @latest when selecting adaptors
   [#2843](https://github.com/OpenFn/lightning/issues/2843)
+- Remove OpenTelemetry suport as it is not currently in use
+  [#3081](https://github.com/OpenFn/lightning/issues/3081)
 
-### Fixed
-
-## [v2.11.1-pre.1] - 2025-03-26
+## [v2.11.1] - 2025-04-03
 
 ### Added
 

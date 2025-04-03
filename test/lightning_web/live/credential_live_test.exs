@@ -2938,7 +2938,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert_email_sent(
         to: Swoosh.Email.Recipient.format(credential.user),
-        subject: "Confirm your credential transfer"
+        subject: "Transfer #{credential.name} to #{receiver.first_name}"
       )
 
       assert Repo.get_by(Lightning.Accounts.UserToken,

@@ -18,6 +18,3 @@ config :logger, level: :info
 config :lightning,
   schemas_path: "priv/schemas",
   adaptor_icons_path: "priv/static/images/adaptors"
-
-# For now, do not export any open-telephony messages
-config :opentelemetry, traces_exporter: :none

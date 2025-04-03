@@ -2999,6 +2999,64 @@ defmodule LightningWeb.ProjectLiveTest do
              |> element("#failure-alert-status-#{project_user.id}")
              |> render() =~ "Unavailable"
     end
+
+    test "removal confirmation modal shows user's credentials that will be removed",
+         %{
+           conn: conn
+         } do
+      project = insert(:project)
+      {conn, _user} = setup_project_user(conn, project, :admin)
+
+      user_to_remove = insert(:user, first_name: "Amy", last_name: "Admin")
+
+      project_user =
+        insert(:project_user,
+          project: project,
+          user: user_to_remove,
+          role: :viewer
+        )
+
+      credential =
+        insert(:credential,
+          name: "DHIS2 play",
+          user: user_to_remove,
+          project_credentials: [%{project_id: project.id}]
+        )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#collaboration"
+        )
+
+      assert has_element?(view, "#remove_#{project_user.id}_modal")
+
+      modal = element(view, "#remove_#{project_user.id}_modal")
+      modal_html = render(modal)
+
+      assert modal_html =~ credential.name
+      assert modal_html =~ "and their owned credential #{credential.name}"
+
+      credential2 =
+        insert(:credential,
+          name: "PostgreSQL",
+          user: user_to_remove,
+          project_credentials: [%{project_id: project.id}]
+        )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#collaboration"
+        )
+
+      modal = element(view, "#remove_#{project_user.id}_modal")
+      modal_html = render(modal)
+
+      assert modal_html =~ "and their owned credentials"
+      assert modal_html =~ credential.name
+      assert modal_html =~ credential2.name
+    end
   end
 
   describe "project settings:version control" do

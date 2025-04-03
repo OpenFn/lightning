@@ -127,16 +127,6 @@ config :phoenix, :stacktrace_depth, 20
 # Initialize plugs at runtime for faster development compilation
 config :phoenix, :plug_init_mode, :runtime
 
-# https://davelucia.com/blog/observing-elixir-with-lightstep
-if System.get_env("EXPORT_OTEL") == "true" do
-  config :opentelemetry, :processors,
-    otel_batch_processor: %{
-      exporter: {:otel_exporter_stdout, []}
-    }
-else
-  config :opentelemetry, traces_exporter: :none
-end
-
 config :lightning, :is_resettable_demo, true
 
 config :lightning, :apollo, endpoint: "http://localhost:3000"

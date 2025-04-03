@@ -132,8 +132,7 @@ defmodule Lightning.VersionControl.GithubClient do
       {Tesla.Middleware.Headers,
        [
          {"Authorization", "Bearer #{token}"}
-       ]},
-      Tesla.Middleware.OpenTelemetry
+       ]}
     ]
 
     {:ok, Tesla.client(middleware)}
@@ -141,8 +140,7 @@ defmodule Lightning.VersionControl.GithubClient do
 
   def build_basic_auth_client(username, password) do
     middleware = [
-      {Tesla.Middleware.BasicAuth, [username: username, password: password]},
-      Tesla.Middleware.OpenTelemetry
+      {Tesla.Middleware.BasicAuth, [username: username, password: password]}
     ]
 
     {:ok, Tesla.client(middleware)}

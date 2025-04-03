@@ -323,6 +323,7 @@
           id="oauth-clients"
           title="OAuth Clients"
           clients={@oauth_clients}
+          show_owner={true}
         >
           <:empty_state>
             <button
@@ -405,6 +406,23 @@
                 <.link
                   class="table-action"
                   phx-click={
+                    show_modal("transfer-credential-#{credential.id}-modal")
+                  }
+                >
+                  <%= case credential.transfer_status do %>
+                    <% :pending -> %>
+                      Revoke Transfer
+                    <% :completed -> %>
+                      Transfer
+                    <% nil -> %>
+                      Transfer
+                  <% end %>
+                </.link>
+              </span>
+              <span>
+                <.link
+                  class="table-action"
+                  phx-click={
                     show_modal("edit-credential-#{credential.id}-modal")
                   }
                 >
@@ -440,6 +458,13 @@
                 :if={can_edit?(credential, @current_user)}
                 id={"delete_credential_#{credential.id}_modal"}
                 credential={credential}
+              />
+              <.live_component
+                id={"transfer-credential-#{credential.id}-modal"}
+                module={LightningWeb.CredentialLive.TransferCredentialModal}
+                credential={credential}
+                current_user={@current_user}
+                return_to={~p"/projects/#{@project.id}/settings#credentials"}
               />
             </div>
           </:actions>
