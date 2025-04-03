@@ -564,14 +564,12 @@ export const Copy = {
     this.el.addEventListener('click', ev => {
       ev.preventDefault();
       let target = document.querySelector(to);
-      console.log(target);
       if (
         target instanceof HTMLInputElement ||
         target instanceof HTMLTextAreaElement
       ) {
         let text = target.value;
         let element = this.el;
-        console.log(text);
         navigator.clipboard.writeText(text).then(() => {
           console.log('Copied!');
           if (phxThenAttribute == null) {
