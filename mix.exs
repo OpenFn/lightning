@@ -103,7 +103,7 @@ defmodule Lightning.MixProject do
       {:mox, "~> 1.2.0", only: :test},
       {:oauth2, "~> 2.1"},
       {:oban, "~> 2.18"},
-      {:petal_components, "~> 2.9"},
+      {:petal_components, "~> 3.0"},
       {:phoenix, "~> 1.7.11"},
       {:phoenix_ecto, "~> 4.6"},
       {:phoenix_html, "~> 4.1"},
