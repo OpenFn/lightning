@@ -84,7 +84,7 @@ defmodule LightningWeb.DashboardLive.ProjectCreationModal do
               phx-click="close_modal"
               phx-target={@myself}
               type="button"
-              class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
+              class="rounded-md bg-white text-gray-400 hover:text-gray-500 hover:cursor-pointer focus:outline-none"
               aria-label={gettext("close")}
             >
               <span class="sr-only">Close</span>

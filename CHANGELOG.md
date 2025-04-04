@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Restart the credential setup from selecting the credential type
+  [#2284](https://github.com/OpenFn/lightning/issues/2284)
 - Enable Support User and adds audit trail for MFA.
   [#3072](https://github.com/OpenFn/lightning/issues/3072)
 
