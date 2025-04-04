@@ -5,6 +5,7 @@ import tippy, {
 import type { PhoenixHook } from './PhoenixHook';
 
 import LogLineHighlight from './LogLineHighlight';
+import WorkflowToYAML from '../yaml-exporter/WorkflowToYAML';
 import ElapsedIndicator from './ElapsedIndicator';
 import {
   TabbedContainer,
@@ -24,6 +25,7 @@ import {
 
 export {
   LogLineHighlight,
+  WorkflowToYAML,
   ElapsedIndicator,
   TabbedContainer,
   TabbedSelector,
@@ -562,24 +564,69 @@ export const Copy = {
     this.el.addEventListener('click', ev => {
       ev.preventDefault();
       let target = document.querySelector(to);
-      if (!(target instanceof HTMLInputElement)) return;
-      let text = target.value;
-      let element = this.el;
-      navigator.clipboard.writeText(text).then(() => {
-        console.log('Copied!');
-        if (phxThenAttribute == null) {
-          let originalText = element.textContent;
-          element.textContent = 'Copied!';
-          setTimeout(function () {
-            element.textContent = originalText;
-          }, 3000);
-        } else {
-          this.liveSocket.execJS(this.el, phxThenAttribute);
-        }
-      });
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement
+      ) {
+        let text = target.value;
+        let element = this.el;
+        navigator.clipboard.writeText(text).then(() => {
+          console.log('Copied!');
+          if (phxThenAttribute == null) {
+            let originalText = element.textContent;
+            element.textContent = 'Copied!';
+            setTimeout(function () {
+              element.textContent = originalText;
+            }, 3000);
+          } else {
+            this.liveSocket.execJS(this.el, phxThenAttribute);
+          }
+        });
+      }
     });
   },
 } as PhoenixHook<{}, { to: string }>;
+
+export const DownloadText = {
+  mounted() {
+    const { target, contentType, fileName } = this.el.dataset;
+
+    if (!target || !contentType || !fileName) {
+      throw new Error(
+        'target element or content-type or  file-name data attributes are not set'
+      );
+    }
+
+    this.el.addEventListener('click', ev => {
+      ev.preventDefault();
+      const targetEl = document.querySelector(target);
+      if (
+        targetEl instanceof HTMLInputElement ||
+        targetEl instanceof HTMLTextAreaElement
+      ) {
+        const blob = new Blob([targetEl.value], { type: contentType });
+
+        // Create a URL for the Blob
+        const url = window.URL.createObjectURL(blob);
+
+        // Create a temporary anchor element
+        const downloadLink = document.createElement('a');
+        downloadLink.href = url;
+        downloadLink.download = fileName;
+
+        // Append to the body (required for Firefox)
+        document.body.appendChild(downloadLink);
+
+        // Trigger click event to start download
+        downloadLink.click();
+
+        // Clean up
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(downloadLink);
+      }
+    });
+  },
+} as PhoenixHook<{}>;
 
 // Sets the checkbox to indeterminate state if the element has the
 // `indeterminate` class

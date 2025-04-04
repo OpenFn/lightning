@@ -1117,6 +1117,46 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       end
     end
 
+    test "users can view workflow as code", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      for {conn, _user} <-
+            setup_project_users(conn, project, [:viewer, :editor, :admin, :owner]) do
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/w/#{workflow.id}",
+            on_error: :raise
+          )
+
+        view
+        |> element("#toggle-settings")
+        |> render_click()
+
+        assert assert_patch(view) =~
+                 ~p"/projects/#{project.id}/w/#{workflow.id}?m=settings"
+
+        view |> element("a#view-workflow-as-yaml-link") |> render_click()
+
+        assert assert_patch(view) =~
+                 ~p"/projects/#{project.id}/w/#{workflow.id}?m=code"
+
+        expected_download_name =
+          String.replace(workflow.name, " ", "-") <> ".yaml"
+
+        assert has_element?(
+                 view,
+                 "#download-workflow-code-btn[data-file-name='#{expected_download_name}']"
+               )
+
+        assert has_element?(view, "#copy-workflow-code-btn")
+
+        GenServer.stop(view.pid)
+      end
+    end
+
     test "renders error message when a job has an empty body", %{
       conn: conn,
       project: project,
