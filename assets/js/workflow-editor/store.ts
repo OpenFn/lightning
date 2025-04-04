@@ -278,6 +278,6 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
 );
 
 export const useWorkflowStore = (onChange?: (v: unknown) => void) => {
-  store.subscribe(onChange);
+  if (onChange) store.subscribe(onChange);
   return useStore(store);
 };
