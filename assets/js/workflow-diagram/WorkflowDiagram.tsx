@@ -41,9 +41,7 @@ type ChartCache = {
 const LAYOUT_DURATION = 300;
 
 export default function WorkflowDiagram(props: WorkflowDiagramProps) {
-  const { jobs, triggers, edges, disabled } = useWorkflowStore((v) => {
-    console.log("observer: workflowEditor", v)
-  });
+  const { jobs, triggers, edges, disabled } = useWorkflowStore();
   const { selection, onSelectionChange, el } = props;
 
   const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
