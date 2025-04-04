@@ -1,7 +1,7 @@
 import type { Patch as ImmerPatch } from 'immer';
 
 import { applyPatches, enablePatches, produce } from 'immer';
-import { createStore } from 'zustand';
+import { createStore, useStore, type StoreApi } from 'zustand';
 import type { Lightning } from '../workflow-diagram/types';
 import { randomUUID } from '../common';
 
@@ -69,6 +69,13 @@ function toRFC6902Patch(patch: ImmerPatch): Patch {
   return newPatch;
 }
 
+// just trust this singleton - [works on the assumption that workflowEditor will instantiate(currently true) before jobEditor tries to use it]
+let store: StoreApi<WorkflowState>;
+
+export const useWorkflowStore = () => {
+  return useStore(store);
+};
+
 export const createWorkflowStore = (
   initProps?: Partial<WorkflowProps>,
   onChange: (pendingAction: PendingAction) => void = () => {}
@@ -105,7 +112,7 @@ export const createWorkflowStore = (
     return nextState;
   }
 
-  return createStore<WorkflowState>()((set, get) => ({
+  store = createStore<WorkflowState>()((set, get) => ({
     ...DEFAULT_PROPS,
     ...initProps,
     add: data => {
@@ -232,6 +239,7 @@ export const createWorkflowStore = (
       }));
     },
   }));
+  return store;
 };
 
 export type WorkflowStore = ReturnType<typeof createWorkflowStore>;
