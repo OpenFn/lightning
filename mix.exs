@@ -73,7 +73,7 @@ defmodule Lightning.MixProject do
       {:broadway_kafka, "~> 0.4.2"},
       {:bypass, "~> 2.1", only: :test},
       {:briefly, "~> 0.5.0"},
-      {:cachex, "~> 3.4"},
+      {:cachex, "~> 4.0"},
       {:cloak_ecto, "~> 1.3.0"},
       {:credo, "~> 1.7.3", only: [:test, :dev]},
       {:crontab, "~> 1.1"},
