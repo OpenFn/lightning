@@ -39,6 +39,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   on_mount {LightningWeb.Hooks, :project_scope}
 
   jsx("assets/js/workflow-editor/WorkflowEditor.tsx")
+  jsx("assets/js/workflow-editor/WorkflowStoreSync.tsx")
 
   attr :changeset, :map, required: true
   attr :project_user, :map, required: true
@@ -175,6 +176,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       <div class="relative h-full flex" id={"workflow-edit-#{@workflow.id}"}>
         <div class="flex-none" id="job-editor-pane">
+          <.WorkflowStoreSync />
           <div
             :if={@selected_job && @selection_mode == "expand"}
             class={[
