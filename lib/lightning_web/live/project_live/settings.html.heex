@@ -221,6 +221,7 @@
             </div>
           </.form>
         </div>
+
         <div class="hidden sm:block" aria-hidden="true">
           <div class="py-2"></div>
         </div>
@@ -322,6 +323,7 @@
           id="oauth-clients"
           title="OAuth Clients"
           clients={@oauth_clients}
+          show_owner={true}
         >
           <:empty_state>
             <button
@@ -338,7 +340,7 @@
             </button>
           </:empty_state>
           <:actions :let={client}>
-            <div :if={client.user_id == @current_user.id}>
+            <div :if={can_edit?(client, @current_user)}>
               <span>
                 <.link
                   class="table-action"
@@ -399,7 +401,24 @@
             </button>
           </:empty_state>
           <:actions :let={credential}>
-            <div :if={credential.user_id == @current_user.id}>
+            <div :if={can_edit?(credential, @current_user)}>
+              <span>
+                <.link
+                  class="table-action"
+                  phx-click={
+                    show_modal("transfer-credential-#{credential.id}-modal")
+                  }
+                >
+                  <%= case credential.transfer_status do %>
+                    <% :pending -> %>
+                      Revoke Transfer
+                    <% :completed -> %>
+                      Transfer
+                    <% nil -> %>
+                      Transfer
+                  <% end %>
+                </.link>
+              </span>
               <span>
                 <.link
                   class="table-action"
@@ -436,9 +455,16 @@
                 return_to={~p"/projects/#{@project.id}/settings#credentials"}
               />
               <LightningWeb.Components.Credentials.delete_credential_modal
-                :if={credential.user_id == @current_user.id}
+                :if={can_edit?(credential, @current_user)}
                 id={"delete_credential_#{credential.id}_modal"}
                 credential={credential}
+              />
+              <.live_component
+                id={"transfer-credential-#{credential.id}-modal"}
+                module={LightningWeb.CredentialLive.TransferCredentialModal}
+                credential={credential}
+                current_user={@current_user}
+                return_to={~p"/projects/#{@project.id}/settings#credentials"}
               />
             </div>
           </:actions>
@@ -654,22 +680,39 @@
         </LightningWeb.WorkflowLive.Components.webhook_auth_methods_table>
       </:panel>
       <:panel hash="collaboration">
-        <div>
-          <h6 class="font-medium text-black">Project collaboration</h6>
-          <small class="block my-1 text-xs text-gray-600">
-            View collaborators and manage alert settings for this project.
-          </small>
-          <.permissions_message
-            :if={!@can_edit_project}
-            section="collaboration settings, but you can change your notification preferences."
-          />
-        </div>
-        <div class="hidden sm:block" aria-hidden="true">
-          <div class="py-2"></div>
-        </div>
-        <div>
-          <div class="flex items-center flex-row-reverse mb-8">
-            <div class="mt-4 sm:ml-16 sm:mt-0">
+        <div class="flex flex-col">
+          <div>
+            <h6 class="font-medium text-black">Project collaboration</h6>
+            <small class="block my-1 text-xs text-gray-600">
+              View collaborators and manage alert settings for this project.
+            </small>
+            <.permissions_message
+              :if={!@can_edit_project}
+              section="collaboration settings, but you can change your notification preferences."
+            />
+          </div>
+          <div class="flex flex-row items-center mt-4 mb-8">
+            <div :if={@can_edit_project} class="flex flex-row">
+              <div>
+                <.input
+                  type="toggle"
+                  id="toggle-support-access"
+                  name="allow_support_access"
+                  checked={@project.allow_support_access}
+                  phx-click="toggle_support_access"
+                  label="Grant support access"
+                />
+              </div>
+              <div>
+                <Common.tooltip
+                  id="toggle-support-tooltip"
+                  title="Granting support access will allow all designated support users for this Lightning instance to access this project with editor permissions."
+                  class="inline-block"
+                />
+              </div>
+            </div>
+            <div class="flex flex-row flex-grow"></div>
+            <div class="sm:ml-16 sm:mt-0">
               <.button
                 id="show_collaborators_modal_button"
                 type="button"

@@ -4,6 +4,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   """
   use LightningWeb, :live_view
 
+  import LightningWeb.CredentialLive.Helpers, only: [can_edit?: 2]
   import PetalComponents.Table
 
   alias Lightning.Accounts.User
@@ -303,12 +304,50 @@ defmodule LightningWeb.ProjectLive.Settings do
     end
   end
 
-  def handle_event("toggle-mfa", _params, socket) do
-    if socket.assigns.can_edit_project && socket.assigns.can_require_mfa do
+  def handle_event("toggle_support_access", _params, socket) do
+    if socket.assigns.can_edit_project do
       project = socket.assigns.project
 
       {:ok, project} =
-        Projects.update_project(project, %{requires_mfa: !project.requires_mfa})
+        Projects.update_project(
+          project,
+          %{
+            allow_support_access: !project.allow_support_access
+          },
+          socket.assigns.current_user
+        )
+
+      flash_msg =
+        if project.allow_support_access do
+          "Granted access to support users successfully"
+        else
+          "Revoked access to support users successfully"
+        end
+
+      {:noreply,
+       socket
+       |> assign(:project, project)
+       |> put_flash(:info, flash_msg)}
+    else
+      {:noreply,
+       put_flash(
+         socket,
+         :error,
+         "You are not authorized to perform this action."
+       )}
+    end
+  end
+
+  def handle_event("toggle-mfa", _params, socket) do
+    if socket.assigns.can_edit_project && socket.assigns.can_require_mfa do
+      %{project: project, current_user: current_user} = socket.assigns
+
+      {:ok, project} =
+        Projects.update_project(
+          project,
+          %{requires_mfa: !project.requires_mfa},
+          current_user
+        )
 
       {:noreply,
        socket
@@ -643,6 +682,31 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   defp confirm_user_removal_modal(assigns) do
+    user_credentials =
+      get_user_credentials_in_project(
+        assigns.project_user.user,
+        assigns.project_user.project
+      )
+
+    {access_text, credentials_text} =
+      case user_credentials do
+        [] ->
+          {"They will no longer have access to this project.", ""}
+
+        [credential] ->
+          {"They will no longer have access to this project",
+           " and their owned credential #{credential.name} will be removed from it"}
+
+        credentials ->
+          credentials_list = Enum.map_join(credentials, ", ", & &1.name)
+
+          {"They will no longer have access to this project",
+           " and their owned credentials #{credentials_list} will be removed from it"}
+      end
+
+    assigns = assign(assigns, :access_text, access_text)
+    assigns = assign(assigns, :credentials_text, credentials_text)
+
     ~H"""
     <.modal id={@id} width="max-w-md">
       <:title>
@@ -664,8 +728,7 @@ defmodule LightningWeb.ProjectLive.Settings do
       </:title>
       <div class="px-6">
         <p class="text-sm text-gray-500">
-          Are you sure you want to remove "{@project_user.user.first_name} {@project_user.user.last_name}" from this project?
-          They will nolonger have access.
+          Are you sure you want to remove "{@project_user.user.first_name} {@project_user.user.last_name}" from this project? {@access_text}{@credentials_text}.
           Do you wish to proceed with this action?
         </p>
       </div>
@@ -732,5 +795,12 @@ defmodule LightningWeb.ProjectLive.Settings do
     |> Atom.to_string()
     |> String.replace("_", " ")
     |> String.capitalize()
+  end
+
+  defp get_user_credentials_in_project(
+         %User{} = user,
+         %Projects.Project{} = project
+       ) do
+    Credentials.list_user_credentials_in_project(user, project)
   end
 end

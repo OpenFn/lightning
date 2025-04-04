@@ -26,6 +26,7 @@ defmodule Lightning.Accounts.User do
     field :hashed_password, :string, redact: true
     field :confirmed_at, :utc_datetime
     field :role, RolesEnum, default: :user
+    field :support_user, :boolean, default: false
     field :disabled, :boolean, default: false
     field :mfa_enabled, :boolean, default: false
     field :scheduled_deletion, :utc_datetime
@@ -233,6 +234,7 @@ defmodule Lightning.Accounts.User do
       :first_name,
       :last_name,
       :role,
+      :support_user,
       :disabled,
       :scheduled_deletion
     ])
