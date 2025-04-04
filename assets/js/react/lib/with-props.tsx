@@ -11,7 +11,7 @@ import type { Portals } from '#/react/types';
 
 interface ActionProps {
   pushEvent: (name: string, payload: Record<string, unknown>) => void,
-  pushEventTo: (name: string, payload: Record<string, unknown>, callback: (response: unknown) => void) => void,
+  pushEventTo: (name: string, payload: Record<string, unknown>, callback?: (response: unknown) => void) => void,
   handleEvent: (name: string, callback: (payload: unknown) => void) => void,
   el: HTMLElement,
   navigate: (path: string) => void,

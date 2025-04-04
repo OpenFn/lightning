@@ -1,42 +1,11 @@
 
 import type { WithActionProps } from '#/react/lib/with-props';
-import React from 'react';
 import WorkflowDiagram from '../workflow-diagram/WorkflowDiagram';
-import { useWorkflowStore, type ChangeArgs, type WorkflowProps } from './store';
-import { randomUUID } from '../common';
-import { DEFAULT_TEXT } from '../editor/Editor';
-
-const createNewWorkflow = (): Required<ChangeArgs> => {
-  const triggers = [
-    {
-      id: randomUUID(),
-      type: 'webhook' as 'webhook',
-    },
-  ];
-  const jobs = [
-    {
-      id: randomUUID(),
-      name: 'New job',
-      adaptor: '@openfn/language-common@latest',
-      body: DEFAULT_TEXT,
-    },
-  ];
-
-  const edges = [
-    {
-      id: randomUUID(),
-      source_trigger_id: triggers[0].id,
-      target_job_id: jobs[0].id,
-      condition_type: 'always',
-    },
-  ];
-  return { triggers, jobs, edges };
-};
+import { useWorkflowStore } from './store';
 
 export const WorkflowEditor: WithActionProps<{ selection: string }> = (props) => {
-  const { add, setState, getItem } = useWorkflowStore();
-  const [workflowLoadParamsStart, setParamsStart] = React.useState<number>(null);
-  const [selection, setSelection] = React.useState(props.selection);
+  const { getItem, selection } = useWorkflowStore();
+
   const onSelectionChange = (id?: string) => {
     console.debug('onSelectionChange', id);
 
@@ -69,36 +38,6 @@ export const WorkflowEditor: WithActionProps<{ selection: string }> = (props) =>
     }
   }
 
-  React.useEffect(() => {
-    props.handleEvent('navigate', (e: any) => {
-      const id = new URL(window.location.href).searchParams.get('s');
-
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      if (e.patch) setSelection(id);
-    })
-    props.handleEvent('current-workflow-params', (payload: { workflow_params: WorkflowProps }) => {
-      const { workflow_params } = payload;
-      setState(workflow_params);
-      if (!workflow_params.triggers.length && !workflow_params.jobs.length) {
-        const diff = createNewWorkflow();
-        add(diff);
-        const selected = diff.jobs[0].id;
-        onSelectionChange(selected);
-      }
-
-      props.pushEventTo('workflow_editor_metrics_report', {
-        metrics: [
-          {
-            event: 'workflow-params load',
-            start: workflowLoadParamsStart,
-            end: new Date().getTime(),
-          },
-        ],
-      })
-    })
-    setParamsStart(new Date().getTime());
-    props.pushEventTo('get-initial-state', {});
-  }, [add, props, setState])
   return <WorkflowDiagram
     el={props.el}
     selection={selection}

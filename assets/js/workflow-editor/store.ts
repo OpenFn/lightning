@@ -26,6 +26,7 @@ export type WorkflowProps = {
   jobs: Lightning.JobNode[];
   edges: Lightning.Edge[];
   disabled: boolean;
+  selection: string | null;
 };
 
 export interface WorkflowState extends WorkflowProps {
@@ -50,6 +51,7 @@ export interface WorkflowState extends WorkflowProps {
   ) => Lightning.TriggerNode | Lightning.JobNode | Lightning.Edge | undefined;
   applyPatches: (patches: Patch[]) => void;
   setDisabled: (value: boolean) => void;
+  setSelection: (value: string) => void;
 }
 
 // Immer's Patch type has an array of strings for the path, but RFC 6902
@@ -111,6 +113,7 @@ const DEFAULT_PROPS: WorkflowProps = {
   jobs: [],
   edges: [],
   disabled: false,
+  selection: null,
 };
 
 export type WorkflowStore = StoreApi<WorkflowState>;
@@ -274,6 +277,12 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
       }));
     },
     setState: set.bind(this),
+    setSelection(value) {
+      set(state => ({
+        ...state,
+        selection: value,
+      }));
+    },
   })
 );
 
