@@ -28,11 +28,9 @@ import { LiveSocket } from 'phoenix_live_view';
 
 import topbar from '../vendor/topbar.cjs';
 import * as Hooks from './hooks';
-import WorkflowEditor from './workflow-editor';
 import LogViewer from './log-viewer';
 
 let hooks = {
-  WorkflowEditor,
   LogViewer,
   ...Hooks,
 };
