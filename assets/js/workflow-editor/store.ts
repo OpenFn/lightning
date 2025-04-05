@@ -125,9 +125,6 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
     subscribe: cb => {
       if (get().observer) return;
       set({ observer: cb });
-      return () => {
-        set({ observer: null });
-      };
     },
     add: data => {
       console.log('add', data);
@@ -286,7 +283,6 @@ export const store: WorkflowStore = createStore<WorkflowState>()(
   })
 );
 
-export const useWorkflowStore = (onChange?: (v: unknown) => void) => {
-  if (onChange) store.subscribe(onChange);
+export const useWorkflowStore = () => {
   return useStore(store);
 };
