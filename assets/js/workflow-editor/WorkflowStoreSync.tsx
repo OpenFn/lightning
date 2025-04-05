@@ -33,14 +33,9 @@ const createNewWorkflow = (): Required<ChangeArgs> => {
 
 // This component renders nothing. it just serves as a syn to the backend
 export const WorkflowStoreSync: WithActionProps = (props) => {
-  const [pendingChanges, setPendingChanges] = React.useState<PendingAction[]>([]);
-  const [workflowLoadParamsStart, setParamsStart] = React.useState<number | null>(null);
-  const { applyPatches, setState, add, getItem, setSelection } = useWorkflowStore((v) => {
-    setPendingChanges(p => p.concat(v));
-    // store pending changes somewhere
-    // pause processing. react over re-renders
-    // void processPendingChanges();
-  });
+  const pendingChanges = React.useRef<PendingAction[]>([]);
+  const workflowLoadParamsStart = React.useRef<number | null>(null)
+  const { applyPatches, setState, add, getItem, setSelection, subscribe } = useWorkflowStore();
 
   const pushPendingChange = React.useCallback((pendingChange: PendingAction) => {
     return new Promise((resolve, reject) => {
@@ -60,14 +55,20 @@ export const WorkflowStoreSync: WithActionProps = (props) => {
   }, [props, applyPatches])
 
   const processPendingChanges = React.useCallback(async () => {
-    while (pendingChanges.length > 0) {
-      const pendingChange = pendingChanges[0];
-      setPendingChanges(p => p.slice(1))
-      // pushchange here
+    while (pendingChanges.current.length > 0) {
+      const pendingChange = pendingChanges.current[0];
+      pendingChanges.current = pendingChanges.current.slice(1);
       if (pendingChange)
         await pushPendingChange(pendingChange)
     }
-  }, [pendingChanges, pushPendingChange])
+  }, [pushPendingChange])
+
+  React.useEffect(() => {
+    subscribe((v) => {
+      pendingChanges.current = pendingChanges.current.concat(v);
+      void processPendingChanges();
+    })
+  }, [processPendingChanges, subscribe])
 
   React.useEffect(() => {
     props.handleEvent('patches-applied', (response: { patches: Patch[] }) => {
@@ -77,7 +78,7 @@ export const WorkflowStoreSync: WithActionProps = (props) => {
     })
   }, [applyPatches, props])
 
-  const onSelectionChange = (id?: string) => {
+  const onSelectionChange = React.useCallback((id?: string) => {
     console.debug('onSelectionChange', id);
 
     const currentUrl = new URL(window.location.href);
@@ -107,7 +108,7 @@ export const WorkflowStoreSync: WithActionProps = (props) => {
     ) {
       props.navigate(nextUrl.toString());
     }
-  }
+  }, [props, getItem])
 
   React.useEffect(() => {
     props.handleEvent('navigate', (e: any) => {
@@ -130,15 +131,15 @@ export const WorkflowStoreSync: WithActionProps = (props) => {
         metrics: [
           {
             event: 'workflow-params load',
-            start: workflowLoadParamsStart,
+            start: workflowLoadParamsStart.current,
             end: new Date().getTime(),
           },
         ],
       })
     })
-    setParamsStart(new Date().getTime());
+    workflowLoadParamsStart.current = new Date().getTime();
     props.pushEventTo('get-initial-state', {});
-  }, [add, props, setState])
+  }, [add, props, setState, onSelectionChange, setSelection])
 
   return <></>
 }
