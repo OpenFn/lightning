@@ -401,6 +401,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           centered
         />
         <.form
+          :if={@selection_mode !== "expand"}
           id="workflow-form"
           for={@workflow_form}
           phx-submit="save"
