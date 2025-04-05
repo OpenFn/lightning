@@ -5,6 +5,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   import LightningWeb.Components.NewInputs
   import LightningWeb.Components.Icons
   import LightningWeb.WorkflowLive.Components
+  import React
 
   alias Lightning.AiAssistant
   alias Lightning.Extensions.UsageLimiting.Action
@@ -36,6 +37,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
   require Lightning.Run
 
   on_mount {LightningWeb.Hooks, :project_scope}
+
+  jsx("assets/js/workflow-editor/WorkflowEditor.tsx")
+  jsx("assets/js/workflow-editor/WorkflowStoreSync.tsx")
 
   attr :changeset, :map, required: true
   attr :project_user, :map, required: true
@@ -172,6 +176,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       <div class="relative h-full flex" id={"workflow-edit-#{@workflow.id}"}>
         <div class="flex-none" id="job-editor-pane">
+          <.WorkflowStoreSync />
           <div
             :if={@selected_job && @selection_mode == "expand"}
             class={[
@@ -343,23 +348,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           </div>
         </div>
 
-        <div
-          phx-hook="WorkflowEditor"
-          class="grow"
-          id={"editor-#{@workflow.id}"}
-          phx-update="ignore"
-        >
-          <%!-- Before Editor component has mounted --%>
-          <div class="flex place-content-center h-full cursor-wait">
-            <span class="inline-block top-[50%] relative">
-              <div class="flex items-center justify-center">
-                <.button_loader>
-                  Loading workflow
-                </.button_loader>
-              </div>
-            </span>
-          </div>
-        </div>
+        <.WorkflowEditor :if={@selection_mode != "expand"} />
         <.live_component
           :if={@selected_job}
           id="new-credential-modal"
@@ -412,6 +401,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           centered
         />
         <.form
+          :if={@selection_mode !== "expand"}
           id="workflow-form"
           for={@workflow_form}
           phx-submit="save"
