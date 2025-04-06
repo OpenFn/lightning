@@ -26,6 +26,7 @@ import { getVisibleRect, isPointInRect } from './util/viewport';
 
 type WorkflowDiagramProps = {
   el?: HTMLElement | null;
+  containerEl?: HTMLElement | null;
   selection: string | null;
   onSelectionChange: (id: string | null) => void;
   forceFit?: boolean;
@@ -42,7 +43,7 @@ const LAYOUT_DURATION = 300;
 
 export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const { jobs, triggers, edges, disabled } = useWorkflowStore();
-  const { selection, onSelectionChange, el } = props;
+  const { selection, onSelectionChange, containerEl: el } = props;
 
   const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
 

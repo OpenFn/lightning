@@ -40,6 +40,7 @@ export const WorkflowEditor: WithActionProps<{ selection: string }> = (props) =>
 
   return <WorkflowDiagram
     el={props.el}
+    containerEl={props.containerEl}
     selection={selection}
     onSelectionChange={onSelectionChange}
   />

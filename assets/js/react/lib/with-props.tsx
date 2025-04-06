@@ -14,6 +14,7 @@ interface ActionProps {
   pushEventTo: (name: string, payload: Record<string, unknown>, callback?: (response: unknown) => void) => void,
   handleEvent: (name: string, callback: (payload: unknown) => void) => void,
   el: HTMLElement,
+  containerEl: HTMLElement,
   navigate: (path: string) => void,
 }
 
@@ -49,7 +50,8 @@ export const withProps = <const Props = object,>(
         pushEventTo={actions.pushEventTo}
         handleEvent={actions.handleEvent}
         navigate={actions.navigate}
-        el={actions.el}>
+        el={actions.el}
+        containerEl={actions.containerEl}>
         {mergeChildren(
           (typeof props === 'object' &&
             props !== null &&

@@ -75,6 +75,7 @@ export const ReactComponent = {
         handleEvent: this.handleEvent.bind(this),
         pushEventTo: this.pushEventTo.bind(this, this.el),
         el: this.el,
+        containerEl: this._containerEl,
         navigate: (path) => {
           this.liveSocket.execJS(this.el, '[["patch",{"replace":false,"href":"' + path + '"}]]')
         },
