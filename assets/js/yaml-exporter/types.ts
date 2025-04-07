@@ -87,7 +87,7 @@ export type SpecEdge = {
 
 export type WorkflowSpec = {
   name: string;
-  jobs: Map<string, SpecJob>;
-  triggers: Map<string, SpecTrigger>;
-  edges: Map<string, SpecEdge>;
+  jobs: Record<string, SpecJob>;
+  triggers: Record<string, SpecTrigger>;
+  edges: Record<string, SpecEdge>;
 };
