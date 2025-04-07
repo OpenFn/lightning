@@ -15,6 +15,7 @@ defmodule LightningWeb.CollectionLive.Components do
           <button
             phx-click={hide_modal(@id)}
             type="button"
+            variant="secondary"
             class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
             aria-label={gettext("close")}
           >

@@ -678,9 +678,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
           <:footer>
             <div class="flex flex-row justify-end gap-2">
               <.button
+                variant="secondary"
                 id="download-workflow-code-btn"
-                color_class="bg-white text-gray-900 ring-gray-300 ring-1 ring-inset hover:bg-gray-50"
-                class="items-center text-sm hover:cursor-pointer"
                 data-target="#workflow-code-viewer"
                 data-content-type="text/yaml"
                 data-file-name={String.replace(@workflow.name || "workflow"," ", "-") <> ".yaml"}
@@ -689,11 +688,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 Download
               </.button>
               <.button
+                variant="secondary"
                 id="copy-workflow-code-btn"
-                color_class="bg-white text-gray-900 ring-gray-300 ring-1 ring-inset hover:bg-gray-50"
-                class="items-center text-sm hover:cursor-pointer"
                 data-to="#workflow-code-viewer"
                 phx-hook="Copy"
+                class="min-w-[6rem]"
               >
                 Copy Code
               </.button>
