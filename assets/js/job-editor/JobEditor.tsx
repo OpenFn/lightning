@@ -19,18 +19,16 @@ export const JobEditor: WithActionProps<JobEditorProps> = (props) => {
   const [metadata, setMetadata] = React.useState<false | object>(false);
   const [source, setSource] = React.useState('');
 
-  // use workflowstore here
   const { change, getById } = useWorkflowStore();
 
   // debounce editor content update
-  const _debouncedPushChange = pDebounce((content: string) => {
+  const debouncedPushChange = pDebounce((content: string) => {
     change({ jobs: [{ id: props.job_id, body: content }] })
   }, EDITOR_DEBOUNCE_MS);
 
   // init hook - getting metadata
   React.useEffect(() => {
     props.handleEvent('metadata_ready', (payload) => {
-      setMetadata(payload as object);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const sortedMetadata = sortMetadata(payload);
       setMetadata(sortedMetadata as object);
@@ -51,6 +49,6 @@ export const JobEditor: WithActionProps<JobEditorProps> = (props) => {
     disabled={props.disabled}
     disabledMessage={props.disabled_message}
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
-    onSourceChanged={_debouncedPushChange}
+    onSourceChanged={debouncedPushChange}
   />
 }
