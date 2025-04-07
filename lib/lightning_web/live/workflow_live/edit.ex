@@ -675,26 +675,26 @@ defmodule LightningWeb.WorkflowLive.Edit do
             class="hidden font-mono proportional-nums text-slate-200 bg-slate-700 resize-none"
           />
           <:footer>
-            <div class="flex flex-row justify-end">
+            <div class="flex flex-row justify-end gap-2">
               <.button
                 id="download-workflow-code-btn"
                 color_class="bg-white text-gray-900 ring-gray-300 ring-1 ring-inset hover:bg-gray-50"
-                class="items-center gap-x-1.5 px-2.5 py-1.5 text-sm hover:cursor-pointer"
+                class="items-center text-sm hover:cursor-pointer"
                 data-target="#workflow-code-viewer"
                 data-content-type="text/yaml"
                 data-file-name={String.replace(@workflow.name || "workflow"," ", "-") <> ".yaml"}
                 phx-hook="DownloadText"
               >
-                <.icon name="hero-arrow-down-tray" class="-ml-0.5 size-5" /> Download
+                Download
               </.button>
               <.button
                 id="copy-workflow-code-btn"
                 color_class="bg-white text-gray-900 ring-gray-300 ring-1 ring-inset hover:bg-gray-50"
-                class="items-center gap-x-1.5 px-2.5 py-1.5 text-sm hover:cursor-pointer"
+                class="items-center text-sm hover:cursor-pointer"
                 data-to="#workflow-code-viewer"
                 phx-hook="Copy"
               >
-                <.icon name="hero-clipboard" class="-ml-0.5 size-5" /> Copy
+                Copy Code
               </.button>
             </div>
           </:footer>
