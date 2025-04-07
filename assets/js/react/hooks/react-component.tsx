@@ -25,7 +25,6 @@ const rootObserver = new RootObserver();
 
 export const ReactComponent = {
   mounted() {
-    console.log(this)
     this._name = this.el.dataset.reactName;
     this._file = this.el.dataset.reactFile;
 
