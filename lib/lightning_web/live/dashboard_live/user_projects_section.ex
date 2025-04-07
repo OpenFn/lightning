@@ -37,7 +37,10 @@ defmodule LightningWeb.DashboardLive.UserProjectsSection do
   defp switch_sort_direction("desc"), do: "asc"
 
   defp assign_projects(%{assigns: assigns} = socket) do
-    sort_param = "#{assigns.sort_key}_#{assigns.sort_direction}"
+    sort_param = {
+      String.to_existing_atom(assigns.sort_key),
+      String.to_existing_atom(assigns.sort_direction)
+    }
 
     projects =
       Projects.get_projects_overview(assigns.current_user, order_by: sort_param)

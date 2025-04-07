@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.11.1",
+      version: "2.11.2",
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -103,16 +103,7 @@ defmodule Lightning.MixProject do
       {:mox, "~> 1.2.0", only: :test},
       {:oauth2, "~> 2.1"},
       {:oban, "~> 2.18"},
-      {:opentelemetry_exporter, "~> 1.6.0"},
-      {:opentelemetry, "~> 1.3.1"},
-      {:opentelemetry_api, "~> 1.2.2"},
-      {:opentelemetry_cowboy, "~> 0.2.1"},
-      {:opentelemetry_ecto, "~> 1.1.1"},
-      {:opentelemetry_liveview, "~> 1.0.0-rc.4"},
-      {:opentelemetry_oban, "~> 1.0.0"},
-      {:opentelemetry_phoenix, "~> 1.1.1"},
-      {:opentelemetry_tesla, "~> 2.2.0"},
-      {:petal_components, "~> 2.9"},
+      {:petal_components, "~> 3.0"},
       {:phoenix, "~> 1.7.11"},
       {:phoenix_ecto, "~> 4.6"},
       {:phoenix_html, "~> 4.1"},

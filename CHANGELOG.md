@@ -17,6 +17,22 @@ and this project adheres to
 
 ### Added
 
+- Enable Support User and adds audit trail for MFA.
+  [#3072](https://github.com/OpenFn/lightning/issues/3072)
+
+### Changed
+
+- Updated dependencies [#3086](https://github.com/OpenFn/lightning/pull/3086):
+  - `phoenix` from 1.7.20 to 1.7.21
+  - `phoenix_live_view` from 1.0.5 to 1.0.9
+  - `petal_components` from 2.9.0 to 3.0.1
+
+### Fixed
+
+## [v2.11.2-pre.0] - 2025-04-03
+
+### Added
+
 - Remove Credentials for Collaborators Removed from a Project
   [#2942](https://github.com/OpenFn/lightning/issues/2942)
 - Enable Credential Transfer In Projects Credentials Table
@@ -34,10 +50,10 @@ and this project adheres to
   [#3061](https://github.com/OpenFn/lightning/issues/3061)
 - Default to latest specific version instead of @latest when selecting adaptors
   [#2843](https://github.com/OpenFn/lightning/issues/2843)
+- Remove OpenTelemetry suport as it is not currently in use
+  [#3081](https://github.com/OpenFn/lightning/issues/3081)
 
-### Fixed
-
-## [v2.11.1-pre.1] - 2025-03-26
+## [v2.11.1] - 2025-04-03
 
 ### Added
 

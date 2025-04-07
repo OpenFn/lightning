@@ -246,7 +246,8 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :form, :map, required: true
   attr :on_change, :any, required: true
   attr :editable, :boolean, default: false
-  attr :project_user, :map, required: true
+  attr :project_user, :map
+  attr :project, :map
 
   def job_form(assigns) do
     ~H"""
@@ -275,7 +276,7 @@ defmodule LightningWeb.WorkflowLive.Components do
           id={"credential-picker-#{Phoenix.HTML.Form.input_value(@form, :id)}"}
           module={LightningWeb.JobLive.CredentialPicker}
           disabled={!@editable}
-          project_user={@project_user}
+          project={@project}
           on_change={@on_change}
           form={@form}
         />

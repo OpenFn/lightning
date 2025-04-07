@@ -569,6 +569,22 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "Project settings"
     end
 
+    test "access project settings page by support user", %{
+      conn: conn,
+      project: project,
+      user: user
+    } do
+      _user = Repo.update!(Changeset.change(user, %{support_user: true}))
+
+      project =
+        Repo.update!(Changeset.change(project, %{allow_support_access: true}))
+
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+
+      assert html =~ "Project settings"
+    end
+
     @tag role: :admin
     test "project admin can view project collaboration page", %{
       conn: conn,
@@ -682,6 +698,53 @@ defmodule LightningWeb.ProjectLiveTest do
 
         assert html =~ credential_name
       end)
+    end
+
+    test "support users can create new credentials in the project credentials page",
+         %{
+           conn: conn,
+           user: user
+         } do
+      _user = Repo.update!(Changeset.change(user, %{support_user: true}))
+
+      project =
+        insert(:project,
+          name: "project-1",
+          allow_support_access: true,
+          project_users: [%{user: build(:user), role: :owner}]
+        )
+
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      credential_name = Lightning.Name.generate()
+
+      refute html =~ credential_name
+
+      view |> select_credential_type("http")
+      view |> click_continue()
+
+      assert view
+             |> fill_credential(%{
+               name: credential_name,
+               body: %{
+                 username: "foo",
+                 password: "bar",
+                 baseUrl: "http://localhost"
+               }
+             })
+
+      {:ok, _view, html} =
+        view
+        |> click_save()
+        |> follow_redirect(
+          conn,
+          ~p"/projects/#{project}/settings#credentials"
+        )
+
+      assert html =~ credential_name
     end
 
     test "non authorized project users can't create new credentials in the project credentials page",
@@ -878,6 +941,38 @@ defmodule LightningWeb.ProjectLiveTest do
                "You are not authorized to perform this action."
     end
 
+    test "support users cannot edit project details", %{
+      conn: conn,
+      user: user
+    } do
+      _user = Repo.update!(Changeset.change(user, %{support_user: true}))
+
+      project =
+        insert(:project,
+          name: "project-1",
+          allow_support_access: true,
+          project_users: [%{user: build(:user), role: :owner}]
+        )
+
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+
+      assert html =~ "Project settings"
+
+      assert view
+             |> has_element?("input[disabled='disabled'][name='project[name]']")
+
+      assert view
+             |> has_element?(
+               "textarea[disabled='disabled'][name='project[description]']"
+             )
+
+      assert view |> has_element?("button[disabled][type=submit]")
+
+      assert view |> render_click("save", %{"project" => %{}}) =~
+               "You are not authorized to perform this action."
+    end
+
     test "project members can edit their own digest frequency and failure alert settings",
          %{conn: conn, user: authenticated_user} do
       unauthenticated_user = user_fixture(first_name: "Bob")
@@ -1052,6 +1147,58 @@ defmodule LightningWeb.ProjectLiveTest do
                    ~p"/projects/#{project}/settings",
                    on_error: :raise
                  )
+      end)
+    end
+
+    test "project admin can toggle support access",
+         %{
+           conn: conn,
+           user: user
+         } do
+      project =
+        insert(:project,
+          project_users: [%{user: user, role: :admin}]
+        )
+
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project}/settings#collaboration",
+          on_error: :raise
+        )
+
+      assert html =~ "Project settings"
+
+      assert view
+             |> element("#toggle-support-access")
+             |> render_click() =~ "Granted access to support users successfully"
+
+      assert %{allow_support_access: true} = Repo.get(Project, project.id)
+
+      assert view
+             |> element("#toggle-support-access")
+             |> render_click() =~ "Revoked access to support users successfully"
+
+      assert %{allow_support_access: false} = Repo.get(Project, project.id)
+    end
+
+    test "project editors and viewers cannot grant support access", %{
+      conn: conn,
+      user: user
+    } do
+      project =
+        insert(:project,
+          project_users: [%{user: user, role: :admin}]
+        )
+
+      ~w(editor viewer)a
+      |> Enum.each(fn role ->
+        {conn, _user} = setup_project_user(conn, project, role)
+
+        {:ok, view, html} =
+          live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+
+        assert html =~ "Project settings"
+
+        refute has_element?(view, "#toggle-support-access")
       end)
     end
 
