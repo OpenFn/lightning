@@ -22,6 +22,8 @@ defmodule LightningWeb.Components.NewInputs do
   attr :type, :string, default: "button", values: ["button", "submit"]
   attr :class, :any, default: ""
 
+  attr :variant, :string, default: "primary", values: ["primary", "secondary"]
+
   attr :color_class, :any,
     default:
       "bg-primary-600 hover:bg-primary-700 text-white focus:ring-primary-500 disabled:bg-primary-300"
@@ -31,7 +33,7 @@ defmodule LightningWeb.Components.NewInputs do
 
   slot :inner_block, required: true
 
-  def button(assigns) do
+  def button(%{variant: "primary"} = assigns) do
     ~H"""
     <.simple_button_with_tooltip
       id={@id}
@@ -43,6 +45,24 @@ defmodule LightningWeb.Components.NewInputs do
         "focus:ring-2 focus:ring-offset-2",
         "phx-submit-loading:opacity-75",
         @color_class,
+        @class
+      ]}
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+    </.simple_button_with_tooltip>
+    """
+  end
+
+  def button(%{variant: "secondary"} = assigns) do
+    ~H"""
+    <.simple_button_with_tooltip
+      id={@id}
+      tooltip={@tooltip}
+      type={@type}
+      class={[
+        "rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 ring-1 shadow-xs ring-gray-300 ring-inset",
+        "hover:bg-gray-50 disabled:bg-gray-50",
         @class
       ]}
       {@rest}

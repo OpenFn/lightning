@@ -1,0 +1,110 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "WorkflowSpec",
+  "version": "1.0.0",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string",
+      "enum": ["1.0.0"]
+    },
+    "name": {
+      "type": "string"
+    },
+    "jobs": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "adaptor": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          }
+        },
+        "required": ["name", "adaptor", "body"]
+      }
+    },
+    "triggers": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["cron", "webhook", "kafka"]
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "cron_expression": {
+            "type": "string"
+          }
+        },
+        "required": ["type", "enabled"],
+        "oneOf": [
+          {
+            "properties": {
+              "type": {
+                "const": "cron"
+              },
+              "cron_expression": {
+                "type": "string"
+              }
+            },
+            "required": ["cron_expression"]
+          },
+          {
+            "properties": {
+              "type": {
+                "const": "webhook"
+              }
+            }
+          },
+          {
+            "properties": {
+              "type": {
+                "const": "kafka"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "edges": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "source_trigger": {
+            "type": "string"
+          },
+          "source_job": {
+            "type": "string"
+          },
+          "target_job": {
+            "type": "string"
+          },
+          "condition_type": {
+            "type": "string"
+          },
+          "condition_label": {
+            "type": "string"
+          },
+          "condition_expression": {
+            "type": ["string", "null"]
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": ["target_job", "condition_type", "enabled"]
+      }
+    }
+  },
+  "required": ["version", "name", "jobs", "triggers", "edges"]
+}
