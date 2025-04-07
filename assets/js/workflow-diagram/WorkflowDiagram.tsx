@@ -46,6 +46,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   const { selection, onSelectionChange, containerEl: el } = props;
 
   const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
+  const workflowDiagramRef = useRef<HTMLDivElement>(null)
 
   const updateSelection = useCallback(
     (id?: string | null) => {
@@ -103,8 +104,8 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
       if (layoutId) {
         chartCache.current.lastLayout = layoutId;
         const viewBounds = {
-          width: el?.clientWidth ?? 0,
-          height: el?.clientHeight ?? 0,
+          width: workflowDiagramRef.current?.clientWidth ?? 0,
+          height: workflowDiagramRef.current?.clientHeight ?? 0,
         };
         layout(newModel, setModel, flow, viewBounds, {
           duration: props.layoutDuration ?? LAYOUT_DURATION,
@@ -234,6 +235,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   return (
     <ReactFlowProvider>
       <ReactFlow
+        ref={workflowDiagramRef}
         proOptions={{ account: 'paid-pro', hideAttribution: true }}
         nodes={model.nodes}
         edges={model.edges}
