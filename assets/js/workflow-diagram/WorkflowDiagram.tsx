@@ -20,7 +20,7 @@ import shouldLayout from './util/should-layout';
 import throttle from './util/throttle';
 import updateSelectionStyles from './util/update-selection';
 
-import { useWorkflowStore } from '../workflow-editor/store';
+import { useWorkflowStore } from '../workflow-store/store';
 import type { Flow, Positions } from './types';
 import { getVisibleRect, isPointInRect } from './util/viewport';
 

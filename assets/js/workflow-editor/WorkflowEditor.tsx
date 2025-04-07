@@ -1,7 +1,7 @@
 
 import type { WithActionProps } from '#/react/lib/with-props';
 import WorkflowDiagram from '../workflow-diagram/WorkflowDiagram';
-import { useWorkflowStore } from './store';
+import { useWorkflowStore } from '../workflow-store/store';
 
 export const WorkflowEditor: WithActionProps<{ selection: string }> = (props) => {
   const { getItem, selection } = useWorkflowStore();

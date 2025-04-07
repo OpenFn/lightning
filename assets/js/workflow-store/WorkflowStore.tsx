@@ -31,8 +31,8 @@ const createNewWorkflow = (): Required<ChangeArgs> => {
   return { triggers, jobs, edges };
 };
 
-// This component renders nothing. it just serves as a syn to the backend
-export const WorkflowStoreSync: WithActionProps = (props) => {
+// This component renders nothing. it just serves as a store sync to the backend
+export const WorkflowStore: WithActionProps = (props) => {
   const pendingChanges = React.useRef<PendingAction[]>([]);
   const workflowLoadParamsStart = React.useRef<number | null>(null)
   const { applyPatches, setState, add, getItem, setSelection, subscribe } = useWorkflowStore();

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { randomUUID } from '../common';
 import { DEFAULT_TEXT } from '../editor/Editor';
-import { useWorkflowStore } from '../workflow-editor/store';
+import { useWorkflowStore } from '../workflow-store/store';
 import { styleEdge } from './styles';
 import type { Flow } from './types';
 import toWorkflow from './util/to-workflow';

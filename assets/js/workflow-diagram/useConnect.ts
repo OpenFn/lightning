@@ -1,11 +1,10 @@
 import { useCallback, useState } from 'react';
-import { useStore, type StoreApi } from 'zustand';
+import type * as F from 'reactflow';
+import { randomUUID } from '../common';
+import { useWorkflowStore } from '../workflow-store/store';
 import Connection from './edges/Connection';
 import { styleEdge } from './styles';
 import type { Flow } from './types';
-import type * as F from 'reactflow';
-import { useWorkflowStore, type WorkflowState } from '../workflow-editor/store';
-import { randomUUID } from '../common';
 import toWorkflow from './util/to-workflow';
 
 const generateEdgeDiff = (source: string, target: string) => {
