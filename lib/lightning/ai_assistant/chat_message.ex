@@ -14,12 +14,16 @@ defmodule Lightning.AiAssistant.ChatMessage do
           role: role(),
           status: status(),
           is_deleted: boolean(),
-          is_public: boolean()
+          is_public: boolean(),
+          rag_results: map() | nil,
+          prompt: String.t() | nil
         }
 
   schema "ai_chat_messages" do
     field :content, :string
     field :role, Ecto.Enum, values: [:user, :assistant]
+    field :rag_results, :map
+    field :prompt, :string
 
     field :status, Ecto.Enum,
       values: [:success, :error, :cancelled],
@@ -42,7 +46,9 @@ defmodule Lightning.AiAssistant.ChatMessage do
       :status,
       :is_deleted,
       :is_public,
-      :chat_session_id
+      :chat_session_id,
+      :rag_results,
+      :prompt
     ])
     |> validate_required([:content, :role])
     |> maybe_put_user_assoc(attrs[:user] || attrs["user"])

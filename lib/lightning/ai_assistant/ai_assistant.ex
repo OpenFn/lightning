@@ -141,7 +141,15 @@ defmodule Lightning.AiAssistant do
          session
        )
        when status in 200..299 do
-    message = body["history"] |> Enum.reverse() |> hd()
+    message =
+      body["history"]
+      |> Enum.reverse()
+      |> hd()
+      |> Map.merge(%{
+        "rag_results" => body["rag"],
+        "prompt" => body["system_message"]
+      })
+
     save_message(session, message, body["usage"])
   end
 
