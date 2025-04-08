@@ -47,6 +47,7 @@ export const ReactComponent = {
     this._listeners = new Set();
     this._boundaryMounted = false;
 
+
     invariant(
       isReactHookedElement(this.el),
       this._errorMsg('Element is not valid for this hook!')
@@ -72,6 +73,11 @@ export const ReactComponent = {
         pushEvent: this.pushEvent.bind(this),
         handleEvent: this.handleEvent.bind(this),
         pushEventTo: this.pushEventTo.bind(this, this.el),
+        el: this.el,
+        containerEl: this._containerEl,
+        navigate: (path) => {
+          this.liveSocket.execJS(this.el, '[["patch",{"replace":false,"href":"' + path + '"}]]')
+        },
       },
       /* eslint-enable */
       this.__view(),

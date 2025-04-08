@@ -1,7 +1,7 @@
 import React from "react"
 import type { WithActionProps } from "../react/lib/with-props";
 import { sortMetadata } from "../metadata-loader/metadata";
-import { useWorkflowStore } from "../workflow-editor/store";
+import { useWorkflowStore } from "../workflow-store/store";
 import pDebounce from "p-debounce";
 import { EDITOR_DEBOUNCE_MS } from "../common";
 import type { Lightning } from "#/workflow-diagram/types";
