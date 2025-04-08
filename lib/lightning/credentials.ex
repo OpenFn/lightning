@@ -106,13 +106,35 @@ defmodule Lightning.Credentials do
   end
 
   @spec list_credentials(User.t()) :: [Credential.t()]
+  def list_credentials(%User{id: user_id, support_user: true}) do
+    support_credentials =
+      from(c in Credential,
+        join: pc in assoc(c, :project_credentials),
+        join: p in assoc(pc, :project),
+        where: p.allow_support_access,
+        preload: [:projects, :user, oauth_token: :oauth_client]
+      )
+      |> Repo.all()
+
+    user_credentials = list_credentials_query(user_id) |> Repo.all()
+
+    [support_credentials, user_credentials]
+    |> Enum.concat()
+    |> Enum.uniq_by(& &1.id)
+    |> Enum.sort_by(&String.downcase(&1.name))
+  end
+
   def list_credentials(%User{id: user_id}) do
+    list_credentials_query(user_id)
+    |> order_by([c], asc: fragment("lower(?)", c.name))
+    |> Repo.all()
+  end
+
+  defp list_credentials_query(user_id) do
     from(c in Credential,
       where: c.user_id == ^user_id,
-      preload: [:projects, :user, oauth_token: :oauth_client],
-      order_by: [asc: fragment("lower(?)", c.name)]
+      preload: [:projects, :user, oauth_token: :oauth_client]
     )
-    |> Repo.all()
   end
 
   @doc """
@@ -1613,5 +1635,37 @@ defmodule Lightning.Credentials do
     |> String.split(delimiter)
     |> Enum.map(&String.trim/1)
     |> Enum.reject(&(&1 == ""))
+  end
+
+  @doc """
+  Returns all credentials owned by a specific user that are also being used in a specific project.
+
+  ## Parameters
+    - `user`: The `User` struct whose credentials we want to find.
+    - `project`: The `Project` struct to check for credential usage.
+
+  ## Returns
+    - A list of `Credential` structs that are owned by the user and used in the project.
+
+  ## Examples
+
+      iex> list_user_credentials_in_project(%User{id: 123}, %Project{id: 456})
+      [%Credential{user_id: 123, ...}, %Credential{user_id: 123, ...}]
+  """
+  @spec list_user_credentials_in_project(User.t(), Project.t()) :: [
+          Credential.t()
+        ]
+  def list_user_credentials_in_project(%User{id: user_id}, %Project{
+        id: project_id
+      }) do
+    query =
+      from c in Credential,
+        join: pc in assoc(c, :project_credentials),
+        on: pc.project_id == ^project_id,
+        where: c.user_id == ^user_id,
+        order_by: [asc: fragment("lower(?)", c.name)],
+        distinct: c.id
+
+    Repo.all(query)
   end
 end

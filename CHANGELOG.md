@@ -17,6 +17,50 @@ and this project adheres to
 
 ### Added
 
+- Restart the credential setup from selecting the credential type
+  [#2284](https://github.com/OpenFn/lightning/issues/2284)
+- Enable Support User and adds audit trail for MFA.
+  [#3072](https://github.com/OpenFn/lightning/issues/3072)
+
+### Changed
+
+- Updated dependencies [#3086](https://github.com/OpenFn/lightning/pull/3086):
+  - `phoenix` from 1.7.20 to 1.7.21
+  - `phoenix_live_view` from 1.0.5 to 1.0.9
+  - `petal_components` from 2.9.0 to 3.0.1
+
+### Fixed
+
+## [v2.11.2-pre.0] - 2025-04-03
+
+### Added
+
+- Remove Credentials for Collaborators Removed from a Project
+  [#2942](https://github.com/OpenFn/lightning/issues/2942)
+- Enable Credential Transfer In Projects Credentials Table
+  [#2978](https://github.com/OpenFn/lightning/issues/2978)
+- Allow possibility to inject components for implementing GDPR compliance
+  [PR#3056](https://github.com/OpenFn/lightning/pull/3056)
+- Change edge color in the workflow when there is an error
+  [#2999](https://github.com/OpenFn/lightning/issues/2999)
+- Allow users to view and copy their workflow as a code
+  [#3016](https://github.com/OpenFn/lightning/issues/3016)
+
+### Changed
+
+- Stagger cleanup crons in the hopes that it reduces the imapct on the database.
+  [#3061](https://github.com/OpenFn/lightning/issues/3061)
+- Default to latest specific version instead of @latest when selecting adaptors
+  [#2843](https://github.com/OpenFn/lightning/issues/2843)
+- Remove OpenTelemetry suport as it is not currently in use
+  [#3081](https://github.com/OpenFn/lightning/issues/3081)
+
+## [v2.11.1] - 2025-04-03
+
+### Added
+
+- Fix putting project credentials on a new credential
+  [#2993](https://github.com/OpenFn/lightning/issues/2993)
 - Allow users to book for demo sessions
   [PR#3035](https://github.com/OpenFn/lightning/pull/3035)
 - Allow workflow and project concurrency progress windows

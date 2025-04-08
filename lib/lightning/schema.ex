@@ -1,6 +1,6 @@
 defmodule Lightning.Schema do
   @moduledoc """
-  Defines the database schema and primary key type for Thunderbolt schemas.
+  Defines the database schema and primary key type for the billing app's schemas.
   """
   defmacro __using__(_opts) do
     quote do

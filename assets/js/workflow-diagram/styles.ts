@@ -46,19 +46,27 @@ export const edgeLabelTextStyles = {
 
 export const edgeLabelStyles = (
   selected: boolean | undefined,
-  data?: { enabled?: boolean }
+  data?: { enabled?: boolean; errors?: object }
 ) => {
-  const { enabled } = data ?? {};
+  const { enabled, errors } = data ?? {};
   const primaryColor = (selected?: boolean, enabled?: boolean) => {
     if (enabled) return selected ? EDGE_COLOR_SELECTED : EDGE_COLOR;
     return selected ? EDGE_COLOR_SELECTED_DISABLED : EDGE_COLOR_DISABLED;
   };
 
+  const hasErrors = (errors: object | undefined | null) => {
+    if (!errors) return false;
+
+    return Object.values(errors).some(errorArray => errorArray.length > 0);
+  };
+
   // this is just styling the parent of the edge label
   // the icon and label will inherit
   return {
-    borderColor: primaryColor(selected, enabled),
-    color: primaryColor(selected, enabled),
+    borderColor: hasErrors(errors)
+      ? ERROR_COLOR
+      : primaryColor(selected, enabled),
+    color: hasErrors(errors) ? ERROR_COLOR : primaryColor(selected, enabled),
     backgroundColor: 'transparent',
     display: 'flex',
     alignItems: 'center',
@@ -87,9 +95,14 @@ export const styleNode = (node: Flow.Node) => {
 };
 
 export const styleEdge = (edge: Flow.Edge) => {
+  const primaryColor = edge.selected ? EDGE_COLOR_SELECTED : EDGE_COLOR;
+  const hasErrors =
+    typeof edge.data?.errors === 'object' &&
+    Object.values(edge.data.errors).some(errorArray => errorArray.length > 0);
+
   edge.style = {
     strokeWidth: '2',
-    stroke: edge.selected ? EDGE_COLOR_SELECTED : EDGE_COLOR,
+    stroke: hasErrors ? ERROR_COLOR : primaryColor,
   };
 
   if (edge.data?.placeholder) {
@@ -107,7 +120,7 @@ export const styleEdge = (edge: Flow.Edge) => {
     edge.markerEnd = {
       ...edge.markerEnd,
       width: 15,
-      color: edge.selected ? EDGE_COLOR_SELECTED : EDGE_COLOR,
+      color: hasErrors ? ERROR_COLOR : primaryColor,
     };
   }
   return edge;

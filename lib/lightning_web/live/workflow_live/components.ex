@@ -111,12 +111,27 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :project_concurrency_disabled, :boolean, required: true
   attr :project_id, :string, required: true
   attr :max_concurrency, :integer, required: true
+  attr :base_url, :string, required: true
 
   def workflow_settings(assigns) do
     ~H"""
     <div class="md:grid md:grid-cols-4 md:gap-4 p-2 @container">
       <div class="col-span-6 @md:col-span-4">
         <.input type="text" label="Workflow Name" field={@form[:name]} />
+      </div>
+      <div class="col-span-6 @md:col-span-4">
+        <span class="flex grow flex-col mb-3">
+          <span class="text-sm font-semibold leading-6 text-gray-900">
+            Workflow as YAML
+          </span>
+          <.link
+            id="view-workflow-as-yaml-link"
+            patch={@base_url <> "?m=code"}
+            class="text-xs link"
+          >
+            View your workflow as YAML code
+          </.link>
+        </span>
       </div>
 
       <div class="col-span-6 @md:col-span-4">
@@ -231,7 +246,8 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :form, :map, required: true
   attr :on_change, :any, required: true
   attr :editable, :boolean, default: false
-  attr :project_user, :map, required: true
+  attr :project_user, :map
+  attr :project, :map
 
   def job_form(assigns) do
     ~H"""
@@ -260,7 +276,7 @@ defmodule LightningWeb.WorkflowLive.Components do
           id={"credential-picker-#{Phoenix.HTML.Form.input_value(@form, :id)}"}
           module={LightningWeb.JobLive.CredentialPicker}
           disabled={!@editable}
-          project_user={@project_user}
+          project={@project}
           on_change={@on_change}
           form={@form}
         />

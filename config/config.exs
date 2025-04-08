@@ -125,7 +125,7 @@ config :esbuild,
         )
       |> then(fn args ->
         case config_env() do
-          "prod" -> args
+          :prod -> args
           _ -> args ++ ["--jsx-dev"]
         end
       end),
@@ -193,6 +193,52 @@ config :lightning, LightningWeb.CollectionsController,
 #
 # To disable the feedback mechanism, set the value to `false` as shown below:
 config :lightning, :ai_feedback, false
+
+# Configuration for GDPR Compliance Components
+#
+# The GDPR configuration allows you to enable or disable user consent management
+# features across your application. This includes both a notification banner and
+# preference management components that handle user consent for data processing
+# activities in compliance with GDPR regulations.
+#
+# -------------------------
+# GDPR Banner Configuration
+# -------------------------
+#
+# The banner appears to users who have not yet specified their privacy preferences.
+# It provides information about data processing activities and prompts the user
+# to make choices about cookie and data usage.
+#
+# Example:
+# To enable the GDPR banner with a custom component:
+#
+# config :lightning, :gdpr_banner, %{
+#   component: MyAppWeb.Components.CookieConsentBanner,
+#   id: "cookie-consent-banner"
+# }
+#
+# ------------------------------
+# GDPR Preferences Configuration
+# ------------------------------
+#
+# The preferences component provides an interface for users to view and modify
+# their consent settings for various data processing activities.
+#
+# Example:
+# To enable GDPR preferences management with a custom component:
+#
+# config :lightning, :gdpr_preferences, %{
+#   component: MyAppWeb.Components.CookiePreferencesComponent,
+#   id: "cookie-consent-preferences"
+# }
+#
+# -----------------------
+# Disabling GDPR Components
+# -----------------------
+#
+# To disable either or both GDPR components, set their values to `false`:
+config :lightning, :gdpr_preferences, false
+config :lightning, :gdpr_banner, false
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

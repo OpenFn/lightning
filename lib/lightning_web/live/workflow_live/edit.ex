@@ -428,6 +428,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             <.workflow_settings
               can_edit_run_settings={@can_edit_run_settings}
               project_id={@workflow.project_id}
+              base_url={@base_url}
               project_concurrency_disabled={@workflow.project.concurrency == 1}
               max_concurrency={@max_concurrency}
               form={@workflow_form}
@@ -464,6 +465,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 }
                 form={jf}
                 project_user={@project_user}
+                project={@project}
               />
               <:footer>
                 <div class="flex flex-row">
@@ -634,6 +636,59 @@ defmodule LightningWeb.WorkflowLive.Edit do
             </.panel>
           </.single_inputs_for>
         </.form>
+
+        <.panel
+          :if={@selection_mode == "code"}
+          title="Workflow as Code"
+          id={"workflow-code-#{@workflow.id}"}
+          class="hidden min-w-lg"
+          phx-mounted={fade_in()}
+          phx-remove={fade_out()}
+          cancel_url={@base_url}
+          phx-hook="WorkflowToYAML"
+          data-loading-el="workflow-code-loader"
+          data-viewer-el="workflow-code-viewer"
+        >
+          <div
+            id="workflow-code-loader"
+            class="relative text-xs @md:text-base p-12 text-center bg-slate-700 font-mono text-slate-200"
+          >
+            <.text_ping_loader>
+              Stand by
+            </.text_ping_loader>
+          </div>
+          <.textarea_element
+            id="workflow-code-viewer"
+            name="workflow-code"
+            value=""
+            rows="18"
+            disabled={true}
+            class="hidden font-mono proportional-nums text-slate-200 bg-slate-700 resize-none"
+          />
+          <:footer>
+            <div class="flex flex-row justify-end gap-2">
+              <.button
+                variant="secondary"
+                id="download-workflow-code-btn"
+                data-target="#workflow-code-viewer"
+                data-content-type="text/yaml"
+                data-file-name={String.replace(@workflow.name || "workflow"," ", "-") <> ".yaml"}
+                phx-hook="DownloadText"
+              >
+                Download
+              </.button>
+              <.button
+                variant="secondary"
+                id="copy-workflow-code-btn"
+                data-to="#workflow-code-viewer"
+                phx-hook="Copy"
+                class="min-w-[6rem]"
+              >
+                Copy Code
+              </.button>
+            </div>
+          </:footer>
+        </.panel>
 
         <.live_component
           :if={
@@ -2299,6 +2354,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
       %{"m" => "settings", "s" => nil, "a" => nil} ->
         socket |> unselect_all() |> set_mode("settings")
 
+      %{"m" => "code", "s" => nil, "a" => nil} ->
+        socket |> unselect_all() |> set_mode("code")
+
       # Nothing is selected
       %{"s" => nil} ->
         socket |> unselect_all() |> set_mode(nil)
@@ -2410,7 +2468,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp set_mode(socket, mode) do
-    if mode in [nil, "expand", "settings"] do
+    if mode in [nil, "expand", "settings", "code"] do
       socket
       |> assign(selection_mode: mode)
     else

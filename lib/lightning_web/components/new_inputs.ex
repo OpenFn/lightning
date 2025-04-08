@@ -22,6 +22,8 @@ defmodule LightningWeb.Components.NewInputs do
   attr :type, :string, default: "button", values: ["button", "submit"]
   attr :class, :any, default: ""
 
+  attr :variant, :string, default: "primary", values: ["primary", "secondary"]
+
   attr :color_class, :any,
     default:
       "bg-primary-600 hover:bg-primary-700 text-white focus:ring-primary-500 disabled:bg-primary-300"
@@ -31,7 +33,7 @@ defmodule LightningWeb.Components.NewInputs do
 
   slot :inner_block, required: true
 
-  def button(assigns) do
+  def button(%{variant: "primary"} = assigns) do
     ~H"""
     <.simple_button_with_tooltip
       id={@id}
@@ -43,6 +45,24 @@ defmodule LightningWeb.Components.NewInputs do
         "focus:ring-2 focus:ring-offset-2",
         "phx-submit-loading:opacity-75",
         @color_class,
+        @class
+      ]}
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+    </.simple_button_with_tooltip>
+    """
+  end
+
+  def button(%{variant: "secondary"} = assigns) do
+    ~H"""
+    <.simple_button_with_tooltip
+      id={@id}
+      tooltip={@tooltip}
+      type={@type}
+      class={[
+        "rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 ring-1 shadow-xs ring-gray-300 ring-inset",
+        "hover:bg-gray-50 disabled:bg-gray-50",
         @class
       ]}
       {@rest}
@@ -139,6 +159,7 @@ defmodule LightningWeb.Components.NewInputs do
   attr :id, :any, default: nil
   attr :name, :any
   attr :label, :string, default: nil
+  attr :sublabel, :string, default: nil
   attr :value, :any
 
   attr :type, :string,
@@ -270,22 +291,7 @@ defmodule LightningWeb.Components.NewInputs do
       <.label :if={@label} for={@id}>
         {@label}<span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
       </.label>
-      <textarea
-        id={@id}
-        name={@name}
-        class={[
-          "focus:outline focus:outline-2 focus:outline-offset-1 rounded-md shadow-xs text-sm",
-          "mt-2 block w-full focus:ring-0",
-          "sm:text-sm sm:leading-6",
-          "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 overflow-y-auto",
-          @errors == [] &&
-            "border-slate-300 focus:border-slate-400 focus:outline-indigo-600",
-          @errors != [] && @field && @field.field == @name && @field.errors != [] &&
-            "border-danger-400 focus:border-danger-400 focus:outline-danger-400",
-          @class
-        ]}
-        {@rest}
-      ><%= Form.normalize_value("textarea", @value) %></textarea>
+      <.textarea_element id={@id} name={@name} class={@class} value={@value} {@rest} />
       <.error :for={msg <- @errors} :if={@display_errors}>{msg}</.error>
     </div>
     """
@@ -535,6 +541,9 @@ defmodule LightningWeb.Components.NewInputs do
         {@label}
         <span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
       </.label>
+      <small :if={@sublabel} class="mb-2 block text-xs text-gray-600">
+        {@sublabel}
+      </small>
       <.input_element
         type={@type}
         name={@name}
@@ -590,6 +599,47 @@ defmodule LightningWeb.Components.NewInputs do
       ]}
       {@rest}
     />
+    """
+  end
+
+  @doc """
+  Renders a textarea element.
+
+  This function is used internally by `input/1` and generally should not
+  be used directly.
+
+  Look at `input type="textarea"` to see how these values `attr` get populated
+  """
+
+  attr :id, :string, default: nil
+  attr :name, :string, required: true
+  attr :value, :any
+  attr :errors, :list, default: []
+  attr :class, :string, default: ""
+
+  attr :rest, :global,
+    include:
+      ~w(accept autocomplete capture cols disabled form list max maxlength min minlength
+              multiple pattern placeholder readonly required rows size step)
+
+  def textarea_element(assigns) do
+    ~H"""
+    <textarea
+      id={@id}
+      name={@name}
+      class={[
+        "focus:outline focus:outline-2 focus:outline-offset-1 rounded-md shadow-xs text-sm",
+        "mt-2 block w-full focus:ring-0",
+        "sm:text-sm sm:leading-6",
+        "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 overflow-y-auto",
+        @errors == [] &&
+          "border-slate-300 focus:border-slate-400 focus:outline-indigo-600",
+        @errors != [] &&
+          "border-danger-400 focus:border-danger-400 focus:outline-danger-400",
+        @class
+      ]}
+      {@rest}
+    ><%= Form.normalize_value("textarea", @value) %></textarea>
     """
   end
 

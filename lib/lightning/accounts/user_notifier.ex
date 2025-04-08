@@ -423,20 +423,25 @@ defmodule Lightning.Accounts.UserNotifier do
         credential,
         token
       ) do
-    validity_days = Lightning.Config.credential_transfer_token_validity_in_days()
-    validity_text = format_validity_period(validity_days)
+    validity_text =
+      Lightning.Config.credential_transfer_token_validity_in_days()
+      |> format_validity_period()
 
     confirmation_url =
       url(~p"/credentials/transfer/#{credential.id}/#{receiver.id}/#{token}")
 
-    deliver(owner, "Confirm your credential transfer", """
+    deliver(owner, "Transfer #{credential.name} to #{receiver.first_name}", """
     Hi #{owner.first_name},
 
-    Confirm your credential transfer to #{receiver.first_name} (#{receiver.email}) by visiting the link below:
+    You are about to transfer #{credential.name} to #{receiver.first_name} (#{receiver.email}). Please ignore this email if you have not requested to transfer this credential.
+
+    To confirm this activity, click the link below:
 
     #{confirmation_url}
 
-    Note that this link is only valid for #{validity_text}. If you didn't request this change, please ignore this.
+    Please note:
+    1. Transferring your credentials is irreversible and can impact the security of your projects.
+    2. This link is only valid for #{validity_text}.
 
     OpenFn
     """)
@@ -453,12 +458,10 @@ defmodule Lightning.Accounts.UserNotifier do
       ) do
     credentials_url = url(~p"/credentials")
 
-    deliver(receiver, "You have received a credential", """
-    Hi #{receiver.first_name},
+    deliver(receiver, "A credential has been transferred to you.", """
+    #{owner.first_name} has transferred the credential \"#{credential.name}\" to you. As a credential owner, you can edit the credential details and share the credential with other projects in your OpenFn account.
 
-    #{owner.first_name} has transferred the credential \"#{credential.name}\" to you.
-
-    You can find it in your list of credentials by following this URL: #{credentials_url}
+    See your credential list here: #{credentials_url}
 
     OpenFn
     """)

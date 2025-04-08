@@ -29,6 +29,7 @@ defmodule LightningWeb.ConnCase do
       import LightningWeb.ConnCase
       import LightningWeb.ConnHelpers
 
+      alias Ecto.Changeset
       alias LightningWeb.Router.Helpers, as: Routes
       alias Lightning.Repo
 

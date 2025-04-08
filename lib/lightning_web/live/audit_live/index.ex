@@ -5,6 +5,7 @@ defmodule LightningWeb.AuditLive.Index do
   use LightningWeb, :live_view
 
   import PetalComponents.Table
+  import PetalComponents.Badge
 
   alias Lightning.Auditing
   alias Lightning.Policies.Permissions

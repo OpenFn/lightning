@@ -284,6 +284,16 @@ defmodule Lightning.Config do
     defp book_demo_banner_config do
       Application.get_env(:lightning, :book_demo_banner, [])
     end
+
+    @impl true
+    def gdpr_banner do
+      Application.get_env(:lightning, :gdpr_banner)
+    end
+
+    @impl true
+    def gdpr_preferences do
+      Application.get_env(:lightning, :gdpr_preferences)
+    end
   end
 
   @callback apollo(key :: atom() | nil) :: map()
@@ -328,6 +338,8 @@ defmodule Lightning.Config do
   @callback book_demo_banner_enabled?() :: boolean()
   @callback book_demo_calendly_url() :: String.t()
   @callback book_demo_openfn_workflow_url() :: String.t()
+  @callback gdpr_banner() :: map() | false
+  @callback gdpr_preferences() :: map() | false
 
   @doc """
   Returns the configuration for the `Lightning.AdaptorRegistry` service
@@ -516,6 +528,14 @@ defmodule Lightning.Config do
 
   def book_demo_openfn_workflow_url do
     impl().book_demo_openfn_workflow_url()
+  end
+
+  def gdpr_banner do
+    impl().gdpr_banner()
+  end
+
+  def gdpr_preferences do
+    impl().gdpr_preferences()
   end
 
   defp impl do

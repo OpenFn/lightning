@@ -31,8 +31,8 @@ defmodule LightningWeb.CredentialLive.Helpers do
   """
   def prepare_projects_associations(changeset, selected_projects, assoc_key) do
     project_credentials = Ecto.Changeset.fetch_field!(changeset, assoc_key)
-    selected_ids = MapSet.new(Enum.map(selected_projects, & &1.id))
-    project_ids = MapSet.new(Enum.map(project_credentials, & &1.project_id))
+    selected_ids = MapSet.new(selected_projects, & &1.id)
+    project_ids = MapSet.new(project_credentials, & &1.project_id)
 
     {projects_to_keep, projects_to_delete} =
       Enum.split_with(
@@ -154,5 +154,13 @@ defmodule LightningWeb.CredentialLive.Helpers do
       |> Phoenix.LiveView.put_flash(:info, "Credential created successfully")
       |> Phoenix.LiveView.push_navigate(to: socket.assigns.return_to)
     end
+  end
+
+  # if we want support users to view oauth clients or credentials just extend this condition
+  def can_edit?(
+        %{user_id: user_id},
+        current_user
+      ) do
+    user_id == current_user.id
   end
 end

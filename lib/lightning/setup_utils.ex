@@ -794,6 +794,7 @@ defmodule Lightning.SetupUtils do
       Lightning.Projects.ProjectCredential,
       Lightning.WorkOrder,
       Lightning.Invocation.Step,
+      Lightning.Credentials.OauthToken,
       Lightning.Credentials.Credential,
       Lightning.KafkaTriggers.TriggerKafkaMessageRecord,
       Lightning.Workflows.Job,
@@ -803,6 +804,8 @@ defmodule Lightning.SetupUtils do
       Lightning.Projects.ProjectUser,
       Lightning.Invocation.Dataclip,
       Lightning.Projects.File,
+      Lightning.Projects.ProjectOauthClient,
+      Lightning.Credentials.OauthClient,
       Lightning.Projects.Project
     ])
 

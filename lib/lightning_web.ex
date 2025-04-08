@@ -120,7 +120,6 @@ defmodule LightningWeb do
       import LightningWeb.Gettext
 
       import PetalComponents.Avatar
-      import PetalComponents.Badge
       import PetalComponents.Card
       import PetalComponents.Dropdown
       import PetalComponents.Typography

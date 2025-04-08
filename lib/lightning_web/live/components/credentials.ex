@@ -443,6 +443,7 @@ defmodule LightningWeb.Components.Credentials do
   attr :id, :string, required: true
   attr :clients, :list, required: true
   attr :title, :string, required: true
+  attr :show_owner, :boolean, default: false
 
   slot :actions,
     doc: "the slot for showing user actions in the last table column"
@@ -462,6 +463,7 @@ defmodule LightningWeb.Components.Credentials do
         <.table id={"#{@id}-table"}>
           <.tr>
             <.th>Name</.th>
+            <.th :if={@show_owner}>Owner</.th>
             <.th>Projects With Access</.th>
             <.th>Authorization URL</.th>
             <.th><span class="sr-only">Actions</span></.th>
@@ -473,6 +475,9 @@ defmodule LightningWeb.Components.Credentials do
             class="hover:bg-gray-100 transition-colors duration-200"
           >
             <.td class="break-words max-w-[15rem]">{client.name}</.td>
+            <.td :if={@show_owner} class="break-words max-w-[15rem]">
+              {if client.global, do: "GLOBAL", else: client.user.email}
+            </.td>
             <.td class="break-words max-w-[20rem]">
               <%= for project_name <- client.project_names do %>
                 <span class="inline-flex items-center rounded-md bg-primary-50 p-1 my-0.5 text-xs font-medium ring-1 ring-inset ring-gray-500/10">

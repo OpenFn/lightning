@@ -68,6 +68,12 @@
         id="account-confirmation-modal"
         current_user={@current_user}
       />
+      <.live_component
+        :if={assigns[:gdpr_banner]}
+        module={@gdpr_banner.component}
+        id={@gdpr_banner.id}
+        current_user={@current_user}
+      />
     </div>
   </div>
 </main>

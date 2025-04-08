@@ -22,7 +22,7 @@ defmodule LightningWeb.Components.Icons do
       <.icon name="hero-play-circle" class="ml-1 w-3 h-3 animate-spin" />
   """
   attr :name, :string, required: true
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :naked, :boolean, default: false
   attr :rest, :global
 

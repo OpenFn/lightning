@@ -49,7 +49,7 @@
         </button>
       </:empty_state>
       <:actions :let={client}>
-        <div :if={client.user_id == @current_user.id}>
+        <div :if={can_edit?(client, @current_user)}>
           <span>
             <.link
               class="table-action"
@@ -69,7 +69,7 @@
           </span>
 
           <LightningWeb.Components.Credentials.delete_oauth_client_modal
-            :if={client.user_id == @current_user.id}
+            :if={can_edit?(client, @current_user)}
             id={"delete_oauth_client_#{client.id}_modal"}
             client={client}
           />
@@ -106,7 +106,7 @@
         </button>
       </:empty_state>
       <:actions :let={credential}>
-        <div :if={credential.user_id == @current_user.id}>
+        <div :if={can_edit?(credential, @current_user)}>
           <span>
             <.link
               class="table-action"
