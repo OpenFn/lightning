@@ -418,7 +418,10 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
 
     # Verify BETA chip is not present for webhook trigger
     refute view |> element("#kafka-trigger-title-beta") |> has_element?()
-    refute view |> element("span[aria-label*='Kafka triggers are currently in beta']") |> has_element?()
+
+    refute view
+           |> element("span[aria-label*='Kafka triggers are currently in beta']")
+           |> has_element?()
 
     # Test for cron trigger
     {:ok, view, _html} =
@@ -430,7 +433,10 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
 
     # Verify BETA chip is not present for cron trigger
     refute view |> element("#kafka-trigger-title-beta") |> has_element?()
-    refute view |> element("span[aria-label*='Kafka triggers are currently in beta']") |> has_element?()
+
+    refute view
+           |> element("span[aria-label*='Kafka triggers are currently in beta']")
+           |> has_element?()
 
     # Test for kafka trigger
     {:ok, view, html} =
@@ -446,6 +452,8 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
     # Verify tooltip content
     assert html =~ "Kafka triggers are currently in beta"
     assert html =~ "Learn about the rough edges and roadmap here"
-    assert html =~ "https://docs.openfn.org/documentation/build/triggers#known-sharp-edges-on-the-kafka-trigger-feature"
+
+    assert html =~
+             "https://docs.openfn.org/documentation/build/triggers#known-sharp-edges-on-the-kafka-trigger-feature"
   end
 end

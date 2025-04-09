@@ -2764,14 +2764,22 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   defp render_trigger_title(trigger_type) do
     case trigger_type do
-      "" -> "New Trigger"
-      "webhook" -> "Webhook Trigger"
-      "cron" -> "Cron Trigger"
+      "" ->
+        "New Trigger"
+
+      "webhook" ->
+        "Webhook Trigger"
+
+      "cron" ->
+        "Cron Trigger"
+
       "kafka" ->
         LightningWeb.WorkflowLive.Components.kafka_trigger_title(%{
           id: "kafka-trigger-title"
         })
-      _ -> "Unknown Trigger"
+
+      _ ->
+        "Unknown Trigger"
     end
   end
 end
