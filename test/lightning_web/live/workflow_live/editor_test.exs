@@ -71,7 +71,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
     actual_attrs =
       view
-      |> element("div[phx-hook='JobEditor']")
+      |> element("div[phx-hook='ReactComponent'][data-react-name='JobEditor']")
       |> render()
       |> Floki.parse_fragment!()
       |> Enum.at(0)
@@ -87,7 +87,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
     assert {"data-disabled", "false"} in actual_attrs
     assert {"data-source", job.body} in actual_attrs
     assert {"id", "job-editor-#{job.id}"} in actual_attrs
-    assert {"phx-hook", "JobEditor"} in actual_attrs
+    assert {"phx-hook", "ReactComponent"} in actual_attrs
+    assert {"data-react-name", "JobEditor"} in actual_attrs
     assert {"phx-target", "1"} in actual_attrs
     assert {"phx-update", "ignore"} in actual_attrs
 
@@ -406,7 +407,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       assert has_element?(
                view,
-               "#manual-job-#{job.id} form [phx-hook='DataclipViewer'][data-id='#{new_dataclip.id}']"
+               "#manual-job-#{job.id} form [phx-hook='ReactComponent'][data-react-name='DataclipViewer'][id='#{new_dataclip.id}']"
              )
 
       element =
@@ -784,7 +785,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       # the form has the dataclips body
       assert has_element?(
                view,
-               "#manual-job-#{job_2.id} form [phx-hook='DataclipViewer'][data-id='#{output_dataclip.id}']"
+               "#manual-job-#{job_2.id} form [phx-hook='ReactComponent'][data-react-name='DataclipViewer'][id='#{output_dataclip.id}']"
              )
 
       # the step dataclip is selected
@@ -969,7 +970,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       assert has_element?(
                view,
-               "#{form} [phx-hook='DataclipViewer'][data-id='#{output_dataclip.id}']"
+               "#{form} [phx-hook='ReactComponent'][data-react-name='DataclipViewer'][id='#{output_dataclip.id}']"
              )
 
       refute view |> element(form) |> render() =~
@@ -1448,7 +1449,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       # dataclip body is displayed
       assert has_element?(
                view,
-               "#manual-job-#{job_1.id} [phx-hook='DataclipViewer'][data-id='#{input_dataclip.id}']"
+               "#manual-job-#{job_1.id} [phx-hook='ReactComponent'][data-react-name='DataclipViewer'][id='#{input_dataclip.id}']"
              ),
              "dataclip body is present"
 
@@ -1472,7 +1473,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       # dataclip body is still present
       assert has_element?(
                view,
-               "#manual-job-#{job_1.id} [phx-hook='DataclipViewer'][data-id='#{input_dataclip.id}']"
+               "#manual-job-#{job_1.id} [phx-hook='ReactComponent'][data-react-name='DataclipViewer'][id='#{input_dataclip.id}']"
              ),
              "dataclip body is present when the step starts"
 
@@ -1491,7 +1492,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       # dataclip body is nolonger present
       refute has_element?(
                view,
-               "#manual-job-#{job_1.id} [phx-hook='DataclipViewer'][data-id='#{input_dataclip.id}']"
+               "#manual-job-#{job_1.id} [phx-hook='ReactComponent'][data-react-name='DataclipViewer'][id='#{input_dataclip.id}']"
              ),
              "dataclip body has been removed"
 
@@ -1742,6 +1743,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       assert_push_event(view, "metadata_ready", %{"error" => "no_credential"})
 
+      view |> click_close_job_edit_view
+
       view
       |> form("#workflow-form",
         workflow: %{
@@ -1900,13 +1903,13 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
         assert has_element?(
                  run_view,
-                 "div#input-panel [phx-hook='DataclipViewer'][data-id='#{input_dataclip.id}']"
+                 "div#input-panel [phx-hook='ReactComponent'][data-react-name='DataclipViewer'][id='#{input_dataclip.id}']"
                )
 
         # output panel shows correct information
         assert has_element?(
                  run_view,
-                 "div#output-panel [phx-hook='DataclipViewer'][data-id='#{output_dataclip.id}']"
+                 "div#output-panel [phx-hook='ReactComponent'][data-react-name='DataclipViewer'][id='#{output_dataclip.id}']"
                )
       end
     end

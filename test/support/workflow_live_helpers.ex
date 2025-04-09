@@ -69,6 +69,16 @@ defmodule Lightning.WorkflowLive.Helpers do
     |> render_click()
   end
 
+  def click_close_job_edit_view(view) do
+    close_btn =
+      view
+      |> element("a[id^='close-job-edit-view']")
+
+    assert has_element?(close_btn)
+
+    close_btn |> render_click()
+  end
+
   def click_close_error_flash(view) do
     view |> render_click("lv:clear-flash", %{key: "error"})
 
@@ -98,7 +108,7 @@ defmodule Lightning.WorkflowLive.Helpers do
 
   def change_editor_text(view, text) do
     view
-    |> element("[phx-hook='JobEditor']")
+    |> element("[phx-hook='ReactComponent'][data-react-name='JobEditor']")
     |> render_hook(:job_body_changed, %{source: text})
   end
 
@@ -351,7 +361,7 @@ defmodule Lightning.WorkflowLive.Helpers do
   # Element Helpers
 
   def editor_element(view) do
-    view |> element("div[phx-hook=WorkflowEditor]")
+    view |> element("[phx-hook=ReactComponent][data-react-name=WorkflowEditor]")
   end
 
   def selected_adaptor_version_element(view, job) do

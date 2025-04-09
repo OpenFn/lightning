@@ -111,7 +111,7 @@ defmodule LightningWeb.RunLive.ShowTest do
              |> render_async()
              |> Floki.parse_fragment!()
              |> Floki.find(
-               "[phx-hook='DataclipViewer'][data-id='#{step.input_dataclip_id}']"
+               "[phx-hook='ReactComponent'][data-react-name='DataclipViewer'][id='#{step.input_dataclip_id}']"
              )
              |> Enum.count() == 1
 
@@ -132,7 +132,7 @@ defmodule LightningWeb.RunLive.ShowTest do
              |> render_async()
              |> Floki.parse_fragment!()
              |> Floki.find(
-               "[phx-hook='DataclipViewer'][data-id='#{step.output_dataclip_id}']"
+               "[phx-hook='ReactComponent'][data-react-name='DataclipViewer'][id='#{step.output_dataclip_id}']"
              )
              |> Enum.count() == 1
 
@@ -171,7 +171,7 @@ defmodule LightningWeb.RunLive.ShowTest do
              |> render_async()
              |> Floki.parse_fragment!()
              |> Floki.find(
-               "[phx-hook='DataclipViewer'][data-id='#{step_2.output_dataclip_id}']"
+               "[phx-hook='ReactComponent'][data-react-name='DataclipViewer'][id='#{step_2.output_dataclip_id}']"
              )
              |> Enum.count() == 1
 
@@ -182,7 +182,7 @@ defmodule LightningWeb.RunLive.ShowTest do
              |> render_async()
              |> Floki.parse_fragment!()
              |> Floki.find(
-               "[phx-hook='DataclipViewer'][data-id='#{step.output_dataclip_id}']"
+               "[phx-hook='ReactComponent'][data-react-name='DataclipViewer'][id='#{step.output_dataclip_id}']"
              )
              |> Enum.count() == 1
 
