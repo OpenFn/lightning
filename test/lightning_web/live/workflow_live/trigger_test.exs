@@ -397,4 +397,55 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
       # ========================================================================
     end
   end
+
+  test "BETA chip appears for Kafka triggers but not for other trigger types", %{
+    project: project,
+    workflow: workflow,
+    conn: conn
+  } do
+    # Create different types of triggers
+    webhook_trigger = insert(:trigger, type: :webhook, workflow: workflow)
+    cron_trigger = insert(:trigger, type: :cron, workflow: workflow)
+    kafka_trigger = insert(:trigger, type: :kafka, workflow: workflow)
+
+    # Test for webhook trigger
+    {:ok, view, _html} =
+      live(
+        conn,
+        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: webhook_trigger.id, v: workflow.lock_version]}",
+        on_error: :raise
+      )
+
+    # Verify BETA chip is not present for webhook trigger
+    refute view |> element("#kafka-trigger-title-beta") |> has_element?()
+    refute view |> element("span[aria-label*='Kafka triggers are currently in beta']") |> has_element?()
+
+    # Test for cron trigger
+    {:ok, view, _html} =
+      live(
+        conn,
+        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: cron_trigger.id, v: workflow.lock_version]}",
+        on_error: :raise
+      )
+
+    # Verify BETA chip is not present for cron trigger
+    refute view |> element("#kafka-trigger-title-beta") |> has_element?()
+    refute view |> element("span[aria-label*='Kafka triggers are currently in beta']") |> has_element?()
+
+    # Test for kafka trigger
+    {:ok, view, html} =
+      live(
+        conn,
+        ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: kafka_trigger.id, v: workflow.lock_version]}",
+        on_error: :raise
+      )
+
+    # Verify BETA chip is present for kafka trigger
+    assert view |> element("#kafka-trigger-title-beta") |> has_element?()
+
+    # Verify tooltip content
+    assert html =~ "Kafka triggers are currently in beta"
+    assert html =~ "Learn about the rough edges and roadmap here"
+    assert html =~ "https://docs.openfn.org/documentation/build/triggers#known-sharp-edges-on-the-kafka-trigger-feature"
+  end
 end
