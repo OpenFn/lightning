@@ -71,7 +71,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
     actual_attrs =
       view
-      |> element("div[phx-hook='ReactComponent'][data-react-name='JobEditor']")
+      |> element("[phx-hook='ReactComponent'][data-react-name='JobEditor']")
       |> render()
       |> Floki.parse_fragment!()
       |> Enum.at(0)
