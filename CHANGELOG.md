@@ -17,7 +17,7 @@ and this project adheres to
 
 ### Added
 
-- AI Assistant: store rag results in the database
+- AI Assistant: add metadata column to chat sessions
   [#3054](https://github.com/OpenFn/lightning/issues/3054)
 - Restart the credential setup from selecting the credential type
   [#2284](https://github.com/OpenFn/lightning/issues/2284)
