@@ -4,7 +4,6 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
   import React
 
   attr :adaptor, :string, required: true
-  attr :change_event, :string, default: "job_body_changed"
   attr :disabled, :boolean, default: false
   attr :disabled_message, :string, required: true
   attr :job_id, :string, required: true

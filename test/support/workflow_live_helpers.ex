@@ -57,6 +57,16 @@ defmodule Lightning.WorkflowLive.Helpers do
     |> render_submit()
   end
 
+  @doc """
+  This helper is used to trigger the save event on the workflow form.
+
+  This is the same as pressing `Ctrl+S` or `Cmd+S`,
+  note that it doesn't send any changes to the server, it just triggers the event.
+  """
+  def trigger_save(view) do
+    view |> render_hook("save", %{})
+  end
+
   def click_delete_job(view, job) do
     view
     |> delete_job_button(job)
@@ -106,10 +116,31 @@ defmodule Lightning.WorkflowLive.Helpers do
     link |> render_click()
   end
 
+  @doc """
+  Change the text of the selected job's body, just like the React component
+  does.
+  """
   def change_editor_text(view, text) do
+    assigns = :sys.get_state(view.pid).socket.assigns
+
+    selected_job = assigns.selected_job
+
+    # find the index of the selected job
+    idx =
+      assigns.workflow_params["jobs"]
+      |> Enum.find_index(fn j -> j["id"] == selected_job.id end)
+
     view
     |> element("[phx-hook='ReactComponent'][data-react-name='JobEditor']")
-    |> render_hook(:job_body_changed, %{source: text})
+    |> render_hook("push-change", %{
+      patches: [%{op: "replace", path: "/jobs/#{idx}/body", value: text}]
+    })
+  end
+
+  def close_job_edit_view(view, job) do
+    view
+    |> element("a#close-job-edit-view-#{job.id}")
+    |> render_click()
   end
 
   @doc """

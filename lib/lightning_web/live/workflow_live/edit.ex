@@ -400,6 +400,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
           icon
           centered
         />
+        <.live_component
+          :if={@project_repo_connection && @show_github_sync_modal}
+          id="github-sync-modal"
+          module={LightningWeb.WorkflowLive.GithubSyncModal}
+          current_user={@current_user}
+          project_repo_connection={@project_repo_connection}
+        />
         <.form
           :if={@selection_mode !== "expand"}
           id="workflow-form"
@@ -408,13 +415,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
           phx-hook="SaveViaCtrlS"
           phx-change="validate"
         >
-          <.live_component
-            :if={@project_repo_connection && @show_github_sync_modal}
-            id="github-sync-modal"
-            module={LightningWeb.WorkflowLive.GithubSyncModal}
-            current_user={@current_user}
-            project_repo_connection={@project_repo_connection}
-          />
           <input type="hidden" name="_ignore_me" />
           <.panel
             :if={@selection_mode == "settings"}

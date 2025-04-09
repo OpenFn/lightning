@@ -136,6 +136,7 @@ config :esbuild,
     cd: Path.expand("../assets", __DIR__),
     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
   ]
+
 # https://fly.io/phoenix-files/tailwind-standalone/
 config :tailwind,
   version: "4.0.13",
