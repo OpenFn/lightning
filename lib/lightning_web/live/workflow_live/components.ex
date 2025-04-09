@@ -438,13 +438,15 @@ defmodule LightningWeb.WorkflowLive.Components do
                       get_webhook_auth_methods_from_trigger(@selected_trigger)
                   }>
                     <%= if auth_method.name |> String.length <= 50 do %>
-                      {auth_method.name} (<.humanized_auth_method_type auth_method={
-                        auth_method
-                      } />)
+                      {auth_method.name} (<.humanized_auth_method_type
+                        id={"auth-method-type-#{auth_method.id}"}
+                        auth_method={auth_method}
+                      />)
                     <% else %>
-                      {auth_method.name |> String.slice(0..50)} ... (<.humanized_auth_method_type auth_method={
-                        auth_method
-                      } />)
+                      {auth_method.name |> String.slice(0..50)} ... (<.humanized_auth_method_type
+                        id={"auth-method-type-#{auth_method.id}-truncated"}
+                        auth_method={auth_method}
+                      />)
                     <% end %>
                   </li>
                 </ul>
@@ -471,6 +473,8 @@ defmodule LightningWeb.WorkflowLive.Components do
   end
 
   attr :auth_method, :map, required: true
+  attr :id, :string, required: true
+  attr :tooltip, :string, required: false
 
   def humanized_auth_method_type(assigns) do
     assigns =
@@ -486,6 +490,20 @@ defmodule LightningWeb.WorkflowLive.Components do
 
     ~H"""
     <span>{@humanized_type}</span>
+    """
+  end
+
+  attr :id, :string, required: true
+
+  def kafka_trigger_title(assigns) do
+    ~H"""
+    <div class="flex items-center">
+      Kafka Trigger
+      <LightningWeb.Components.Common.beta_chip
+        id={"#{@id}-beta"}
+        tooltip="Kafka triggers are currently in beta. Learn about the rough edges and roadmap here: https://docs.openfn.org/documentation/build/triggers#known-sharp-edges-on-the-kafka-trigger-feature"
+      />
+    </div>
     """
   end
 
@@ -722,7 +740,10 @@ defmodule LightningWeb.WorkflowLive.Components do
           {auth_method.name}
         </.td>
         <.td class="whitespace-nowrap text-sm text-gray-900">
-          <.humanized_auth_method_type auth_method={auth_method} />
+          <.humanized_auth_method_type
+            id={"auth-method-type-#{auth_method.id}"}
+            auth_method={auth_method}
+          />
         </.td>
         <.td class="whitespace-nowrap text-sm text-gray-900">
           {render_slot(@linked_triggers, auth_method)}
