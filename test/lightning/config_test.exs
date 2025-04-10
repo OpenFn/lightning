@@ -42,6 +42,17 @@ defmodule Lightning.Configtest do
 
       assert expected == actual
     end
+
+    test "returns module responsible for injecting external metric plugins" do
+      expected =
+        extract_from_config(Lightning.Extensions, :external_metrics)
+
+      refute expected == nil
+
+      actual = API.external_metrics_module()
+
+      assert expected == actual
+    end
   end
 
   defp extract_from_config(config, key) do

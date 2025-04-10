@@ -22,7 +22,11 @@ defmodule Lightning.PromExTest do
     assert Lightning.PromEx.dashboards() == expected
   end
 
-  test "returns enabled plugins" do
+  test "returns enabled plugins including external plugins" do
+    Mox.stub(Lightning.MockConfig, :external_metrics_module, fn ->
+      Lightning.PromExTest.ExternalMetrics
+    end)
+
     stalled_run_threshold_seconds =
       Application.get_env(:lightning, :metrics)[
         :stalled_run_threshold_seconds
@@ -51,10 +55,26 @@ defmodule Lightning.PromExTest do
         run_queue_metrics_period_seconds: run_metrics_period,
         run_performance_age_seconds: performance_age_seconds,
         stalled_run_threshold_seconds: stalled_run_threshold_seconds
-      }
+      },
+      FooPlugin,
+      BarPlugin
     ]
 
     assert Lightning.PromEx.plugins() == expected
+  end
+
+  test "seeds any external event metrics to ensure presence of the metrics" do
+    Mox.stub(Lightning.MockConfig, :external_metrics_module, fn ->
+      Lightning.PromExTest.ExternalMetrics
+    end)
+
+    event = [:promex, :test, :event]
+
+    ref = :telemetry_test.attach_event_handlers(self(), [event])
+
+    Lightning.PromEx.seed_event_metrics()
+
+    assert_received {^event, ^ref, %{count: 42}, %{}}
   end
 
   defp update_promex_config(overrides) do
@@ -63,5 +83,15 @@ defmodule Lightning.PromExTest do
       |> Keyword.merge(overrides)
 
     Application.put_env(:lightning, Lightning.PromEx, new_config)
+  end
+
+  defmodule ExternalMetrics do
+    def plugins do
+      [FooPlugin, BarPlugin]
+    end
+
+    def seed_event_metrics do
+      :telemetry.execute([:promex, :test, :event], %{count: 42}, %{})
+    end
   end
 end

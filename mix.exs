@@ -54,7 +54,8 @@ defmodule Lightning.MixProject do
   def application do
     [
       mod: {Lightning.Application, [:timex]},
-      extra_applications: [:logger, :runtime_tools, :os_mon, :scrivener]
+      extra_applications: [:logger, :runtime_tools, :os_mon, :scrivener],
+      start_phases: [seed_prom_ex_telemetry: []]
     ]
   end
 

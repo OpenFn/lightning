@@ -294,6 +294,12 @@ defmodule Lightning.Config do
     def gdpr_preferences do
       Application.get_env(:lightning, :gdpr_preferences)
     end
+
+    @impl true
+    def external_metrics_module do
+      Application.get_env(:lightning, Lightning.Extensions, [])
+      |> Keyword.get(:external_metrics)
+    end
   end
 
   @callback apollo(key :: atom() | nil) :: map()
@@ -340,6 +346,7 @@ defmodule Lightning.Config do
   @callback book_demo_openfn_workflow_url() :: String.t()
   @callback gdpr_banner() :: map() | false
   @callback gdpr_preferences() :: map() | false
+  @callback external_metrics_module() :: module() | nil
 
   @doc """
   Returns the configuration for the `Lightning.AdaptorRegistry` service
@@ -536,6 +543,10 @@ defmodule Lightning.Config do
 
   def gdpr_preferences do
     impl().gdpr_preferences()
+  end
+
+  def external_metrics_module do
+    impl().external_metrics_module()
   end
 
   defp impl do
