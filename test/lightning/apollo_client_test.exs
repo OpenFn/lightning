@@ -23,7 +23,8 @@ defmodule Lightning.ApolloClientTest do
                "api_key" => "api_key",
                "content" => "foo",
                "context" => %{},
-               "history" => []
+               "history" => [],
+               "meta" => %{}
              }
 
       {:ok,

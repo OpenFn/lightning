@@ -9,13 +9,14 @@ defmodule Lightning.ApolloClient do
           }
           | %{}
 
-  @spec query(String.t(), context(), list()) :: Tesla.Env.result()
-  def query(content, context \\ %{}, history \\ []) do
+  @spec query(String.t(), context(), list(), map()) :: Tesla.Env.result()
+  def query(content, context \\ %{}, history \\ [], meta \\ %{}) do
     payload = %{
       "api_key" => Lightning.Config.apollo(:ai_assistant_api_key),
       "content" => content,
       "context" => context,
-      "history" => history
+      "history" => history,
+      "meta" => meta
     }
 
     client() |> Tesla.post("/services/job_chat", payload)

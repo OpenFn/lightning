@@ -17,6 +17,7 @@ defmodule Lightning.AiAssistant.ChatSession do
           adaptor: String.t() | nil,
           is_public: boolean(),
           is_deleted: boolean(),
+          meta: map() | nil,
           messages: [ChatMessage.t(), ...] | []
         }
 
@@ -24,6 +25,7 @@ defmodule Lightning.AiAssistant.ChatSession do
     field :expression, :string, virtual: true
     field :adaptor, :string, virtual: true
     field :title, :string
+    field :meta, :map
     field :is_public, :boolean, default: false
     field :is_deleted, :boolean, default: false
     belongs_to :job, Job
@@ -36,7 +38,7 @@ defmodule Lightning.AiAssistant.ChatSession do
 
   def changeset(chat_session, attrs) do
     chat_session
-    |> cast(attrs, [:title, :is_public, :is_deleted, :job_id, :user_id])
+    |> cast(attrs, [:title, :is_public, :is_deleted, :job_id, :user_id, :meta])
     |> validate_required([:title, :job_id, :user_id])
     |> cast_assoc(:messages)
   end
