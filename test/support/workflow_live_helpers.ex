@@ -13,7 +13,9 @@ defmodule Lightning.WorkflowLive.Helpers do
 
   def select_node(view, node, version \\ nil) do
     query_string =
-      if version, do: "?s=#{node.id}&v=#{version}", else: "?s=#{node.id}"
+      if version && version > 0,
+        do: "?s=#{node.id}&v=#{version}",
+        else: "?s=#{node.id}"
 
     view
     |> render_patch(query_string)
@@ -250,7 +252,13 @@ defmodule Lightning.WorkflowLive.Helpers do
       },
       %{
         "triggers" => [%{"id" => trigger_id}],
-        "jobs" => [%{"id" => job_id}],
+        "jobs" => [
+          %{
+            "id" => job_id,
+            "name" => "random job",
+            "body" => "// comment"
+          }
+        ],
         "edges" => [
           %{
             "id" => Ecto.UUID.generate(),

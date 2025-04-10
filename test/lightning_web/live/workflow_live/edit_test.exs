@@ -142,9 +142,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       Mox.verify_on_exit!()
 
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/new?m=settings",
-          on_error: :raise
-        )
+        live(conn, ~p"/projects/#{project.id}/w/new", on_error: :raise)
 
       assert view |> push_patches_to_view(initial_workflow_patchset(project))
 
@@ -156,14 +154,61 @@ defmodule LightningWeb.WorkflowLive.EditTest do
              |> element("input[name='workflow[name]']")
              |> render() =~ workflow_name
 
-      assert view |> save_is_disabled?()
+      # save button is not present
+      refute view
+             |> element("button[type='submit'][form='workflow-form'][disabled]")
+             |> has_element?()
 
+      refute view
+             |> element("button[type='submit'][form='workflow-form']")
+             |> has_element?()
+
+      # settings panel is not preset
+      refute has_element?(view, "#toggle-settings")
+
+      # selecting a job doesn't open the panel
+      {job, _, _} = select_first_job(view)
+      path = assert_patch(view)
+      assert path == ~p"/projects/#{project.id}/w/new?s=#{job.id}"
+      refute render(view) =~ "Job Name"
+      refute has_element?(view, "input[name='workflow[jobs][0][name]']")
+
+      # the panel for creating workflow appears
+      html = render(view)
+      assert html =~ "Create workflow"
+      assert html =~ "How do you want to name your workflow?"
+      assert has_element?(view, "form#new-workflow-name-form")
+
+      # now let's fill in the name
       workflow_name = "My Workflow"
-      view |> fill_workflow_name(workflow_name)
 
-      assert view |> save_is_disabled?()
+      view
+      |> form("#new-workflow-name-form")
+      |> render_change(workflow: %{name: workflow_name})
 
-      {job, _, _} = view |> select_first_job()
+      # click continue
+      view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
+
+      # the panel disappears
+      html = render(view)
+      refute html =~ "Create workflow"
+      refute html =~ "How do you want to name your workflow?"
+      refute has_element?(view, "form#new-workflow-name-form")
+
+      # save button is now present
+      assert view
+             |> element("button[type='submit'][form='workflow-form']")
+             |> has_element?()
+
+      # toggle settings panel button is now preset
+      assert has_element?(view, "#toggle-settings")
+
+      # selecting a job now opens the panel
+      {job, _, _} = select_first_job(view)
+      path = assert_patch(view)
+      assert path == ~p"/projects/#{project.id}/w/new?s=#{job.id}"
+      assert render(view) =~ "Job Name"
+      assert has_element?(view, "input[name='workflow[jobs][0][name]']")
 
       view |> fill_job_fields(job, %{name: "My Job"})
 

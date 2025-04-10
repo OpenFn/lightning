@@ -8,6 +8,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   alias Lightning.Projects.Project
   alias Lightning.WorkOrders.SearchParams
   alias LightningWeb.WorkflowLive.Helpers
+  alias Phoenix.LiveView.JS
   alias Timex.Format.DateTime.Formatters.Relative
 
   def workflow_list(assigns) do
@@ -21,6 +22,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
           </span>
         </h3>
         <.create_workflow_card
+          project_id={@project.id}
           limit_error={@workflow_creation_limit_error}
           can_create_workflow={@can_create_workflow}
         />
@@ -226,6 +228,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   end
 
   attr :can_create_workflow, :boolean, required: true
+  attr :project_id, :string, required: true
   attr :limit_error, :string
 
   def create_workflow_card(assigns) do
@@ -243,10 +246,12 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       <.button
         disabled={@disabled}
         tooltip={@tooltip}
-        phx-click={if !@disabled, do: show_modal("workflow_modal")}
+        phx-click={
+          if !@disabled, do: JS.navigate(~p"/projects/#{@project_id}/w/new")
+        }
         class="col-span-1 w-full rounded-md"
         role="button"
-        id="open-modal-button"
+        id="new-workflow-button"
       >
         Create new workflow
       </.button>

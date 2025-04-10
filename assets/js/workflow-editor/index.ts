@@ -256,8 +256,8 @@ export default {
 
       // Select the first job
       // TODO should the workflow name have focus instead?
-      const selected = diff.jobs[0].id;
-      this.onSelectionChange(selected);
+      // const selected = diff.jobs[0].id;
+      // this.onSelectionChange(selected);
     }
 
     this.maybeMountComponent();

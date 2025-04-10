@@ -5,7 +5,8 @@ import tippy, {
 import type { PhoenixHook } from './PhoenixHook';
 
 import LogLineHighlight from './LogLineHighlight';
-import WorkflowToYAML from '../yaml-exporter/WorkflowToYAML';
+import WorkflowToYAML from '../yaml/WorkflowToYAML';
+import YAMLToWorkflow from '../yaml/YAMLToWorkflow';
 import ElapsedIndicator from './ElapsedIndicator';
 import {
   TabbedContainer,
@@ -26,6 +27,7 @@ import {
 export {
   LogLineHighlight,
   WorkflowToYAML,
+  YAMLToWorkflow,
   ElapsedIndicator,
   TabbedContainer,
   TabbedSelector,

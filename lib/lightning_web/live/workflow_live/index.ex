@@ -2,8 +2,6 @@ defmodule LightningWeb.WorkflowLive.Index do
   @moduledoc false
   use LightningWeb, :live_view
 
-  import LightningWeb.WorkflowLive.Components
-
   alias Lightning.DashboardStats
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
@@ -12,9 +10,6 @@ defmodule LightningWeb.WorkflowLive.Index do
   alias LightningWeb.LiveHelpers
   alias LightningWeb.WorkflowLive.DashboardComponents
   alias LightningWeb.WorkflowLive.Helpers
-  alias LightningWeb.WorkflowLive.NewWorkflowForm
-
-  # alias Phoenix.LiveView.TagEngine
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
@@ -57,7 +52,6 @@ defmodule LightningWeb.WorkflowLive.Index do
           workflows_stats={@workflows_stats}
           project={@project}
         />
-        <.create_workflow_modal form={@form} />
       </LayoutComponents.centered>
     </LayoutComponents.page_content>
     """
@@ -88,8 +82,7 @@ defmodule LightningWeb.WorkflowLive.Index do
      |> assign(
        can_delete_workflow: can_delete_workflow,
        can_create_workflow: can_create_workflow
-     )
-     |> assign_workflow_form(NewWorkflowForm.validate(%{}, project.id))}
+     )}
   end
 
   @impl true
@@ -144,31 +137,6 @@ defmodule LightningWeb.WorkflowLive.Index do
     end
   end
 
-  def handle_event("validate_workflow", %{"new_workflow" => params}, socket) do
-    changeset =
-      NewWorkflowForm.validate(params, socket.assigns.project.id)
-      |> Map.put(:action, :validate)
-
-    {:noreply, socket |> assign_workflow_form(changeset)}
-  end
-
-  def handle_event("create_work_flow", %{"new_workflow" => params}, socket) do
-    changeset =
-      params
-      |> NewWorkflowForm.validate(socket.assigns.project.id)
-      |> NewWorkflowForm.validate_for_save()
-
-    if changeset.valid? do
-      {:noreply,
-       push_navigate(socket,
-         to:
-           ~p"/projects/#{socket.assigns.project}/w/new?#{%{name: Ecto.Changeset.get_field(changeset, :name)}}"
-       )}
-    else
-      {:noreply, socket |> assign_workflow_form(changeset)}
-    end
-  end
-
   def handle_event("delete_workflow", %{"id" => id}, socket) do
     %{
       project: project,
@@ -197,10 +165,6 @@ defmodule LightningWeb.WorkflowLive.Index do
        socket
        |> put_flash(:error, "You are not authorized to perform this action.")}
     end
-  end
-
-  defp assign_workflow_form(socket, changeset) do
-    socket |> assign(form: to_form(changeset, as: :new_workflow))
   end
 
   defp check_workflow_and_run_limits(assigns, project_id) do

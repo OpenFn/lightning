@@ -94,7 +94,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 current_user={@current_user}
                 prior_user={@prior_user_presence.user}
               />
-              <div :if={@snapshot_version_tag != "latest" && @can_edit_workflow}>
+              <div :if={
+                @snapshot_version_tag != "latest" && @can_edit_workflow &&
+                  !@show_new_workflow_panel
+              }>
                 <span
                   id="edit-disabled-warning"
                   class="cursor-pointer text-xs flex items-center"
@@ -123,7 +126,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           </.button>
 
           <.with_changes_indicator
-            :if={@snapshot_version_tag == "latest"}
+            :if={@snapshot_version_tag == "latest" && !@show_new_workflow_panel}
             changeset={@changeset}
           >
             <div class="flex flex-row gap-2">
@@ -169,448 +172,407 @@ defmodule LightningWeb.WorkflowLive.Edit do
           </.with_changes_indicator>
         </LayoutComponents.header>
       </:header>
-
-      <div class="relative h-full flex" id={"workflow-edit-#{@workflow.id}"}>
-        <div class="flex-none" id="job-editor-pane">
-          <div
-            :if={@selected_job && @selection_mode == "expand"}
-            class={[
-              "fixed left-0 top-0 right-0 bottom-0 flex-wrap",
-              "hidden opacity-0",
-              "bg-white inset-0 z-30 overflow-hidden drop-shadow-[0_35px_35px_rgba(0,0,0,0.25)]"
-            ]}
-            phx-mounted={fade_in()}
-            phx-remove={fade_out()}
-          >
-            <LightningWeb.WorkflowLive.JobView.job_edit_view
-              job={@selected_job}
-              snapshot={@snapshot}
-              snapshot_version={@snapshot_version_tag}
-              current_user={@current_user}
-              display_banner={@display_banner}
-              banner_message={@banner_message}
-              presences={@presences}
-              prior_user_presence={@prior_user_presence}
-              project={@project}
-              socket={@socket}
-              follow_run_id={@follow_run && @follow_run.id}
-              close_url={close_url(assigns, :selected_job, :select)}
-              form={single_inputs_for(@workflow_form, :jobs, @selected_job.id)}
+      <div class="h-full flex">
+        <.live_component
+          :if={@show_new_workflow_panel}
+          id="new-workflow-panel"
+          module={LightningWeb.WorkflowLive.NewWorkflowComponent}
+          workflow_form={@workflow_form}
+        />
+        <div class="relative h-full flex grow" id={"workflow-edit-#{@workflow.id}"}>
+          <div class="flex-none" id="job-editor-pane">
+            <div
+              :if={@selected_job && @selection_mode == "expand"}
+              class={[
+                "fixed left-0 top-0 right-0 bottom-0 flex-wrap",
+                "hidden opacity-0",
+                "bg-white inset-0 z-30 overflow-hidden drop-shadow-[0_35px_35px_rgba(0,0,0,0.25)]"
+              ]}
+              phx-mounted={fade_in()}
+              phx-remove={fade_out()}
             >
-              <.collapsible_panel
-                id={"manual-job-#{@selected_job.id}"}
-                class="h-full border border-l-0 manual-job-panel"
+              <LightningWeb.WorkflowLive.JobView.job_edit_view
+                job={@selected_job}
+                snapshot={@snapshot}
+                snapshot_version={@snapshot_version_tag}
+                current_user={@current_user}
+                display_banner={@display_banner}
+                banner_message={@banner_message}
+                presences={@presences}
+                prior_user_presence={@prior_user_presence}
+                project={@project}
+                socket={@socket}
+                follow_run_id={@follow_run && @follow_run.id}
+                close_url={close_url(assigns, :selected_job, :select)}
+                form={single_inputs_for(@workflow_form, :jobs, @selected_job.id)}
               >
-                <:tabs>
-                  <LightningWeb.Components.Tabbed.tabs
-                    id="tab-bar-left"
-                    default_hash="manual"
-                    class="flex flex-row space-x-6 -my-2 job-viewer-tabs"
-                  >
-                    <:tab hash="manual">
-                      <span class="inline-block align-middle">Input</span>
-                    </:tab>
-                    <:tab hash="aichat">
-                      <span class="inline-block align-middle">AI Assistant</span>
-                    </:tab>
-                  </LightningWeb.Components.Tabbed.tabs>
-                </:tabs>
-                <LightningWeb.Components.Tabbed.panels
-                  id="input-panels"
-                  class="contents"
-                  default_hash="manual"
+                <.collapsible_panel
+                  id={"manual-job-#{@selected_job.id}"}
+                  class="h-full border border-l-0 manual-job-panel"
                 >
-                  <:panel hash="manual" class="overflow-auto h-full">
-                    <div class="grow flex flex-col gap-4 p-2 min-h-0 h-full">
-                      <LightningWeb.WorkflowLive.ManualWorkorder.component
-                        id={"manual-job-#{@selected_job.id}"}
-                        form={@manual_run_form}
-                        dataclips={@selectable_dataclips}
-                        disabled={
-                          !@can_run_workflow ||
-                            @snapshot_version_tag != "latest"
-                        }
-                        project={@project}
-                        admin_contacts={@admin_contacts}
-                        can_edit_data_retention={@can_edit_data_retention}
-                        follow_run={@follow_run}
-                        step={@step}
-                        show_missing_dataclip_selector={
-                          @show_missing_dataclip_selector
-                        }
-                      />
-                    </div>
-                  </:panel>
-                  <:panel hash="aichat" class="h-full">
-                    <%= if @ai_assistant_enabled do %>
-                      <div class="grow min-h-0 h-full text-sm">
-                        <.live_component
-                          module={LightningWeb.WorkflowLive.AiAssistantComponent}
-                          can_edit_workflow={@can_edit_workflow}
-                          project_id={@project.id}
-                          current_user={@current_user}
-                          selected_job={@selected_job}
-                          chat_session_id={@chat_session_id}
-                          query_params={@query_params}
-                          base_url={@base_url}
-                          action={if(@chat_session_id, do: :show, else: :new)}
-                          id={"aichat-#{@selected_job.id}"}
+                  <:tabs>
+                    <LightningWeb.Components.Tabbed.tabs
+                      id="tab-bar-left"
+                      default_hash="manual"
+                      class="flex flex-row space-x-6 -my-2 job-viewer-tabs"
+                    >
+                      <:tab hash="manual">
+                        <span class="inline-block align-middle">Input</span>
+                      </:tab>
+                      <:tab hash="aichat">
+                        <span class="inline-block align-middle">AI Assistant</span>
+                      </:tab>
+                    </LightningWeb.Components.Tabbed.tabs>
+                  </:tabs>
+                  <LightningWeb.Components.Tabbed.panels
+                    id="input-panels"
+                    class="contents"
+                    default_hash="manual"
+                  >
+                    <:panel hash="manual" class="overflow-auto h-full">
+                      <div class="grow flex flex-col gap-4 p-2 min-h-0 h-full">
+                        <LightningWeb.WorkflowLive.ManualWorkorder.component
+                          id={"manual-job-#{@selected_job.id}"}
+                          form={@manual_run_form}
+                          dataclips={@selectable_dataclips}
+                          disabled={
+                            !@can_run_workflow ||
+                              @snapshot_version_tag != "latest"
+                          }
+                          project={@project}
+                          admin_contacts={@admin_contacts}
+                          can_edit_data_retention={@can_edit_data_retention}
+                          follow_run={@follow_run}
+                          step={@step}
+                          show_missing_dataclip_selector={
+                            @show_missing_dataclip_selector
+                          }
                         />
                       </div>
-                    <% else %>
-                      <div class="flex flex-col items-center justify-center h-full">
-                        <div class="text-center w-1/2">
-                          <p class="text-gray-500 text-sm mb-2">
-                            AI Assistant has not been configured for your instance - contact your admin for support.
-                          </p>
-                          <p class="text-gray-500 text-sm mb-2">
-                            Try the AI Assistant on Openfn cloud for free at
-                            <a
-                              href="https://app.openfn.org"
-                              target="_blank"
-                              class="text-primary-600"
-                            >
-                              app.openfn.org
-                            </a>
-                          </p>
+                    </:panel>
+                    <:panel hash="aichat" class="h-full">
+                      <%= if @ai_assistant_enabled do %>
+                        <div class="grow min-h-0 h-full text-sm">
+                          <.live_component
+                            module={LightningWeb.WorkflowLive.AiAssistantComponent}
+                            can_edit_workflow={@can_edit_workflow}
+                            project_id={@project.id}
+                            current_user={@current_user}
+                            selected_job={@selected_job}
+                            chat_session_id={@chat_session_id}
+                            query_params={@query_params}
+                            base_url={@base_url}
+                            action={if(@chat_session_id, do: :show, else: :new)}
+                            id={"aichat-#{@selected_job.id}"}
+                          />
                         </div>
-                      </div>
-                    <% end %>
-                  </:panel>
-                </LightningWeb.Components.Tabbed.panels>
-              </.collapsible_panel>
-              <:footer>
-                <div class="flex flex-row gap-x-2">
-                  <% {is_empty, error_message} =
-                    editor_is_empty(@workflow_form, @selected_job) %>
+                      <% else %>
+                        <div class="flex flex-col items-center justify-center h-full">
+                          <div class="text-center w-1/2">
+                            <p class="text-gray-500 text-sm mb-2">
+                              AI Assistant has not been configured for your instance - contact your admin for support.
+                            </p>
+                            <p class="text-gray-500 text-sm mb-2">
+                              Try the AI Assistant on Openfn cloud for free at
+                              <a
+                                href="https://app.openfn.org"
+                                target="_blank"
+                                class="text-primary-600"
+                              >
+                                app.openfn.org
+                              </a>
+                            </p>
+                          </div>
+                        </div>
+                      <% end %>
+                    </:panel>
+                  </LightningWeb.Components.Tabbed.panels>
+                </.collapsible_panel>
+                <:footer>
+                  <div class="flex flex-row gap-x-2">
+                    <% {is_empty, error_message} =
+                      editor_is_empty(@workflow_form, @selected_job) %>
 
-                  <div
-                    :if={@snapshot_version_tag == "latest" && @display_banner}
-                    id={"inspector-banner-#{@current_user.id}"}
-                    class="flex items-center text-sm font-medium text-gray-500"
-                  >
-                    <span
-                      id={"inspector-banner-#{@current_user.id}-tooltip"}
-                      class="cursor-pointer text-xs flex items-center"
-                      phx-hook="Tooltip"
-                      data-placement="top"
-                      aria-label={@banner_message}
+                    <div
+                      :if={@snapshot_version_tag == "latest" && @display_banner}
+                      id={"inspector-banner-#{@current_user.id}"}
+                      class="flex items-center text-sm font-medium text-gray-500"
                     >
-                      <.icon name="hero-lock-closed-solid" class="h-4 w-4" />
-                      Read-only
-                    </span>
-                  </div>
-
-                  <.version_switcher_toggle
-                    :if={display_switcher(@snapshot, @workflow)}
-                    id={@selected_job.id}
-                    label="Latest Version"
-                    disabled={job_deleted?(@selected_job, @workflow)}
-                    version={@snapshot_version_tag}
-                  />
-
-                  <.save_is_blocked_error :if={is_empty}>
-                    {error_message}
-                  </.save_is_blocked_error>
-
-                  <.icon
-                    :if={!@can_edit_workflow}
-                    name="hero-lock-closed"
-                    class="w-5 h-5 place-self-center text-gray-300"
-                  />
-                  <.run_buttons
-                    step={@step}
-                    manual_run_form={@manual_run_form}
-                    selectable_dataclips={@selectable_dataclips}
-                    follow_run={@follow_run}
-                    save_and_run_disabled={@save_and_run_disabled}
-                    snapshot_version_tag={@snapshot_version_tag}
-                  />
-                  <.with_changes_indicator changeset={@changeset}>
-                    <.save_workflow_button
-                      id="inspector-save-workflow-btn"
-                      changeset={@changeset}
-                      can_edit_workflow={@can_edit_workflow}
-                      snapshot_version_tag={@snapshot_version_tag}
-                      has_presence_priority={@has_presence_edit_priority}
-                      project_repo_connection={@project_repo_connection}
-                      dropdown_position={:top}
-                    />
-                  </.with_changes_indicator>
-                </div>
-              </:footer>
-            </LightningWeb.WorkflowLive.JobView.job_edit_view>
-          </div>
-        </div>
-
-        <div
-          phx-hook="WorkflowEditor"
-          class="grow"
-          id={"editor-#{@workflow.id}"}
-          phx-update="ignore"
-        >
-          <%!-- Before Editor component has mounted --%>
-          <div class="flex place-content-center h-full cursor-wait">
-            <span class="inline-block top-[50%] relative">
-              <div class="flex items-center justify-center">
-                <.button_loader>
-                  Loading workflow
-                </.button_loader>
-              </div>
-            </span>
-          </div>
-        </div>
-        <.live_component
-          :if={@selected_job}
-          id="new-credential-modal"
-          module={LightningWeb.CredentialLive.CredentialFormComponent}
-          action={:new}
-          credential_type={@selected_credential_type}
-          credential={
-            %Lightning.Credentials.Credential{
-              user_id: @current_user.id,
-              project_credentials: [
-                %Lightning.Projects.ProjectCredential{
-                  project_id: @project.id
-                }
-              ]
-            }
-          }
-          current_user={@current_user}
-          oauth_client={nil}
-          oauth_clients={@oauth_clients}
-          projects={[]}
-          project={@project}
-          show_project_credentials={false}
-          on_save={
-            fn credential ->
-              form =
-                single_inputs_for(@workflow_form, :jobs, @selected_job.id)
-
-              params =
-                LightningWeb.Utils.build_params_for_field(
-                  form,
-                  :project_credential_id,
-                  credential.project_credentials |> Enum.at(0) |> Map.get(:id)
-                )
-
-              send_form_changed(params)
-            end
-          }
-          can_create_project_credential={@can_edit_workflow}
-          return_to={
-            ~p"/projects/#{@project.id}/w/#{@workflow.id}?s=#{@selected_job.id}"
-          }
-        />
-        <Common.banner
-          :if={@display_banner}
-          type="warning"
-          id={"canvas-banner-#{@current_user.id}"}
-          message={@banner_message}
-          class="absolute"
-          icon
-          centered
-        />
-        <.form
-          id="workflow-form"
-          for={@workflow_form}
-          phx-submit="save"
-          phx-hook="SaveViaCtrlS"
-          phx-change="validate"
-        >
-          <.live_component
-            :if={@project_repo_connection && @show_github_sync_modal}
-            id="github-sync-modal"
-            module={LightningWeb.WorkflowLive.GithubSyncModal}
-            current_user={@current_user}
-            project_repo_connection={@project_repo_connection}
-          />
-          <input type="hidden" name="_ignore_me" />
-          <.panel
-            :if={@selection_mode == "settings"}
-            title="Workflow settings"
-            id={"workflow-settings-#{@workflow.id}"}
-            class="hidden"
-            phx-mounted={fade_in()}
-            phx-remove={fade_out()}
-            cancel_url={@base_url}
-          >
-            <.workflow_settings
-              can_edit_run_settings={@can_edit_run_settings}
-              project_id={@workflow.project_id}
-              base_url={@base_url}
-              project_concurrency_disabled={@workflow.project.concurrency == 1}
-              max_concurrency={@max_concurrency}
-              form={@workflow_form}
-            />
-          </.panel>
-
-          <.single_inputs_for
-            :let={{jf}}
-            :if={@selected_job}
-            form={@workflow_form}
-            field={:jobs}
-            id={@selected_job.id}
-          >
-            <.panel
-              title={
-                jf[:name].value
-                |> then(fn
-                  "" -> "Untitled Job"
-                  name -> name
-                end)
-              }
-              id={"job-pane-#{@selected_job.id}"}
-              cancel_url={close_url(assigns, :selected_job, :unselect)}
-              class="hidden"
-              phx-mounted={fade_in()}
-              phx-remove={fade_out()}
-            >
-              <.job_form
-                on_change={&send_form_changed/1}
-                editable={
-                  is_nil(@workflow.deleted_at) && @can_edit_workflow &&
-                    @snapshot_version_tag == "latest" &&
-                    @has_presence_edit_priority
-                }
-                form={jf}
-                project_user={@project_user}
-                project={@project}
-              />
-              <:footer>
-                <div class="flex flex-row">
-                  <div class="flex items-center">
-                    <.expand_job_editor
-                      base_url={@base_url}
-                      snapshot_lock_version={@snapshot && @snapshot.lock_version}
-                      snapshot_version_tag={@snapshot_version_tag}
-                      job={@selected_job}
-                      selected_run={@selected_run}
-                      form={@workflow_form}
-                    />
-                  </div>
-                  <div class="grow flex justify-end">
-                    <label>
-                      <.button
-                        id="delete-job-button"
-                        phx-click="delete_node"
-                        phx-value-id={@selected_job.id}
-                        class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
-                        disabled={
-                          !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                            @has_child_edges or @is_first_job or
-                            @snapshot_version_tag != "latest" ||
-                            !@has_presence_edit_priority
-                        }
-                        tooltip={
-                          job_deletion_tooltip_message(
-                            is_struct(@workflow.deleted_at),
-                            @can_edit_workflow,
-                            @has_child_edges,
-                            @is_first_job
-                          )
-                        }
-                        data-confirm="Are you sure you want to delete this step?"
+                      <span
+                        id={"inspector-banner-#{@current_user.id}-tooltip"}
+                        class="cursor-pointer text-xs flex items-center"
+                        phx-hook="Tooltip"
+                        data-placement="top"
+                        aria-label={@banner_message}
                       >
-                        Delete Step
-                      </.button>
-                    </label>
-                  </div>
-                </div>
-              </:footer>
-            </.panel>
-          </.single_inputs_for>
-          <.single_inputs_for
-            :let={tf}
-            :if={@selected_trigger}
-            form={@workflow_form}
-            field={:triggers}
-            id={@selected_trigger.id}
-          >
-            <.panel
-              id={"trigger-pane-#{@selected_trigger.id}"}
-              cancel_url={close_url(assigns, :selected_trigger, :unselect)}
-              class="hidden"
-              phx-mounted={fade_in()}
-              phx-remove={fade_out()}
-              title={
-                Phoenix.HTML.Form.input_value(tf, :type)
-                |> to_string()
-                |> then(fn
-                  "" -> "New Trigger"
-                  "webhook" -> "Webhook Trigger"
-                  "cron" -> "Cron Trigger"
-                  # TODO Not tested
-                  "kafka" -> "Kafka Trigger"
-                end)
-              }
-            >
-              <.trigger_form
-                form={tf}
-                on_change={&send_form_changed/1}
-                disabled={
-                  !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                    @snapshot_version_tag != "latest" ||
-                    !@has_presence_edit_priority
-                }
-                can_write_webhook_auth_method={@can_write_webhook_auth_method}
-                selected_trigger={@selected_trigger}
-                action={@live_action}
-                cancel_url={close_url(assigns, :selected_trigger, :unselect)}
-              />
-              <:footer>
-                <div class="flex flex-row">
-                  <div class="flex items-center">
-                    <.input
-                      type="toggle"
-                      field={tf[:enabled]}
-                      disabled={
-                        !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                          @snapshot_version_tag != "latest" ||
-                          !@has_presence_edit_priority
-                      }
-                      label="Enabled"
+                        <.icon name="hero-lock-closed-solid" class="h-4 w-4" />
+                        Read-only
+                      </span>
+                    </div>
+
+                    <.version_switcher_toggle
+                      :if={display_switcher(@snapshot, @workflow)}
+                      id={@selected_job.id}
+                      label="Latest Version"
+                      disabled={job_deleted?(@selected_job, @workflow)}
+                      version={@snapshot_version_tag}
                     />
+
+                    <.save_is_blocked_error :if={is_empty}>
+                      {error_message}
+                    </.save_is_blocked_error>
+
+                    <.icon
+                      :if={!@can_edit_workflow}
+                      name="hero-lock-closed"
+                      class="w-5 h-5 place-self-center text-gray-300"
+                    />
+                    <.run_buttons
+                      step={@step}
+                      manual_run_form={@manual_run_form}
+                      selectable_dataclips={@selectable_dataclips}
+                      follow_run={@follow_run}
+                      save_and_run_disabled={@save_and_run_disabled}
+                      snapshot_version_tag={@snapshot_version_tag}
+                    />
+                    <.with_changes_indicator changeset={@changeset}>
+                      <.save_workflow_button
+                        id="inspector-save-workflow-btn"
+                        changeset={@changeset}
+                        can_edit_workflow={@can_edit_workflow}
+                        snapshot_version_tag={@snapshot_version_tag}
+                        has_presence_priority={@has_presence_edit_priority}
+                        project_repo_connection={@project_repo_connection}
+                        dropdown_position={:top}
+                      />
+                    </.with_changes_indicator>
                   </div>
-                </div>
-              </:footer>
-            </.panel>
-          </.single_inputs_for>
-          <.single_inputs_for
-            :let={ef}
-            :if={@selected_edge}
-            form={@workflow_form}
-            field={:edges}
-            id={@selected_edge.id}
+                </:footer>
+              </LightningWeb.WorkflowLive.JobView.job_edit_view>
+            </div>
+          </div>
+
+          <div
+            phx-hook="WorkflowEditor"
+            class="grow"
+            id={"editor-#{@workflow.id}"}
+            phx-update="ignore"
           >
+            <%!-- Before Editor component has mounted --%>
+            <div class="flex place-content-center h-full cursor-wait">
+              <span class="inline-block top-[50%] relative">
+                <div class="flex items-center justify-center">
+                  <.button_loader>
+                    Loading workflow
+                  </.button_loader>
+                </div>
+              </span>
+            </div>
+          </div>
+          <.live_component
+            :if={@selected_job}
+            id="new-credential-modal"
+            module={LightningWeb.CredentialLive.CredentialFormComponent}
+            action={:new}
+            credential_type={@selected_credential_type}
+            credential={
+              %Lightning.Credentials.Credential{
+                user_id: @current_user.id,
+                project_credentials: [
+                  %Lightning.Projects.ProjectCredential{
+                    project_id: @project.id
+                  }
+                ]
+              }
+            }
+            current_user={@current_user}
+            oauth_client={nil}
+            oauth_clients={@oauth_clients}
+            projects={[]}
+            project={@project}
+            show_project_credentials={false}
+            on_save={
+              fn credential ->
+                form =
+                  single_inputs_for(@workflow_form, :jobs, @selected_job.id)
+
+                params =
+                  LightningWeb.Utils.build_params_for_field(
+                    form,
+                    :project_credential_id,
+                    credential.project_credentials |> Enum.at(0) |> Map.get(:id)
+                  )
+
+                send_form_changed(params)
+              end
+            }
+            can_create_project_credential={@can_edit_workflow}
+            return_to={
+              ~p"/projects/#{@project.id}/w/#{@workflow.id}?s=#{@selected_job.id}"
+            }
+          />
+          <Common.banner
+            :if={@display_banner}
+            type="warning"
+            id={"canvas-banner-#{@current_user.id}"}
+            message={@banner_message}
+            class="absolute"
+            icon
+            centered
+          />
+          <.form
+            id="workflow-form"
+            for={@workflow_form}
+            phx-submit="save"
+            phx-hook="SaveViaCtrlS"
+            phx-change="validate"
+          >
+            <.live_component
+              :if={@project_repo_connection && @show_github_sync_modal}
+              id="github-sync-modal"
+              module={LightningWeb.WorkflowLive.GithubSyncModal}
+              current_user={@current_user}
+              project_repo_connection={@project_repo_connection}
+            />
+            <input type="hidden" name="_ignore_me" />
             <.panel
-              id={"edge-pane-#{@selected_edge.id}"}
-              cancel_url={close_url(assigns, :selected_edge, :unselect)}
-              title="Path"
+              :if={@selection_mode == "settings"}
+              title="Workflow settings"
+              id={"workflow-settings-#{@workflow.id}"}
               class="hidden"
               phx-mounted={fade_in()}
               phx-remove={fade_out()}
+              cancel_url={@base_url}
             >
-              <.edge_form
-                form={ef}
-                disabled={
-                  !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                    @snapshot_version_tag != "latest" ||
-                    !@has_presence_edit_priority
-                }
-                cancel_url={close_url(assigns, :selected_edge, :unselect)}
+              <.workflow_settings
+                can_edit_run_settings={@can_edit_run_settings}
+                project_id={@workflow.project_id}
+                base_url={@base_url}
+                project_concurrency_disabled={@workflow.project.concurrency == 1}
+                max_concurrency={@max_concurrency}
+                form={@workflow_form}
               />
-              <:footer>
-                <div class="flex flex-row">
-                  <div class="flex items-center">
-                    <%= if ef[:source_trigger_id].value do %>
-                      <p class="text-sm text-gray-500">
-                        This path will be active if its trigger is enabled
-                      </p>
-                    <% else %>
+            </.panel>
+
+            <.single_inputs_for
+              :let={{jf}}
+              :if={@selected_job}
+              form={@workflow_form}
+              field={:jobs}
+              id={@selected_job.id}
+            >
+              <.panel
+                title={
+                  jf[:name].value
+                  |> then(fn
+                    "" -> "Untitled Job"
+                    name -> name
+                  end)
+                }
+                id={"job-pane-#{@selected_job.id}"}
+                cancel_url={close_url(assigns, :selected_job, :unselect)}
+                class="hidden"
+                phx-mounted={fade_in()}
+                phx-remove={fade_out()}
+              >
+                <.job_form
+                  on_change={&send_form_changed/1}
+                  editable={
+                    is_nil(@workflow.deleted_at) && @can_edit_workflow &&
+                      @snapshot_version_tag == "latest" &&
+                      @has_presence_edit_priority
+                  }
+                  form={jf}
+                  project_user={@project_user}
+                  project={@project}
+                />
+                <:footer>
+                  <div class="flex flex-row">
+                    <div class="flex items-center">
+                      <.expand_job_editor
+                        base_url={@base_url}
+                        snapshot_lock_version={@snapshot && @snapshot.lock_version}
+                        snapshot_version_tag={@snapshot_version_tag}
+                        job={@selected_job}
+                        selected_run={@selected_run}
+                        form={@workflow_form}
+                      />
+                    </div>
+                    <div class="grow flex justify-end">
+                      <label>
+                        <.button
+                          id="delete-job-button"
+                          phx-click="delete_node"
+                          phx-value-id={@selected_job.id}
+                          class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
+                          disabled={
+                            !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                              @has_child_edges or @is_first_job or
+                              @snapshot_version_tag != "latest" ||
+                              !@has_presence_edit_priority
+                          }
+                          tooltip={
+                            job_deletion_tooltip_message(
+                              is_struct(@workflow.deleted_at),
+                              @can_edit_workflow,
+                              @has_child_edges,
+                              @is_first_job
+                            )
+                          }
+                          data-confirm="Are you sure you want to delete this step?"
+                        >
+                          Delete Step
+                        </.button>
+                      </label>
+                    </div>
+                  </div>
+                </:footer>
+              </.panel>
+            </.single_inputs_for>
+            <.single_inputs_for
+              :let={tf}
+              :if={@selected_trigger}
+              form={@workflow_form}
+              field={:triggers}
+              id={@selected_trigger.id}
+            >
+              <.panel
+                id={"trigger-pane-#{@selected_trigger.id}"}
+                cancel_url={close_url(assigns, :selected_trigger, :unselect)}
+                class="hidden"
+                phx-mounted={fade_in()}
+                phx-remove={fade_out()}
+                title={
+                  Phoenix.HTML.Form.input_value(tf, :type)
+                  |> to_string()
+                  |> then(fn
+                    "" -> "New Trigger"
+                    "webhook" -> "Webhook Trigger"
+                    "cron" -> "Cron Trigger"
+                    # TODO Not tested
+                    "kafka" -> "Kafka Trigger"
+                  end)
+                }
+              >
+                <.trigger_form
+                  form={tf}
+                  on_change={&send_form_changed/1}
+                  disabled={
+                    !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                      @snapshot_version_tag != "latest" ||
+                      !@has_presence_edit_priority
+                  }
+                  can_write_webhook_auth_method={@can_write_webhook_auth_method}
+                  selected_trigger={@selected_trigger}
+                  action={@live_action}
+                  cancel_url={close_url(assigns, :selected_trigger, :unselect)}
+                />
+                <:footer>
+                  <div class="flex flex-row">
+                    <div class="flex items-center">
                       <.input
                         type="toggle"
-                        field={ef[:enabled]}
+                        field={tf[:enabled]}
                         disabled={
                           !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
                             @snapshot_version_tag != "latest" ||
@@ -618,103 +580,151 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         }
                         label="Enabled"
                       />
-                    <% end %>
+                    </div>
                   </div>
-                  <div class="grow flex justify-end">
-                    <label>
-                      <%= unless ef[:source_trigger_id].value do %>
-                        <.button
-                          id="delete-edge-button"
-                          class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
-                          data-confirm="Are you sure you want to delete this path?"
-                          phx-click="delete_edge"
-                          phx-value-id={ef[:id].value}
+                </:footer>
+              </.panel>
+            </.single_inputs_for>
+            <.single_inputs_for
+              :let={ef}
+              :if={@selected_edge}
+              form={@workflow_form}
+              field={:edges}
+              id={@selected_edge.id}
+            >
+              <.panel
+                id={"edge-pane-#{@selected_edge.id}"}
+                cancel_url={close_url(assigns, :selected_edge, :unselect)}
+                title="Path"
+                class="hidden"
+                phx-mounted={fade_in()}
+                phx-remove={fade_out()}
+              >
+                <.edge_form
+                  form={ef}
+                  disabled={
+                    !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                      @snapshot_version_tag != "latest" ||
+                      !@has_presence_edit_priority
+                  }
+                  cancel_url={close_url(assigns, :selected_edge, :unselect)}
+                />
+                <:footer>
+                  <div class="flex flex-row">
+                    <div class="flex items-center">
+                      <%= if ef[:source_trigger_id].value do %>
+                        <p class="text-sm text-gray-500">
+                          This path will be active if its trigger is enabled
+                        </p>
+                      <% else %>
+                        <.input
+                          type="toggle"
+                          field={ef[:enabled]}
                           disabled={
                             !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
                               @snapshot_version_tag != "latest" ||
-                              !@has_presence_edit_priority or
-                              ef[:source_trigger_id].value
+                              !@has_presence_edit_priority
                           }
-                        >
-                          Delete Path
-                        </.button>
+                          label="Enabled"
+                        />
                       <% end %>
-                    </label>
+                    </div>
+                    <div class="grow flex justify-end">
+                      <label>
+                        <%= unless ef[:source_trigger_id].value do %>
+                          <.button
+                            id="delete-edge-button"
+                            class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
+                            data-confirm="Are you sure you want to delete this path?"
+                            phx-click="delete_edge"
+                            phx-value-id={ef[:id].value}
+                            disabled={
+                              !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                                @snapshot_version_tag != "latest" ||
+                                !@has_presence_edit_priority or
+                                ef[:source_trigger_id].value
+                            }
+                          >
+                            Delete Path
+                          </.button>
+                        <% end %>
+                      </label>
+                    </div>
                   </div>
-                </div>
-              </:footer>
-            </.panel>
-          </.single_inputs_for>
-        </.form>
+                </:footer>
+              </.panel>
+            </.single_inputs_for>
+          </.form>
 
-        <.panel
-          :if={@selection_mode == "code"}
-          title="Workflow as Code"
-          id={"workflow-code-#{@workflow.id}"}
-          class="hidden min-w-lg"
-          phx-mounted={fade_in()}
-          phx-remove={fade_out()}
-          cancel_url={@base_url}
-          phx-hook="WorkflowToYAML"
-          data-loading-el="workflow-code-loader"
-          data-viewer-el="workflow-code-viewer"
-        >
-          <div
-            id="workflow-code-loader"
-            class="relative text-xs @md:text-base p-12 text-center bg-slate-700 font-mono text-slate-200"
+          <.panel
+            :if={@selection_mode == "code"}
+            title="Workflow as Code"
+            id={"workflow-code-#{@workflow.id}"}
+            class="hidden min-w-lg"
+            phx-mounted={fade_in()}
+            phx-remove={fade_out()}
+            cancel_url={@base_url}
+            phx-hook="WorkflowToYAML"
+            data-loading-el="workflow-code-loader"
+            data-viewer-el="workflow-code-viewer"
           >
-            <.text_ping_loader>
-              Stand by
-            </.text_ping_loader>
-          </div>
-          <.textarea_element
-            id="workflow-code-viewer"
-            name="workflow-code"
-            value=""
-            rows="18"
-            disabled={true}
-            class="hidden font-mono proportional-nums text-slate-200 bg-slate-700 resize-none"
-          />
-          <:footer>
-            <div class="flex flex-row justify-end gap-2">
-              <.button
-                variant="secondary"
-                id="download-workflow-code-btn"
-                data-target="#workflow-code-viewer"
-                data-content-type="text/yaml"
-                data-file-name={String.replace(@workflow.name || "workflow"," ", "-") <> ".yaml"}
-                phx-hook="DownloadText"
-              >
-                Download
-              </.button>
-              <.button
-                variant="secondary"
-                id="copy-workflow-code-btn"
-                data-to="#workflow-code-viewer"
-                phx-hook="Copy"
-                class="min-w-[6rem]"
-              >
-                Copy Code
-              </.button>
+            <div
+              id="workflow-code-loader"
+              class="relative text-xs @md:text-base p-12 text-center bg-slate-700 font-mono text-slate-200"
+            >
+              <.text_ping_loader>
+                Stand by
+              </.text_ping_loader>
             </div>
-          </:footer>
-        </.panel>
+            <.textarea_element
+              id="workflow-code-viewer"
+              name="workflow-code"
+              value=""
+              rows="18"
+              disabled={true}
+              class="hidden font-mono proportional-nums text-slate-200 bg-slate-700 resize-none text-nowrap overflow-x-auto"
+            />
+            <:footer>
+              <div class="flex flex-row justify-end gap-2">
+                <.button
+                  variant="secondary"
+                  id="download-workflow-code-btn"
+                  data-target="#workflow-code-viewer"
+                  data-content-type="text/yaml"
+                  data-file-name={String.replace(@workflow.name || "workflow"," ", "-") <> ".yaml"}
+                  phx-hook="DownloadText"
+                >
+                  Download
+                </.button>
+                <.button
+                  variant="secondary"
+                  id="copy-workflow-code-btn"
+                  data-to="#workflow-code-viewer"
+                  phx-hook="Copy"
+                  class="min-w-[6rem]"
+                >
+                  Copy Code
+                </.button>
+              </div>
+            </:footer>
+          </.panel>
 
-        <.live_component
-          :if={
-            @live_action == :edit && @can_write_webhook_auth_method &&
-              @selected_trigger && @snapshot_version_tag == "latest"
-          }
-          module={LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent}
-          id="webhooks_auth_method_modal"
-          action={:new}
-          trigger={@selected_trigger}
-          project={@project}
-          current_user={@current_user}
-          return_to={
-            ~p"/projects/#{@project.id}/w/#{@workflow.id}?#{%{s: @selected_trigger.id}}"
-          }
-        />
+          <.live_component
+            :if={
+              @live_action == :edit && @can_write_webhook_auth_method &&
+                @selected_trigger && @snapshot_version_tag == "latest"
+            }
+            module={LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent}
+            id="webhooks_auth_method_modal"
+            action={:new}
+            trigger={@selected_trigger}
+            project={@project}
+            current_user={@current_user}
+            return_to={
+              ~p"/projects/#{@project.id}/w/#{@workflow.id}?#{%{s: @selected_trigger.id}}"
+            }
+          />
+        </div>
       </div>
     </LayoutComponents.page_content>
     """
@@ -1217,6 +1227,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
        selected_credential_type: nil,
        oauth_clients: OauthClients.list_clients(assigns.project),
        show_missing_dataclip_selector: false,
+       show_new_workflow_panel: assigns.live_action == :new,
        admin_contacts: Projects.list_project_admin_emails(assigns.project.id),
        show_github_sync_modal: false,
        project_repo_connection:
@@ -1250,18 +1261,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
      end)}
   end
 
-  def apply_action(socket, :new, params) do
+  def apply_action(socket, :new, _params) do
     if socket.assigns.workflow do
       socket
     else
       socket
       |> assign_workflow(%Workflow{
         project_id: socket.assigns.project.id,
-        name: params["name"],
         id: Ecto.UUID.generate()
       })
     end
-    |> assign(page_title: params["name"])
+    |> assign(page_title: "New Workflow")
   end
 
   def apply_action(socket, :edit, %{"id" => workflow_id} = params) do
@@ -1680,6 +1690,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
      update(socket, :show_missing_dataclip_selector, fn val -> !val end)}
   end
 
+  def handle_event("toggle_new_workflow_panel", _, socket) do
+    {:noreply,
+     socket
+     |> update(:show_new_workflow_panel, fn val -> !val end)
+     |> maybe_disable_canvas()}
+  end
+
   def handle_event("manual_run_change", %{"manual" => params}, socket) do
     changeset =
       WorkOrders.Manual.new(
@@ -2024,14 +2041,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
       has_presence_edit_priority: has_edit_priority,
       snapshot_version_tag: version,
       can_edit_workflow: can_edit_workflow,
-      workflow: workflow
+      workflow: workflow,
+      show_new_workflow_panel: show_new_workflow_panel
     } = socket.assigns
 
     disabled =
       !(is_nil(workflow.deleted_at) && has_edit_priority && version == "latest" &&
           can_edit_workflow)
 
-    push_event(socket, "set-disabled", %{disabled: disabled})
+    push_event(socket, "set-disabled", %{
+      disabled: show_new_workflow_panel || disabled
+    })
   end
 
   defp maybe_switch_workflow_version(socket) do
@@ -2383,6 +2403,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
             socket |> unselect_all()
         end
     end
+    |> then(fn socket ->
+      if socket.assigns.show_new_workflow_panel do
+        socket |> unselect_all() |> set_mode(nil)
+      else
+        socket
+      end
+    end)
     |> assign_follow_run(socket.assigns.query_params)
     |> assign_chat_session_id(socket.assigns.query_params)
   end
