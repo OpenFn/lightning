@@ -15,7 +15,8 @@ defmodule LightningWeb.CredentialLiveHelpers do
       |> form("#credential-schema-picker", selected: type)
       |> render_change()
 
-    assert Floki.parse_fragment!(html)
+    assert html
+           |> Floki.parse_fragment!()
            |> Floki.find("input[type=radio][value=#{type}]")
            |> Enum.any?(),
            "Expected #{type} to be selected"

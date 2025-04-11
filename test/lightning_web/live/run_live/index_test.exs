@@ -386,12 +386,16 @@ defmodule LightningWeb.RunLive.IndexTest do
 
       Enum.each(jobs, fn job ->
         label =
-          Floki.find(html, "#jobl_#{job.id}")
+          html
+          |> Floki.parse_fragment!()
+          |> Floki.find("#jobl_#{job.id}")
           |> Floki.attribute("class")
           |> List.first()
 
         disabled =
-          Floki.find(html, "#job_#{job.id}")
+          html
+          |> Floki.parse_fragment!()
+          |> Floki.find("#job_#{job.id}")
           |> Floki.attribute("disabled")
           |> List.first()
 

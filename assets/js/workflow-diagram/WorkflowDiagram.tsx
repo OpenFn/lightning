@@ -1,37 +1,34 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ReactFlow, {
   Controls,
-  ControlButton,
-  type NodeChange,
-  type ReactFlowInstance,
   ReactFlowProvider,
   applyNodeChanges,
   getRectOfNodes,
-  type Rect,
+  type NodeChange,
+  type ReactFlowInstance,
+  type Rect
 } from 'reactflow';
-import { useStore, type StoreApi } from 'zustand';
-import { shallow } from 'zustand/shallow';
 
+import { FIT_DURATION, FIT_PADDING } from './constants';
+import edgeTypes from './edges';
 import layout from './layout';
 import nodeTypes from './nodes';
-import edgeTypes from './edges';
-import usePlaceholders from './usePlaceholders';
 import useConnect from './useConnect';
+import usePlaceholders from './usePlaceholders';
 import fromWorkflow from './util/from-workflow';
+import shouldLayout from './util/should-layout';
 import throttle from './util/throttle';
 import updateSelectionStyles from './util/update-selection';
-import { FIT_DURATION, FIT_PADDING } from './constants';
-import shouldLayout from './util/should-layout';
 
-import type { WorkflowState } from '../workflow-editor/store';
+import { useWorkflowStore } from '../workflow-store/store';
 import type { Flow, Positions } from './types';
 import { getVisibleRect, isPointInRect } from './util/viewport';
 
 type WorkflowDiagramProps = {
   el?: HTMLElement | null;
+  containerEl?: HTMLElement | null;
   selection: string | null;
   onSelectionChange: (id: string | null) => void;
-  store: StoreApi<WorkflowState>;
   forceFit?: boolean;
 };
 
@@ -44,10 +41,12 @@ type ChartCache = {
 
 const LAYOUT_DURATION = 300;
 
-export default (props: WorkflowDiagramProps) => {
-  const { selection, onSelectionChange, store, el } = props;
+export default function WorkflowDiagram(props: WorkflowDiagramProps) {
+  const { jobs, triggers, edges, disabled } = useWorkflowStore();
+  const { selection, onSelectionChange, containerEl: el } = props;
 
   const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
+  const workflowDiagramRef = useRef<HTMLDivElement>(null)
 
   const updateSelection = useCallback(
     (id?: string | null) => {
@@ -63,18 +62,15 @@ export default (props: WorkflowDiagramProps) => {
     placeholders,
     add: addPlaceholder,
     cancel: cancelPlaceholder,
-  } = usePlaceholders(el, store, updateSelection);
+  } = usePlaceholders(el, updateSelection);
 
-  const workflow = useStore(
-    store!,
-    state => ({
-      jobs: state.jobs,
-      triggers: state.triggers,
-      edges: state.edges,
-      disabled: state.disabled,
-    }),
-    shallow
-  );
+
+  const workflow = React.useMemo(() => ({
+    jobs,
+    triggers,
+    edges,
+    disabled,
+  }), [jobs, triggers, edges, disabled])
 
   // Track positions and selection on a ref, as a passive cache, to prevent re-renders
   const chartCache = useRef<ChartCache>({
@@ -108,8 +104,8 @@ export default (props: WorkflowDiagramProps) => {
       if (layoutId) {
         chartCache.current.lastLayout = layoutId;
         const viewBounds = {
-          width: el?.clientWidth ?? 0,
-          height: el?.clientHeight ?? 0,
+          width: workflowDiagramRef.current?.clientWidth ?? 0,
+          height: workflowDiagramRef.current?.clientHeight ?? 0,
         };
         layout(newModel, setModel, flow, viewBounds, {
           duration: props.layoutDuration ?? LAYOUT_DURATION,
@@ -235,10 +231,11 @@ export default (props: WorkflowDiagramProps) => {
     }
   }, [flow, model, el]);
 
-  const connectHandlers = useConnect(model, setModel, store);
+  const connectHandlers = useConnect(model, setModel);
   return (
     <ReactFlowProvider>
       <ReactFlow
+        ref={workflowDiagramRef}
         proOptions={{ account: 'paid-pro', hideAttribution: true }}
         nodes={model.nodes}
         edges={model.edges}

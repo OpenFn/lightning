@@ -5559,7 +5559,9 @@ defmodule LightningWeb.ProjectLiveTest do
     Floki.parse_fragment!(render(view))
     |> Floki.find("#project-form tbody tr")
     |> Enum.find_index(fn el ->
-      Floki.find(el, "td:first-child()") |> Floki.text() =~
+      el
+      |> Floki.find("td:first-child()")
+      |> Floki.text() =~
         "#{user.first_name} #{user.last_name}"
     end)
     |> to_string()

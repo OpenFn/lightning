@@ -1,228 +1,54 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import {
-  ViewColumnsIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  ChevronUpIcon,
-  ChevronDownIcon,
-  DocumentTextIcon,
-  SparklesIcon,
-} from '@heroicons/react/24/outline';
+import React from "react"
+import type { WithActionProps } from "../react/lib/with-props";
+import { sortMetadata } from "../metadata-loader/metadata";
+import { useWorkflowStore } from "../workflow-store/store";
+import pDebounce from "p-debounce";
+import { EDITOR_DEBOUNCE_MS } from "../common";
+import type { Lightning } from "#/workflow-diagram/types";
+import JobEditorComponent from "./JobEditorComponent";
 
-import Docs from '../adaptor-docs/Docs';
-import Editor from '../editor/Editor';
-import Metadata from '../metadata-explorer/Explorer';
-
-enum SettingsKeys {
-  ORIENTATION = 'lightning.job-editor.orientation',
-  SHOW_PANEL = 'lightning.job-editor.showPanel',
-  ACTIVE_TAB = 'lightning.job-editor.activeTab',
+interface JobEditorProps {
+  job_id: string,
+  adaptor: string,
+  source: string,
+  disabled: boolean,
+  disabled_message: string,
 }
 
-// TODO maybe a usePersist() hook which takes defaults as an argument and returns a) the persisted values and b) a setter (shallow merge)
-const persistedSettings = localStorage.getItem('lightning.job-editor.settings');
-const settings = persistedSettings
-  ? JSON.parse(persistedSettings)
-  : {
-      [SettingsKeys.ORIENTATION]: 'h',
-      [SettingsKeys.SHOW_PANEL]: false,
-    };
+export const JobEditor: WithActionProps<JobEditorProps> = (props) => {
+  const [metadata, setMetadata] = React.useState<false | object>(false);
+  const [source, setSource] = React.useState('');
 
-const persistSettings = () =>
-  localStorage.setItem(
-    'lightning.job-editor.settings',
-    JSON.stringify(settings)
-  );
+  const { change, getById } = useWorkflowStore();
 
-const iconStyle = 'inline cursor-pointer h-6 w-6 mr-1 hover:text-primary-600';
+  // debounce editor content update
+  const debouncedPushChange = pDebounce((content: string) => {
+    change({ jobs: [{ id: props.job_id, body: content }] })
+  }, EDITOR_DEBOUNCE_MS);
 
-type TabSpec = {
-  label: string;
-  id: string;
-  icon: React.JSXElementConstructor<React.SVGAttributes<SVGSVGElement>>;
-};
+  // init hook - getting metadata
+  React.useEffect(() => {
+    props.handleEvent('metadata_ready', (payload) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const sortedMetadata = sortMetadata(payload);
+      setMetadata(sortedMetadata as object);
+    })
+    props.pushEventTo('request_metadata', {});
+  }, [props])
 
-type TabsProps = {
-  options: TabSpec[];
-  onSelectionChange?: (newName: string) => void;
-  verticalCollapse: boolean;
-  initialSelection?: String;
-};
+  React.useEffect(() => {
+    const foundJob = getById<Lightning.Job>(props.job_id);
+    if (!foundJob) setSource(props.source);
+    else setSource(foundJob.body);
+  }, [getById, props.job_id, props.source])
 
-const Tabs = ({
-  options,
-  onSelectionChange,
-  verticalCollapse,
-  initialSelection,
-}: TabsProps) => {
-  const [selected, setSelected] = useState(initialSelection);
-
-  const handleSelectionChange = (name: string) => {
-    if (name !== selected) {
-      setSelected(name);
-      onSelectionChange?.(name);
-    }
-  };
-
-  const commonStyle = 'flex';
-  const horizStyle = 'flex-space-x-2 w-full';
-  const vertStyle = 'flex-space-y-2';
-
-  const style: React.CSSProperties = verticalCollapse
-    ? {
-        writingMode: 'vertical-rl',
-        textOrientation: 'mixed',
-      }
-    : {};
-
-  return (
-    <nav
-      className={`${commonStyle} ${verticalCollapse ? vertStyle : horizStyle}`}
-      aria-label="Tabs"
-      style={style}
-    >
-      {options.map(({ label, id, icon }) => {
-        const style =
-          id === selected
-            ? 'bg-primary-50 text-gray-700'
-            : 'text-gray-400 hover:text-gray-700';
-        return (
-          <div
-            key={id}
-            onClick={() => handleSelectionChange(id)}
-            className={`${style} select-none rounded-md px-3 py-2 text-sm font-medium cursor-pointer flex-row whitespace-nowrap`}
-          >
-            {React.createElement(icon, { className: iconStyle })}
-            <span className="align-bottom">{label}</span>
-          </div>
-        );
-      })}
-    </nav>
-  );
-};
-
-type JobEditorProps = {
-  adaptor: string;
-  source: string;
-  disabled?: boolean;
-  disabledMessage?: string;
-  metadata?: object | true;
-  onSourceChanged?: (src: string) => void;
-};
-
-export default ({
-  adaptor,
-  source,
-  disabled,
-  disabledMessage,
-  metadata,
-  onSourceChanged,
-}: JobEditorProps) => {
-  const [vertical, setVertical] = useState(
-    () => settings[SettingsKeys.ORIENTATION] === 'v'
-  );
-  const [showPanel, setShowPanel] = useState(
-    () => settings[SettingsKeys.SHOW_PANEL]
-  );
-  const [selectedTab, setSelectedTab] = useState('docs');
-
-  const toggleOrientiation = useCallback(() => {
-    setVertical(!vertical);
-    settings[SettingsKeys.ORIENTATION] = vertical ? 'h' : 'v';
-    persistSettings();
-  }, [vertical]);
-
-  const toggleShowPanel = useCallback(() => {
-    setShowPanel(!showPanel);
-    settings[SettingsKeys.SHOW_PANEL] = !showPanel;
-    persistSettings();
-  }, [showPanel]);
-
-  const handleSelectionChange = (newSelection: string) => {
-    setSelectedTab(newSelection);
-    if (!showPanel) {
-      toggleShowPanel();
-    }
-  };
-
-  const CollapseIcon = useMemo(() => {
-    if (vertical) {
-      return showPanel ? ChevronDownIcon : ChevronUpIcon;
-    } else {
-      return showPanel ? ChevronRightIcon : ChevronLeftIcon;
-    }
-  }, [vertical, showPanel]);
-
-  return (
-    <>
-      <div className="cursor-pointer"></div>
-      <div className={`flex h-full flex-${vertical ? 'col' : 'row'}`}>
-        <div className="flex-1 rounded-md overflow-hidden">
-          <Editor
-            source={source}
-            adaptor={adaptor}
-            metadata={metadata === true ? undefined : metadata}
-            disabled={disabled}
-            disabledMessage={disabledMessage}
-            onChange={onSourceChanged}
-          />
-        </div>
-        <div
-          className={`${
-            showPanel ? 'flex flex-1 flex-col z-10 overflow-hidden' : ''
-          } ${vertical ? 'pt-2' : 'pl-2'} bg-white`}
-        >
-          <div
-            className={[
-              'flex',
-              !vertical && !showPanel
-                ? 'flex-col-reverse items-center'
-                : 'flex-row',
-              'w-full',
-              'justify-items-end',
-              'sticky',
-            ].join(' ')}
-          >
-            <Tabs
-              options={[
-                { label: 'Docs', id: 'docs', icon: DocumentTextIcon },
-                { label: 'Metadata', id: 'metadata', icon: SparklesIcon }, // TODO if active, colour it
-              ]}
-              initialSelection={selectedTab}
-              onSelectionChange={handleSelectionChange}
-              verticalCollapse={!vertical && !showPanel}
-            />
-            <div
-              className={`flex select-none flex-1 text-right py-2 ${
-                !showPanel && !vertical ? 'flex-col-reverse' : 'flex-row'
-              }`}
-            >
-              <ViewColumnsIcon
-                className={`${iconStyle} ${!vertical ? 'rotate-90' : ''}`}
-                onClick={toggleOrientiation}
-                title="Toggle panel orientation"
-              />
-              <CollapseIcon
-                className={iconStyle}
-                onClick={toggleShowPanel}
-                title="Collapse panel"
-              />
-            </div>
-          </div>
-          {showPanel && (
-            <div
-              className={`flex flex-1 ${
-                vertical ? 'overflow-auto' : 'overflow-hidden'
-              }`}
-            >
-              {selectedTab === 'docs' && <Docs adaptor={adaptor} />}
-              {selectedTab === 'metadata' && (
-                <Metadata adaptor={adaptor} metadata={metadata} />
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </>
-  );
-};
+  return <JobEditorComponent
+    adaptor={props.adaptor}
+    source={source}
+    metadata={metadata}
+    disabled={props.disabled}
+    disabledMessage={props.disabled_message}
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    onSourceChanged={debouncedPushChange}
+  />
+}
