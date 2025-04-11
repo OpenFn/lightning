@@ -532,7 +532,9 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       Path.wildcard("#{schemas_path}/*.json")
       |> Enum.map(fn p ->
         name = p |> Path.basename() |> String.replace(".json", "")
-        {Phoenix.Naming.humanize(name), name, nil, nil}
+        image_path = "/images/adaptors/#{name}-square.png"
+        image_exists = File.exists?(Path.join("priv/static", image_path))
+        {Phoenix.Naming.humanize(name), name, if(image_exists, do: image_path, else: nil), nil}
       end)
 
     schemas_options
@@ -540,7 +542,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       name in ["googlesheets", "gmail", "collections"]
     end)
     |> Enum.concat([{"Raw JSON", "raw", nil, nil}])
-    |> Enum.sort_by(& &1, :asc)
+    |> Enum.sort_by(&(String.downcase(elem(&1, 0))), :asc)
   end
 
   defp list_users do
@@ -673,10 +675,10 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
         get_type_options(schemas_path)
         |> Enum.concat(
           Enum.map(oauth_clients, fn client ->
-            {client.name, client.id, nil, "oauth"}
+            {client.name, client.id, "images/oauth-2.png", "oauth"}
           end)
         )
-        |> Enum.sort()
+        |> Enum.sort_by(&(String.downcase(elem(&1, 0))), :asc)
       else
         []
       end
