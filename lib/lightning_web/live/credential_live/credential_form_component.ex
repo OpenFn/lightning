@@ -528,7 +528,9 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   end
 
   defp get_type_options(schemas_path) do
-    manifest_path = Path.join(["priv", "static", "images", "adaptors", "adaptor_icons.json"])
+    manifest_path =
+      Path.join(["priv", "static", "images", "adaptors", "adaptor_icons.json"])
+
     manifest =
       case File.read(manifest_path) do
         {:ok, content} -> Jason.decode!(content)
@@ -548,7 +550,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       name in ["googlesheets", "gmail", "collections"]
     end)
     |> Enum.concat([{"Raw JSON", "raw", nil, nil}])
-    |> Enum.sort_by(&(String.downcase(elem(&1, 0))), :asc)
+    |> Enum.sort_by(&String.downcase(elem(&1, 0)), :asc)
   end
 
   defp list_users do
@@ -684,7 +686,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
             {client.name, client.id, "/images/oauth-2.png", "oauth"}
           end)
         )
-        |> Enum.sort_by(&(String.downcase(elem(&1, 0))), :asc)
+        |> Enum.sort_by(&String.downcase(elem(&1, 0)), :asc)
       else
         []
       end
