@@ -540,7 +540,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       |> Enum.map(fn p ->
         name = p |> Path.basename() |> String.replace(".json", "")
         image_path = get_in(manifest, [name, "square"])
-        {Phoenix.Naming.humanize(name), name, image_path, nil}
+        {name, name, image_path, nil}
       end)
 
     schemas_options
@@ -681,7 +681,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
         get_type_options(schemas_path)
         |> Enum.concat(
           Enum.map(oauth_clients, fn client ->
-            {client.name, client.id, "images/oauth-2.png", "oauth"}
+            {client.name, client.id, "/images/oauth-2.png", "oauth"}
           end)
         )
         |> Enum.sort_by(&(String.downcase(elem(&1, 0))), :asc)
