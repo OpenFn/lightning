@@ -3,6 +3,7 @@ defmodule LightningWeb.RunLive.ShowTest do
 
   import Phoenix.LiveViewTest
   import Lightning.Factories
+  import Lightning.WorkflowLive.Helpers
 
   alias Lightning.WorkOrders
   alias Phoenix.LiveView.AsyncResult
@@ -87,7 +88,7 @@ defmodule LightningWeb.RunLive.ShowTest do
         Lightning.Runs.start_step(run, %{
           step_id: Ecto.UUID.generate(),
           job_id: job_a.id,
-          input_dataclip_id: workorder.dataclip_id
+          input_dataclip_id: input_dataclip_id = workorder.dataclip_id
         })
 
       html = step_list_item(view, run, step)
@@ -106,14 +107,17 @@ defmodule LightningWeb.RunLive.ShowTest do
 
       view |> select_step(run, job_a.name)
 
+      # <script id=\"step-input-dataclip-viewer\" type=\"application/json\" data-react-file=\"/assets/js/react/components/DataclipViewer.js\" data-react-name=\"DataclipViewer\" phx-hook=\"ReactComponent\">\n  {\"id\":\"step-input-dataclip-viewer\",\"dataclipId\":\"a96efdd4-99f6-4dd2-a6b5-36d34c9638fa\"}\n</script>
+
+      input_dataclip_viewer =
+        view
+        |> dataclip_viewer("step-input-dataclip-viewer")
+        |> get_attrs_and_inner_html()
+        |> decode_inner_json()
+
       # Check that the input dataclip is rendered
-      assert view
-             |> render_async()
-             |> Floki.parse_fragment!()
-             |> Floki.find(
-               "[phx-hook='ReactComponent'][data-react-name='DataclipViewer'][id='#{step.input_dataclip_id}']"
-             )
-             |> Enum.count() == 1
+      assert {_attrs, %{"dataclipId" => ^input_dataclip_id}} =
+               input_dataclip_viewer
 
       assert view |> output_is_empty?(step)
 
@@ -128,13 +132,16 @@ defmodule LightningWeb.RunLive.ShowTest do
           reason: "success"
         })
 
-      assert view
-             |> render_async()
-             |> Floki.parse_fragment!()
-             |> Floki.find(
-               "[phx-hook='ReactComponent'][data-react-name='DataclipViewer'][id='#{step.output_dataclip_id}']"
-             )
-             |> Enum.count() == 1
+      # Check that the output dataclip is rendered
+      output_dataclip_viewer =
+        view
+        |> dataclip_viewer("step-output-dataclip-viewer")
+        |> get_attrs_and_inner_html()
+        |> decode_inner_json()
+
+      # Check that the output dataclip is rendered
+      assert {_attrs, %{"dataclipId" => ^output_dataclip_id}} =
+               output_dataclip_viewer
 
       {:ok, step_2} =
         Lightning.Runs.start_step(run, %{
@@ -157,34 +164,36 @@ defmodule LightningWeb.RunLive.ShowTest do
 
       assert view |> output_is_empty?(step_2)
 
-      {:ok, step_2} =
+      {:ok, _step_2} =
         Lightning.Runs.complete_step(%{
           run_id: run_id,
           project_id: project.id,
           step_id: step_2.id,
           output_dataclip: ~s({"z": 2}),
-          output_dataclip_id: Ecto.UUID.generate(),
+          output_dataclip_id: step_2_output_dataclip_id = Ecto.UUID.generate(),
           reason: "success"
         })
 
-      assert view
-             |> render_async()
-             |> Floki.parse_fragment!()
-             |> Floki.find(
-               "[phx-hook='ReactComponent'][data-react-name='DataclipViewer'][id='#{step_2.output_dataclip_id}']"
-             )
-             |> Enum.count() == 1
+      output_dataclip_viewer =
+        view
+        |> dataclip_viewer("step-output-dataclip-viewer")
+        |> get_attrs_and_inner_html()
+        |> decode_inner_json()
+
+      assert {_attrs, %{"dataclipId" => ^step_2_output_dataclip_id}} =
+               output_dataclip_viewer
 
       # Go back to the previous step and check the output gets switched back
       view |> select_step(run, job_a.name)
 
-      assert view
-             |> render_async()
-             |> Floki.parse_fragment!()
-             |> Floki.find(
-               "[phx-hook='ReactComponent'][data-react-name='DataclipViewer'][id='#{step.output_dataclip_id}']"
-             )
-             |> Enum.count() == 1
+      output_dataclip_viewer =
+        view
+        |> dataclip_viewer("step-output-dataclip-viewer")
+        |> get_attrs_and_inner_html()
+        |> decode_inner_json()
+
+      assert {_attrs, %{"dataclipId" => ^output_dataclip_id}} =
+               output_dataclip_viewer
 
       {:ok, _} = Lightning.Runs.complete_run(run, %{state: "failed"})
 

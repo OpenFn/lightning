@@ -63,8 +63,8 @@ defmodule Lightning.WorkflowLive.Helpers do
   This is the same as pressing `Ctrl+S` or `Cmd+S`,
   note that it doesn't send any changes to the server, it just triggers the event.
   """
-  def trigger_save(view) do
-    view |> render_hook("save", %{})
+  def trigger_save(view, params \\ %{}) do
+    view |> render_hook("save", params)
   end
 
   def click_delete_job(view, job) do
@@ -443,8 +443,60 @@ defmodule Lightning.WorkflowLive.Helpers do
     |> element("a[href='#{path}']", text_filter)
   end
 
-  # Model & Factory Helpers
+  @doc """
+  Returns the attributes and inner HTML of a given element.
+  """
+  def get_attrs_and_inner_html(element) do
+    element
+    |> render()
+    |> Floki.parse_fragment!()
+    |> then(fn elements ->
+      case elements do
+        [element] -> element
+        _ -> raise "Expected exactly one element, but got #{length(elements)}"
+      end
+    end)
+    |> then(fn {_tag, attrs, inner_html} ->
+      {Map.new(attrs), inner_html |> Enum.join()}
+    end)
+  end
 
+  @doc """
+  Decodes the inner HTML of a React component.
+  To be used with `get_attrs_and_inner_html/1`.
+
+  ## Examples
+
+      view
+      |> dataclip_viewer("step-output-dataclip-viewer")
+      |> get_attrs_and_inner_html()
+      |> decode_inner_json()
+
+      # =>
+      # {
+      #   %{"data-react-id" => "step-output-dataclip-viewer"},
+      #   %{"body" => "..."}
+      # }
+  """
+  def decode_inner_json({attrs, inner_html}) do
+    {attrs, inner_html |> Jason.decode!()}
+  end
+
+  def dataclip_viewer(view, id) do
+    view
+    |> element(
+      "script[phx-hook='ReactComponent'][data-react-name='DataclipViewer'][id='#{id}']"
+    )
+  end
+
+  def job_editor(view, id \\ 1) do
+    view
+    |> element(
+      "script[phx-hook='ReactComponent'][data-react-name='JobEditor'][id='JobEditor-#{id}']"
+    )
+  end
+
+  # Model & Factory Helpers
   def create_workflow(%{project: project}) do
     trigger = build(:trigger, type: :webhook)
 
