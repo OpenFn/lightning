@@ -24,6 +24,7 @@ and this project adheres to
 
 ### Changed
 
+- Adjusted flash messages
 - Updated dependencies [#3086](https://github.com/OpenFn/lightning/pull/3086):
   - `phoenix` from 1.7.20 to 1.7.21
   - `phoenix_live_view` from 1.0.5 to 1.0.9
