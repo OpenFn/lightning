@@ -2845,7 +2845,7 @@ defmodule LightningWeb.ProjectLiveTest do
             ~p"/projects/#{project}/settings#collaboration"
           )
 
-        assert flash["info"] == "Collaborator removed successfully!"
+        assert flash["info"] == "Collaborator removed"
 
         # project user is removed
         refute Repo.get(Lightning.Projects.ProjectUser, project_user.id)
@@ -4374,7 +4374,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
         flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
 
-        assert flash["info"] == "Connection made successfully!"
+        assert flash["info"] == "Connection made"
       end
     end
 
@@ -4968,7 +4968,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
         flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
 
-        assert flash["info"] == "Github sync initiated successfully!"
+        assert flash["info"] == "Github sync initiated"
       end
     end
 
@@ -5262,7 +5262,7 @@ defmodule LightningWeb.ProjectLiveTest do
             ~p"/projects/#{project.id}/settings#collections"
           )
 
-        assert flash["info"] == "Collection created successfully!"
+        assert flash["info"] == "Collection created"
 
         # collection now exists
         assert Lightning.Repo.get_by(Lightning.Collections.Collection,
@@ -5450,7 +5450,7 @@ defmodule LightningWeb.ProjectLiveTest do
             ~p"/projects/#{project.id}/settings#collections"
           )
 
-        assert flash["info"] == "Collection updated successfully!"
+        assert flash["info"] == "Collection updated"
 
         assert Lightning.Repo.get_by(Lightning.Collections.Collection,
                  project_id: project.id,
@@ -5536,7 +5536,7 @@ defmodule LightningWeb.ProjectLiveTest do
             ~p"/projects/#{project.id}/settings#collections"
           )
 
-        assert flash["info"] == "Collection deleted successfully!"
+        assert flash["info"] == "Collection deleted"
 
         # collection does not exist
         refute Lightning.Repo.get(
