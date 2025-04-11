@@ -528,13 +528,19 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   end
 
   defp get_type_options(schemas_path) do
+    manifest_path = Path.join(["priv", "static", "images", "adaptors", "adaptor_icons.json"])
+    manifest =
+      case File.read(manifest_path) do
+        {:ok, content} -> Jason.decode!(content)
+        _ -> %{}
+      end
+
     schemas_options =
       Path.wildcard("#{schemas_path}/*.json")
       |> Enum.map(fn p ->
         name = p |> Path.basename() |> String.replace(".json", "")
-        image_path = "/images/adaptors/#{name}-square.png"
-        image_exists = File.exists?(Path.join("priv/static", image_path))
-        {Phoenix.Naming.humanize(name), name, if(image_exists, do: image_path, else: nil), nil}
+        image_path = get_in(manifest, [name, "square"])
+        {Phoenix.Naming.humanize(name), name, image_path, nil}
       end)
 
     schemas_options
