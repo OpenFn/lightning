@@ -1,5 +1,6 @@
 import type { PhoenixHook } from './PhoenixHook';
 import { initiateSaveAndRun } from '../common';
+import type { ViewHook } from 'phoenix_live_view';
 
 /**
  * Priority levels for key handlers.
@@ -85,9 +86,9 @@ type PriorityLevel = PRIORITY;
 const keyHandlers = new Set<{
   hook: any;
   keyCheck: (e: KeyboardEvent) => boolean;
-  action: (e: KeyboardEvent, el: HTMLElement) => void;
+  action: (e: KeyboardEvent, el: HTMLElement, hook: ViewHook) => void;
   priority: PriorityLevel;
-  bindingScope?: string;
+  bindingScope?: string | undefined;
 }>();
 
 /**
@@ -120,7 +121,7 @@ const keyHandlers = new Set<{
  */
 function createKeyCombinationHook(
   keyCheck: (e: KeyboardEvent) => boolean,
-  action: (e: KeyboardEvent, el: HTMLElement) => void,
+  action: (e: KeyboardEvent, el: HTMLElement, hook: ViewHook) => void,
   priority: PriorityLevel = PRIORITY.NORMAL,
   bindingScope?: string
 ): PhoenixHook {
@@ -128,6 +129,8 @@ function createKeyCombinationHook(
     mounted() {
       const handler = { hook: this, keyCheck, action, priority, bindingScope };
       keyHandlers.add(handler);
+
+      this.abortController = new AbortController();
 
       this.callback = (e: KeyboardEvent) => {
         if (!keyCheck(e)) return;
@@ -160,11 +163,13 @@ function createKeyCombinationHook(
 
         const topHandler = matchingHandlers[0];
         if (topHandler?.hook === this) {
-          topHandler.action(e, this.el);
+          topHandler.action(e, this.el, this);
         }
       };
 
-      window.addEventListener('keydown', this.callback);
+      window.addEventListener('keydown', this.callback, {
+        signal: this.abortController.signal,
+      });
     },
 
     destroyed() {
@@ -173,10 +178,11 @@ function createKeyCombinationHook(
           keyHandlers.delete(handler);
         }
       });
-      window.removeEventListener('keydown', this.callback);
+      this.abortController.abort();
     },
   } as PhoenixHook<{
     callback: (e: KeyboardEvent) => void;
+    abortController: AbortController;
   }>;
 }
 
@@ -230,7 +236,7 @@ const isEscape = (e: KeyboardEvent) => e.key === 'Escape';
  * @param e - The keyboard event that triggered the action.
  * @param el - The DOM element associated with the hook.
  */
-const clickAction = (e: KeyboardEvent, el: HTMLElement) =>
+const clickAction = (_e: KeyboardEvent, el: HTMLElement) =>
   initiateSaveAndRun(el);
 
 /**
@@ -239,8 +245,9 @@ const clickAction = (e: KeyboardEvent, el: HTMLElement) =>
  * @param e - The keyboard event that triggered the action.
  * @param el - The DOM element associated with the hook.
  */
-const submitAction = (e: KeyboardEvent, el: HTMLElement) =>
+const submitAction = (_e: KeyboardEvent, el: HTMLElement) => {
   el.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+};
 
 /**
  * Simulates a "close" action, used to close modals, panels, or other UI components.
@@ -248,7 +255,7 @@ const submitAction = (e: KeyboardEvent, el: HTMLElement) =>
  * @param e - The keyboard event that triggered the action.
  * @param el - The DOM element associated with the hook.
  */
-const closeAction = (e: KeyboardEvent, el: HTMLElement) => el.click();
+const closeAction = (_e: KeyboardEvent, el: HTMLElement) => el.click();
 
 /**
  * Hook to trigger a form submission when "Ctrl+S" (or "Cmd+S" on macOS) is pressed.
@@ -263,6 +270,16 @@ export const SaveViaCtrlS = createKeyCombinationHook(
   submitAction
 );
 
+// TODO: This is a hack to save the inspector. We should find a better way to do this.
+// We shouldn't need to have access to the hook.
+// Perhaps we can abstract the keyhandling logic to be usable from a hook
+// and from react.
+export const InspectorSaveViaCtrlS = createKeyCombinationHook(
+  isCtrlOrMetaS,
+  (_e, el, hook) => {
+    hook.pushEvent('save', {});
+  }
+);
 /**
  * Hook to open the Github Sync modal when "Ctrl+Shift+S" (or "Cmd+Shift+S" on macOS) is pressed.
  *

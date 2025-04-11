@@ -202,6 +202,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
               close_url={close_url(assigns, :selected_job, :select)}
               form={single_inputs_for(@workflow_form, :jobs, @selected_job.id)}
             >
+              <div
+                phx-hook="InspectorSaveViaCtrlS"
+                id="job-edit-save"
+                class="contents"
+              >
+              </div>
               <.collapsible_panel
                 id={"manual-job-#{@selected_job.id}"}
                 class="h-full border border-l-0 manual-job-panel"
@@ -348,7 +354,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           </div>
         </div>
 
-        <.WorkflowEditor :if={@selection_mode != "expand"} />
+        <.WorkflowEditor />
         <.live_component
           :if={@selected_job}
           id="new-credential-modal"
