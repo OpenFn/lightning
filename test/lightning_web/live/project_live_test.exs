@@ -4374,7 +4374,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
         flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
 
-        assert flash["info"] == "Connection made"
+        assert flash["info"] == "Connected to GitHub"
       end
     end
 
