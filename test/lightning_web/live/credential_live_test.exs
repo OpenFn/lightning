@@ -986,69 +986,6 @@ defmodule LightningWeb.CredentialLiveTest do
       {_path, flash} = assert_redirect(index_live)
       assert flash == %{"info" => "Credential updated successfully"}
     end
-
-    # test "blocks credential transfer to invalid owner; allows to valid owner", %{
-    #   conn: conn,
-    #   user: first_owner,
-    #   credential: credential_1
-    # } do
-    #   user_2 = insert(:user)
-    #   user_3 = insert(:user)
-
-    #   project =
-    #     insert(:project,
-    #       name: "myproject",
-    #       project_users: [%{user_id: first_owner.id}, %{user_id: user_2.id}]
-    #     )
-
-    #   credential =
-    #     insert(:credential,
-    #       user: first_owner,
-    #       name: "the one for giving away",
-    #       project_credentials: [
-    #         %{project: project, credential: nil}
-    #       ]
-    #     )
-
-    #   {:ok, index_live, html} = live(conn, ~p"/credentials")
-
-    #   # both credentials appear in the list
-    #   assert html =~ credential_1.name
-    #   assert html =~ credential.name
-
-    #   assert html =~ first_owner.id
-    #   assert html =~ user_2.id
-    #   assert html =~ user_3.id
-
-    #   assert index_live
-    #          |> form("#credential-form-#{credential.id}",
-    #            credential: Map.put(@update_attrs, :user_id, user_3.id)
-    #          )
-    #          |> render_change() =~ "Invalid owner"
-
-    #   #  Can't transfer to user who doesn't have access to right projects
-    #   assert index_live |> submit_disabled()
-
-    #   {:ok, _index_live, html} =
-    #     index_live
-    #     |> form("#credential-form-#{credential.id}",
-    #       credential: %{
-    #         body: "{\"a\":\"new_secret\"}",
-    #         user_id: user_2.id
-    #       }
-    #     )
-    #     |> render_submit()
-    #     |> follow_redirect(
-    #       conn,
-    #       ~p"/credentials"
-    #     )
-
-    #   # Once the transfer is made, the credential should not show up in the list
-
-    #   assert html =~ "Credential updated successfully"
-    #   assert html =~ credential_1.name
-    #   refute html =~ "the one for giving away"
-    # end
   end
 
   describe "Authorizing an oauth credential" do
@@ -3149,6 +3086,76 @@ defmodule LightningWeb.CredentialLiveTest do
         |> follow_redirect(conn, ~p"/credentials")
 
       assert html =~ "Could not revoke transfer"
+    end
+  end
+
+  describe "credential type picker modal" do
+    setup do
+      # Create test manifest file in the configured location
+      Application.ensure_all_started(:lightning)
+      adaptor_icons_path = Application.get_env(:lightning, :adaptor_icons_path)
+      File.mkdir_p!(adaptor_icons_path)
+
+      # Create a manifest with some test data
+      manifest_path = Path.join(adaptor_icons_path, "adaptor_icons.json")
+
+      manifest_content =
+        Jason.encode!(%{
+          "http" => %{"square" => "/images/http-square.png"},
+          "postgresql" => %{"square" => "/images/postgresql-square.png"},
+          "dhis2" => %{"square" => nil}
+        })
+
+      File.write!(manifest_path, manifest_content)
+
+      on_exit(fn ->
+        # Clean up manifest file after the test
+        File.rm(manifest_path)
+      end)
+
+      :ok
+    end
+
+    test "displays credential type modal with icons from manifest", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/credentials")
+
+      html_tree = Floki.parse_document!(html)
+
+      # Check for postgresql with image
+      postgresql_label =
+        Floki.find(
+          html_tree,
+          "label[for='credential-schema-picker_selected_postgresql']"
+        )
+
+      postgresql_img = Floki.find(postgresql_label, "img")
+      assert length(postgresql_img) > 0
+      img_src = postgresql_img |> Floki.attribute("src") |> List.first()
+      assert img_src =~ "postgresql-square.png"
+
+      # For dhis2, which has nil in the manifest, there should be no img tag
+      dhis2_label =
+        Floki.find(
+          html_tree,
+          "label[for='credential-schema-picker_selected_dhis2']"
+        )
+
+      dhis2_img = Floki.find(dhis2_label, "img")
+      assert Enum.empty?(dhis2_img)
+    end
+
+    test "handles missing manifest gracefully", %{conn: conn} do
+      # Remove the manifest file to test missing manifest case
+      adaptor_icons_path = Application.get_env(:lightning, :adaptor_icons_path)
+      manifest_path = Path.join(adaptor_icons_path, "adaptor_icons.json")
+      File.rm(manifest_path)
+
+      {:ok, _view, html} = live(conn, ~p"/credentials")
+
+      # Schema types should still be there, just without icons
+      assert html =~ "http"
+      assert html =~ "postgresql"
+      assert html =~ "Raw JSON"
     end
   end
 
