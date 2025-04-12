@@ -566,7 +566,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     end)
   end
 
-  defp get_manifest_path() do
+  defp get_manifest_path do
     Path.join([
       Application.get_env(:lightning, :adaptor_icons_path),
       "adaptor_icons.json"
