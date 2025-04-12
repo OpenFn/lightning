@@ -384,9 +384,7 @@ defmodule LightningWeb.Components.Form do
         <%= PhoenixHTMLHelpers.Form.label(@form, @field, @opts) do %>
           <div class="flex items-center">
             {@title}
-            <object :if={@logo} data={@logo} type="image/png" class="w-3 h-3 ml-1"/>
-
-
+            <object :if={@logo} data={@logo} type="image/png" class="w-3 h-3 ml-1" />
           </div>
         <% end %>
         <LightningWeb.Components.Common.tooltip
@@ -398,7 +396,7 @@ defmodule LightningWeb.Components.Form do
       <%= PhoenixHTMLHelpers.Form.label(@form, @field, @opts) do %>
         <div class="flex items-center">
           {@title}
-            <object :if={@logo} data={@logo} type="image/png" class="w-3 h-3 ml-1"/>
+          <object :if={@logo} data={@logo} type="image/png" class="w-3 h-3 ml-1" />
         </div>
       <% end %>
     <% end %>

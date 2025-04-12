@@ -532,7 +532,12 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       Path.wildcard("#{schemas_path}/*.json")
       |> Enum.map(fn p ->
         name = p |> Path.basename() |> String.replace(".json", "")
-        image_path = Routes.static_path(LightningWeb.Endpoint, "/images/adaptors/#{name}-square.png")
+
+        image_path =
+          Routes.static_path(
+            LightningWeb.Endpoint,
+            "/images/adaptors/#{name}-square.png"
+          )
 
         {name, name, image_path, nil}
       end)
