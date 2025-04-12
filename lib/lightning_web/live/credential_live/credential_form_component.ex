@@ -528,22 +528,11 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   end
 
   defp get_type_options(schemas_path) do
-    manifest =
-      case get_manifest_path() |> File.read() do
-        {:ok, content} -> Jason.decode!(content)
-        _ -> %{}
-      end
-
     schemas_options =
       Path.wildcard("#{schemas_path}/*.json")
       |> Enum.map(fn p ->
         name = p |> Path.basename() |> String.replace(".json", "")
-        image_path = get_in(manifest, [name, "square"])
-
-        image_path =
-          if image_path,
-            do: Routes.static_path(LightningWeb.Endpoint, image_path),
-            else: nil
+        image_path = Routes.static_path(LightningWeb.Endpoint, "/images/adaptors/#{name}-square.png")
 
         {name, name, image_path, nil}
       end)
@@ -564,13 +553,6 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
         value: user.id
       ]
     end)
-  end
-
-  defp get_manifest_path do
-    Path.join([
-      Application.get_env(:lightning, :adaptor_icons_path),
-      "adaptor_icons.json"
-    ])
   end
 
   defp get_scopes(%{body: %{"scope" => scope}}), do: String.split(scope)
