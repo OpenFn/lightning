@@ -9,6 +9,7 @@ defmodule Lightning.DashboardStats do
   alias Lightning.Repo
   alias Lightning.Run
   alias Lightning.Workflows.Workflow
+  alias Lightning.WorkOrder
 
   defmodule WorkflowStats do
     @moduledoc """
@@ -74,6 +75,40 @@ defmodule Lightning.DashboardStats do
     }
   end
 
+  @doc """
+  Sort workflow stats based on field and direction according to specific rules:
+  - last_workorder_updated_at: Sort by latest work order's timestamp
+  - workorders_count: Sort by total count of work orders
+  - failed_workorders_count: Sort by count of failed work orders
+  """
+  def sort_workflow_stats(workflow_stats, sort_field, sort_direction) do
+    sorter = get_sort_function(sort_field)
+    sort_order = String.to_existing_atom(sort_direction)
+
+    # Pass the sorter function and the sort order separately
+    Enum.sort_by(workflow_stats, sorter, sort_order)
+  end
+
+  # Remove the direction parameter from these functions
+  defp get_sort_function("workorders_count") do
+    fn stats -> stats.workorders_count end
+  end
+
+  defp get_sort_function("failed_workorders_count") do
+    fn stats -> stats.failed_workorders_count end
+  end
+
+  defp get_sort_function("last_workorder_updated_at") do
+    fn stats ->
+      timestamp = stats.last_workorder.updated_at || ~U[1970-01-01 00:00:00Z]
+      timestamp
+    end
+  end
+
+  defp get_sort_function(_) do
+    fn stats -> stats.workflow.name end
+  end
+
   def aggregate_project_metrics(workflows_stats) do
     %ProjectMetrics{
       work_order_metrics:
@@ -110,7 +145,7 @@ defmodule Lightning.DashboardStats do
          %Workflow{id: workflow_id},
          excluded_states \\ []
        ) do
-    from(wo in Lightning.WorkOrder,
+    from(wo in WorkOrder,
       where: wo.workflow_id == ^workflow_id,
       where: wo.state not in ^excluded_states,
       order_by: [desc: wo.inserted_at],
@@ -123,7 +158,7 @@ defmodule Lightning.DashboardStats do
   end
 
   defp count_workorders(%Workflow{id: workflow_id}) do
-    from(wo in Lightning.WorkOrder,
+    from(wo in WorkOrder,
       where: wo.workflow_id == ^workflow_id,
       select: wo.state
     )

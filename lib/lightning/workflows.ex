@@ -292,16 +292,56 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
-  Retrieves a list of active Workflows with their jobs and triggers preloaded.
+  Returns a list of workflows for a project, with optional search filtering.
+
+  ## Options
+    * `:order_by` - A tuple containing the field and direction to sort by,
+      e.g., {:name, :asc} or {:enabled, :desc}
+    * `:include` - Associations to preload, same as in `get_workflow/2`
+    * `:search` - Optional search term to filter workflow names
+
+  ## Examples
+      iex> get_workflows_for(project, search: "api", order_by: {:name, :desc})
+      [%Workflow{name: "API Workflow"}, ...]
   """
-  @spec get_workflows_for(Project.t()) :: [Workflow.t()]
-  def get_workflows_for(%Project{} = project) do
-    from(w in Workflow,
-      preload: [:triggers, :edges, jobs: [:workflow]],
-      where: is_nil(w.deleted_at) and w.project_id == ^project.id,
-      order_by: [asc: w.name]
-    )
+  def get_workflows_for(%Project{} = project, opts \\ []) do
+    include = Keyword.get(opts, :include, [:triggers, :edges, jobs: [:workflow]])
+    include = if :triggers in include, do: include, else: [:triggers | include]
+    order_by = Keyword.get(opts, :order_by, {:name, :asc})
+    search_term = Keyword.get(opts, :search)
+
+    query =
+      from(w in Workflow,
+        where: is_nil(w.deleted_at) and w.project_id == ^project.id,
+        preload: ^include
+      )
+
+    query =
+      if search_term && search_term != "" do
+        search_pattern = "%#{search_term}%"
+        from w in query, where: ilike(w.name, ^search_pattern)
+      else
+        query
+      end
+
+    query
+    |> apply_sorting(order_by)
     |> Repo.all()
+  end
+
+  defp apply_sorting(query, {:name, direction}) do
+    from w in query, order_by: [{^direction, w.name}]
+  end
+
+  defp apply_sorting(query, {:enabled, direction}) do
+    from w in query,
+      left_join: t in assoc(w, :triggers),
+      group_by: w.id,
+      order_by: [{^direction, fragment("COALESCE(MAX(?::int), 0)", t.enabled)}]
+  end
+
+  defp apply_sorting(query, _) do
+    from w in query, order_by: [asc: w.name]
   end
 
   @spec to_project_space([Workflow.t()]) :: %{}

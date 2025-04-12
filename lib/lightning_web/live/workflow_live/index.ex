@@ -14,8 +14,6 @@ defmodule LightningWeb.WorkflowLive.Index do
   alias LightningWeb.WorkflowLive.Helpers
   alias LightningWeb.WorkflowLive.NewWorkflowForm
 
-  # alias Phoenix.LiveView.TagEngine
-
   on_mount {LightningWeb.Hooks, :project_scope}
 
   # TODO - make this configurable some day
@@ -27,6 +25,7 @@ defmodule LightningWeb.WorkflowLive.Index do
   attr :workflows, :list
   attr :project, Lightning.Projects.Project
   attr :banner, :map, default: nil
+  attr :search_term, :string, default: ""
 
   @impl true
   def render(%{project: %{id: project_id}} = assigns) do
@@ -56,6 +55,9 @@ defmodule LightningWeb.WorkflowLive.Index do
           workflow_creation_limit_error={@workflow_creation_limit_error}
           workflows_stats={@workflows_stats}
           project={@project}
+          sort_key={@sort_key}
+          sort_direction={@sort_direction}
+          search_term={@search_term}
         />
         <.create_workflow_modal form={@form} />
       </LayoutComponents.centered>
@@ -87,40 +89,136 @@ defmodule LightningWeb.WorkflowLive.Index do
      socket
      |> assign(
        can_delete_workflow: can_delete_workflow,
-       can_create_workflow: can_create_workflow
+       can_create_workflow: can_create_workflow,
+       sort_key: "name",
+       sort_direction: "asc",
+       search_term: ""
      )
      |> assign_workflow_form(NewWorkflowForm.validate(%{}, project.id))}
   end
 
   @impl true
   def handle_params(params, _url, socket) do
+    search_term = params["q"] || ""
+
+    sort_key = params["sort"] || "name"
+    sort_direction = params["dir"] || "asc"
+
+    socket =
+      assign(socket,
+        search_term: search_term,
+        sort_key: sort_key,
+        sort_direction: sort_direction
+      )
+
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
   defp apply_action(socket, :index, _params) do
-    %{project: project} = socket.assigns
+    %{project: project, search_term: search_term} = socket.assigns
 
-    workflows_stats =
-      project
-      |> Workflows.get_workflows_for()
-      |> Enum.map(&DashboardStats.get_workflow_stats/1)
+    db_sortable_fields = [:name, :enabled]
+    sort_key = string_to_atom(socket.assigns.sort_key)
+    sort_direction = string_to_atom(socket.assigns.sort_direction)
+
+    opts = [
+      search: search_term,
+      order_by: {sort_key, sort_direction}
+    ]
+
+    workflows = Workflows.get_workflows_for(project, opts)
+    workflow_stats = Enum.map(workflows, &DashboardStats.get_workflow_stats/1)
+
+    sorted_stats =
+      if sort_key in db_sortable_fields do
+        workflow_stats
+      else
+        DashboardStats.sort_workflow_stats(
+          workflow_stats,
+          socket.assigns.sort_key,
+          socket.assigns.sort_direction
+        )
+      end
 
     socket
     |> assign(
       active_menu_item: :overview,
       page_title: "Workflows",
-      metrics: DashboardStats.aggregate_project_metrics(workflows_stats),
-      workflows_stats: workflows_stats
+      metrics: DashboardStats.aggregate_project_metrics(sorted_stats),
+      workflows_stats: sorted_stats
     )
   end
 
+  # Handle search events with URL parameter 'q'
   @impl true
+  def handle_event("search_workflows", %{"value" => search_term}, socket) do
+    %{sort_key: sort_key, sort_direction: sort_direction} = socket.assigns
+
+    # Build query params
+    query_params = build_query_params(search_term, sort_key, sort_direction)
+
+    {:noreply,
+     socket
+     |> push_patch(
+       to: ~p"/projects/#{socket.assigns.project.id}/w?#{query_params}"
+     )}
+  end
+
+  def handle_event("clear_search", _params, socket) do
+    %{sort_key: sort_key, sort_direction: sort_direction} = socket.assigns
+
+    # Build query params with only sort params
+    query_params = %{
+      sort: sort_key,
+      dir: sort_direction
+    }
+
+    {:noreply,
+     socket
+     |> push_patch(
+       to: ~p"/projects/#{socket.assigns.project.id}/w?#{query_params}"
+     )}
+  end
+
+  def handle_event("sort", %{"by" => field}, socket) do
+    %{
+      search_term: search_term,
+      sort_key: current_sort_key,
+      sort_direction: current_direction
+    } = socket.assigns
+
+    new_direction =
+      if current_sort_key == field do
+        switch_sort_direction(current_direction)
+      else
+        "asc"
+      end
+
+    # Build query params
+    query_params = build_query_params(search_term, field, new_direction)
+
+    {:noreply,
+     socket
+     |> push_patch(
+       to: ~p"/projects/#{socket.assigns.project.id}/w?#{query_params}"
+     )}
+  end
+
   def handle_event(
         "toggle_workflow_state",
         %{"workflow_state" => state, "value_key" => workflow_id},
         socket
       ) do
-    %{current_user: actor, project: project_id} = socket.assigns
+    %{
+      current_user: actor,
+      project: project_id,
+      search_term: search_term,
+      sort_key: sort_key,
+      sort_direction: sort_direction
+    } = socket.assigns
+
+    # Build query params
+    query_params = build_query_params(search_term, sort_key, sort_direction)
 
     workflow_id
     |> Workflows.get_workflow!(include: [:triggers])
@@ -131,7 +229,7 @@ defmodule LightningWeb.WorkflowLive.Index do
         {:noreply,
          socket
          |> put_flash(:info, "Workflow updated")
-         |> push_patch(to: ~p"/projects/#{project_id}/w")}
+         |> push_patch(to: ~p"/projects/#{project_id}/w?#{query_params}")}
 
       {:error, _changeset} ->
         {:noreply,
@@ -140,10 +238,47 @@ defmodule LightningWeb.WorkflowLive.Index do
            :error,
            "Failed to update workflow. Please try again."
          )
-         |> push_patch(to: ~p"/projects/#{project_id}/w")}
+         |> push_patch(to: ~p"/projects/#{project_id}/w?#{query_params}")}
     end
   end
 
+  # Update delete_workflow to preserve search and sort parameters
+  def handle_event("delete_workflow", %{"id" => id}, socket) do
+    %{
+      project: project,
+      can_delete_workflow: can_delete_workflow?,
+      current_user: user,
+      search_term: search_term,
+      sort_key: sort_key,
+      sort_direction: sort_direction
+    } = socket.assigns
+
+    # Build query params
+    query_params = build_query_params(search_term, sort_key, sort_direction)
+
+    if can_delete_workflow? do
+      Workflows.get_workflow!(id)
+      |> Workflows.mark_for_deletion(user)
+      |> case do
+        {:ok, _} ->
+          {
+            :noreply,
+            socket
+            |> put_flash(:info, "Workflow successfully deleted.")
+            |> push_patch(to: ~p"/projects/#{project.id}/w?#{query_params}")
+          }
+
+        {:error, _changeset} ->
+          {:noreply, socket |> put_flash(:error, "Can't delete workflow")}
+      end
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You are not authorized to perform this action.")}
+    end
+  end
+
+  # Existing event handlers and helper functions
   def handle_event("validate_workflow", %{"new_workflow" => params}, socket) do
     changeset =
       NewWorkflowForm.validate(params, socket.assigns.project.id)
@@ -169,33 +304,17 @@ defmodule LightningWeb.WorkflowLive.Index do
     end
   end
 
-  def handle_event("delete_workflow", %{"id" => id}, socket) do
-    %{
-      project: project,
-      can_delete_workflow: can_delete_workflow?,
-      current_user: user
-    } = socket.assigns
+  # Helper function to build query params (reused across handlers)
+  defp build_query_params(search_term, sort_key, sort_direction) do
+    base_params = %{
+      sort: sort_key,
+      dir: sort_direction
+    }
 
-    if can_delete_workflow? do
-      Workflows.get_workflow!(id)
-      |> Workflows.mark_for_deletion(user)
-      |> case do
-        {:ok, _} ->
-          {
-            :noreply,
-            socket
-            |> assign(workflows: Workflows.get_workflows_for(project))
-            |> put_flash(:info, "Workflow successfully deleted.")
-            |> push_patch(to: "/projects/#{project.id}/w")
-          }
-
-        {:error, _changeset} ->
-          {:noreply, socket |> put_flash(:error, "Can't delete workflow")}
-      end
+    if search_term && search_term != "" do
+      Map.put(base_params, :q, search_term)
     else
-      {:noreply,
-       socket
-       |> put_flash(:error, "You are not authorized to perform this action.")}
+      base_params
     end
   end
 
@@ -220,4 +339,19 @@ defmodule LightningWeb.WorkflowLive.Index do
         error_msg
     end
   end
+
+  defp string_to_atom("name"), do: :name
+  defp string_to_atom("enabled"), do: :enabled
+  defp string_to_atom("workorders_count"), do: :workorders_count
+  defp string_to_atom("failed_workorders_count"), do: :failed_workorders_count
+
+  defp string_to_atom("last_workorder_updated_at"),
+    do: :last_workorder_updated_at
+
+  defp string_to_atom("asc"), do: :asc
+  defp string_to_atom("desc"), do: :desc
+  defp string_to_atom(_), do: :name
+
+  defp switch_sort_direction("asc"), do: "desc"
+  defp switch_sort_direction("desc"), do: "asc"
 end
