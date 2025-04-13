@@ -309,7 +309,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
         assert view
                |> element("#toggle-control-#{workflow.id}")
                |> render_click() =~
-                 "Workflow updated successfully!"
+                 "Workflow updated"
 
         assert view
                |> has_element?(

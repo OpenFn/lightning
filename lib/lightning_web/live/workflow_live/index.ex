@@ -123,7 +123,7 @@ defmodule LightningWeb.WorkflowLive.Index do
       {:ok, _workflow} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Workflow updated successfully!")
+         |> put_flash(:info, "Workflow updated")
          |> push_patch(to: ~p"/projects/#{project_id}/w")}
 
       {:error, _changeset} ->

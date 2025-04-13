@@ -303,7 +303,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       view
       |> element("#delete_credential_#{credential.id}_modal_confirm_button")
-      |> render_click() =~ "Credential deleted successfully!"
+      |> render_click() =~ "Credential deleted"
 
       {:ok, _view, html} =
         live(conn, ~p"/projects/#{project}/settings#credentials",
