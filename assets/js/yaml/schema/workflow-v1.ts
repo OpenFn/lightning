@@ -49,14 +49,14 @@ const workflowV1Schema = {
           additionalProperties: false,
           oneOf: [
             {
+              properties: { type: { const: 'webhook' } },
+            },
+            {
               properties: {
                 type: { const: 'cron' },
                 cron_expression: { type: 'string' },
               },
               required: ['cron_expression'],
-            },
-            {
-              properties: { type: { const: 'webhook' } },
             },
             {
               properties: { type: { const: 'kafka' } },

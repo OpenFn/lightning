@@ -2,18 +2,37 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
   @moduledoc false
 
   use LightningWeb, :live_component
+  alias Lightning.Workflows.Workflow
+  alias LightningWeb.API.ProvisioningJSON
 
   @impl true
   def update(assigns, socket) do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign_new(:selected_method, fn -> "import" end)}
+     |> assign_new(:workflow, fn -> %Workflow{project_id: assigns.project_id} end)
+     |> assign_new(:changeset, fn %{workflow: workflow} ->
+       Workflow.changeset(workflow, %{})
+     end)
+     |> assign_new(:selected_method, fn -> "scratch" end)}
   end
 
   @impl true
   def handle_event("choose-another-method", %{"method" => method}, socket) do
     {:noreply, assign(socket, selected_method: method)}
+  end
+
+  def handle_event("validate-parsed-workflow", %{"workflow" => params}, socket) do
+    changeset = Workflow.changeset(socket.assigns.workflow, params)
+
+    response =
+      if changeset.valid? do
+        %{}
+      else
+        ProvisioningJSON.error(%{changeset: changeset})
+      end
+
+    {:reply, response, assign(socket, changeset: changeset)}
   end
 
   @impl true
@@ -35,7 +54,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
 
           <.create_workflow_via_import
             :if={@selected_method == "import"}
-            workflow_form={@workflow_form}
+            changeset={@changeset}
             myself={@myself}
           />
         </div>
@@ -93,7 +112,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
     """
   end
 
-  attr :workflow_form, :map, required: true
+  attr :changeset, Ecto.Changeset, required: true
   attr :myself, :any, required: true
 
   defp create_workflow_via_import(assigns) do
@@ -136,6 +155,11 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         </div>
       </div>
       <div>
+        <div
+          id="workflow-errors"
+          class="error-space mb-1 text-xs text-danger-600 hidden"
+        >
+        </div>
         <.textarea_element
           id="workflow-code-viewer"
           phx-update="ignore"
@@ -145,8 +169,6 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
           class="font-mono proportional-nums text-slate-200 bg-slate-700 resize-none text-nowrap overflow-x-auto"
           placeholder="Paste your YAML content here"
         />
-        <div id="workflow-errors" class="error-space mt-1 text-xs text-danger-600">
-        </div>
       </div>
       <div class="flex flex-row justify-end gap-3">
         <.button
@@ -163,7 +185,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
           id="toggle_new_workflow_panel_btn"
           type="button"
           phx-click="toggle_new_workflow_panel"
-          disabled={!@workflow_form.source.valid?}
+          disabled={!@changeset.valid?}
         >
           Continue
         </.button>
