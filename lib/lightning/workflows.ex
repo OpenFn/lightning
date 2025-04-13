@@ -292,17 +292,42 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
-  Returns a list of workflows for a project, with optional search filtering.
+  Returns a list of workflows for a project with optional filtering, sorting, and preloading.
+
+  ## Parameters
+    * `project` - A %Project{} struct for which to retrieve workflows
+    * `opts` - Optional keyword list of options
 
   ## Options
+    * `:search` - String to filter workflows by name using case-insensitive partial matching
     * `:order_by` - A tuple containing the field and direction to sort by,
-      e.g., {:name, :asc} or {:enabled, :desc}
-    * `:include` - Associations to preload, same as in `get_workflow/2`
-    * `:search` - Optional search term to filter workflow names
+      e.g., `{:name, :asc}` or `{:enabled, :desc}`
+    * `:include` - List of associations to preload (defaults to [:triggers, :edges, jobs: [:workflow]])
+
+  ## Returns
+    A list of %Workflow{} structs that match the criteria
 
   ## Examples
+
+      # Get all workflows for a project
+      iex> get_workflows_for(project)
+      [%Workflow{}, ...]
+
+      # Search workflows containing "api" in their name
+      iex> get_workflows_for(project, search: "api")
+      [%Workflow{name: "API Gateway"}, %Workflow{name: "External API"}]
+
+      # Sort workflows by name in descending order
+      iex> get_workflows_for(project, order_by: {:name, :desc})
+      [%Workflow{name: "Zebra"}, %Workflow{name: "Apple"}]
+
+      # Search and sort combined
       iex> get_workflows_for(project, search: "api", order_by: {:name, :desc})
-      [%Workflow{name: "API Workflow"}, ...]
+      [%Workflow{name: "REST API"}, %Workflow{name: "API Gateway"}]
+
+      # Customize preloaded associations
+      iex> get_workflows_for(project, include: [:triggers])
+      [%Workflow{triggers: [...]}, ...]
   """
   def get_workflows_for(%Project{} = project, opts \\ []) do
     include = Keyword.get(opts, :include, [:triggers, :edges, jobs: [:workflow]])

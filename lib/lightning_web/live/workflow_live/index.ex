@@ -149,12 +149,10 @@ defmodule LightningWeb.WorkflowLive.Index do
     )
   end
 
-  # Handle search events with URL parameter 'q'
   @impl true
   def handle_event("search_workflows", %{"value" => search_term}, socket) do
     %{sort_key: sort_key, sort_direction: sort_direction} = socket.assigns
 
-    # Build query params
     query_params = build_query_params(search_term, sort_key, sort_direction)
 
     {:noreply,
@@ -167,7 +165,6 @@ defmodule LightningWeb.WorkflowLive.Index do
   def handle_event("clear_search", _params, socket) do
     %{sort_key: sort_key, sort_direction: sort_direction} = socket.assigns
 
-    # Build query params with only sort params
     query_params = %{
       sort: sort_key,
       dir: sort_direction
@@ -194,7 +191,6 @@ defmodule LightningWeb.WorkflowLive.Index do
         "asc"
       end
 
-    # Build query params
     query_params = build_query_params(search_term, field, new_direction)
 
     {:noreply,
@@ -217,7 +213,6 @@ defmodule LightningWeb.WorkflowLive.Index do
       sort_direction: sort_direction
     } = socket.assigns
 
-    # Build query params
     query_params = build_query_params(search_term, sort_key, sort_direction)
 
     workflow_id
@@ -242,7 +237,6 @@ defmodule LightningWeb.WorkflowLive.Index do
     end
   end
 
-  # Update delete_workflow to preserve search and sort parameters
   def handle_event("delete_workflow", %{"id" => id}, socket) do
     %{
       project: project,
@@ -253,7 +247,6 @@ defmodule LightningWeb.WorkflowLive.Index do
       sort_direction: sort_direction
     } = socket.assigns
 
-    # Build query params
     query_params = build_query_params(search_term, sort_key, sort_direction)
 
     if can_delete_workflow? do
@@ -278,7 +271,6 @@ defmodule LightningWeb.WorkflowLive.Index do
     end
   end
 
-  # Existing event handlers and helper functions
   def handle_event("validate_workflow", %{"new_workflow" => params}, socket) do
     changeset =
       NewWorkflowForm.validate(params, socket.assigns.project.id)
@@ -304,7 +296,6 @@ defmodule LightningWeb.WorkflowLive.Index do
     end
   end
 
-  # Helper function to build query params (reused across handlers)
   defp build_query_params(search_term, sort_key, sort_direction) do
     base_params = %{
       sort: sort_key,
