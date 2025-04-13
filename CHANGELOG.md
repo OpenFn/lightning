@@ -17,6 +17,7 @@ and this project adheres to
 
 ### Added
 
+- Sort & filter workflows [#3046](https://github.com/OpenFn/lightning/issues/3046)
 - Restart the credential setup from selecting the credential type
   [#2284](https://github.com/OpenFn/lightning/issues/2284)
 - Enable Support User and adds audit trail for MFA.
