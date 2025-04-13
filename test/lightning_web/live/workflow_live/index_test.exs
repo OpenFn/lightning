@@ -165,22 +165,15 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
                html
              )
 
-      # Workflow links
       assert view
-             |> has_link?(
-               ~p"/projects/#{project.id}/w/#{workflow1.id}",
-               "One"
-             )
+             |> has_element?("tr#workflow-#{workflow1.id} span", "One")
 
       assert view
-             |> has_link?(
-               ~p"/projects/#{project.id}/w/#{workflow2.id}",
-               "Two"
-             )
+             |> has_element?("tr#workflow-#{workflow2.id} span", "Two")
 
       assert view
-             |> has_link?(
-               ~p"/projects/#{project.id}/w/#{new_workflow.id}",
+             |> has_element?(
+               "tr#workflow-#{new_workflow.id} span",
                new_workflow.name
              )
 

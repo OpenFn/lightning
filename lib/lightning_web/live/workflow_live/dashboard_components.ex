@@ -7,8 +7,8 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   alias Lightning.DashboardStats.ProjectMetrics
   alias Lightning.Projects.Project
   alias Lightning.WorkOrders.SearchParams
-  alias LightningWeb.WorkflowLive.Helpers
   alias LightningWeb.Components.Common
+  alias LightningWeb.WorkflowLive.Helpers
   alias Phoenix.LiveView.JS
   alias Timex.Format.DateTime.Formatters.Relative
 
