@@ -1,5 +1,3 @@
-// import { JSONSchemaType } from 'ajv';
-// import type { WorkflowSpec } from '../types';
 const workflowV1Schema = {
   $schema: 'http://json-schema.org/draft-07/schema#',
   title: 'WorkflowSpec',

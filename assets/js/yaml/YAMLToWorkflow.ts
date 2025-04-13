@@ -76,7 +76,7 @@ const YAMLToWorkflow = {
     });
   },
   destroyed() {
-    // clear server state
+    // reset server state
     this.updateServerState(defaultWorkflowState());
   },
   updateServerState(state: WorkflowState) {
@@ -116,8 +116,7 @@ const YAMLToWorkflow = {
 } as PhoenixHook<{
   workflowSpec: undefined | WorkflowSpec;
   workflowState: WorkflowState;
-  workflowYAML: undefined | string;
-  validateYAML: () => void;
+  validateYAML: (workflowYAML: string) => void;
   updateServerState: (state: WorkflowState) => void;
   fileInputEl: HTMLElement;
   viewerEl: HTMLElement;
