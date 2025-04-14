@@ -21,6 +21,7 @@ defmodule Lightning.Workflows do
   alias Lightning.Workflows.Workflow
 
   defdelegate subscribe(project_id), to: Events
+
   require Logger
 
   @doc """
@@ -533,6 +534,35 @@ defmodule Lightning.Workflows do
   def has_newer_version?(%Workflow{lock_version: version, id: id}) do
     from(w in Workflow, where: w.lock_version > ^version and w.id == ^id)
     |> Repo.exists?()
+  end
+
+  def maybe_create_latest_snaphost(
+        %{
+          id: workflow_id,
+          lock_version: lock_version,
+          updated_at: updated_at,
+          deleted_at: nil
+        } = workflow
+      ) do
+    case Repo.get_by(Snapshot,
+           workflow_id: workflow_id,
+           lock_version: lock_version
+         ) do
+      nil ->
+        workflow
+        |> Snapshot.build()
+        |> Repo.insert()
+        |> tap(fn result ->
+          with {:ok, _snapshot} <- result do
+            Logger.warning(
+              "Created latest snapshot for #{workflow_id} (last_update: #{updated_at})"
+            )
+          end
+        end)
+
+      snapshot ->
+        {:ok, snapshot}
+    end
   end
 
   @doc """

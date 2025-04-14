@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Add helper function to create latest snapshot
+  [#3099](https://github.com/OpenFn/lightning/issues/3099)
 - Restart the credential setup from selecting the credential type
   [#2284](https://github.com/OpenFn/lightning/issues/2284)
 - Enable Support User and adds audit trail for MFA.
