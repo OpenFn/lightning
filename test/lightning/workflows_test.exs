@@ -768,6 +768,105 @@ defmodule Lightning.WorkflowsTest do
     end
   end
 
+  describe "get_workflows_for/2" do
+    setup do
+      project = insert(:project)
+
+      w1 = insert(:workflow, project: project, name: "API Gateway")
+      w2 = insert(:workflow, project: project, name: "Background Jobs")
+      w3 = insert(:workflow, project: project, name: "REST API")
+
+      insert(:trigger, workflow: w1, enabled: true)
+      insert(:trigger, workflow: w2, enabled: false)
+      insert(:trigger, workflow: w3, enabled: true)
+
+      %{project: project, w1: w1, w2: w2, w3: w3}
+    end
+
+    test "returns all workflows for a project", %{project: project} do
+      workflows = Workflows.get_workflows_for(project)
+      assert length(workflows) == 3
+    end
+
+    test "filters workflows by search term", %{project: project} do
+      workflows = Workflows.get_workflows_for(project, search: "api")
+      assert length(workflows) == 2
+
+      assert Enum.map(workflows, & &1.name) |> Enum.sort() == [
+               "API Gateway",
+               "REST API"
+             ]
+    end
+
+    test "returns empty list for non-matching search", %{project: project} do
+      workflows = Workflows.get_workflows_for(project, search: "nonexistent")
+      assert workflows == []
+    end
+
+    test "sorts workflows by name ascending", %{project: project} do
+      workflows = Workflows.get_workflows_for(project, order_by: {:name, :asc})
+      names = Enum.map(workflows, & &1.name)
+      assert names == ["API Gateway", "Background Jobs", "REST API"]
+    end
+
+    test "sorts workflows by name descending", %{project: project} do
+      workflows = Workflows.get_workflows_for(project, order_by: {:name, :desc})
+      names = Enum.map(workflows, & &1.name)
+      assert names == ["REST API", "Background Jobs", "API Gateway"]
+    end
+
+    test "sorts workflows by enabled state ascending", %{project: project} do
+      workflows =
+        Workflows.get_workflows_for(project, order_by: {:enabled, :asc})
+
+      first_workflow = List.first(workflows)
+      last_workflow = List.last(workflows)
+
+      assert first_workflow.triggers |> Enum.any?(& &1.enabled) == false
+      assert last_workflow.triggers |> Enum.any?(& &1.enabled) == true
+    end
+
+    test "sorts workflows by enabled state descending", %{project: project} do
+      workflows =
+        Workflows.get_workflows_for(project, order_by: {:enabled, :desc})
+
+      first_workflow = List.first(workflows)
+      last_workflow = List.last(workflows)
+
+      assert first_workflow.triggers |> Enum.any?(& &1.enabled) == true
+      assert last_workflow.triggers |> Enum.any?(& &1.enabled) == false
+    end
+
+    test "uses default sorting for invalid order_by", %{project: project} do
+      workflows =
+        Workflows.get_workflows_for(project, order_by: {:invalid, :asc})
+
+      names = Enum.map(workflows, & &1.name)
+      assert names == ["API Gateway", "Background Jobs", "REST API"]
+    end
+
+    test "customizes preloaded associations", %{project: project} do
+      workflows = Workflows.get_workflows_for(project, include: [:triggers])
+      workflow = List.first(workflows)
+
+      assert workflow.triggers != %Ecto.Association.NotLoaded{}
+      assert match?(%Ecto.Association.NotLoaded{}, workflow.edges)
+    end
+
+    test "always includes triggers even if not specified", %{project: project} do
+      workflows = Workflows.get_workflows_for(project, include: [:edges])
+      workflow = List.first(workflows)
+
+      assert workflow.triggers != %Ecto.Association.NotLoaded{}
+      assert workflow.edges != %Ecto.Association.NotLoaded{}
+    end
+
+    test "ignores empty search term", %{project: project} do
+      workflows = Workflows.get_workflows_for(project, search: "")
+      assert length(workflows) == 3
+    end
+  end
+
   defp assert_trigger_state_audit(
          workflow_id,
          user_id,
