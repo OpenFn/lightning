@@ -13,9 +13,7 @@ defmodule Lightning.WorkflowLive.Helpers do
 
   def select_node(view, node, version \\ nil) do
     query_string =
-      if version && version > 0,
-        do: "?s=#{node.id}&v=#{version}",
-        else: "?s=#{node.id}"
+      if version, do: "?s=#{node.id}&v=#{version}", else: "?s=#{node.id}"
 
     view
     |> render_patch(query_string)
