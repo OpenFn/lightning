@@ -435,4 +435,156 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
              } = audit
     end
   end
+
+  describe "search workflows" do
+    test "filters workflows by search term", %{conn: conn, project: project} do
+      w1 = insert(:workflow, project: project, name: "API Gateway")
+      w2 = insert(:workflow, project: project, name: "Background Jobs")
+      _w3 = insert(:workflow, project: project, name: "REST API")
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w?q=api")
+
+      assert has_workflow_card?(view, w1)
+      refute has_workflow_card?(view, w2)
+
+      assert view |> has_element?("input[name='search_workflows'][value='api']")
+    end
+
+    test "clears search term", %{conn: conn, project: project} do
+      insert(:workflow, project: project, name: "API Gateway")
+      insert(:workflow, project: project, name: "Background Jobs")
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w?q=api")
+
+      assert view
+             |> element("#clear_search_button")
+             |> render_click() =~ "Background Jobs"
+
+      assert_patch(view, ~p"/projects/#{project.id}/w?sort=name&dir=asc")
+    end
+
+    test "updates search in real-time", %{conn: conn, project: project} do
+      insert(:workflow, project: project, name: "API Gateway")
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      assert view
+             |> element("input[name='search_workflows']")
+             |> render_keyup(%{value: "api"}) =~ "API Gateway"
+    end
+
+    test "shows appropriate empty state message with search term", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project.id}/w?q=nonexistent")
+
+      assert html =~
+               "No workflows found matching &quot;nonexistent&quot;. Try a different search term."
+    end
+  end
+
+  describe "sorting workflows" do
+    test "sorts workflows by different fields", %{conn: conn, project: project} do
+      w1 = insert(:workflow, project: project, name: "A Workflow")
+      w2 = insert(:workflow, project: project, name: "B Workflow")
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      assert has_workflow_in_order?(view, [w1, w2])
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w?sort=name&dir=desc")
+
+      assert has_workflow_in_order?(view, [w2, w1])
+
+      html =
+        view
+        |> element("a[phx-click='sort']", "Name")
+        |> render_click()
+
+      assert html =~ ~r/#{w1.name}.*#{w2.name}/s
+    end
+
+    test "combines sorting with search", %{conn: conn, project: project} do
+      w1 = insert(:workflow, project: project, name: "API First")
+      w2 = insert(:workflow, project: project, name: "API Second")
+      _w3 = insert(:workflow, project: project, name: "Background Job")
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w?q=api&sort=name&dir=desc")
+
+      assert has_workflow_in_order?(view, [w2, w1])
+      refute has_workflow_card?(view, _w3)
+    end
+  end
+
+  describe "empty states" do
+    setup :register_and_log_in_user
+    setup :create_project_for_current_user
+
+    test "shows appropriate empty state message with no workflows", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, _view, html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      assert html =~
+               "No workflows found. Create your first workflow to get started."
+    end
+
+    test "shows appropriate empty state message when search has no results", %{
+      conn: conn,
+      project: project
+    } do
+      insert(:workflow, project: project, name: "Existing Workflow")
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      html =
+        view
+        |> element("input[name='search_workflows']")
+        |> render_keyup(%{value: "nonexistent"})
+
+      assert html =~ "No workflows found matching"
+      assert html =~ "Try a different search term"
+    end
+
+    test "switches between empty state messages", %{conn: conn, project: project} do
+      {:ok, view, html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      assert html =~
+               "No workflows found. Create your first workflow to get started."
+
+      html =
+        view
+        |> element("input[name='search_workflows']")
+        |> render_keyup(%{value: "nonexistent"})
+
+      assert html =~
+               "No workflows found matching &quot;nonexistent&quot;. Try a different search term."
+
+      html =
+        view
+        |> element("#clear_search_button")
+        |> render_click()
+
+      assert html =~
+               "No workflows found. Create your first workflow to get started."
+    end
+  end
+
+  defp has_workflow_in_order?(view, workflows) do
+    html = render(view)
+
+    workflow_pattern =
+      workflows
+      |> Enum.map(&~r/#{&1.name}/)
+      |> Enum.reduce(fn pattern, acc ->
+        Regex.compile!("#{acc.source}.*#{pattern.source}", "s")
+      end)
+
+    html =~ workflow_pattern
+  end
 end

@@ -307,7 +307,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       <div class="text-sm">
         <div class="flex items-center">
           <span
-            class="flex-shrink truncate text-gray-900 font-medium"
+            class="flex-shrink truncate text-gray-900 font-medium workflow-name"
             style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
           >
             {@workflow.name}
