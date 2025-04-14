@@ -304,30 +304,35 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
 
     ~H"""
     <div class="flex flex-1 items-center truncate">
-      <div class="text-sm">
-        <div class="flex items-center">
-          <span
-            class="flex-shrink truncate text-gray-900 font-medium workflow-name"
-            style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
-          >
-            {@workflow.name}
-          </span>
-        </div>
-        <%= if @trigger_enabled do %>
-          <p class="text-gray-500 text-xs mt-1">
-            Updated {@relative_updated_at}
-          </p>
-        <% else %>
-          <div class="flex items-center mt-1">
-            <div style="background: #8b5f0d" class="w-2 h-2 rounded-full"></div>
-            <div>
-              <p class="text-[#8b5f0d] text-xs">
-                &nbsp; Disabled
-              </p>
-            </div>
+      <Common.wrapper_tooltip
+        id={"workflow-name-#{@workflow.id}"}
+        tooltip={@workflow.name}
+      >
+        <div class="text-sm">
+          <div class="flex items-center">
+            <span
+              class="flex-shrink truncate text-gray-900 font-medium workflow-name"
+              style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+            >
+              {@workflow.name}
+            </span>
           </div>
-        <% end %>
-      </div>
+          <%= if @trigger_enabled do %>
+            <p class="text-gray-500 text-xs mt-1">
+              Updated {@relative_updated_at}
+            </p>
+          <% else %>
+            <div class="flex items-center mt-1">
+              <div style="background: #8b5f0d" class="w-2 h-2 rounded-full"></div>
+              <div>
+                <p class="text-[#8b5f0d] text-xs">
+                  &nbsp; Disabled
+                </p>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </Common.wrapper_tooltip>
     </div>
     """
   end
