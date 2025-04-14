@@ -302,6 +302,97 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     end
 
     @tag role: :editor
+    test "creating a new workflow via import", %{conn: conn, project: project} do
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new", on_error: :raise)
+
+      # the panel for creating workflow is visible
+      html = render(view)
+      assert html =~ "Create workflow"
+      assert html =~ "How do you want to name your workflow?"
+      assert has_element?(view, "form#new-workflow-name-form")
+
+      refute html =~ "Upload a YAML file"
+
+      # click to go to import page
+      html = view |> element("#import-workflow-btn") |> render_click()
+
+      assert html =~ "Upload a YAML file"
+      refute html =~ "How do you want to name your workflow?"
+      refute has_element?(view, "form#new-workflow-name-form")
+
+      assert has_element?(view, "#workflow-importer[phx-hook='YAMLToWorkflow']")
+
+      # button to continue is disabled
+      assert has_element?(view, "button#toggle_new_workflow_panel_btn:disabled")
+
+      # sending a valid payload enables the toggle button
+      job_id = Ecto.UUID.generate()
+      trigger_id = Ecto.UUID.generate()
+
+      valid_payload = %{
+        "triggers" => [%{"id" => trigger_id, "type" => "webhook"}],
+        "jobs" => [
+          %{
+            "id" => job_id,
+            "name" => "random job",
+            "body" => "// comment"
+          }
+        ],
+        "edges" => [
+          %{
+            "id" => Ecto.UUID.generate(),
+            "source_trigger_id" => trigger_id,
+            "condition_type" => "always",
+            "target_job_id" => job_id
+          }
+        ],
+        "name" => "test-workflow"
+      }
+
+      view
+      |> with_target("#new-workflow-panel")
+      |> render_click("validate-parsed-workflow", %{"workflow" => valid_payload})
+
+      assert_reply view, %{}
+
+      refute has_element?(view, "button#toggle_new_workflow_panel_btn:disabled")
+      assert has_element?(view, "button#toggle_new_workflow_panel_btn")
+
+      # sending in an invalid payload disables the button
+      view
+      |> with_target("#new-workflow-panel")
+      |> render_click("validate-parsed-workflow", %{
+        "workflow" => %{valid_payload | "name" => ""}
+      })
+
+      assert_reply view, %{errors: %{name: ["This field can't be blank."]}}
+
+      assert has_element?(view, "button#toggle_new_workflow_panel_btn:disabled")
+
+      # lets enable the button again and close the panel
+      view
+      |> with_target("#new-workflow-panel")
+      |> render_click("validate-parsed-workflow", %{"workflow" => valid_payload})
+
+      view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
+
+      # the panel disappears
+      html = render(view)
+      refute html =~ "Create workflow"
+      refute has_element?(view, "button#toggle_new_workflow_panel_btn:disabled")
+      refute has_element?(view, "button#toggle_new_workflow_panel_btn")
+
+      # save button is now present
+      assert view
+             |> element("button[type='submit'][form='workflow-form']")
+             |> has_element?()
+
+      # toggle settings panel button is now preset
+      assert has_element?(view, "#toggle-settings")
+    end
+
+    @tag role: :editor
     test "auditing snapshot creation", %{
       conn: conn,
       project: project,

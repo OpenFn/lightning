@@ -38,7 +38,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="w-1/3">
+    <div id={@id} class="w-1/3">
       <div class="divide-y divide-gray-200 bg-white rounded-lg">
         <div class="flex px-4 py-5 sm:px-6">
           <div class="grow font-bold">
