@@ -41,7 +41,11 @@ defmodule Lightning.RunsTest do
   end
 
   describe "claim/1" do
-    test "claims a run from the queue" do
+    setup do
+      %{worker_name: "my.worker.name"}
+    end
+
+    test "claims a run from the queue", %{worker_name: worker_name} do
       %{triggers: [trigger]} =
         workflow = insert(:simple_workflow) |> with_snapshot()
 
@@ -51,15 +55,32 @@ defmodule Lightning.RunsTest do
           dataclip: params_with_assocs(:dataclip)
         )
 
-      assert {:ok, [claimed]} = Runs.claim()
+      assert {:ok, [claimed]} = Runs.claim(worker_name)
 
       assert claimed.id == run.id
       assert claimed.state == :claimed
 
-      assert {:ok, []} = Runs.claim()
+      assert {:ok, []} = Runs.claim(worker_name)
     end
 
-    test "claims a run from the queue having parallel runs disabled" do
+    test "persists worker name when claiming", %{worker_name: worker_name} do
+      %{triggers: [trigger]} =
+        workflow = insert(:simple_workflow) |> with_snapshot()
+
+      {:ok, %{runs: [run]}} =
+        WorkOrders.create_for(trigger,
+          workflow: workflow,
+          dataclip: params_with_assocs(:dataclip)
+        )
+
+      Runs.claim(worker_name)
+
+      assert %{worker_name: ^worker_name} = Repo.get!(Run, run.id)
+    end
+
+    test "claims a run from the queue having parallel runs disabled", %{
+      worker_name: worker_name
+    } do
       project1 = insert(:project, concurrency: 1)
       project2 = insert(:project)
 
@@ -82,9 +103,9 @@ defmodule Lightning.RunsTest do
           {run, %{trigger: trigger, workflow: workflow}}
         end)
 
-      assert {:ok, [%{id: ^run1_id, state: :claimed}]} = Runs.claim()
-      assert {:ok, [%{id: ^run2a_id, state: :claimed}]} = Runs.claim()
-      assert {:ok, []} = Runs.claim()
+      assert {:ok, [%{id: ^run1_id, state: :claimed}]} = Runs.claim(worker_name)
+      assert {:ok, [%{id: ^run2a_id, state: :claimed}]} = Runs.claim(worker_name)
+      assert {:ok, []} = Runs.claim(worker_name)
 
       {:ok, %{runs: [%{id: run2b_id}]}} =
         WorkOrders.create_for(trigger2,
@@ -92,16 +113,16 @@ defmodule Lightning.RunsTest do
           dataclip: params_with_assocs(:dataclip)
         )
 
-      assert {:ok, [%{id: ^run2b_id, state: :claimed}]} = Runs.claim()
+      assert {:ok, [%{id: ^run2b_id, state: :claimed}]} = Runs.claim(worker_name)
 
       Repo.get!(Run, run1_id)
       |> Ecto.Changeset.change(%{state: :success})
       |> Repo.update!()
 
-      assert {:ok, [%{id: ^run3_id, state: :claimed}]} = Runs.claim()
+      assert {:ok, [%{id: ^run3_id, state: :claimed}]} = Runs.claim(worker_name)
     end
 
-    test "claims with demand" do
+    test "claims with demand", %{worker_name: worker_name} do
       %{triggers: [trigger]} =
         workflow = insert(:simple_workflow) |> with_snapshot()
 
@@ -117,20 +138,22 @@ defmodule Lightning.RunsTest do
           run
         end)
 
-      assert {:ok, [claimed_1, claimed_2]} = Runs.claim(2)
+      assert {:ok, [claimed_1, claimed_2]} = Runs.claim(2, worker_name)
 
       assert claimed_1.id == run_1.id
       assert claimed_1.state == :claimed
       assert claimed_2.id == run_2.id
       assert claimed_2.state == :claimed
 
-      assert {:ok, [claimed_3]} = Runs.claim(2)
+      assert {:ok, [claimed_3]} = Runs.claim(2, worker_name)
 
       assert claimed_3.id == run_3.id
       assert claimed_3.state == :claimed
     end
 
-    test "claims with demand for all immediate run" do
+    test "claims with demand for all immediate run", %{
+      worker_name: worker_name
+    } do
       %{triggers: [trigger]} =
         workflow = insert(:simple_workflow) |> with_snapshot()
 
@@ -168,19 +191,19 @@ defmodule Lightning.RunsTest do
           |> then(fn {:ok, %{run: run}} -> {i, run} end)
         end)
 
-      assert {:ok, [claimed_1, claimed_2]} = Runs.claim(2)
+      assert {:ok, [claimed_1, claimed_2]} = Runs.claim(2, worker_name)
 
       assert claimed_1.id == runs[1].id
       assert claimed_1.state == :claimed
       assert claimed_2.id == runs[2].id
       assert claimed_2.state == :claimed
 
-      assert {:ok, [claimed_3]} = Runs.claim()
+      assert {:ok, [claimed_3]} = Runs.claim(worker_name)
 
       assert claimed_3.id == runs[3].id
       assert claimed_3.state == :claimed
 
-      assert {:ok, [claimed_4, claimed_5]} = Runs.claim(2)
+      assert {:ok, [claimed_4, claimed_5]} = Runs.claim(2, worker_name)
 
       assert claimed_4.id in [runs[4].id, second_last_run.id]
       assert claimed_4.state == :claimed
@@ -189,7 +212,7 @@ defmodule Lightning.RunsTest do
       assert claimed_5.id in [runs[4].id, second_last_run.id]
       assert claimed_5.state == :claimed
 
-      assert {:ok, [claimed_6]} = Runs.claim(2)
+      assert {:ok, [claimed_6]} = Runs.claim(2, worker_name)
 
       assert claimed_6.id == last_run.id
       assert claimed_6.state == :claimed

@@ -20,8 +20,12 @@ defmodule LightningWeb.WorkerChannel do
   end
 
   @impl true
-  def handle_in("claim", %{"demand" => demand}, socket) do
-    case Runs.claim(demand) do
+  def handle_in(
+        "claim",
+        %{"demand" => demand, "pod_name" => worker_name},
+        socket
+      ) do
+    case Runs.claim(demand, worker_name) do
       {:ok, runs} ->
         runs =
           runs
