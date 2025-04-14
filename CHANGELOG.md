@@ -17,7 +17,12 @@ and this project adheres to
 
 ### Added
 
-- Sort & filter workflows [#3046](https://github.com/OpenFn/lightning/issues/3046)
+- Enabled displaying full workflow name when hovering workflow name in the
+  workflows list page [#2894](https://github.com/OpenFn/lightning/issues/2894)
+- Enabled clickable rows in the workflows list page
+  [#3047](https://github.com/OpenFn/lightning/issues/3047)
+- Added sorting & filtering workflows
+  [#3046](https://github.com/OpenFn/lightning/issues/3046)
 - Restart the credential setup from selecting the credential type
   [#2284](https://github.com/OpenFn/lightning/issues/2284)
 - Enable Support User and adds audit trail for MFA.
