@@ -45,7 +45,7 @@
   "devDependencies": {
     "@eslint-community/eslint-plugin-eslint-comments": "^4.4.1",
     "@eslint/js": "^9.21.0",
-    "@openfn/ws-worker": "^1.13.0",
+    "@openfn/ws-worker": "^1.13.2",
     "@total-typescript/ts-reset": "^0.6.1",
     "@tsconfig/node-lts": "^22.0.1",
     "@tsconfig/recommended": "^1.0.8",
