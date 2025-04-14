@@ -486,25 +486,120 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
   end
 
   describe "sorting workflows" do
-    test "sorts workflows by different fields", %{conn: conn, project: project} do
+    test "sorts workflows by all available fields", %{
+      conn: conn,
+      project: project
+    } do
       w1 = insert(:workflow, project: project, name: "A Workflow")
       w2 = insert(:workflow, project: project, name: "B Workflow")
 
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+      trigger1 =
+        insert(:trigger,
+          workflow: w1,
+          type: :webhook,
+          enabled: true,
+          custom_path: "path1"
+        )
 
-      assert has_workflow_in_order?(view, [w1, w2])
+      trigger2 =
+        insert(:trigger,
+          workflow: w2,
+          type: :webhook,
+          enabled: false,
+          custom_path: "path2"
+        )
 
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w?sort=name&dir=desc")
+      _trigger1b =
+        insert(:trigger,
+          workflow: w1,
+          type: :cron,
+          enabled: true,
+          cron_expression: "* * * * *"
+        )
 
-      assert has_workflow_in_order?(view, [w2, w1])
+      dataclip = insert(:dataclip)
 
-      html =
-        view
-        |> element("a[phx-click='sort']", "Name")
-        |> render_click()
+      insert(:workorder,
+        workflow: w1,
+        trigger: trigger1,
+        dataclip: dataclip,
+        state: :failed,
+        updated_at: DateTime.utc_now()
+      )
 
-      assert html =~ ~r/#{w1.name}.*#{w2.name}/s
+      insert(:workorder,
+        workflow: w1,
+        trigger: trigger1,
+        dataclip: dataclip,
+        state: :failed,
+        updated_at: DateTime.utc_now() |> DateTime.add(-1, :hour)
+      )
+
+      insert(:workorder,
+        workflow: w1,
+        trigger: trigger1,
+        dataclip: dataclip,
+        state: :success,
+        updated_at: DateTime.utc_now() |> DateTime.add(-2, :hour)
+      )
+
+      insert(:workorder,
+        workflow: w2,
+        trigger: trigger2,
+        dataclip: dataclip,
+        state: :failed,
+        updated_at: DateTime.utc_now() |> DateTime.add(-3, :hour)
+      )
+
+      insert(:workorder,
+        workflow: w2,
+        trigger: trigger2,
+        dataclip: dataclip,
+        state: :success,
+        updated_at: DateTime.utc_now() |> DateTime.add(-4, :hour)
+      )
+
+      w1 =
+        Lightning.Repo.get!(Lightning.Workflows.Workflow, w1.id)
+        |> Lightning.Repo.preload(:triggers)
+
+      w2 =
+        Lightning.Repo.get!(Lightning.Workflows.Workflow, w2.id)
+        |> Lightning.Repo.preload(:triggers)
+
+      test_cases = [
+        {"name", "asc", [w1, w2]},
+        {"name", "desc", [w2, w1]},
+        {"workorders_count", "desc", [w1, w2]},
+        {"workorders_count", "asc", [w2, w1]},
+        {"failed_workorders_count", "desc", [w1, w2]},
+        {"failed_workorders_count", "asc", [w2, w1]},
+        {"last_workorder_updated_at", "desc", [w1, w2]},
+        {"last_workorder_updated_at", "asc", [w2, w1]},
+        {"enabled", "desc", [w1, w2]},
+        {"enabled", "asc", [w2, w1]}
+      ]
+
+      for {sort_field, direction, expected_order} <- test_cases do
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/w?sort=#{sort_field}&dir=#{direction}"
+          )
+
+        assert has_workflow_in_order?(view, expected_order),
+               "Failed to sort by #{sort_field} in #{direction} direction"
+
+        if direction == "asc" do
+          _html =
+            view
+            |> element("th a[phx-value-by='#{sort_field}']")
+            |> render_click()
+
+          assert has_workflow_in_order?(view, Enum.reverse(expected_order)),
+                 "Failed to reverse sort order for #{sort_field}"
+        end
+      end
     end
 
     test "combines sorting with search", %{conn: conn, project: project} do
