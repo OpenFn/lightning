@@ -6,10 +6,10 @@ defmodule Lightning.Runs.Queue do
 
   alias Lightning.Runs
 
-  @spec claim(non_neg_integer(), Ecto.Query.t()) ::
+  @spec claim(non_neg_integer(), Ecto.Query.t(), String.t() | nil) ::
           {:ok, [Lightning.Run.t()]}
           | {:error, Ecto.Changeset.t(Lightning.Run.t())}
-  def claim(demand, base_query) do
+  def claim(demand, base_query, worker_name \\ nil) do
     subset_query =
       base_query
       |> select([:id])
@@ -34,7 +34,11 @@ defmodule Lightning.Runs.Queue do
       |> select([a, _], a)
 
     case Runs.update_runs(query,
-           set: [state: :claimed, claimed_at: DateTime.utc_now()]
+           set: [
+             state: :claimed,
+             claimed_at: DateTime.utc_now(),
+             worker_name: worker_name
+           ]
          ) do
       {:ok, %{runs: {_, runs}}} ->
         {:ok, runs}
