@@ -21,6 +21,9 @@ and this project adheres to
   [#2284](https://github.com/OpenFn/lightning/issues/2284)
 - Enable Support User and adds audit trail for MFA.
   [#3072](https://github.com/OpenFn/lightning/issues/3072)
+- When claiming a run, a worker name can optionally be provided to the
+  adaptor that is responsible for claiming runs.
+  [#3079](https://github.com/OpenFn/lightning/issues/3079)
 
 ### Changed
 
