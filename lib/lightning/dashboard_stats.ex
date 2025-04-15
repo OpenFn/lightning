@@ -80,39 +80,38 @@ defmodule Lightning.DashboardStats do
 
   ## Parameters
     * `workflow_stats` - A list of WorkflowStats structs to be sorted
-    * `sort_field` - String representing the field to sort by, options include:
-      * `"last_workorder_updated_at"` - Sort by timestamp of the latest work order
-      * `"workorders_count"` - Sort by total count of work orders
-      * `"failed_workorders_count"` - Sort by count of failed work orders
-    * `sort_direction` - String representing sort direction, either "asc" or "desc"
+    * `sort_field` - Atom representing the field to sort by, options include:
+      * `:last_workorder_updated_at` - Sort by timestamp of the latest work order
+      * `:workorders_count` - Sort by total count of work orders
+      * `:failed_workorders_count` - Sort by count of failed work orders
+    * `sort_direction` - Atom representing sort direction, either :asc or :desc
 
   ## Returns
     Sorted list of WorkflowStats structs
 
   ## Examples
 
-      iex> sort_workflow_stats(workflow_stats, "workorders_count", "desc")
+      iex> sort_workflow_stats(workflow_stats, :workorders_count, :desc)
       [%WorkflowStats{workorders_count: 100, ...}, %WorkflowStats{workorders_count: 50, ...}]
 
-      iex> sort_workflow_stats(workflow_stats, "last_workorder_updated_at", "asc")
+      iex> sort_workflow_stats(workflow_stats, :last_workorder_updated_at, :asc)
       [%WorkflowStats{last_workorder: %{updated_at: ~U[2023-01-01 00:00:00Z]}, ...}, ...]
   """
-  def sort_workflow_stats(workflow_stats, sort_field, sort_direction) do
+  def sort_workflow_stats(workflow_stats, sort_field, sort_direction)
+      when is_atom(sort_field) and is_atom(sort_direction) do
     sorter = get_sort_function(sort_field)
-    sort_order = String.to_existing_atom(sort_direction)
-
-    Enum.sort_by(workflow_stats, sorter, sort_order)
+    Enum.sort_by(workflow_stats, sorter, sort_direction)
   end
 
-  defp get_sort_function("workorders_count") do
+  defp get_sort_function(:workorders_count) do
     fn stats -> stats.workorders_count end
   end
 
-  defp get_sort_function("failed_workorders_count") do
+  defp get_sort_function(:failed_workorders_count) do
     fn stats -> stats.failed_workorders_count end
   end
 
-  defp get_sort_function("last_workorder_updated_at") do
+  defp get_sort_function(:last_workorder_updated_at) do
     fn stats ->
       timestamp = stats.last_workorder.updated_at || ~U[1970-01-01 00:00:00Z]
       timestamp

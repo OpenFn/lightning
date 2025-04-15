@@ -355,11 +355,11 @@ defmodule Lightning.Workflows do
     |> Repo.all()
   end
 
-  defp apply_sorting(query, {:name, direction}) do
+  defp apply_sorting(query, {:name, direction}) when is_atom(direction) do
     from w in query, order_by: [{^direction, w.name}]
   end
 
-  defp apply_sorting(query, {:enabled, direction}) do
+  defp apply_sorting(query, {:enabled, direction}) when is_atom(direction) do
     from w in query,
       left_join: t in assoc(w, :triggers),
       group_by: w.id,

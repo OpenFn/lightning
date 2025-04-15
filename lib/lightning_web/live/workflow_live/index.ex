@@ -55,8 +55,8 @@ defmodule LightningWeb.WorkflowLive.Index do
           workflow_creation_limit_error={@workflow_creation_limit_error}
           workflows_stats={@workflows_stats}
           project={@project}
-          sort_key={@sort_key}
-          sort_direction={@sort_direction}
+          sort_key={Atom.to_string(@sort_key)}
+          sort_direction={Atom.to_string(@sort_direction)}
           search_term={@search_term}
         />
         <.create_workflow_modal form={@form} />
@@ -101,25 +101,26 @@ defmodule LightningWeb.WorkflowLive.Index do
   def handle_params(params, _url, socket) do
     search_term = params["q"] || ""
 
-    sort_key = params["sort"] || "name"
-    sort_direction = params["dir"] || "asc"
+    sort_key = params["sort"] |> to_sort_key()
+    sort_direction = params["dir"] |> to_sort_direction()
 
-    socket =
-      assign(socket,
-        search_term: search_term,
-        sort_key: sort_key,
-        sort_direction: sort_direction
-      )
-
-    {:noreply, apply_action(socket, socket.assigns.live_action, params)}
+    {:noreply,
+     socket
+     |> assign(
+       search_term: search_term,
+       sort_key: sort_key,
+       sort_direction: sort_direction
+     )
+     |> apply_action(socket.assigns.live_action, params)}
   end
 
   defp apply_action(socket, :index, _params) do
-    %{project: project, search_term: search_term} = socket.assigns
-
-    db_sortable_fields = [:name, :enabled]
-    sort_key = string_to_atom(socket.assigns.sort_key)
-    sort_direction = string_to_atom(socket.assigns.sort_direction)
+    %{
+      project: project,
+      search_term: search_term,
+      sort_key: sort_key,
+      sort_direction: sort_direction
+    } = socket.assigns
 
     opts = [
       search: search_term,
@@ -130,21 +131,23 @@ defmodule LightningWeb.WorkflowLive.Index do
     workflow_stats = Enum.map(workflows, &DashboardStats.get_workflow_stats/1)
 
     sorted_stats =
-      if sort_key in db_sortable_fields do
+      if sort_key in [:name, :enabled] do
         workflow_stats
       else
         DashboardStats.sort_workflow_stats(
           workflow_stats,
-          socket.assigns.sort_key,
-          socket.assigns.sort_direction
+          sort_key,
+          sort_direction
         )
       end
+
+    metrics = DashboardStats.aggregate_project_metrics(sorted_stats)
 
     socket
     |> assign(
       active_menu_item: :overview,
       page_title: "Workflows",
-      metrics: DashboardStats.aggregate_project_metrics(sorted_stats),
+      metrics: metrics,
       workflows_stats: sorted_stats
     )
   end
@@ -178,24 +181,15 @@ defmodule LightningWeb.WorkflowLive.Index do
   end
 
   def handle_event("sort", %{"by" => field}, socket) do
-    %{
-      search_term: search_term,
-      sort_key: current_sort_key,
-      sort_direction: current_direction
-    } = socket.assigns
+    %{search_term: search_term, sort_direction: current_direction} =
+      socket.assigns
 
-    new_direction =
-      if current_sort_key == field do
-        switch_sort_direction(current_direction)
-      else
-        "asc"
-      end
+    new_direction = switch_sort_direction(current_direction)
 
     query_params = build_query_params(search_term, field, new_direction)
 
     {:noreply,
-     socket
-     |> push_patch(
+     push_patch(socket,
        to: ~p"/projects/#{socket.assigns.project.id}/w?#{query_params}"
      )}
   end
@@ -331,18 +325,17 @@ defmodule LightningWeb.WorkflowLive.Index do
     end
   end
 
-  defp string_to_atom("name"), do: :name
-  defp string_to_atom("enabled"), do: :enabled
-  defp string_to_atom("workorders_count"), do: :workorders_count
-  defp string_to_atom("failed_workorders_count"), do: :failed_workorders_count
+  defp to_sort_key("name"), do: :name
+  defp to_sort_key("enabled"), do: :enabled
+  defp to_sort_key("workorders_count"), do: :workorders_count
+  defp to_sort_key("failed_workorders_count"), do: :failed_workorders_count
+  defp to_sort_key("last_workorder_updated_at"), do: :last_workorder_updated_at
+  defp to_sort_key(_), do: :name
 
-  defp string_to_atom("last_workorder_updated_at"),
-    do: :last_workorder_updated_at
+  defp to_sort_direction("asc"), do: :asc
+  defp to_sort_direction("desc"), do: :desc
+  defp to_sort_direction(_), do: :asc
 
-  defp string_to_atom("asc"), do: :asc
-  defp string_to_atom("desc"), do: :desc
-  defp string_to_atom(_), do: :name
-
-  defp switch_sort_direction("asc"), do: "desc"
-  defp switch_sort_direction("desc"), do: "asc"
+  defp switch_sort_direction(:asc), do: :desc
+  defp switch_sort_direction(:desc), do: :asc
 end
