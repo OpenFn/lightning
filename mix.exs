@@ -54,7 +54,8 @@ defmodule Lightning.MixProject do
   def application do
     [
       mod: {Lightning.Application, [:timex]},
-      extra_applications: [:logger, :runtime_tools, :os_mon, :scrivener]
+      extra_applications: [:logger, :runtime_tools, :os_mon, :scrivener],
+      start_phases: [seed_prom_ex_telemetry: []]
     ]
   end
 
@@ -73,7 +74,7 @@ defmodule Lightning.MixProject do
       {:broadway_kafka, "~> 0.4.2"},
       {:bypass, "~> 2.1", only: :test},
       {:briefly, "~> 0.5.0"},
-      {:cachex, "~> 3.4"},
+      {:cachex, "~> 4.0"},
       {:cloak_ecto, "~> 1.3.0"},
       {:credo, "~> 1.7.3", only: [:test, :dev]},
       {:crontab, "~> 1.1"},
@@ -88,7 +89,7 @@ defmodule Lightning.MixProject do
       {:excoveralls, "~> 0.18.5", only: [:test, :dev]},
       {:floki, ">= 0.30.0", only: :test},
       {:gettext, "~> 0.18"},
-      {:google_api_storage, "~> 0.40.1"},
+      {:google_api_storage, "~> 0.46.0"},
       {:hackney, "~> 1.18"},
       {:heroicons, "~> 0.5.3"},
       {:httpoison, "~> 2.0"},

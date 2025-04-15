@@ -75,7 +75,7 @@ defmodule LightningWeb.CollectionLiveTest do
         |> render_click()
         |> follow_redirect(conn, ~p"/settings/collections")
 
-      assert html =~ "Collection deleted successfully"
+      assert html =~ "Collection deleted"
 
       refute has_element?(view, "tr#collections-table-row-#{collection.id}")
     end

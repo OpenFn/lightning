@@ -80,7 +80,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
         {:ok, _collection} ->
           {:noreply,
            socket
-           |> put_flash(:info, "Collection deleted successfully!")
+           |> put_flash(:info, "Collection deleted")
            |> push_navigate(to: socket.assigns.return_to)}
 
         {:error, _reason} ->
@@ -115,7 +115,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
     |> case do
       {:ok, _collection} ->
         socket
-        |> put_flash(:info, "Collection created successfully!")
+        |> put_flash(:info, "Collection created")
         |> push_navigate(to: socket.assigns.return_to)
 
       {:error, :exceeds_limit, %{text: error_msg}} ->
@@ -136,7 +136,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
     case Collections.update_collection(socket.assigns.collection, params) do
       {:ok, _collection} ->
         socket
-        |> put_flash(:info, "Collection updated successfully!")
+        |> put_flash(:info, "Collection updated")
         |> push_navigate(to: socket.assigns.return_to)
 
       {:error, changeset} ->
