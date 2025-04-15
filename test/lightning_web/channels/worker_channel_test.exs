@@ -5,7 +5,6 @@ defmodule LightningWeb.WorkerChannelTest do
   alias Lightning.WorkOrders
   alias Lightning.Workers
 
-
   import Lightning.Factories
 
   describe "joining" do

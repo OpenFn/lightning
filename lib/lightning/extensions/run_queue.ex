@@ -13,7 +13,7 @@ defmodule Lightning.Extensions.RunQueue do
               | {:error, Ecto.Multi.name(), any(),
                  %{required(Ecto.Multi.name()) => any()}}
 
-  @callback claim(demand :: non_neg_integer()) ::
+  @callback claim(demand :: non_neg_integer(), worker_name :: String.t()) ::
               {:ok, [Lightning.Run.t()]}
 
   @callback dequeue(run :: Lightning.Run.t()) ::
