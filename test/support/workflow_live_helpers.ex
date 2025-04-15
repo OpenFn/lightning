@@ -325,10 +325,21 @@ defmodule Lightning.WorkflowLive.Helpers do
     view |> element("[data-is-dirty]") |> has_element?()
   end
 
+  # Really don't like that we don't have _any_ submit buttons on the page
+  # at this exact moment.
+  # We're relying entirely on the WorkflowStore and phx-change events to update
+  # the state of the form in the LiveView.
   def save_is_disabled?(view) do
     view
-    |> element("button[type='submit'][form='workflow-form'][disabled]")
-    |> has_element?()
+    |> render()
+    |> Floki.parse_document!()
+    |> Floki.find("button")
+    |> Enum.filter(fn {_, _attrs, children} ->
+      children |> Floki.text() |> String.contains?("Save")
+    end)
+    |> Enum.all?(fn {_, attrs, _} ->
+      {"disabled", "disabled"} in attrs
+    end)
   end
 
   def input_is_disabled?(view, %Job{} = job, field) do

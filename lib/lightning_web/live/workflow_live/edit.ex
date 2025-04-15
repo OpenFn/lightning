@@ -202,12 +202,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
               close_url={close_url(assigns, :selected_job, :select)}
               form={single_inputs_for(@workflow_form, :jobs, @selected_job.id)}
             >
-              <div
-                phx-hook="InspectorSaveViaCtrlS"
-                id="job-edit-save"
-                class="contents"
-              >
-              </div>
               <.collapsible_panel
                 id={"manual-job-#{@selected_job.id}"}
                 class="h-full border border-l-0 manual-job-panel"
@@ -2652,28 +2646,23 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     assigns =
       assigns
-      |> assign(
-        disabled: disabled,
-        tooltip: tooltip
-      )
+      |> assign(disabled: disabled, tooltip: tooltip)
 
     ~H"""
     <div class="inline-flex rounded-md shadow-xs z-5">
       <.button
         id={@id}
-        phx-disable-with="Saving..."
+        phx-disable-with
         disabled={@disabled}
-        type="submit"
-        form="workflow-form"
+        phx-hook="InspectorSaveViaCtrlS"
+        phx-click={JS.push("save")}
         phx-disconnected={JS.set_attribute({"disabled", ""})}
         tooltip={@tooltip}
         class={
           ["focus:ring-transparent"] ++
             if @project_repo_connection, do: ["rounded-r-none"], else: []
         }
-        phx-connected={
-          !@disabled && !@has_presence_priority && JS.remove_attribute("disabled")
-        }
+        phx-connected={!@disabled && JS.remove_attribute("disabled")}
       >
         Save
       </.button>
@@ -2687,9 +2676,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           disabled={@disabled}
           phx-click={show_dropdown("#{@id}-save-and-sync")}
           phx-disconnected={JS.set_attribute({"disabled", ""})}
-          phx-connected={
-            !@disabled && !@has_presence_priority && JS.remove_attribute("disabled")
-          }
+          phx-connected={!@disabled && JS.remove_attribute("disabled")}
         >
           <span class="sr-only">Open options</span>
           <.icon name="hero-chevron-down" class="w-4 h-4" />

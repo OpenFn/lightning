@@ -6,7 +6,7 @@ const debouncedDispatchEvent = pDebounce((eventTarget, event) => {
   eventTarget.dispatchEvent(event);
 }, EDITOR_DEBOUNCE_MS);
 
-export function initiateSaveAndRun(buttonElement) {
+export function submitOrClick(buttonElement) {
   if (buttonElement.getAttribute('type') === 'submit') {
     const formId = buttonElement.getAttribute('form');
     const form = document.getElementById(formId);

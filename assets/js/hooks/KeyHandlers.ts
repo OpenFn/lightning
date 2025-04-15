@@ -1,6 +1,5 @@
+import { submitOrClick } from '../common';
 import type { PhoenixHook } from './PhoenixHook';
-import { initiateSaveAndRun } from '../common';
-import type { ViewHook } from 'phoenix_live_view';
 
 /**
  * Priority levels for key handlers.
@@ -86,7 +85,7 @@ type PriorityLevel = PRIORITY;
 const keyHandlers = new Set<{
   hook: any;
   keyCheck: (e: KeyboardEvent) => boolean;
-  action: (e: KeyboardEvent, el: HTMLElement, hook: ViewHook) => void;
+  action: (e: KeyboardEvent, el: HTMLElement) => void;
   priority: PriorityLevel;
   bindingScope?: string | undefined;
 }>();
@@ -121,7 +120,7 @@ const keyHandlers = new Set<{
  */
 function createKeyCombinationHook(
   keyCheck: (e: KeyboardEvent) => boolean,
-  action: (e: KeyboardEvent, el: HTMLElement, hook: ViewHook) => void,
+  action: (e: KeyboardEvent, el: HTMLElement) => void,
   priority: PriorityLevel = PRIORITY.NORMAL,
   bindingScope?: string
 ): PhoenixHook {
@@ -151,19 +150,24 @@ function createKeyCombinationHook(
           h => h.bindingScope === focusedScope
         );
 
-        const matchingHandlers = keyMatchingHandlers
-          .filter(h => {
-            if (h.bindingScope) {
-              return h.bindingScope === focusedScope;
-            } else {
-              return !hasScopedHandlers;
-            }
-          })
-          .sort((a, b) => b.priority - a.priority);
+        const matchingHandlers = keyMatchingHandlers.filter(h => {
+          if (h.bindingScope) {
+            return h.bindingScope === focusedScope;
+          } else {
+            return !hasScopedHandlers;
+          }
+        });
 
-        const topHandler = matchingHandlers[0];
-        if (topHandler?.hook === this) {
-          topHandler.action(e, this.el, this);
+        const maxPriority = Math.max(...matchingHandlers.map(h => h.priority));
+        const topPriorityHandlers = matchingHandlers.filter(
+          h => h.priority === maxPriority
+        );
+
+        // Take the last handler if there are more than one with the same priority.
+        const lastHandler = topPriorityHandlers[topPriorityHandlers.length - 1];
+
+        if (lastHandler?.hook === this) {
+          lastHandler.action(e, this.el);
         }
       };
 
@@ -232,12 +236,15 @@ const isEscape = (e: KeyboardEvent) => e.key === 'Escape';
 
 /**
  * Simulates a "click" action, used to trigger save and run functionality.
+ * Will skip saving if the element is disabled.
  *
  * @param e - The keyboard event that triggered the action.
  * @param el - The DOM element associated with the hook.
  */
-const clickAction = (_e: KeyboardEvent, el: HTMLElement) =>
-  initiateSaveAndRun(el);
+const clickAction = (_e: KeyboardEvent, el: HTMLElement) => {
+  if (el.hasAttribute('disabled')) return;
+  submitOrClick(el);
+};
 
 /**
  * Simulates a form submission action.
@@ -270,15 +277,9 @@ export const SaveViaCtrlS = createKeyCombinationHook(
   submitAction
 );
 
-// TODO: This is a hack to save the inspector. We should find a better way to do this.
-// We shouldn't need to have access to the hook.
-// Perhaps we can abstract the keyhandling logic to be usable from a hook
-// and from react.
 export const InspectorSaveViaCtrlS = createKeyCombinationHook(
   isCtrlOrMetaS,
-  (_e, el, hook) => {
-    hook.pushEvent('save', {});
-  }
+  clickAction
 );
 /**
  * Hook to open the Github Sync modal when "Ctrl+Shift+S" (or "Cmd+Shift+S" on macOS) is pressed.

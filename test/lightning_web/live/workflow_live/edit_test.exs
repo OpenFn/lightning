@@ -576,11 +576,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         assert view
                |> has_element?("[id='version-switcher-toggle-#{job.id}]")
 
-        assert view
-               |> has_element?(
-                 "[type='submit'][form='workflow-form'][disabled]",
-                 "Save"
-               )
+        assert view |> save_is_disabled?()
       end)
 
       snapshot.edges
@@ -650,7 +646,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
              |> element("#version-switcher-button-#{workflow.id}")
              |> has_element?()
 
-      assert view |> element("[type='submit']", "Save") |> has_element?()
+      refute view |> save_is_disabled?()
     end
 
     test "Creating an audit event on rerun", %{
