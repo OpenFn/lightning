@@ -14,7 +14,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-5139774C.js"></script>
+    <script src="dist/sidebar_items-76A2A6A5.js"></script>
     <script src="docs_config.js"></script>
     <script async src="dist/html-YIPIRHGU.js"></script>
 
@@ -143,24 +143,24 @@ configure the necessary bit of PromEx. Be sure to check out <a href="https://hex
 more details regarding configuring PromEx:</p><pre><code class="makeup elixir" translate="no"><span class="n">config</span><span class="w"> </span><span class="ss">:lightning</span><span class="p">,</span><span class="w"> </span><span class="nc">Lightning.PromEx</span><span class="p">,</span><span class="w">
   </span><span class="ss">disabled</span><span class="p">:</span><span class="w"> </span><span class="no">false</span><span class="p">,</span><span class="w">
   </span><span class="ss">manual_metrics_start_delay</span><span class="p">:</span><span class="w"> </span><span class="ss">:no_delay</span><span class="p">,</span><span class="w">
-  </span><span class="ss">drop_metrics_groups</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7183201696-1">[</span><span class="p" data-group-id="7183201696-1">]</span><span class="p">,</span><span class="w">
+  </span><span class="ss">drop_metrics_groups</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7241225298-1">[</span><span class="p" data-group-id="7241225298-1">]</span><span class="p">,</span><span class="w">
   </span><span class="ss">grafana</span><span class="p">:</span><span class="w"> </span><span class="ss">:disabled</span><span class="p">,</span><span class="w">
   </span><span class="ss">metrics_server</span><span class="p">:</span><span class="w"> </span><span class="ss">:disabled</span></code></pre></li><li><p>Add this module to your application supervision tree. It should be one of the first
 things that is started so that no Telemetry events are missed. For example, if PromEx
 is started after your Repo module, you will miss Ecto's init events and the dashboards
-will be missing some data points:</p><pre><code class="makeup elixir" translate="no"><span class="kd">def</span><span class="w"> </span><span class="nf">start</span><span class="p" data-group-id="4650954658-1">(</span><span class="c">_type</span><span class="p">,</span><span class="w"> </span><span class="c">_args</span><span class="p" data-group-id="4650954658-1">)</span><span class="w"> </span><span class="k" data-group-id="4650954658-2">do</span><span class="w">
-  </span><span class="n">children</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="4650954658-3">[</span><span class="w">
+will be missing some data points:</p><pre><code class="makeup elixir" translate="no"><span class="kd">def</span><span class="w"> </span><span class="nf">start</span><span class="p" data-group-id="3086680147-1">(</span><span class="c">_type</span><span class="p">,</span><span class="w"> </span><span class="c">_args</span><span class="p" data-group-id="3086680147-1">)</span><span class="w"> </span><span class="k" data-group-id="3086680147-2">do</span><span class="w">
+  </span><span class="n">children</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="3086680147-3">[</span><span class="w">
     </span><span class="nc">Lightning.PromEx</span><span class="p">,</span><span class="w">
 
     </span><span class="n">...</span><span class="w">
-  </span><span class="p" data-group-id="4650954658-3">]</span><span class="w">
+  </span><span class="p" data-group-id="3086680147-3">]</span><span class="w">
 
   </span><span class="n">...</span><span class="w">
-</span><span class="k" data-group-id="4650954658-2">end</span></code></pre></li><li><p>Update your <code class="inline">endpoint.ex</code> file to expose your metrics (or configure a standalone
+</span><span class="k" data-group-id="3086680147-2">end</span></code></pre></li><li><p>Update your <code class="inline">endpoint.ex</code> file to expose your metrics (or configure a standalone
 server using the <code class="inline">:metrics_server</code> config options). Be sure to put this plug before
 your <a href="https://hexdocs.pm/plug/1.17.0/Plug.Telemetry.html"><code class="inline">Plug.Telemetry</code></a> entry so that you can avoid having calls to your <code class="inline">/metrics</code>
 endpoint create their own metrics and logs which can pollute your logs/metrics given
-that Prometheus will scrape at a regular interval and that can get noisy:</p><pre><code class="makeup elixir" translate="no"><span class="kd">defmodule</span><span class="w"> </span><span class="nc">LightningWeb.Endpoint</span><span class="w"> </span><span class="k" data-group-id="6152790882-1">do</span><span class="w">
+that Prometheus will scrape at a regular interval and that can get noisy:</p><pre><code class="makeup elixir" translate="no"><span class="kd">defmodule</span><span class="w"> </span><span class="nc">LightningWeb.Endpoint</span><span class="w"> </span><span class="k" data-group-id="4633446475-1">do</span><span class="w">
   </span><span class="kn">use</span><span class="w"> </span><span class="nc">Phoenix.Endpoint</span><span class="p">,</span><span class="w"> </span><span class="ss">otp_app</span><span class="p">:</span><span class="w"> </span><span class="ss">:lightning</span><span class="w">
 
   </span><span class="n">...</span><span class="w">
@@ -168,7 +168,7 @@ that Prometheus will scrape at a regular interval and that can get noisy:</p><pr
   </span><span class="n">plug</span><span class="w"> </span><span class="nc">PromEx.Plug</span><span class="p">,</span><span class="w"> </span><span class="ss">prom_ex_module</span><span class="p">:</span><span class="w"> </span><span class="nc">Lightning.PromEx</span><span class="w">
 
   </span><span class="n">...</span><span class="w">
-</span><span class="k" data-group-id="6152790882-1">end</span></code></pre></li><li><p>Update the list of plugins in the <code class="inline">plugins/0</code> function return list to reflect your
+</span><span class="k" data-group-id="4633446475-1">end</span></code></pre></li><li><p>Update the list of plugins in the <code class="inline">plugins/0</code> function return list to reflect your
 application's dependencies. Also update the list of dashboards that are to be uploaded
 to Grafana in the <code class="inline">dashboards/0</code> function.</p></li></ol>
     </section>
@@ -194,6 +194,14 @@ to Grafana in the <code class="inline">dashboards/0</code> function.</p></li></o
       </div>
 
         <div class="summary-synopsis"><p>Returns a specification to start this module under a supervisor.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#seed_event_metrics/0" data-no-tooltip translate="no">seed_event_metrics()</a>
+
+      </div>
 
     </div>
 
@@ -230,6 +238,28 @@ to Grafana in the <code class="inline">dashboards/0</code> function.</p></li></o
   <section class="docstring">
 
 <p>Returns a specification to start this module under a supervisor.</p><p>See <a href="https://hexdocs.pm/elixir/Supervisor.html"><code class="inline">Supervisor</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="seed_event_metrics/0">
+
+  <div class="detail-header">
+    <a href="#seed_event_metrics/0" class="detail-link" data-no-tooltip title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">seed_event_metrics()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/prom_ex.ex#L97" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
   </section>
 </section>
 
