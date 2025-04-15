@@ -40,7 +40,7 @@ defmodule LightningWeb.WorkerChannelTest do
     end
 
     test "returns an empty list when there are no runs", %{socket: socket} do
-      ref = push(socket, "claim", %{"demand" => 1, "pod_name" => "my.pod.name"})
+      ref = push(socket, "claim", %{"demand" => 1, "worker_name" => "my.pod.name"})
       assert_reply ref, :ok, %{runs: []}
     end
 
@@ -64,7 +64,7 @@ defmodule LightningWeb.WorkerChannelTest do
 
       %{id: run_id} = run
 
-      ref = push(socket, "claim", %{"demand" => 1, "pod_name" => "my.pod.name"})
+      ref = push(socket, "claim", %{"demand" => 1, "worker_name" => "my.pod.name"})
 
       assert_reply ref,
                    :ok,
@@ -80,7 +80,7 @@ defmodule LightningWeb.WorkerChannelTest do
 
       assert claims["id"] == run_id
 
-      ref = push(socket, "claim", %{"demand" => 4, "pod_name" => "my.pod.name"})
+      ref = push(socket, "claim", %{"demand" => 4, "worker_name" => "my.pod.name"})
       assert_reply ref, :ok, %{runs: runs}
 
       assert runs |> Enum.map(& &1["id"]) |> MapSet.new() ==
@@ -99,7 +99,7 @@ defmodule LightningWeb.WorkerChannelTest do
           dataclip: params_with_assocs(:dataclip)
         )
 
-      ref = push(socket, "claim", %{"demand" => 1, "pod_name" => "my.pod.name"})
+      ref = push(socket, "claim", %{"demand" => 1, "worker_name" => "my.pod.name"})
 
       assert_reply ref, :ok, %{runs: [%{"id" => ^run_id}]}
 
