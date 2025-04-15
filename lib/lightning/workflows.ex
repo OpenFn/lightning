@@ -536,8 +536,19 @@ defmodule Lightning.Workflows do
     |> Repo.exists?()
   end
 
-  def maybe_create_latest_snaphost(
-        %{
+  @doc """
+  Creates a latest snapshot for the given workflow if one does not already exist
+  for the current lock_version. Returns {:ok, snapshot} if a snapshot exists or is created.
+
+  > #### Note {: .info}
+  >
+  > In normal situations this function is not needed as the snapshot is created
+  > when the workflow is saved.
+  """
+  @spec maybe_create_latest_snapshot(Workflow.t()) ::
+          {:ok, Snapshot.t()} | {:error, Ecto.Changeset.t(Snapshot.t())}
+  def maybe_create_latest_snapshot(
+        %Workflow{
           id: workflow_id,
           lock_version: lock_version,
           updated_at: updated_at,
