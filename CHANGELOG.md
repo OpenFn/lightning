@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Add helper function to create latest snapshot
+  [#3099](https://github.com/OpenFn/lightning/issues/3099)
 - Restart the credential setup from selecting the credential type
   [#2284](https://github.com/OpenFn/lightning/issues/2284)
 - Enable Support User and adds audit trail for MFA.
@@ -25,6 +27,10 @@ and this project adheres to
   [#3016](https://github.com/OpenFn/lightning/issues/3016)
 - Allow users to create workflow via YAML import
   [#3013](https://github.com/OpenFn/lightning/issues/3013)
+- Make provision for the inclusion of 'external' metrics.
+  [#3096] (https://github.com/OpenFn/lightning/issues/3096])
+- Introduce 'seeding' of PromEx event metrics
+  [#3096] (https://github.com/OpenFn/lightning/issues/3096])
 
 ### Changed
 
