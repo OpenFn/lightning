@@ -332,9 +332,7 @@ defmodule Lightning.Workflows do
   """
   def get_workflows_for(%Project{} = project, opts \\ []) do
     include = Keyword.get(opts, :include, [:triggers, :edges, jobs: [:workflow]])
-    include = if :triggers in include, do: include, else: [:triggers | include]
     order_by = Keyword.get(opts, :order_by, {:name, :asc})
-    search_term = Keyword.get(opts, :search)
 
     query =
       from(w in Workflow,
@@ -343,9 +341,8 @@ defmodule Lightning.Workflows do
       )
 
     query =
-      if search_term && search_term != "" do
-        search_pattern = "%#{search_term}%"
-        from w in query, where: ilike(w.name, ^search_pattern)
+      if search = Keyword.get(opts, :search) do
+        from w in query, where: ilike(w.name, ^"%#{search}%")
       else
         query
       end

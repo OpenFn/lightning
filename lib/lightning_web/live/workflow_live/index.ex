@@ -122,10 +122,14 @@ defmodule LightningWeb.WorkflowLive.Index do
       sort_direction: sort_direction
     } = socket.assigns
 
-    opts = [
-      search: search_term,
-      order_by: {sort_key, sort_direction}
-    ]
+    opts = [order_by: {sort_key, sort_direction}]
+
+    opts =
+      if search_term && search_term != "" do
+        Keyword.put(opts, :search, search_term)
+      else
+        opts
+      end
 
     workflows = Workflows.get_workflows_for(project, opts)
     workflow_stats = Enum.map(workflows, &DashboardStats.get_workflow_stats/1)
@@ -330,11 +334,11 @@ defmodule LightningWeb.WorkflowLive.Index do
   defp to_sort_key("workorders_count"), do: :workorders_count
   defp to_sort_key("failed_workorders_count"), do: :failed_workorders_count
   defp to_sort_key("last_workorder_updated_at"), do: :last_workorder_updated_at
-  defp to_sort_key(_), do: :name
+  defp to_sort_key(nil), do: :name
 
   defp to_sort_direction("asc"), do: :asc
   defp to_sort_direction("desc"), do: :desc
-  defp to_sort_direction(_), do: :asc
+  defp to_sort_direction(nil), do: :asc
 
   defp switch_sort_direction(:asc), do: :desc
   defp switch_sort_direction(:desc), do: :asc

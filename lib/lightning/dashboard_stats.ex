@@ -99,27 +99,18 @@ defmodule Lightning.DashboardStats do
   """
   def sort_workflow_stats(workflow_stats, sort_field, sort_direction)
       when is_atom(sort_field) and is_atom(sort_direction) do
-    sorter = get_sort_function(sort_field)
+    sorter = get_sorter(sort_field)
     Enum.sort_by(workflow_stats, sorter, sort_direction)
   end
 
-  defp get_sort_function(:workorders_count) do
-    fn stats -> stats.workorders_count end
-  end
-
-  defp get_sort_function(:failed_workorders_count) do
-    fn stats -> stats.failed_workorders_count end
-  end
-
-  defp get_sort_function(:last_workorder_updated_at) do
+  defp get_sorter(:last_workorder_updated_at) do
     fn stats ->
-      timestamp = stats.last_workorder.updated_at || ~U[1970-01-01 00:00:00Z]
-      timestamp
+      stats.last_workorder.updated_at || ~U[1970-01-01 00:00:00Z]
     end
   end
 
-  defp get_sort_function(_) do
-    fn stats -> stats.workflow.name end
+  defp get_sorter(field) do
+    fn stats -> Map.get(stats, field) end
   end
 
   def aggregate_project_metrics(workflows_stats) do
