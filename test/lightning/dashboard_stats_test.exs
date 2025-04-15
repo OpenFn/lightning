@@ -158,7 +158,7 @@ defmodule Lightning.DashboardStatsTest do
 
     test "sorts by workorders_count ascending", %{stats: stats} do
       sorted =
-        DashboardStats.sort_workflow_stats(stats, "workorders_count", "asc")
+        DashboardStats.sort_workflow_stats(stats, :workorders_count, :asc)
 
       counts = Enum.map(sorted, & &1.workorders_count)
       assert counts == Enum.sort(counts)
@@ -166,7 +166,7 @@ defmodule Lightning.DashboardStatsTest do
 
     test "sorts by workorders_count descending", %{stats: stats} do
       sorted =
-        DashboardStats.sort_workflow_stats(stats, "workorders_count", "desc")
+        DashboardStats.sort_workflow_stats(stats, :workorders_count, :desc)
 
       counts = Enum.map(sorted, & &1.workorders_count)
       assert counts == Enum.sort(counts, :desc)
@@ -176,8 +176,8 @@ defmodule Lightning.DashboardStatsTest do
       sorted =
         DashboardStats.sort_workflow_stats(
           stats,
-          "failed_workorders_count",
-          "asc"
+          :failed_workorders_count,
+          :asc
         )
 
       counts = Enum.map(sorted, & &1.failed_workorders_count)
@@ -188,8 +188,8 @@ defmodule Lightning.DashboardStatsTest do
       sorted =
         DashboardStats.sort_workflow_stats(
           stats,
-          "failed_workorders_count",
-          "desc"
+          :failed_workorders_count,
+          :desc
         )
 
       counts = Enum.map(sorted, & &1.failed_workorders_count)
@@ -200,8 +200,8 @@ defmodule Lightning.DashboardStatsTest do
       sorted =
         DashboardStats.sort_workflow_stats(
           stats,
-          "last_workorder_updated_at",
-          "asc"
+          :last_workorder_updated_at,
+          :asc
         )
 
       timestamps = Enum.map(sorted, & &1.last_workorder.updated_at)
@@ -212,8 +212,8 @@ defmodule Lightning.DashboardStatsTest do
       sorted =
         DashboardStats.sort_workflow_stats(
           stats,
-          "last_workorder_updated_at",
-          "desc"
+          :last_workorder_updated_at,
+          :desc
         )
 
       timestamps = Enum.map(sorted, & &1.last_workorder.updated_at)
@@ -221,7 +221,7 @@ defmodule Lightning.DashboardStatsTest do
     end
 
     test "sorts by workflow name when given invalid sort field", %{stats: stats} do
-      sorted = DashboardStats.sort_workflow_stats(stats, "invalid_field", "asc")
+      sorted = DashboardStats.sort_workflow_stats(stats, :invalid_field, :asc)
       names = Enum.map(sorted, & &1.workflow.name)
       assert names == ["A Workflow", "B Workflow", "C Workflow"]
     end
@@ -235,8 +235,8 @@ defmodule Lightning.DashboardStatsTest do
       sorted =
         DashboardStats.sort_workflow_stats(
           all_stats,
-          "last_workorder_updated_at",
-          "asc"
+          :last_workorder_updated_at,
+          :asc
         )
 
       first_stat = List.first(sorted)
