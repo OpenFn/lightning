@@ -107,5 +107,24 @@ defmodule LightningWeb.WorkerChannelTest do
 
       assert run.worker_name == "my.pod.name"
     end
+
+    test "if given an empty string for a worker name stores it as nil", %{
+      socket: socket
+    } do
+      %{triggers: [trigger]} =
+        workflow = insert(:simple_workflow) |> with_snapshot()
+
+      {:ok, %{runs: [%{id: run_id} = run]}} =
+        WorkOrders.create_for(trigger,
+          workflow: workflow,
+          dataclip: params_with_assocs(:dataclip)
+        )
+
+      ref = push(socket, "claim", %{"demand" => 1, "worker_name" => ""})
+
+      assert_reply ref, :ok, %{runs: [%{"id" => ^run_id}]}
+
+      assert %{worker_name: nil} = Repo.reload!(run)
+    end
   end
 end

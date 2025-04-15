@@ -25,7 +25,7 @@ defmodule LightningWeb.WorkerChannel do
         %{"demand" => demand, "worker_name" => worker_name},
         socket
       ) do
-    case Runs.claim(demand, worker_name) do
+    case Runs.claim(demand, sanitise_worker_name(worker_name)) do
       {:ok, runs} ->
         runs =
           runs
@@ -46,6 +46,10 @@ defmodule LightningWeb.WorkerChannel do
         {:reply, {:error, LightningWeb.ChangesetJSON.errors(changeset)}, socket}
     end
   end
+
+  defp sanitise_worker_name(""), do: nil
+
+  defp sanitise_worker_name(worker_name), do: worker_name
 
   defp run_options(run) do
     Ecto.assoc(run, :workflow)
