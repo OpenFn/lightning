@@ -168,6 +168,12 @@ defmodule Lightning.Application do
     state
   end
 
+  @impl true
+  def start_phase(:seed_prom_ex_telemetry, :normal, _) do
+    Lightning.PromEx.seed_event_metrics()
+    :ok
+  end
+
   def oban_opts do
     opts = Application.get_env(:lightning, Oban)
 

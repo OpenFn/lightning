@@ -1,6 +1,7 @@
 defmodule Lightning.WorkflowsTest do
   use Lightning.DataCase, async: false
 
+  import ExUnit.CaptureLog
   import Lightning.Factories
 
   alias Lightning.Auditing.Audit
@@ -443,6 +444,31 @@ defmodule Lightning.WorkflowsTest do
     test "change_workflow/1 returns a workflow changeset" do
       workflow = insert(:workflow)
       assert %Ecto.Changeset{} = Workflows.change_workflow(workflow)
+    end
+
+    test "maybe_create_latest_snapshot/1 creates snapshot if missing latest" do
+      workflow =
+        insert(:simple_workflow, lock_version: 2, updated_at: DateTime.utc_now())
+
+      refute Snapshot.get_current_for(workflow)
+
+      assert capture_log(fn ->
+               assert {:ok, %Snapshot{lock_version: 2}} =
+                        Workflows.maybe_create_latest_snapshot(workflow)
+             end) =~
+               "Created latest snapshot for #{workflow.id} (last_update: #{workflow.updated_at})"
+    end
+
+    test "maybe_create_latest_snapshot/1 does not create snapshot if latest exists" do
+      {:ok, workflow} =
+        insert(:simple_workflow)
+        |> Workflows.change_workflow(%{name: "some-updated-name"})
+        |> Workflows.save_workflow(insert(:user))
+
+      %{lock_version: lock_version} = Snapshot.get_current_for(workflow)
+
+      assert {:ok, %Snapshot{lock_version: ^lock_version}} =
+               Workflows.maybe_create_latest_snapshot(workflow)
     end
   end
 
