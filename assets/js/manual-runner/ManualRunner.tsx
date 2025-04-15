@@ -40,17 +40,21 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = () => {
     return ""
   }
 
+  const selectOptionHandler = (option: SeletableOptions) => () => {
+    setSelectedOption(p => p === option ? SeletableOptions.NONE : option);
+  }
+
   return <div className="px-4 py-6">
     <div className="flex flex-col gap-3">
       <div className="font-bold flex justify-center">Select Input</div>
       <div className="flex gap-4 justify-center">
-        <button type="button" onClick={() => { setSelectedOption(SeletableOptions.EMPTY) }} className={"border rounded-md px-3 py-1 flex justify-center items-center gap-1 text-sm hover:bg-slate-100 hover:border-primary-300 group" + getActive(SeletableOptions.EMPTY)}>
+        <button type="button" onClick={selectOptionHandler(SeletableOptions.EMPTY)} className={"border rounded-md px-3 py-1 flex justify-center items-center gap-1 text-sm hover:bg-slate-100 hover:border-primary-300 group" + getActive(SeletableOptions.EMPTY)}>
           <DocumentIcon className={`${iconStyle} transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} /> Empty
         </button>
-        <button type="button" onClick={() => { setSelectedOption(SeletableOptions.CUSTOM) }} className={"border rounded-md px-3 py-1 flex justify-center items-center gap-1 text-sm hover:bg-slate-100 hover:border-primary-300 group" + getActive(SeletableOptions.CUSTOM)}>
+        <button type="button" onClick={selectOptionHandler(SeletableOptions.CUSTOM)} className={"border rounded-md px-3 py-1 flex justify-center items-center gap-1 text-sm hover:bg-slate-100 hover:border-primary-300 group" + getActive(SeletableOptions.CUSTOM)}>
           <PencilSquareIcon className={`${iconStyle} transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} /> Custom
         </button>
-        <button type="button" onClick={() => { setSelectedOption(SeletableOptions.IMPORT) }} className={"border rounded-md px-3 py-1 flex justify-center items-center gap-1 text-sm hover:bg-slate-100 hover:border-primary-300 group" + getActive(SeletableOptions.IMPORT)}>
+        <button type="button" onClick={selectOptionHandler(SeletableOptions.IMPORT)} className={"border rounded-md px-3 py-1 flex justify-center items-center gap-1 text-sm hover:bg-slate-100 hover:border-primary-300 group" + getActive(SeletableOptions.IMPORT)}>
           <DocumentArrowUpIcon className={`${iconStyle} transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} /> Import
         </button>
       </div>
