@@ -43,6 +43,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
   jsx("assets/js/workflow-editor/WorkflowEditor.tsx")
   jsx("assets/js/workflow-store/WorkflowStore.tsx")
 
+  jsx("assets/js/manual-runner/ManualRunner.tsx")
+
   attr :changeset, :map, required: true
   attr :project_user, :map, required: true
 
@@ -235,7 +237,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   >
                     <:panel hash="manual" class="overflow-auto h-full">
                       <div class="grow flex flex-col gap-4 p-2 min-h-0 h-full">
-                        <LightningWeb.WorkflowLive.ManualWorkorder.component
+                        <.ManualRunner :if={@selection_mode === "expand"} />
+                        <%!-- <LightningWeb.WorkflowLive.ManualWorkorder.component
                           id={"manual-job-#{@selected_job.id}"}
                           form={@manual_run_form}
                           dataclips={@selectable_dataclips}
@@ -251,7 +254,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           show_missing_dataclip_selector={
                             @show_missing_dataclip_selector
                           }
-                        />
+                        /> --%>
                       </div>
                     </:panel>
                     <:panel hash="aichat" class="h-full">
