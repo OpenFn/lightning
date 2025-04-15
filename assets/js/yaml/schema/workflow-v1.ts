@@ -19,6 +19,7 @@ const workflowV1Schema = {
             name: { type: 'string' },
             adaptor: { type: 'string' },
             body: { type: 'string' },
+            credential: { type: ['string', 'null'] },
           },
           required: ['name', 'adaptor', 'body'],
           additionalProperties: false,
