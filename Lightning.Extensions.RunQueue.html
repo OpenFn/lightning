@@ -14,7 +14,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-C878E5F1.js"></script>
+    <script src="dist/sidebar_items-97A7EAE6.js"></script>
     <script src="docs_config.js"></script>
     <script async src="dist/html-YIPIRHGU.js"></script>
 
@@ -157,7 +157,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#c:claim/1" data-no-tooltip translate="no">claim(demand)</a>
+        <a href="#c:claim/2" data-no-tooltip translate="no">claim(demand, worker_name)</a>
 
       </div>
 
@@ -200,14 +200,14 @@ Pages
       <span class="text">Callbacks</span>
     </h1>
     <div class="callbacks-list">
-<section class="detail" id="c:claim/1">
+<section class="detail" id="c:claim/2">
 
   <div class="detail-header">
-    <a href="#c:claim/1" class="detail-link" data-no-tooltip title="Link to this callback">
+    <a href="#c:claim/2" class="detail-link" data-no-tooltip title="Link to this callback">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this callback</span>
     </a>
-    <h1 class="signature" translate="no">claim(demand)</h1>
+    <h1 class="signature" translate="no">claim(demand, worker_name)</h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/extensions/run_queue.ex#L16" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
@@ -221,7 +221,8 @@ Pages
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@callback</span> claim(demand :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()) :: {:ok, [<a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>()]}</pre>
+          <pre translate="no"><span class="attribute">@callback</span> claim(demand :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>(), worker_name :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) ::
+  {:ok, [<a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>()]}</pre>
 
       </div>
 
