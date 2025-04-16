@@ -38,6 +38,8 @@ and this project adheres to
   - `phoenix` from 1.7.20 to 1.7.21
   - `phoenix_live_view` from 1.0.5 to 1.0.9
   - `petal_components` from 2.9.0 to 3.0.1
+- Added a "BETA" label to the Kafka trigger type
+  [#3098](https://github.com/OpenFn/lightning/pull/3098)
 
 ### Fixed
 

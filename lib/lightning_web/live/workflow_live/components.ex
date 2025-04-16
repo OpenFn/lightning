@@ -437,15 +437,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                     auth_method <-
                       get_webhook_auth_methods_from_trigger(@selected_trigger)
                   }>
-                    <%= if auth_method.name |> String.length <= 50 do %>
-                      {auth_method.name} (<.humanized_auth_method_type auth_method={
-                        auth_method
-                      } />)
-                    <% else %>
-                      {auth_method.name |> String.slice(0..50)} ... (<.humanized_auth_method_type auth_method={
-                        auth_method
-                      } />)
-                    <% end %>
+                    {truncate_string(auth_method.name, 50)} (<span class="text-xs">{humanized_auth_method_type(auth_method)}</span>)
                   </li>
                 </ul>
 
@@ -470,22 +462,39 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
-  attr :auth_method, :map, required: true
+  defp truncate_string(string, length) do
+    if String.length(string) > length do
+      String.slice(string, 0..length) <> "..."
+    else
+      string
+    end
+  end
 
-  def humanized_auth_method_type(assigns) do
-    assigns =
-      assign(
-        assigns,
-        :humanized_type,
-        %{
-          api: "API",
-          basic: "Basic"
-        }
-        |> Map.get(assigns.auth_method.auth_type, "")
-      )
+  defp humanized_auth_method_type(auth_method) do
+    case auth_method do
+      %{auth_type: :api} -> "API"
+      %{auth_type: :basic} -> "Basic"
+      _ -> ""
+    end
+  end
 
+  attr :id, :string, required: true
+
+  def kafka_trigger_title(assigns) do
     ~H"""
-    <span>{@humanized_type}</span>
+    <div class="flex items-center">
+      Kafka Trigger
+      <span
+        class="text-sm"
+        id={"#{@id}-beta-tooltip"}
+        phx-hook="Tooltip"
+        data-allow-html="true"
+        data-placement="bottom"
+        aria-label="Kafka triggers are currently in beta and your Lightning administrator may disable them in the future. <a href='https://docs.openfn.org/documentation/build/triggers#known-sharp-edges-on-the-kafka-trigger-feature' target='_blank' class='link'>Learn about the sharp edges</a>"
+      >
+        <LightningWeb.Components.Common.beta_chip id={"#{@id}-beta"} />
+      </span>
+    </div>
     """
   end
 
@@ -722,7 +731,7 @@ defmodule LightningWeb.WorkflowLive.Components do
           {auth_method.name}
         </.td>
         <.td class="whitespace-nowrap text-sm text-gray-900">
-          <.humanized_auth_method_type auth_method={auth_method} />
+          <span>{humanized_auth_method_type(auth_method)}</span>
         </.td>
         <.td class="whitespace-nowrap text-sm text-gray-900">
           {render_slot(@linked_triggers, auth_method)}
