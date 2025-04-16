@@ -9,7 +9,7 @@ import type {
   WorkflowSpec,
 } from './types';
 import { randomUUID } from '../common';
-import workflowV1Schema from './schema/workflow-v1';
+import workflowV1Schema from './schema/workflow-spec.json';
 import YAML from 'yaml';
 import Ajv, { type ErrorObject } from 'ajv';
 
