@@ -50,6 +50,8 @@ and this project adheres to
   - `petal_components` from 2.9.0 to 3.0.1
 - Move new workflow form into the edit page
   [#3083](https://github.com/OpenFn/lightning/issues/3083)
+- Added logos & case-insensitive sorting of credential types
+  [#3107](https://github.com/OpenFn/lightning/pull/3107)
 - Added a "BETA" label to the Kafka trigger type
   [#3098](https://github.com/OpenFn/lightning/pull/3098)
 
