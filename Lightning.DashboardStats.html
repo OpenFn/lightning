@@ -14,7 +14,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-09A27518.js"></script>
+    <script src="dist/sidebar_items-A9DDD652.js"></script>
     <script src="docs_config.js"></script>
     <script async src="dist/html-YIPIRHGU.js"></script>
 
@@ -179,6 +179,16 @@ Pages
 
     </div>
 
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#sort_workflow_stats/3" data-no-tooltip translate="no">sort_workflow_stats(workflow_stats, sort_field, sort_direction)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Sorts a list of workflow statistics based on the specified field and direction.</p></div>
+
+    </div>
+
 </div>
 
   </section>
@@ -201,7 +211,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">aggregate_project_metrics(workflows_stats)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/dashboard_stats.ex#L77" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/dashboard_stats.ex#L116" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -223,7 +233,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">filter_days_ago(query, days)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/dashboard_stats.ex#L222" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/dashboard_stats.ex#L261" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -245,7 +255,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">get_workflow_stats(workflow)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/dashboard_stats.ex#L48" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/dashboard_stats.ex#L49" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -256,6 +266,50 @@ Pages
   <section class="docstring">
 
 
+  </section>
+</section>
+<section class="detail" id="sort_workflow_stats/3">
+
+  <div class="detail-header">
+    <a href="#sort_workflow_stats/3" class="detail-link" data-no-tooltip title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">sort_workflow_stats(workflow_stats, sort_field, sort_direction)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/dashboard_stats.ex#L100" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Sorts a list of workflow statistics based on the specified field and direction.</p><h2 id="sort_workflow_stats/3-parameters" class="section-heading">
+  <a href="#sort_workflow_stats/3-parameters" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Parameters</span>
+</h2>
+<ul><li><code class="inline">workflow_stats</code> - A list of WorkflowStats structs to be sorted</li><li><code class="inline">sort_field</code> - Atom representing the field to sort by, options include:<ul><li><code class="inline">:last_workorder_updated_at</code> - Sort by timestamp of the latest work order</li><li><code class="inline">:workorders_count</code> - Sort by total count of work orders</li><li><code class="inline">:failed_workorders_count</code> - Sort by count of failed work orders</li></ul></li><li><code class="inline">sort_direction</code> - Atom representing sort direction, either :asc or :desc</li></ul><h2 id="sort_workflow_stats/3-returns" class="section-heading">
+  <a href="#sort_workflow_stats/3-returns" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Returns</span>
+</h2>
+<p>  Sorted list of WorkflowStats structs</p><h2 id="sort_workflow_stats/3-examples" class="section-heading">
+  <a href="#sort_workflow_stats/3-examples" class="hover-link">
+    <i class="ri-link-m" aria-hidden="true"></i>
+  </a>
+  <span class="text">Examples</span>
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">sort_workflow_stats</span><span class="p" data-group-id="3524079266-1">(</span><span class="n">workflow_stats</span><span class="p">,</span><span class="w"> </span><span class="ss">:workorders_count</span><span class="p">,</span><span class="w"> </span><span class="ss">:desc</span><span class="p" data-group-id="3524079266-1">)</span><span class="w">
+</span><span class="p" data-group-id="3524079266-2">[</span><span class="p" data-group-id="3524079266-3">%</span><span class="nc" data-group-id="3524079266-3">WorkflowStats</span><span class="p" data-group-id="3524079266-3">{</span><span class="ss">workorders_count</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="3524079266-3">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3524079266-4">%</span><span class="nc" data-group-id="3524079266-4">WorkflowStats</span><span class="p" data-group-id="3524079266-4">{</span><span class="ss">workorders_count</span><span class="p">:</span><span class="w"> </span><span class="mi">50</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="3524079266-4">}</span><span class="p" data-group-id="3524079266-2">]</span><span class="w">
+
+</span><span class="gp unselectable">iex&gt; </span><span class="n">sort_workflow_stats</span><span class="p" data-group-id="3524079266-5">(</span><span class="n">workflow_stats</span><span class="p">,</span><span class="w"> </span><span class="ss">:last_workorder_updated_at</span><span class="p">,</span><span class="w"> </span><span class="ss">:asc</span><span class="p" data-group-id="3524079266-5">)</span><span class="w">
+</span><span class="p" data-group-id="3524079266-6">[</span><span class="p" data-group-id="3524079266-7">%</span><span class="nc" data-group-id="3524079266-7">WorkflowStats</span><span class="p" data-group-id="3524079266-7">{</span><span class="ss">last_workorder</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3524079266-8">%{</span><span class="ss">updated_at</span><span class="p">:</span><span class="w"> </span><span class="ld">~U[2023-01-01 00:00:00Z]</span><span class="p" data-group-id="3524079266-8">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="3524079266-7">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="3524079266-6">]</span></code></pre>
   </section>
 </section>
 
