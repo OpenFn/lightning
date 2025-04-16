@@ -5,16 +5,16 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.34.2">
-    <meta name="project" content="Lightning v2.11.2">
+    <meta name="project" content="Lightning v2.11.3">
 
 
-    <title>Lightning.OauthClients — Lightning v2.11.2</title>
+    <title>Lightning.OauthClients — Lightning v2.11.3</title>
     <link rel="stylesheet" href="dist/html-elixir-F2VRIOKR.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-97A7EAE6.js"></script>
+    <script src="dist/sidebar_items-D48F5054.js"></script>
     <script src="docs_config.js"></script>
     <script async src="dist/html-YIPIRHGU.js"></script>
 
@@ -54,7 +54,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.11.2
+          v2.11.3
         </div>
       </div>
     </div>
@@ -132,7 +132,7 @@ Pages
       </a>
 
     <span translate="no">Lightning.OauthClients</span> 
-    <small class="app-vsn" translate="no">(Lightning v2.11.2)</small>
+    <small class="app-vsn" translate="no">(Lightning v2.11.3)</small>
 
   </h1>
 
@@ -269,8 +269,8 @@ their associations with projects and handling audit trails for changes.</p>
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_client</span><span class="p" data-group-id="1254091106-1">(</span><span class="p" data-group-id="1254091106-2">%</span><span class="nc" data-group-id="1254091106-2">OauthClient</span><span class="p" data-group-id="1254091106-2">{</span><span class="p" data-group-id="1254091106-2">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1254091106-3">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;New Client&quot;</span><span class="p" data-group-id="1254091106-3">}</span><span class="p" data-group-id="1254091106-1">)</span><span class="w">
-</span><span class="p" data-group-id="1254091106-4">%</span><span class="nc" data-group-id="1254091106-4">Ecto.Changeset</span><span class="p" data-group-id="1254091106-4">{</span><span class="n">...</span><span class="p" data-group-id="1254091106-4">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_client</span><span class="p" data-group-id="5454516902-1">(</span><span class="p" data-group-id="5454516902-2">%</span><span class="nc" data-group-id="5454516902-2">OauthClient</span><span class="p" data-group-id="5454516902-2">{</span><span class="p" data-group-id="5454516902-2">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5454516902-3">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;New Client&quot;</span><span class="p" data-group-id="5454516902-3">}</span><span class="p" data-group-id="5454516902-1">)</span><span class="w">
+</span><span class="p" data-group-id="5454516902-4">%</span><span class="nc" data-group-id="5454516902-4">Ecto.Changeset</span><span class="p" data-group-id="5454516902-4">{</span><span class="n">...</span><span class="p" data-group-id="5454516902-4">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="create_client/1">
@@ -355,11 +355,11 @@ Required fields: <code class="inline">name</code>, <code class="inline">authoriz
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_client</span><span class="p" data-group-id="5438777420-1">(</span><span class="n">client</span><span class="p" data-group-id="5438777420-1">)</span><span class="w">
-</span><span class="p" data-group-id="5438777420-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5438777420-3">%</span><span class="nc" data-group-id="5438777420-3">OauthClient</span><span class="p" data-group-id="5438777420-3">{</span><span class="p" data-group-id="5438777420-3">}</span><span class="p" data-group-id="5438777420-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_client</span><span class="p" data-group-id="6936573356-1">(</span><span class="n">client</span><span class="p" data-group-id="6936573356-1">)</span><span class="w">
+</span><span class="p" data-group-id="6936573356-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6936573356-3">%</span><span class="nc" data-group-id="6936573356-3">OauthClient</span><span class="p" data-group-id="6936573356-3">{</span><span class="p" data-group-id="6936573356-3">}</span><span class="p" data-group-id="6936573356-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_client</span><span class="p" data-group-id="5438777420-4">(</span><span class="n">client</span><span class="p" data-group-id="5438777420-4">)</span><span class="w">
-</span><span class="p" data-group-id="5438777420-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5438777420-6">%</span><span class="nc" data-group-id="5438777420-6">Ecto.Changeset</span><span class="p" data-group-id="5438777420-6">{</span><span class="p" data-group-id="5438777420-6">}</span><span class="p" data-group-id="5438777420-5">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_client</span><span class="p" data-group-id="6936573356-4">(</span><span class="n">client</span><span class="p" data-group-id="6936573356-4">)</span><span class="w">
+</span><span class="p" data-group-id="6936573356-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6936573356-6">%</span><span class="nc" data-group-id="6936573356-6">Ecto.Changeset</span><span class="p" data-group-id="6936573356-6">{</span><span class="p" data-group-id="6936573356-6">}</span><span class="p" data-group-id="6936573356-5">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_client!/1">
@@ -405,10 +405,10 @@ Required fields: <code class="inline">name</code>, <code class="inline">authoriz
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_client!</span><span class="p" data-group-id="5051899651-1">(</span><span class="mi">123</span><span class="p" data-group-id="5051899651-1">)</span><span class="w">
-</span><span class="p" data-group-id="5051899651-2">%</span><span class="nc" data-group-id="5051899651-2">OauthClient</span><span class="p" data-group-id="5051899651-2">{</span><span class="p" data-group-id="5051899651-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_client!</span><span class="p" data-group-id="0210234070-1">(</span><span class="mi">123</span><span class="p" data-group-id="0210234070-1">)</span><span class="w">
+</span><span class="p" data-group-id="0210234070-2">%</span><span class="nc" data-group-id="0210234070-2">OauthClient</span><span class="p" data-group-id="0210234070-2">{</span><span class="p" data-group-id="0210234070-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_client!</span><span class="p" data-group-id="5051899651-3">(</span><span class="mi">456</span><span class="p" data-group-id="5051899651-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_client!</span><span class="p" data-group-id="0210234070-3">(</span><span class="mi">456</span><span class="p" data-group-id="0210234070-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
@@ -449,9 +449,9 @@ Required fields: <code class="inline">name</code>, <code class="inline">authoriz
   </a>
   <span class="text">Examples</span>
 </h2>
-<p>  When given a Project:</p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_clients</span><span class="p" data-group-id="1753282785-1">(</span><span class="p" data-group-id="1753282785-2">%</span><span class="nc" data-group-id="1753282785-2">Project</span><span class="p" data-group-id="1753282785-2">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="1753282785-2">}</span><span class="p" data-group-id="1753282785-1">)</span><span class="w">
-</span><span class="p" data-group-id="1753282785-3">[</span><span class="p" data-group-id="1753282785-4">%</span><span class="nc" data-group-id="1753282785-4">OauthClient</span><span class="p" data-group-id="1753282785-4">{</span><span class="ss">project_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="1753282785-4">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1753282785-5">%</span><span class="nc" data-group-id="1753282785-5">OauthClient</span><span class="p" data-group-id="1753282785-5">{</span><span class="ss">project_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="1753282785-5">}</span><span class="p" data-group-id="1753282785-3">]</span></code></pre><p>  When given a User:</p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_clients</span><span class="p" data-group-id="7315306107-1">(</span><span class="p" data-group-id="7315306107-2">%</span><span class="nc" data-group-id="7315306107-2">User</span><span class="p" data-group-id="7315306107-2">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">123</span><span class="p" data-group-id="7315306107-2">}</span><span class="p" data-group-id="7315306107-1">)</span><span class="w">
-</span><span class="p" data-group-id="7315306107-3">[</span><span class="p" data-group-id="7315306107-4">%</span><span class="nc" data-group-id="7315306107-4">OauthClient</span><span class="p" data-group-id="7315306107-4">{</span><span class="ss">user_id</span><span class="p">:</span><span class="w"> </span><span class="mi">123</span><span class="p" data-group-id="7315306107-4">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7315306107-5">%</span><span class="nc" data-group-id="7315306107-5">OauthClient</span><span class="p" data-group-id="7315306107-5">{</span><span class="ss">user_id</span><span class="p">:</span><span class="w"> </span><span class="mi">123</span><span class="p" data-group-id="7315306107-5">}</span><span class="p" data-group-id="7315306107-3">]</span></code></pre>
+<p>  When given a Project:</p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_clients</span><span class="p" data-group-id="4906438111-1">(</span><span class="p" data-group-id="4906438111-2">%</span><span class="nc" data-group-id="4906438111-2">Project</span><span class="p" data-group-id="4906438111-2">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="4906438111-2">}</span><span class="p" data-group-id="4906438111-1">)</span><span class="w">
+</span><span class="p" data-group-id="4906438111-3">[</span><span class="p" data-group-id="4906438111-4">%</span><span class="nc" data-group-id="4906438111-4">OauthClient</span><span class="p" data-group-id="4906438111-4">{</span><span class="ss">project_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="4906438111-4">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4906438111-5">%</span><span class="nc" data-group-id="4906438111-5">OauthClient</span><span class="p" data-group-id="4906438111-5">{</span><span class="ss">project_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="4906438111-5">}</span><span class="p" data-group-id="4906438111-3">]</span></code></pre><p>  When given a User:</p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_clients</span><span class="p" data-group-id="0214029797-1">(</span><span class="p" data-group-id="0214029797-2">%</span><span class="nc" data-group-id="0214029797-2">User</span><span class="p" data-group-id="0214029797-2">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="mi">123</span><span class="p" data-group-id="0214029797-2">}</span><span class="p" data-group-id="0214029797-1">)</span><span class="w">
+</span><span class="p" data-group-id="0214029797-3">[</span><span class="p" data-group-id="0214029797-4">%</span><span class="nc" data-group-id="0214029797-4">OauthClient</span><span class="p" data-group-id="0214029797-4">{</span><span class="ss">user_id</span><span class="p">:</span><span class="w"> </span><span class="mi">123</span><span class="p" data-group-id="0214029797-4">}</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0214029797-5">%</span><span class="nc" data-group-id="0214029797-5">OauthClient</span><span class="p" data-group-id="0214029797-5">{</span><span class="ss">user_id</span><span class="p">:</span><span class="w"> </span><span class="mi">123</span><span class="p" data-group-id="0214029797-5">}</span><span class="p" data-group-id="0214029797-3">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="update_client/2">
@@ -491,11 +491,11 @@ Required fields: <code class="inline">name</code>, <code class="inline">authoriz
   </a>
   <span class="text">Examples</span>
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_client</span><span class="p" data-group-id="1854577938-1">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1854577938-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="1854577938-2">}</span><span class="p" data-group-id="1854577938-1">)</span><span class="w">
-</span><span class="p" data-group-id="1854577938-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1854577938-4">%</span><span class="nc" data-group-id="1854577938-4">OauthClient</span><span class="p" data-group-id="1854577938-4">{</span><span class="p" data-group-id="1854577938-4">}</span><span class="p" data-group-id="1854577938-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_client</span><span class="p" data-group-id="2762693260-1">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2762693260-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="2762693260-2">}</span><span class="p" data-group-id="2762693260-1">)</span><span class="w">
+</span><span class="p" data-group-id="2762693260-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2762693260-4">%</span><span class="nc" data-group-id="2762693260-4">OauthClient</span><span class="p" data-group-id="2762693260-4">{</span><span class="p" data-group-id="2762693260-4">}</span><span class="p" data-group-id="2762693260-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_client</span><span class="p" data-group-id="1854577938-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1854577938-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="1854577938-6">}</span><span class="p" data-group-id="1854577938-5">)</span><span class="w">
-</span><span class="p" data-group-id="1854577938-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1854577938-8">%</span><span class="nc" data-group-id="1854577938-8">Ecto.Changeset</span><span class="p" data-group-id="1854577938-8">{</span><span class="p" data-group-id="1854577938-8">}</span><span class="p" data-group-id="1854577938-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_client</span><span class="p" data-group-id="2762693260-5">(</span><span class="n">client</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2762693260-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="2762693260-6">}</span><span class="p" data-group-id="2762693260-5">)</span><span class="w">
+</span><span class="p" data-group-id="2762693260-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2762693260-8">%</span><span class="nc" data-group-id="2762693260-8">Ecto.Changeset</span><span class="p" data-group-id="2762693260-8">{</span><span class="p" data-group-id="2762693260-8">}</span><span class="p" data-group-id="2762693260-7">}</span></code></pre>
   </section>
 </section>
 
