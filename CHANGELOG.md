@@ -46,6 +46,8 @@ and this project adheres to
   - `petal_components` from 2.9.0 to 3.0.1
 - Added a "BETA" label to the Kafka trigger type
   [#3098](https://github.com/OpenFn/lightning/pull/3098)
+- Simplified adding credentials to projects
+  [#3034](https://github.com/OpenFn/lightning/issues/3034)
 
 ### Fixed
 
