@@ -68,7 +68,7 @@ defmodule Lightning.PromExTest do
       Lightning.PromExTest.ExternalMetrics
     end)
 
-    lost_runs_count_event = [:lightning, :run, :lost, :count]
+    lost_runs_count_event = [:lightning, :run, :lost]
     test_event = [:promex, :test, :event]
 
     ref =

@@ -562,6 +562,22 @@ defmodule Lightning.Runs.PromExPluginText do
     end
   end
 
+  describe "seed_event_metrics/0" do
+    test "seeds the lost runs counter" do
+      event = [:lightning, :run, :lost]
+
+      ref = :telemetry_test.attach_event_handlers(self(), [event])
+
+      Lightning.Runs.PromExPlugin.seed_event_metrics()
+
+      assert_received {
+        ^event,
+        ^ref,
+        %{count: 1},
+        %{seed_event: true, worker_name: "n/a"}
+      }
+    end
+  end
   defp available_run(now, time_offset) do
     insert(
       :run,

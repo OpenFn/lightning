@@ -58,6 +58,17 @@ defmodule Lightning.Runs.PromExPlugin do
     ]
   end
 
+  def seed_event_metrics do
+    :telemetry.execute(
+      [:lightning, :run, :lost],
+      %{count: 1},
+      %{
+        seed_event: true,
+        worker_name: "n/a"
+      }
+    )
+  end
+
   @impl true
   def polling_metrics(opts) do
     {:ok, stalled_run_threshold_seconds} =

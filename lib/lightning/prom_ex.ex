@@ -96,6 +96,8 @@ defmodule Lightning.PromEx do
 
   def seed_event_metrics do
     Lightning.Config.external_metrics_module().seed_event_metrics()
+
+    Lightning.Runs.PromExPlugin.seed_event_metrics()
   end
 
   @impl true
