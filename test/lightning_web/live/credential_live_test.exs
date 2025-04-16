@@ -368,13 +368,16 @@ defmodule LightningWeb.CredentialLiveTest do
                "#credential-form-new textarea[name='credential[body]']"
              )
 
+      # Select first project
       index_live
       |> element("#project-credentials-list-new")
       |> render_change(%{"project_id" => project1.id})
 
-      index_live
-      |> element("#add-project-credential-button-new", "Add")
-      |> render_click()
+      # Verify project is added
+      assert index_live
+             |> has_element?(
+               "#remove-project-credential-button-new-#{project1.id}"
+             )
 
       assert index_live
              |> form("#credential-form-new", credential: %{name: ""})
@@ -384,13 +387,16 @@ defmodule LightningWeb.CredentialLiveTest do
              |> form("#credential-form-new", credential: %{name: "MailChimp'24"})
              |> render_change() =~ "credential name has invalid format"
 
+      # Select second project
       index_live
       |> element("#project-credentials-list-new")
       |> render_change(%{"project_id" => project2.id})
 
-      index_live
-      |> element("#add-project-credential-button-new", "Add")
-      |> render_click()
+      # Verify second project is added
+      assert index_live
+             |> has_element?(
+               "#remove-project-credential-button-new-#{project2.id}"
+             )
 
       {:ok, _index_live, html} =
         index_live
@@ -446,10 +452,6 @@ defmodule LightningWeb.CredentialLiveTest do
       |> element("#project-credentials-list-new")
       |> render_change(%{"project_id" => project1.id})
 
-      index_live
-      |> element("#add-project-credential-button-new", "Add")
-      |> render_click()
-
       assert index_live
              |> form("#credential-form-new", credential: %{name: ""})
              |> render_change() =~ "can&#39;t be blank"
@@ -461,10 +463,6 @@ defmodule LightningWeb.CredentialLiveTest do
       index_live
       |> element("#project-credentials-list-new")
       |> render_change(%{"project_id" => project2.id})
-
-      index_live
-      |> element("#add-project-credential-button-new", "Add")
-      |> render_click()
 
       {:ok, _index_live, html} =
         index_live
@@ -771,7 +769,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ "some updated name"
     end
 
-    test "adds new project with access", %{
+    test "Edit adds new project with access", %{
       conn: conn,
       user: user
     } do
@@ -800,9 +798,11 @@ defmodule LightningWeb.CredentialLiveTest do
       |> element("#project-credentials-list-#{credential.id}")
       |> render_change(%{"project_id" => project.id})
 
-      view
-      |> element("#add-project-credential-button-#{credential.id}")
-      |> render_click()
+      # Verify project is added
+      assert view
+             |> has_element?(
+               "#remove-project-credential-button-#{credential.id}-#{project.id}"
+             )
 
       view |> form("#credential-form-#{credential.id}") |> render_submit()
 
@@ -928,18 +928,19 @@ defmodule LightningWeb.CredentialLiveTest do
       |> element("#project-credentials-list-#{credential.id}")
       |> render_change(%{"project_id" => project.id})
 
-      html =
-        view
-        |> element("#add-project-credential-button-#{credential.id}")
-        |> render_click()
+      html = view |> render()
 
       assert html =~ project.name,
              "adding an existing project doesn't break anything"
 
-      assert view |> delete_credential_button(project.id) |> has_element?()
+      # Verify the project is added to the credential's projects list
+      assert view
+             |> has_element?(
+               "#remove-project-credential-button-#{credential.id}-#{project.id}"
+             ),
+             "project should be added to credential's projects list"
 
       # Let's remove the project and add it back again
-
       view
       |> delete_credential_button(project.id)
       |> render_click()
@@ -952,12 +953,11 @@ defmodule LightningWeb.CredentialLiveTest do
       |> element("#project-credentials-list-#{credential.id}")
       |> render_change(%{"project_id" => project.id})
 
-      view
-      |> element("#add-project-credential-button-#{credential.id}")
-      |> render_click()
-
-      assert view |> delete_credential_button(project.id) |> has_element?(),
-             "project is added back"
+      assert view
+             |> has_element?(
+               "#remove-project-credential-button-#{credential.id}-#{project.id}"
+             ),
+             "project should be added back to credential's projects list"
 
       view |> form("#credential-form-#{credential.id}") |> render_submit()
 
@@ -1362,10 +1362,6 @@ defmodule LightningWeb.CredentialLiveTest do
         view
         |> element("#project-credentials-list-new")
         |> render_change(%{"project_id" => project.id})
-
-        view
-        |> element("#add-project-credential-button-new", "Add")
-        |> render_click()
       end)
 
       view
