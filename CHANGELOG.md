@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- AI Assistant: add metadata column to chat sessions
+  [#3054](https://github.com/OpenFn/lightning/issues/3054)
+  
 ### Changed
 
 ### Fixed
