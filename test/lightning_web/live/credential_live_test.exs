@@ -3090,72 +3090,23 @@ defmodule LightningWeb.CredentialLiveTest do
   end
 
   describe "credential type picker modal" do
-    setup do
-      # Create test manifest file in the configured location
-      Application.ensure_all_started(:lightning)
-      adaptor_icons_path = Application.get_env(:lightning, :adaptor_icons_path)
-      File.mkdir_p!(adaptor_icons_path)
-
-      # Create a manifest with some test data
-      manifest_path = Path.join(adaptor_icons_path, "adaptor_icons.json")
-
-      manifest_content =
-        Jason.encode!(%{
-          "http" => %{"square" => "/images/http-square.png"},
-          "postgresql" => %{"square" => "/images/postgresql-square.png"},
-          "dhis2" => %{"square" => nil}
-        })
-
-      File.write!(manifest_path, manifest_content)
-
-      on_exit(fn ->
-        # Clean up manifest file after the test
-        File.rm(manifest_path)
-      end)
-
-      :ok
-    end
-
-    test "displays credential type modal with icons from manifest", %{conn: conn} do
+    test "displays credential type modal with icons", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/credentials")
 
       html_tree = Floki.parse_document!(html)
 
-      # Check for postgresql with image
-      postgresql_label =
-        Floki.find(
-          html_tree,
-          "label[for='credential-schema-picker_selected_postgresql']"
-        )
+      for adaptor <- ["postgresql", "dhis2", "http"] do
+        adaptor_label =
+          Floki.find(
+            html_tree,
+            "label[for='credential-schema-picker_selected_#{adaptor}']"
+          )
 
-      postgresql_img = Floki.find(postgresql_label, "img")
-      assert length(postgresql_img) > 0
-      img_src = postgresql_img |> Floki.attribute("src") |> List.first()
-      assert img_src =~ "postgresql-square.png"
-
-      # For dhis2, which has nil in the manifest, there should be no img tag
-      dhis2_label =
-        Floki.find(
-          html_tree,
-          "label[for='credential-schema-picker_selected_dhis2']"
-        )
-
-      dhis2_img = Floki.find(dhis2_label, "img")
-      assert Enum.empty?(dhis2_img)
-    end
-
-    test "handles missing manifest gracefully", %{conn: conn} do
-      # Remove the manifest file to test missing manifest case
-      adaptor_icons_path = Application.get_env(:lightning, :adaptor_icons_path)
-      manifest_path = Path.join(adaptor_icons_path, "adaptor_icons.json")
-      File.rm(manifest_path)
-
-      {:ok, _view, html} = live(conn, ~p"/credentials")
-
-      # Schema types should still be there, just without icons
-      assert html =~ "http"
-      assert html =~ "postgresql"
-      assert html =~ "Raw JSON"
+        adaptor_icon = Floki.find(adaptor_label, "object")
+        assert length(adaptor_icon) > 0
+        img_src = adaptor_icon |> Floki.attribute("data") |> List.first()
+        assert img_src =~ "/images/adaptors/#{adaptor}-square.png"
+      end
     end
   end
 
