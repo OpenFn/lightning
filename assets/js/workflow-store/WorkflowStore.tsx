@@ -78,38 +78,6 @@ export const WorkflowStore: WithActionProps = (props) => {
     })
   }, [applyPatches, props])
 
-  const onSelectionChange = React.useCallback((id?: string) => {
-    console.debug('onSelectionChange', id);
-
-    const currentUrl = new URL(window.location.href);
-    const nextUrl = new URL(currentUrl);
-
-    const idExists = getItem(id);
-    if (!idExists) {
-      nextUrl.searchParams.delete('s');
-      nextUrl.searchParams.delete('m');
-      nextUrl.searchParams.set('placeholder', 'true');
-    } else {
-      nextUrl.searchParams.delete('placeholder');
-      if (!id) {
-        console.debug('Unselecting');
-
-        nextUrl.searchParams.delete('s');
-        nextUrl.searchParams.delete('m');
-      } else {
-        console.debug('Selecting', id);
-
-        nextUrl.searchParams.set('s', id);
-      }
-    }
-
-    if (
-      currentUrl.searchParams.toString() !== nextUrl.searchParams.toString()
-    ) {
-      props.navigate(nextUrl.toString());
-    }
-  }, [props, getItem])
-
   React.useEffect(() => {
     props.handleEvent('navigate', (e: any) => {
       const id = new URL(window.location.href).searchParams.get('s');
@@ -123,8 +91,6 @@ export const WorkflowStore: WithActionProps = (props) => {
       if (!workflow_params.triggers.length && !workflow_params.jobs.length) {
         const diff = createNewWorkflow();
         add(diff);
-        const selected = diff.jobs[0].id;
-        onSelectionChange(selected);
       }
 
       props.pushEventTo('workflow_editor_metrics_report', {
@@ -139,7 +105,7 @@ export const WorkflowStore: WithActionProps = (props) => {
     })
     workflowLoadParamsStart.current = new Date().getTime();
     props.pushEventTo('get-initial-state', {});
-  }, [add, props, setState, onSelectionChange, setSelection])
+  }, [add, props, setState, setSelection])
 
   return <></>
 }
