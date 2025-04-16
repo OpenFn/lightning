@@ -250,7 +250,13 @@ defmodule Lightning.WorkflowLive.Helpers do
       },
       %{
         "triggers" => [%{"id" => trigger_id}],
-        "jobs" => [%{"id" => job_id}],
+        "jobs" => [
+          %{
+            "id" => job_id,
+            "name" => "random job",
+            "body" => "// comment"
+          }
+        ],
         "edges" => [
           %{
             "id" => Ecto.UUID.generate(),

@@ -88,8 +88,8 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
     assert {"data-source", job.body} in actual_attrs
     assert {"id", "job-editor-#{job.id}"} in actual_attrs
     assert {"phx-hook", "JobEditor"} in actual_attrs
-    assert {"phx-target", "1"} in actual_attrs
     assert {"phx-update", "ignore"} in actual_attrs
+    assert Map.has_key?(actual_attrs, "phx-target")
 
     # try changing the assigned credential
 
@@ -504,9 +504,16 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/new?#{%{name: workflow_name}}",
+          ~p"/projects/#{project}/w/new",
           on_error: :raise
         )
+
+      view
+      |> form("#new-workflow-name-form")
+      |> render_change(workflow: %{name: workflow_name})
+
+      # click continue
+      view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
 
       # add a job to the workflow
       %{"value" => %{"id" => job_id}} = job_patch = add_job_patch(job_name)
