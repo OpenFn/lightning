@@ -68,13 +68,27 @@ defmodule Lightning.PromExTest do
       Lightning.PromExTest.ExternalMetrics
     end)
 
-    event = [:promex, :test, :event]
+    lost_runs_count_event = [:lightning, :run, :lost, :count]
+    test_event = [:promex, :test, :event]
 
-    ref = :telemetry_test.attach_event_handlers(self(), [event])
+    ref =
+      :telemetry_test.attach_event_handlers(
+        self(),
+        [
+          lost_runs_count_event,
+          test_event
+        ]
+      )
 
     Lightning.PromEx.seed_event_metrics()
 
-    assert_received {^event, ^ref, %{count: 42}, %{}}
+    assert_received {^test_event, ^ref, %{count: 42}, %{}}
+    assert_received {
+                      ^lost_runs_count_event,
+                      ^ref,
+                      %{count: 1},
+                      %{seed_event: true, worker_name: "n/a"}
+                    }
   end
 
   defp update_promex_config(overrides) do
