@@ -14,7 +14,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-D48F5054.js"></script>
+    <script src="dist/sidebar_items-609BD6D8.js"></script>
     <script src="docs_config.js"></script>
     <script async src="dist/html-YIPIRHGU.js"></script>
 
@@ -227,7 +227,7 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#save_message/3" data-no-tooltip translate="no">save_message(session, message, usage \\ %{})</a>
+        <a href="#save_message/4" data-no-tooltip translate="no">save_message(session, message, usage \\ %{}, meta \\ nil)</a>
 
       </div>
 
@@ -314,7 +314,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">enabled?()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L192" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L195" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -342,7 +342,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">endpoint_available?()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L237" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L240" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -429,7 +429,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">mark_disclaimer_read(user)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L223" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L226" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -491,7 +491,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">query(session, content)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L130" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L132" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -509,20 +509,22 @@ Pages
 
       </div>
 
-<p>Queries the AI assistant with the given content.</p><p>Returns <code class="inline">{:ok, session}</code> if the query was successful, otherwise <code class="inline">{:error, reason}</code>.</p><p><strong>Example</strong></p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">AiAssistant</span><span class="o">.</span><span class="n">query</span><span class="p" data-group-id="1681303241-1">(</span><span class="n">session</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;fn()&quot;</span><span class="p" data-group-id="1681303241-1">)</span><span class="w">
-</span><span class="p" data-group-id="1681303241-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">session</span><span class="p" data-group-id="1681303241-2">}</span></code></pre>
+<p>Queries the AI assistant with the given content.</p><p>Returns <code class="inline">{:ok, session}</code> if the query was successful, otherwise <code class="inline">{:error, reason}</code>.</p><p><strong>Example</strong></p><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="nc">AiAssistant</span><span class="o">.</span><span class="n">query</span><span class="p" data-group-id="9793722158-1">(</span><span class="n">session</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;fn()&quot;</span><span class="p" data-group-id="9793722158-1">)</span><span class="w">
+</span><span class="p" data-group-id="9793722158-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">session</span><span class="p" data-group-id="9793722158-2">}</span></code></pre>
   </section>
 </section>
-<section class="detail" id="save_message/3">
+<section class="detail" id="save_message/4">
 
     <span id="save_message/2"></span>
 
+    <span id="save_message/3"></span>
+
   <div class="detail-header">
-    <a href="#save_message/3" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#save_message/4" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">save_message(session, message, usage \\ %{})</h1>
+    <h1 class="signature" translate="no">save_message(session, message, usage \\ %{}, meta \\ nil)</h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L95" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
@@ -568,7 +570,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">update_message_status(session, message, status)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L248" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L251" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -600,7 +602,7 @@ Pages
     </a>
     <h1 class="signature" translate="no">user_has_read_disclaimer?(user)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L200" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/ai_assistant.ex#L203" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
