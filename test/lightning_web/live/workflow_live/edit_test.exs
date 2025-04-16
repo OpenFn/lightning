@@ -215,10 +215,11 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       view |> fill_job_fields(job, %{name: "My Job"})
 
-      # skipping this assertion because in the Job schema @latest is selected by default
-      # refute view |> selected_adaptor_version_element(job) |> render() =~
-      #          ~r(value="@openfn/[a-z-]+@latest"),
-      #        "should not have @latest selected by default"
+      # this has been inversed. ideally, it should not select latest by default
+      # but given that @latest is set in the Job schema, it will alwasy get selected
+      assert view |> selected_adaptor_version_element(job) |> render() =~
+               ~r(value="@openfn/[a-z-]+@latest"),
+             "should have @latest selected by default"
 
       view |> CredentialLiveHelpers.select_credential_type("dhis2")
 
