@@ -187,17 +187,12 @@ defmodule LightningWeb.Components.Common do
   end
 
   attr :id, :string, required: true
-  attr :tooltip, :string, required: false
 
   def beta_chip(assigns) do
-    has_tooltip? = Map.has_key?(assigns, :tooltip)
-    assigns = assign(assigns, has_tooltip?: has_tooltip?)
-
     ~H"""
     <div id={"#{@id}-container"} class="flex items-middle text-sm font-normal ml-1">
       <span
         id={@id}
-        {if @has_tooltip?, do: ["phx-hook": "Tooltip", "data-placement": "bottom", "data-allow-html": "true", "aria-label": @tooltip], else: []}
         class="inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-800"
       >
         BETA
