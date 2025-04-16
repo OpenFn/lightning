@@ -501,7 +501,7 @@ defmodule LightningWeb.WorkflowLive.Components do
       Kafka Trigger
       <LightningWeb.Components.Common.beta_chip
         id={"#{@id}-beta"}
-        tooltip="Kafka triggers are currently in beta and your Lightning administrator may disable them in the future. Learn about the sharp edges: https://docs.openfn.org/documentation/build/triggers#known-sharp-edges-on-the-kafka-trigger-feature"
+        tooltip="Kafka triggers are currently in beta and your Lightning administrator may disable them in the future. <a href='https://docs.openfn.org/documentation/build/triggers#known-sharp-edges-on-the-kafka-trigger-feature' target='_blank' class='link'>Learn about the sharp edges</a>"
       />
     </div>
     """

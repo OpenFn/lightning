@@ -2774,9 +2774,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         "Cron Trigger"
 
       "kafka" ->
-        LightningWeb.WorkflowLive.Components.kafka_trigger_title(%{
-          id: "kafka-trigger-title"
-        })
+        kafka_trigger_title(%{id: "kafka-trigger-title"})
 
       _ ->
         "Unknown Trigger"

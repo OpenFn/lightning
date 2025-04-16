@@ -197,7 +197,7 @@ defmodule LightningWeb.Components.Common do
     <div id={"#{@id}-container"} class="flex items-middle text-sm font-normal ml-1">
       <span
         id={@id}
-        {if @has_tooltip?, do: ["phx-hook": "Tooltip", "data-placement": "bottom", "aria-label": @tooltip], else: []}
+        {if @has_tooltip?, do: ["phx-hook": "Tooltip", "data-placement": "bottom", "data-allow-html": "true", "aria-label": @tooltip], else: []}
         class="inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-800"
       >
         BETA
