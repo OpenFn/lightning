@@ -17,6 +17,12 @@ and this project adheres to
 
 ### Added
 
+- Enabled displaying full workflow name when hovering workflow name in the
+  workflows list page [#2894](https://github.com/OpenFn/lightning/issues/2894)
+- Enabled clickable rows in the workflows list page
+  [#3047](https://github.com/OpenFn/lightning/issues/3047)
+- Added sorting & filtering workflows
+  [#3046](https://github.com/OpenFn/lightning/issues/3046)
 - Add helper function to create latest snapshot
   [#3099](https://github.com/OpenFn/lightning/issues/3099)
 - Restart the credential setup from selecting the credential type

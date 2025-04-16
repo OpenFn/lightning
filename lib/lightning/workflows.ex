@@ -293,16 +293,78 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
-  Retrieves a list of active Workflows with their jobs and triggers preloaded.
+  Returns a list of workflows for a project with optional filtering, sorting, and preloading.
+
+  ## Parameters
+    * `project` - A %Project{} struct for which to retrieve workflows
+    * `opts` - Optional keyword list of options
+
+  ## Options
+    * `:search` - String to filter workflows by name using case-insensitive partial matching
+    * `:order_by` - A tuple containing the field and direction to sort by,
+      e.g., `{:name, :asc}` or `{:enabled, :desc}`
+    * `:include` - List of associations to preload (defaults to [:triggers, :edges, jobs: [:workflow]])
+
+  ## Returns
+    A list of %Workflow{} structs that match the criteria
+
+  ## Examples
+
+      # Get all workflows for a project
+      iex> get_workflows_for(project)
+      [%Workflow{}, ...]
+
+      # Search workflows containing "api" in their name
+      iex> get_workflows_for(project, search: "api")
+      [%Workflow{name: "API Gateway"}, %Workflow{name: "External API"}]
+
+      # Sort workflows by name in descending order
+      iex> get_workflows_for(project, order_by: {:name, :desc})
+      [%Workflow{name: "Zebra"}, %Workflow{name: "Apple"}]
+
+      # Search and sort combined
+      iex> get_workflows_for(project, search: "api", order_by: {:name, :desc})
+      [%Workflow{name: "REST API"}, %Workflow{name: "API Gateway"}]
+
+      # Customize preloaded associations
+      iex> get_workflows_for(project, include: [:triggers])
+      [%Workflow{triggers: [...]}, ...]
   """
-  @spec get_workflows_for(Project.t()) :: [Workflow.t()]
-  def get_workflows_for(%Project{} = project) do
-    from(w in Workflow,
-      preload: [:triggers, :edges, jobs: [:workflow]],
-      where: is_nil(w.deleted_at) and w.project_id == ^project.id,
-      order_by: [asc: w.name]
-    )
+  def get_workflows_for(%Project{} = project, opts \\ []) do
+    include = Keyword.get(opts, :include, [:triggers, :edges, jobs: [:workflow]])
+    order_by = Keyword.get(opts, :order_by, {:name, :asc})
+
+    query =
+      from(w in Workflow,
+        where: is_nil(w.deleted_at) and w.project_id == ^project.id,
+        preload: ^include
+      )
+
+    query =
+      if search = Keyword.get(opts, :search) do
+        from w in query, where: ilike(w.name, ^"%#{search}%")
+      else
+        query
+      end
+
+    query
+    |> apply_sorting(order_by)
     |> Repo.all()
+  end
+
+  defp apply_sorting(query, {:name, direction}) when is_atom(direction) do
+    from w in query, order_by: [{^direction, w.name}]
+  end
+
+  defp apply_sorting(query, {:enabled, direction}) when is_atom(direction) do
+    from w in query,
+      left_join: t in assoc(w, :triggers),
+      group_by: w.id,
+      order_by: [{^direction, fragment("COALESCE(MAX(?::int), 0)", t.enabled)}]
+  end
+
+  defp apply_sorting(query, _) do
+    from w in query, order_by: [asc: w.name]
   end
 
   @spec to_project_space([Workflow.t()]) :: %{}

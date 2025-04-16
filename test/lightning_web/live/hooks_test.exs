@@ -27,7 +27,7 @@ defmodule LightningWeb.HooksTest do
 
       result =
         view
-        |> element("#workflow-card-#{workflow.id}")
+        |> element("#workflow-#{workflow.id}")
         |> render_click()
         |> follow_redirect(conn)
 
