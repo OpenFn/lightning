@@ -11,6 +11,7 @@ defmodule Lightning.Runs.PromExPlugin do
 
   alias Lightning.Repo
   alias Lightning.Run
+  alias Telemetry.Metrics
 
   require Run
 
@@ -21,33 +22,40 @@ defmodule Lightning.Runs.PromExPlugin do
 
   @impl true
   def event_metrics(_opts) do
-    Event.build(
-      :rory_test,
-      [
-        distribution(
-          [:lightning, :run, :queue, :delay, :milliseconds],
-          event_name: [:domain, :run, :queue],
-          measurement: :delay,
-          description: "Queue delay for runs",
-          reporter_options: [
-            buckets: [
-              100,
-              200,
-              400,
-              800,
-              1_500,
-              5_000,
-              15_000,
-              30_000,
-              50_000,
-              100_000
-            ]
-          ],
-          tags: [],
-          unit: :millisecond
-        )
-      ]
-    )
+    [
+      Event.build(
+        :lightning_run_event_metrics,
+        [
+          distribution(
+            [:lightning, :run, :queue, :delay, :milliseconds],
+            event_name: [:domain, :run, :queue],
+            measurement: :delay,
+            description: "Queue delay for runs",
+            reporter_options: [
+              buckets: [
+                100,
+                200,
+                400,
+                800,
+                1_500,
+                5_000,
+                15_000,
+                30_000,
+                50_000,
+                100_000
+              ]
+            ],
+            tags: [],
+            unit: :millisecond
+          ),
+          Metrics.counter(
+            [:lightning, :run, :lost, :count],
+            description: "A counter of lost runs.",
+            tags: [:seed_event, :worker_name]
+          )
+        ]
+      )
+    ]
   end
 
   @impl true

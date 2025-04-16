@@ -14,10 +14,70 @@ defmodule Lightning.Runs.PromExPluginText do
   @run_performance_age_seconds 4
   @stalled_run_threshold_seconds 333
 
-  test "event_metrics returns a Promex Event" do
-    event = PromExPlugin.event_metrics(plugin_config())
+  describe "event_metrics/1" do
+    test "returns a single event group" do
+      assert [
+               %PromEx.MetricTypes.Event{
+                 group_name: :lightning_run_event_metrics
+               }
+             ] = PromExPlugin.event_metrics(plugin_config())
+    end
 
-    assert event.group_name == :rory_test
+    test "returns a distribution metric for run queue delay" do
+      [%{metrics: metrics}] = PromExPlugin.event_metrics(plugin_config())
+
+      metric =
+        metrics
+        |> find_event_metric([:lightning, :run, :queue, :delay, :milliseconds])
+
+      assert metric.event_name == [:domain, :run, :queue]
+      assert metric.measurement == :delay
+      assert metric.reporter_options == [
+               buckets: [
+                 100,
+                 200,
+                 400,
+                 800,
+                 1_500,
+                 5_000,
+                 15_000,
+                 30_000,
+                 50_000,
+                 100_000
+               ]
+             ]
+
+      assert metric.tags == []
+      assert metric.unit == :millisecond
+    end
+
+    test "returns a counter metric to track lost runs" do
+      [%{metrics: metrics}] = PromExPlugin.event_metrics(plugin_config())
+
+      metric =
+        metrics
+        |> find_event_metric([:lightning, :run, :lost, :count])
+
+      assert metric.description == "A counter of lost runs."
+      assert metric.event_name == [:lightning, :run, :lost]
+      assert metric.tags == [:seed_event, :worker_name]
+    end
+
+    def find_event_metric(metrics, metric_name) do
+      assert [candidate] =
+        metrics
+        |> Enum.filter(fn metric ->
+          metric.name == metric_name
+        end)
+
+      candidate
+    end
+  end
+
+  test "event_metrics returns a Promex Event" do
+    [event] = PromExPlugin.event_metrics(plugin_config())
+
+    assert event.group_name == :lightning_run_event_metrics
 
     [metric | _] = event.metrics
 
