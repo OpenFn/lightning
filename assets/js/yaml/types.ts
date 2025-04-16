@@ -35,7 +35,7 @@ export type StateEdge = {
   condition_expression?: string | null;
   source_job_id?: string;
   source_trigger_id?: string;
-  target_job_id?: string;
+  target_job_id: string;
   enabled: boolean;
 };
 

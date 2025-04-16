@@ -227,7 +227,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
          ) do
       :ok ->
         socket
-        |> put_flash(:info, "Connection made successfully!")
+        |> put_flash(:info, "Connected to GitHub")
         |> push_navigate(
           to: ~p"/projects/#{socket.assigns.project}/settings#vcs"
         )
@@ -261,7 +261,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     case VersionControl.initiate_sync(repo_connection, commit_message) do
       :ok ->
         socket
-        |> put_flash(:info, "Github sync initiated successfully!")
+        |> put_flash(:info, "Github sync initiated")
         |> push_navigate(
           to: ~p"/projects/#{socket.assigns.project}/settings#vcs"
         )

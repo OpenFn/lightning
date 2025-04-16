@@ -253,11 +253,6 @@ export default {
       // Create a placeholder chart and push it back up to the server
       const diff = createNewWorkflow();
       this.workflowStore.getState().add(diff);
-
-      // Select the first job
-      // TODO should the workflow name have focus instead?
-      const selected = diff.jobs[0].id;
-      this.onSelectionChange(selected);
     }
 
     this.maybeMountComponent();

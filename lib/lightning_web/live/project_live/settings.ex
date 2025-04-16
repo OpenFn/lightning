@@ -435,7 +435,7 @@ defmodule LightningWeb.ProjectLive.Settings do
 
     {:noreply,
      socket
-     |> put_flash(:info, "Oauth client deleted successfully!")
+     |> put_flash(:info, "Oauth client deleted")
      |> assign(
        :oauth_clients,
        list_clients(assigns.project)
@@ -453,7 +453,7 @@ defmodule LightningWeb.ProjectLive.Settings do
       {:ok, %Credential{}} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Credential deleted successfully!")
+         |> put_flash(:info, "Credential deleted")
          |> assign(
            :credentials,
            list_credentials(assigns.project)
@@ -480,7 +480,7 @@ defmodule LightningWeb.ProjectLive.Settings do
 
       {:noreply,
        socket
-       |> put_flash(:info, "Collaborator removed successfully!")
+       |> put_flash(:info, "Collaborator removed")
        |> push_navigate(
          to: ~p"/projects/#{assigns.project}/settings#collaboration"
        )}

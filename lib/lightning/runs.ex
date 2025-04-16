@@ -40,8 +40,8 @@ defmodule Lightning.Runs do
   # all implementation should default to 1.
   # """
   @impl Lightning.Extensions.RunQueue
-  def claim(demand \\ 1) do
-    RunQueue.claim(demand)
+  def claim(demand \\ 1, worker_name) do
+    RunQueue.claim(demand, worker_name)
   end
 
   # @doc """
