@@ -50,7 +50,8 @@ Application.put_env(:lightning, Lightning.Extensions,
   run_queue: Lightning.Extensions.FifoRunQueue,
   account_hook: Lightning.Extensions.MockAccountHook,
   collection_hook: Lightning.Extensions.MockCollectionHook,
-  project_hook: Lightning.Extensions.MockProjectHook
+  project_hook: Lightning.Extensions.MockProjectHook,
+  external_metrics: Lightning.Extensions.ExternalMetrics
 )
 
 ExUnit.start()

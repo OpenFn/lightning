@@ -57,7 +57,7 @@ defmodule LightningWeb.CollectionLive.Index do
       {:ok, _collection} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Collection deleted successfully!")
+         |> put_flash(:info, "Collection deleted")
          |> push_navigate(to: ~p"/settings/collections")}
 
       {:error, reason} ->

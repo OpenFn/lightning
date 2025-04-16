@@ -17,13 +17,23 @@ and this project adheres to
 
 ### Added
 
+- Add helper function to create latest snapshot
+  [#3099](https://github.com/OpenFn/lightning/issues/3099)
 - Restart the credential setup from selecting the credential type
   [#2284](https://github.com/OpenFn/lightning/issues/2284)
 - Enable Support User and adds audit trail for MFA.
   [#3072](https://github.com/OpenFn/lightning/issues/3072)
+- Make provision for the inclusion of 'external' metrics.
+  [#3096] (https://github.com/OpenFn/lightning/issues/3096])
+- Introduce 'seeding' of PromEx event metrics
+  [#3096] (https://github.com/OpenFn/lightning/issues/3096])
+- When claiming a run, a worker name can optionally be provided to the
+  adaptor that is responsible for claiming runs.
+  [#3079](https://github.com/OpenFn/lightning/issues/3079)
 
 ### Changed
 
+- Adjusted flash messages
 - Updated dependencies [#3086](https://github.com/OpenFn/lightning/pull/3086):
   - `phoenix` from 1.7.20 to 1.7.21
   - `phoenix_live_view` from 1.0.5 to 1.0.9
@@ -33,7 +43,7 @@ and this project adheres to
 
 ### Fixed
 
-## [v2.11.2-pre.0] - 2025-04-03
+## [v2.11.2] - 2025-04-10
 
 ### Added
 
