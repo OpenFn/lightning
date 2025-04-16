@@ -165,22 +165,15 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
                html
              )
 
-      # Workflow links
       assert view
-             |> has_link?(
-               ~p"/projects/#{project.id}/w/#{workflow1.id}",
-               "One"
-             )
+             |> has_element?("tr#workflow-#{workflow1.id} span", "One")
 
       assert view
-             |> has_link?(
-               ~p"/projects/#{project.id}/w/#{workflow2.id}",
-               "Two"
-             )
+             |> has_element?("tr#workflow-#{workflow2.id} span", "Two")
 
       assert view
-             |> has_link?(
-               ~p"/projects/#{project.id}/w/#{new_workflow.id}",
+             |> has_element?(
+               "tr#workflow-#{new_workflow.id} span",
                new_workflow.name
              )
 
@@ -456,5 +449,252 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
                actor_id: ^user_id
              } = audit
     end
+  end
+
+  describe "search workflows" do
+    test "filters workflows by search term", %{conn: conn, project: project} do
+      w1 = insert(:workflow, project: project, name: "API Gateway")
+      w2 = insert(:workflow, project: project, name: "Background Jobs")
+      _w3 = insert(:workflow, project: project, name: "REST API")
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w?q=api")
+
+      assert has_workflow_card?(view, w1)
+      refute has_workflow_card?(view, w2)
+
+      assert view |> has_element?("input[name='search_workflows'][value='api']")
+    end
+
+    test "clears search term", %{conn: conn, project: project} do
+      insert(:workflow, project: project, name: "API Gateway")
+      insert(:workflow, project: project, name: "Background Jobs")
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w?q=api")
+
+      assert view
+             |> element("#clear_search_button")
+             |> render_click() =~ "Background Jobs"
+
+      assert_patch(view, ~p"/projects/#{project.id}/w?sort=name&dir=asc")
+    end
+
+    test "updates search in real-time", %{conn: conn, project: project} do
+      insert(:workflow, project: project, name: "API Gateway")
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      assert view
+             |> element("input[name='search_workflows']")
+             |> render_keyup(%{value: "api"}) =~ "API Gateway"
+    end
+
+    test "shows appropriate empty state message with search term", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project.id}/w?q=nonexistent")
+
+      assert html =~
+               "No workflows found matching &quot;nonexistent&quot;. Try a different search term."
+    end
+  end
+
+  describe "sorting workflows" do
+    test "sorts workflows by all available fields", %{
+      conn: conn,
+      project: project
+    } do
+      w1 = insert(:workflow, project: project, name: "A Workflow")
+      w2 = insert(:workflow, project: project, name: "B Workflow")
+
+      trigger1 =
+        insert(:trigger,
+          workflow: w1,
+          type: :webhook,
+          enabled: true,
+          custom_path: "path1"
+        )
+
+      trigger2 =
+        insert(:trigger,
+          workflow: w2,
+          type: :webhook,
+          enabled: false,
+          custom_path: "path2"
+        )
+
+      _trigger1b =
+        insert(:trigger,
+          workflow: w1,
+          type: :cron,
+          enabled: true,
+          cron_expression: "* * * * *"
+        )
+
+      dataclip = insert(:dataclip)
+
+      insert(:workorder,
+        workflow: w1,
+        trigger: trigger1,
+        dataclip: dataclip,
+        state: :failed,
+        updated_at: DateTime.utc_now()
+      )
+
+      insert(:workorder,
+        workflow: w1,
+        trigger: trigger1,
+        dataclip: dataclip,
+        state: :failed,
+        updated_at: DateTime.utc_now() |> DateTime.add(-1, :hour)
+      )
+
+      insert(:workorder,
+        workflow: w1,
+        trigger: trigger1,
+        dataclip: dataclip,
+        state: :success,
+        updated_at: DateTime.utc_now() |> DateTime.add(-2, :hour)
+      )
+
+      insert(:workorder,
+        workflow: w2,
+        trigger: trigger2,
+        dataclip: dataclip,
+        state: :failed,
+        updated_at: DateTime.utc_now() |> DateTime.add(-3, :hour)
+      )
+
+      insert(:workorder,
+        workflow: w2,
+        trigger: trigger2,
+        dataclip: dataclip,
+        state: :success,
+        updated_at: DateTime.utc_now() |> DateTime.add(-4, :hour)
+      )
+
+      w1 =
+        Lightning.Repo.get!(Lightning.Workflows.Workflow, w1.id)
+        |> Lightning.Repo.preload(:triggers)
+
+      w2 =
+        Lightning.Repo.get!(Lightning.Workflows.Workflow, w2.id)
+        |> Lightning.Repo.preload(:triggers)
+
+      test_cases = [
+        {"name", "asc", [w1, w2]},
+        {"name", "desc", [w2, w1]},
+        {"workorders_count", "desc", [w1, w2]},
+        {"workorders_count", "asc", [w2, w1]},
+        {"failed_workorders_count", "desc", [w1, w2]},
+        {"failed_workorders_count", "asc", [w2, w1]},
+        {"last_workorder_updated_at", "desc", [w1, w2]},
+        {"last_workorder_updated_at", "asc", [w2, w1]},
+        {"enabled", "desc", [w1, w2]},
+        {"enabled", "asc", [w2, w1]}
+      ]
+
+      for {sort_field, direction, expected_order} <- test_cases do
+        {:ok, view, _html} =
+          live(
+            conn,
+            ~p"/projects/#{project.id}/w?sort=#{sort_field}&dir=#{direction}"
+          )
+
+        assert has_workflow_in_order?(view, expected_order),
+               "Failed to sort by #{sort_field} in #{direction} direction"
+
+        if direction == "asc" do
+          _html =
+            view
+            |> element("th a[phx-value-by='#{sort_field}']")
+            |> render_click()
+
+          assert has_workflow_in_order?(view, Enum.reverse(expected_order)),
+                 "Failed to reverse sort order for #{sort_field}"
+        end
+      end
+    end
+
+    test "combines sorting with search", %{conn: conn, project: project} do
+      w1 = insert(:workflow, project: project, name: "API First")
+      w2 = insert(:workflow, project: project, name: "API Second")
+      _w3 = insert(:workflow, project: project, name: "Background Job")
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w?q=api&sort=name&dir=desc")
+
+      assert has_workflow_in_order?(view, [w2, w1])
+      refute has_workflow_card?(view, _w3)
+    end
+  end
+
+  describe "empty states" do
+    setup :register_and_log_in_user
+    setup :create_project_for_current_user
+
+    test "shows appropriate empty state message with no workflows", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, _view, html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      assert html =~
+               "No workflows found. Create your first workflow to get started."
+    end
+
+    test "shows appropriate empty state message when search has no results", %{
+      conn: conn,
+      project: project
+    } do
+      insert(:workflow, project: project, name: "Existing Workflow")
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      html =
+        view
+        |> element("input[name='search_workflows']")
+        |> render_keyup(%{value: "nonexistent"})
+
+      assert html =~ "No workflows found matching"
+      assert html =~ "Try a different search term"
+    end
+
+    test "switches between empty state messages", %{conn: conn, project: project} do
+      {:ok, view, html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      assert html =~
+               "No workflows found. Create your first workflow to get started."
+
+      html =
+        view
+        |> element("input[name='search_workflows']")
+        |> render_keyup(%{value: "nonexistent"})
+
+      assert html =~
+               "No workflows found matching &quot;nonexistent&quot;. Try a different search term."
+
+      html =
+        view
+        |> element("#clear_search_button")
+        |> render_click()
+
+      assert html =~
+               "No workflows found. Create your first workflow to get started."
+    end
+  end
+
+  defp has_workflow_in_order?(view, workflows) do
+    html = render(view)
+
+    workflow_pattern =
+      workflows
+      |> Enum.map(&~r/#{&1.name}/)
+      |> Enum.reduce(fn pattern, acc ->
+        Regex.compile!("#{acc.source}.*#{pattern.source}", "s")
+      end)
+
+    html =~ workflow_pattern
   end
 end

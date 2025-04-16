@@ -546,13 +546,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 title={
                   Phoenix.HTML.Form.input_value(tf, :type)
                   |> to_string()
-                  |> then(fn
-                    "" -> "New Trigger"
-                    "webhook" -> "Webhook Trigger"
-                    "cron" -> "Cron Trigger"
-                    # TODO Not tested
-                    "kafka" -> "Kafka Trigger"
-                  end)
+                  |> render_trigger_title()
                 }
               >
                 <.trigger_form
@@ -2795,4 +2789,23 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp loaded?(%Workflow{} = workflow), do: workflow.__meta__.state == :loaded
+
+  defp render_trigger_title(trigger_type) do
+    case trigger_type do
+      "" ->
+        "New Trigger"
+
+      "webhook" ->
+        "Webhook Trigger"
+
+      "cron" ->
+        "Cron Trigger"
+
+      "kafka" ->
+        kafka_trigger_title(%{id: "kafka-trigger-title"})
+
+      _ ->
+        "Unknown Trigger"
+    end
+  end
 end
