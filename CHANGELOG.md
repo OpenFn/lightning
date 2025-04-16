@@ -17,6 +17,12 @@ and this project adheres to
 
 ### Added
 
+- Enabled displaying full workflow name when hovering workflow name in the
+  workflows list page [#2894](https://github.com/OpenFn/lightning/issues/2894)
+- Enabled clickable rows in the workflows list page
+  [#3047](https://github.com/OpenFn/lightning/issues/3047)
+- Added sorting & filtering workflows
+  [#3046](https://github.com/OpenFn/lightning/issues/3046)
 - Add helper function to create latest snapshot
   [#3099](https://github.com/OpenFn/lightning/issues/3099)
 - Restart the credential setup from selecting the credential type
@@ -27,6 +33,9 @@ and this project adheres to
   [#3096] (https://github.com/OpenFn/lightning/issues/3096])
 - Introduce 'seeding' of PromEx event metrics
   [#3096] (https://github.com/OpenFn/lightning/issues/3096])
+- When claiming a run, a worker name can optionally be provided to the
+  adaptor that is responsible for claiming runs.
+  [#3079](https://github.com/OpenFn/lightning/issues/3079)
 
 ### Changed
 
@@ -37,6 +46,8 @@ and this project adheres to
   - `petal_components` from 2.9.0 to 3.0.1
 - Large refactor of the inspector and React components
   [#3043](https://github.com/OpenFn/lightning/pull/3043)
+- Added a "BETA" label to the Kafka trigger type
+  [#3098](https://github.com/OpenFn/lightning/pull/3098)
 
 ### Fixed
 

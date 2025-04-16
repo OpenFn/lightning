@@ -16,9 +16,6 @@ defmodule LightningWeb.JobLive.KafkaSetupComponent do
 
     ~H"""
     <div id={@id} class="col-span-4 @md:col-span-2 grid grid-cols-4 gap-2">
-      <div class="hidden sm:block" aria-hidden="true">
-        <div class="py-2"></div>
-      </div>
       <.inputs_for :let={kafka_config} field={@form[:kafka_configuration]}>
         <% source =
           kafka_config.source

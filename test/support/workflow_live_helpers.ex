@@ -425,7 +425,7 @@ defmodule Lightning.WorkflowLive.Helpers do
   end
 
   def workflow_card(view, workflow) do
-    view |> element("#workflow-card-#{workflow.id}", workflow.name)
+    element(view, "#workflow-#{workflow.id}")
   end
 
   def delete_job_button(view, %Job{} = job) do

@@ -9,6 +9,7 @@ defmodule Lightning.DashboardStats do
   alias Lightning.Repo
   alias Lightning.Run
   alias Lightning.Workflows.Workflow
+  alias Lightning.WorkOrder
 
   defmodule WorkflowStats do
     @moduledoc """
@@ -74,6 +75,44 @@ defmodule Lightning.DashboardStats do
     }
   end
 
+  @doc """
+  Sorts a list of workflow statistics based on the specified field and direction.
+
+  ## Parameters
+    * `workflow_stats` - A list of WorkflowStats structs to be sorted
+    * `sort_field` - Atom representing the field to sort by, options include:
+      * `:last_workorder_updated_at` - Sort by timestamp of the latest work order
+      * `:workorders_count` - Sort by total count of work orders
+      * `:failed_workorders_count` - Sort by count of failed work orders
+    * `sort_direction` - Atom representing sort direction, either :asc or :desc
+
+  ## Returns
+    Sorted list of WorkflowStats structs
+
+  ## Examples
+
+      iex> sort_workflow_stats(workflow_stats, :workorders_count, :desc)
+      [%WorkflowStats{workorders_count: 100, ...}, %WorkflowStats{workorders_count: 50, ...}]
+
+      iex> sort_workflow_stats(workflow_stats, :last_workorder_updated_at, :asc)
+      [%WorkflowStats{last_workorder: %{updated_at: ~U[2023-01-01 00:00:00Z]}, ...}, ...]
+  """
+  def sort_workflow_stats(workflow_stats, sort_field, sort_direction)
+      when is_atom(sort_field) and is_atom(sort_direction) do
+    sorter = get_sorter(sort_field)
+    Enum.sort_by(workflow_stats, sorter, sort_direction)
+  end
+
+  defp get_sorter(:last_workorder_updated_at) do
+    fn stats ->
+      stats.last_workorder.updated_at || ~U[1970-01-01 00:00:00Z]
+    end
+  end
+
+  defp get_sorter(field) do
+    fn stats -> Map.get(stats, field) end
+  end
+
   def aggregate_project_metrics(workflows_stats) do
     %ProjectMetrics{
       work_order_metrics:
@@ -110,7 +149,7 @@ defmodule Lightning.DashboardStats do
          %Workflow{id: workflow_id},
          excluded_states \\ []
        ) do
-    from(wo in Lightning.WorkOrder,
+    from(wo in WorkOrder,
       where: wo.workflow_id == ^workflow_id,
       where: wo.state not in ^excluded_states,
       order_by: [desc: wo.inserted_at],
@@ -123,7 +162,7 @@ defmodule Lightning.DashboardStats do
   end
 
   defp count_workorders(%Workflow{id: workflow_id}) do
-    from(wo in Lightning.WorkOrder,
+    from(wo in WorkOrder,
       where: wo.workflow_id == ^workflow_id,
       select: wo.state
     )
