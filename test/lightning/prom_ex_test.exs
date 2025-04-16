@@ -83,12 +83,13 @@ defmodule Lightning.PromExTest do
     Lightning.PromEx.seed_event_metrics()
 
     assert_received {^test_event, ^ref, %{count: 42}, %{}}
+
     assert_received {
-                      ^lost_runs_count_event,
-                      ^ref,
-                      %{count: 1},
-                      %{seed_event: true, worker_name: "n/a"}
-                    }
+      ^lost_runs_count_event,
+      ^ref,
+      %{count: 1},
+      %{seed_event: true, state: "n/a", worker_name: "n/a"}
+    }
   end
 
   defp update_promex_config(overrides) do

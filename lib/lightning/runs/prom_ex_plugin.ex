@@ -17,6 +17,7 @@ defmodule Lightning.Runs.PromExPlugin do
 
   @available_count_event [:lightning, :run, :queue, :available]
   @average_claim_event [:lightning, :run, :queue, :claim]
+  @lost_run_event [:lightning, :run, :lost]
   @finalised_count_event [:lightning, :run, :queue, :finalised]
   @stalled_event [:lightning, :run, :queue, :stalled]
 
@@ -49,25 +50,31 @@ defmodule Lightning.Runs.PromExPlugin do
             unit: :millisecond
           ),
           Metrics.counter(
-            [:lightning, :run, :lost, :count],
+            @lost_run_event ++ [:count],
             description: "A counter of lost runs.",
-            tags: [:seed_event, :worker_name]
+            tags: [:seed_event, :state, :worker_name]
           )
         ]
       )
     ]
   end
 
-  def seed_event_metrics do
+  def seed_event_metrics, do: fire_lost_run_event(nil, nil, true)
+
+  def fire_lost_run_event(worker_name, state, seed_event \\ false) do
     :telemetry.execute(
-      [:lightning, :run, :lost],
+      @lost_run_event,
       %{count: 1},
       %{
-        seed_event: true,
-        worker_name: "n/a"
+        seed_event: seed_event,
+        state: state |> nil_to_na() |> to_string(),
+        worker_name: worker_name |> nil_to_na()
       }
     )
   end
+
+  defp nil_to_na(nil), do: "n/a"
+  defp nil_to_na(value), do: value
 
   @impl true
   def polling_metrics(opts) do
