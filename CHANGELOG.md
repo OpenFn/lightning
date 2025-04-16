@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.11.3-pre.0] - 2025-04-16
+
+### Added
+
 - Enabled displaying full workflow name when hovering workflow name in the
   workflows list page [#2894](https://github.com/OpenFn/lightning/issues/2894)
 - Enabled clickable rows in the workflows list page
@@ -54,8 +62,6 @@ and this project adheres to
   [#3107](https://github.com/OpenFn/lightning/pull/3107)
 - Added a "BETA" label to the Kafka trigger type
   [#3098](https://github.com/OpenFn/lightning/pull/3098)
-
-### Fixed
 
 ## [v2.11.2] - 2025-04-10
 
