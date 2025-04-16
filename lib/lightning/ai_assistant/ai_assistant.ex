@@ -102,7 +102,7 @@ defmodule Lightning.AiAssistant do
       :upsert,
       ChatSession.changeset(session, %{
         messages: messages ++ [message],
-        meta: meta
+        meta: meta || session.meta
       })
     )
     |> Multi.merge(&maybe_increment_ai_usage/1)
