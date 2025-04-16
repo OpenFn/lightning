@@ -129,10 +129,7 @@ defmodule LightningWeb.WorkflowLive.Helpers do
         "This workflow is inactive (no triggers configured)"
 
       {true, [first_trigger | _]} ->
-        case first_trigger.type do
-          :cron -> "This workflow is active (cron trigger enabled)"
-          :webhook -> "This workflow is active (webhook trigger enabled)"
-        end
+        "This workflow is active (#{first_trigger.type} trigger enabled)"
 
       {false, _} ->
         "This workflow is inactive (manual runs only)"
