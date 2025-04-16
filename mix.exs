@@ -5,7 +5,7 @@ defmodule Lightning.MixProject do
     [
       app: :lightning,
       version: "2.11.2",
-      elixir: "~> 1.15",
+      elixir: "~> 1.17",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
         warnings_as_errors: true
@@ -78,7 +78,7 @@ defmodule Lightning.MixProject do
       {:cloak_ecto, "~> 1.3.0"},
       {:credo, "~> 1.7.3", only: [:test, :dev]},
       {:crontab, "~> 1.1"},
-      {:dialyxir, "~> 1.4.2", only: [:test, :dev], runtime: false},
+      {:dialyxir, "~> 1.4.5", only: [:test, :dev], runtime: false},
       {:ecto_enum, "~> 1.4"},
       {:ecto_psql_extras, "~> 0.8.2"},
       {:ecto_sql, "~> 3.11"},
@@ -98,7 +98,7 @@ defmodule Lightning.MixProject do
       {:jsonpatch, "~> 1.0.2"},
       {:junit_formatter, "~> 3.0", only: [:test]},
       {:libcluster, "~> 3.3"},
-      {:mimic, "~> 1.7.2", only: :test},
+      {:mimic, "~> 1.10.2", only: :test},
       {:mix_test_watch, "~> 1.2.0", only: [:test, :dev], runtime: false},
       {:mock, "~> 0.3.8", only: :test},
       {:mox, "~> 1.2.0", only: :test},
