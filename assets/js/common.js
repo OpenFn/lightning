@@ -1,15 +1,12 @@
 import pDebounce from 'p-debounce';
 
-export const EDITOR_DEBOUNCE_MS = 300
+export const EDITOR_DEBOUNCE_MS = 300;
 
-const debouncedDispatchEvent = pDebounce(
-  (eventTarget, event) => {
-    eventTarget.dispatchEvent(event);
-  },
-  EDITOR_DEBOUNCE_MS
-);
+const debouncedDispatchEvent = pDebounce((eventTarget, event) => {
+  eventTarget.dispatchEvent(event);
+}, EDITOR_DEBOUNCE_MS);
 
-export function initiateSaveAndRun(buttonElement) {
+export function submitOrClick(buttonElement) {
   if (buttonElement.getAttribute('type') === 'submit') {
     const formId = buttonElement.getAttribute('form');
     const form = document.getElementById(formId);

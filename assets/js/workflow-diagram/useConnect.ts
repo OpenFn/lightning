@@ -1,11 +1,10 @@
 import { useCallback, useState } from 'react';
-import { useStore, type StoreApi } from 'zustand';
+import type * as F from 'reactflow';
+import { randomUUID } from '../common';
+import { useWorkflowStore } from '../workflow-store/store';
 import Connection from './edges/Connection';
 import { styleEdge } from './styles';
 import type { Flow } from './types';
-import type * as F from 'reactflow';
-import type { WorkflowState } from '../workflow-editor/store';
-import { randomUUID } from '../common'
 import toWorkflow from './util/to-workflow';
 
 const generateEdgeDiff = (source: string, target: string) => {
@@ -126,18 +125,16 @@ const resetModel = (model: Flow.Model) => ({
 
 export default (
   model: Flow.Model,
-  setModel: React.Dispatch<React.SetStateAction<Flow.Model>>,
-  store: StoreApi<WorkflowState>
+  setModel: React.Dispatch<React.SetStateAction<Flow.Model>>
 ) => {
   const [dragActive, setDragActive] = useState<string | false>(false);
-
-  const addToStore = useStore(store!, state => state.add);
+  const { add: addTo } = useWorkflowStore();
 
   const onConnect: F.OnConnect = useCallback(args => {
     const newModel = generateEdgeDiff(args.source, args.target);
     const wf = toWorkflow(newModel);
 
-    addToStore(wf);
+    addTo(wf);
   }, []);
 
   const onConnectStart: F.OnConnectStart = useCallback(

@@ -1,11 +1,11 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import type { editor } from 'monaco-editor';
 import type { EditorProps as MonacoProps } from '@monaco-editor/react';
+import type { editor } from 'monaco-editor';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { MonacoEditor, type Monaco } from '../monaco';
 import { fetchDTSListing, fetchFile } from '@openfn/describe-package';
+import { submitOrClick } from '../common';
+import { MonacoEditor, type Monaco } from '../monaco';
 import createCompletionProvider from './magic-completion';
-import { initiateSaveAndRun } from '../common';
 
 // static imports for core lib
 import dts_es5 from './lib/es5.min.dts';
@@ -242,7 +242,7 @@ export default function Editor({
         monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
         function () {
           const actionButton = document.getElementById('save-and-run')!;
-          initiateSaveAndRun(actionButton);
+          submitOrClick(actionButton);
         }
       );
 
@@ -254,7 +254,7 @@ export default function Editor({
           const actionButton = document.getElementById(
             'create-new-work-order'
           )!;
-          initiateSaveAndRun(actionButton);
+          submitOrClick(actionButton);
         }
       );
 

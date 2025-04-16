@@ -329,13 +329,13 @@
   }
 
   .phx-click-loading {
-    &:not([phx-hook='WorkflowEditor']) {
+    &:not([phx-hook='ReactComponent'][data-react-name='WorkflowEditor']) {
       opacity: 0.5;
       transition: opacity 1s ease-out;
     }
   }
 
-  [phx-hook='WorkflowEditor'].phx-click-loading ~ form#workflow-form {
+  [phx-hook='ReactComponent'][data-react-name='WorkflowEditor'].phx-click-loading ~ form#workflow-form {
     opacity: 0.5;
     transition: opacity 1s ease-out;
   }
