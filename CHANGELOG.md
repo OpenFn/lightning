@@ -19,7 +19,9 @@ and this project adheres to
 
 - AI Assistant: add metadata column to chat sessions
   [#3054](https://github.com/OpenFn/lightning/issues/3054)
-  
+- Custom metrics to track lost runs.
+  [#3070](https://github.com/OpenFn/lightning/issues/3070)
+
 ### Changed
 
 ### Fixed
