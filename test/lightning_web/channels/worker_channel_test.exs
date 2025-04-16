@@ -1,8 +1,10 @@
 defmodule LightningWeb.WorkerChannelTest do
   use LightningWeb.ChannelCase, async: true
 
+  alias Lightning.Repo
   alias Lightning.WorkOrders
   alias Lightning.Workers
+
   import Lightning.Factories
 
   describe "joining" do
@@ -38,7 +40,9 @@ defmodule LightningWeb.WorkerChannelTest do
     end
 
     test "returns an empty list when there are no runs", %{socket: socket} do
-      ref = push(socket, "claim", %{"demand" => 1})
+      ref =
+        push(socket, "claim", %{"demand" => 1, "worker_name" => "my.pod.name"})
+
       assert_reply ref, :ok, %{runs: []}
     end
 
@@ -62,7 +66,8 @@ defmodule LightningWeb.WorkerChannelTest do
 
       %{id: run_id} = run
 
-      ref = push(socket, "claim", %{"demand" => 1})
+      ref =
+        push(socket, "claim", %{"demand" => 1, "worker_name" => "my.pod.name"})
 
       assert_reply ref,
                    :ok,
@@ -78,13 +83,54 @@ defmodule LightningWeb.WorkerChannelTest do
 
       assert claims["id"] == run_id
 
-      ref = push(socket, "claim", %{"demand" => 4})
+      ref =
+        push(socket, "claim", %{"demand" => 4, "worker_name" => "my.pod.name"})
+
       assert_reply ref, :ok, %{runs: runs}
 
       assert runs |> Enum.map(& &1["id"]) |> MapSet.new() ==
                rest |> Enum.map(& &1.id) |> MapSet.new()
 
       assert length(runs) == 2, "only 2 runs should be returned"
+    end
+
+    test "updates the run with the provided worker name", %{socket: socket} do
+      %{triggers: [trigger]} =
+        workflow = insert(:simple_workflow) |> with_snapshot()
+
+      {:ok, %{runs: [%{id: run_id} = run]}} =
+        WorkOrders.create_for(trigger,
+          workflow: workflow,
+          dataclip: params_with_assocs(:dataclip)
+        )
+
+      ref =
+        push(socket, "claim", %{"demand" => 1, "worker_name" => "my.pod.name"})
+
+      assert_reply ref, :ok, %{runs: [%{"id" => ^run_id}]}
+
+      run = Repo.reload!(run)
+
+      assert run.worker_name == "my.pod.name"
+    end
+
+    test "if given an empty string for a worker name stores it as nil", %{
+      socket: socket
+    } do
+      %{triggers: [trigger]} =
+        workflow = insert(:simple_workflow) |> with_snapshot()
+
+      {:ok, %{runs: [%{id: run_id} = run]}} =
+        WorkOrders.create_for(trigger,
+          workflow: workflow,
+          dataclip: params_with_assocs(:dataclip)
+        )
+
+      ref = push(socket, "claim", %{"demand" => 1, "worker_name" => ""})
+
+      assert_reply ref, :ok, %{runs: [%{"id" => ^run_id}]}
+
+      assert %{worker_name: nil} = Repo.reload!(run)
     end
   end
 end

@@ -40,6 +40,8 @@ and this project adheres to
 - When claiming a run, a worker name can optionally be provided to the
   adaptor that is responsible for claiming runs.
   [#3079](https://github.com/OpenFn/lightning/issues/3079)
+- Persist worker name provided by worker when claiming a run.
+  [#3079](https://github.com/OpenFn/lightning/issues/3079)
 
 ### Changed
 
