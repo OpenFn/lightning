@@ -8,7 +8,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   import React
 
   alias Lightning.AiAssistant
-  alias Lightning.Dataclips
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Invocation
@@ -36,6 +35,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Phoenix.LiveView.JS
 
   require Lightning.Run
+
+  @latest_dataclips_limit 5
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
@@ -1418,7 +1419,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("get-selectable-dataclips", %{"job_id" => job_id}, socket) do
-    dataclips = Dataclips.list_recent_for_job(job_id, 5)
+    dataclips =
+      Invocation.list_dataclips_for_job(
+        %Job{id: job_id},
+        @latest_dataclips_limit
+      )
 
     {:noreply,
      push_event(socket, "current-selectable-dataclips", %{dataclips: dataclips})}

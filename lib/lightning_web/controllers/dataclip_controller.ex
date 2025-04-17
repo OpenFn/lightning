@@ -1,9 +1,9 @@
 defmodule LightningWeb.DataclipController do
   use LightningWeb, :controller
 
-  alias Lightning.Dataclips
+  alias Lightning.DataclipScrubber
   alias Lightning.Invocation
-  alias Lightning.Policies.Dataclips, as: DataclipsPolicies
+  alias Lightning.Policies.Dataclips
   alias Lightning.Policies.Permissions
 
   @max_age 86_400
@@ -12,7 +12,7 @@ defmodule LightningWeb.DataclipController do
     dataclip_without_body = Invocation.get_dataclip!(dataclip_id)
 
     if Permissions.can?(
-         DataclipsPolicies,
+         Dataclips,
          :view_dataclip,
          conn.assigns.current_user,
          dataclip_without_body
@@ -45,7 +45,7 @@ defmodule LightningWeb.DataclipController do
     body =
       dataclip
       |> Map.put(:body, Jason.encode!(dataclip.body, pretty: true))
-      |> Dataclips.scrub_dataclip_body!()
+      |> DataclipScrubber.scrub_dataclip_body!()
 
     conn
     |> put_resp_content_type("application/json")
