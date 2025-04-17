@@ -8,6 +8,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   import React
 
   alias Lightning.AiAssistant
+  alias Lightning.Dataclips
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Invocation
@@ -1414,6 +1415,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   def handle_event("get-current-state", _params, socket) do
     {:reply, %{workflow_params: socket.assigns.workflow_params}, socket}
+  end
+
+  def handle_event("get-selectable-dataclips", %{"job_id" => job_id}, socket) do
+    dataclips = Dataclips.list_recent_for_job(job_id, 5)
+
+    {:noreply,
+     push_event(socket, "current-selectable-dataclips", %{dataclips: dataclips})}
   end
 
   def handle_event("switch-version", %{"type" => type}, socket) do

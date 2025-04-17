@@ -1,6 +1,6 @@
-defmodule Lightning.DataclipScrubber do
+defmodule Lightning.Dataclips do
   @moduledoc """
-  Handles scrubbing of dataclips
+  Fetchs, pre-processes dataclips and updates Dataclips
   """
 
   import Ecto.Query
@@ -11,9 +11,24 @@ defmodule Lightning.DataclipScrubber do
   alias Lightning.Repo
   alias Lightning.RunStep
   alias Lightning.Scrubber
+  alias Lightning.Workflows.Job
 
-  @spec scrub_dataclip_body!(Dataclip.t()) :: String.t()
-  def scrub_dataclip_body!(%{body: body} = dataclip) when is_binary(body) do
+  def list_recent_for_job(job_id, limit) do
+    from(d in Dataclip,
+      join: j in Job,
+      on: j.id == ^job_id,
+      join: s in Step,
+      on: s.input_dataclip_id == d.id,
+      where: is_nil(d.wiped_at),
+      order_by: [desc: d.inserted_at],
+      limit: ^limit,
+      select: %{d | body: d.body}
+    )
+    |> Repo.all()
+  end
+
+  def scrub_dataclip_body!(%Dataclip{body: body} = dataclip)
+      when is_binary(body) do
     if dataclip.type == :step_result do
       step_query = from s in Step, where: s.output_dataclip_id == ^dataclip.id
       scrub_body(body, Repo.one(step_query))
