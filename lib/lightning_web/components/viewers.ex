@@ -58,6 +58,13 @@ defmodule LightningWeb.Components.Viewers do
           "info"
         end
       end)
+      |> assign_new(:waiting_message, fn ->
+        case assigns[:run_state] do
+          :available -> "Waiting for an available worker"
+          :claimed -> "Creating secure runtime & installing adaptors"
+          _any -> "Nothing yet"
+        end
+      end)
 
     ~H"""
     <%= if @run_state in Lightning.Run.final_states() and @logs_empty? do %>
@@ -99,7 +106,7 @@ defmodule LightningWeb.Components.Viewers do
               class="relative text-xs @md:text-base p-12 text-center bg-slate-700 font-mono text-gray-200"
             >
               <.text_ping_loader>
-                Nothing yet
+                {@waiting_message}
               </.text_ping_loader>
             </div>
             <div id={"#{@id}-viewer"} class="hidden absolute inset-0 rounded-md">
