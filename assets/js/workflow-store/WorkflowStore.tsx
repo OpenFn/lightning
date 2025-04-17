@@ -34,8 +34,8 @@ const createNewWorkflow = (): Required<ChangeArgs> => {
 // This component renders nothing. it just serves as a store sync to the backend
 export const WorkflowStore: WithActionProps = (props) => {
   const pendingChanges = React.useRef<PendingAction[]>([]);
-  const workflowLoadParamsStart = React.useRef<number | null>(null)
-  const { applyPatches, setState, add, getItem, setSelection, subscribe } = useWorkflowStore();
+  const workflowLoadParamsStart = React.useRef<Date | null>(null)
+  const { applyPatches, setState, add, setSelection, subscribe } = useWorkflowStore();
 
   const pushPendingChange = React.useCallback((pendingChange: PendingAction) => {
     return new Promise((resolve, reject) => {
@@ -93,17 +93,22 @@ export const WorkflowStore: WithActionProps = (props) => {
         add(diff);
       }
 
+      const end = new Date();
+      console.debug('current-worflow-params processed', end.toISOString());
+      console.timeEnd('workflow-params load');
       props.pushEventTo('workflow_editor_metrics_report', {
         metrics: [
           {
             event: 'workflow-params load',
-            start: workflowLoadParamsStart.current,
-            end: new Date().getTime(),
+            start: workflowLoadParamsStart.current?.getTime(),
+            end: end.getTime(),
           },
         ],
       })
     })
-    workflowLoadParamsStart.current = new Date().getTime();
+    workflowLoadParamsStart.current = new Date();
+    console.debug('get-initial-state pushed', workflowLoadParamsStart.current.toISOString());
+    console.time('workflow-params load');
     props.pushEventTo('get-initial-state', {});
   }, [add, props, setState, setSelection])
 
