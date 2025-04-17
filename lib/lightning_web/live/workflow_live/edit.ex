@@ -33,6 +33,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Lightning.WorkOrders
   alias LightningWeb.UiMetrics
   alias LightningWeb.WorkflowLive.Helpers
+  alias LightningWeb.WorkflowLive.NewManualRun
   alias LightningWeb.WorkflowNewLive.WorkflowParams
   alias Phoenix.LiveView.JS
 
@@ -43,6 +44,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   jsx("assets/js/workflow-editor/WorkflowEditor.tsx")
   jsx("assets/js/workflow-store/WorkflowStore.tsx")
 
+  attr :job_id, :string
   jsx("assets/js/manual-runner/ManualRunner.tsx")
 
   attr :changeset, :map, required: true
@@ -1491,6 +1493,34 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   def handle_event("get-current-state", _params, socket) do
     {:reply, %{workflow_params: socket.assigns.workflow_params}, socket}
+  end
+
+  def handle_event(
+        "get-selectable-dataclips",
+        %{"job_id" => job_id, "limit" => limit},
+        socket
+      ) do
+    payload = NewManualRun.get_selectable_dataclips(job_id, limit)
+    {:reply, payload, socket}
+  end
+
+  def handle_event(
+        "search-selectable-dataclips",
+        %{"job_id" => job_id, "search_text" => search_text, "limit" => limit} =
+          params,
+        socket
+      ) do
+    offset = Map.get(params, "offset")
+
+    payload =
+      NewManualRun.search_selectable_dataclips(
+        job_id,
+        search_text,
+        limit,
+        offset
+      )
+
+    {:reply, payload, socket}
   end
 
   def handle_event("switch-version", %{"type" => type}, socket) do

@@ -15,8 +15,6 @@ defmodule Lightning.WebAndWorkerTest do
   alias Lightning.WorkOrders
   alias Lightning.Workflows.Snapshot
 
-  require Run
-
   setup :set_mox_from_context
   setup :verify_on_exit!
 

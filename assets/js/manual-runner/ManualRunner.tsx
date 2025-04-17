@@ -1,10 +1,11 @@
 import { MonacoEditor } from "#/monaco";
+import { DataclipViewer } from "#/react/components/DataclipViewer";
 import type { WithActionProps } from "#/react/lib/with-props";
 import { DocumentIcon, PencilSquareIcon, DocumentArrowUpIcon, MagnifyingGlassIcon, DocumentTextIcon, InformationCircleIcon } from "@heroicons/react/24/outline"
 import { CloudArrowUpIcon } from "@heroicons/react/24/solid";
 import React from "react";
 interface ManualRunnerProps {
-  smth: number
+  job_id: string
 }
 
 const iconStyle = 'h-4 w-4 text-grey-400 mr-1';
@@ -16,13 +17,56 @@ enum SeletableOptions {
   IMPORT
 }
 
-export const ManualRunner: WithActionProps<ManualRunnerProps> = () => {
+interface Dataclip {
+  id: string;
+  body: {
+    data: Record<string, unknown>;
+    request: {
+      headers: {
+        accept: string;
+        host: string;
+        "user-agent": string;
+      };
+      method: string;
+      path: string[];
+      query_params: Record<string, unknown>;
+    };
+  };
+  request: null;
+  type: "http_request";
+  wiped_at: string | null;
+  project_id: string;
+  inserted_at: string;
+  updated_at: string;
+}
+
+export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
+  const { pushEvent, job_id } = props;
   const [selectedOption, setSelectedOption] = React.useState<SeletableOptions>(SeletableOptions.NONE);
+  const [recentclips, setRecentClips] = React.useState<Dataclip[]>([]);
+  const [query, setQuery] = React.useState("");
+  const [results, setResults] = React.useState<Dataclip[]>([]);
+  const [selectedclip, setSelectedclip] = React.useState<Dataclip | null>(null);
+
+  React.useEffect(() => {
+    pushEvent("get-selectable-dataclips", { job_id: job_id, limit: 5 }, (response) => {
+      const dataclips = response.dataclips as Dataclip[];
+      setRecentClips(dataclips);
+    })
+  }, [pushEvent, job_id])
+
+  React.useEffect(() => {
+    // FIXME: search currently errors on phx side
+    pushEvent("search-selectable-dataclips", { job_id: job_id, search_text: query, limit: 5 }, (response) => {
+      // const dataclips = response.dataclips as Dataclip[];
+      // setResults(dataclips);
+    })
+  }, [pushEvent, query, job_id])
 
   const innerView = React.useMemo(() => {
     switch (selectedOption) {
       case SeletableOptions.NONE:
-        return <NoneView />
+        return <NoneView dataclips={recentclips} setQuery={setQuery} setSelected={setSelectedclip} />
       case SeletableOptions.IMPORT:
         return <ImportView />
       case SeletableOptions.CUSTOM:
@@ -32,7 +76,7 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = () => {
       default:
         return <></>
     }
-  }, [selectedOption])
+  }, [selectedOption, recentclips])
 
   const getActive = (v: SeletableOptions) => {
     if (selectedOption === v)
@@ -44,6 +88,36 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = () => {
     setSelectedOption(p => p === option ? SeletableOptions.NONE : option);
   }
 
+  if (selectedclip)
+    return <>
+      <div className="flex-0">
+        <div className="my-2" onClick={() => { setSelectedclip(null) }}>
+          <button className="flex w-full items-center justify-between px-4 py-2 bg-[#dbe9fe] text-[#3562dd] rounded-md hover:bg-[#b7d3fd]">
+            <span>{selectedclip.id}</span>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="flex flex-row">
+          <div className="basis-1/2 font-semibold text-secondary-700 text-xs xl:text-base">
+            Type
+          </div>
+          <div className="basis-1/2 text-right">
+            <DataClipTypePill type={selectedclip.type} />
+          </div>
+        </div>
+        <div className="flex flex-row mt-4">
+          <div className="basis-1/2 font-semibold text-secondary-700 text-xs xl:text-base">
+            Created at
+          </div>
+          <div className="basis-1/2 text-right">
+            {formatDate(new Date(selectedclip.inserted_at))}
+          </div>
+        </div>
+      </div>
+      <DataclipViewer dataclipId={selectedclip.id} />
+    </>
   return <div className="px-4 py-6">
     <div className="flex flex-col gap-3">
       <div className="font-bold flex justify-center">Select Input</div>
@@ -63,28 +137,22 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = () => {
   </div>
 }
 
-const NoneView = () => {
+const NoneView: React.FC<{ dataclips: Dataclip[], setQuery: (v: string) => void, setSelected: (v: Dataclip) => void }> = ({ dataclips, setQuery, setSelected }) => {
   return <>
     <hr className="my-3" />
     <div className="flex flex-col gap-3">
       <div className="relative">
-        <input type="email" className="w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md pr-3 pl-10 py-2 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-300 shadow-sm focus:shadow" placeholder="Search field" />
-        <div className="absolute left-1 top-1 rounded p-1.5 border border-transparent text-center text-sm" type="button">
+        <input onChange={e => { setQuery(e.target.value) }} type="email" className="w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md pr-3 pl-10 py-2 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-300 shadow-sm focus:shadow" placeholder="Search field" />
+        <div className="absolute left-1 top-1 rounded p-1.5 border border-transparent text-center text-sm">
           <MagnifyingGlassIcon className={iconStyle} />
         </div>
       </div>
-      <div className="flex items-center justify-between border rounded px-3 py-1 cursor-pointer hover:bg-slate-100 hover:border-primary-600 group">
-        <div className="flex gap-1 items-center text-base"> <DocumentTextIcon className={`${iconStyle} transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} /> dataclip-one </div>
-        <div className="text-xs">{new Date().toISOString()}</div>
-      </div>
-      <div className="flex items-center justify-between border rounded px-3 py-1 cursor-pointer hover:bg-slate-100 hover:border-primary-600 group">
-        <div className="flex gap-1 items-center text-base"> <DocumentTextIcon className={`${iconStyle} transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} /> dataclip-two </div>
-        <div className="text-xs">{new Date().toISOString()}</div>
-      </div>
-      <div className="flex items-center justify-between border rounded px-3 py-1 cursor-pointer hover:bg-slate-100 hover:border-primary-600 group">
-        <div className="flex gap-1 items-center text-base"> <DocumentTextIcon className={`${iconStyle} transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} /> dataclip-three </div>
-        <div className="text-xs">{new Date().toISOString()}</div>
-      </div>
+      {dataclips.map(clip => {
+        return <div onClick={() => { setSelected(clip); }} className="flex items-center justify-between border rounded px-3 py-1 cursor-pointer hover:bg-slate-100 hover:border-primary-600 group">
+          <div className="flex gap-1 items-center text-sm"> <DocumentTextIcon className={`${iconStyle} transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} /> {clip.id} </div>
+          <div className="text-xs">{clip.updated_at}</div>
+        </div>
+      })}
     </div>
   </>
 }
@@ -146,4 +214,40 @@ const CustomView = () => {
       }}
     />
   </div>
+}
+
+type DataClipType = 'step_result' | 'http_request' | 'global' | 'saved_input';
+
+interface DataClipTypePillProps {
+  type: DataClipType;
+}
+
+const DataClipTypePill: React.FC<DataClipTypePillProps> = ({ type = "saved_input" }) => {
+  const baseClasses = 'px-2 py-1 rounded-full inline-block text-sm font-mono';
+
+  const typeClasses = {
+    step_result: 'bg-purple-500 text-purple-900',
+    http_request: 'bg-green-500 text-green-900',
+    global: 'bg-blue-500 text-blue-900',
+    saved_input: 'bg-yellow-500 text-yellow-900',
+  }[type] || '';
+
+  return (
+    <div className={`${baseClasses} ${typeClasses}`}>
+      {type}
+    </div>
+  );
+};
+
+// to be moved to a utils file
+function formatDate(date: Date, locale: string = 'en-US'): string {
+  return new Intl.DateTimeFormat(locale, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).format(date);
 }
