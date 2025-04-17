@@ -60,8 +60,8 @@ defmodule LightningWeb.Components.Viewers do
       end)
       |> assign_new(:waiting_message, fn ->
         case assigns[:run_state] do
-          :available -> "Waiting for an available worker"
-          :claimed -> "Creating secure runtime & installing adaptors"
+          :available -> "Waiting for worker..."
+          :claimed -> "Creating runtime & installing adaptors..."
           _any -> "Nothing yet"
         end
       end)
