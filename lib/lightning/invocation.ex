@@ -11,6 +11,7 @@ defmodule Lightning.Invocation do
   alias Lightning.Projects.File, as: ProjectFile
   alias Lightning.Projects.Project
   alias Lightning.Repo
+  alias Lightning.Workflows.Job
   alias Lightning.WorkOrder
   alias Lightning.WorkOrders.ExportAudit
   alias Lightning.WorkOrders.ExportWorker
@@ -35,7 +36,7 @@ defmodule Lightning.Invocation do
     Repo.all(Dataclip)
   end
 
-  @spec list_dataclips_query(project :: Project.t()) :: Ecto.Queryable.t()
+  @spec list_dataclips_query(Project.t()) :: Ecto.Queryable.t()
   def list_dataclips_query(%Project{id: project_id}) do
     from(d in Dataclip,
       where: d.project_id == ^project_id,
@@ -43,15 +44,58 @@ defmodule Lightning.Invocation do
     )
   end
 
-  @spec list_dataclips(project :: Project.t()) :: [Dataclip.t()]
+  @spec list_dataclips(Project.t()) :: [Dataclip.t()]
   def list_dataclips(%Project{id: project_id}) do
     list_dataclips_query(%Project{id: project_id}) |> Repo.all()
   end
 
-  def list_dataclips_for_job(%Lightning.Workflows.Job{id: job_id}) do
-    Query.last_n_for_job(job_id, 5)
+  @spec list_dataclips_for_job(Job.t(), limit :: pos_integer()) :: [Dataclip.t()]
+  def list_dataclips_for_job(%Job{id: job_id}, limit \\ 5) do
+    Query.last_n_for_job(job_id, limit)
     |> Query.select_as_input()
     |> where([d], is_nil(d.wiped_at))
+    |> Repo.all()
+  end
+
+  @spec list_dataclips_for_job(
+          Job.t(),
+          filters :: map(),
+          limit :: pos_integer(),
+          offset :: pos_integer() | nil
+        ) :: [Dataclip.t()]
+  def list_dataclips_for_job(%Job{id: job_id}, filters, limit, offset \\ nil) do
+    filters =
+      Enum.reduce(filters, dynamic(true), fn
+        {:id, uuid}, dynamic ->
+          dynamic([d], ^dynamic and d.id == ^uuid)
+
+        {:id_prefix, id_prefix}, dynamic ->
+          {id_prefix_start, id_prefix_end} =
+            id_prefix_interval(id_prefix)
+
+          dynamic(
+            [d],
+            ^dynamic and d.id > ^id_prefix_start and d.id < ^id_prefix_end
+          )
+
+        {:type, type}, dynamic ->
+          dynamic([d], ^dynamic and d.type == ^type)
+
+        {:date, date}, dynamic ->
+          dynamic([d], ^dynamic and fragment("date(?)", d.inserted_at) == ^date)
+
+        {:datetime, ts}, dynamic ->
+          dynamic([d], ^dynamic and d.inserted_at == ^ts)
+
+        {:after, ts}, dynamic ->
+          dynamic([d], ^dynamic and d.inserted_at > ^ts)
+      end)
+
+    Query.last_n_for_job(job_id, limit)
+    |> Query.select_as_input()
+    |> where([d], is_nil(d.wiped_at))
+    |> where([d], ^filters)
+    |> then(fn query -> if offset, do: query, else: offset(query, ^offset) end)
     |> Repo.all()
   end
 
@@ -706,5 +750,26 @@ defmodule Lightning.Invocation do
       )
     end)
     |> Repo.transaction()
+  end
+
+  @uuid_binary_size 16
+
+  defp id_prefix_interval(id_prefix) do
+    prefix_bin =
+      id_prefix
+      |> String.to_charlist()
+      |> Enum.chunk_every(2)
+      |> Enum.reduce(<<>>, fn byte_chunk, prefix_bin ->
+        byte_int = byte_chunk |> :binary.list_to_bin() |> String.to_integer(16)
+        prefix_bin <> <<byte_int>>
+      end)
+
+    prefix_size = byte_size(prefix_bin)
+    missing_byte_size = @uuid_binary_size - prefix_size
+
+    {
+      Ecto.UUID.load!(prefix_bin <> :binary.copy(<<0>>, missing_byte_size)),
+      Ecto.UUID.load!(prefix_bin <> :binary.copy(<<255>>, missing_byte_size))
+    }
   end
 end
