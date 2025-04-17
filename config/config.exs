@@ -119,6 +119,7 @@ config :esbuild,
          js/job-editor/JobEditor.tsx
          js/workflow-editor/WorkflowEditor.tsx
          js/workflow-store/WorkflowStore.tsx
+         js/manual-runner/ManualRunner.tsx
          editor.worker=monaco-editor/esm/vs/editor/editor.worker.js
          json.worker=monaco-editor/esm/vs/language/json/json.worker.js
          css.worker=monaco-editor/esm/vs/language/css/css.worker.js
