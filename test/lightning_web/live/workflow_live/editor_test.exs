@@ -1655,13 +1655,13 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       # input panel shows correct information
       html = run_view |> element("div#input-panel") |> render()
 
-      assert html =~ "Nothing yet"
+      assert html =~ "Waiting for worker..."
       refute html =~ "No input/output available. This step was never started."
 
       # output panel shows correct information
       html = run_view |> element("div#output-panel") |> render()
 
-      assert html =~ "Nothing yet"
+      assert html =~ "Waiting for worker..."
       refute html =~ "No input/output available. This step was never started."
 
       # let's subscribe to events to make sure we're in sync with liveview
@@ -1702,12 +1702,12 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       # input panel shows correct information
       html = run_view |> element("div#input-panel") |> render()
-      refute html =~ "Nothing yet"
+      refute html =~ "Waiting for worker..."
       assert html =~ "No input/output available. This step was never started."
 
       # output panel shows correct information
       html = run_view |> element("div#output-panel") |> render()
-      refute html =~ "Nothing yet"
+      refute html =~ "Waiting for worker..."
       assert html =~ "No input/output available. This step was never started."
     end
   end

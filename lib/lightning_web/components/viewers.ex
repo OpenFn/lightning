@@ -99,7 +99,7 @@ defmodule LightningWeb.Components.Viewers do
               class="relative text-xs @md:text-base p-12 text-center bg-slate-700 font-mono text-gray-200"
             >
               <.text_ping_loader>
-                Nothing yet
+                Waiting for worker...
               </.text_ping_loader>
             </div>
             <div id={"#{@id}-viewer"} class="hidden absolute inset-0 rounded-md">
@@ -265,7 +265,7 @@ defmodule LightningWeb.Components.Viewers do
         class="relative rounded-md text-xs @md:text-base p-12 text-center bg-slate-700 font-mono text-gray-200"
       >
         <.text_ping_loader>
-          Nothing yet
+          Waiting for worker...
         </.text_ping_loader>
       </div>
 

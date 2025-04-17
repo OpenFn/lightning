@@ -78,7 +78,7 @@ defmodule LightningWeb.Components.ViewerTest do
         )
 
       assert html =~ "No input state could be saved for this run."
-      refute html =~ "Nothing yet"
+      refute html =~ "Waiting for worker..."
       refute html =~ "data for this step has not been retained"
       refute html =~ "this policy\n      </a>\n      for future runs"
       refute html =~ "test@email.com"
@@ -96,7 +96,7 @@ defmodule LightningWeb.Components.ViewerTest do
           can_edit_data_retention: true
         )
 
-      refute html =~ "Nothing yet"
+      refute html =~ "Waiting for worker..."
       assert html =~ "data for this step has not been retained"
       assert html =~ "this policy\n      </a>\n      for future runs"
       refute html =~ "test@email.com"
@@ -114,7 +114,7 @@ defmodule LightningWeb.Components.ViewerTest do
           can_edit_data_retention: false
         )
 
-      refute html =~ "Nothing yet"
+      refute html =~ "Waiting for worker..."
       assert html =~ "data for this step has not been retained"
       refute html =~ "this policy\n      </a>\n      for future runs"
       assert html =~ "test@email.com"
@@ -132,7 +132,7 @@ defmodule LightningWeb.Components.ViewerTest do
           can_edit_data_retention: false
         )
 
-      refute html =~ "Nothing yet"
+      refute html =~ "Waiting for worker..."
       assert html =~ "data for this step has not been retained in accordance"
 
       # running step always shows the pending state
@@ -148,7 +148,7 @@ defmodule LightningWeb.Components.ViewerTest do
           can_edit_data_retention: true
         )
 
-      assert html =~ "Nothing yet"
+      assert html =~ "Waiting for worker..."
       refute html =~ "data for this step has not been retained"
       refute html =~ "this policy\n      </a>\n      for future runs"
       refute html =~ "test@email.com"
@@ -168,7 +168,7 @@ defmodule LightningWeb.Components.ViewerTest do
           can_edit_data_retention: true
         )
 
-      refute html =~ "Nothing yet"
+      refute html =~ "Waiting for worker..."
       assert html =~ "data for this step has not been retained"
       assert html =~ "this policy\n      </a>\n      for future runs"
       refute html =~ "test@email.com"

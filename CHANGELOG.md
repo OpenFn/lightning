@@ -19,8 +19,11 @@ and this project adheres to
 
 - AI Assistant: add metadata column to chat sessions
   [#3054](https://github.com/OpenFn/lightning/issues/3054)
-  
+
 ### Changed
+
+- Replaced "Nothing yet" with "Waiting for Worker" in the Inpsector while
+  waiting for a run to start
 
 ### Fixed
 
@@ -48,8 +51,8 @@ and this project adheres to
   [#3096](https://github.com/OpenFn/lightning/issues/3096)
 - Introduce 'seeding' of PromEx event metrics
   [#3096](https://github.com/OpenFn/lightning/issues/3096)
-- When claiming a run, a worker name can optionally be provided to the
-  adaptor that is responsible for claiming runs.
+- When claiming a run, a worker name can optionally be provided to the adaptor
+  that is responsible for claiming runs.
   [#3079](https://github.com/OpenFn/lightning/issues/3079)
 - Persist worker name provided by worker when claiming a run.
   [#3079](https://github.com/OpenFn/lightning/issues/3079)
