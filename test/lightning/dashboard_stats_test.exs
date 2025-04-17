@@ -131,4 +131,117 @@ defmodule Lightning.DashboardStatsTest do
                ])
     end
   end
+
+  describe "sort_workflow_stats/3" do
+    setup do
+      w1 = complex_workflow_with_runs(last_workorder_failed: false)
+      w2 = complex_workflow_with_runs(last_workorder_failed: true)
+      w3 = complex_workflow_with_runs(last_workorder_failed: false)
+
+      stats1 = %{
+        DashboardStats.get_workflow_stats(w1)
+        | workflow: %{name: "A Workflow"}
+      }
+
+      stats2 = %{
+        DashboardStats.get_workflow_stats(w2)
+        | workflow: %{name: "B Workflow"}
+      }
+
+      stats3 = %{
+        DashboardStats.get_workflow_stats(w3)
+        | workflow: %{name: "C Workflow"}
+      }
+
+      %{stats: [stats1, stats2, stats3]}
+    end
+
+    test "sorts by workorders_count ascending", %{stats: stats} do
+      sorted =
+        DashboardStats.sort_workflow_stats(stats, :workorders_count, :asc)
+
+      counts = Enum.map(sorted, & &1.workorders_count)
+      assert counts == Enum.sort(counts)
+    end
+
+    test "sorts by workorders_count descending", %{stats: stats} do
+      sorted =
+        DashboardStats.sort_workflow_stats(stats, :workorders_count, :desc)
+
+      counts = Enum.map(sorted, & &1.workorders_count)
+      assert counts == Enum.sort(counts, :desc)
+    end
+
+    test "sorts by failed_workorders_count ascending", %{stats: stats} do
+      sorted =
+        DashboardStats.sort_workflow_stats(
+          stats,
+          :failed_workorders_count,
+          :asc
+        )
+
+      counts = Enum.map(sorted, & &1.failed_workorders_count)
+      assert counts == Enum.sort(counts)
+    end
+
+    test "sorts by failed_workorders_count descending", %{stats: stats} do
+      sorted =
+        DashboardStats.sort_workflow_stats(
+          stats,
+          :failed_workorders_count,
+          :desc
+        )
+
+      counts = Enum.map(sorted, & &1.failed_workorders_count)
+      assert counts == Enum.sort(counts, :desc)
+    end
+
+    test "sorts by last_workorder_updated_at ascending", %{stats: stats} do
+      sorted =
+        DashboardStats.sort_workflow_stats(
+          stats,
+          :last_workorder_updated_at,
+          :asc
+        )
+
+      timestamps = Enum.map(sorted, & &1.last_workorder.updated_at)
+      assert timestamps == Enum.sort(timestamps)
+    end
+
+    test "sorts by last_workorder_updated_at descending", %{stats: stats} do
+      sorted =
+        DashboardStats.sort_workflow_stats(
+          stats,
+          :last_workorder_updated_at,
+          :desc
+        )
+
+      timestamps = Enum.map(sorted, & &1.last_workorder.updated_at)
+      assert timestamps == Enum.sort(timestamps, :desc)
+    end
+
+    test "sorts by workflow name when given invalid sort field", %{stats: stats} do
+      sorted = DashboardStats.sort_workflow_stats(stats, :invalid_field, :asc)
+      names = Enum.map(sorted, & &1.workflow.name)
+      assert names == ["A Workflow", "B Workflow", "C Workflow"]
+    end
+
+    test "handles nil last_workorder_updated_at when sorting by timestamp", %{
+      stats: [stats1 | rest]
+    } do
+      stats_with_nil = put_in(stats1.last_workorder.updated_at, nil)
+      all_stats = [stats_with_nil | rest]
+
+      sorted =
+        DashboardStats.sort_workflow_stats(
+          all_stats,
+          :last_workorder_updated_at,
+          :asc
+        )
+
+      first_stat = List.first(sorted)
+
+      assert first_stat.last_workorder.updated_at == nil
+    end
+  end
 end

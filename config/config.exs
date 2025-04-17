@@ -31,7 +31,8 @@ config :lightning, Lightning.Extensions,
   run_queue: Lightning.Extensions.FifoRunQueue,
   account_hook: Lightning.Extensions.AccountHook,
   collection_hook: Lightning.Extensions.CollectionHook,
-  project_hook: Lightning.Extensions.ProjectHook
+  project_hook: Lightning.Extensions.ProjectHook,
+  external_metrics: Lightning.Extensions.ExternalMetrics
 
 config :lightning, Lightning.Extensions.Routing,
   session_opts: [on_mount: LightningWeb.InitAssigns],

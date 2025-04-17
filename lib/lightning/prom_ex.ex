@@ -73,6 +73,8 @@ defmodule Lightning.PromEx do
         :run_queue_metrics_period_seconds
       ]
 
+    external_plugins = Lightning.Config.external_metrics_module().plugins()
+
     [
       # PromEx built in plugins
       Plugins.Application,
@@ -89,7 +91,11 @@ defmodule Lightning.PromEx do
         run_performance_age_seconds: run_performance_age_seconds,
         stalled_run_threshold_seconds: stalled_run_threshold_seconds
       }
-    ]
+    ] ++ external_plugins
+  end
+
+  def seed_event_metrics do
+    Lightning.Config.external_metrics_module().seed_event_metrics()
   end
 
   @impl true

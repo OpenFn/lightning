@@ -299,6 +299,12 @@ defmodule Lightning.Config do
     def max_dataclip_size_bytes do
       Application.get_env(:lightning, :max_dataclip_size_bytes, 10_000_000)
     end
+
+    @impl true
+    def external_metrics_module do
+      Application.get_env(:lightning, Lightning.Extensions, [])
+      |> Keyword.get(:external_metrics)
+    end
   end
 
   @callback apollo(key :: atom() | nil) :: map()
@@ -346,6 +352,7 @@ defmodule Lightning.Config do
   @callback gdpr_banner() :: map() | false
   @callback gdpr_preferences() :: map() | false
   @callback max_dataclip_size_bytes() :: integer()
+  @callback external_metrics_module() :: module() | nil
 
   @doc """
   Returns the configuration for the `Lightning.AdaptorRegistry` service
@@ -546,6 +553,10 @@ defmodule Lightning.Config do
 
   def max_dataclip_size_bytes do
     impl().max_dataclip_size_bytes()
+  end
+
+  def external_metrics_module do
+    impl().external_metrics_module()
   end
 
   defp impl do

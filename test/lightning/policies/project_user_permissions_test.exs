@@ -10,21 +10,19 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
   """
   use Lightning.DataCase, async: true
 
-  import Lightning.ProjectsFixtures
-  import Lightning.AccountsFixtures
   alias Lightning.Accounts
   alias Lightning.Policies.{Permissions, ProjectUsers}
 
   setup do
-    viewer = user_fixture()
-    admin = user_fixture()
-    owner = user_fixture()
-    editor = user_fixture()
-    intruder = user_fixture()
+    viewer = insert(:user)
+    admin = insert(:user)
+    owner = insert(:user)
+    editor = insert(:user)
+    intruder = insert(:user)
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
     project =
-      project_fixture(
+      insert(:project,
         project_users: [
           %{user_id: viewer.id, role: :viewer},
           %{user_id: editor.id, role: :editor},
@@ -34,7 +32,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
       )
 
     marked_project =
-      project_fixture(
+      insert(:project,
         project_users: [
           %{user_id: viewer.id, role: :viewer},
           %{user_id: editor.id, role: :editor},
@@ -111,7 +109,6 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
         create_workflow
         delete_workflow
         edit_workflow
-        provision_project
         edit_project
         write_webhook_auth_method
         create_project_credential
@@ -131,7 +128,6 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
         delete_workflow
         edit_workflow
         create_project_credential
-        provision_project
         run_workflow
       )a |> (&assert_can(ProjectUsers, &1, editor, project)).()
     end
@@ -159,7 +155,6 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
           delete_workflow
           edit_workflow
           edit_project
-          provision_project
           write_webhook_auth_method
           create_project_credential
           run_workflow
@@ -178,11 +173,80 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
         delete_workflow
         edit_workflow
         edit_project
-        provision_project
         write_webhook_auth_method
         create_project_credential
         run_workflow
       )a |> (&assert_can(ProjectUsers, &1, owner, project)).()
+    end
+  end
+
+  describe "Support users" do
+    test "can access projects that allow support access", %{project: project} do
+      support_user = insert(:user, support_user: true)
+      project = %{project | allow_support_access: true}
+
+      assert ProjectUsers
+             |> Permissions.can?(:access_project, support_user, project)
+    end
+
+    test "cannot access projects that don't allow support access", %{
+      project: project
+    } do
+      support_user = insert(:user, support_user: true)
+      project = %{project | allow_support_access: false}
+
+      refute ProjectUsers
+             |> Permissions.can?(:access_project, support_user, project)
+    end
+
+    test "have the same worfklow allowance as editor", %{project: project} do
+      support_user = insert(:user, support_user: true)
+
+      editor_project_user =
+        insert(:project_user,
+          project: project,
+          user: build(:user),
+          role: :editor
+        )
+
+      ~w(
+        create_workflow
+        edit_workflow
+        delete_workflow
+        run_workflow
+        create_project_credential
+        initiate_github_sync
+      )a |> (&assert_can(ProjectUsers, &1, support_user, nil)).()
+
+      ~w(
+        create_workflow
+        edit_workflow
+        delete_workflow
+        run_workflow
+        create_project_credential
+        initiate_github_sync
+      )a
+      |> (&assert_can(
+            ProjectUsers,
+            &1,
+            editor_project_user.user,
+            editor_project_user
+          )).()
+    end
+
+    test "cannot perform project user actions when not a support user", %{
+      project: _project
+    } do
+      regular_user = insert(:user, support_user: false)
+
+      ~w(
+        create_workflow
+        edit_workflow
+        delete_workflow
+        run_workflow
+        create_project_credential
+        initiate_github_sync
+      )a |> (&refute_can(ProjectUsers, &1, regular_user, nil)).()
     end
   end
 

@@ -60,7 +60,7 @@ defmodule LightningWeb.JobLive.CredentialPicker do
   end
 
   @impl true
-  def update(%{project_user: project_user} = assigns, socket) do
+  def update(%{project: project} = assigns, socket) do
     socket =
       socket
       |> assign(assigns)
@@ -83,8 +83,7 @@ defmodule LightningWeb.JobLive.CredentialPicker do
         else
           socket
           |> assign(
-            credentials:
-              Lightning.Projects.list_project_credentials(project_user.project)
+            credentials: Lightning.Projects.list_project_credentials(project)
           )
         end
       end)

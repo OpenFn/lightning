@@ -92,7 +92,7 @@ defmodule Lightning.AiAssistant do
 
   @spec save_message(ChatSession.t(), %{any() => any()}) ::
           {:ok, ChatSession.t()} | {:error, Ecto.Changeset.t()}
-  def save_message(session, message, usage \\ %{}) do
+  def save_message(session, message, usage \\ %{}, meta \\ nil) do
     messages = Enum.map(session.messages, &Map.take(&1, [:id]))
 
     Multi.new()
@@ -100,8 +100,10 @@ defmodule Lightning.AiAssistant do
     |> Multi.put(:message, message)
     |> Multi.insert_or_update(
       :upsert,
-      session
-      |> ChatSession.changeset(%{messages: messages ++ [message]})
+      ChatSession.changeset(session, %{
+        messages: messages ++ [message],
+        meta: meta || session.meta
+      })
     )
     |> Multi.merge(&maybe_increment_ai_usage/1)
     |> Repo.transaction()
@@ -131,7 +133,8 @@ defmodule Lightning.AiAssistant do
     ApolloClient.query(
       content,
       %{expression: session.expression, adaptor: session.adaptor},
-      build_history(session)
+      build_history(session),
+      session.meta || %{}
     )
     |> handle_apollo_resp(session)
   end
@@ -142,7 +145,7 @@ defmodule Lightning.AiAssistant do
        )
        when status in 200..299 do
     message = body["history"] |> Enum.reverse() |> hd()
-    save_message(session, message, body["usage"])
+    save_message(session, message, body["usage"], body["meta"])
   end
 
   defp handle_apollo_resp(

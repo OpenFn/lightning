@@ -2,39 +2,85 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   @moduledoc false
   use LightningWeb, :component
 
-  import LightningWeb.Components.Table
+  import PetalComponents.Table
 
   alias Lightning.DashboardStats.ProjectMetrics
   alias Lightning.Projects.Project
   alias Lightning.WorkOrders.SearchParams
+  alias LightningWeb.Components.Common
   alias LightningWeb.WorkflowLive.Helpers
+  alias Phoenix.LiveView.JS
   alias Timex.Format.DateTime.Formatters.Relative
+
+  attr :period, :string, default: "last 30 days"
+  attr :can_create_workflow, :boolean
+  attr :can_delete_workflow, :boolean
+  attr :workflow_creation_limit_error, :string
+  attr :workflows_stats, :list
+  attr :project, :map
+  attr :sort_key, :string, default: "name"
+  attr :sort_direction, :string, default: "asc"
+  attr :search_term, :string, default: ""
 
   def workflow_list(assigns) do
     ~H"""
     <div class="w-full">
       <div class="mt-14 flex justify-between mb-3">
-        <h3 class="text-3xl font-bold">
-          Workflows
-          <span class="text-base font-normal">
-            ({length(assigns.workflows_stats)})
-          </span>
-        </h3>
-        <.create_workflow_card
-          limit_error={@workflow_creation_limit_error}
-          can_create_workflow={@can_create_workflow}
-        />
+        <.table_title count={length(@workflows_stats)} />
+        <div class="flex gap-2 items-start">
+          <.search_workflows_input search_term={@search_term} />
+          <.create_workflow_card
+            project_id={@project.id}
+            limit_error={@workflow_creation_limit_error}
+            can_create_workflow={@can_create_workflow}
+          />
+        </div>
       </div>
       <.workflows_table
+        id="workflows-table"
         period={@period}
         workflows_stats={@workflows_stats}
-        can_create_workflow={@can_create_workflow}
         can_delete_workflow={@can_delete_workflow}
         project={@project}
-      />
+        sort_key={@sort_key}
+        sort_direction={@sort_direction}
+      >
+        <:empty_state>
+          <div class="text-center py-8">
+            <p class="text-gray-500">
+              <%= if @search_term != "" do %>
+                No workflows found matching "{@search_term}". Try a different search term.
+              <% else %>
+                No workflows found. Create your first workflow to get started.
+              <% end %>
+            </p>
+          </div>
+        </:empty_state>
+      </.workflows_table>
     </div>
     """
   end
+
+  defp table_title(assigns) do
+    ~H"""
+    <h3 class="text-3xl font-bold">
+      Workflows
+      <span class="text-base font-normal">
+        ({@count})
+      </span>
+    </h3>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :workflows_stats, :list, required: true
+  attr :period, :string, required: true
+  attr :project, :map, required: true
+  attr :can_delete_workflow, :boolean, default: false
+  attr :sort_key, :string, default: "name"
+  attr :sort_direction, :string, default: "asc"
+
+  slot :empty_state, doc: "the slot for showing an empty state"
 
   def workflows_table(%{workflows_stats: workflows_stats} = assigns) do
     assigns =
@@ -54,100 +100,142 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
             "lost" => "true",
             "exception" => "true"
           }),
-        workflows: Enum.map(workflows_stats, &Map.merge(&1, &1.workflow))
+        workflows: Enum.map(workflows_stats, &Map.merge(&1, &1.workflow)),
+        empty?: Enum.empty?(workflows_stats)
       )
 
     ~H"""
-    <.table
-      id="workflows"
-      rows={@workflows}
-      row_class="group hover:bg-indigo-50 hover:border-l-indigo-500"
-    >
-      <:col :let={workflow} label_class="ml-3 text-gray-700" label="Name">
-        <.workflow_card
-          workflow={workflow}
-          project={@project}
-          trigger_enabled={Enum.any?(workflow.triggers, & &1.enabled)}
-        />
-      </:col>
-      <:col
-        :let={workflow}
-        label_class="text-gray-700 font-medium"
-        label="Latest Work Order"
-      >
-        <.state_card
-          state={workflow.last_workorder.state}
-          timestamp={workflow.last_workorder.updated_at}
-          period={@period}
-        />
-      </:col>
-      <:col
-        :let={workflow}
-        label_class="text-gray-700 font-medium"
-        label="Work Orders"
-      >
-        <div class="ml-2">
-          <%= if workflow.workorders_count > 0 do %>
-            <div class="text-indigo-700 text-lg">
-              <.link
-                class="hover:underline"
-                navigate={
-                  ~p"/projects/#{@project.id}/history?#{%{filters: Map.merge(@wo_filters, %{workflow_id: workflow.id})}}"
-                }
+    <%= if @empty? do %>
+      {render_slot(@empty_state)}
+    <% else %>
+      <div id={@id}>
+        <.table>
+          <.tr>
+            <.th>
+              <.sortable_table_header
+                target_sort_key="name"
+                current_sort_key={@sort_key}
+                current_sort_direction={@sort_direction}
               >
-                {workflow.workorders_count}
-              </.link>
-            </div>
-            <div class="text-gray-500 text-xs">
-              ({workflow.step_count} steps,
-              <span>
-                {workflow.step_success_rate}% success
-              </span>
-              )
-            </div>
-          <% else %>
-            <div class="text-gray-400 text-lg">
-              <span>0</span>
-            </div>
-            <div class="text-xs">
-              <span>N/A</span>
-            </div>
-          <% end %>
-        </div>
-      </:col>
-      <:col
-        :let={workflow}
-        label_class="text-gray-700 font-medium"
-        label="Work Orders in a failed state"
-      >
-        <div class="flex justify-between">
-          <div class="ml-2">
-            <%= if workflow.failed_workorders_count > 0 do %>
-              <div class="text-indigo-700 text-lg">
-                <.link
-                  class="hover:underline"
-                  navigate={
-                    ~p"/projects/#{@project.id}/history?#{%{filters: Map.merge(@failed_wo_filters, %{workflow_id: workflow.id})}}"
-                  }
-                >
-                  {workflow.failed_workorders_count}
-                </.link>
+                Name
+              </.sortable_table_header>
+            </.th>
+            <.th>
+              <.sortable_table_header
+                target_sort_key="last_workorder_updated_at"
+                current_sort_key={@sort_key}
+                current_sort_direction={@sort_direction}
+              >
+                Latest Work Order
+              </.sortable_table_header>
+            </.th>
+            <.th>
+              <.sortable_table_header
+                target_sort_key="workorders_count"
+                current_sort_key={@sort_key}
+                current_sort_direction={@sort_direction}
+              >
+                Work Orders
+              </.sortable_table_header>
+            </.th>
+            <.th>
+              <.sortable_table_header
+                target_sort_key="failed_workorders_count"
+                current_sort_key={@sort_key}
+                current_sort_direction={@sort_direction}
+              >
+                Work Orders in a failed state
+              </.sortable_table_header>
+            </.th>
+            <.th>
+              <.sortable_table_header
+                target_sort_key="enabled"
+                current_sort_key={@sort_key}
+                current_sort_direction={@sort_direction}
+              >
+                Enabled
+              </.sortable_table_header>
+            </.th>
+            <.th>
+              <span class="sr-only">Actions</span>
+            </.th>
+          </.tr>
+          <.tr
+            :for={workflow <- @workflows}
+            id={"workflow-#{workflow.id}"}
+            class="hover:bg-gray-100 transition-colors duration-200 cursor-pointer"
+            phx-click={JS.navigate(~p"/projects/#{@project.id}/w/#{workflow.id}")}
+          >
+            <.td class="break-words max-w-[15rem]">
+              <.workflow_card
+                workflow={workflow}
+                project={@project}
+                trigger_enabled={Enum.any?(workflow.triggers, & &1.enabled)}
+              />
+            </.td>
+            <.td class="break-words max-w-[15rem]">
+              <.state_card
+                state={workflow.last_workorder.state}
+                timestamp={workflow.last_workorder.updated_at}
+                period={@period}
+              />
+            </.td>
+            <.td class="break-words max-w-[10rem]">
+              <div>
+                <%= if workflow.workorders_count > 0 do %>
+                  <div class="text-indigo-700 text-lg">
+                    <.link
+                      class="hover:underline"
+                      navigate={
+                        ~p"/projects/#{@project.id}/history?#{%{filters: Map.merge(@wo_filters, %{workflow_id: workflow.id})}}"
+                      }
+                      onclick="event.stopPropagation()"
+                    >
+                      {workflow.workorders_count}
+                    </.link>
+                  </div>
+                  <div class="text-gray-500 text-xs">
+                    ({workflow.step_count} steps, <span>{workflow.step_success_rate}% success</span>)
+                  </div>
+                <% else %>
+                  <div class="text-gray-400 text-lg">
+                    <span>0</span>
+                  </div>
+                  <div class="text-xs">
+                    <span>N/A</span>
+                  </div>
+                <% end %>
               </div>
-              <div class="text-gray-500 text-xs">
-                Latest failure {workflow.last_failed_workorder.updated_at
-                |> Relative.format!("{relative}")}
+            </.td>
+            <.td class="break-words max-w-[15rem]">
+              <div>
+                <%= if workflow.failed_workorders_count > 0 do %>
+                  <div class="text-indigo-700 text-lg">
+                    <.link
+                      class="hover:underline"
+                      navigate={
+                        ~p"/projects/#{@project.id}/history?#{%{filters: Map.merge(@failed_wo_filters, %{workflow_id: workflow.id})}}"
+                      }
+                      onclick="event.stopPropagation()"
+                    >
+                      {workflow.failed_workorders_count}
+                    </.link>
+                  </div>
+                  <div class="text-gray-500 text-xs">
+                    Latest failure {workflow.last_failed_workorder.updated_at
+                    |> Relative.format!("{relative}")}
+                  </div>
+                <% else %>
+                  <div class="text-gray-400 text-lg">
+                    <span>0</span>
+                  </div>
+                  <div class="text-xs mt-1">
+                    <span>N/A</span>
+                  </div>
+                <% end %>
               </div>
-            <% else %>
-              <div class="text-gray-400 text-lg">
-                <span>0</span>
-              </div>
-              <div class="text-xs mt-1">
-                <span>N/A</span>
-              </div>
-            <% end %>
-          </div>
-          <div class="mr-2 pt-2">
-            <div :if={@can_delete_workflow} class="flex items-center gap-2">
+            </.td>
+            <.td>
               <.input
                 id={workflow.id}
                 type="toggle"
@@ -157,20 +245,42 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                 on_click="toggle_workflow_state"
                 value_key={workflow.id}
               />
-              <.link
-                href="#"
-                class="table-action"
-                phx-click="delete_workflow"
-                phx-value-id={workflow.id}
-                data-confirm="Are you sure you'd like to delete this workflow?"
-              >
-                Delete
-              </.link>
-            </div>
-          </div>
-        </div>
-      </:col>
-    </.table>
+            </.td>
+            <.td class="text-right">
+              <%= if @can_delete_workflow do %>
+                <.link
+                  href="#"
+                  class="table-action"
+                  phx-click="delete_workflow"
+                  phx-value-id={workflow.id}
+                  data-confirm="Are you sure you'd like to delete this workflow?"
+                >
+                  Delete
+                </.link>
+              <% end %>
+            </.td>
+          </.tr>
+        </.table>
+      </div>
+    <% end %>
+    """
+  end
+
+  attr :current_sort_key, :string, required: true
+  attr :current_sort_direction, :string, required: true
+  attr :target_sort_key, :string, required: true
+  slot :inner_block, required: true
+
+  defp sortable_table_header(assigns) do
+    ~H"""
+    <Common.sortable_table_header
+      phx-click="sort"
+      phx-value-by={@target_sort_key}
+      active={@current_sort_key == @target_sort_key}
+      sort_direction={@current_sort_direction}
+    >
+      {render_slot(@inner_block)}
+    </Common.sortable_table_header>
     """
   end
 
@@ -191,26 +301,25 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
 
     ~H"""
     <div class="flex flex-1 items-center truncate">
-      <.link
-        id={"workflow-card-#{@workflow.id}"}
-        navigate={~p"/projects/#{@project.id}/w/#{@workflow.id}"}
-        role="button"
+      <Common.wrapper_tooltip
+        id={"workflow-name-#{@workflow.id}"}
+        tooltip={@workflow.name}
       >
         <div class="text-sm">
           <div class="flex items-center">
             <span
-              class="flex-shrink truncate text-gray-900 hover:text-gray-600 font-medium ml-3"
+              class="flex-shrink truncate text-gray-900 font-medium workflow-name"
               style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
             >
               {@workflow.name}
             </span>
           </div>
           <%= if @trigger_enabled do %>
-            <p class="text-gray-500 text-xs ml-3 mt-1">
+            <p class="text-gray-500 text-xs mt-1">
               Updated {@relative_updated_at}
             </p>
           <% else %>
-            <div class="flex items-center ml-3 mt-1">
+            <div class="flex items-center mt-1">
               <div style="background: #8b5f0d" class="w-2 h-2 rounded-full"></div>
               <div>
                 <p class="text-[#8b5f0d] text-xs">
@@ -220,12 +329,13 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
             </div>
           <% end %>
         </div>
-      </.link>
+      </Common.wrapper_tooltip>
     </div>
     """
   end
 
   attr :can_create_workflow, :boolean, required: true
+  attr :project_id, :string, required: true
   attr :limit_error, :string
 
   def create_workflow_card(assigns) do
@@ -243,13 +353,132 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       <.button
         disabled={@disabled}
         tooltip={@tooltip}
-        phx-click={if !@disabled, do: show_modal("workflow_modal")}
+        phx-click={
+          if !@disabled, do: JS.navigate(~p"/projects/#{@project_id}/w/new")
+        }
         class="col-span-1 w-full rounded-md"
         role="button"
-        id="open-modal-button"
+        id="new-workflow-button"
       >
         Create new workflow
       </.button>
+    </div>
+    """
+  end
+
+  attr :search_term, :string, default: ""
+
+  def search_workflows_input(assigns) do
+    ~H"""
+    <div class="relative rounded-md shadow-xs flex h-full">
+      <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+        <Heroicons.magnifying_glass class="h-5 w-5 text-gray-400" />
+      </div>
+      <.input
+        type="text"
+        name="search_workflows"
+        value={@search_term}
+        placeholder="Search"
+        class="block w-full rounded-md py-1.5 pl-10 pr-20 text-gray-900 placeholder:text-gray-400 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+        phx-keyup="search_workflows"
+        phx-debounce="300"
+      />
+
+      <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+        <a
+          href="#"
+          class={if @search_term == "", do: "hidden"}
+          id="clear_search_button"
+          phx-click="clear_search"
+        >
+          <Heroicons.x_mark class="h-5 w-5 text-gray-400" />
+        </a>
+      </div>
+    </div>
+    """
+  end
+
+  attr :state, :atom, required: true
+  attr :timestamp, :any, required: true
+  attr :period, :string, required: true
+
+  def state_card(assigns) do
+    assigns =
+      assigns
+      |> assign(
+        time:
+          if !is_nil(assigns.state) do
+            DateTime.to_naive(assigns.timestamp)
+            |> Relative.format!("{relative}")
+          end
+      )
+
+    ~H"""
+    <div class="flex flex-col text-center">
+      <%= if is_nil(@state) do %>
+        <div class="flex items-center gap-x-2">
+          <span class="inline-block h-2 w-2 bg-gray-200 rounded-full"></span>
+          <span class="text-grey-200 italic">Nothing {@period}</span>
+        </div>
+      <% else %>
+        <.status_card state={@state} time={@time} />
+      <% end %>
+    </div>
+    """
+  end
+
+  def status_card(assigns) do
+    dot_color = %{
+      pending: "bg-gray-600",
+      running: "bg-blue-600",
+      success: "bg-green-600",
+      failed: "bg-red-600",
+      crashed: "bg-orange-600",
+      cancelled: "bg-gray-500",
+      killed: "bg-yellow-600",
+      exception: "bg-gray-300 border-solid border-2 border-gray-800",
+      lost: "bg-gray-300 border-solid border-2 border-gray-800"
+    }
+
+    font_color = %{
+      pending: "text-gray-500",
+      running: "text-blue-500",
+      success: "text-green-500",
+      failed: "text-red-500",
+      crashed: "text-orange-500",
+      cancelled: "text-gray-500",
+      killed: "text-yellow-800",
+      exception: "text-gray-600",
+      lost: "text-gray-600"
+    }
+
+    assigns =
+      assign(assigns,
+        text:
+          LightningWeb.RunLive.Components.display_text_from_state(assigns.state),
+        dot_color: Map.get(dot_color, assigns.state),
+        font_color: Map.get(font_color, assigns.state)
+      )
+
+    ~H"""
+    <div>
+      <div class="flex items-center gap-x-2">
+        <span class="inline-block relative flex h-2 w-2">
+          <%= if @state in [:pending, :running] do %>
+            <span class={[
+              "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75",
+              @dot_color
+            ]}>
+            </span>
+          <% end %>
+          <span class={["relative inline-flex rounded-full h-2 w-2", @dot_color]}>
+          </span>
+        </span>
+        <span class={[@font_color, "font-medium"]}>{@text}</span>
+      </div>
+      <span class="block text-left text-gray-500 text-xs ml-4 mt-1">
+        {@time}
+      </span>
     </div>
     """
   end
@@ -350,87 +579,6 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
           {render_slot(@link)}
         </div>
       </div>
-    </div>
-    """
-  end
-
-  def state_card(assigns) do
-    assigns =
-      assigns
-      |> assign(
-        time:
-          if !is_nil(assigns.state) do
-            DateTime.to_naive(assigns.timestamp)
-            |> Relative.format!("{relative}")
-          end
-      )
-
-    ~H"""
-    <div class="flex flex-col text-center">
-      <%= if is_nil(@state) do %>
-        <div class="flex items-center gap-x-2">
-          <span class="inline-block h-2 w-2 bg-gray-200 rounded-full"></span>
-          <span class="text-grey-200 italic">Nothing {@period}</span>
-        </div>
-      <% else %>
-        <.status_card state={@state} time={@time} />
-      <% end %>
-    </div>
-    """
-  end
-
-  def status_card(assigns) do
-    dot_color = %{
-      pending: "bg-gray-600",
-      running: "bg-blue-600",
-      success: "bg-green-600",
-      failed: "bg-red-600",
-      crashed: "bg-orange-600",
-      cancelled: "bg-gray-500",
-      killed: "bg-yellow-600",
-      exception: "bg-gray-300 border-solid border-2 border-gray-800",
-      lost: "bg-gray-300 border-solid border-2 border-gray-800"
-    }
-
-    font_color = %{
-      pending: "text-gray-500",
-      running: "text-blue-500",
-      success: "text-green-500",
-      failed: "text-red-500",
-      crashed: "text-orange-500",
-      cancelled: "text-gray-500",
-      killed: "text-yellow-800",
-      exception: "text-gray-600",
-      lost: "text-gray-600"
-    }
-
-    assigns =
-      assign(assigns,
-        text:
-          LightningWeb.RunLive.Components.display_text_from_state(assigns.state),
-        dot_color: Map.get(dot_color, assigns.state),
-        font_color: Map.get(font_color, assigns.state)
-      )
-
-    ~H"""
-    <div>
-      <div class="flex items-center gap-x-2">
-        <span class="inline-block relative flex h-2 w-2">
-          <%= if @state in [:pending, :running] do %>
-            <span class={[
-              "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75",
-              @dot_color
-            ]}>
-            </span>
-          <% end %>
-          <span class={["relative inline-flex rounded-full h-2 w-2", @dot_color]}>
-          </span>
-        </span>
-        <span class={[@font_color, "font-medium"]}>{@text}</span>
-      </div>
-      <span class="block text-left text-gray-500 text-xs ml-4 mt-1">
-        {@time}
-      </span>
     </div>
     """
   end

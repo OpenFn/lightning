@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.11.1",
+      version: "2.11.3",
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -54,7 +54,8 @@ defmodule Lightning.MixProject do
   def application do
     [
       mod: {Lightning.Application, [:timex]},
-      extra_applications: [:logger, :runtime_tools, :os_mon, :scrivener]
+      extra_applications: [:logger, :runtime_tools, :os_mon, :scrivener],
+      start_phases: [seed_prom_ex_telemetry: []]
     ]
   end
 
@@ -73,7 +74,7 @@ defmodule Lightning.MixProject do
       {:broadway_kafka, "~> 0.4.2"},
       {:bypass, "~> 2.1", only: :test},
       {:briefly, "~> 0.5.0"},
-      {:cachex, "~> 3.4"},
+      {:cachex, "~> 4.0"},
       {:cloak_ecto, "~> 1.3.0"},
       {:credo, "~> 1.7.3", only: [:test, :dev]},
       {:crontab, "~> 1.1"},
@@ -85,10 +86,10 @@ defmodule Lightning.MixProject do
       {:ex_doc, "~> 0.28", only: :dev, runtime: false},
       {:ex_json_schema, "~> 0.9.1"},
       {:ex_machina, "~> 2.8.0", only: :test},
-      {:excoveralls, "~> 0.15.0", only: [:test, :dev]},
+      {:excoveralls, "~> 0.18.5", only: [:test, :dev]},
       {:floki, ">= 0.30.0", only: :test},
       {:gettext, "~> 0.18"},
-      {:google_api_storage, "~> 0.40.1"},
+      {:google_api_storage, "~> 0.46.0"},
       {:hackney, "~> 1.18"},
       {:heroicons, "~> 0.5.3"},
       {:httpoison, "~> 2.0"},
@@ -103,16 +104,7 @@ defmodule Lightning.MixProject do
       {:mox, "~> 1.2.0", only: :test},
       {:oauth2, "~> 2.1"},
       {:oban, "~> 2.18"},
-      {:opentelemetry_exporter, "~> 1.6.0"},
-      {:opentelemetry, "~> 1.3.1"},
-      {:opentelemetry_api, "~> 1.2.2"},
-      {:opentelemetry_cowboy, "~> 0.2.1"},
-      {:opentelemetry_ecto, "~> 1.1.1"},
-      {:opentelemetry_liveview, "~> 1.0.0-rc.4"},
-      {:opentelemetry_oban, "~> 1.0.0"},
-      {:opentelemetry_phoenix, "~> 1.1.1"},
-      {:opentelemetry_tesla, "~> 2.2.0"},
-      {:petal_components, "~> 2.9"},
+      {:petal_components, "~> 3.0"},
       {:phoenix, "~> 1.7.11"},
       {:phoenix_ecto, "~> 4.6"},
       {:phoenix_html, "~> 4.1"},

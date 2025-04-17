@@ -31,10 +31,10 @@ defmodule Lightning.Projects.AuditTest do
         retention_policy: :retain_with_errors
       }
 
-      [audit_history_retention: {:insert, changeset, []}] =
+      [{"audit_history_retention_period", {:insert, changeset, []}}] =
         Audit.derive_events(
           Multi.new(),
-          project |> Project.changeset(attrs),
+          Project.changeset(project, attrs),
           user
         )
         |> Multi.to_list()
@@ -80,10 +80,10 @@ defmodule Lightning.Projects.AuditTest do
         dataclip_retention_period: 7
       }
 
-      [audit_dataclip_retention: {:insert, changeset, []}] =
+      [{"audit_dataclip_retention_period", {:insert, changeset, []}}] =
         Audit.derive_events(
           Multi.new(),
-          project |> Project.changeset(attrs),
+          Project.changeset(project, attrs),
           user
         )
         |> Multi.to_list()
@@ -120,13 +120,17 @@ defmodule Lightning.Projects.AuditTest do
       events_multi =
         Audit.derive_events(
           Multi.new(),
-          project |> Project.changeset(attrs),
+          Project.changeset(project, attrs),
           user
         )
         |> Multi.to_list()
 
       for {name, change} <- events_multi do
-        assert name in [:audit_dataclip_retention, :audit_history_retention]
+        assert name in [
+                 "audit_dataclip_retention_period",
+                 "audit_history_retention_period"
+               ]
+
         assert {:insert, _, []} = change
       end
     end

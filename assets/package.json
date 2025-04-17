@@ -18,6 +18,7 @@
     "@tailwindcss/container-queries": "^0.1.1",
     "@tailwindcss/forms": "^0.5.6",
     "@uidotdev/usehooks": "^2.4.1",
+    "ajv": "^8.17.1",
     "cronstrue": "^2.14.0",
     "d3-timer": "^3.0.1",
     "esbuild-plugin-copy": "^2.1.1",
@@ -39,12 +40,13 @@
     "tiny-invariant": "^1.3.3",
     "tiny-warning": "^1.0.3",
     "tippy.js": "^6.3.7",
+    "yaml": "^2.7.1",
     "zustand": "^4.3.7"
   },
   "devDependencies": {
     "@eslint-community/eslint-plugin-eslint-comments": "^4.4.1",
     "@eslint/js": "^9.21.0",
-    "@openfn/ws-worker": "^1.13.0",
+    "@openfn/ws-worker": "^1.13.2",
     "@total-typescript/ts-reset": "^0.6.1",
     "@tsconfig/node-lts": "^22.0.1",
     "@tsconfig/recommended": "^1.0.8",

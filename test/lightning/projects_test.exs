@@ -1686,7 +1686,7 @@ defmodule Lightning.ProjectsTest do
 
       result =
         Projects.get_projects_overview(user,
-          order_by: "last_updated_at_desc"
+          order_by: {:last_updated_at, :desc}
         )
 
       assert [
@@ -1718,7 +1718,7 @@ defmodule Lightning.ProjectsTest do
 
       result =
         Projects.get_projects_overview(user,
-          order_by: "last_updated_at_asc"
+          order_by: {:last_updated_at, :asc}
         )
 
       assert [
@@ -2020,6 +2020,48 @@ defmodule Lightning.ProjectsTest do
              }
     end
 
+    test "creates audit events when toggling the support user grant", %{
+      user: %{id: user_id} = user
+    } do
+      %{id: project_id} =
+        project = insert(:project, allow_support_access: false)
+
+      Projects.update_project(project, %{allow_support_access: true}, user)
+
+      changes = %Lightning.Auditing.Audit.Changes{
+        after: %{"allow_support_access" => true},
+        before: %{"allow_support_access" => false}
+      }
+
+      assert %{
+               item_type: "project",
+               item_id: ^project_id,
+               actor_id: ^user_id,
+               changes: ^changes
+             } = Repo.get_by!(Audit, event: "allow_support_access_updated")
+    end
+
+    test "creates audit events when toggling MFA", %{
+      user: %{id: user_id} = user
+    } do
+      %{id: project_id} =
+        project = insert(:project, requires_mfa: false)
+
+      Projects.update_project(project, %{requires_mfa: true}, user)
+
+      changes = %Lightning.Auditing.Audit.Changes{
+        after: %{"requires_mfa" => true},
+        before: %{"requires_mfa" => false}
+      }
+
+      assert %{
+               item_type: "project",
+               item_id: ^project_id,
+               actor_id: ^user_id,
+               changes: ^changes
+             } = Repo.get_by!(Audit, event: "requires_mfa_updated")
+    end
+
     test "does not create events if no user was provided" do
       project =
         insert(
@@ -2060,6 +2102,91 @@ defmodule Lightning.ProjectsTest do
       Projects.update_project(project, update_attrs, user)
 
       assert Audit |> Repo.all() |> Enum.empty?()
+    end
+  end
+
+  describe "delete_project_user!/1" do
+    test "deletes the project user and removes their credentials from the project" do
+      user1 = insert(:user)
+      user2 = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [
+            %{user_id: user1.id, role: :owner},
+            %{user_id: user2.id, role: :editor}
+          ]
+        )
+
+      project_user =
+        Enum.find(project.project_users, fn pu -> pu.user_id == user2.id end)
+
+      credential1 =
+        insert(:credential,
+          user: user1,
+          project_credentials: [%{project_id: project.id}]
+        )
+
+      credential2 =
+        insert(:credential,
+          user: user2,
+          project_credentials: [%{project_id: project.id}]
+        )
+
+      other_project = insert(:project)
+
+      credential3 =
+        insert(:credential,
+          user: user2,
+          project_credentials: [%{project_id: other_project.id}]
+        )
+
+      deleted_project_user = Projects.delete_project_user!(project_user)
+
+      assert deleted_project_user.id == project_user.id
+      refute Repo.get(Lightning.Projects.ProjectUser, project_user.id)
+
+      pc1 =
+        Repo.get_by(Lightning.Projects.ProjectCredential,
+          project_id: project.id,
+          credential_id: credential1.id
+        )
+
+      assert pc1 != nil
+
+      pc2 =
+        Repo.get_by(Lightning.Projects.ProjectCredential,
+          project_id: project.id,
+          credential_id: credential2.id
+        )
+
+      assert pc2 == nil
+
+      pc3 =
+        Repo.get_by(Lightning.Projects.ProjectCredential,
+          project_id: other_project.id,
+          credential_id: credential3.id
+        )
+
+      assert pc3 != nil
+
+      assert Repo.get(Lightning.Credentials.Credential, credential1.id)
+      assert Repo.get(Lightning.Credentials.Credential, credential2.id)
+      assert Repo.get(Lightning.Credentials.Credential, credential3.id)
+    end
+
+    test "works when user has no credentials in the project" do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user_id: user.id, role: :editor}])
+
+      project_user = List.first(project.project_users)
+
+      deleted_project_user = Projects.delete_project_user!(project_user)
+
+      assert deleted_project_user.id == project_user.id
+      refute Repo.get(Lightning.Projects.ProjectUser, project_user.id)
     end
   end
 

@@ -2,7 +2,6 @@ defmodule LightningWeb.WebhooksControllerTest do
   use LightningWeb.ConnCase, async: false
 
   import Lightning.Factories
-  import Mox
 
   alias Lightning.Extensions.MockRateLimiter
   alias Lightning.Extensions.StubRateLimiter
@@ -12,12 +11,6 @@ defmodule LightningWeb.WebhooksControllerTest do
   alias Lightning.Repo
   alias Lightning.Runs
   alias Lightning.WorkOrders
-
-  require Record
-  @fields Record.extract(:span, from: "deps/opentelemetry/include/otel_span.hrl")
-  Record.defrecordp(:span, @fields)
-
-  setup :set_mox_from_context
 
   describe "a POST request to '/i'" do
     setup [:stub_rate_limiter_ok, :stub_usage_limiter_ok]

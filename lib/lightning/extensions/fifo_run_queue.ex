@@ -19,12 +19,12 @@ defmodule Lightning.Extensions.FifoRunQueue do
   def enqueue_many(%Multi{} = multi), do: Repo.transaction(multi)
 
   @impl true
-  def claim(demand) do
+  def claim(demand, worker_name \\ nil) do
     fifo_runs_query =
       Query.eligible_for_claim()
       |> prepend_order_by([:priority])
 
-    Queue.claim(demand, fifo_runs_query)
+    Queue.claim(demand, fifo_runs_query, worker_name)
   end
 
   @impl true

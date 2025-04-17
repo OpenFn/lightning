@@ -111,12 +111,27 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :project_concurrency_disabled, :boolean, required: true
   attr :project_id, :string, required: true
   attr :max_concurrency, :integer, required: true
+  attr :base_url, :string, required: true
 
   def workflow_settings(assigns) do
     ~H"""
     <div class="md:grid md:grid-cols-4 md:gap-4 p-2 @container">
       <div class="col-span-6 @md:col-span-4">
         <.input type="text" label="Workflow Name" field={@form[:name]} />
+      </div>
+      <div class="col-span-6 @md:col-span-4">
+        <span class="flex grow flex-col mb-3">
+          <span class="text-sm font-semibold leading-6 text-gray-900">
+            Workflow as YAML
+          </span>
+          <.link
+            id="view-workflow-as-yaml-link"
+            patch={@base_url <> "?m=code"}
+            class="text-xs link"
+          >
+            View your workflow as YAML code
+          </.link>
+        </span>
       </div>
 
       <div class="col-span-6 @md:col-span-4">
@@ -231,7 +246,8 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :form, :map, required: true
   attr :on_change, :any, required: true
   attr :editable, :boolean, default: false
-  attr :project_user, :map, required: true
+  attr :project_user, :map
+  attr :project, :map
 
   def job_form(assigns) do
     ~H"""
@@ -260,7 +276,7 @@ defmodule LightningWeb.WorkflowLive.Components do
           id={"credential-picker-#{Phoenix.HTML.Form.input_value(@form, :id)}"}
           module={LightningWeb.JobLive.CredentialPicker}
           disabled={!@editable}
-          project_user={@project_user}
+          project={@project}
           on_change={@on_change}
           form={@form}
         />
@@ -421,15 +437,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                     auth_method <-
                       get_webhook_auth_methods_from_trigger(@selected_trigger)
                   }>
-                    <%= if auth_method.name |> String.length <= 50 do %>
-                      {auth_method.name} (<.humanized_auth_method_type auth_method={
-                        auth_method
-                      } />)
-                    <% else %>
-                      {auth_method.name |> String.slice(0..50)} ... (<.humanized_auth_method_type auth_method={
-                        auth_method
-                      } />)
-                    <% end %>
+                    {truncate_string(auth_method.name, 50)} (<span class="text-xs">{humanized_auth_method_type(auth_method)}</span>)
                   </li>
                 </ul>
 
@@ -454,22 +462,39 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
-  attr :auth_method, :map, required: true
+  defp truncate_string(string, length) do
+    if String.length(string) > length do
+      String.slice(string, 0..length) <> "..."
+    else
+      string
+    end
+  end
 
-  def humanized_auth_method_type(assigns) do
-    assigns =
-      assign(
-        assigns,
-        :humanized_type,
-        %{
-          api: "API",
-          basic: "Basic"
-        }
-        |> Map.get(assigns.auth_method.auth_type, "")
-      )
+  defp humanized_auth_method_type(auth_method) do
+    case auth_method do
+      %{auth_type: :api} -> "API"
+      %{auth_type: :basic} -> "Basic"
+      _ -> ""
+    end
+  end
 
+  attr :id, :string, required: true
+
+  def kafka_trigger_title(assigns) do
     ~H"""
-    <span>{@humanized_type}</span>
+    <div class="flex items-center">
+      Kafka Trigger
+      <span
+        class="text-sm"
+        id={"#{@id}-beta-tooltip"}
+        phx-hook="Tooltip"
+        data-allow-html="true"
+        data-placement="bottom"
+        aria-label="Kafka triggers are currently in beta and your Lightning administrator may disable them in the future. <a href='https://docs.openfn.org/documentation/build/triggers#known-sharp-edges-on-the-kafka-trigger-feature' target='_blank' class='link'>Learn about the sharp edges</a>"
+      >
+        <LightningWeb.Components.Common.beta_chip id={"#{@id}-beta"} />
+      </span>
+    </div>
     """
   end
 
@@ -706,7 +731,7 @@ defmodule LightningWeb.WorkflowLive.Components do
           {auth_method.name}
         </.td>
         <.td class="whitespace-nowrap text-sm text-gray-900">
-          <.humanized_auth_method_type auth_method={auth_method} />
+          <span>{humanized_auth_method_type(auth_method)}</span>
         </.td>
         <.td class="whitespace-nowrap text-sm text-gray-900">
           {render_slot(@linked_triggers, auth_method)}
@@ -721,57 +746,6 @@ defmodule LightningWeb.WorkflowLive.Components do
         </.td>
       </.tr>
     </.table>
-    """
-  end
-
-  def create_workflow_modal(assigns) do
-    ~H"""
-    <.modal id="workflow_modal" width="w-full max-w-xl">
-      <:title>
-        <div class="flex justify-between">
-          Let's get started
-          <button
-            phx-click={hide_modal("workflow_modal")}
-            type="button"
-            class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
-            aria-label={gettext("close")}
-          >
-            <span class="sr-only">Close</span>
-            <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
-          </button>
-        </div>
-      </:title>
-      <.form
-        for={@form}
-        id={@form.id}
-        phx-change="validate_workflow"
-        phx-submit="create_work_flow"
-        class="mx-6"
-      >
-        <.input field={@form[:name]} type="text" label="Workflow Name" />
-      </.form>
-      <:footer class="mx-6 mt-6">
-        <div class="flex gap-x-5 justify-end relative">
-          <.link
-            class="justify-center rounded-md bg-white px-4 py-3 text-sm font-semibold text-gray-500 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
-            phx-click={hide_modal("workflow_modal")}
-          >
-            Cancel
-          </.link>
-          <span class="group">
-            <button
-              disabled={not @form.source.valid?}
-              id="workflow_button"
-              form={@form.id}
-              type="submit"
-              class=" justify-center rounded-md bg-primary-600 disabled:bg-primary-300 px-6 py-3 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 disabled:outline-0 focus:outline-2 focus:outline-indigo-600 focus:outline-offset-2 active:outlin-2 active:outline-indigo-600 active:outline-offset-2"
-            >
-              Create Workflow
-            </button>
-          </span>
-        </div>
-      </:footer>
-    </.modal>
     """
   end
 

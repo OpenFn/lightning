@@ -72,6 +72,56 @@ defmodule Lightning.Extensions.FifoRunQueueTest do
       assert {:ok, []} = FifoRunQueue.claim(1)
     end
 
+    test "allows the worker name to be persisted on the claimed run" do
+      project1 = insert(:project)
+
+      %{triggers: [trigger1]} =
+        workflow1 =
+        insert(:simple_workflow, project: project1) |> with_snapshot()
+
+      {:ok, %{runs: [run1]}} =
+        WorkOrders.create_for(trigger1,
+          workflow: workflow1,
+          dataclip: params_with_assocs(:dataclip)
+        )
+
+      {:ok, %{runs: [run2]}} =
+        WorkOrders.create_for(trigger1,
+          workflow: workflow1,
+          dataclip: params_with_assocs(:dataclip)
+        )
+
+      FifoRunQueue.claim(2, "my.worker.name")
+
+      assert %{worker_name: "my.worker.name"} = Lightning.Repo.reload!(run1)
+      assert %{worker_name: "my.worker.name"} = Lightning.Repo.reload!(run2)
+    end
+
+    test "sets the worker name as nil if none is provided" do
+      project1 = insert(:project)
+
+      %{triggers: [trigger1]} =
+        workflow1 =
+        insert(:simple_workflow, project: project1) |> with_snapshot()
+
+      {:ok, %{runs: [run1]}} =
+        WorkOrders.create_for(trigger1,
+          workflow: workflow1,
+          dataclip: params_with_assocs(:dataclip)
+        )
+
+      {:ok, %{runs: [run2]}} =
+        WorkOrders.create_for(trigger1,
+          workflow: workflow1,
+          dataclip: params_with_assocs(:dataclip)
+        )
+
+      FifoRunQueue.claim(2)
+
+      assert %{worker_name: nil} = Lightning.Repo.reload!(run1)
+      assert %{worker_name: nil} = Lightning.Repo.reload!(run2)
+    end
+
     test "is limited by workflow concurrency" do
       [id1, id2] =
         Enum.map(1..2, fn _i -> Ecto.UUID.generate() end)

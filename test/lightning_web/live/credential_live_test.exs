@@ -86,6 +86,44 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ credential.name
     end
 
+    test "lists all credentials for support user", %{
+      conn: conn,
+      user: user,
+      credential: credential
+    } do
+      _user = Repo.update!(Changeset.change(user, %{support_user: true}))
+
+      %{credential: support_credential} =
+        insert(:project_credential,
+          project: build(:project, allow_support_access: true)
+        )
+
+      {:ok, _index_live, html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      assert html =~ "Credentials"
+      assert html =~ "Projects with access"
+      assert html =~ "Type"
+
+      assert html =~
+               credential.name |> Phoenix.HTML.Safe.to_iodata() |> to_string()
+
+      [[], project_names] =
+        Credentials.list_credentials(%User{id: credential.user_id})
+        |> Enum.sort_by(&(&1.project_credentials |> length))
+        |> Enum.map(fn c ->
+          Enum.map(c.projects, fn p -> p.name end)
+        end)
+
+      assert html =~ project_names |> Enum.join(", ")
+
+      assert html =~ "Edit"
+      assert html =~ "Production"
+      assert html =~ credential.schema
+      assert html =~ credential.name
+      assert html =~ support_credential.schema
+      assert html =~ support_credential.name
+    end
+
     # https://github.com/OpenFn/Lightning/issues/273 - allow users to delete
 
     test "can schedule for deletion a credential that is not associated to any activity",
@@ -265,7 +303,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       view
       |> element("#delete_credential_#{credential.id}_modal_confirm_button")
-      |> render_click() =~ "Credential deleted successfully!"
+      |> render_click() =~ "Credential deleted"
 
       {:ok, _view, html} =
         live(conn, ~p"/projects/#{project}/settings#credentials",
@@ -279,6 +317,37 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert credential.scheduled_deletion
     end
+
+    test "doesn't show delete credential to support user", %{
+      conn: conn,
+      user: user
+    } do
+      _user = Repo.update!(Changeset.change(user, %{support_user: true}))
+
+      project =
+        insert(:project,
+          allow_support_access: true,
+          project_users: [%{user: build(:user), role: :owner}]
+        )
+
+      credential =
+        insert(:credential,
+          user: build(:user),
+          project_credentials: [%{project: project}]
+        )
+
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      assert html =~ credential.name
+
+      refute view
+             |> has_element?(
+               "#delete_credential_#{credential.id}_modal_confirm_button"
+             )
+    end
   end
 
   describe "Clicking new from the list view" do
@@ -288,6 +357,80 @@ defmodule LightningWeb.CredentialLiveTest do
       project: project1
     } do
       project2 = insert(:project, project_users: [%{user: user, role: :admin}])
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      index_live |> select_credential_type("raw")
+      index_live |> click_continue()
+
+      assert index_live
+             |> has_element?(
+               "#credential-form-new textarea[name='credential[body]']"
+             )
+
+      index_live
+      |> element("#project-credentials-list-new")
+      |> render_change(%{"project_id" => project1.id})
+
+      index_live
+      |> element("#add-project-credential-button-new", "Add")
+      |> render_click()
+
+      assert index_live
+             |> form("#credential-form-new", credential: %{name: ""})
+             |> render_change() =~ "can&#39;t be blank"
+
+      assert index_live
+             |> form("#credential-form-new", credential: %{name: "MailChimp'24"})
+             |> render_change() =~ "credential name has invalid format"
+
+      index_live
+      |> element("#project-credentials-list-new")
+      |> render_change(%{"project_id" => project2.id})
+
+      index_live
+      |> element("#add-project-credential-button-new", "Add")
+      |> render_click()
+
+      {:ok, _index_live, html} =
+        index_live
+        |> form("#credential-form-new", credential: @create_attrs)
+        |> render_submit()
+        |> follow_redirect(conn, ~p"/credentials")
+
+      {path, flash} = assert_redirect(index_live)
+
+      assert flash == %{"info" => "Credential created successfully"}
+      assert path == "/credentials"
+
+      assert html =~ project1.name
+      assert html =~ @create_attrs.name
+
+      credential =
+        Repo.get_by(Credential, name: @create_attrs.name)
+        |> Repo.preload(:projects)
+
+      assert MapSet.equal?(
+               MapSet.new(credential.projects, & &1.id),
+               MapSet.new([project1.id, project2.id])
+             )
+    end
+
+    test "allows a support user to define and save a new raw credential", %{
+      conn: conn,
+      user: user,
+      project: project1
+    } do
+      _user = Repo.update!(Changeset.change(user, %{support_user: true}))
+
+      project1 =
+        Repo.update!(Changeset.change(project1, %{allow_support_access: true}))
+
+      project2 =
+        insert(:project,
+          allow_support_access: true,
+          project_users: [%{user: build(:user), role: :admin}]
+        )
 
       {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
@@ -680,6 +823,37 @@ defmodule LightningWeb.CredentialLiveTest do
                end)
     end
 
+    test "cannot add new project with access by support user", %{
+      conn: conn,
+      user: user
+    } do
+      _user = Repo.update!(Changeset.change(user, %{support_user: true}))
+
+      project =
+        insert(:project,
+          allow_support_access: true,
+          project_users: [build(:project_user, user: build(:user))]
+        )
+
+      project_user = insert(:project_user, project: project, user: build(:user))
+
+      %{credential: credential} =
+        insert(:project_credential,
+          credential:
+            build(:credential,
+              name: "my-credential",
+              schema: "http",
+              body: %{"username" => "test", "password" => "test"},
+              user: project_user.user
+            ),
+          project: project
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      refute has_element?(view, "#project-credentials-list-#{credential.id}")
+    end
+
     test "removes project with access", %{
       conn: conn,
       user: user
@@ -812,69 +986,6 @@ defmodule LightningWeb.CredentialLiveTest do
       {_path, flash} = assert_redirect(index_live)
       assert flash == %{"info" => "Credential updated successfully"}
     end
-
-    # test "blocks credential transfer to invalid owner; allows to valid owner", %{
-    #   conn: conn,
-    #   user: first_owner,
-    #   credential: credential_1
-    # } do
-    #   user_2 = insert(:user)
-    #   user_3 = insert(:user)
-
-    #   project =
-    #     insert(:project,
-    #       name: "myproject",
-    #       project_users: [%{user_id: first_owner.id}, %{user_id: user_2.id}]
-    #     )
-
-    #   credential =
-    #     insert(:credential,
-    #       user: first_owner,
-    #       name: "the one for giving away",
-    #       project_credentials: [
-    #         %{project: project, credential: nil}
-    #       ]
-    #     )
-
-    #   {:ok, index_live, html} = live(conn, ~p"/credentials")
-
-    #   # both credentials appear in the list
-    #   assert html =~ credential_1.name
-    #   assert html =~ credential.name
-
-    #   assert html =~ first_owner.id
-    #   assert html =~ user_2.id
-    #   assert html =~ user_3.id
-
-    #   assert index_live
-    #          |> form("#credential-form-#{credential.id}",
-    #            credential: Map.put(@update_attrs, :user_id, user_3.id)
-    #          )
-    #          |> render_change() =~ "Invalid owner"
-
-    #   #  Can't transfer to user who doesn't have access to right projects
-    #   assert index_live |> submit_disabled()
-
-    #   {:ok, _index_live, html} =
-    #     index_live
-    #     |> form("#credential-form-#{credential.id}",
-    #       credential: %{
-    #         body: "{\"a\":\"new_secret\"}",
-    #         user_id: user_2.id
-    #       }
-    #     )
-    #     |> render_submit()
-    #     |> follow_redirect(
-    #       conn,
-    #       ~p"/credentials"
-    #     )
-
-    #   # Once the transfer is made, the credential should not show up in the list
-
-    #   assert html =~ "Credential updated successfully"
-    #   assert html =~ credential_1.name
-    #   refute html =~ "the one for giving away"
-    # end
   end
 
   describe "Authorizing an oauth credential" do
@@ -2764,7 +2875,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert_email_sent(
         to: Swoosh.Email.Recipient.format(credential.user),
-        subject: "Confirm your credential transfer"
+        subject: "Transfer #{credential.name} to #{receiver.first_name}"
       )
 
       assert Repo.get_by(Lightning.Accounts.UserToken,
@@ -2975,6 +3086,27 @@ defmodule LightningWeb.CredentialLiveTest do
         |> follow_redirect(conn, ~p"/credentials")
 
       assert html =~ "Could not revoke transfer"
+    end
+  end
+
+  describe "credential type picker modal" do
+    test "displays credential type modal with icons", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/credentials")
+
+      html_tree = Floki.parse_document!(html)
+
+      for adaptor <- ["postgresql", "dhis2", "http"] do
+        adaptor_label =
+          Floki.find(
+            html_tree,
+            "label[for='credential-schema-picker_selected_#{adaptor}']"
+          )
+
+        adaptor_icon = Floki.find(adaptor_label, "object")
+        assert length(adaptor_icon) > 0
+        img_src = adaptor_icon |> Floki.attribute("data") |> List.first()
+        assert img_src =~ "/images/adaptors/#{adaptor}-square.png"
+      end
     end
   end
 

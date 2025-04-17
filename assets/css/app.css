@@ -109,6 +109,14 @@
 @import 'reactflow/dist/style.css' layer(utilities);
 @import '../../deps/petal_components/assets/default.css';
 
+@layer base {
+  /* Use the pointer for buttons */
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
 @utility link {
   @apply cursor-pointer
       /* underline */

@@ -17,6 +17,65 @@ and this project adheres to
 
 ### Added
 
+- AI Assistant: add metadata column to chat sessions
+  [#3054](https://github.com/OpenFn/lightning/issues/3054)
+  
+### Changed
+
+### Fixed
+
+## [v2.11.3-pre.0] - 2025-04-16
+
+### Added
+
+- Enabled displaying full workflow name when hovering workflow name in the
+  workflows list page [#2894](https://github.com/OpenFn/lightning/issues/2894)
+- Enabled clickable rows in the workflows list page
+  [#3047](https://github.com/OpenFn/lightning/issues/3047)
+- Added sorting & filtering workflows
+  [#3046](https://github.com/OpenFn/lightning/issues/3046)
+- Add helper function to create latest snapshot
+  [#3099](https://github.com/OpenFn/lightning/issues/3099)
+- Restart the credential setup from selecting the credential type
+  [#2284](https://github.com/OpenFn/lightning/issues/2284)
+- Enable Support User and adds audit trail for MFA.
+  [#3072](https://github.com/OpenFn/lightning/issues/3072)
+- Allow users to view and copy their workflow as a code
+  [#3016](https://github.com/OpenFn/lightning/issues/3016)
+- Allow users to create workflow via YAML import
+  [#3013](https://github.com/OpenFn/lightning/issues/3013)
+- Make provision for the inclusion of 'external' metrics.
+  [#3096](https://github.com/OpenFn/lightning/issues/3096)
+- Introduce 'seeding' of PromEx event metrics
+  [#3096](https://github.com/OpenFn/lightning/issues/3096)
+- When claiming a run, a worker name can optionally be provided to the
+  adaptor that is responsible for claiming runs.
+  [#3079](https://github.com/OpenFn/lightning/issues/3079)
+- Persist worker name provided by worker when claiming a run.
+  [#3079](https://github.com/OpenFn/lightning/issues/3079)
+
+### Changed
+
+- Adjusted flash messages
+- Updated dependencies [#3086](https://github.com/OpenFn/lightning/pull/3086):
+  - `phoenix` from 1.7.20 to 1.7.21
+  - `phoenix_live_view` from 1.0.5 to 1.0.9
+  - `petal_components` from 2.9.0 to 3.0.1
+- Move new workflow form into the edit page
+  [#3083](https://github.com/OpenFn/lightning/issues/3083)
+- Added logos & case-insensitive sorting of credential types
+  [#3107](https://github.com/OpenFn/lightning/pull/3107)
+- Added a "BETA" label to the Kafka trigger type
+  [#3098](https://github.com/OpenFn/lightning/pull/3098)
+
+## [v2.11.2] - 2025-04-10
+
+### Added
+
+- Remove Credentials for Collaborators Removed from a Project
+  [#2942](https://github.com/OpenFn/lightning/issues/2942)
+- Enable Credential Transfer In Projects Credentials Table
+  [#2978](https://github.com/OpenFn/lightning/issues/2978)
 - Allow possibility to inject components for implementing GDPR compliance
   [PR#3056](https://github.com/OpenFn/lightning/pull/3056)
 - Change edge color in the workflow when there is an error
@@ -28,10 +87,10 @@ and this project adheres to
   [#3061](https://github.com/OpenFn/lightning/issues/3061)
 - Default to latest specific version instead of @latest when selecting adaptors
   [#2843](https://github.com/OpenFn/lightning/issues/2843)
+- Remove OpenTelemetry suport as it is not currently in use
+  [#3081](https://github.com/OpenFn/lightning/issues/3081)
 
-### Fixed
-
-## [v2.11.1-pre.1] - 2025-03-26
+## [v2.11.1] - 2025-04-03
 
 ### Added
 
