@@ -35,7 +35,7 @@ const createNewWorkflow = (): Required<ChangeArgs> => {
 export const WorkflowStore: WithActionProps = (props) => {
   const pendingChanges = React.useRef<PendingAction[]>([]);
   const workflowLoadParamsStart = React.useRef<Date | null>(null)
-  const { applyPatches, setState, add, setSelection, subscribe } = useWorkflowStore();
+  const { applyPatches, setState, add, setSelection, subscribe, setDisabled } = useWorkflowStore();
 
   const pushPendingChange = React.useCallback((pendingChange: PendingAction) => {
     return new Promise((resolve, reject) => {
@@ -111,6 +111,12 @@ export const WorkflowStore: WithActionProps = (props) => {
     console.time('workflow-params load');
     props.pushEventTo('get-initial-state', {});
   }, [add, props, setState, setSelection])
+
+  React.useEffect(() => {
+    props.handleEvent('set-disabled', (response: { disabled: boolean }) => {
+      setDisabled(response.disabled);
+    });
+  }, [props, setDisabled])
 
   return <></>
 }
