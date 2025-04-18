@@ -17,7 +17,10 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       refute view |> element("#workflow-importer") |> has_element?()
     end
 
-    test "switches to import view when import button is clicked", %{conn: conn, project: project} do
+    test "switches to import view when import button is clicked", %{
+      conn: conn,
+      project: project
+    } do
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
 
       # Click import button
@@ -31,7 +34,10 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       assert view |> element("#workflow-file") |> has_element?()
     end
 
-    test "can switch back to template view from import view", %{conn: conn, project: project} do
+    test "can switch back to template view from import view", %{
+      conn: conn,
+      project: project
+    } do
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
 
       # Switch to import view
@@ -64,8 +70,13 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
 
       # Select a template
-      assert view |> element("#template-input-base-webhook-template") |> has_element?()
-      assert view |> element("#template-input-base-cron-template") |> has_element?()
+      assert view
+             |> element("#template-input-base-webhook-template")
+             |> has_element?()
+
+      assert view
+             |> element("#template-input-base-cron-template")
+             |> has_element?()
     end
   end
 
@@ -84,7 +95,10 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       assert view |> element("#workflow-file") |> has_element?()
     end
 
-    test "dropzone has proper attributes for drag and drop", %{conn: conn, project: project} do
+    test "dropzone has proper attributes for drag and drop", %{
+      conn: conn,
+      project: project
+    } do
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
 
       # Switch to import view
@@ -92,7 +106,9 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
 
       # Verify dropzone has necessary attributes for the JavaScript hook
       assert view
-             |> element("#workflow-dropzone[phx-hook='FileDropzone'][data-target='#workflow-file']")
+             |> element(
+               "#workflow-dropzone[phx-hook='FileDropzone'][data-target='#workflow-file']"
+             )
              |> has_element?()
     end
   end
