@@ -67,6 +67,8 @@ and this project adheres to
   [#3107](https://github.com/OpenFn/lightning/pull/3107)
 - Added a "BETA" label to the Kafka trigger type
   [#3098](https://github.com/OpenFn/lightning/pull/3098)
+- Simplified adding credentials to projects
+  [#3034](https://github.com/OpenFn/lightning/issues/3034)
 
 ## [v2.11.2] - 2025-04-10
 
