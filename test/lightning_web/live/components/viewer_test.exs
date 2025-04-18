@@ -37,7 +37,7 @@ defmodule LightningWeb.Components.ViewerTest do
       assert html =~ "No logs were received for this run."
     end
 
-    test "shows 'Waiting for worker...' when run state is :available", %{
+    test "shows 'Waiting for worker' when run state is :available", %{
       workflow: %{jobs: [_job | _rest]}
     } do
       html =
@@ -49,10 +49,10 @@ defmodule LightningWeb.Components.ViewerTest do
           run_id: "run-id"
         )
 
-      assert html =~ "Waiting for worker..."
+      assert html =~ "Waiting for worker"
     end
 
-    test "shows 'Creating runtime & installing adaptors...' when run state is :claimed",
+    test "shows 'Creating runtime & installing adaptors' when run state is :claimed",
          %{
            workflow: %{jobs: [_job | _rest]}
          } do
@@ -65,7 +65,7 @@ defmodule LightningWeb.Components.ViewerTest do
           run_id: "run-id"
         )
 
-      assert html =~ "Creating runtime &amp; installing adaptors..."
+      assert html =~ "Creating runtime &amp; installing adaptors"
     end
   end
 
