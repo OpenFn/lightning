@@ -17,38 +17,6 @@ const hyphenate = (str: string) => {
   return str.replace(/\s+/g, '-');
 };
 
-export const defaultWorkflowState = (): WorkflowState => {
-  const trigger: StateTrigger = {
-    id: randomUUID(),
-    type: 'webhook',
-    enabled: true,
-  };
-
-  // intentionally left out adaptor because of the @latest stuff
-  const job: StateJob = {
-    id: randomUUID(),
-    name: 'New Job',
-    body: '// job body here',
-  };
-
-  const edge: StateEdge = {
-    id: randomUUID(),
-    source_trigger_id: trigger.id,
-    target_job_id: job.id,
-    enabled: true,
-    condition_type: 'always',
-  };
-
-  const workflowState: WorkflowState = {
-    name: '',
-    jobs: [job],
-    edges: [edge],
-    triggers: [trigger],
-  };
-
-  return workflowState;
-};
-
 export const convertWorkflowStateToSpec = (
   workflowState: WorkflowState
 ): WorkflowSpec => {
@@ -233,6 +201,12 @@ export const parseWorkflowYAML = (yamlString: string): WorkflowSpec => {
     },
     {}
   );
+
+  return parsedYAML as WorkflowSpec;
+};
+
+export const parseWorkflowTemplate = (code: string): WorkflowSpec => {
+  const parsedYAML = YAML.parse(code);
 
   return parsedYAML as WorkflowSpec;
 };

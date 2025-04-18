@@ -179,8 +179,16 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # the panel for creating workflow appears
       html = render(view)
       assert html =~ "Create workflow"
-      assert html =~ "How do you want to name your workflow?"
+      assert html =~ "Describe your workflow in a few words here"
       assert has_element?(view, "form#new-workflow-name-form")
+      assert has_element?(view, "form#choose-workflow-template-form")
+
+      # the base webhook template is selected by default
+      assert view
+             |> element(
+               "form#choose-workflow-template-form label[data-selected='true']"
+             )
+             |> render() =~ "base-webhook"
 
       # now let's fill in the name
       workflow_name = "My Workflow"
@@ -195,8 +203,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # the panel disappears
       html = render(view)
       refute html =~ "Create workflow"
-      refute html =~ "How do you want to name your workflow?"
+      refute html =~ "Describe your workflow in a few words here"
       refute has_element?(view, "form#new-workflow-name-form")
+      refute has_element?(view, "form#choose-workflow-template-form")
 
       # save button is now present
       assert view
@@ -303,6 +312,70 @@ defmodule LightningWeb.WorkflowLive.EditTest do
     end
 
     @tag role: :editor
+    test "creating a new workflow via template copies the name of the template",
+         %{conn: conn, project: project} do
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/new", on_error: :raise)
+
+      # the panel for creating workflow is visible
+      html = render(view)
+      assert html =~ "Create workflow"
+      assert html =~ "Describe your workflow in a few words here"
+      assert has_element?(view, "form#new-workflow-name-form")
+      assert has_element?(view, "form#choose-workflow-template-form")
+
+      # the base webhook template is selected by default
+      template_name = "base-webhook"
+
+      assert view
+             |> element(
+               "form#choose-workflow-template-form label[data-selected='true']"
+             )
+             |> render() =~ template_name
+
+      # lets dummy send the content or base template
+      job_id = Ecto.UUID.generate()
+      trigger_id = Ecto.UUID.generate()
+
+      payload = %{
+        "triggers" => [%{"id" => trigger_id, "type" => "webhook"}],
+        "jobs" => [
+          %{
+            "id" => job_id,
+            "name" => "random job",
+            "body" => "// comment"
+          }
+        ],
+        "edges" => [
+          %{
+            "id" => Ecto.UUID.generate(),
+            "source_trigger_id" => trigger_id,
+            "condition_type" => "always",
+            "target_job_id" => job_id
+          }
+        ]
+      }
+
+      view
+      |> with_target("#new-workflow-panel")
+      |> render_click("template-parsed", %{"workflow" => payload})
+
+      # click continue
+      view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
+
+      click_save(view)
+
+      expected_workflow_name = "Copy of #{template_name}"
+
+      assert Lightning.Repo.exists?(
+               from w in Workflow,
+                 where:
+                   w.project_id == ^project.id and
+                     w.name == ^expected_workflow_name
+             )
+    end
+
+    @tag role: :editor
     test "creating a new workflow via import", %{conn: conn, project: project} do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/new", on_error: :raise)
@@ -310,8 +383,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       # the panel for creating workflow is visible
       html = render(view)
       assert html =~ "Create workflow"
-      assert html =~ "How do you want to name your workflow?"
+      assert html =~ "Describe your workflow in a few words here"
       assert has_element?(view, "form#new-workflow-name-form")
+      assert has_element?(view, "form#choose-workflow-template-form")
 
       refute html =~ "Upload a YAML file"
 
@@ -319,8 +393,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       html = view |> element("#import-workflow-btn") |> render_click()
 
       assert html =~ "Upload a YAML file"
-      refute html =~ "How do you want to name your workflow?"
+      refute html =~ "Describe your workflow in a few words here"
       refute has_element?(view, "form#new-workflow-name-form")
+      refute has_element?(view, "form#choose-workflow-template-form")
 
       assert has_element?(view, "#workflow-importer[phx-hook='YAMLToWorkflow']")
 
