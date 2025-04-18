@@ -25,6 +25,8 @@ import {
   CloseNodePanelViaEscape,
 } from './KeyHandlers';
 
+import FileDropzone from "./FileDropzone";
+
 export {
   LogLineHighlight,
   WorkflowToYAML,
@@ -41,6 +43,7 @@ export {
   AltRunViaCtrlShiftEnter,
   CloseInspectorPanelViaEscape,
   CloseNodePanelViaEscape,
+  FileDropzone,
 };
 
 export { ReactComponent } from '#/react/hooks';

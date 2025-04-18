@@ -272,7 +272,12 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
       data-error-el="workflow-errors"
       class="flex flex-col gap-3 h-full"
     >
-      <div class="mt-2 flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-10">
+      <div
+        id="workflow-dropzone"
+        phx-hook="FileDropzone"
+        class="mt-2 flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-10 transition-colors duration-200 ease-in-out"
+        data-target="#workflow-file"
+      >
         <div class="text-center">
           <Heroicons.cloud_arrow_up class="mx-auto size-10 text-gray-300" />
           <div class="mt-4 flex text-sm/6 text-gray-600">
@@ -290,7 +295,6 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
                 phx-update="ignore"
               />
             </label>
-            <%!-- TODO - add drag and drop --%>
             <p class="pl-1">or drag and drop</p>
           </div>
           <p class="text-xs/5 text-gray-600">YML or YAML, up to 8MB</p>
