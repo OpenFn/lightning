@@ -141,8 +141,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         </div>
         <div class="px-4 py-4 sm:p-3 flex flex-row justify-center gap-3 h-max">
           <.button
-            id="move-back-to-templates-btn"
             :if={@selected_method == "import"}
+            id="move-back-to-templates-btn"
             type="button"
             variant="secondary"
             phx-click="choose-another-method"
@@ -152,8 +152,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
             Back
           </.button>
           <.button
-            id="import-workflow-btn"
             :if={@selected_method != "import"}
+            id="import-workflow-btn"
             type="button"
             class="inline-flex gap-x-1.5"
             phx-click="choose-another-method"
