@@ -1050,7 +1050,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       # the select input now exists
       assert has_element?(view, "select[name='manual[dataclip_id]']")
 
-      # the wiped message is nolonger displayed
+      # the wiped message is no longer displayed
       refute render(form) =~ "data for this step has not been retained"
 
       assert has_element?(view, "textarea[name='manual[body]']")
@@ -1127,7 +1127,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       assert has_element?(view, "textarea[name='manual[body]']"),
              "dataclip body input exists"
 
-      # the wiped message is nolonger displayed
+      # the wiped message is no longer displayed
       refute render(form) =~ "data for this step has not been retained"
 
       # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
@@ -1207,7 +1207,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       assert has_element?(view, "textarea[name='manual[body]']"),
              "dataclip body input exists"
 
-      # the job not run message is nolonger displayed
+      # the job not run message is no longer displayed
       refute render(form) =~ "This job was not/is not yet included in this Run"
 
       # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
@@ -1495,7 +1495,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       # make sure that the event is processed by liveview
       render(view)
 
-      # dataclip body is nolonger present
+      # dataclip body is no longer present
       refute has_element?(
                view,
                "#manual-job-#{job_1.id} [phx-hook='DataclipViewer'][data-id='#{input_dataclip.id}']"
@@ -1694,7 +1694,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       # action button is rendered correctly.
       refute has_element?(view, "button", "Retry from here")
-      refute has_element?(view, "button", "Processing"), "nolonger processing"
+      refute has_element?(view, "button", "Processing"), "no longer processing"
       assert has_element?(view, "button", "Create New Work Order")
 
       # make sure event is processed by the run viewer

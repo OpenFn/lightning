@@ -19,6 +19,8 @@ and this project adheres to
 
 - AI Assistant: add metadata column to chat sessions
   [#3054](https://github.com/OpenFn/lightning/issues/3054)
+- Added a message to explain to the user why they're waiting for a run
+  [#3131](https://github.com/OpenFn/lightning/issues/3131)
 - Allow users to create workflows from base templates
   [#3110](https://github.com/OpenFn/lightning/issues/3110)
 
