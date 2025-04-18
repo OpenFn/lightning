@@ -325,13 +325,25 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert has_element?(view, "form#choose-workflow-template-form")
 
       # the base webhook template is selected by default
-      template_name = "base-webhook"
+      assert view
+             |> element(
+               "form#choose-workflow-template-form label[data-selected='true']"
+             )
+             |> render() =~ "base-webhook"
+
+      # lets select the cron one
+      template_id = "base-cron-template"
+      cron_template_name = "base-cron"
+
+      view
+      |> form("#choose-workflow-template-form", %{template_id: template_id})
+      |> render_change()
 
       assert view
              |> element(
                "form#choose-workflow-template-form label[data-selected='true']"
              )
-             |> render() =~ template_name
+             |> render() =~ cron_template_name
 
       # lets dummy send the content or base template
       job_id = Ecto.UUID.generate()
@@ -365,7 +377,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       click_save(view)
 
-      expected_workflow_name = "Copy of #{template_name}"
+      expected_workflow_name = "Copy of #{cron_template_name}"
 
       assert Lightning.Repo.exists?(
                from w in Workflow,
