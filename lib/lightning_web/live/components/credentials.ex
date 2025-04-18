@@ -184,7 +184,6 @@ defmodule LightningWeb.Components.Credentials do
           %{
             select_id: "project-credentials-list-#{assigns.id}",
             prompt: "Grant projects access to this credential",
-            add_project_id: "add-project-credential-button-#{assigns.id}",
             remove_project_id: "remove-project-credential-button-#{assigns.id}"
           }
 
@@ -192,7 +191,6 @@ defmodule LightningWeb.Components.Credentials do
           %{
             select_id: "project-oauth-clients-list-#{assigns.id}",
             prompt: "Grant projects access to this OAuth client",
-            add_project_id: "add-project-oauth-client-button-#{assigns.id}",
             remove_project_id: "remove-project-oauth-client-button-#{assigns.id}"
           }
       end
@@ -208,40 +206,25 @@ defmodule LightningWeb.Components.Credentials do
         >
           Project
         </label>
-
-        <div class="flex w-full items-center gap-2 pb-3 mt-1">
-          <div class="grow">
-            <select
-              id={@select_id}
-              name={:project_id}
-              class={[
-                "block w-full rounded-lg border border-secondary-300 bg-white",
-                "sm:text-sm shadow-xs",
-                "focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-primary-200/50",
-                "disabled:cursor-not-allowed "
-              ]}
-              phx-change="select_project"
-              phx-target={@phx_target}
-            >
-              <option value="">{@prompt}</option>
-              {Phoenix.HTML.Form.options_for_select(
-                map_projects_for_select(@available_projects),
-                @selected
-              )}
-            </select>
-          </div>
-
-          <div class="grow-0 items-right">
-            <.button
-              id={@add_project_id}
-              disabled={disable_add_button(@available_projects, @selected_projects)}
-              phx-target={@phx_target}
-              phx-value-project_id={@selected}
-              phx-click="add_selected_project"
-            >
-              Add
-            </.button>
-          </div>
+        <div class="mt-1 pb-3">
+          <select
+            id={@select_id}
+            name="project_id"
+            class={[
+              "block w-full rounded-lg border border-secondary-300 bg-white",
+              "sm:text-sm shadow-xs",
+              "focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-primary-200/50",
+              "disabled:cursor-not-allowed "
+            ]}
+            phx-change="add_selected_project"
+            phx-target={@phx_target}
+          >
+            <option value="">{@prompt}</option>
+            {Phoenix.HTML.Form.options_for_select(
+              map_projects_for_select(@available_projects),
+              ""
+            )}
+          </select>
         </div>
 
         <div class="overflow-auto max-h-32">
@@ -273,10 +256,6 @@ defmodule LightningWeb.Components.Credentials do
     Enum.map(projects, fn %{id: id, name: name} ->
       {name, id}
     end)
-  end
-
-  defp disable_add_button(available_projects, selected) do
-    selected == "" or selected == nil or available_projects == []
   end
 
   attr :users, :list, required: true

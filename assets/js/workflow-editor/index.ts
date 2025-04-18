@@ -1,15 +1,12 @@
 // Hook for Workflow Editor Component
-import { DEFAULT_TEXT } from '../editor/Editor';
 import type { PhoenixHook } from '../hooks/PhoenixHook';
 import type { Lightning } from '../workflow-diagram/types';
-import { randomUUID } from '../common';
 import type { mount } from './component';
 import {
   type Patch,
   type PendingAction,
   type WorkflowProps,
   createWorkflowStore,
-  type ChangeArgs,
 } from './store';
 
 export type WorkflowEditorEntrypoint = PhoenixHook<
@@ -39,33 +36,6 @@ export type WorkflowEditorEntrypoint = PhoenixHook<
   },
   { baseUrl?: string | undefined }
 >;
-
-const createNewWorkflow = (): Required<ChangeArgs> => {
-  const triggers = [
-    {
-      id: randomUUID(),
-      type: 'webhook' as 'webhook',
-    },
-  ];
-  const jobs = [
-    {
-      id: randomUUID(),
-      name: 'New job',
-      adaptor: '@openfn/language-common@latest',
-      body: DEFAULT_TEXT,
-    },
-  ];
-
-  const edges = [
-    {
-      id: randomUUID(),
-      source_trigger_id: triggers[0].id,
-      target_job_id: jobs[0].id,
-      condition_type: 'always',
-    },
-  ];
-  return { triggers, jobs, edges };
-};
 
 // To support temporary workflow editor metrics submissions to Lightning
 // server.
@@ -248,12 +218,6 @@ export default {
     workflow_params: WorkflowProps;
   }) {
     this.workflowStore.setState(_state => payload);
-
-    if (!payload.triggers.length && !payload.jobs.length) {
-      // Create a placeholder chart and push it back up to the server
-      const diff = createNewWorkflow();
-      this.workflowStore.getState().add(diff);
-    }
 
     this.maybeMountComponent();
     let end = new Date();

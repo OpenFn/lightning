@@ -177,7 +177,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           :if={@show_new_workflow_panel}
           id="new-workflow-panel"
           module={LightningWeb.WorkflowLive.NewWorkflowComponent}
-          workflow_form={@workflow_form}
+          workflow={@workflow}
           project_id={@project.id}
         />
         <div class="relative h-full flex grow" id={"workflow-edit-#{@workflow.id}"}>

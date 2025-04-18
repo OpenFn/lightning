@@ -1,10 +1,6 @@
 import type { PhoenixHook } from '../hooks/PhoenixHook';
 import type { WorkflowSpec, WorkflowState } from './types';
-import {
-  parseWorkflowYAML,
-  convertWorkflowSpecToState,
-  defaultWorkflowState,
-} from './util';
+import { parseWorkflowYAML, convertWorkflowSpecToState } from './util';
 
 function transformServerErrors(
   errors: Record<string, any>,
@@ -75,13 +71,6 @@ const YAMLToWorkflow = {
       this.validateYAML(yamlString);
     });
   },
-  destroyed() {
-    // reset server state
-    this.updateServerState(defaultWorkflowState());
-  },
-  updateServerState(state: WorkflowState) {
-    this.pushEvent('validate', { workflow: state });
-  },
   validateYAML(workflowYAML: string) {
     this.errorEl.classList.add('hidden');
     this.errorEl.textContent = '';
@@ -100,8 +89,6 @@ const YAMLToWorkflow = {
             const errors = transformServerErrors(response['errors']);
             this.errorEl.textContent = errors[0];
             this.errorEl.classList.remove('hidden');
-          } else {
-            this.updateServerState(this.workflowState);
           }
         }
       );
