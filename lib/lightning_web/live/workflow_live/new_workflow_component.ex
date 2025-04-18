@@ -160,7 +160,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
             phx-value-method="import"
             phx-target={@myself}
           >
-            <.icon name="hero-document-plus" class="size-5" /> Import
+            <.icon name="hero-document" class="size-5" /> Import
           </.button>
           <.button
             id="toggle_new_workflow_panel_btn"
@@ -272,14 +272,15 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
       data-error-el="workflow-errors"
       class="flex flex-col gap-3 h-full"
     >
-      <div class="flex justify-center rounded-lg border border-dashed border-gray-900/25 px-4 py-6">
+      <div class="mt-2 flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-10">
         <div class="text-center">
-          <div class="flex text-sm/6 text-gray-600">
+          <Heroicons.cloud_arrow_up class="mx-auto size-10 text-gray-300" />
+          <div class="mt-4 flex text-sm/6 text-gray-600">
             <label
               for="workflow-file"
-              class="relative cursor-pointer rounded-md bg-white font-semibold text-indigo-600 focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-2 focus-within:outline-hidden hover:text-indigo-500"
+              class="relative cursor-pointer rounded-md bg-white font-semibold text-indigo-600 focus-within:outline-none focus-within:ring-offset-2 hover:text-indigo-500"
             >
-              <span>Upload a YAML file</span>
+              <span>Upload a file</span>
               <input
                 id="workflow-file"
                 name="workflow-file"
@@ -289,8 +290,10 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
                 phx-update="ignore"
               />
             </label>
+            <%!-- TODO - add drag and drop --%>
+            <p class="pl-1">or drag and drop</p>
           </div>
-          <p class="text-xs/5 text-gray-600">Accepts .yml and .yaml files</p>
+          <p class="text-xs/5 text-gray-600">YML or YAML, up to 8MB</p>
         </div>
       </div>
       <div class="relative">
