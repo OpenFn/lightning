@@ -351,7 +351,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       {:ok, view, html} = live(conn, ~p"/projects/#{project.id}/w/new")
 
       assert html =~ "Create workflow"
-      assert html =~ "How do you want to name your workflow?"
+      assert html =~ "Describe your workflow in a few words here"
       assert has_element?(view, "form#new-workflow-name-form")
 
       view
@@ -364,7 +364,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       html = render(view)
 
       refute html =~ "Create workflow"
-      refute html =~ "How do you want to name your workflow?"
+      refute html =~ "Describe your workflow in a few words here"
       refute has_element?(view, "form#new-workflow-name-form")
     end
 
