@@ -341,12 +341,12 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
     [
       %{
         id: "base-webhook-template",
-        name: "base-webhook",
-        description: "webhook triggered workflow",
+        name: "Event-based Workflow",
+        description: "The basic structure for a webhook-triggered workflow",
         code: """
         jobs:
-          New-job:
-            name: New job
+          Step-1:
+            name: Transform data
             adaptor: "@openfn/language-common@latest"
             body: |
               // Check out the Job Writing Guide for help getting started:
@@ -356,34 +356,35 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
             type: webhook
             enabled: false
         edges:
-          webhook->New-job:
+          webhook->Step-1:
             source_trigger: webhook
-            target_job: New-job
+            target_job: Step-1
             condition_type: always
             enabled: true
         """
       },
       %{
         id: "base-cron-template",
-        name: "base-cron",
-        description: "cron triggered workflow",
+        name: "Scheduled Workflow",
+        description: "The basic structure for a cron-triggered workflow",
         code: """
         jobs:
-          New-job:
-            name: New job
-            adaptor: "@openfn/language-common@latest"
+          Get-data:
+            name: Get data
+            adaptor: "@openfn/language-http@7.0.3"
             body: |
               // Check out the Job Writing Guide for help getting started:
               // https://docs.openfn.org/documentation/jobs/job-writing-guide
+              get('https://docs.openfn.org/documentation');
         triggers:
           cron:
             type: cron
-            cron_expression: 0 * * * *
+            cron_expression: "*/15 * * * *"
             enabled: false
         edges:
-          cron->New-job:
+          cron->Get-data:
             source_trigger: cron
-            target_job: New-job
+            target_job: Get-data
             condition_type: always
             enabled: true
         """

@@ -58,9 +58,9 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
       {:ok, view, html} = live(conn, ~p"/projects/#{project.id}/w/new")
 
       assert html =~ "base-webhook"
-      assert html =~ "webhook triggered workflow"
+      assert html =~ "Event-based Workflow"
       assert html =~ "base-cron"
-      assert html =~ "cron triggered workflow"
+      assert html =~ "Scheduled Workflow"
 
       # Template selection form should be present
       assert view |> element("#choose-workflow-template-form") |> has_element?()

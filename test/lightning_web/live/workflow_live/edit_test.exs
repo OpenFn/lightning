@@ -333,7 +333,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       # lets select the cron one
       template_id = "base-cron-template"
-      cron_template_name = "base-cron"
+      cron_template_name = "Scheduled Workflow"
 
       view
       |> form("#choose-workflow-template-form", %{template_id: template_id})
