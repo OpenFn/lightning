@@ -5,11 +5,9 @@ defmodule LightningWeb.RunChannel do
   use LightningWeb, :channel
 
   import LightningWeb.ChannelHelpers
-  import Ecto.Query
 
   alias Lightning.Credentials
   alias Lightning.Credentials.Credential
-  alias Lightning.Invocation.LogLine
   alias Lightning.Repo
   alias Lightning.Runs
   alias Lightning.Scrubber
@@ -76,11 +74,9 @@ defmodule LightningWeb.RunChannel do
       {:ok, run} ->
         # TODO: Turn FailureAlerter into an Oban worker and process async
         # instead of blocking the channel.
-        log_lines_query =
-          from(l in LogLine, order_by: [asc: l.timestamp])
 
         run
-        |> Repo.preload(log_lines: log_lines_query, work_order: [:workflow])
+        |> Repo.preload(:log_lines, work_order: [:workflow])
         |> Lightning.FailureAlerter.alert_on_failure()
 
         socket |> assign(run: run) |> reply_with({:ok, nil})
