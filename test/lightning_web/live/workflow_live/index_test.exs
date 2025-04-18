@@ -496,7 +496,10 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
         live(conn, ~p"/projects/#{project.id}/w?q=nonexistent")
 
       assert html =~
-               "No workflows found matching &quot;nonexistent&quot;. Try a different search term."
+               "No workflows found matching &quot;nonexistent&quot;. Try a different search term or"
+
+      assert html =~
+               "<a href=\"/projects/#{project.id}/w/new\" data-phx-link=\"redirect\" data-phx-link-state=\"push\" class=\"link\">\n              create a new one"
     end
   end
 
@@ -641,7 +644,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       {:ok, _view, html} = live(conn, ~p"/projects/#{project.id}/w")
 
       assert html =~
-               "No workflows found. Create your first workflow to get started."
+               "No workflows found.\n            <a href=\"/projects/#{project.id}/w/new\" data-phx-link=\"redirect\" data-phx-link-state=\"push\" class=\"link\">\n              Create one\n            </a>\n            to start automating."
     end
 
     test "shows appropriate empty state message when search has no results", %{
@@ -665,7 +668,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       {:ok, view, html} = live(conn, ~p"/projects/#{project.id}/w")
 
       assert html =~
-               "No workflows found. Create your first workflow to get started."
+               "No workflows found.\n            <a href=\"/projects/#{project.id}/w/new\" data-phx-link=\"redirect\" data-phx-link-state=\"push\" class=\"link\">\n              Create one\n            </a>\n            to start automating."
 
       html =
         view
@@ -673,7 +676,10 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
         |> render_keyup(%{value: "nonexistent"})
 
       assert html =~
-               "No workflows found matching &quot;nonexistent&quot;. Try a different search term."
+               "No workflows found matching &quot;nonexistent&quot;. Try a different search term or"
+
+      assert html =~
+               "<a href=\"/projects/#{project.id}/w/new\" data-phx-link=\"redirect\" data-phx-link-state=\"push\" class=\"link\">\n              create a new one"
 
       html =
         view
@@ -681,7 +687,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
         |> render_click()
 
       assert html =~
-               "No workflows found. Create your first workflow to get started."
+               "No workflows found.\n            <a href=\"/projects/#{project.id}/w/new\" data-phx-link=\"redirect\" data-phx-link-state=\"push\" class=\"link\">\n              Create one\n            </a>\n            to start automating."
     end
   end
 

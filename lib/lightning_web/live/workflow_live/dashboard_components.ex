@@ -49,9 +49,18 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
           <div class="text-center py-8">
             <p class="text-gray-500">
               <%= if @search_term != "" do %>
-                No workflows found matching "{@search_term}". Try a different search term.
+                No workflows found matching "{@search_term}". Try a different search term or <.link
+                  navigate={~p"/projects/#{@project.id}/w/new"}
+                  class="link"
+                >
+                  create a new one
+                </.link>.
               <% else %>
-                No workflows found. Create your first workflow to get started.
+                No workflows found.
+                <.link navigate={~p"/projects/#{@project.id}/w/new"} class="link">
+                  Create one
+                </.link>
+                to start automating.
               <% end %>
             </p>
           </div>
