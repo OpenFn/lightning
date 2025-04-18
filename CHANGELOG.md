@@ -17,16 +17,22 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.11.3-pre.1] - 2025-04-16
+
+### Added
+
 - AI Assistant: add metadata column to chat sessions
   [#3054](https://github.com/OpenFn/lightning/issues/3054)
 - Added a message to explain to the user why they're waiting for a run
   [#3131](https://github.com/OpenFn/lightning/issues/3131)
 - Allow users to create workflows from base templates
   [#3110](https://github.com/OpenFn/lightning/issues/3110)
-
-### Changed
-
-### Fixed
+- Simplified adding credentials to projects
+  [#3034](https://github.com/OpenFn/lightning/issues/3034)
 
 ## [v2.11.3-pre.0] - 2025-04-16
 
@@ -52,8 +58,8 @@ and this project adheres to
   [#3096](https://github.com/OpenFn/lightning/issues/3096)
 - Introduce 'seeding' of PromEx event metrics
   [#3096](https://github.com/OpenFn/lightning/issues/3096)
-- When claiming a run, a worker name can optionally be provided to the
-  adaptor that is responsible for claiming runs.
+- When claiming a run, a worker name can optionally be provided to the adaptor
+  that is responsible for claiming runs.
   [#3079](https://github.com/OpenFn/lightning/issues/3079)
 - Persist worker name provided by worker when claiming a run.
   [#3079](https://github.com/OpenFn/lightning/issues/3079)
@@ -71,8 +77,6 @@ and this project adheres to
   [#3107](https://github.com/OpenFn/lightning/pull/3107)
 - Added a "BETA" label to the Kafka trigger type
   [#3098](https://github.com/OpenFn/lightning/pull/3098)
-- Simplified adding credentials to projects
-  [#3034](https://github.com/OpenFn/lightning/issues/3034)
 
 ## [v2.11.2] - 2025-04-10
 
