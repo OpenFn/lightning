@@ -19,7 +19,9 @@ and this project adheres to
 
 - AI Assistant: add metadata column to chat sessions
   [#3054](https://github.com/OpenFn/lightning/issues/3054)
-  
+- Allow users to create workflows from base templates
+  [#3110](https://github.com/OpenFn/lightning/issues/3110)
+
 ### Changed
 
 ### Fixed
