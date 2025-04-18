@@ -141,17 +141,6 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         </div>
         <div class="px-4 py-4 sm:p-3 flex flex-row justify-center gap-3 h-max">
           <.button
-            :if={@selected_method == "import"}
-            id="move-back-to-templates-btn"
-            type="button"
-            variant="secondary"
-            phx-click="choose-another-method"
-            phx-value-method="template"
-            phx-target={@myself}
-          >
-            Back
-          </.button>
-          <.button
             :if={@selected_method != "import"}
             id="import-workflow-btn"
             type="button"
@@ -163,9 +152,30 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
             <.icon name="hero-document" class="size-5" /> Import
           </.button>
           <.button
+            :if={@selected_method != "import"}
             id="toggle_new_workflow_panel_btn"
             type="button"
             phx-click="toggle_new_workflow_panel"
+          >
+            Get started
+          </.button>
+          <.button
+            :if={@selected_method == "import"}
+            id="move-back-to-templates-btn"
+            type="button"
+            variant="secondary"
+            phx-click="choose-another-method"
+            phx-value-method="template"
+            phx-target={@myself}
+          >
+            Back
+          </.button>
+          <.button
+            :if={@selected_method == "import"}
+            id="toggle_new_workflow_panel_btn"
+            type="button"
+            phx-click="toggle_new_workflow_panel"
+            disabled={!@changeset.valid?}
           >
             Get started
           </.button>

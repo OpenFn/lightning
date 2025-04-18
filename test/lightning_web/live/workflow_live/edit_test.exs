@@ -399,12 +399,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert has_element?(view, "form#new-workflow-name-form")
       assert has_element?(view, "form#choose-workflow-template-form")
 
-      refute html =~ "Upload a YAML file"
+      refute html =~ "Upload a file"
 
       # click to go to import page
       html = view |> element("#import-workflow-btn") |> render_click()
 
-      assert html =~ "Upload a YAML file"
+      assert html =~ "Upload a file"
       refute html =~ "Describe your workflow in a few words here"
       refute has_element?(view, "form#new-workflow-name-form")
       refute has_element?(view, "form#choose-workflow-template-form")
