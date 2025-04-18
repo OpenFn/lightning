@@ -293,7 +293,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
           <div class="mt-4 flex text-sm/6 text-gray-600">
             <label
               for="workflow-file"
-              class="relative cursor-pointer rounded-md bg-white font-semibold text-indigo-600 focus-within:outline-none focus-within:ring-offset-2 hover:text-indigo-500"
+              class="relative cursor-pointer rounded-md font-semibold text-indigo-600 focus-within:outline-none focus-within:ring-offset-2 hover:text-indigo-500"
             >
               <span>Upload a file</span>
               <input
