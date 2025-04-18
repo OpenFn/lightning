@@ -74,9 +74,8 @@ defmodule LightningWeb.RunChannel do
       {:ok, run} ->
         # TODO: Turn FailureAlerter into an Oban worker and process async
         # instead of blocking the channel.
-
         run
-        |> Repo.preload(:log_lines, work_order: [:workflow])
+        |> Repo.preload([:log_lines, work_order: [:workflow]])
         |> Lightning.FailureAlerter.alert_on_failure()
 
         socket |> assign(run: run) |> reply_with({:ok, nil})
