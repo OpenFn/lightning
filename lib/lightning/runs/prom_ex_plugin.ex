@@ -11,44 +11,70 @@ defmodule Lightning.Runs.PromExPlugin do
 
   alias Lightning.Repo
   alias Lightning.Run
+  alias Telemetry.Metrics
 
   require Run
 
   @available_count_event [:lightning, :run, :queue, :available]
   @average_claim_event [:lightning, :run, :queue, :claim]
+  @lost_run_event [:lightning, :run, :lost]
   @finalised_count_event [:lightning, :run, :queue, :finalised]
   @stalled_event [:lightning, :run, :queue, :stalled]
 
   @impl true
   def event_metrics(_opts) do
-    Event.build(
-      :rory_test,
-      [
-        distribution(
-          [:lightning, :run, :queue, :delay, :milliseconds],
-          event_name: [:domain, :run, :queue],
-          measurement: :delay,
-          description: "Queue delay for runs",
-          reporter_options: [
-            buckets: [
-              100,
-              200,
-              400,
-              800,
-              1_500,
-              5_000,
-              15_000,
-              30_000,
-              50_000,
-              100_000
-            ]
-          ],
-          tags: [],
-          unit: :millisecond
-        )
-      ]
+    [
+      Event.build(
+        :lightning_run_event_metrics,
+        [
+          distribution(
+            [:lightning, :run, :queue, :delay, :milliseconds],
+            event_name: [:domain, :run, :queue],
+            measurement: :delay,
+            description: "Queue delay for runs",
+            reporter_options: [
+              buckets: [
+                100,
+                200,
+                400,
+                800,
+                1_500,
+                5_000,
+                15_000,
+                30_000,
+                50_000,
+                100_000
+              ]
+            ],
+            tags: [],
+            unit: :millisecond
+          ),
+          Metrics.counter(
+            @lost_run_event ++ [:count],
+            description: "A counter of lost runs.",
+            tags: [:seed_event, :state, :worker_name]
+          )
+        ]
+      )
+    ]
+  end
+
+  def seed_event_metrics, do: fire_lost_run_event(nil, nil, true)
+
+  def fire_lost_run_event(worker_name, state, seed_event \\ false) do
+    :telemetry.execute(
+      @lost_run_event,
+      %{count: 1},
+      %{
+        seed_event: seed_event,
+        state: state |> nil_to_na() |> to_string(),
+        worker_name: worker_name |> nil_to_na()
+      }
     )
   end
+
+  defp nil_to_na(nil), do: "n/a"
+  defp nil_to_na(value), do: value
 
   @impl true
   def polling_metrics(opts) do

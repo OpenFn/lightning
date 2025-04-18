@@ -923,6 +923,55 @@ defmodule Lightning.RunsTest do
 
       assert reloaded_unfinished_step.finished_at != nil
     end
+
+    @tag :capture_log
+    test "triggers an event to mark the lost run" do
+      lost_run_event = [:lightning, :run, :lost]
+
+      ref = :telemetry_test.attach_event_handlers(self(), [lost_run_event])
+
+      worker_name = "my.worker.name"
+
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+      dataclip = insert(:dataclip)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      current_time = ~U[2024-05-05 12:34:56Z]
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          state: :started,
+          claimed_at: current_time |> DateTime.add(-3600),
+          worker_name: worker_name
+        )
+
+      _finished_step =
+        insert(:step,
+          runs: [run],
+          finished_at: current_time,
+          exit_reason: "success"
+        )
+
+      _unfinished_step = insert(:step, runs: [run])
+
+      Runs.mark_run_lost(run)
+
+      assert_received {
+        ^lost_run_event,
+        ^ref,
+        %{count: 1},
+        %{seed_event: false, state: "started", worker_name: ^worker_name}
+      }
+    end
   end
 
   describe "wipe_dataclips/1" do
