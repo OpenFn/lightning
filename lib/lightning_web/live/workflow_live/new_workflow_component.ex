@@ -119,7 +119,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
     ~H"""
     <div id={@id} class="w-1/3">
       <div class="divide-y divide-gray-200 bg-white h-full flex flex-col">
-        <div class="flex px-4 py-5 sm:px-6">
+        <div class="flex px-4 py-5 sm:px-6 border-b border-gray-200">
           <div class="grow font-bold">
             Create workflow
           </div>
@@ -138,6 +138,37 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
             changeset={@changeset}
             myself={@myself}
           />
+        </div>
+        <div class="px-4 py-4 sm:p-3 flex flex-row justify-center gap-3 h-max">
+          <.button
+            id="move-back-to-templates-btn"
+            :if={@selected_method == "import"}
+            type="button"
+            variant="secondary"
+            phx-click="choose-another-method"
+            phx-value-method="template"
+            phx-target={@myself}
+          >
+            Back
+          </.button>
+          <.button
+            id="import-workflow-btn"
+            :if={@selected_method != "import"}
+            type="button"
+            class="inline-flex gap-x-1.5"
+            phx-click="choose-another-method"
+            phx-value-method="import"
+            phx-target={@myself}
+          >
+            <.icon name="hero-document-plus" class="size-5" /> Import
+          </.button>
+          <.button
+            id="toggle_new_workflow_panel_btn"
+            type="button"
+            phx-click="toggle_new_workflow_panel"
+          >
+            Get started
+          </.button>
         </div>
       </div>
     </div>
@@ -224,26 +255,6 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
           </div>
         </fieldset>
       </.form>
-
-      <div class="flex flex-row justify-center gap-3 h-max">
-        <.button
-          id="import-workflow-btn"
-          type="button"
-          class="inline-flex gap-x-1.5"
-          phx-click="choose-another-method"
-          phx-value-method="import"
-          phx-target={@myself}
-        >
-          <.icon name="hero-document-plus" class="size-5" /> Import
-        </.button>
-        <.button
-          id="toggle_new_workflow_panel_btn"
-          type="button"
-          phx-click="toggle_new_workflow_panel"
-        >
-          Get started
-        </.button>
-      </div>
     </div>
     """
   end
@@ -304,26 +315,6 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
           class="font-mono proportional-nums text-slate-200 bg-slate-700 resize-none text-nowrap overflow-x-auto flex-grow"
           placeholder="Paste your YAML content here"
         />
-      </div>
-      <div class="flex flex-row justify-center gap-3 h-max">
-        <.button
-          id="move-back-to-templates-btn"
-          type="button"
-          variant="secondary"
-          phx-click="choose-another-method"
-          phx-value-method="template"
-          phx-target={@myself}
-        >
-          Back
-        </.button>
-        <.button
-          id="toggle_new_workflow_panel_btn"
-          type="button"
-          phx-click="toggle_new_workflow_panel"
-          disabled={!@changeset.valid?}
-        >
-          Continue
-        </.button>
       </div>
     </div>
     """
