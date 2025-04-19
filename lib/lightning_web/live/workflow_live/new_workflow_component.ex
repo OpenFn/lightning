@@ -10,6 +10,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
     {:ok,
      socket
      |> assign(selected_method: "template")
+     |> assign(custom_button: Application.get_env(:lightning, :workflow_button))
      |> apply_selected_method()}
   end
 
@@ -140,6 +141,13 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
           />
         </div>
         <div class="px-4 py-4 sm:p-3 flex flex-row justify-center gap-3 h-max">
+          <%= if @custom_button do %>
+            {Phoenix.LiveView.TagEngine.component(
+              @custom_button.component,
+              Map.take(assigns, @custom_button.assigns_keys),
+              {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
+            )}
+          <% end %>
           <.button
             :if={@selected_method != "import"}
             id="import-workflow-btn"
