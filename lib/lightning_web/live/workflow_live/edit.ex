@@ -174,7 +174,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         </LayoutComponents.header>
       </:header>
 
-      <.WorkflowStore />
+      <.WorkflowStore react-id="workflow-mount" />
       <div class="relative h-full flex" id={"workflow-edit-#{@workflow.id}"}>
         <div class="flex-none" id="job-editor-pane">
           <div
@@ -347,8 +347,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             </LightningWeb.WorkflowLive.JobView.job_edit_view>
           </div>
         </div>
-
-        <.WorkflowEditor />
+        <.WorkflowEditor react-portal-target="workflow-mount" />
         <.live_component
           :if={@selected_job}
           id="new-credential-modal"

@@ -18,7 +18,7 @@ interface ActionProps {
   navigate: (path: string) => void,
 }
 
-export type WithActionProps<T = Record<string, unknown>> = React.FunctionComponent<ActionProps & T>;
+export type WithActionProps<T = Record<string, unknown>> = React.FunctionComponent<React.PropsWithChildren<ActionProps & T>>;
 
 /**
  * Use [`useSyncExternalStore`](https://react.dev/reference/react/useSyncExternalStore)
