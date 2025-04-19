@@ -71,6 +71,8 @@ defmodule Lightning.FailureAlerter do
     )
     |> case do
       {:allow, count} ->
+        ordered_logs = Enum.sort_by(run_logs, & &1.timestamp, DateTime)
+
         Lightning.FailureEmail.deliver_failure_email(recipient.email, %{
           work_order_id: work_order_id,
           work_order_url: work_order_url,
@@ -79,7 +81,7 @@ defmodule Lightning.FailureAlerter do
           rate_limit: rate_limit,
           run_id: run_id,
           run_url: run_url,
-          run_logs: run_logs,
+          run_logs: ordered_logs,
           project_name: project_name,
           workflow_name: workflow_name,
           workflow_id: workflow_id,

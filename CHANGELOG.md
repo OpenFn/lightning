@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Sort logs in failure notification emails by timestamp, ascending
+  [#2347](https://github.com/OpenFn/lightning/issues/2347)
+
 ## [v2.11.3-pre.1] - 2025-04-16
 
 ### Added
