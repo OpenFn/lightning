@@ -1,8 +1,9 @@
 defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
   @moduledoc false
-
   use LightningWeb, :live_component
+
   alias Lightning.Workflows.Workflow
+  alias Lightning.WorkflowTemplates
   alias LightningWeb.API.ProvisioningJSON
 
   @impl true
@@ -10,6 +11,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
     {:ok,
      socket
      |> assign(selected_method: "template")
+     |> assign(search_term: "")
      |> apply_selected_method()}
   end
 
@@ -35,7 +37,6 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
     response =
       if changeset.valid? do
         update_parent_form(params)
-
         %{}
       else
         ProvisioningJSON.error(%{changeset: changeset})
@@ -59,6 +60,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
   end
 
   def handle_event("validate-name", %{"workflow" => params}, socket) do
+    # Only update the workflow name, don't use this for search filtering
     update_parent_form(params)
 
     {:noreply,
@@ -66,9 +68,24 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
      |> assign(workflow_name_changeset: workflow_name_changeset(params))}
   end
 
-  def handle_event("select-template", %{"template_id" => template_id}, socket) do
+  def handle_event("search-templates", %{"search" => search_term}, socket) do
+    # Filter templates based on search term
+    filtered_templates =
+      filter_templates(socket.assigns.all_templates, search_term)
+
+    {:noreply,
+     socket
+     |> assign(search_term: search_term)
+     |> assign(filtered_templates: filtered_templates)}
+  end
+
+  def handle_event(
+        "select-template",
+        %{"template_id" => template_id} = _params,
+        socket
+      ) do
     template =
-      Enum.find(socket.assigns.templates, fn template ->
+      Enum.find(socket.assigns.filtered_templates, fn template ->
         template.id == template_id
       end)
 
@@ -78,17 +95,68 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
      |> push_selected_template_code()}
   end
 
+  # Handle the case when only _target is present
+  def handle_event("select-template", %{"_target" => _} = params, socket) do
+    case params do
+      %{"template_id" => template_id} ->
+        handle_event("select-template", %{"template_id" => template_id}, socket)
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("clear-search", _params, socket) do
+    filtered_templates = socket.assigns.all_templates
+
+    {:noreply,
+     socket
+     |> assign(search_term: "")
+     |> assign(filtered_templates: filtered_templates)}
+  end
+
+  defp filter_templates(templates, search_term)
+       when is_binary(search_term) and search_term != "" do
+    search_term = String.downcase(search_term)
+
+    matches_search_term = fn template ->
+      name_match =
+        template.name &&
+          String.contains?(String.downcase(template.name), search_term)
+
+      description_match =
+        template.description &&
+          String.contains?(String.downcase(template.description), search_term)
+
+      tags_match =
+        template.tags &&
+          Enum.any?(
+            template.tags,
+            &String.contains?(String.downcase(&1), search_term)
+          )
+
+      name_match || description_match || tags_match
+    end
+
+    Enum.filter(templates, matches_search_term)
+  end
+
+  defp filter_templates(templates, _), do: templates
+
   defp apply_selected_method(socket) do
     case socket.assigns.selected_method do
       "template" ->
         base_templates = base_templates()
+        users_templates = WorkflowTemplates.list_templates()
+        all_templates = base_templates ++ users_templates
         default_template = hd(base_templates)
 
         socket
         |> assign(
           workflow_name_changeset: workflow_name_changeset(%{}),
           selected_template: default_template,
-          templates: base_templates
+          all_templates: all_templates,
+          filtered_templates: all_templates
         )
         |> push_selected_template_code()
 
@@ -119,18 +187,14 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
     ~H"""
     <div id={@id} class="w-1/3">
       <div class="divide-y divide-gray-200 bg-white h-full flex flex-col">
-        <div class="flex px-4 py-5 sm:px-6 border-b border-gray-200">
-          <div class="grow font-bold">
-            Create workflow
-          </div>
-        </div>
-        <div class="px-4 py-5 sm:p-6 flex-grow">
+        <div class="px-2 py-2 sm:px-4 sm:py-2 flex-grow overflow-hidden flex flex-col">
           <.create_workflow_from_template
             :if={@selected_method == "template"}
             myself={@myself}
-            templates={@templates}
+            templates={@filtered_templates}
             selected_template={@selected_template}
             workflow_name_changeset={@workflow_name_changeset}
+            search_term={@search_term}
           />
 
           <.create_workflow_via_import
@@ -139,7 +203,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
             myself={@myself}
           />
         </div>
-        <div class="px-4 py-4 sm:p-3 flex flex-row justify-center gap-3 h-max">
+        <div class="px-4 py-4 sm:p-3 flex flex-row justify-center gap-3 h-max border-t">
           <.button
             :if={@selected_method != "import"}
             id="import-workflow-btn"
@@ -189,57 +253,86 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
   attr :selected_template, :map, required: true
   attr :templates, :list, required: true
   attr :myself, :any, required: true
+  attr :search_term, :string, required: true
 
   defp create_workflow_from_template(assigns) do
     ~H"""
     <div
       id="create-workflow-from-template"
       phx-hook="TemplateToWorkflow"
-      class="flex flex-col gap-3 h-full"
+      class="flex flex-col p-1 gap-4 h-full overflow-hidden"
     >
-      <.form
-        :let={f}
-        as={:workflow}
-        id="new-workflow-name-form"
-        phx-change="validate-name"
-        phx-target={@myself}
-        phx-debounce="300"
-        for={@workflow_name_changeset}
-      >
-        <div class="grid grid-cols-1">
-          <.input_element
-            type="text"
-            name={f[:name].name}
-            placeholder="Describe your workflow in a few words here"
-            class="col-start-1 row-start-1 block w-full text-gray-900 placeholder:text-gray-400 py-1.5 pr-3 pl-10"
-            value={f[:name].value}
-          />
-          <.icon
-            name="hero-magnifying-glass"
-            class="pointer-events-none col-start-1 row-start-1 ml-3 size-5 self-center text-gray-400 sm:size-4"
-          />
-        </div>
-      </.form>
+      <div>
+        <h3 class="text-base font-medium text-gray-700 mb-2">Name your workflow</h3>
+        <.form
+          :let={f}
+          as={:workflow}
+          id="new-workflow-name-form"
+          phx-change="validate-name"
+          phx-target={@myself}
+          phx-debounce="300"
+          for={@workflow_name_changeset}
+        >
+          <div class="relative rounded-md">
+            <.input_element
+              type="text"
+              name={f[:name].name}
+              placeholder={"Copy of #{@selected_template.name}"}
+              class="block w-full rounded-md border-0 py-2 pl-10 pr-10 text-gray-900 ring-1 ring-gray-300 focus:ring-2 focus:ring-indigo-600 sm:text-sm"
+              value={f[:name].value}
+            />
+            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+              <.icon name="hero-pencil" class="size-5 text-gray-400" />
+            </div>
+          </div>
+        </.form>
+      </div>
+
+      <div>
+        <h3 class="text-base font-medium text-gray-700 mb-2">Choose a template</h3>
+        <.form
+          id="search-templates-form"
+          phx-change="search-templates"
+          phx-target={@myself}
+          phx-debounce="300"
+          for={to_form(%{"search" => @search_term})}
+        >
+          <div class="relative rounded-md">
+            <.input_element
+              type="text"
+              name="search"
+              placeholder="Search templates"
+              class="block w-full rounded-md border-0 py-2 pl-10 pr-4 text-gray-900 ring-1 ring-gray-300 focus:ring-2 focus:ring-indigo-600 sm:text-sm"
+              value={@search_term}
+            />
+            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+              <.icon name="hero-magnifying-glass" class="size-5 text-gray-400" />
+            </div>
+          </div>
+        </.form>
+      </div>
+
       <.form
         id="choose-workflow-template-form"
         phx-change="select-template"
         phx-target={@myself}
         for={to_form(%{})}
-        class="flex-grow"
+        class="flex-grow mt-2 overflow-hidden flex flex-col"
       >
-        <fieldset>
-          <div class="grid grid-cols-1 gap-y-6 sm:grid-cols-2 sm:gap-x-4 overflow-y-auto">
+        <fieldset class="overflow-auto pr-4 flex-grow">
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label
               :for={template <- @templates}
               id={"template-label-#{template.id}"}
               phx-hook="Tooltip"
-              aria-label={template.description}
+              aria-label={"<span class='font-medium text-left text-sm text-white block mb-2'>#{template.name}</span><span class='text-gray-300 text-xs block text-left'>#{template.description}</span>"}
+              data-allow-html="true"
               data-selected={"#{template.id == @selected_template.id}"}
               for={"template-input-#{template.id}"}
               class={[
-                "flex cursor-pointer rounded-lg border bg-white p-4 shadow-xs focus:outline-hidden max-h-32 overflow-hidden text-ellipsis",
+                "relative flex flex-col cursor-pointer rounded-lg border bg-white p-4 hover:bg-gray-50 transition-all h-24",
                 if(template.id == @selected_template.id,
-                  do: "border-indigo-600 border-2 ring-indigo-600",
+                  do: "border-indigo-600 border-1",
                   else: "border-gray-300"
                 )
               ]}
@@ -251,17 +344,42 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
                 value={template.id}
                 class="sr-only"
               />
-              <span class="flex flex-1">
-                <span class="flex flex-col">
-                  <span class="block text-sm font-medium text-gray-900">
-                    {template.name}
-                  </span>
-                  <span class="mt-1 flex items-center text-sm text-gray-500">
-                    {template.description}
-                  </span>
+              <span class={[
+                "absolute top-0 right-0",
+                if(template.id == @selected_template.id,
+                  do: "text-indigo-600",
+                  else: "text-transparent"
+                )
+              ]}>
+                <.icon name="hero-check-circle" class="size-5 fill-current" />
+              </span>
+              <span class="flex-1 overflow-hidden flex flex-col">
+                <span class="font-medium text-gray-900 line-clamp-1">
+                  {template.name}
+                </span>
+                <span class="text-sm text-gray-500 line-clamp-2">
+                  {template.description}
                 </span>
               </span>
             </label>
+          </div>
+
+          <div
+            :if={length(@templates) == 0}
+            class="flex flex-col items-center justify-center py-10 text-gray-500 bg-gray-50 rounded-lg mt-4"
+          >
+            <.icon name="hero-magnifying-glass" class="size-8 text-gray-400 mb-2" />
+            <p class="text-center text-sm text-gray-600">
+              No templates match your search criteria.
+            </p>
+            <p class="text-center text-sm text-gray-600">
+              Try different keywords or <button
+                type="button"
+                phx-click="clear-search"
+                phx-target={@myself}
+                class="text-indigo-600 hover:text-indigo-500 font-medium"
+              >clear your search</button>.
+            </p>
           </div>
         </fieldset>
       </.form>
@@ -343,6 +461,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         id: "base-webhook-template",
         name: "Event-based Workflow",
         description: "The basic structure for a webhook-triggered workflow",
+        tags: ["webhook", "event", "workflow"],
         code: """
         jobs:
           Step-1:
@@ -367,6 +486,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         id: "base-cron-template",
         name: "Scheduled Workflow",
         description: "The basic structure for a cron-triggered workflow",
+        tags: ["cron", "scheduled", "workflow"],
         code: """
         jobs:
           Get-data:
