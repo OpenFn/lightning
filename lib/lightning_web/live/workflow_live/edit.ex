@@ -27,6 +27,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.WorkflowTemplate
+  alias Lightning.WorkflowTemplates
   alias Lightning.WorkOrders
   alias LightningWeb.UiMetrics
   alias LightningWeb.WorkflowLive.Helpers
@@ -653,17 +655,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
           <.panel
             :if={@selection_mode == "code"}
-            title="Workflow as Code"
+            title={
+              if @publish_template,
+                do: "Publish Workflow as Template",
+                else: "Workflow as Code"
+            }
             id={"workflow-code-#{@workflow.id}"}
             class="hidden min-w-lg"
             phx-mounted={fade_in()}
             phx-remove={fade_out()}
             cancel_url={@base_url}
             phx-hook="WorkflowToYAML"
-            data-loading-el="workflow-code-loader"
-            data-viewer-el="workflow-code-viewer"
           >
             <div
+              :if={!@workflow_code && !@publish_template}
               id="workflow-code-loader"
               class="relative text-xs @md:text-base p-12 text-center bg-slate-700 font-mono text-slate-200"
             >
@@ -672,15 +677,49 @@ defmodule LightningWeb.WorkflowLive.Edit do
               </.text_ping_loader>
             </div>
             <.textarea_element
+              :if={@workflow_code && !@publish_template}
               id="workflow-code-viewer"
               name="workflow-code"
-              value=""
+              value={@workflow_code}
               rows="18"
               disabled={true}
-              class="hidden font-mono proportional-nums text-slate-200 bg-slate-700 resize-none text-nowrap overflow-x-auto"
+              class="font-mono proportional-nums text-slate-200 bg-slate-700 resize-none text-nowrap overflow-x-auto"
             />
+            <.form
+              :let={f}
+              :if={@publish_template && @workflow_code}
+              for={@workflow_template_changeset}
+              id="workflow-template-form"
+              phx-change="validate"
+              phx-submit="save"
+            >
+              <div class="container mx-auto space-y-6 bg-white">
+                <.template_field field={f[:name]} label="Name" required={true}>
+                  A descriptive name for your template
+                </.template_field>
+
+                <.template_field
+                  field={f[:description]}
+                  label="Description"
+                  type="textarea"
+                >
+                  A detailed description of what this template does
+                </.template_field>
+
+                <.template_field
+                  type="tags"
+                  label="Tags"
+                  raw_field={f[:raw_tags]}
+                  hidden_field={f[:tags]}
+                  tags={get_tags_from_changeset(@workflow_template_changeset)}
+                  current_tag={@current_template_tag}
+                >
+                  Add tags to help others find your template
+                </.template_field>
+              </div>
+            </.form>
             <:footer>
-              <div class="flex flex-row justify-end gap-2">
+              <div :if={!@publish_template} class="flex flex-row justify-end gap-2">
                 <.button
                   variant="secondary"
                   id="download-workflow-code-btn"
@@ -700,6 +739,36 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 >
                   Copy Code
                 </.button>
+                <.button
+                  variant="primary"
+                  id="publish-template-btn"
+                  phx-click="publish_template"
+                  class="min-w-[8rem]"
+                >
+                  {if @has_workflow_template?,
+                    do: "Update Template",
+                    else: "Publish Template"}
+                </.button>
+              </div>
+              <div :if={@publish_template} class="sm:flex sm:flex-row-reverse">
+                <button
+                  type="submit"
+                  form="workflow-template-form"
+                  disabled={!@workflow_template_changeset.valid?}
+                  class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 sm:ml-3 sm:w-auto"
+                >
+                  {if @has_workflow_template?,
+                    do: "Update Template",
+                    else: "Publish Template"}
+                </button>
+                <button
+                  id="cancel-template-publish"
+                  type="button"
+                  phx-click="cancel_publish_template"
+                  class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+                >
+                  Back
+                </button>
               </div>
             </:footer>
           </.panel>
@@ -1225,6 +1294,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
        show_new_workflow_panel: assigns.live_action == :new,
        admin_contacts: Projects.list_project_admin_emails(assigns.project.id),
        show_github_sync_modal: false,
+       publish_template: false,
+       workflow_code: nil,
        project_repo_connection:
          VersionControl.get_repo_connection_for_project(assigns.project.id),
        max_concurrency: assigns.project.concurrency
@@ -1238,6 +1309,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
      apply_action(socket, socket.assigns.live_action, params)
      |> track_user_presence()
      |> apply_query_params(params)
+     |> prepare_workflow_template()
      |> maybe_show_manual_run()
      |> tap(fn socket ->
        if connected?(socket) do
@@ -1569,6 +1641,115 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, socket}
   end
 
+  def handle_event(
+        "validate",
+        %{
+          "_target" => ["workflow_template", "raw_tags"],
+          "workflow_template" => template_params
+        },
+        socket
+      ) do
+    with true <- String.match?(template_params["raw_tags"], ~r/[,]+/),
+         new_tags <- parse_tag_input(template_params["raw_tags"]),
+         current_tags <-
+           get_tags_from_changeset(socket.assigns.workflow_template_changeset),
+         updated_tags <- (new_tags ++ current_tags) |> Enum.uniq() |> Enum.sort() do
+      updated_changeset =
+        socket.assigns.workflow_template
+        |> create_updated_changeset(
+          template_params,
+          socket.assigns,
+          updated_tags
+        )
+        |> Map.put(:action, :validate)
+
+      {:noreply,
+       socket
+       |> push_event("clear_input", %{})
+       |> assign(workflow_template_changeset: updated_changeset)}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("validate", %{"workflow_template" => template_params}, socket) do
+    tags = get_tags_from_changeset(socket.assigns.workflow_template_changeset)
+
+    changeset =
+      socket.assigns.workflow_template
+      |> create_updated_changeset(template_params, socket.assigns, tags)
+      |> Map.put(:action, :validate)
+
+    {:noreply, assign(socket, :workflow_template_changeset, changeset)}
+  end
+
+  @impl true
+  def handle_event("remove_tag", %{"tag" => tag}, socket) do
+    current_tags =
+      get_tags_from_changeset(socket.assigns.workflow_template_changeset)
+
+    updated_tags = Enum.reject(current_tags, &(&1 == tag))
+
+    updated_changeset =
+      socket.assigns.workflow_template_changeset
+      |> Ecto.Changeset.put_change(:tags, updated_tags)
+
+    {:noreply, assign(socket, workflow_template_changeset: updated_changeset)}
+  end
+
+  @impl true
+  def handle_event("edit_tag", %{"scope" => tag_value}, socket) do
+    current_tags =
+      get_tags_from_changeset(socket.assigns.workflow_template_changeset)
+
+    new_tags = Enum.reject(current_tags, &(&1 == tag_value))
+
+    new_changeset =
+      Ecto.Changeset.put_change(
+        socket.assigns.workflow_template_changeset,
+        :tags,
+        new_tags
+      )
+
+    {:noreply,
+     socket
+     |> assign(current_tag: tag_value)
+     |> assign(workflow_template_changeset: new_changeset)}
+  end
+
+  @impl true
+  def handle_event("save", %{"workflow_template" => template_params}, socket) do
+    %{workflow: workflow, workflow_code: code} = socket.assigns
+    tags = get_tags_from_changeset(socket.assigns.workflow_template_changeset)
+
+    params =
+      Map.merge(template_params, %{
+        "code" => code,
+        "workflow_id" => workflow.id,
+        "tags" => tags
+      })
+
+    case WorkflowTemplates.create_template(params) do
+      {:ok, _template} ->
+        flash_msg =
+          if socket.assigns.has_workflow_template?,
+            do: "Workflow template updated.",
+            else: "Workflow published as template."
+
+        {:noreply,
+         socket
+         |> put_flash(:info, flash_msg)
+         |> push_patch(
+           to:
+             ~p"/projects/#{socket.assigns.project}/w/#{socket.assigns.workflow}?m=code"
+         )}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, assign(socket, :workflow_template_changeset, changeset)}
+    end
+  end
+
   def handle_event("save", submitted_params, socket) do
     %{
       project: project,
@@ -1844,6 +2025,25 @@ defmodule LightningWeb.WorkflowLive.Edit do
      socket
      |> assign(:changeset, changeset)
      |> handle_new_params(params, :workflow)}
+  end
+
+  def handle_event("publish_template", _params, socket) do
+    {:noreply,
+     socket
+     |> push_event("generate_workflow_code", %{})
+     |> assign(publish_template: true)}
+  end
+
+  def handle_event("workflow_code_generated", %{"code" => code}, socket) do
+    changeset =
+      WorkflowTemplate.changeset(socket.assigns.workflow_template, %{code: code})
+
+    {:noreply,
+     assign(socket, workflow_code: code, workflow_template_changeset: changeset)}
+  end
+
+  def handle_event("cancel_publish_template", _params, socket) do
+    {:noreply, assign(socket, publish_template: false)}
   end
 
   def handle_event(_unhandled_event, _params, socket) do
@@ -2380,7 +2580,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
         socket |> unselect_all() |> set_mode("settings")
 
       %{"m" => "code", "s" => nil, "a" => nil} ->
-        socket |> unselect_all() |> set_mode("code")
+        socket
+        |> unselect_all()
+        |> set_mode("code")
+        |> assign(publish_template: false)
 
       # Nothing is selected
       %{"s" => nil} ->
@@ -2807,5 +3010,124 @@ defmodule LightningWeb.WorkflowLive.Edit do
       _ ->
         "Unknown Trigger"
     end
+  end
+
+  defp prepare_workflow_template(socket) do
+    template =
+      WorkflowTemplates.get_template_by_workflow_id(socket.assigns.workflow.id) ||
+        %WorkflowTemplate{}
+
+    changeset =
+      WorkflowTemplate.changeset(template, %{
+        code: socket.assigns.workflow_code,
+        workflow_id: socket.assigns.workflow.id,
+        tags: template.tags || []
+      })
+
+    socket
+    |> assign(
+      workflow_template: template,
+      workflow_template_changeset: changeset,
+      current_template_tag: nil,
+      has_workflow_template?: template.id != nil
+    )
+  end
+
+  defp get_tags_from_changeset(changeset) do
+    Ecto.Changeset.get_field(changeset, :tags, [])
+  end
+
+  defp parse_tag_input(input) do
+    input
+    |> String.split(~r/[,]+/, trim: true)
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.sort()
+  end
+
+  defp create_updated_changeset(template, params, assigns, tags) do
+    Map.merge(params, %{
+      "code" => assigns.workflow_code,
+      "workflow_id" => assigns.workflow.id,
+      "tags" => tags
+    })
+    |> then(&WorkflowTemplate.changeset(template, &1))
+  end
+
+  # Component functions
+  defp template_field(assigns) do
+    assigns =
+      assigns
+      |> Map.put_new(:type, "text")
+      |> Map.put_new(:required, false)
+
+    case assigns.type do
+      "tags" ->
+        ~H"""
+        <div class="space-y-2 mt-5">
+          <.input
+            id="workflow-template-tags"
+            type="text"
+            label={@label}
+            field={@raw_field}
+            value={@current_tag}
+            phx-hook="ClearInput"
+            placeholder="comma,separated,tags"
+          />
+          <.input type="hidden" field={@hidden_field} />
+          <small class="mt-2 block text-xs text-gray-600">
+            {render_slot(@inner_block)}
+          </small>
+          <.tag_list tags={@tags} />
+        </div>
+        """
+
+      _ ->
+        ~H"""
+        <div class="space-y-4">
+          <.input
+            type={@type}
+            field={@field}
+            label={@label}
+            required={@required}
+            class={if @type == "textarea", do: "bg-white text-slate-900", else: nil}
+          />
+          <small class="mt-2 block text-xs text-gray-600">
+            {render_slot(@inner_block)}
+          </small>
+        </div>
+        """
+    end
+  end
+
+  defp tag_list(assigns) do
+    ~H"""
+    <div>
+      <span
+        :for={tag <- @tags}
+        id={"tag-#{tag}"}
+        phx-hook="EditScope"
+        data-scope={tag}
+        data-event-type="edit_tag"
+        class="inline-flex items-center rounded-md bg-blue-50 p-2 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 mr-1 my-1"
+      >
+        {tag}
+        <button
+          type="button"
+          phx-click="remove_tag"
+          phx-value-tag={tag}
+          class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-gray-500/20"
+        >
+          <span class="sr-only">Remove</span>
+          <svg
+            viewBox="0 0 14 14"
+            class="h-3.5 w-3.5 stroke-gray-600/50 group-hover:stroke-gray-600/75"
+          >
+            <path d="M4 4l6 6m0-6l-6 6" />
+          </svg>
+          <span class="absolute -inset-1"></span>
+        </button>
+      </span>
+    </div>
+    """
   end
 end
