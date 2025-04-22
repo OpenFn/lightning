@@ -6,11 +6,15 @@ defmodule Lightning.FailureEmail do
 
   alias Lightning.Mailer
 
-  defp failure_subject(%{name: name}, failure_count, time_scale) do
+  defp failure_subject(
+         %{name: name, project_name: project_name},
+         failure_count,
+         time_scale
+       ) do
     if failure_count < 2 do
-      "\"#{name}\" failed."
+      "\"#{name}\" (#{project_name}) failed"
     else
-      "\"#{name}\" has failed #{failure_count} times in the last #{ms_to_human(time_scale)}."
+      "\"#{name}\" (#{project_name}) failed #{failure_count} times in the last #{ms_to_human(time_scale)}"
     end
   end
 
@@ -24,7 +28,10 @@ defmodule Lightning.FailureEmail do
       )
       |> subject(
         failure_subject(
-          %{name: body_data[:workflow_name]},
+          %{
+            name: body_data[:workflow_name],
+            project_name: body_data[:project_name]
+          },
           body_data[:count],
           body_data[:time_scale]
         )
