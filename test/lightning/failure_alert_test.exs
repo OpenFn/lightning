@@ -246,7 +246,8 @@ defmodule Lightning.FailureAlertTest do
 
       FailureAlerter.alert_on_failure(run_1)
 
-      refute_email_sent(subject: "\"workflow-a\" failed.")
+      s1 = "\"workflow-a\" (#{project_name}) failed"
+      refute_email_sent(subject: ^s1)
     end
 
     test "does not increment the rate-limiter counter when an email is not delivered.",
