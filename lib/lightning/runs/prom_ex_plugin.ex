@@ -12,8 +12,6 @@ defmodule Lightning.Runs.PromExPlugin do
   alias Lightning.Repo
   alias Lightning.Run
 
-  require Run
-
   @available_count_event [:lightning, :run, :queue, :available]
   @average_claim_event [:lightning, :run, :queue, :claim]
   @finalised_count_event [:lightning, :run, :queue, :finalised]

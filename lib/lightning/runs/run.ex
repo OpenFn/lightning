@@ -30,11 +30,7 @@ defmodule Lightning.Run do
   @doc """
   Returns the list of final states for a run.
   """
-  defmacro final_states do
-    quote do
-      unquote(@final_states)
-    end
-  end
+  def final_states, do: @final_states
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
