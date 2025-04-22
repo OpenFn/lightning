@@ -319,7 +319,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         for={to_form(%{})}
         class="flex-grow mt-2 overflow-hidden flex flex-col"
       >
-        <fieldset class="overflow-auto pr-4 flex-grow">
+        <fieldset class="overflow-auto flex-grow">
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label
               :for={template <- @templates}
@@ -344,7 +344,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
                 value={template.id}
                 class="sr-only"
               />
-              <span class={[
+              <%!-- <span class={[
                 "absolute top-0 right-0",
                 if(template.id == @selected_template.id,
                   do: "text-indigo-600",
@@ -352,7 +352,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
                 )
               ]}>
                 <.icon name="hero-check-circle" class="size-5 fill-current" />
-              </span>
+              </span> --%>
               <span class="flex-1 overflow-hidden flex flex-col">
                 <span class="font-medium text-gray-900 line-clamp-1">
                   {template.name}
