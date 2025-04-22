@@ -157,7 +157,32 @@ defmodule Lightning.InvocationTest do
 
   describe "list_dataclips_for_job/2" do
     test "returns empty list if there are no input dataclips" do
-      assert [] = Invocation.list_dataclips_for_job(%Job{id: Ecto.UUID.generate()}, 5)
+      assert [] =
+               Invocation.list_dataclips_for_job(
+                 %Job{id: Ecto.UUID.generate()},
+                 5
+               )
+    end
+
+    test "returns a list up to a limit of dataclips" do
+      %{jobs: [job | _rest]} = insert(:simple_workflow)
+
+      [_dataclip1, dataclip2, dataclip3] =
+        Enum.map(1..3, fn i ->
+          insert(:dataclip,
+            body: %{"field" => "value"},
+            request: %{"headers" => "list"},
+            type: :http_request,
+            inserted_at: DateTime.add(DateTime.utc_now(), i, :millisecond)
+          )
+          |> tap(&insert(:step, input_dataclip: &1, job: job))
+        end)
+
+      # string limit works too
+      assert_dataclips_list(
+        [dataclip3, dataclip2],
+        Invocation.list_dataclips_for_job(%Job{id: job.id}, "2")
+      )
     end
 
     test "returns latest dataclips for a job selecting the body as input" do
@@ -177,30 +202,24 @@ defmodule Lightning.InvocationTest do
 
       dataclips =
         Enum.map(1..6, fn i ->
-          dataclip =
-            insert(:dataclip,
-              body: %{"foo#{i}" => "bar#{i}"},
-              request: %{"headers" => "list#{i}"},
-              inserted_at: DateTime.add(inserted_at, i, :millisecond)
-            )
-            |> Map.delete(:project)
+          insert(:dataclip,
+            body: %{"foo#{i}" => "bar#{i}"},
+            request: %{"headers" => "list#{i}"},
+            inserted_at: DateTime.add(inserted_at, i, :millisecond)
+          )
+          |> tap(fn dataclip ->
+            insert(:step, input_dataclip: dataclip, job: job1)
 
-          insert(:step, input_dataclip: dataclip, job: job1)
-
-          assert dataclip.body == %{"foo#{i}" => "bar#{i}"}
-
-          dataclip
-          |> Map.update(:body, nil, fn body ->
-            %{"data" => body, "request" => dataclip.request}
+            assert dataclip.body == %{"foo#{i}" => "bar#{i}"}
           end)
-          |> Map.put(:request, nil)
         end)
         |> Enum.drop(1)
         |> Enum.sort_by(& &1.inserted_at, :desc)
 
-      assert ^dataclips =
-               Invocation.list_dataclips_for_job(job1, 5)
-               |> Enum.map(&Map.delete(&1, :project))
+      assert_dataclips_list(
+        dataclips,
+        Invocation.list_dataclips_for_job(job1, 5)
+      )
     end
 
     test "filters out wiped dataclips" do
@@ -213,21 +232,28 @@ defmodule Lightning.InvocationTest do
       )
 
       dataclip =
-        insert(:dataclip, body: %{"foo" => "bar"}, request: %{"headers" => "list"})
-        |> then(&Map.update(&1, :body, nil, fn body -> %{"data" => body, "request" => &1.request} end))
-        |> Map.drop([:project, :request])
+        insert(:dataclip,
+          body: %{"foo" => "bar"},
+          request: %{"headers" => "list"}
+        )
 
       insert(:step, input_dataclip: dataclip, job: job1)
 
-      assert [^dataclip] =
-               Invocation.list_dataclips_for_job(job1, 5)
-               |> Enum.map(&Map.drop(&1, [:project, :request]))
+      assert_dataclips_list(
+        [dataclip],
+        Invocation.list_dataclips_for_job(job1, 5)
+      )
     end
   end
 
   describe "list_dataclips_for_job/3" do
     test "returns empty list if there are no input dataclips" do
-      assert [] = Invocation.list_dataclips_for_job(%Job{id: Ecto.UUID.generate()}, %{}, 5)
+      assert [] =
+               Invocation.list_dataclips_for_job(
+                 %Job{id: Ecto.UUID.generate()},
+                 %{},
+                 5
+               )
     end
 
     test "returns latest dataclips for a job filtering by type" do
@@ -280,7 +306,11 @@ defmodule Lightning.InvocationTest do
         |> Enum.sort_by(& &1.inserted_at, :desc)
 
       assert ^dataclips =
-               Invocation.list_dataclips_for_job(job1, %{type: "http_request"}, 5)
+               Invocation.list_dataclips_for_job(
+                 job1,
+                 %{type: "http_request"},
+                 5
+               )
                |> Enum.map(&Map.delete(&1, :project))
     end
 
@@ -294,14 +324,26 @@ defmodule Lightning.InvocationTest do
       )
 
       dataclip =
-        insert(:dataclip, body: %{"foo" => "bar"}, request: %{"headers" => "list"}, type: :http_request)
-        |> then(&Map.update(&1, :body, nil, fn body -> %{"data" => body, "request" => &1.request} end))
+        insert(:dataclip,
+          body: %{"foo" => "bar"},
+          request: %{"headers" => "list"},
+          type: :http_request
+        )
+        |> then(
+          &Map.update(&1, :body, nil, fn body ->
+            %{"data" => body, "request" => &1.request}
+          end)
+        )
         |> Map.drop([:project, :request])
 
       insert(:step, input_dataclip: dataclip, job: job1)
 
       assert [^dataclip] =
-               Invocation.list_dataclips_for_job(job1, %{type: "http_request"}, 5)
+               Invocation.list_dataclips_for_job(
+                 job1,
+                 %{type: "http_request"},
+                 5
+               )
                |> Enum.map(&Map.drop(&1, [:project, :request]))
     end
   end
@@ -1327,5 +1369,20 @@ defmodule Lightning.InvocationTest do
         assert project_file.type == :export
       end)
     end
+  end
+
+  defp assert_dataclips_list(expected, returned) do
+    assert expected
+           |> Enum.map(&format_listed/1)
+           |> Enum.map(&Map.delete(&1, :project)) ==
+             Enum.map(returned, &Map.delete(&1, :project))
+  end
+
+  defp format_listed(dataclip) do
+    dataclip
+    |> Map.update(:body, nil, fn body ->
+      %{"data" => body, "request" => dataclip.request}
+    end)
+    |> Map.put(:request, nil)
   end
 end

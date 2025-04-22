@@ -1421,16 +1421,31 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:reply, %{workflow_params: socket.assigns.workflow_params}, socket}
   end
 
-  def handle_event("get-selectable-dataclips", %{"job_id" => job_id, "limit" => limit}, socket) do
+  def handle_event(
+        "get-selectable-dataclips",
+        %{"job_id" => job_id, "limit" => limit},
+        socket
+      ) do
     event = NewManualRun.get_selectable_dataclips(job_id, limit)
 
     {:noreply, push_event(socket, event.key, event.payload)}
   end
 
-  def handle_event("search-selectable-dataclips", %{"job_id" => job_id, "search_text" => search_text, "limit" => limit} = params, socket) do
+  def handle_event(
+        "search-selectable-dataclips",
+        %{"job_id" => job_id, "search_text" => search_text, "limit" => limit} =
+          params,
+        socket
+      ) do
     offset = Map.get(params, "offset")
 
-    event = NewManualRun.search_selectable_dataclips(job_id, search_text, limit, offset)
+    event =
+      NewManualRun.search_selectable_dataclips(
+        job_id,
+        search_text,
+        limit,
+        offset
+      )
 
     {:noreply, push_event(socket, event.key, event.payload)}
   end

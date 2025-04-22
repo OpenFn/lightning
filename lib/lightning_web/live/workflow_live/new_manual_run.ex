@@ -14,7 +14,10 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
     dataclips =
       Invocation.list_dataclips_for_job(%Job{id: job_id}, limit)
 
-    %Edit.PushEvent{key: "current-selectable-dataclips", payload: %{dataclips: dataclips}}
+    %Edit.PushEvent{
+      key: "current-selectable-dataclips",
+      payload: %{dataclips: dataclips}
+    }
   end
 
   def search_selectable_dataclips(job_id, search_text, limit, offset) do
@@ -28,7 +31,10 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
         offset
       )
 
-    %Edit.PushEvent{key: "searched-selectable-dataclips", payload: %{dataclips: dataclips}}
+    %Edit.PushEvent{
+      key: "searched-selectable-dataclips",
+      payload: %{dataclips: dataclips}
+    }
   end
 
   defp get_dataclips_filters(search_text) do

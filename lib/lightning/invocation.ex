@@ -57,13 +57,24 @@ defmodule Lightning.Invocation do
     |> Repo.all()
   end
 
-  @spec list_dataclips_for_job(Job.t(), map(), pos_integer(), pos_integer() | nil)  :: [Dataclip.t()]
+  @spec list_dataclips_for_job(
+          Job.t(),
+          filters :: map(),
+          limit :: pos_integer(),
+          offset :: pos_integer() | nil
+        ) :: [Dataclip.t()]
   def list_dataclips_for_job(%Job{id: job_id}, filters, limit, offset \\ nil) do
-    filters = Enum.reduce(filters, dynamic(true), fn
-      {:type, type}, dynamic -> dynamic([d], ^dynamic and d.type == ^type)
-      {:date, date}, dynamic -> dynamic([d], ^dynamic and fragment("date(?)", d.inserted_at) == ^date)
-      {:datetime, ts}, dynamic -> dynamic([d], ^dynamic and d.inserted_at == ^ts)
-    end)
+    filters =
+      Enum.reduce(filters, dynamic(true), fn
+        {:type, type}, dynamic ->
+          dynamic([d], ^dynamic and d.type == ^type)
+
+        {:date, date}, dynamic ->
+          dynamic([d], ^dynamic and fragment("date(?)", d.inserted_at) == ^date)
+
+        {:datetime, ts}, dynamic ->
+          dynamic([d], ^dynamic and d.inserted_at == ^ts)
+      end)
 
     Query.last_n_for_job(job_id, limit)
     |> Query.select_as_input()
