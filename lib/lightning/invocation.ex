@@ -55,6 +55,21 @@ defmodule Lightning.Invocation do
     |> Repo.all()
   end
 
+  def list_dataclips_for_job(%Lightning.Workflows.Job{id: job_id}, filters, limit, offset \\ nil) do
+    filters = Enum.reduce(filters, dynamic(true), fn
+      {:type, type}, dynamic -> dynamic([d], ^dynamic and d.type == ^type)
+      {:date, date}, dynamic -> dynamic([d], ^dynamic and fragment("date(?)", d.inserted_at) == ^date)
+      {:datetime, ts}, dynamic -> dynamic([d], ^dynamic and d.inserted_at == ^ts)
+    end)
+
+    Query.last_n_for_job(job_id, limit)
+    |> Query.select_as_input()
+    |> where([d], is_nil(d.wiped_at))
+    |> where([d], ^filters)
+    |> then(fn query -> if offset, do: query, else: offset(query, ^offset) end)
+    |> Repo.all()
+  end
+
   @spec get_dataclip_details!(id :: Ecto.UUID.t()) :: Dataclip.t()
   def get_dataclip_details!(id),
     do: Repo.get!(Query.dataclip_with_body(), id)

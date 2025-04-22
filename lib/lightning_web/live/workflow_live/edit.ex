@@ -31,12 +31,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Lightning.WorkOrders
   alias LightningWeb.UiMetrics
   alias LightningWeb.WorkflowLive.Helpers
+  alias LightningWeb.WorkflowLive.NewManualRun
   alias LightningWeb.WorkflowNewLive.WorkflowParams
   alias Phoenix.LiveView.JS
 
   require Lightning.Run
-
-  @latest_dataclips_limit 5
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
@@ -1419,14 +1418,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("get-selectable-dataclips", %{"job_id" => job_id}, socket) do
-    dataclips =
-      Invocation.list_dataclips_for_job(
-        %Job{id: job_id},
-        @latest_dataclips_limit
-      )
+    {:noreply, NewManualRun.get_selectable_dataclips(socket, job_id)}
+  end
 
-    {:noreply,
-     push_event(socket, "current-selectable-dataclips", %{dataclips: dataclips})}
+  def handle_event("search-selectable-dataclips", %{"job_id" => job_id, "search_text" => search_text}, socket) do
+    {:noreply, NewManualRun.search_selectable_dataclips(socket, job_id, search_text)}
   end
 
   def handle_event("switch-version", %{"type" => type}, socket) do
