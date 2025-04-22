@@ -118,5 +118,5 @@ export const WorkflowStore: WithActionProps = (props) => {
     });
   }, [props, setDisabled])
 
-  return <></>
+  return <>{props.children}</>
 }
