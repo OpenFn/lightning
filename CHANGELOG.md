@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Add project name to failure email subject
+  [#2974](https://github.com/OpenFn/lightning/issues/2974)
+
 ### Fixed
 
 ## [v2.11.3-pre.1] - 2025-04-16
