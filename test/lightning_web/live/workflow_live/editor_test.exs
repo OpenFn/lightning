@@ -499,9 +499,16 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       {:ok, view, _html} =
         live(
           conn,
-          ~p"/projects/#{project}/w/new?#{%{name: workflow_name}}",
+          ~p"/projects/#{project}/w/new",
           on_error: :raise
         )
+
+      view
+      |> form("#new-workflow-name-form")
+      |> render_change(workflow: %{name: workflow_name})
+
+      # click continue
+      view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
 
       # add a job to the workflow
       %{"value" => %{"id" => job_id}} = job_patch = add_job_patch(job_name)
@@ -1036,7 +1043,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       # the select input now exists
       assert has_element?(view, "select[name='manual[dataclip_id]']")
 
-      # the wiped message is nolonger displayed
+      # the wiped message is no longer displayed
       refute render(form) =~ "data for this step has not been retained"
 
       assert has_element?(view, "textarea[name='manual[body]']")
@@ -1113,7 +1120,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       assert has_element?(view, "textarea[name='manual[body]']"),
              "dataclip body input exists"
 
-      # the wiped message is nolonger displayed
+      # the wiped message is no longer displayed
       refute render(form) =~ "data for this step has not been retained"
 
       # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
@@ -1193,7 +1200,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       assert has_element?(view, "textarea[name='manual[body]']"),
              "dataclip body input exists"
 
-      # the job not run message is nolonger displayed
+      # the job not run message is no longer displayed
       refute render(form) =~ "This job was not/is not yet included in this Run"
 
       # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
@@ -1675,7 +1682,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       # action button is rendered correctly.
       refute has_element?(view, "button", "Retry from here")
-      refute has_element?(view, "button", "Processing"), "nolonger processing"
+      refute has_element?(view, "button", "Processing"), "no longer processing"
       assert has_element?(view, "button", "Create New Work Order")
 
       # make sure event is processed by the run viewer

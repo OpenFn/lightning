@@ -2,8 +2,6 @@ defmodule LightningWeb.WorkflowLive.Index do
   @moduledoc false
   use LightningWeb, :live_view
 
-  import LightningWeb.WorkflowLive.Components
-
   alias Lightning.DashboardStats
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
@@ -12,7 +10,6 @@ defmodule LightningWeb.WorkflowLive.Index do
   alias LightningWeb.LiveHelpers
   alias LightningWeb.WorkflowLive.DashboardComponents
   alias LightningWeb.WorkflowLive.Helpers
-  alias LightningWeb.WorkflowLive.NewWorkflowForm
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
@@ -59,7 +56,6 @@ defmodule LightningWeb.WorkflowLive.Index do
           sort_direction={Atom.to_string(@sort_direction)}
           search_term={@search_term}
         />
-        <.create_workflow_modal form={@form} />
       </LayoutComponents.centered>
     </LayoutComponents.page_content>
     """
@@ -93,8 +89,7 @@ defmodule LightningWeb.WorkflowLive.Index do
        sort_key: "name",
        sort_direction: "asc",
        search_term: ""
-     )
-     |> assign_workflow_form(NewWorkflowForm.validate(%{}, project.id))}
+     )}
   end
 
   @impl true
@@ -269,31 +264,6 @@ defmodule LightningWeb.WorkflowLive.Index do
     end
   end
 
-  def handle_event("validate_workflow", %{"new_workflow" => params}, socket) do
-    changeset =
-      NewWorkflowForm.validate(params, socket.assigns.project.id)
-      |> Map.put(:action, :validate)
-
-    {:noreply, socket |> assign_workflow_form(changeset)}
-  end
-
-  def handle_event("create_work_flow", %{"new_workflow" => params}, socket) do
-    changeset =
-      params
-      |> NewWorkflowForm.validate(socket.assigns.project.id)
-      |> NewWorkflowForm.validate_for_save()
-
-    if changeset.valid? do
-      {:noreply,
-       push_navigate(socket,
-         to:
-           ~p"/projects/#{socket.assigns.project}/w/new?#{%{name: Ecto.Changeset.get_field(changeset, :name)}}"
-       )}
-    else
-      {:noreply, socket |> assign_workflow_form(changeset)}
-    end
-  end
-
   defp build_query_params(search_term, sort_key, sort_direction) do
     base_params = %{
       sort: sort_key,
@@ -305,10 +275,6 @@ defmodule LightningWeb.WorkflowLive.Index do
     else
       base_params
     end
-  end
-
-  defp assign_workflow_form(socket, changeset) do
-    socket |> assign(form: to_form(changeset, as: :new_workflow))
   end
 
   defp check_workflow_and_run_limits(assigns, project_id) do

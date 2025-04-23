@@ -749,57 +749,6 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
-  def create_workflow_modal(assigns) do
-    ~H"""
-    <.modal id="workflow_modal" width="w-full max-w-xl">
-      <:title>
-        <div class="flex justify-between">
-          Let's get started
-          <button
-            phx-click={hide_modal("workflow_modal")}
-            type="button"
-            class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
-            aria-label={gettext("close")}
-          >
-            <span class="sr-only">Close</span>
-            <.icon name="hero-x-mark" class="h-5 w-5 stroke-current" />
-          </button>
-        </div>
-      </:title>
-      <.form
-        for={@form}
-        id={@form.id}
-        phx-change="validate_workflow"
-        phx-submit="create_work_flow"
-        class="mx-6"
-      >
-        <.input field={@form[:name]} type="text" label="Workflow Name" />
-      </.form>
-      <:footer class="mx-6 mt-6">
-        <div class="flex gap-x-5 justify-end relative">
-          <.link
-            class="justify-center rounded-md bg-white px-4 py-3 text-sm font-semibold text-gray-500 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
-            phx-click={hide_modal("workflow_modal")}
-          >
-            Cancel
-          </.link>
-          <span class="group">
-            <button
-              disabled={not @form.source.valid?}
-              id="workflow_button"
-              form={@form.id}
-              type="submit"
-              class=" justify-center rounded-md bg-primary-600 disabled:bg-primary-300 px-6 py-3 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 disabled:outline-0 focus:outline-2 focus:outline-indigo-600 focus:outline-offset-2 active:outlin-2 active:outline-indigo-600 active:outline-offset-2"
-            >
-              Create Workflow
-            </button>
-          </span>
-        </div>
-      </:footer>
-    </.modal>
-    """
-  end
-
   def workflow_info_banner(assigns) do
     ~H"""
     <div

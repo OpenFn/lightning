@@ -30,6 +30,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
         <div class="flex gap-2 items-start">
           <.search_workflows_input search_term={@search_term} />
           <.create_workflow_card
+            project_id={@project.id}
             limit_error={@workflow_creation_limit_error}
             can_create_workflow={@can_create_workflow}
           />
@@ -48,9 +49,18 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
           <div class="text-center py-8">
             <p class="text-gray-500">
               <%= if @search_term != "" do %>
-                No workflows found matching "{@search_term}". Try a different search term.
+                No workflows found matching "{@search_term}". Try a different search term or <.link
+                  navigate={~p"/projects/#{@project.id}/w/new"}
+                  class="link"
+                >
+                  create a new one
+                </.link>.
               <% else %>
-                No workflows found. Create your first workflow to get started.
+                No workflows found.
+                <.link navigate={~p"/projects/#{@project.id}/w/new"} class="link">
+                  Create one
+                </.link>
+                to start automating.
               <% end %>
             </p>
           </div>
@@ -334,6 +344,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   end
 
   attr :can_create_workflow, :boolean, required: true
+  attr :project_id, :string, required: true
   attr :limit_error, :string
 
   def create_workflow_card(assigns) do
@@ -351,10 +362,12 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       <.button
         disabled={@disabled}
         tooltip={@tooltip}
-        phx-click={if !@disabled, do: show_modal("workflow_modal")}
+        phx-click={
+          if !@disabled, do: JS.navigate(~p"/projects/#{@project_id}/w/new")
+        }
         class="col-span-1 w-full rounded-md"
         role="button"
-        id="open-modal-button"
+        id="new-workflow-button"
       >
         Create new workflow
       </.button>

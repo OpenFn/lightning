@@ -107,8 +107,6 @@ defmodule LightningWeb.RunLive.ShowTest do
 
       view |> select_step(run, job_a.name)
 
-      # <script id=\"step-input-dataclip-viewer\" type=\"application/json\" data-react-file=\"/assets/js/react/components/DataclipViewer.js\" data-react-name=\"DataclipViewer\" phx-hook=\"ReactComponent\">\n  {\"id\":\"step-input-dataclip-viewer\",\"dataclipId\":\"a96efdd4-99f6-4dd2-a6b5-36d34c9638fa\"}\n</script>
-
       input_dataclip_viewer =
         view
         |> dataclip_viewer("step-input-dataclip-viewer")

@@ -203,6 +203,11 @@ defmodule Lightning.WebAndWorkerTest do
       Events.subscribe(run)
 
       assert_receive %Events.RunUpdated{
+                       run: %{id: ^run_id, state: :started}
+                     },
+                     115_000
+
+      assert_receive %Events.RunUpdated{
                        run: %{id: ^run_id, state: :success}
                      },
                      115_000
