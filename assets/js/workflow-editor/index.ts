@@ -80,7 +80,7 @@ export default {
     );
 
     this.handleEvent('patches-applied', (response: { patches: Patch[] }) => {
-      console.debug('patches-applied', response.patches);
+      console.log('patches-applied', response.patches);
       this.workflowStore.getState().applyPatches(response.patches);
     });
 

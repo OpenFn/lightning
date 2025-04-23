@@ -586,6 +586,11 @@ defmodule Lightning.Projects do
     from(w in Workflow, where: w.project_id == ^project.id)
   end
 
+  def list_workflows(project) do
+    project_workflows_query(project)
+    |> Repo.all()
+  end
+
   @spec project_users_query(atom | %{:id => any, optional(any) => any}) ::
           Ecto.Query.t()
   def project_users_query(project) do

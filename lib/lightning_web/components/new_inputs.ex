@@ -629,7 +629,7 @@ defmodule LightningWeb.Components.NewInputs do
       name={@name}
       class={[
         "focus:outline focus:outline-2 focus:outline-offset-1 rounded-md shadow-xs text-sm",
-        "mt-2 block w-full focus:ring-0",
+        "block w-full focus:ring-0",
         "sm:text-sm sm:leading-6",
         "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 overflow-y-auto",
         @errors == [] &&

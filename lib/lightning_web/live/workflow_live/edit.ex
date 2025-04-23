@@ -147,17 +147,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   on_click="toggle_workflow_state"
                 />
                 <div>
-                  <.link
-                    patch={
-                      if @selection_mode == "settings",
-                        do: @base_url,
-                        else: "#{@base_url}?m=settings"
-                    }
-                    class="w-5 h-5 place-self-center text-slate-500 hover:text-slate-400 cursor-pointer"
-                    id="toggle-settings"
-                  >
-                    <.icon name="hero-adjustments-vertical" />
-                  </.link>
+                  <div>
+                    <.settings_icon
+                      changeset={@changeset}
+                      selection_mode={@selection_mode}
+                      base_url={@base_url}
+                    />
+                  </div>
                 </div>
                 <.offline_indicator />
               </div>
@@ -180,7 +176,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           id="new-workflow-panel"
           module={LightningWeb.WorkflowLive.NewWorkflowComponent}
           workflow={@workflow}
-          project_id={@project.id}
+          project={@project}
         />
         <div class="relative h-full flex grow" id={"workflow-edit-#{@workflow.id}"}>
           <div class="flex-none" id="job-editor-pane">
@@ -693,29 +689,38 @@ defmodule LightningWeb.WorkflowLive.Edit do
               phx-change="validate"
               phx-submit="save"
             >
-              <div class="container mx-auto space-y-6 bg-white">
-                <.template_field field={f[:name]} label="Name" required={true}>
-                  A descriptive name for your template
-                </.template_field>
+              <div class="container mx-auto space-y-4 bg-white">
+                <.input
+                  type="text"
+                  field={f[:name]}
+                  label="Name"
+                  required={true}
+                  value={@workflow.name}
+                  placeholder="A descriptive name for your template"
+                />
 
-                <.template_field
+                <.input
+                  type="textarea"
                   field={f[:description]}
                   label="Description"
-                  type="textarea"
-                >
-                  A detailed description of what this template does
-                </.template_field>
+                  class="bg-white text-slate-900"
+                  placeholder="A detailed description of what this template does"
+                />
 
-                <.template_field
-                  type="tags"
-                  label="Tags"
-                  raw_field={f[:raw_tags]}
-                  hidden_field={f[:tags]}
-                  tags={get_tags_from_changeset(@workflow_template_changeset)}
-                  current_tag={@current_template_tag}
-                >
-                  Add tags to help others find your template
-                </.template_field>
+                <div class="space-y-4">
+                  <.input
+                    id="workflow-template-tags"
+                    type="text"
+                    field={f[:raw_tags]}
+                    label="Tags"
+                    phx-hook="ClearInput"
+                    placeholder="Separate tags with commas (,)"
+                  />
+                  <.input type="hidden" field={f[:tags]} />
+                  <.tag_list tags={
+                    get_tags_from_changeset(@workflow_template_changeset)
+                  } />
+                </div>
               </div>
             </.form>
             <:footer>
@@ -751,6 +756,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 </.button>
               </div>
               <div :if={@publish_template} class="sm:flex sm:flex-row-reverse">
+                <% dbg(@workflow_template_changeset) %>
                 <button
                   type="submit"
                   form="workflow-template-form"
@@ -2037,6 +2043,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   def handle_event("workflow_code_generated", %{"code" => code}, socket) do
     changeset =
       WorkflowTemplate.changeset(socket.assigns.workflow_template, %{code: code})
+      |> dbg()
 
     {:noreply,
      assign(socket, workflow_code: code, workflow_template_changeset: changeset)}
@@ -2870,7 +2877,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           {true, "You do not have permission to edit this workflow"}
 
         %{changeset: %{valid?: false}} ->
-          {true, "You have some unresolved errors in your workflow"}
+          {true, "You have unresolved errors in your workflow"}
 
         %{snapshot_version_tag: tag} when tag != "latest" ->
           {true, "You cannot edit an old snapshot of a workflow"}
@@ -3015,13 +3022,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp prepare_workflow_template(socket) do
     template =
       WorkflowTemplates.get_template_by_workflow_id(socket.assigns.workflow.id) ||
-        %WorkflowTemplate{}
+        %WorkflowTemplate{
+          name: socket.assigns.workflow.name,
+          workflow_id: socket.assigns.workflow.id,
+          tags: []
+        }
 
     changeset =
       WorkflowTemplate.changeset(template, %{
-        code: socket.assigns.workflow_code,
-        workflow_id: socket.assigns.workflow.id,
-        tags: template.tags || []
+        code: socket.assigns.workflow_code
       })
 
     socket
@@ -3053,52 +3062,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> then(&WorkflowTemplate.changeset(template, &1))
   end
 
-  # Component functions
-  defp template_field(assigns) do
-    assigns =
-      assigns
-      |> Map.put_new(:type, "text")
-      |> Map.put_new(:required, false)
-
-    case assigns.type do
-      "tags" ->
-        ~H"""
-        <div class="space-y-2 mt-5">
-          <.input
-            id="workflow-template-tags"
-            type="text"
-            label={@label}
-            field={@raw_field}
-            value={@current_tag}
-            phx-hook="ClearInput"
-            placeholder="comma,separated,tags"
-          />
-          <.input type="hidden" field={@hidden_field} />
-          <small class="mt-2 block text-xs text-gray-600">
-            {render_slot(@inner_block)}
-          </small>
-          <.tag_list tags={@tags} />
-        </div>
-        """
-
-      _ ->
-        ~H"""
-        <div class="space-y-4">
-          <.input
-            type={@type}
-            field={@field}
-            label={@label}
-            required={@required}
-            class={if @type == "textarea", do: "bg-white text-slate-900", else: nil}
-          />
-          <small class="mt-2 block text-xs text-gray-600">
-            {render_slot(@inner_block)}
-          </small>
-        </div>
-        """
-    end
-  end
-
   defp tag_list(assigns) do
     ~H"""
     <div>
@@ -3128,6 +3091,38 @@ defmodule LightningWeb.WorkflowLive.Edit do
         </button>
       </span>
     </div>
+    """
+  end
+
+  defp workflow_settings_errors?(changeset) do
+    errors_keys = Keyword.keys(changeset.errors)
+    Enum.any?([:name, :concurrency], &(&1 in errors_keys))
+  end
+
+  defp settings_icon(assigns) do
+    base_icon_class = "w-5 h-5 place-self-center cursor-pointer"
+
+    class =
+      if workflow_settings_errors?(assigns.changeset) do
+        base_icon_class <> " text-danger-500 hover:text-danger-400"
+      else
+        base_icon_class <> " text-slate-500 hover:text-slate-400"
+      end
+
+    assigns = assign(assigns, :class, class)
+
+    ~H"""
+    <.link
+      patch={
+        if @selection_mode == "settings",
+          do: @base_url,
+          else: "#{@base_url}?m=settings"
+      }
+      class={@class}
+      id="toggle-settings"
+    >
+      <.icon name="hero-adjustments-vertical" />
+    </.link>
     """
   end
 end
