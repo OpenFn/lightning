@@ -102,6 +102,7 @@ defmodule Lightning.JanitorTest do
       assert reloaded_lost_long_run.state == :lost
 
       subject = "\"pain perdu\" (#{project.name}) failed"
+
       assert_receive {:email, %Swoosh.Email{subject: ^subject}},
                      1000
     end
