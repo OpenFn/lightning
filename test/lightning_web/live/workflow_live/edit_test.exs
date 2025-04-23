@@ -209,7 +209,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       # save button is now present
       assert view
-             |> element("button[type='submit'][form='workflow-form']")
+             |> element("button", "Save")
              |> has_element?()
 
       # toggle settings panel button is now preset
@@ -475,7 +475,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       # save button is now present
       assert view
-             |> element("button[type='submit'][form='workflow-form']")
+             |> element("button", "Save")
              |> has_element?()
 
       # toggle settings panel button is now preset
