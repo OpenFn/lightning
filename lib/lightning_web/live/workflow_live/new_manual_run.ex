@@ -5,7 +5,6 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
   """
   alias Lightning.Invocation
   alias Lightning.Invocation.Dataclip
-  alias LightningWeb.WorkflowLive.Edit
   alias Lightning.Workflows.Job
 
   @dataclip_types MapSet.new(Dataclip.source_types(), &to_string/1)
@@ -14,10 +13,7 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
     dataclips =
       Invocation.list_dataclips_for_job(%Job{id: job_id}, limit)
 
-    %Edit.PushEvent{
-      key: "current-selectable-dataclips",
-      payload: %{dataclips: dataclips}
-    }
+    %{dataclips: dataclips}
   end
 
   def search_selectable_dataclips(job_id, search_text, limit, offset) do
@@ -31,10 +27,7 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
         offset
       )
 
-    %Edit.PushEvent{
-      key: "searched-selectable-dataclips",
-      payload: %{dataclips: dataclips}
-    }
+    %{dataclips: dataclips}
   end
 
   defp get_dataclips_filters(search_text) do
@@ -44,7 +37,7 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
       if MapSet.member?(@dataclip_types, text) do
         Map.put(filters, :type, text)
       else
-        with :error <- Date.from_iso8601(text) do
+        with {:error, _reason} <- Date.from_iso8601(text) do
           DateTime.from_iso8601(text)
         end
         |> case do

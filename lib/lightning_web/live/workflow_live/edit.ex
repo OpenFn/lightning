@@ -47,10 +47,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   attr :changeset, :map, required: true
   attr :project_user, :map, required: true
 
-  defmodule PushEvent do
-    defstruct [:key, :payload]
-  end
-
   @impl true
   def render(assigns) do
     assigns =
@@ -1426,9 +1422,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
         %{"job_id" => job_id, "limit" => limit},
         socket
       ) do
-    event = NewManualRun.get_selectable_dataclips(job_id, limit)
-
-    {:noreply, push_event(socket, event.key, event.payload)}
+    payload = NewManualRun.get_selectable_dataclips(job_id, limit)
+    {:reply, payload, socket}
   end
 
   def handle_event(
@@ -1439,7 +1434,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       ) do
     offset = Map.get(params, "offset")
 
-    event =
+    payload =
       NewManualRun.search_selectable_dataclips(
         job_id,
         search_text,
@@ -1447,7 +1442,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         offset
       )
 
-    {:noreply, push_event(socket, event.key, event.payload)}
+    {:reply, payload, socket}
   end
 
   def handle_event("switch-version", %{"type" => type}, socket) do
