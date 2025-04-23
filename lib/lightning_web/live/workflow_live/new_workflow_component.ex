@@ -1,7 +1,5 @@
 defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
   @moduledoc false
-  # alias LightningWeb.WorkflowNewLive.WorkflowParams
-  # alias Lightning.Workflows
   alias Lightning.Projects
   use LightningWeb, :live_component
 
@@ -80,15 +78,19 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         template.id == template_id
       end)
 
-    # params = Workflows.change_workflow(template.workflow) |> WorkflowParams.to_map()
-
-    # patches =
-    #   WorkflowParams.to_patches(params, %{}) |> dbg()
+    # TODO: Empty Patches Workaround for Layout Recalculation
+    #
+    # We send empty patches to the workflow diagram via `push_event(socket, "patches-applied", %{patches: []})`
+    # to force a layout recalculation. This is needed because the current layout algorithm doesn't properly
+    # handle initial workflow model parameter changes.
+    #
+    # @josephjclark and @elias-ba agreed on this temporary solution until the layout
+    # calculation algorithm is improved.
+    push_event(socket, "patches-applied", %{patches: []})
 
     {:noreply,
      socket
      |> assign(selected_template: template)
-     |> push_event("patches-applied", %{patches: []})
      |> push_selected_template_code()}
   end
 
