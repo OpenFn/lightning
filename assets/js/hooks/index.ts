@@ -17,6 +17,7 @@ import {
 
 import {
   SaveViaCtrlS,
+  InspectorSaveViaCtrlS,
   OpenSyncModalViaCtrlShiftS,
   SendMessageViaCtrlEnter,
   DefaultRunViaCtrlEnter,
@@ -37,6 +38,7 @@ export {
   TabbedSelector,
   TabbedPanels,
   SaveViaCtrlS,
+  InspectorSaveViaCtrlS,
   OpenSyncModalViaCtrlShiftS,
   SendMessageViaCtrlEnter,
   DefaultRunViaCtrlEnter,

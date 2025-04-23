@@ -21,6 +21,8 @@ and this project adheres to
 
 - Add project name to failure email subject
   [#2974](https://github.com/OpenFn/lightning/issues/2974)
+- Large refactor of the inspector and React components
+  [#3043](https://github.com/OpenFn/lightning/pull/3043)
 
 ### Fixed
 

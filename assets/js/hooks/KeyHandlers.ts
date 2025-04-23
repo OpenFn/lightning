@@ -1,5 +1,5 @@
+import { submitOrClick } from '../common';
 import type { PhoenixHook } from './PhoenixHook';
-import { initiateSaveAndRun } from '../common';
 
 /**
  * Priority levels for key handlers.
@@ -87,7 +87,7 @@ const keyHandlers = new Set<{
   keyCheck: (e: KeyboardEvent) => boolean;
   action: (e: KeyboardEvent, el: HTMLElement) => void;
   priority: PriorityLevel;
-  bindingScope?: string;
+  bindingScope?: string | undefined;
 }>();
 
 /**
@@ -129,6 +129,8 @@ function createKeyCombinationHook(
       const handler = { hook: this, keyCheck, action, priority, bindingScope };
       keyHandlers.add(handler);
 
+      this.abortController = new AbortController();
+
       this.callback = (e: KeyboardEvent) => {
         if (!keyCheck(e)) return;
 
@@ -148,23 +150,30 @@ function createKeyCombinationHook(
           h => h.bindingScope === focusedScope
         );
 
-        const matchingHandlers = keyMatchingHandlers
-          .filter(h => {
-            if (h.bindingScope) {
-              return h.bindingScope === focusedScope;
-            } else {
-              return !hasScopedHandlers;
-            }
-          })
-          .sort((a, b) => b.priority - a.priority);
+        const matchingHandlers = keyMatchingHandlers.filter(h => {
+          if (h.bindingScope) {
+            return h.bindingScope === focusedScope;
+          } else {
+            return !hasScopedHandlers;
+          }
+        });
 
-        const topHandler = matchingHandlers[0];
-        if (topHandler?.hook === this) {
-          topHandler.action(e, this.el);
+        const maxPriority = Math.max(...matchingHandlers.map(h => h.priority));
+        const topPriorityHandlers = matchingHandlers.filter(
+          h => h.priority === maxPriority
+        );
+
+        // Take the last handler if there are more than one with the same priority.
+        const lastHandler = topPriorityHandlers[topPriorityHandlers.length - 1];
+
+        if (lastHandler?.hook === this) {
+          lastHandler.action(e, this.el);
         }
       };
 
-      window.addEventListener('keydown', this.callback);
+      window.addEventListener('keydown', this.callback, {
+        signal: this.abortController.signal,
+      });
     },
 
     destroyed() {
@@ -173,10 +182,11 @@ function createKeyCombinationHook(
           keyHandlers.delete(handler);
         }
       });
-      window.removeEventListener('keydown', this.callback);
+      this.abortController.abort();
     },
   } as PhoenixHook<{
     callback: (e: KeyboardEvent) => void;
+    abortController: AbortController;
   }>;
 }
 
@@ -226,12 +236,15 @@ const isEscape = (e: KeyboardEvent) => e.key === 'Escape';
 
 /**
  * Simulates a "click" action, used to trigger save and run functionality.
+ * Will skip saving if the element is disabled.
  *
  * @param e - The keyboard event that triggered the action.
  * @param el - The DOM element associated with the hook.
  */
-const clickAction = (e: KeyboardEvent, el: HTMLElement) =>
-  initiateSaveAndRun(el);
+const clickAction = (_e: KeyboardEvent, el: HTMLElement) => {
+  if (el.hasAttribute('disabled')) return;
+  submitOrClick(el);
+};
 
 /**
  * Simulates a form submission action.
@@ -239,8 +252,9 @@ const clickAction = (e: KeyboardEvent, el: HTMLElement) =>
  * @param e - The keyboard event that triggered the action.
  * @param el - The DOM element associated with the hook.
  */
-const submitAction = (e: KeyboardEvent, el: HTMLElement) =>
+const submitAction = (_e: KeyboardEvent, el: HTMLElement) => {
   el.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+};
 
 /**
  * Simulates a "close" action, used to close modals, panels, or other UI components.
@@ -248,7 +262,7 @@ const submitAction = (e: KeyboardEvent, el: HTMLElement) =>
  * @param e - The keyboard event that triggered the action.
  * @param el - The DOM element associated with the hook.
  */
-const closeAction = (e: KeyboardEvent, el: HTMLElement) => el.click();
+const closeAction = (_e: KeyboardEvent, el: HTMLElement) => el.click();
 
 /**
  * Hook to trigger a form submission when "Ctrl+S" (or "Cmd+S" on macOS) is pressed.
@@ -263,6 +277,10 @@ export const SaveViaCtrlS = createKeyCombinationHook(
   submitAction
 );
 
+export const InspectorSaveViaCtrlS = createKeyCombinationHook(
+  isCtrlOrMetaS,
+  clickAction
+);
 /**
  * Hook to open the Github Sync modal when "Ctrl+Shift+S" (or "Cmd+Shift+S" on macOS) is pressed.
  *

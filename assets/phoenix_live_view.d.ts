@@ -163,7 +163,7 @@ declare module 'phoenix_live_view' {
   interface ViewHookInternal {
     liveSocket: LiveSocket;
     /**  @private */
-    __view: View;
+    __view: () => View;
   }
 
   interface Rendered {
