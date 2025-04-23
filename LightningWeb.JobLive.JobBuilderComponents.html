@@ -14,7 +14,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-74C9D4DD.js"></script>
+    <script src="dist/sidebar_items-FDCEBA88.js"></script>
     <script src="docs_config.js"></script>
     <script async src="dist/html-YIPIRHGU.js"></script>
 
@@ -153,11 +153,19 @@ Pages
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#job_editor_component/1" data-no-tooltip translate="no">job_editor_component(assigns)</a>
+        <a href="#JobEditor/1" data-no-tooltip translate="no">JobEditor(assigns)</a>
 
       </div>
 
-        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">adaptor</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">change_event</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;job_body_changed&quot;</code>.</li><li><code class="inline">disabled</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">disabled_message</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">job_id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">source</code> (<code class="inline">:string</code>) (required)</li><li>Global attributes are accepted.</li></ul></div>
+        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">adaptor</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">disabled</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">disabled_message</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">job_id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">source</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">react-id</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">react-portal-target</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li>Global attributes are accepted.</li></ul></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#job_editor_component/1" data-no-tooltip translate="no">job_editor_component(assigns)</a>
+
+      </div>
 
     </div>
 
@@ -174,16 +182,16 @@ Pages
       <span class="text">Functions</span>
     </h1>
     <div class="functions-list">
-<section class="detail" id="job_editor_component/1">
+<section class="detail" id="JobEditor/1">
 
   <div class="detail-header">
-    <a href="#job_editor_component/1" class="detail-link" data-no-tooltip title="Link to this function">
+    <a href="#JobEditor/1" class="detail-link" data-no-tooltip title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">job_editor_component(assigns)</h1>
+    <h1 class="signature" translate="no">JobEditor(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/job_builder_components.ex#L12" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/job_builder_components.ex#L13" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -193,13 +201,35 @@ Pages
 
   <section class="docstring">
 
-<h2 id="job_editor_component/1-attributes" class="section-heading">
-  <a href="#job_editor_component/1-attributes" class="hover-link">
+<h2 id="JobEditor/1-attributes" class="section-heading">
+  <a href="#JobEditor/1-attributes" class="hover-link">
     <i class="ri-link-m" aria-hidden="true"></i>
   </a>
   <span class="text">Attributes</span>
 </h2>
-<ul><li><code class="inline">adaptor</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">change_event</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">&quot;job_body_changed&quot;</code>.</li><li><code class="inline">disabled</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">disabled_message</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">job_id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">source</code> (<code class="inline">:string</code>) (required)</li><li>Global attributes are accepted.</li></ul>
+<ul><li><code class="inline">adaptor</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">disabled</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">false</code>.</li><li><code class="inline">disabled_message</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">job_id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">source</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">react-id</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li><code class="inline">react-portal-target</code> (<code class="inline">:string</code>) - Defaults to <code class="inline">nil</code>.</li><li>Global attributes are accepted.</li></ul>
+  </section>
+</section>
+<section class="detail" id="job_editor_component/1">
+
+  <div class="detail-header">
+    <a href="#job_editor_component/1" class="detail-link" data-no-tooltip title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">job_editor_component(assigns)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/job_builder_components.ex#L15" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
   </section>
 </section>
 
