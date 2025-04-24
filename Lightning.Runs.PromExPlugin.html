@@ -14,7 +14,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-K7URE6B4.js"></script>
-    <script src="dist/sidebar_items-FDCEBA88.js"></script>
+    <script src="dist/sidebar_items-D2448C86.js"></script>
     <script src="docs_config.js"></script>
     <script async src="dist/html-YIPIRHGU.js"></script>
 
@@ -174,7 +174,23 @@ Polling metrics are used to publish metrics that are calculated by polling data 
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#fire_lost_run_event/3" data-no-tooltip translate="no">fire_lost_run_event(worker_name, state, seed_event \\ false)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#run_queue_metrics/2" data-no-tooltip translate="no">run_queue_metrics(run_age_seconds, consideration_window_seconds)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#seed_event_metrics/0" data-no-tooltip translate="no">seed_event_metrics()</a>
 
       </div>
 
@@ -210,7 +226,7 @@ Polling metrics are used to publish metrics that are calculated by polling data 
     </a>
     <h1 class="signature" translate="no">calculate_average_claim_duration(reference_time, run_age_seconds)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/prom_ex_plugin.ex#L182" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/prom_ex_plugin.ex#L208" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -232,7 +248,31 @@ Polling metrics are used to publish metrics that are calculated by polling data 
     </a>
     <h1 class="signature" translate="no">count_finalised_runs(threshold_time)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/prom_ex_plugin.ex#L242" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/prom_ex_plugin.ex#L268" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="fire_lost_run_event/3">
+
+    <span id="fire_lost_run_event/2"></span>
+
+  <div class="detail-header">
+    <a href="#fire_lost_run_event/3" class="detail-link" data-no-tooltip title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">fire_lost_run_event(worker_name, state, seed_event \\ false)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/prom_ex_plugin.ex#L64" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -254,7 +294,29 @@ Polling metrics are used to publish metrics that are calculated by polling data 
     </a>
     <h1 class="signature" translate="no">run_queue_metrics(run_age_seconds, consideration_window_seconds)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/prom_ex_plugin.ex#L157" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/prom_ex_plugin.ex#L183" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="seed_event_metrics/0">
+
+  <div class="detail-header">
+    <a href="#seed_event_metrics/0" class="detail-link" data-no-tooltip title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">seed_event_metrics()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/prom_ex_plugin.ex#L62" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -276,7 +338,7 @@ Polling metrics are used to publish metrics that are calculated by polling data 
     </a>
     <h1 class="signature" translate="no">stalled_run_count(threshold_seconds)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/prom_ex_plugin.ex#L93" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/prom_ex_plugin.ex#L119" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
