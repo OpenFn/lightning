@@ -17,34 +17,37 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
   end
 
   def search_selectable_dataclips(job_id, search_text, limit, offset) do
-    filters = get_dataclips_filters(search_text)
+    case get_dataclips_filters(search_text) do
+      {:ok, filters} ->
+        dataclips =
+          Invocation.list_dataclips_for_job(
+            %Job{id: job_id},
+            filters,
+            limit,
+            offset
+          )
 
-    dataclips =
-      Invocation.list_dataclips_for_job(
-        %Job{id: job_id},
-        filters,
-        limit,
-        offset
-      )
+        %{dataclips: dataclips}
 
-    %{dataclips: dataclips}
+      {:error, reason} ->
+        %{error: reason}
+    end
   end
 
   defp get_dataclips_filters(search_text) do
     search_text
     |> String.split()
     |> Enum.reduce(Map.new(), fn text, filters ->
-      if MapSet.member?(@dataclip_types, text) do
-        Map.put(filters, :type, text)
-      else
-        with {:error, _reason} <- Date.from_iso8601(text) do
-          DateTime.from_iso8601(text)
-        end
-        |> case do
-          {:ok, %Date{} = date} -> Map.put(filters, :date, date)
-          {:ok, datetime} -> Map.put(filters, :datetime, datetime)
-          :error -> filters
-        end
+      with {:error, _reason} <- Date.from_iso8601(text),
+           {:error, _reason} <- DateTime.from_iso8601(text),
+           true <-
+             MapSet.member?(@dataclip_types, text) || {:error, :invalid_type} do
+        {:ok, Map.put(filters, :type, text)}
+      end
+      |> case do
+        {:ok, %Date{} = date} -> {:ok, Map.put(filters, :date, date)}
+        {:ok, datetime, _tz} -> {:ok, Map.put(filters, :datetime, datetime)}
+        error -> error
       end
     end)
   end
