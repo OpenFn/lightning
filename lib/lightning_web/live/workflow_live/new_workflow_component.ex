@@ -1,8 +1,8 @@
 defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
   @moduledoc false
-  alias Lightning.Projects
   use LightningWeb, :live_component
 
+  alias Lightning.Projects
   alias Lightning.Workflows.Workflow
   alias Lightning.WorkflowTemplates
   alias LightningWeb.API.ProvisioningJSON

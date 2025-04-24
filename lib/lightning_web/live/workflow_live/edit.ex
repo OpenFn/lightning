@@ -749,6 +749,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   id="publish-template-btn"
                   phx-click="publish_template"
                   class="min-w-[8rem]"
+                  disabled={@changeset.changes |> Enum.any?()}
+                  tooltip={
+                    if @changeset.changes |> Enum.any?(),
+                      do:
+                        "You must save your workflow first before #{if @has_workflow_template?, do: "updating", else: "publishing"} a template.",
+                      else: nil
+                  }
                 >
                   {if @has_workflow_template?,
                     do: "Update Template",
@@ -756,7 +763,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 </.button>
               </div>
               <div :if={@publish_template} class="sm:flex sm:flex-row-reverse">
-                <% dbg(@workflow_template_changeset) %>
                 <button
                   type="submit"
                   form="workflow-template-form"
@@ -2043,7 +2049,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   def handle_event("workflow_code_generated", %{"code" => code}, socket) do
     changeset =
       WorkflowTemplate.changeset(socket.assigns.workflow_template, %{code: code})
-      |> dbg()
 
     {:noreply,
      assign(socket, workflow_code: code, workflow_template_changeset: changeset)}
