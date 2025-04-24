@@ -15,13 +15,14 @@ export function mount(
   const initialSelection = new URL(window.location.href).searchParams.get('s');
   render(initialSelection);
 
-  function render(selection?: string | null) {
+  function render(selection?: string | null, forceFit?: boolean) {
     componentRoot.render(
       <WorkflowDiagram
         el={el}
         selection={selection || null}
         store={workflowStore}
         onSelectionChange={onSelectionChange}
+        forceFit={forceFit || false}
       />
     );
   }
