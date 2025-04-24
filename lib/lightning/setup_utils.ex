@@ -184,7 +184,7 @@ defmodule Lightning.SetupUtils do
     users
   end
 
-  def create_starter_project(name, project_users) do
+  def create_starter_project(name, project_users, with_workflow \\ false) do
     {:ok, project} =
       Projects.create_project(
         %{
@@ -196,129 +196,137 @@ defmodule Lightning.SetupUtils do
         false
       )
 
-    user = get_most_privileged_user!(project)
+    if with_workflow do
+      user = get_most_privileged_user!(project)
 
-    {:ok, workflow} =
-      Workflows.save_workflow(
-        %{
-          name: "Sample Workflow",
-          project_id: project.id
-        },
-        user
-      )
+      {:ok, workflow} =
+        Workflows.save_workflow(
+          %{
+            name: "Sample Workflow",
+            project_id: project.id
+          },
+          user
+        )
 
-    {:ok, source_trigger} =
-      Workflows.build_trigger(%{
-        type: :webhook,
-        workflow_id: workflow.id
-      })
+      {:ok, source_trigger} =
+        Workflows.build_trigger(%{
+          type: :webhook,
+          workflow_id: workflow.id
+        })
 
-    {:ok, job_1} =
-      Jobs.create_job(
-        %{
-          name: "Job 1 - Check if age is over 18 months",
+      {:ok, job_1} =
+        Jobs.create_job(
+          %{
+            name: "Job 1 - Check if age is over 18 months",
+            body: """
+              fn(state => {
+                if (state.data.age_in_months > 18) {
+                  console.log('Eligible for program.');
+                  return state;
+                }
+                else { throw 'Error, patient ineligible.' }
+              });
+            """,
+            adaptor: "@openfn/language-common@latest",
+            workflow_id: workflow.id
+          },
+          user
+        )
+
+      {:ok, _root_edge} =
+        Workflows.create_edge(
+          %{
+            workflow_id: workflow.id,
+            condition_type: :always,
+            source_trigger: source_trigger,
+            target_job: job_1,
+            enabled: true
+          },
+          user
+        )
+
+      {:ok, job_2} =
+        Jobs.create_job(
+          %{
+            name: "Job 2 - Convert data to DHIS2 format",
+            body: """
+              fn(state => {
+                const names = state.data.name.split(' ');
+                return { ...state, names };
+              });
+            """,
+            adaptor: "@openfn/language-common@latest",
+            workflow_id: workflow.id
+          },
+          user
+        )
+
+      {:ok, _job_2_edge} =
+        Workflows.create_edge(
+          %{
+            workflow_id: workflow.id,
+            source_job: job_1,
+            condition_type: :on_job_success,
+            target_job: job_2,
+            enabled: true
+          },
+          user
+        )
+
+      dhis2_credential = create_dhis2_credential(user)
+
+      {:ok, job_3} =
+        Workflows.Job.changeset(%Workflows.Job{}, %{
+          name: "Job 3 - Upload to DHIS2",
           body: """
-            fn(state => {
-              if (state.data.age_in_months > 18) {
-                console.log('Eligible for program.');
-                return state;
-              }
-              else { throw 'Error, patient ineligible.' }
+            create('trackedEntityInstances', {
+              trackedEntityType: 'nEenWmSyUEp', // a person
+              orgUnit: 'DiszpKrYNg8',
+              attributes: [
+                {
+                  attribute: 'w75KJ2mc4zz', // attribute id for first name
+                  value: state.names[0] // the first name from submission
+                },
+                {
+                  attribute: 'zDhUuAYrxNC', // attribute id for last name
+                  value: state.names[1] // the last name from submission
+                }
+              ]
             });
           """,
-          adaptor: "@openfn/language-common@latest",
+          adaptor: "@openfn/language-dhis2@latest",
           workflow_id: workflow.id
-        },
-        user
-      )
+        })
+        |> put_assoc(:project_credential, %{
+          project: project,
+          credential: dhis2_credential
+        })
+        |> Repo.insert()
 
-    {:ok, _root_edge} =
-      Workflows.create_edge(
-        %{
-          workflow_id: workflow.id,
-          condition_type: :always,
-          source_trigger: source_trigger,
-          target_job: job_1,
-          enabled: true
-        },
-        user
-      )
+      {:ok, _job_3_edge} =
+        Workflows.create_edge(
+          %{
+            workflow_id: workflow.id,
+            source_job: job_2,
+            condition_type: :on_job_success,
+            target_job: job_3,
+            enabled: true
+          },
+          user
+        )
 
-    {:ok, job_2} =
-      Jobs.create_job(
-        %{
-          name: "Job 2 - Convert data to DHIS2 format",
-          body: """
-            fn(state => {
-              const names = state.data.name.split(' ');
-              return { ...state, names };
-            });
-          """,
-          adaptor: "@openfn/language-common@latest",
-          workflow_id: workflow.id
-        },
-        user
-      )
-
-    {:ok, _job_2_edge} =
-      Workflows.create_edge(
-        %{
-          workflow_id: workflow.id,
-          source_job: job_1,
-          condition_type: :on_job_success,
-          target_job: job_2,
-          enabled: true
-        },
-        user
-      )
-
-    dhis2_credential = create_dhis2_credential(user)
-
-    {:ok, job_3} =
-      Workflows.Job.changeset(%Workflows.Job{}, %{
-        name: "Job 3 - Upload to DHIS2",
-        body: """
-          create('trackedEntityInstances', {
-            trackedEntityType: 'nEenWmSyUEp', // a person
-            orgUnit: 'DiszpKrYNg8',
-            attributes: [
-              {
-                attribute: 'w75KJ2mc4zz', // attribute id for first name
-                value: state.names[0] // the first name from submission
-              },
-              {
-                attribute: 'zDhUuAYrxNC', // attribute id for last name
-                value: state.names[1] // the last name from submission
-              }
-            ]
-          });
-        """,
-        adaptor: "@openfn/language-dhis2@latest",
-        workflow_id: workflow.id
-      })
-      |> put_assoc(:project_credential, %{
+      %{
         project: project,
-        credential: dhis2_credential
-      })
-      |> Repo.insert()
-
-    {:ok, _job_3_edge} =
-      Workflows.create_edge(
-        %{
-          workflow_id: workflow.id,
-          source_job: job_2,
-          condition_type: :on_job_success,
-          target_job: job_3,
-          enabled: true
-        },
-        user
-      )
-
-    %{
-      project: project,
-      workflow: workflow,
-      jobs: [job_1, job_2, job_3]
-    }
+        workflow: workflow,
+        jobs: [job_1, job_2, job_3]
+      }
+    else
+      %{
+        project: project,
+        workflow: nil,
+        jobs: []
+      }
+    end
   end
 
   def create_openhie_project(project_users) do

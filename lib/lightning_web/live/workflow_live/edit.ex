@@ -738,6 +738,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   id="publish-template-btn"
                   phx-click="publish_template"
                   class="min-w-[8rem]"
+                  disabled={@changeset.changes |> Enum.any?()}
+                  tooltip={
+                    if @changeset.changes |> Enum.any?(),
+                      do:
+                        "You must save your workflow first before #{if @has_workflow_template?, do: "updating", else: "publishing"} a template.",
+                      else: nil
+                  }
                 >
                   {if @has_workflow_template?,
                     do: "Update Template",

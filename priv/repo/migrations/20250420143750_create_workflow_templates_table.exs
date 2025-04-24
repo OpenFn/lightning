@@ -5,7 +5,7 @@ defmodule Lightning.Repo.Migrations.CreateWorkflowTemplatesTable do
     create table(:workflow_templates, primary_key: false) do
       add :id, :binary_id, primary_key: true
       add :name, :string, null: false
-      add :description, :string
+      add :description, :text, null: true
       add :code, :text, null: false
       add :layout, :text, null: true
       add :tags, {:array, :string}, null: false
