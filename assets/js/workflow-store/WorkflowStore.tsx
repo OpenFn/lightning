@@ -79,6 +79,14 @@ export const WorkflowStore: WithActionProps = (props) => {
   }, [applyPatches, props])
 
   React.useEffect(() => {
+    props.handleEvent('put-applied', (response: { state: WorkflowProps }) => {
+      console.debug('put-applied', response.state);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unnecessary-condition
+      if (response.state) setState(response.state)
+    })
+  }, [setState, props])
+
+  React.useEffect(() => {
     props.handleEvent('navigate', (e: any) => {
       const id = new URL(window.location.href).searchParams.get('s');
 
