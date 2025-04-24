@@ -685,7 +685,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   field={f[:name]}
                   label="Name"
                   required={true}
-                  value={@workflow.name}
                   placeholder="A descriptive name for your template"
                 />
 
@@ -746,7 +745,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 </.button>
               </div>
               <div :if={@publish_template} class="sm:flex sm:flex-row-reverse">
-                <% dbg(@workflow_template_changeset) %>
                 <button
                   type="submit"
                   form="workflow-template-form"
@@ -2033,7 +2031,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   def handle_event("workflow_code_generated", %{"code" => code}, socket) do
     changeset =
       WorkflowTemplate.changeset(socket.assigns.workflow_template, %{code: code})
-      |> dbg()
 
     {:noreply,
      assign(socket, workflow_code: code, workflow_template_changeset: changeset)}
@@ -3006,13 +3003,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
     template =
       WorkflowTemplates.get_template_by_workflow_id(socket.assigns.workflow.id) ||
         %WorkflowTemplate{
-          name: socket.assigns.workflow.name,
           workflow_id: socket.assigns.workflow.id,
           tags: []
         }
 
     changeset =
       WorkflowTemplate.changeset(template, %{
+        name: socket.assigns.workflow.name,
         code: socket.assigns.workflow_code
       })
 

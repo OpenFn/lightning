@@ -88,6 +88,20 @@ export default {
       this.workflowStore.getState().setDisabled(response.disabled);
     });
 
+    // TODO: Force-fit Workaround for Layout Recalculation
+    //
+    // We force a re-render of the workflow diagram with forceFit=true to trigger
+    // a layout recalculation. This is needed because the current layout algorithm
+    // doesn't properly handle initial workflow model parameter changes.
+    //
+    // @josephjclark and @elias-ba agreed on this temporary solution until the
+    // layout calculation algorithm is improved.
+    this.handleEvent('force-fit', () => {
+      if (this.component) {
+        this.component.render(null, true);
+      }
+    });
+
     this.handleEvent<{ href: string; patch: boolean }>('navigate', e => {
       const id = new URL(window.location.href).searchParams.get('s');
 

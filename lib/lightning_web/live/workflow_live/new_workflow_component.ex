@@ -78,16 +78,6 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
         template.id == template_id
       end)
 
-    # TODO: Empty Patches Workaround for Layout Recalculation
-    #
-    # We send empty patches to the workflow diagram via `push_event(socket, "patches-applied", %{patches: []})`
-    # to force a layout recalculation. This is needed because the current layout algorithm doesn't properly
-    # handle initial workflow model parameter changes.
-    #
-    # @josephjclark and @elias-ba agreed on this temporary solution until the layout
-    # calculation algorithm is improved.
-    push_event(socket, "patches-applied", %{patches: []})
-
     {:noreply,
      socket
      |> assign(selected_template: template)
@@ -184,7 +174,9 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
   end
 
   defp push_selected_template_code(socket) do
-    push_event(socket, "template_selected", %{
+    socket
+    |> push_event("force-fit", %{})
+    |> push_event("template_selected", %{
       template: socket.assigns.selected_template.code
     })
   end
