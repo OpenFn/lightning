@@ -13,7 +13,7 @@ defmodule Lightning.Workflows.WorkflowTemplate do
     field :name, :string
     field :description, :string
     field :code, :string
-    field :layout, :string
+    field :positions, :string
     field :tags, {:array, :string}, default: []
 
     belongs_to :workflow, Workflow
@@ -24,7 +24,7 @@ defmodule Lightning.Workflows.WorkflowTemplate do
   @doc false
   def changeset(template, attrs) do
     template
-    |> cast(attrs, [:name, :description, :code, :layout, :tags, :workflow_id])
+    |> cast(attrs, [:name, :description, :code, :positions, :tags, :workflow_id])
     |> validate_required([:name, :code, :tags, :workflow_id])
     |> validate_length(:description,
       max: 1000,

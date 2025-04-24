@@ -2037,7 +2037,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   def handle_event("workflow_code_generated", %{"code" => code}, socket) do
     changeset =
-      WorkflowTemplate.changeset(socket.assigns.workflow_template, %{code: code})
+      WorkflowTemplate.changeset(socket.assigns.workflow_template, %{
+        name: socket.assigns.workflow.name,
+        code: code
+      })
 
     {:noreply,
      assign(socket, workflow_code: code, workflow_template_changeset: changeset)}
@@ -2086,12 +2089,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  def handle_info({"form_changed", %{"workflow" => params}}, socket) do
-    {:noreply, handle_new_params(socket, params, :workflow)}
+  def handle_info({"form_changed", %{"workflow" => params} = payload}, socket) do
+    {:noreply,
+     handle_new_params(socket, params, :workflow, Map.get(payload, "opts", []))}
   end
 
-  def handle_info({"form_changed", %{"snapshot" => params}}, socket) do
-    {:noreply, handle_new_params(socket, params, :snapshot)}
+  def handle_info({"form_changed", %{"snapshot" => params} = payload}, socket) do
+    {:noreply,
+     handle_new_params(socket, params, :snapshot, Map.get(payload, "opts", []))}
   end
 
   def handle_info({:forward, mod, opts}, socket) do
@@ -2480,7 +2485,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> Enum.filter(filter_func)
   end
 
-  defp handle_new_params(socket, params, type) do
+  defp handle_new_params(socket, params, type, opts \\ []) do
     %{workflow_params: initial_params, can_edit_workflow: can_edit_workflow} =
       socket.assigns
 
@@ -2491,10 +2496,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
       socket
       |> apply_params(next_params, type)
       |> mark_validated()
-      |> push_patches_applied(initial_params)
+      |> maybe_push_patches_applied(initial_params, opts)
     else
       socket
       |> put_flash(:error, "You are not authorized to perform this action.")
+    end
+  end
+
+  defp maybe_push_patches_applied(socket, initial_params, opts) do
+    if Keyword.get(opts, :push_patches, true) do
+      push_patches_applied(socket, initial_params)
+    else
+      socket
     end
   end
 

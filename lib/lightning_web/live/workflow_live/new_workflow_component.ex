@@ -35,27 +35,27 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
   def handle_event("validate-parsed-workflow", %{"workflow" => params}, socket) do
     changeset = Workflow.changeset(socket.assigns.workflow, params)
 
-    response =
-      if changeset.valid? do
-        update_parent_form(params)
-        %{}
-      else
-        ProvisioningJSON.error(%{changeset: changeset})
-      end
-
-    {:reply, response, assign(socket, changeset: changeset)}
+    if changeset.valid? do
+      update_parent_form(params)
+      {:reply, %{}, assign(socket, changeset: changeset)}
+    else
+      {:reply, ProvisioningJSON.error(%{changeset: changeset}),
+       assign(socket, changeset: changeset)}
+    end
   end
 
   def handle_event("template-parsed", %{"workflow" => params}, socket) do
     base_name = "Copy of #{socket.assigns.selected_template.name}"
     existing_workflows = Projects.list_workflows(socket.assigns.project)
-    name = generate_unique_name(base_name, existing_workflows)
 
-    params
-    |> Map.put("name", name)
-    |> update_parent_form()
+    params =
+      base_name
+      |> generate_unique_name(existing_workflows)
+      |> then(fn name -> Map.put(params, "name", name) end)
 
-    {:noreply, socket}
+    update_parent_form(params)
+
+    {:noreply, push_event(socket, "state-applied", %{"state" => params})}
   end
 
   def handle_event("search-templates", %{"search" => search_term}, socket) do
@@ -82,16 +82,6 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
      socket
      |> assign(selected_template: template)
      |> push_selected_template_code()}
-  end
-
-  def handle_event("select-template", %{"_target" => _} = params, socket) do
-    case params do
-      %{"template_id" => template_id} ->
-        handle_event("select-template", %{"template_id" => template_id}, socket)
-
-      _ ->
-        {:noreply, socket}
-    end
   end
 
   def handle_event("clear-search", _params, socket) do
@@ -168,8 +158,12 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
     end
   end
 
-  defp update_parent_form(params) do
-    send(self(), {"form_changed", %{"workflow" => params}})
+  def update_parent_form(params) do
+    send(
+      self(),
+      {"form_changed", %{"workflow" => params, "opts" => [push_patches: false]}}
+    )
+
     :ok
   end
 

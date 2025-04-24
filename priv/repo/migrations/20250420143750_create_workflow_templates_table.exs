@@ -7,7 +7,7 @@ defmodule Lightning.Repo.Migrations.CreateWorkflowTemplatesTable do
       add :name, :string, null: false
       add :description, :text, null: true
       add :code, :text, null: false
-      add :layout, :text, null: true
+      add :positions, :text, null: true
       add :tags, {:array, :string}, null: false
 
       add :workflow_id, references(:workflows, type: :binary_id, on_delete: :delete_all),
