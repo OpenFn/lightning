@@ -35,7 +35,7 @@ const createNewWorkflow = (): Required<ChangeArgs> => {
 export const WorkflowStore: WithActionProps = (props) => {
   const pendingChanges = React.useRef<PendingAction[]>([]);
   const workflowLoadParamsStart = React.useRef<Date | null>(null)
-  const { applyPatches, setState, add, setSelection, subscribe, setDisabled } = useWorkflowStore();
+  const { applyPatches, setState, add, setSelection, subscribe, setDisabled, setForceFit } = useWorkflowStore();
 
   const pushPendingChange = React.useCallback((pendingChange: PendingAction) => {
     return new Promise((resolve, reject) => {
@@ -85,6 +85,11 @@ export const WorkflowStore: WithActionProps = (props) => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       if (e.patch) setSelection(id);
     })
+    // force fitting
+    props.handleEvent('force-fit', () => {
+      setForceFit(true);
+    });
+
     props.handleEvent('current-workflow-params', (payload: { workflow_params: WorkflowProps }) => {
       const { workflow_params } = payload;
       setState(workflow_params);
