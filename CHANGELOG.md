@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Custom metrics to track lost runs.
+  [#3070](https://github.com/OpenFn/lightning/issues/3070)
+
 ### Changed
 
 - Add project name to failure email subject

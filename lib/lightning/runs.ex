@@ -13,6 +13,7 @@ defmodule Lightning.Runs do
   alias Lightning.Run
   alias Lightning.Runs.Events
   alias Lightning.Runs.Handlers
+  alias Lightning.Runs.PromExPlugin
   alias Lightning.Runs.RunOptions
   alias Lightning.Services.RunQueue
   alias Lightning.Services.UsageLimiter
@@ -291,13 +292,15 @@ defmodule Lightning.Runs do
 
   @spec mark_run_lost(Lightning.Run.t()) ::
           {:ok, any()} | {:error, any()}
-  def mark_run_lost(%Run{} = run) do
+  def mark_run_lost(%Run{worker_name: worker_name} = run) do
     error_type =
       case run.state do
         :claimed -> "LostAfterClaim"
         :started -> "LostAfterStart"
         _other -> "UnknownReason"
       end
+
+    PromExPlugin.fire_lost_run_event(worker_name, run.state)
 
     Logger.warning(fn ->
       "Detected lost run with reason #{error_type}: #{inspect(run)}"
