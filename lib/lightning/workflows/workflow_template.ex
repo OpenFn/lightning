@@ -26,6 +26,10 @@ defmodule Lightning.Workflows.WorkflowTemplate do
     template
     |> cast(attrs, [:name, :description, :code, :layout, :tags, :workflow_id])
     |> validate_required([:name, :code, :tags, :workflow_id])
+    |> validate_length(:description,
+      max: 1000,
+      message: "Description must be less than 1000 characters"
+    )
     |> assoc_constraint(:workflow)
   end
 end
