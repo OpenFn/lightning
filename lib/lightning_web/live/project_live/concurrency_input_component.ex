@@ -7,7 +7,7 @@ defmodule LightningWeb.ProjectLive.ConcurrencyInputComponent do
 
   def render(assigns) do
     ~H"""
-    <div>
+    <div class="flex items-center">
       <.input
         type="integer-toggle"
         field={@field}
@@ -15,10 +15,10 @@ defmodule LightningWeb.ProjectLive.ConcurrencyInputComponent do
         label=""
         max={nil}
       />
-      <span class="flex grow flex-col">
-        <.label>Disable parallel run execution</.label>
-        <span class="text-sm text-gray-500" id="concurrency-description">
-          Process all runs in this project no more than one at a time.
+      <span class="ml-3 text-sm" id="concurrency-description">
+        <span class="font-medium text-gray-900">Disable parallel execution</span>
+        <span class="text-gray-500">
+          (No more than one run at a time.)
         </span>
       </span>
     </div>

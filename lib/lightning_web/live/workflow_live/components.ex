@@ -195,6 +195,7 @@ defmodule LightningWeb.WorkflowLive.Components do
               class="w-4 text-right"
               min="1"
               max={@max_concurrency}
+              disabled={@project_concurrency_disabled}
             />
           </div>
         </div>
@@ -220,21 +221,13 @@ defmodule LightningWeb.WorkflowLive.Components do
             }
             class="text-xs"
           >
-            <div class="grid grid-flow-row-dense gap-2">
-              <div class="m-auto">
-                <.icon name="hero-exclamation-triangle" class="h-4 w-4 text-red-500" />
-              </div>
-              <span class="italic text-red-500">
-                Parallel execution of runs is disabled for this project.
-                This setting will have no effect.
-              </span>
-              <span class="col-start-2">
-                You can modify your Project Concurrency setting on the
-                <.link patch={~p"/projects/#{@project_id}/settings"}>
-                  <span class="underline">project setup</span>
-                </.link>
-                page.
-              </span>
+            <div class="italic text-gray-500 ">
+              Parallel execution of runs is disabled for this project.
+              This setting will have no effect. You can modify your Project Concurrency setting on the
+              <.link class="link" patch={~p"/projects/#{@project_id}/settings"}>
+                project setup
+              </.link>
+              page.
             </div>
           </div>
         </div>
