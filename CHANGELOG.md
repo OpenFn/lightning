@@ -26,6 +26,8 @@ and this project adheres to
   [#2974](https://github.com/OpenFn/lightning/issues/2974)
 - Large refactor of the inspector and React components
   [#3043](https://github.com/OpenFn/lightning/pull/3043)
+- The AI Assistant now has access to docs.openfn.org to better inform its
+  responses [apollo#209](https://github.com/OpenFn/apollo/pull/209)
 
 ### Fixed
 
@@ -69,8 +71,8 @@ and this project adheres to
 - When claiming a run, a worker name can optionally be provided to the adaptor
   that is responsible for claiming runs.
   [#3079](https://github.com/OpenFn/lightning/issues/3079)
-- Persist worker name provided by worker when claiming a run. NOTE: This requires
-  version `1.13.2` of the worker.
+- Persist worker name provided by worker when claiming a run. NOTE: This
+  requires version `1.13.2` of the worker.
   [#3079](https://github.com/OpenFn/lightning/issues/3079)
 
 ### Changed
