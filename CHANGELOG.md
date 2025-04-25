@@ -17,7 +17,11 @@ and this project adheres to
 
 ### Added
 
-- Custom metrics to track lost runs.
+- Create workflows from base templates
+  [#3018](https://github.com/OpenFn/lightning/issues/3018),
+  [#3031](https://github.com/OpenFn/lightning/issues/3031)
+  [#3080](https://github.com/OpenFn/lightning/issues/3080)
+- Custom metrics to track lost runs
   [#3070](https://github.com/OpenFn/lightning/issues/3070)
 
 ### Changed
