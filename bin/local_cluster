@@ -92,7 +92,7 @@ RESET="\033[0m"
 cleanup() {
   echo "Shutting down all processes..."
   for pid in "${PIDS[@]}"; do
-    kill $pid 2>/dev/null
+    kill "$pid" 2>/dev/null
   done
   exit 0
 }
@@ -127,7 +127,7 @@ if [ "$USE_PROXY" = true ]; then
 # Reverse proxy configuration
 localhost:4000 {
     reverse_proxy {
-        to $(for i in $(seq 1 $INSTANCES); do echo "localhost:$((BASE_PORT + i - 1))"; done | paste -sd " " -)
+        to $(for i in $(seq 1 "$INSTANCES"); do echo "localhost:$((BASE_PORT + i - 1))"; done | paste -sd " " -)
         lb_policy round_robin
     }
 }
@@ -152,7 +152,7 @@ else
 fi
 
 # Start the requested number of instances
-for i in $(seq 1 $INSTANCES); do
+for i in $(seq 1 "$INSTANCES"); do
   export RTM_PORT=$((2222 + i - 1))
   PORT=$((BASE_PORT + i - 1)) run_with_color "${COLORS[$i - 1]}" "node$i" elixir --name "node$i@127.0.0.1" -S mix phx.server &
   PIDS+=($!)
