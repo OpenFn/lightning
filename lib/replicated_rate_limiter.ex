@@ -68,8 +68,8 @@ defmodule ReplicatedRateLimiter do
         )
       end
 
-      def inspect(bucket) do
-        ReplicatedRateLimiter.TokenBucket.inspect(
+      def to_list(bucket) do
+        ReplicatedRateLimiter.TokenBucket.to_list(
           [crdt_name: @crdt_name, ets_table: @ets_table],
           bucket
         )
@@ -95,23 +95,19 @@ defmodule ReplicatedRateLimiter do
       @impl true
       def init(_opts) do
         children = [
-          {ReplicatedRateLimiter.TokenBucket,
-           [crdt_name: @crdt_name, ets_table: @ets_table]},
+          {ReplicatedRateLimiter.TokenBucket, config()},
+          {DeltaCrdt,
+           [
+             crdt: DeltaCrdt.AWLWWMap,
+             name: @crdt_name,
+             sync_interval: 100,
+             on_diffs:
+               {ReplicatedRateLimiter.TokenBucket, :apply_diffs, [config()]}
+           ]},
           {CrdtCluster, [crdt: @crdt_name, name: @cluster_name]}
         ]
 
-        Supervisor.init(children, strategy: :one_for_one) |> IO.inspect()
-      end
-
-      # Supervisor terminate callback to track when it's being stopped
-      def terminate(reason, _state) do
-        IO.inspect(reason)
-
-        Logger.warning(
-          "#{inspect(__MODULE__)} supervisor terminating with reason: #{inspect(reason)}"
-        )
-
-        :ok
+        Supervisor.init(children, strategy: :one_for_one)
       end
     end
   end
@@ -141,6 +137,7 @@ defmodule ReplicatedRateLimiter do
         next_level = current - cost
         :ets.insert(ets_table, {bucket, {next_level, now}})
 
+        # TODO do this in a separate unlinked process
         DeltaCrdt.put(
           crdt_name,
           {bucket, "#{Node.self()}"},
@@ -154,7 +151,7 @@ defmodule ReplicatedRateLimiter do
       end
     end
 
-    def inspect(config, bucket) do
+    def to_list(config, bucket) do
       ets_table = Keyword.get(config, :ets_table)
 
       :ets.lookup(ets_table, bucket)
@@ -173,7 +170,6 @@ defmodule ReplicatedRateLimiter do
     @impl true
     def init(opts) do
       ets_table = Keyword.fetch!(opts, :ets_table)
-      crdt_name = Keyword.fetch!(opts, :crdt_name)
 
       :ets.new(ets_table, [
         :named_table,
@@ -181,21 +177,9 @@ defmodule ReplicatedRateLimiter do
         read_concurrency: true
       ])
 
-      DeltaCrdt.start_link(DeltaCrdt.AWLWWMap,
-        name: crdt_name,
-        sync_interval: 100,
-        on_diffs: {__MODULE__, :apply_diffs, [opts]}
-      )
-      |> case do
-        {:ok, pid} ->
-          {:ok, %{crdt: pid, crdt_name: crdt_name}}
-
-        {:error, {:already_started, pid}} ->
-          {:stop, {:already_started, pid}}
-      end
+      {:ok, %{}}
     end
 
-    # merge incoming deltas into ETS
     def apply_diffs(config, diffs) when is_list(diffs) do
       Logger.debug("Applying diffs: #{inspect(diffs)}")
 
@@ -232,17 +216,6 @@ defmodule ReplicatedRateLimiter do
           end)
         end
       end)
-
-      :ok
-    end
-
-    @impl true
-    def terminate(reason, state) do
-      IO.inspect(reason)
-
-      Logger.warning(
-        "TokenBucket terminating with reason: #{inspect(reason)}, state: #{inspect(state)}"
-      )
 
       :ok
     end
@@ -283,15 +256,6 @@ defmodule CrdtCluster do
   end
 
   def handle_info(_, state), do: {:noreply, state}
-
-  @impl true
-  def terminate(reason, state) do
-    Logger.warning(
-      "CrdtCluster terminating with reason: #{inspect(reason)}, state: #{inspect(state)}"
-    )
-
-    :ok
-  end
 
   defp sync_neighbours(crdt_name) do
     peers = Node.list()

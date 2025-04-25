@@ -1,33 +1,6 @@
 defmodule ReplicatedRateLimiterTest do
   use ExUnit.Case, async: false
   import Eventually
-  require Logger
-
-  # Setup to log and ensure proper cleanup
-  # setup do
-  #   Logger.info("Starting new test")
-
-  #   on_exit(fn ->
-  #     Logger.info("Test completed, cleaning up")
-
-  #     # Let's explicitly clean up supervised processes
-  #     Supervisor.which_children(ReplicatedRateLimiterTest.CrdtEts)
-  #     |> Enum.each(fn {id, pid, _, _} ->
-  #       Logger.info("Terminating child #{inspect(id)} with pid #{inspect(pid)}")
-  #       Process.exit(pid, :shutdown)
-  #     end)
-
-  #     Supervisor.which_children(ReplicatedRateLimiterTest.AnotherRateLimiter)
-  #     |> Enum.each(fn {id, pid, _, _} ->
-  #       Logger.info("Terminating child #{inspect(id)} with pid #{inspect(pid)}")
-  #       Process.exit(pid, :shutdown)
-  #     end)
-
-  #     :ok
-  #   end)
-
-  #   :ok
-  # end
 
   defmodule CrdtEts do
     use ReplicatedRateLimiter,
@@ -40,9 +13,9 @@ defmodule ReplicatedRateLimiterTest do
   end
 
   test "CrdtEts allows calls directly from the main module" do
-    start_link_supervised!(CrdtEts)
+    start_supervised!(CrdtEts)
 
-    config = CrdtEts.config() |> IO.inspect(label: "config") |> Map.new()
+    config = CrdtEts.config() |> Map.new()
 
     # Test using the main module's allow? function
     result = CrdtEts.allow?("test_key")
@@ -58,7 +31,7 @@ defmodule ReplicatedRateLimiterTest do
            "CRDT should have 0 tokens"
 
     assert {0, ^last_updated} =
-             CrdtEts.inspect("test_key_2"),
+             CrdtEts.to_list("test_key_2"),
            "ETS should be the same as CRDT"
 
     assert before <= last_updated
@@ -82,7 +55,7 @@ defmodule ReplicatedRateLimiterTest do
 
     # Wait for the bucket to be updated
     assert_eventually(
-      CrdtEts.inspect("test_key_2")
+      CrdtEts.to_list("test_key_2")
       |> Tuple.to_list()
       |> List.first() == 10
     )

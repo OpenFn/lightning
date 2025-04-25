@@ -25,37 +25,11 @@ defmodule Lightning.RateLimiters do
   defmodule Webhook do
     @moduledoc false
 
+    # Use ReplicatedRateLimiter instead
     use Hammer,
       backend: Hammer.ETS,
       algorithm: :leaky_bucket,
       table: :webhook_limiter
-  end
-
-  defmodule Listener do
-    @moduledoc false
-    use GenServer
-
-    @doc false
-    def start_link(opts) do
-      topic = Keyword.fetch!(opts, :topic)
-      GenServer.start_link(__MODULE__, {topic})
-    end
-
-    @impl true
-    def init({topic}) do
-      :ok = Lightning.subscribe(topic)
-      {:ok, []}
-    end
-
-    # TODO: we need to broadcast _from_ the listener process.
-    # so that we don't end up getting hitting the same key on the same node.
-
-    @impl true
-    def handle_info({:hit, key, scale, limit}, state) do
-      IO.inspect({:hit, key, scale, limit})
-      _count = Webhook.hit(key, scale, limit)
-      {:noreply, state}
-    end
   end
 
   @spec hit({:failure_email, String.t(), String.t()}) :: Mail.hit_result()
@@ -73,11 +47,10 @@ defmodule Lightning.RateLimiters do
     end
   end
 
-  # 10 requests per second, then denied for 1 second
-  # Then allowing 2 request per second.
   def hit({:webhook, project_id}) do
-    Registry.meta(Lightning.PubSub, :pubsub) |> IO.inspect()
-    Lightning.broadcast_from(self(), "__limiter", {:hit, project_id, 2, 10})
+    # 10 requests for a second, then 2 requests per second
+    # Over a long enough period of time, this will allow 2 requests per second.
+    # allow?("webhook_#{project_id}", 10, 2)
     Webhook.hit(project_id, 2, 10)
   end
 
@@ -90,7 +63,7 @@ defmodule Lightning.RateLimiters do
   end
 
   def start_link(opts) do
-    children = [{Mail, opts}, {Webhook, opts}, {Listener, [topic: "__limiter"]}]
+    children = [{Mail, opts}, {Webhook, opts}]
     Supervisor.start_link(children, strategy: :one_for_one)
   end
 end
