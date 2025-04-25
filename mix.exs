@@ -79,6 +79,7 @@ defmodule Lightning.MixProject do
       {:credo, "~> 1.7.3", only: [:test, :dev]},
       {:crontab, "~> 1.1"},
       {:dialyxir, "~> 1.4.2", only: [:test, :dev], runtime: false},
+      {:delta_crdt, "~> 0.6.5"},
       {:ecto_enum, "~> 1.4"},
       {:ecto_psql_extras, "~> 0.8.2"},
       {:ecto_sql, "~> 3.11"},
