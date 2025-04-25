@@ -521,7 +521,12 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             We include your step code in all queries sent to Claude, including some basic documentation,
             ensuring the model is well informed and can see what you can see.
             We do not send your input data, output data or logs to Anthropic.
-          </p>The Assistant uses a mixture of hand-written prompts and information from <a href="https://docs.openfn.org" target="none">docs.openfn.org</a><p> to inform its responses.
+          </p>
+          <p>
+            The Assistant uses a mixture of hand-written prompts and information
+            from <a href="https://docs.openfn.org" target="none">docs.openfn.org</a>
+            to inform its responses.
+          </p>
           <h2 class="font-bold">Responsible AI Policy</h2>
           <p>
             Read about our approach to AI in the
