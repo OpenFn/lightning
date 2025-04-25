@@ -136,18 +136,17 @@
         <div class="bg-white p-4 rounded-md">
           <div>
             <h6 class="font-medium text-black">
-              Concurrency
+              Concurrency Override
             </h6>
             <div class="@container">
               <div class="@sm:max-w-xl">
                 <p class="text-xs text-gray-600">
-                  Runs are executed concurrently in accordance to the individual workflows settings.
-                  However in some situations, you may want to limit the number of concurrent runs
-                  across all workflows in this project.
+                  By default, runs are executed concurrently in accordance to limits set on individual workflows.
+                  In some situations, you may want to prevent concurrent execution across all workflows in a project.
                 </p>
                 <p class="mt-2 text-xs text-gray-600">
-                  By disabling parallel run execution, you can ensure that only one run
-                  is executed at a time across all workflows in this project.
+                  Disabling parallel run execution ensures that only one run
+                  is executed at a time, regardless of workflow, for this entire project.
                 </p>
               </div>
             </div>
@@ -197,8 +196,8 @@
               >
                 <:message>
                   <p>
-                    Disabling parallel run execution can severely limit the overall
-                    throughput of your project.
+                    Disabling parallel run execution may significantly reduce the
+                    overall throughput of your project.
                   </p>
                 </:message>
               </Common.alert>

@@ -503,12 +503,12 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
           on_error: :raise
         )
 
-      view
-      |> form("#new-workflow-name-form")
-      |> render_change(workflow: %{name: workflow_name})
-
       # click continue
       view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
+
+      view
+      |> form("#workflow-form")
+      |> render_change(workflow: %{name: workflow_name})
 
       # add a job to the workflow
       %{"value" => %{"id" => job_id}} = job_patch = add_job_patch(job_name)

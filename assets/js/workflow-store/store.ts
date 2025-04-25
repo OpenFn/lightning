@@ -30,6 +30,8 @@ export type WorkflowProps = {
 };
 
 export interface WorkflowState extends WorkflowProps {
+  forceFit: boolean;
+  setForceFit: (v: boolean) => void;
   setState: (
     partial:
       | WorkflowState
@@ -121,6 +123,10 @@ export type WorkflowStore = StoreApi<WorkflowState>;
 export const store: WorkflowStore = createStore<WorkflowState>()(
   (set, get) => ({
     ...DEFAULT_PROPS,
+    forceFit: false,
+    setForceFit(v) {
+      set({ forceFit: v });
+    },
     observer: null,
     subscribe: cb => {
       if (get().observer) return;
