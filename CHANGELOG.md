@@ -17,8 +17,15 @@ and this project adheres to
 
 ### Added
 
+- Publish workflow as public template
+  [#3018](https://github.com/OpenFn/lightning/issues/3018)
+- Create workflows from templates
+  [#3111](https://github.com/OpenFn/lightning/issues/3111)
+
 ### Changed
 
+- Redirect users to the workflow creation page on sign-up
+  [#3147](https://github.com/OpenFn/lightning/pull/3147)
 - Add project name to failure email subject
   [#2974](https://github.com/OpenFn/lightning/issues/2974)
 - Large refactor of the inspector and React components
