@@ -21,7 +21,7 @@ and this project adheres to
 
 ### Fixed
 
-## [v2.11.3-pre.2] - 2025-04-25
+## [v2.12.0] - 2025-04-25
 
 ### Added
 
@@ -31,20 +31,6 @@ and this project adheres to
   [#3080](https://github.com/OpenFn/lightning/issues/3080)
 - Custom metrics to track lost runs
   [#3070](https://github.com/OpenFn/lightning/issues/3070)
-
-### Changed
-
-- Add project name to failure email subject
-  [#2974](https://github.com/OpenFn/lightning/issues/2974)
-- Large refactor of the inspector and React components
-  [#3043](https://github.com/OpenFn/lightning/pull/3043)
-- The AI Assistant now has access to docs.openfn.org to better inform its
-  responses [apollo#209](https://github.com/OpenFn/apollo/pull/209)
-
-## [v2.11.3-pre.1] - 2025-04-16
-
-### Added
-
 - AI Assistant: add metadata column to chat sessions
   [#3054](https://github.com/OpenFn/lightning/issues/3054)
 - Added a message to explain to the user why they're waiting for a run
@@ -53,11 +39,6 @@ and this project adheres to
   [#3110](https://github.com/OpenFn/lightning/issues/3110)
 - Simplified adding credentials to projects
   [#3034](https://github.com/OpenFn/lightning/issues/3034)
-
-## [v2.11.3-pre.0] - 2025-04-16
-
-### Added
-
 - Enabled displaying full workflow name when hovering workflow name in the
   workflows list page [#2894](https://github.com/OpenFn/lightning/issues/2894)
 - Enabled clickable rows in the workflows list page
@@ -87,6 +68,12 @@ and this project adheres to
 
 ### Changed
 
+- Add project name to failure email subject
+  [#2974](https://github.com/OpenFn/lightning/issues/2974)
+- Large refactor of the inspector and React components
+  [#3043](https://github.com/OpenFn/lightning/pull/3043)
+- The AI Assistant now has access to docs.openfn.org to better inform its
+  responses [apollo#209](https://github.com/OpenFn/apollo/pull/209)
 - Adjusted flash messages
 - Updated dependencies [#3086](https://github.com/OpenFn/lightning/pull/3086):
   - `phoenix` from 1.7.20 to 1.7.21
