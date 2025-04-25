@@ -42,7 +42,6 @@ defmodule ReplicatedRateLimiterTest do
   test "CrdtEts allows calls directly from the main module" do
     start_link_supervised!(CrdtEts)
 
-
     config = CrdtEts.config() |> IO.inspect(label: "config") |> Map.new()
 
     # Test using the main module's allow? function
@@ -89,12 +88,10 @@ defmodule ReplicatedRateLimiterTest do
     )
 
     assert {:allow, 4} = CrdtEts.allow?("test_key_2", 5, 1)
-
   end
 
   test "can start multiple rate limiters" do
     start_supervised!(AnotherRateLimiter)
     start_supervised!(CrdtEts)
-
   end
 end

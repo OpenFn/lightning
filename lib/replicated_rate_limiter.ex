@@ -106,7 +106,11 @@ defmodule ReplicatedRateLimiter do
       # Supervisor terminate callback to track when it's being stopped
       def terminate(reason, _state) do
         IO.inspect(reason)
-        Logger.warning("#{inspect(__MODULE__)} supervisor terminating with reason: #{inspect(reason)}")
+
+        Logger.warning(
+          "#{inspect(__MODULE__)} supervisor terminating with reason: #{inspect(reason)}"
+        )
+
         :ok
       end
     end
@@ -235,7 +239,11 @@ defmodule ReplicatedRateLimiter do
     @impl true
     def terminate(reason, state) do
       IO.inspect(reason)
-      Logger.warning("TokenBucket terminating with reason: #{inspect(reason)}, state: #{inspect(state)}")
+
+      Logger.warning(
+        "TokenBucket terminating with reason: #{inspect(reason)}, state: #{inspect(state)}"
+      )
+
       :ok
     end
   end
@@ -278,7 +286,10 @@ defmodule CrdtCluster do
 
   @impl true
   def terminate(reason, state) do
-    Logger.warning("CrdtCluster terminating with reason: #{inspect(reason)}, state: #{inspect(state)}")
+    Logger.warning(
+      "CrdtCluster terminating with reason: #{inspect(reason)}, state: #{inspect(state)}"
+    )
+
     :ok
   end
 

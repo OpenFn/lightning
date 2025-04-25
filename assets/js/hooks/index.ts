@@ -7,6 +7,7 @@ import type { PhoenixHook } from './PhoenixHook';
 import LogLineHighlight from './LogLineHighlight';
 import WorkflowToYAML from '../yaml/WorkflowToYAML';
 import YAMLToWorkflow from '../yaml/YAMLToWorkflow';
+import TemplateToWorkflow from '../yaml/TemplateToWorkflow';
 import ElapsedIndicator from './ElapsedIndicator';
 import {
   TabbedContainer,
@@ -16,6 +17,7 @@ import {
 
 import {
   SaveViaCtrlS,
+  InspectorSaveViaCtrlS,
   OpenSyncModalViaCtrlShiftS,
   SendMessageViaCtrlEnter,
   DefaultRunViaCtrlEnter,
@@ -24,21 +26,26 @@ import {
   CloseNodePanelViaEscape,
 } from './KeyHandlers';
 
+import FileDropzone from "./FileDropzone";
+
 export {
   LogLineHighlight,
   WorkflowToYAML,
   YAMLToWorkflow,
+  TemplateToWorkflow,
   ElapsedIndicator,
   TabbedContainer,
   TabbedSelector,
   TabbedPanels,
   SaveViaCtrlS,
+  InspectorSaveViaCtrlS,
   OpenSyncModalViaCtrlShiftS,
   SendMessageViaCtrlEnter,
   DefaultRunViaCtrlEnter,
   AltRunViaCtrlShiftEnter,
   CloseInspectorPanelViaEscape,
   CloseNodePanelViaEscape,
+  FileDropzone,
 };
 
 export { ReactComponent } from '#/react/hooks';

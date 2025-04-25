@@ -110,6 +110,10 @@ config :esbuild,
          js/app.js
          js/storybook.js
          js/editor/Editor.tsx
+         js/react/components/DataclipViewer.tsx
+         js/job-editor/JobEditor.tsx
+         js/workflow-editor/WorkflowEditor.tsx
+         js/workflow-store/WorkflowStore.tsx
          editor.worker=monaco-editor/esm/vs/editor/editor.worker.js
          json.worker=monaco-editor/esm/vs/language/json/json.worker.js
          css.worker=monaco-editor/esm/vs/language/css/css.worker.js

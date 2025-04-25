@@ -17,12 +17,32 @@ and this project adheres to
 
 ### Added
 
-- AI Assistant: add metadata column to chat sessions
-  [#3054](https://github.com/OpenFn/lightning/issues/3054)
-  
+- Custom metrics to track lost runs.
+  [#3070](https://github.com/OpenFn/lightning/issues/3070)
+
 ### Changed
 
+- Add project name to failure email subject
+  [#2974](https://github.com/OpenFn/lightning/issues/2974)
+- Large refactor of the inspector and React components
+  [#3043](https://github.com/OpenFn/lightning/pull/3043)
+- The AI Assistant now has access to docs.openfn.org to better inform its
+  responses [apollo#209](https://github.com/OpenFn/apollo/pull/209)
+
 ### Fixed
+
+## [v2.11.3-pre.1] - 2025-04-16
+
+### Added
+
+- AI Assistant: add metadata column to chat sessions
+  [#3054](https://github.com/OpenFn/lightning/issues/3054)
+- Added a message to explain to the user why they're waiting for a run
+  [#3131](https://github.com/OpenFn/lightning/issues/3131)
+- Allow users to create workflows from base templates
+  [#3110](https://github.com/OpenFn/lightning/issues/3110)
+- Simplified adding credentials to projects
+  [#3034](https://github.com/OpenFn/lightning/issues/3034)
 
 ## [v2.11.3-pre.0] - 2025-04-16
 
@@ -48,10 +68,11 @@ and this project adheres to
   [#3096](https://github.com/OpenFn/lightning/issues/3096)
 - Introduce 'seeding' of PromEx event metrics
   [#3096](https://github.com/OpenFn/lightning/issues/3096)
-- When claiming a run, a worker name can optionally be provided to the
-  adaptor that is responsible for claiming runs.
+- When claiming a run, a worker name can optionally be provided to the adaptor
+  that is responsible for claiming runs.
   [#3079](https://github.com/OpenFn/lightning/issues/3079)
-- Persist worker name provided by worker when claiming a run.
+- Persist worker name provided by worker when claiming a run. NOTE: This
+  requires version `1.13.2` of the worker.
   [#3079](https://github.com/OpenFn/lightning/issues/3079)
 
 ### Changed

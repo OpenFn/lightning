@@ -128,7 +128,7 @@ defmodule Lightning.Application do
          endpoint: LightningWeb.Endpoint},
         {Lightning.KafkaTriggers.Supervisor, type: :supervisor},
         # Start our rate limiter
-        {Lightning.RateLimiters, clean_period: :timer.minutes(10)},
+        {Lightning.RateLimiters, clean_period: :timer.minutes(10)}
         # Start a worker by calling: Lightning.Worker.start_link(arg)
         # {Lightning.Worker, arg}
       ]

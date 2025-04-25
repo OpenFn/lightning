@@ -608,7 +608,8 @@ defmodule LightningWeb.DashboardLiveTest do
     |> Floki.parse_document!()
     |> Floki.find("#projects-table tr")
     |> Enum.map(fn tr ->
-      Floki.find(tr, "td:nth-child(1)")
+      tr
+      |> Floki.find("td:nth-child(1)")
       |> Floki.text()
       |> String.trim()
     end)

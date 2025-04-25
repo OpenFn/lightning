@@ -65,7 +65,8 @@ defmodule Lightning do
   # credo:disable-for-next-line
   @callback current_time() :: DateTime.t()
   @callback broadcast(binary(), {atom(), any()}) :: :ok | {:error, term()}
-  @callback broadcast_from(pid(), binary(), {atom(), any()}) :: :ok | {:error, term()}
+  @callback broadcast_from(pid(), binary(), {atom(), any()}) ::
+              :ok | {:error, term()}
   @callback local_broadcast(binary(), {atom(), any()}) :: :ok | {:error, term()}
   @callback subscribe(binary()) :: :ok | {:error, term()}
   @callback release() :: release_info()

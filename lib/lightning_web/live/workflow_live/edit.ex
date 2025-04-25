@@ -5,6 +5,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   import LightningWeb.Components.NewInputs
   import LightningWeb.Components.Icons
   import LightningWeb.WorkflowLive.Components
+  import React
 
   alias Lightning.AiAssistant
   alias Lightning.Extensions.UsageLimiting.Action
@@ -36,6 +37,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
   require Lightning.Run
 
   on_mount {LightningWeb.Hooks, :project_scope}
+
+  jsx("assets/js/workflow-editor/WorkflowEditor.tsx")
+  jsx("assets/js/workflow-store/WorkflowStore.tsx")
 
   attr :changeset, :map, required: true
   attr :project_user, :map, required: true
@@ -172,12 +176,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
           </.with_changes_indicator>
         </LayoutComponents.header>
       </:header>
+      <.WorkflowStore react-id="workflow-mount" />
       <div class="h-full flex">
         <.live_component
           :if={@show_new_workflow_panel}
           id="new-workflow-panel"
           module={LightningWeb.WorkflowLive.NewWorkflowComponent}
-          workflow_form={@workflow_form}
+          workflow={@workflow}
           project_id={@project.id}
         />
         <div class="relative h-full flex grow" id={"workflow-edit-#{@workflow.id}"}>
@@ -353,23 +358,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             </div>
           </div>
 
-          <div
-            phx-hook="WorkflowEditor"
-            class="grow"
-            id={"editor-#{@workflow.id}"}
-            phx-update="ignore"
-          >
-            <%!-- Before Editor component has mounted --%>
-            <div class="flex place-content-center h-full cursor-wait">
-              <span class="inline-block top-[50%] relative">
-                <div class="flex items-center justify-center">
-                  <.button_loader>
-                    Loading workflow
-                  </.button_loader>
-                </div>
-              </span>
-            </div>
-          </div>
+          <.WorkflowEditor react-portal-target="workflow-mount" />
           <.live_component
             :if={@selected_job}
             id="new-credential-modal"
@@ -421,20 +410,21 @@ defmodule LightningWeb.WorkflowLive.Edit do
             icon
             centered
           />
+          <.live_component
+            :if={@project_repo_connection && @show_github_sync_modal}
+            id="github-sync-modal"
+            module={LightningWeb.WorkflowLive.GithubSyncModal}
+            current_user={@current_user}
+            project_repo_connection={@project_repo_connection}
+          />
           <.form
+            :if={@selection_mode !== "expand"}
             id="workflow-form"
             for={@workflow_form}
             phx-submit="save"
             phx-hook="SaveViaCtrlS"
             phx-change="validate"
           >
-            <.live_component
-              :if={@project_repo_connection && @show_github_sync_modal}
-              id="github-sync-modal"
-              module={LightningWeb.WorkflowLive.GithubSyncModal}
-              current_user={@current_user}
-              project_repo_connection={@project_repo_connection}
-            />
             <input type="hidden" name="_ignore_me" />
             <.panel
               :if={@selection_mode == "settings"}
@@ -2678,28 +2668,23 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     assigns =
       assigns
-      |> assign(
-        disabled: disabled,
-        tooltip: tooltip
-      )
+      |> assign(disabled: disabled, tooltip: tooltip)
 
     ~H"""
     <div class="inline-flex rounded-md shadow-xs z-5">
       <.button
         id={@id}
-        phx-disable-with="Saving..."
+        phx-disable-with
         disabled={@disabled}
-        type="submit"
-        form="workflow-form"
+        phx-hook="InspectorSaveViaCtrlS"
+        phx-click={JS.push("save")}
         phx-disconnected={JS.set_attribute({"disabled", ""})}
         tooltip={@tooltip}
         class={
           ["focus:ring-transparent"] ++
             if @project_repo_connection, do: ["rounded-r-none"], else: []
         }
-        phx-connected={
-          !@disabled && !@has_presence_priority && JS.remove_attribute("disabled")
-        }
+        phx-connected={!@disabled && JS.remove_attribute("disabled")}
       >
         Save
       </.button>
@@ -2713,9 +2698,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           disabled={@disabled}
           phx-click={show_dropdown("#{@id}-save-and-sync")}
           phx-disconnected={JS.set_attribute({"disabled", ""})}
-          phx-connected={
-            !@disabled && !@has_presence_priority && JS.remove_attribute("disabled")
-          }
+          phx-connected={!@disabled && JS.remove_attribute("disabled")}
         >
           <span class="sr-only">Open options</span>
           <.icon name="hero-chevron-down" class="w-4 h-4" />
