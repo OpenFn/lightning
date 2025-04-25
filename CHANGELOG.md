@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v2.11.3-pre.2] - 2025-04-25
+
+### Added
+
 - Create workflows from base templates
   [#3018](https://github.com/OpenFn/lightning/issues/3018),
   [#3031](https://github.com/OpenFn/lightning/issues/3031)
@@ -32,8 +40,6 @@ and this project adheres to
   [#3043](https://github.com/OpenFn/lightning/pull/3043)
 - The AI Assistant now has access to docs.openfn.org to better inform its
   responses [apollo#209](https://github.com/OpenFn/apollo/pull/209)
-
-### Fixed
 
 ## [v2.11.3-pre.1] - 2025-04-16
 
