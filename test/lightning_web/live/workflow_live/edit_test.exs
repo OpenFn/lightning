@@ -150,10 +150,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert workflow_name == ""
 
-      assert view
-             |> element("input[name='workflow[name]']")
-             |> render() =~ workflow_name
-
       # save button is not present
       refute view
              |> element("button[type='submit'][form='workflow-form'][disabled]")
@@ -178,9 +174,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       # the panel for creating workflow appears
       html = render(view)
-      assert html =~ "Create workflow"
-      assert html =~ "Describe your workflow in a few words here"
-      assert has_element?(view, "form#new-workflow-name-form")
+      assert html =~ "Build your workflow from templates"
+      assert html =~ "Browse templates"
+      assert has_element?(view, "form#search-templates-form")
       assert has_element?(view, "form#choose-workflow-template-form")
 
       # the base webhook template is selected by default
@@ -190,21 +186,21 @@ defmodule LightningWeb.WorkflowLive.EditTest do
              )
              |> render() =~ "base-webhook"
 
+      # click continue
+      view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
+
       # now let's fill in the name
       workflow_name = "My Workflow"
 
       view
-      |> form("#new-workflow-name-form")
+      |> form("#workflow-form")
       |> render_change(workflow: %{name: workflow_name})
-
-      # click continue
-      view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
 
       # the panel disappears
       html = render(view)
-      refute html =~ "Create workflow"
-      refute html =~ "Describe your workflow in a few words here"
-      refute has_element?(view, "form#new-workflow-name-form")
+      refute html =~ "Build your workflow from templates"
+      refute html =~ "Browse templates"
+      refute has_element?(view, "form#search-templates-form")
       refute has_element?(view, "form#choose-workflow-template-form")
 
       # save button is now present
@@ -321,9 +317,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       # the panel for creating workflow is visible
       html = render(view)
-      assert html =~ "Create workflow"
-      assert html =~ "Describe your workflow in a few words here"
-      assert has_element?(view, "form#new-workflow-name-form")
+      assert html =~ "Build your workflow from templates"
+      assert html =~ "Browse templates"
+      assert has_element?(view, "form#search-templates-form")
       assert has_element?(view, "form#choose-workflow-template-form")
 
       # the base webhook template is selected by default
@@ -396,9 +392,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       # the panel for creating workflow is visible
       html = render(view)
-      assert html =~ "Create workflow"
-      assert html =~ "Describe your workflow in a few words here"
-      assert has_element?(view, "form#new-workflow-name-form")
+      assert html =~ "Build your workflow from templates"
+      assert html =~ "Browse templates"
+      assert has_element?(view, "form#search-templates-form")
       assert has_element?(view, "form#choose-workflow-template-form")
 
       refute html =~ "Upload a file"
@@ -407,8 +403,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       html = view |> element("#import-workflow-btn") |> render_click()
 
       assert html =~ "Upload a file"
-      refute html =~ "Describe your workflow in a few words here"
-      refute has_element?(view, "form#new-workflow-name-form")
+      refute html =~ "Browse templates"
+      refute has_element?(view, "form#search-templates-form")
       refute has_element?(view, "form#choose-workflow-template-form")
 
       assert has_element?(view, "#workflow-importer[phx-hook='YAMLToWorkflow']")
@@ -493,14 +489,14 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert view |> push_patches_to_view(initial_workflow_patchset(project))
 
+      # click continue
+      view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
+
       workflow_name = "My Workflow"
 
       view
-      |> form("#new-workflow-name-form")
+      |> form("#workflow-form")
       |> render_change(workflow: %{name: workflow_name})
-
-      # click continue
-      view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
 
       {job, _, _} = view |> select_first_job()
 
@@ -2086,12 +2082,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       push_patches_to_view(view, initial_workflow_patchset(project))
 
-      view
-      |> form("#new-workflow-name-form")
-      |> render_change(workflow: %{name: "My Workflow"})
-
       # click continue
       view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
+
+      view
+      |> form("#workflow-form")
+      |> render_change(workflow: %{name: "My Workflow"})
 
       {job, _, _} = select_first_job(view)
 
@@ -2126,12 +2122,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       push_patches_to_view(view, initial_workflow_patchset(project))
 
-      view
-      |> form("#new-workflow-name-form")
-      |> render_change(workflow: %{name: "My Workflow"})
-
       # click continue
       view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
+
+      view
+      |> form("#workflow-form")
+      |> render_change(workflow: %{name: "My Workflow"})
 
       {job, _, _} = select_first_job(view)
 
@@ -2421,14 +2417,14 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert view |> push_patches_to_view(initial_workflow_patchset(project))
 
+      # click continue
+      view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
+
       workflow_name = "My Workflow"
 
       view
-      |> form("#new-workflow-name-form")
+      |> form("#workflow-form")
       |> render_change(workflow: %{name: workflow_name})
-
-      # click continue
-      view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
 
       {job, _, _} = view |> select_first_job()
 

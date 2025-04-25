@@ -350,22 +350,18 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       # go directly
       {:ok, view, html} = live(conn, ~p"/projects/#{project.id}/w/new")
 
-      assert html =~ "Create workflow"
-      assert html =~ "Describe your workflow in a few words here"
-      assert has_element?(view, "form#new-workflow-name-form")
-
-      view
-      |> form("#new-workflow-name-form")
-      |> render_change(workflow: %{name: "some new name"})
+      assert html =~ "Build your workflow from templates"
+      assert html =~ "Browse templates"
+      assert has_element?(view, "form#search-templates-form")
 
       view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
 
       # the panel disappears
       html = render(view)
 
-      refute html =~ "Create workflow"
-      refute html =~ "Describe your workflow in a few words here"
-      refute has_element?(view, "form#new-workflow-name-form")
+      refute html =~ "Build your workflow from templates"
+      refute html =~ "Browse templates"
+      refute has_element?(view, "form#search-templates-form")
     end
 
     test "only users with MFA enabled can create workflows for a project with MFA requirement",
