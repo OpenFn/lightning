@@ -66,6 +66,9 @@ defmodule Lightning.Invocation do
   def list_dataclips_for_job(%Job{id: job_id}, filters, limit, offset \\ nil) do
     filters =
       Enum.reduce(filters, dynamic(true), fn
+        {:id, uuid}, dynamic ->
+          dynamic([d], ^dynamic and d.id == ^uuid)
+
         {:type, type}, dynamic ->
           dynamic([d], ^dynamic and d.type == ^type)
 

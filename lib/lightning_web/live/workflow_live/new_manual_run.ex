@@ -40,14 +40,17 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
     |> Enum.reduce(Map.new(), fn text, filters ->
       with {:error, _reason} <- Date.from_iso8601(text),
            {:error, _reason} <- DateTime.from_iso8601(text),
+           :error <- Ecto.UUID.cast(text),
            true <-
              MapSet.member?(@dataclip_types, text) || {:error, :invalid_type} do
-        {:ok, Map.put(filters, :type, text)}
+        {:ok, Map.put(filters, :type, String.to_existing_atom(text))}
       end
       |> case do
         {:ok, %Date{} = date} -> {:ok, Map.put(filters, :date, date)}
         {:ok, datetime, _tz} -> {:ok, Map.put(filters, :datetime, datetime)}
-        error -> error
+        {:ok, uuid} when is_binary(uuid) -> {:ok, Map.put(filters, :id, uuid)}
+        :error -> {:error, :invalid_uuid}
+        result -> result
       end
     end)
   end
