@@ -179,7 +179,11 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
   def render(assigns) do
     assigns =
       assign(assigns,
-        templates: assigns.base_templates ++ assigns.filtered_templates
+        templates:
+          Enum.sort_by(
+            assigns.base_templates ++ assigns.filtered_templates,
+            & &1.name
+          )
       )
 
     ~H"""
