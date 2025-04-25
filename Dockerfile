@@ -15,17 +15,17 @@
 ARG ELIXIR_VERSION=1.16.2
 ARG OTP_VERSION=26.2.5
 ARG DEBIAN_VERSION=bookworm-20240513
-ARG NODE_VERSION=18.17.1
+ARG NODE_VERSION=22.12.0
 
 ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
 ARG RUNNER_IMAGE="debian:${DEBIAN_VERSION}"
 
-FROM ${BUILDER_IMAGE} as builder
+FROM ${BUILDER_IMAGE} AS builder
 ARG NODE_VERSION
 
 # install build and dev dependencies
 RUN apt-get update -y && apt-get install -y \
-    build-essential curl git inotify-tools libsodium-dev
+  build-essential curl git inotify-tools libsodium-dev
 
 COPY bin/install_node bin/install_node
 RUN bin/install_node ${NODE_VERSION}
@@ -55,6 +55,7 @@ RUN mix deps.compile
 
 COPY priv priv
 COPY lib lib
+COPY assets assets
 
 RUN mix lightning.install_runtime
 
@@ -62,12 +63,10 @@ RUN mix lightning.install_adaptor_icons
 
 RUN mix lightning.install_schemas
 
-COPY assets assets
 RUN npm install --prefix assets
 
 # compile assets
 RUN mix assets.deploy
-
 
 # Compile the release
 RUN mix compile
@@ -98,21 +97,22 @@ RUN apt-get clean && rm -f /var/lib/apt/lists/*_**
 # Set the locale
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
 
-ENV LANG en_US.UTF-8
-ENV LANGUAGE en_US:en
-ENV LC_ALL en_US.UTF-8
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
+
+WORKDIR "/app"
 
 COPY bin/install_node tmp/install_node
 RUN tmp/install_node ${NODE_VERSION}
 
-WORKDIR "/app"
 
 RUN useradd --uid 1000 --home /app lightning
 RUN chown lightning /app
 
 # set runner ENV
 ENV MIX_ENV="prod"
-ENV ADAPTORS_PATH /app/priv/openfn
+ENV ADAPTORS_PATH=/app/priv/openfn
 
 # Only copy the final release and the adaptor directory from the build stage
 COPY --from=builder --chown=lightning:root /app/_build/${MIX_ENV}/rel/lightning ./
@@ -127,4 +127,4 @@ ENV COMMIT=${COMMIT}
 ENV BRANCH=${BRANCH}
 ENV IMAGE_TAG=${IMAGE_TAG}
 
-CMD /app/bin/server
+CMD ["/app/bin/server"]
