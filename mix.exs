@@ -4,13 +4,8 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-<<<<<<< HEAD
       version: "2.11.3",
-      elixir: "~> 1.15",
-=======
-      version: "2.11.2",
       elixir: "~> 1.17",
->>>>>>> 4ed742fb6 (Upgrade elixir to 1.17.3)
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
         warnings_as_errors: true
@@ -103,7 +98,7 @@ defmodule Lightning.MixProject do
       {:jsonpatch, "~> 1.0.2"},
       {:junit_formatter, "~> 3.0", only: [:test]},
       {:libcluster, "~> 3.3"},
-      {:mimic, "~> 1.10.2", only: :test},
+      {:mimic, "~> 1.7.2", only: :test},
       {:mix_test_watch, "~> 1.2.0", only: [:test, :dev], runtime: false},
       {:mock, "~> 0.3.8", only: :test},
       {:mox, "~> 1.2.0", only: :test},
