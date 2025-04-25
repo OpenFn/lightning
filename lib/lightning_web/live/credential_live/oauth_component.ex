@@ -524,7 +524,9 @@ defmodule LightningWeb.CredentialLive.OauthComponent do
   end
 
   defp display_loader?(oauth_progress) do
-    oauth_progress not in List.flatten([:not_started | Map.values(@oauth_states)])
+    oauth_progress not in List.flatten([
+      :not_started | Map.values(@oauth_states)
+    ])
   end
 
   defp display_reauthorize_banner?(%{

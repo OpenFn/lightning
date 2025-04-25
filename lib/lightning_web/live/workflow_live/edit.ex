@@ -495,9 +495,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           phx-value-id={@selected_job.id}
                           class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
                           disabled={
-                            !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                              @has_child_edges or @is_first_job or
-                              @snapshot_version_tag != "latest" ||
+                            (!is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                               @has_child_edges or @is_first_job or
+                               @snapshot_version_tag != "latest") ||
                               !@has_presence_edit_priority
                           }
                           tooltip={
@@ -541,8 +541,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   form={tf}
                   on_change={&send_form_changed/1}
                   disabled={
-                    !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                      @snapshot_version_tag != "latest" ||
+                    (!is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                       @snapshot_version_tag != "latest") ||
                       !@has_presence_edit_priority
                   }
                   can_write_webhook_auth_method={@can_write_webhook_auth_method}
@@ -557,8 +557,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         type="toggle"
                         field={tf[:enabled]}
                         disabled={
-                          !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                            @snapshot_version_tag != "latest" ||
+                          (!is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                             @snapshot_version_tag != "latest") ||
                             !@has_presence_edit_priority
                         }
                         label="Enabled"
@@ -586,8 +586,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 <.edge_form
                   form={ef}
                   disabled={
-                    !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                      @snapshot_version_tag != "latest" ||
+                    (!is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                       @snapshot_version_tag != "latest") ||
                       !@has_presence_edit_priority
                   }
                   cancel_url={close_url(assigns, :selected_edge, :unselect)}
@@ -604,8 +604,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           type="toggle"
                           field={ef[:enabled]}
                           disabled={
-                            !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                              @snapshot_version_tag != "latest" ||
+                            (!is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                               @snapshot_version_tag != "latest") ||
                               !@has_presence_edit_priority
                           }
                           label="Enabled"
@@ -622,9 +622,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
                             phx-click="delete_edge"
                             phx-value-id={ef[:id].value}
                             disabled={
-                              !is_nil(@workflow.deleted_at) or !@can_edit_workflow or
-                                @snapshot_version_tag != "latest" ||
-                                !@has_presence_edit_priority or
+                              ((!is_nil(@workflow.deleted_at) or !@can_edit_workflow or
+                                  @snapshot_version_tag != "latest") ||
+                                 !@has_presence_edit_priority) or
                                 ef[:source_trigger_id].value
                             }
                           >

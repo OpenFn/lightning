@@ -27,7 +27,9 @@ defmodule LightningWeb.Dev.ComponentsLive do
        :dataclip,
        dataclip()
        |> Enum.with_index(1)
-       |> Enum.map(fn {line, index} -> %{id: index, line: line, index: index} end)
+       |> Enum.map(fn {line, index} ->
+         %{id: index, line: line, index: index}
+       end)
      )}
   end
 
