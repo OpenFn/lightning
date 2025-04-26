@@ -49,6 +49,8 @@ defmodule Lightning.WorkflowTemplates do
       nil
 
   """
+  def get_template_by_workflow_id(workflow_id) when is_nil(workflow_id), do: nil
+
   def get_template_by_workflow_id(workflow_id) do
     Repo.one(from t in WorkflowTemplate, where: t.workflow_id == ^workflow_id)
   end

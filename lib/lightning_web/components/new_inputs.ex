@@ -146,6 +146,8 @@ defmodule LightningWeb.Components.NewInputs do
 
     * `type="checkbox"` is used exclusively to render boolean values
 
+    * `type="tag"` renders a tag input with comma-separated values
+
     * For live file uploads, see `Phoenix.Component.live_file_input/1`
 
   See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input
@@ -155,6 +157,7 @@ defmodule LightningWeb.Components.NewInputs do
 
       <.input field={@form[:email]} type="email" />
       <.input name="my-input" errors={["oh no!"]} />
+      <.input field={@form[:tags]} type="tag" />
   """
   attr :id, :any, default: nil
   attr :name, :any
@@ -166,7 +169,7 @@ defmodule LightningWeb.Components.NewInputs do
     default: "text",
     values:
       ~w(checkbox color date datetime-local email file hidden month number password
-               range radio search select tel text textarea time url week toggle integer-toggle)
+               range radio search select tag tel text textarea time url week toggle integer-toggle)
 
   attr :field, Phoenix.HTML.FormField,
     doc:
@@ -199,6 +202,8 @@ defmodule LightningWeb.Components.NewInputs do
     doc: "the multiple flag for select inputs"
 
   attr :button_placement, :string, default: nil
+
+  attr :placeholder, :string, default: "Enter tags, separate with commas"
 
   attr :rest, :global,
     include:
@@ -364,6 +369,69 @@ defmodule LightningWeb.Components.NewInputs do
       ]}
       {@rest}
     />
+    """
+  end
+
+  def input(%{type: "tag"} = assigns) do
+    assigns =
+      assign_new(assigns, :tags, fn -> parse_tags_value(assigns[:value]) end)
+
+    ~H"""
+    <div phx-feedback-for={@name} class="tag-input-container">
+      <.label :if={@label} for={@id} class="mb-2">
+        {@label}<span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
+      </.label>
+
+      <div class="relative">
+        <input
+          type="text"
+          name={@name}
+          id={@id}
+          phx-hook="TagInput"
+          placeholder={@placeholder}
+          class={[
+            "focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
+            "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500",
+            @errors == [] &&
+              "border-slate-300 focus:border-slate-400 focus:outline-indigo-600",
+            @errors != [] &&
+              "border-danger-400 focus:border-danger-400 focus:outline-danger-400",
+            @class
+          ]}
+          {@rest}
+        />
+        <input type="hidden" name={@name} id={@id} value={serialize_tags(@tags)} />
+      </div>
+      <.error :for={msg <- @errors} :if={@display_errors}>{msg}</.error>
+
+      <div class="tag-list mt-2">
+        <span
+          :for={tag <- @tags}
+          id={"tag-#{String.replace(tag, " ", "-")}"}
+          phx-hook="EditTag"
+          data-tag={tag}
+          class="inline-flex items-center rounded-md bg-blue-50 p-2 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 mr-1 my-1"
+        >
+          {tag}
+          <button
+            id={"remove-#{String.replace(tag, " ", "-")}"}
+            type="button"
+            phx-hook="DeleteTag"
+            data-tag={tag}
+            class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-gray-500/20"
+          >
+            <span class="sr-only">Remove</span>
+            <svg
+              viewBox="0 0 14 14"
+              class="h-3.5 w-3.5 stroke-gray-600/50 group-hover:stroke-gray-600/75"
+            >
+              <path d="M4 4l6 6m0-6l-6 6" />
+            </svg>
+            <span class="absolute -inset-1"></span>
+          </button>
+        </span>
+      </div>
+    </div>
     """
   end
 
@@ -788,5 +856,16 @@ defmodule LightningWeb.Components.NewInputs do
       {render_slot(@inner_block)}
     </p>
     """
+  end
+
+  defp parse_tags_value(value) when is_binary(value) do
+    String.split(value, ",", trim: true) |> Enum.map(&String.trim/1)
+  end
+
+  defp parse_tags_value(value) when is_list(value), do: value
+  defp parse_tags_value(_), do: []
+
+  defp serialize_tags(tags) when is_list(tags) do
+    Enum.join(tags, ",")
   end
 end

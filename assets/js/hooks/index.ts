@@ -384,23 +384,65 @@ export const OpenAuthorizeUrl = {
   },
 } as PhoenixHook;
 
-export const EditScope = {
+export const TagInput = {
   mounted() {
-    this.el.addEventListener('dblclick', _e => {
-      const scopeValue = this.el.dataset.scope;
-      const eventType = this.el.dataset.eventType;
-      this.pushEventTo(this.el, eventType, { scope: scopeValue });
+    this.el.addEventListener("keydown", (e) => {
+      if (e.key === "," || e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        this.processInput();
+      }
+    });
+
+    this.el.addEventListener("blur", () => {
+      this.processInput();
+    });
+
+    this.handleEvent("focus_tag_input", (data) => {
+      this.el.focus();
+      
+      if (data && data.value) {
+        this.el.value = data.value;
+      }
     });
   },
-} as PhoenixHook<{}, { scope: string; eventType: string }>;
+
+  processInput() {
+    const value = this.el.value.trim();
+    if (value) {
+      const cleanValue = value.replace(/,+$/, "");
+      if (cleanValue) {
+        this.pushEvent("tag_action", { action: "add", value: cleanValue });
+        this.el.value = "";
+      }
+    }
+  }
+};
+
+export const EditTag = {
+  mounted() {
+    this.el.addEventListener("dblclick", (_e) => {
+      const tagValue = this.el.dataset.tag;
+      this.pushEvent("tag_action", { action: "edit", value: tagValue });
+    });
+  }
+};
+
+export const DeleteTag = {
+  mounted() {
+    this.el.addEventListener("click", (_e) => {
+      const tagValue = this.el.dataset.tag;      
+      this.pushEvent("tag_action", { action: "remove", value: tagValue });
+    });
+  }
+};
 
 export const ClearInput = {
   mounted() {
-    this.handleEvent('clear_input', () => {
-      this.el.value = '';
+    this.handleEvent("clear_input", () => {
+      this.el.value = "";
     });
-  },
-} as PhoenixHook<{}, {}, HTMLInputElement>;
+  }
+};
 
 export const ModalHook = {
   mounted() {

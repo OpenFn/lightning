@@ -32,32 +32,6 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
      socket |> assign(selected_method: method) |> apply_selected_method()}
   end
 
-  def handle_event("validate-parsed-workflow", %{"workflow" => params}, socket) do
-    changeset = Workflow.changeset(socket.assigns.workflow, params)
-
-    if changeset.valid? do
-      update_parent_form(params)
-      {:reply, %{}, assign(socket, changeset: changeset)}
-    else
-      {:reply, ProvisioningJSON.error(%{changeset: changeset}),
-       assign(socket, changeset: changeset)}
-    end
-  end
-
-  def handle_event("template-parsed", %{"workflow" => params}, socket) do
-    base_name = "Copy of #{socket.assigns.selected_template.name}"
-    existing_workflows = Projects.list_workflows(socket.assigns.project)
-
-    params =
-      base_name
-      |> generate_unique_name(existing_workflows)
-      |> then(fn name -> Map.put(params, "name", name) end)
-
-    update_parent_form(params)
-
-    {:noreply, push_event(socket, "state-applied", %{"state" => params})}
-  end
-
   def handle_event("search-templates", %{"search" => search_term}, socket) do
     filtered_templates =
       filter_templates(socket.assigns.users_templates, search_term)
@@ -84,11 +58,67 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
      |> push_selected_template_code()}
   end
 
-  def handle_event("clear-search", _params, socket) do
-    {:noreply,
-     socket
-     |> assign(search_term: "")
-     |> assign(filtered_templates: socket.assigns.users_templates)}
+  def handle_event(event_name, %{"workflow" => params}, socket)
+      when event_name in ["workflow-parsed", "template-parsed"] do
+    %{project: project, selected_template: template} = socket.assigns
+
+    workflow_name = default_if_empty(params["name"], "Untitled Workflow")
+    template_name = default_if_empty(template.name, "Untitled Template")
+
+    params =
+      project
+      |> Projects.list_workflows()
+      |> generate_workflow_name(
+        workflow_name,
+        template_name,
+        event_name
+      )
+      |> then(fn name -> Map.put(params, "name", name) end)
+
+    update_parent_form(params)
+
+    case event_name do
+      "workflow-parsed" -> handle_workflow_parsed(socket, params)
+      "template-parsed" -> handle_template_parsed(socket, params)
+    end
+  end
+
+  defp default_if_empty(name, default) do
+    if String.trim(name || "") == "", do: default, else: name
+  end
+
+  defp generate_workflow_name(
+         existing_workflows,
+         workflow_name,
+         template_name,
+         event_name
+       ) do
+    base_name =
+      "Copy of " <>
+        case event_name do
+          "workflow-parsed" -> workflow_name
+          "template-parsed" -> template_name
+        end
+
+    generate_unique_name(base_name, existing_workflows)
+  end
+
+  defp handle_workflow_parsed(socket, params) do
+    changeset = Workflow.changeset(socket.assigns.workflow, params)
+
+    if changeset.valid? do
+      {:reply, %{},
+       socket
+       |> update_workflow_canvas(params)
+       |> assign(changeset: changeset)}
+    else
+      {:reply, ProvisioningJSON.error(%{changeset: changeset}),
+       assign(socket, changeset: changeset)}
+    end
+  end
+
+  defp handle_template_parsed(socket, params) do
+    {:noreply, update_workflow_canvas(socket, params)}
   end
 
   defp generate_unique_name(base_name, existing_workflows) do
@@ -168,11 +198,15 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
   end
 
   defp push_selected_template_code(socket) do
-    socket
-    |> push_event("force-fit", %{})
-    |> push_event("template_selected", %{
+    push_event(socket, "template_selected", %{
       template: socket.assigns.selected_template.code
     })
+  end
+
+  defp update_workflow_canvas(socket, params) do
+    socket
+    |> push_event("state-applied", %{"state" => params})
+    |> push_event("force-fit", %{})
   end
 
   @impl true
