@@ -4501,6 +4501,38 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert_reply view, %{dataclips: ^dataclips}
     end
+
+    test "returns an error on unknown search tagged params",
+         %{conn: conn, project: project} do
+      %{jobs: [job | _rest]} =
+        workflow = insert(:complex_workflow, project: project)
+
+      Lightning.Workflows.Snapshot.create(workflow)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}",
+          on_error: :raise
+        )
+
+      date_param = Date.utc_today()
+
+      _dataclip = insert(:dataclip, inserted_at: DateTime.new!(date_param, ~T[00:00:01]))
+      |> tap(&insert(:step, input_dataclip: &1, job: job))
+
+      render_hook(
+        view,
+        "search-selectable-dataclips",
+        %{
+          "job_id" => job.id,
+          "search_text" => "afterrr: #{Date.to_iso8601(date_param)}",
+          "limit" => 10
+        }
+      )
+
+      assert_reply view, %{error: :invalid_type}
+    end
   end
 
   defp log_viewer_selected_level(log_viewer) do
