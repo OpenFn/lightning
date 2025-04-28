@@ -41,12 +41,26 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
     |> String.split()
     |> Enum.reduce_while(Map.new(), fn text, filters ->
       case parse_param(text) do
-        {:ok, %Date{} = date} -> {:cont, Map.put(filters, :date, date)}
-        {:ok, %NaiveDateTime{} = datetime} -> {:cont, Map.put(filters, :datetime, datetime)}
-        {:ok, {:after, datetime}} -> {:cont, Map.put(filters, :after, datetime)}
-        {:ok, uuid} when is_binary(uuid) -> {:cont, Map.put(filters, :id, uuid)}
-        {:ok, type} when is_atom(type) -> {:cont, Map.put(filters, :type, type)}
-        error -> {:halt, error}
+        {:ok, %Date{} = date} ->
+          {:cont, Map.put(filters, :date, date)}
+
+        {:ok, %NaiveDateTime{} = datetime} ->
+          {:cont, Map.put(filters, :datetime, datetime)}
+
+        {:ok, {:after, datetime}} ->
+          {:cont, Map.put(filters, :after, datetime)}
+
+        {:ok, {:id_prefix, id_prefix}} ->
+          {:cont, Map.put(filters, :id_prefix, id_prefix)}
+
+        {:ok, uuid} when is_binary(uuid) ->
+          {:cont, Map.put(filters, :id, uuid)}
+
+        {:ok, type} when is_atom(type) ->
+          {:cont, Map.put(filters, :type, type)}
+
+        error ->
+          {:halt, error}
       end
     end)
     |> then(fn result ->
@@ -57,7 +71,9 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
   defp parse_param("after:" <> param) do
     case Date.from_iso8601(param) do
       {:ok, date} ->
-        datetime = date |> Date.add(-1) |> NaiveDateTime.new!(~T[23:59:59.999999])
+        datetime =
+          date |> Date.add(-1) |> NaiveDateTime.new!(~T[23:59:59.999999])
+
         {:ok, {:after, datetime}}
 
       {:error, _reason} ->
@@ -71,13 +87,14 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
   defp parse_param("datetime:" <> param), do: NaiveDateTime.from_iso8601(param)
 
   defp parse_param("id:" <> param) do
-    with :error <- Ecto.UUID.cast(param), do: {:error, :invalid_uuid}
+    with :error <- Ecto.UUID.cast(param), do: parse_id_prefix(param)
   end
 
   defp parse_param("type:" <> param) do
-    with true <-
-           MapSet.member?(@dataclip_types, param) || {:error, :invalid_type} do
+    if MapSet.member?(@dataclip_types, param) do
       {:ok, String.to_existing_atom(param)}
+    else
+      {:error, :invalid_type}
     end
   end
 
@@ -85,8 +102,19 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
     with {:error, _reason} <- Date.from_iso8601(text),
          {:error, _reason} <- NaiveDateTime.from_iso8601(text),
          :error <- Ecto.UUID.cast(text),
-         true <- MapSet.member?(@dataclip_types, text) || {:error, :invalid_type} do
+         {:error, _reason} <- parse_id_prefix(text),
+         true <-
+           MapSet.member?(@dataclip_types, text) || {:error, :invalid_search} do
       {:ok, String.to_existing_atom(text)}
+    end
+  end
+
+  defp parse_id_prefix(text) do
+    with {_num, ""} <- Integer.parse(text, 16),
+         0 <- rem(String.length(text), 2) do
+      {:ok, {:id_prefix, text}}
+    else
+      _invalid -> {:error, :invalid_uuid}
     end
   end
 end

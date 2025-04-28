@@ -4152,6 +4152,80 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert_reply view, %{dataclips: [^dataclip]}
     end
 
+    test "searches for dataclips by uuid prefix",
+         %{conn: conn, project: project} do
+      %{jobs: [job | _rest]} =
+        workflow = insert(:complex_workflow, project: project)
+
+      Lightning.Workflows.Snapshot.create(workflow)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}",
+          on_error: :raise
+        )
+
+      dataclip =
+        insert(:dataclip,
+          body: %{"body-field" => "body-value"},
+          request: %{"headers" => "list"},
+          type: :step_result
+        )
+        |> tap(&insert(:step, input_dataclip: &1, job: job))
+        |> then(fn %{body: body, request: request} = dataclip ->
+          Repo.reload!(dataclip) |> restore_listed(body, request)
+        end)
+
+      render_hook(
+        view,
+        "search-selectable-dataclips",
+        %{
+          "job_id" => job.id,
+          "search_text" => Ecto.UUID.generate(),
+          "limit" => 5
+        }
+      )
+
+      assert_reply view, %{dataclips: []}
+
+      render_hook(
+        view,
+        "search-selectable-dataclips",
+        %{
+          "job_id" => job.id,
+          "search_text" => String.slice(dataclip.id, 0..3),
+          "limit" => 5
+        }
+      )
+
+      assert_reply view, %{dataclips: [^dataclip]}
+
+      render_hook(
+        view,
+        "search-selectable-dataclips",
+        %{
+          "job_id" => job.id,
+          "search_text" => "id: #{String.slice(dataclip.id, 0..3)}",
+          "limit" => 5
+        }
+      )
+
+      assert_reply view, %{dataclips: [^dataclip]}
+
+      render_hook(
+        view,
+        "search-selectable-dataclips",
+        %{
+          "job_id" => job.id,
+          "search_text" => "id: #{String.slice(dataclip.id, 0..1)} type: step_result",
+          "limit" => 5
+        }
+      )
+
+      assert_reply view, %{dataclips: [^dataclip]}
+    end
+
     test "searches for dataclips by type",
          %{conn: conn, project: project} do
       %{jobs: [job | _rest]} =
@@ -4229,12 +4303,12 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         "search-selectable-dataclips",
         %{
           "job_id" => job.id,
-          "search_text" => "http_request_typo",
+          "search_text" => "anything invalid",
           "limit" => 3
         }
       )
 
-      assert_reply view, %{error: :invalid_type}
+      assert_reply view, %{error: :invalid_search}
     end
 
     test "searches for dataclips by date",
@@ -4487,14 +4561,15 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         end)
         |> Enum.drop(1)
         |> Enum.sort_by(& &1.inserted_at, :desc)
-        |> Enum.filter(& &1.type == :step_result)
+        |> Enum.filter(&(&1.type == :step_result))
 
       render_hook(
         view,
         "search-selectable-dataclips",
         %{
           "job_id" => job.id,
-          "search_text" => "after: #{Date.to_iso8601(date_param)} type: step_result",
+          "search_text" =>
+            "after: #{Date.to_iso8601(date_param)} type: step_result",
           "limit" => 10
         }
       )
@@ -4518,8 +4593,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       date_param = Date.utc_today()
 
-      _dataclip = insert(:dataclip, inserted_at: DateTime.new!(date_param, ~T[00:00:01]))
-      |> tap(&insert(:step, input_dataclip: &1, job: job))
+      _dataclip =
+        insert(:dataclip, inserted_at: DateTime.new!(date_param, ~T[00:00:01]))
+        |> tap(&insert(:step, input_dataclip: &1, job: job))
 
       render_hook(
         view,
@@ -4531,7 +4607,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         }
       )
 
-      assert_reply view, %{error: :invalid_type}
+      assert_reply view, %{error: :invalid_search}
     end
   end
 

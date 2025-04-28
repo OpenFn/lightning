@@ -69,6 +69,15 @@ defmodule Lightning.Invocation do
         {:id, uuid}, dynamic ->
           dynamic([d], ^dynamic and d.id == ^uuid)
 
+        {:id_prefix, id_prefix}, dynamic ->
+          {id_prefix_start, id_prefix_end} =
+            id_prefix_interval(id_prefix)
+
+          dynamic(
+            [d],
+            ^dynamic and d.id > ^id_prefix_start and d.id < ^id_prefix_end
+          )
+
         {:type, type}, dynamic ->
           dynamic([d], ^dynamic and d.type == ^type)
 
@@ -741,5 +750,26 @@ defmodule Lightning.Invocation do
       )
     end)
     |> Repo.transaction()
+  end
+
+  @uuid_binary_size 16
+
+  defp id_prefix_interval(id_prefix) do
+    prefix_bin =
+      id_prefix
+      |> String.to_charlist()
+      |> Enum.chunk_every(2)
+      |> Enum.reduce(<<>>, fn byte_chunk, prefix_bin ->
+        byte_int = byte_chunk |> :binary.list_to_bin() |> String.to_integer(16)
+        prefix_bin <> <<byte_int>>
+      end)
+
+    prefix_size = byte_size(prefix_bin)
+    missing_byte_size = @uuid_binary_size - prefix_size
+
+    {
+      Ecto.UUID.load!(prefix_bin <> :binary.copy(<<0>>, missing_byte_size)),
+      Ecto.UUID.load!(prefix_bin <> :binary.copy(<<255>>, missing_byte_size))
+    }
   end
 end
