@@ -387,12 +387,25 @@ export const OpenAuthorizeUrl = {
 export const TagInput = {
   mounted() {
     this.container = this.el;
-    this.textInput = this.el.querySelector('input[type="text"]');
-    this.hiddenInput = this.el.querySelector('input[type="hidden"]');
-    this.tagList = this.el.querySelector('.tag-list');
-    
+    this.textInput = document.getElementById(this.el.dataset.textEl);
+    this.hiddenInput = document.getElementById(this.el.dataset.hiddenEl);
+    this.tagList = document.getElementById(this.el.dataset.tagList);
+
+    if (!this.textInput) {
+      console.error("TagInput: textInput element not found.", { textInput: this.textInput });
+      return;
+    }
+    if (!this.hiddenInput) {
+      console.error("TagInput: hiddenInput element not found.", { hiddenInput: this.hiddenInput });
+      return;
+    }
+    if (!this.tagList) {
+      console.error("TagInput: tagList element not found.", { tagList: this.tagList });
+      return;
+    }
+
     this.isInForm = !!this.el.closest("form[phx-change]");
-    
+
     this.setupTextInputEvents();
     this.setupTagListEvents();
   },
@@ -489,6 +502,7 @@ export const TagInput = {
     }
   }
 };
+
 export const ClearInput = {
   mounted() {
     this.handleEvent("clear_input", () => {

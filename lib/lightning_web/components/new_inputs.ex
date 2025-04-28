@@ -386,7 +386,8 @@ defmodule LightningWeb.Components.NewInputs do
 
   def input(%{type: "tag"} = assigns) do
     assigns =
-      assign_new(assigns, :tags, fn ->
+      assigns
+      |> assign_new(:tags, fn ->
         case assigns[:value] do
           tags when is_list(tags) ->
             tags
@@ -400,6 +401,7 @@ defmodule LightningWeb.Components.NewInputs do
             []
         end
       end)
+      |> assign(:id, assigns.id || assigns.name)
 
     ~H"""
     <div
@@ -408,6 +410,9 @@ defmodule LightningWeb.Components.NewInputs do
       phx-hook="TagInput"
       phx-feedback-for={@name}
       data-standalone-mode={@standalone}
+      data-text-el={"#{@id}_raw"}
+      data-hidden-el={@id}
+      data-tag-list={"#{@id}-container-tag-list"}
     >
       <.label :if={@label} for={@id} class="mb-2">
         {@label}<span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
@@ -420,10 +425,10 @@ defmodule LightningWeb.Components.NewInputs do
 
       <div class="relative">
         <input
-          type="text"
           id={"#{@id}_raw"}
-          placeholder={@placeholder}
+          type="text"
           name={"#{@name}_raw"}
+          placeholder={@placeholder}
           class={[
             "focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
             "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500",
@@ -439,7 +444,7 @@ defmodule LightningWeb.Components.NewInputs do
       </div>
       <.error :for={msg <- @errors} :if={@display_errors}>{msg}</.error>
 
-      <div class="tag-list mt-2">
+      <div id={"#{@id}-container-tag-list"} class="tag-list mt-2">
         <span
           :for={tag <- @tags}
           id={"tag-#{String.replace(tag, " ", "-")}"}
@@ -452,7 +457,10 @@ defmodule LightningWeb.Components.NewInputs do
             class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-gray-500/20"
           >
             <span class="sr-only">Remove</span>
-            <Heroicons.x_mark class="h-3 w-3 stroke-gray-600/50 group-hover:stroke-gray-600/75" />
+            <.icon
+              name="hero-x-mark"
+              class="h-3 w-3 stroke-gray-600/50 group-hover:stroke-gray-600/75"
+            />
           </button>
         </span>
       </div>

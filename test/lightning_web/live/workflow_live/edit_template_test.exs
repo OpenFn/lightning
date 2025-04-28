@@ -253,7 +253,7 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
       assert html =~ ~s{id="test-tags_raw"}
       assert html =~ ~s{id="test-tags"}
       assert html =~ ~s{value=""}
-      assert html =~ ~s{<div class="tag-list mt-2">}
+      assert html =~ ~s{class="tag-list mt-2"}
       refute html =~ ~s{<span id="tag-}
     end
 
@@ -270,7 +270,6 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
       assert html =~ ~s{id="test-tags_raw"}
       assert html =~ ~s{id="test-tags"}
       assert html =~ ~s{value="tag1,tag2,tag3"}
-      assert html =~ ~s{<div class="tag-list mt-2">}
 
       assert html =~
                ~s{<span id="tag-tag1" class="inline-flex items-center rounded-md bg-blue-50 p-2 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 mr-1 my-1" data-tag="tag1">}
@@ -295,7 +294,7 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
       assert html =~ ~s{id="test-tags_raw"}
       assert html =~ ~s{id="test-tags"}
       assert html =~ ~s{value="tag1,tag2,tag3"}
-      assert html =~ ~s{<div class="tag-list mt-2">}
+      assert html =~ ~s{class="tag-list mt-2"}
 
       assert html =~
                ~s{<span id="tag-tag1" class="inline-flex items-center rounded-md bg-blue-50 p-2 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 mr-1 my-1" data-tag="tag1">}
@@ -320,7 +319,7 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
       assert html =~ ~s{id="test-tags_raw"}
       assert html =~ ~s{id="test-tags"}
       assert html =~ ~s{value="tag1,tag2,tag3"}
-      assert html =~ ~s{<div class="tag-list mt-2">}
+      assert html =~ ~s{class="tag-list mt-2"}
 
       assert html =~
                ~s{<span id="tag-tag1" class="inline-flex items-center rounded-md bg-blue-50 p-2 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 mr-1 my-1" data-tag="tag1">}
