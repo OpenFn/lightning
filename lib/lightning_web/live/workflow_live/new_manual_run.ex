@@ -39,23 +39,26 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
 
     search_text
     |> String.split()
-    |> Enum.reduce(Map.new(), fn text, filters ->
+    |> Enum.reduce_while(Map.new(), fn text, filters ->
       case parse_param(text) do
-        {:ok, %Date{} = date} -> {:ok, Map.put(filters, :date, date)}
-        {:ok, uuid} when is_binary(uuid) -> {:ok, Map.put(filters, :id, uuid)}
-        {:ok, type} when is_atom(type) -> {:ok, Map.put(filters, :type, type)}
-        {:ok, {:after, datetime}} -> {:ok, Map.put(filters, :after, datetime)}
-        {:ok, datetime} -> {:ok, Map.put(filters, :datetime, datetime)}
-        result -> result
+        {:ok, %Date{} = date} -> {:cont, Map.put(filters, :date, date)}
+        {:ok, %NaiveDateTime{} = datetime} -> {:cont, Map.put(filters, :datetime, datetime)}
+        {:ok, {:after, datetime}} -> {:cont, Map.put(filters, :after, datetime)}
+        {:ok, uuid} when is_binary(uuid) -> {:cont, Map.put(filters, :id, uuid)}
+        {:ok, type} when is_atom(type) -> {:cont, Map.put(filters, :type, type)}
+        error -> {:halt, error}
       end
+    end)
+    |> then(fn result ->
+      with %{} = filters <- result, do: {:ok, filters}
     end)
   end
 
   defp parse_param("after:" <> param) do
     case Date.from_iso8601(param) do
       {:ok, date} ->
-        {:ok,
-         {:after, Date.add(date, -1) |> NaiveDateTime.new!(~T[23:59:59.999999])}}
+        datetime = date |> Date.add(-1) |> NaiveDateTime.new!(~T[23:59:59.999999])
+        {:ok, {:after, datetime}}
 
       {:error, _reason} ->
         with {:ok, datetime} <- NaiveDateTime.from_iso8601(param) do
