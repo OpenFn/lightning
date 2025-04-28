@@ -4116,15 +4116,16 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           on_error: :raise
         )
 
-      dataclip = insert(:dataclip,
-        body: %{"body-field" => "body-value"},
-        request: %{"headers" => "list"},
-        type: :step_result
-      )
-      |> tap(&insert(:step, input_dataclip: &1, job: job))
-      |> then(fn %{body: body, request: request} = dataclip ->
-        Repo.reload!(dataclip) |> restore_listed(body, request)
-      end)
+      dataclip =
+        insert(:dataclip,
+          body: %{"body-field" => "body-value"},
+          request: %{"headers" => "list"},
+          type: :step_result
+        )
+        |> tap(&insert(:step, input_dataclip: &1, job: job))
+        |> then(fn %{body: body, request: request} = dataclip ->
+          Repo.reload!(dataclip) |> restore_listed(body, request)
+        end)
 
       render_hook(
         view,
@@ -4344,6 +4345,107 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       )
 
       assert_reply view, %{dataclips: [^dataclip]}
+    end
+
+    test "searches for dataclips after a datetime",
+         %{conn: conn, project: project} do
+      %{jobs: [job | _rest]} =
+        workflow = insert(:complex_workflow, project: project)
+
+      Lightning.Workflows.Snapshot.create(workflow)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}",
+          on_error: :raise
+        )
+
+      datetime_param = DateTime.utc_now()
+
+      dataclips =
+        Enum.map(-1..5, fn i ->
+          type = if rem(i, 2) == 0, do: :http_request, else: :step_result
+          request = if type == :http_request, do: %{"headers" => "list"}
+
+          insert(:dataclip,
+            body: %{"body-field" => "body-value#{i}"},
+            request: request,
+            type: type,
+            inserted_at: DateTime.add(datetime_param, i, :millisecond)
+          )
+          |> tap(&insert(:step, input_dataclip: &1, job: job))
+          |> then(fn %{body: body, request: request} = dataclip ->
+            Repo.reload!(dataclip) |> restore_listed(body, request)
+          end)
+        end)
+        |> Enum.sort_by(& &1.inserted_at, :desc)
+        |> Enum.take(5)
+
+      render_hook(
+        view,
+        "search-selectable-dataclips",
+        %{
+          "job_id" => job.id,
+          "search_text" => "after: #{DateTime.to_iso8601(datetime_param)}",
+          "limit" => 10
+        }
+      )
+
+      assert_reply view, %{dataclips: ^dataclips}
+    end
+
+    test "searches for dataclips after a date",
+         %{conn: conn, project: project} do
+      %{jobs: [job | _rest]} =
+        workflow = insert(:complex_workflow, project: project)
+
+      Lightning.Workflows.Snapshot.create(workflow)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand"]}",
+          on_error: :raise
+        )
+
+      date_param = Date.utc_today()
+
+      dataclips =
+        Enum.map(-1..5, fn i ->
+          type = if rem(i, 2) == 0, do: :http_request, else: :step_result
+          request = if type == :http_request, do: %{"headers" => "list"}
+
+          insert(:dataclip,
+            body: %{"body-field" => "body-value#{i}"},
+            request: request,
+            type: type,
+            inserted_at:
+              DateTime.add(
+                DateTime.new!(date_param, ~T[00:00:00]),
+                i,
+                :millisecond
+              )
+          )
+          |> tap(&insert(:step, input_dataclip: &1, job: job))
+          |> then(fn %{body: body, request: request} = dataclip ->
+            Repo.reload!(dataclip) |> restore_listed(body, request)
+          end)
+        end)
+        |> Enum.sort_by(& &1.inserted_at, :desc)
+        |> Enum.take(6)
+
+      render_hook(
+        view,
+        "search-selectable-dataclips",
+        %{
+          "job_id" => job.id,
+          "search_text" => "after: #{Date.to_iso8601(date_param)}",
+          "limit" => 10
+        }
+      )
+
+      assert_reply view, %{dataclips: ^dataclips}
     end
   end
 

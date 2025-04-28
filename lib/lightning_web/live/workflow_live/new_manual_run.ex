@@ -34,24 +34,56 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
     end
   end
 
-  defp get_dataclips_filters(search_text) do
+  def get_dataclips_filters(search_text) do
+    search_text = String.replace(search_text, ": ", ":")
+
     search_text
     |> String.split()
     |> Enum.reduce(Map.new(), fn text, filters ->
-      with {:error, _reason} <- Date.from_iso8601(text),
-           {:error, _reason} <- DateTime.from_iso8601(text),
-           :error <- Ecto.UUID.cast(text),
-           true <-
-             MapSet.member?(@dataclip_types, text) || {:error, :invalid_type} do
-        {:ok, Map.put(filters, :type, String.to_existing_atom(text))}
-      end
-      |> case do
+      case parse_param(text) do
         {:ok, %Date{} = date} -> {:ok, Map.put(filters, :date, date)}
-        {:ok, datetime, _tz} -> {:ok, Map.put(filters, :datetime, datetime)}
         {:ok, uuid} when is_binary(uuid) -> {:ok, Map.put(filters, :id, uuid)}
-        :error -> {:error, :invalid_uuid}
+        {:ok, type} when is_atom(type) -> {:ok, Map.put(filters, :type, type)}
+        {:ok, {:after, datetime}} -> {:ok, Map.put(filters, :after, datetime)}
+        {:ok, datetime} -> {:ok, Map.put(filters, :datetime, datetime)}
         result -> result
       end
     end)
+  end
+
+  defp parse_param("after:" <> param) do
+    case Date.from_iso8601(param) do
+      {:ok, date} ->
+        {:ok,
+         {:after, Date.add(date, -1) |> NaiveDateTime.new!(~T[23:59:59.999999])}}
+
+      {:error, _reason} ->
+        with {:ok, datetime} <- NaiveDateTime.from_iso8601(param) do
+          {:ok, {:after, datetime}}
+        end
+    end
+  end
+
+  defp parse_param("date:" <> param), do: Date.from_iso8601(param)
+  defp parse_param("datetime:" <> param), do: NaiveDateTime.from_iso8601(param)
+
+  defp parse_param("id:" <> param) do
+    with :error <- Ecto.UUID.cast(param), do: {:error, :invalid_uuid}
+  end
+
+  defp parse_param("type:" <> param) do
+    with true <-
+           MapSet.member?(@dataclip_types, param) || {:error, :invalid_type} do
+      {:ok, String.to_existing_atom(param)}
+    end
+  end
+
+  defp parse_param(text) do
+    with {:error, _reason} <- Date.from_iso8601(text),
+         {:error, _reason} <- NaiveDateTime.from_iso8601(text),
+         :error <- Ecto.UUID.cast(text),
+         true <- MapSet.member?(@dataclip_types, text) || {:error, :invalid_type} do
+      {:ok, String.to_existing_atom(text)}
+    end
   end
 end
