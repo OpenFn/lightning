@@ -729,6 +729,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   Copy Code
                 </.button>
                 <.button
+                  :if={@current_user.support_user}
                   variant="primary"
                   id="publish-template-btn"
                   phx-click="publish_template"

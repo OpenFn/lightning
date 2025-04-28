@@ -5,7 +5,7 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
   import Lightning.Factories
   import Lightning.WorkflowLive.Helpers
 
-  setup :register_and_log_in_user
+  setup :register_and_log_in_support_user
   setup :create_project_for_current_user
   setup :create_workflow
 
@@ -216,6 +216,26 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
 
       # Verify the template form is not rendered
       refute view |> element("#workflow-template-form") |> has_element?()
+    end
+
+    test "does not show publish button for non-support users", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      # Create a non-support user and add them to the project
+      user = insert(:user, support_user: false)
+      insert(:project_user, user: user, project: project, role: :editor)
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}?m=code")
+
+      render_hook(view, "workflow_code_generated", %{
+        "code" => "test workflow code"
+      })
+
+      refute view |> element("#publish-template-btn") |> has_element?()
     end
   end
 

@@ -103,6 +103,19 @@ defmodule LightningWeb.ConnCase do
     %{conn: log_in_user(conn, user), user: user}
   end
 
+  @doc """
+  Setup helper that registers and logs in a support user.
+
+      setup :register_and_log_in_support_user
+
+  It stores an updated connection and a support user in the
+  test context.
+  """
+  def register_and_log_in_support_user(%{conn: conn}) do
+    user = Lightning.Factories.insert(:user, support_user: true)
+    %{conn: log_in_user(conn, user), user: user}
+  end
+
   def register_and_log_in_superuser(%{conn: conn}) do
     user = Lightning.AccountsFixtures.superuser_fixture()
     %{conn: log_in_user(conn, user), user: user}
