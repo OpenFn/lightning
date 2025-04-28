@@ -224,6 +224,11 @@ defmodule LightningWeb.Components.NewInputs do
 
   attr :value_key, :any, default: nil
 
+  attr :standalone, :boolean,
+    default: false,
+    doc:
+      "indicates if the tag input operates independently of a form's validation flow"
+
   slot :inner_block
 
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
@@ -296,7 +301,14 @@ defmodule LightningWeb.Components.NewInputs do
       <.label :if={@label} for={@id}>
         {@label}<span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
       </.label>
-      <.textarea_element id={@id} name={@name} class={@class} value={@value} {@rest} />
+      <.textarea_element
+        id={@id}
+        name={@name}
+        class={@class}
+        value={@value}
+        placeholder={@placeholder}
+        {@rest}
+      />
       <.error :for={msg <- @errors} :if={@display_errors}>{msg}</.error>
     </div>
     """
@@ -374,20 +386,42 @@ defmodule LightningWeb.Components.NewInputs do
 
   def input(%{type: "tag"} = assigns) do
     assigns =
-      assign_new(assigns, :tags, fn -> parse_tags_value(assigns[:value]) end)
+      assign_new(assigns, :tags, fn ->
+        case assigns[:value] do
+          tags when is_list(tags) ->
+            tags
+
+          value when is_binary(value) ->
+            value
+            |> String.split(",", trim: true)
+            |> Enum.map(&String.trim/1)
+
+          _ ->
+            []
+        end
+      end)
 
     ~H"""
-    <div phx-feedback-for={@name} class="tag-input-container">
+    <div
+      id={"#{@id}-container"}
+      class="tag-input-container"
+      phx-hook="TagInput"
+      phx-feedback-for={@name}
+      data-standalone-mode={@standalone}
+    >
       <.label :if={@label} for={@id} class="mb-2">
         {@label}<span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
+        <.tooltip_for_label :if={@tooltip} id={"#{@id}-tooltip"} tooltip={@tooltip} />
       </.label>
+
+      <small :if={@sublabel} class="mb-2 block text-xs text-gray-600">
+        {@sublabel}
+      </small>
 
       <div class="relative">
         <input
           type="text"
-          name={@name}
-          id={@id}
-          phx-hook="TagInput"
+          id={"#{@id}_input"}
           placeholder={@placeholder}
           class={[
             "focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
@@ -400,7 +434,7 @@ defmodule LightningWeb.Components.NewInputs do
           ]}
           {@rest}
         />
-        <input type="hidden" name={@name} id={@id} value={serialize_tags(@tags)} />
+        <input type="hidden" name={@name} id={@id} value={Enum.join(@tags, ",")} />
       </div>
       <.error :for={msg <- @errors} :if={@display_errors}>{msg}</.error>
 
@@ -408,26 +442,16 @@ defmodule LightningWeb.Components.NewInputs do
         <span
           :for={tag <- @tags}
           id={"tag-#{String.replace(tag, " ", "-")}"}
-          phx-hook="EditTag"
-          data-tag={tag}
           class="inline-flex items-center rounded-md bg-blue-50 p-2 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 mr-1 my-1"
+          data-tag={tag}
         >
           {tag}
           <button
-            id={"remove-#{String.replace(tag, " ", "-")}"}
             type="button"
-            phx-hook="DeleteTag"
-            data-tag={tag}
             class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-gray-500/20"
           >
             <span class="sr-only">Remove</span>
-            <svg
-              viewBox="0 0 14 14"
-              class="h-3.5 w-3.5 stroke-gray-600/50 group-hover:stroke-gray-600/75"
-            >
-              <path d="M4 4l6 6m0-6l-6 6" />
-            </svg>
-            <span class="absolute -inset-1"></span>
+            <Heroicons.x_mark class="h-3 w-3 stroke-gray-600/50 group-hover:stroke-gray-600/75" />
           </button>
         </span>
       </div>
@@ -856,16 +880,5 @@ defmodule LightningWeb.Components.NewInputs do
       {render_slot(@inner_block)}
     </p>
     """
-  end
-
-  defp parse_tags_value(value) when is_binary(value) do
-    String.split(value, ",", trim: true) |> Enum.map(&String.trim/1)
-  end
-
-  defp parse_tags_value(value) when is_list(value), do: value
-  defp parse_tags_value(_), do: []
-
-  defp serialize_tags(tags) when is_list(tags) do
-    Enum.join(tags, ",")
   end
 end

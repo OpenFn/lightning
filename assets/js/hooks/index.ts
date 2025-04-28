@@ -386,56 +386,109 @@ export const OpenAuthorizeUrl = {
 
 export const TagInput = {
   mounted() {
-    this.el.addEventListener("keydown", (e) => {
+    this.container = this.el;
+    this.textInput = this.el.querySelector('input[type="text"]');
+    this.hiddenInput = this.el.querySelector('input[type="hidden"]');
+    this.tagList = this.el.querySelector('.tag-list');
+    
+    this.isInForm = !!this.el.closest("form[phx-change]");
+    
+    this.setupTextInputEvents();
+    this.setupTagListEvents();
+  },
+  
+  setupTextInputEvents() {
+    this.textInput.addEventListener("keydown", (e) => {
       if (e.key === "," || e.key === "Enter" || e.key === "Tab") {
         e.preventDefault();
-        this.processInput();
+        this.addTag();
       }
     });
-
-    this.el.addEventListener("blur", () => {
-      this.processInput();
-    });
-
-    this.handleEvent("focus_tag_input", (data) => {
-      this.el.focus();
-      
-      if (data && data.value) {
-        this.el.value = data.value;
-      }
+    
+    this.textInput.addEventListener("blur", () => {
+      this.addTag();
     });
   },
-
-  processInput() {
-    const value = this.el.value.trim();
-    if (value) {
-      const cleanValue = value.replace(/,+$/, "");
-      if (cleanValue) {
-        this.pushEvent("tag_action", { action: "add", value: cleanValue });
-        this.el.value = "";
+  
+  setupTagListEvents() {
+    this.tagList.addEventListener("click", (e) => {
+      const button = e.target.closest('button');
+      if (!button) return;
+      
+      const tagSpan = button.closest('span[data-tag]');
+      if (!tagSpan) return;
+      
+      const tagToRemove = tagSpan.dataset.tag;
+      this.removeTag(tagToRemove);
+    });
+    
+    this.tagList.addEventListener("dblclick", (e) => {
+      const tagSpan = e.target.closest('span[data-tag]');
+      if (!tagSpan) return;
+      
+      const tagToEdit = tagSpan.dataset.tag;
+      this.editTag(tagToEdit);
+    });
+  },
+  
+  addTag() {
+    const value = this.textInput.value.trim();
+    if (!value) return;
+    
+    const cleanValue = value.replace(/,+$/, "");
+    if (!cleanValue) return;
+    
+    let currentTags = this.getCurrentTags();
+    
+    const newTags = cleanValue
+      .split(",")
+      .map(tag => tag.trim())
+      .filter(tag => tag !== "");
+    
+    for (const tag of newTags) {
+      if (!currentTags.includes(tag)) {
+        currentTags.push(tag);
       }
+    }
+    
+    currentTags.sort();
+    this.updateTags(currentTags);
+    this.textInput.value = "";
+  },
+  
+  removeTag(tagToRemove) {
+    let currentTags = this.getCurrentTags();
+    const updatedTags = currentTags.filter(tag => tag !== tagToRemove);
+    this.updateTags(updatedTags);
+  },
+  
+  editTag(tagToEdit) {
+    let currentTags = this.getCurrentTags();
+    const updatedTags = currentTags.filter(tag => tag !== tagToEdit);
+    
+    this.updateTags(updatedTags);
+    
+    this.textInput.focus();
+    this.textInput.value = tagToEdit;
+  },
+  
+  getCurrentTags() {
+    const value = this.hiddenInput.value.trim();
+    return value
+      ? value.split(",").map(tag => tag.trim()).filter(tag => tag !== "")
+      : [];
+  },
+  
+  updateTags(tags) {
+    this.hiddenInput.value = tags.join(",");
+    
+    this.hiddenInput.dispatchEvent(new Event("input", { bubbles: true }));
+    
+    if (!this.isInForm || this.el.dataset.standaloneMode === "true") {
+      this.pushEvent("tags_updated", { tags: tags });
     }
   }
 };
-
-export const EditTag = {
-  mounted() {
-    this.el.addEventListener("dblclick", (_e) => {
-      const tagValue = this.el.dataset.tag;
-      this.pushEvent("tag_action", { action: "edit", value: tagValue });
-    });
-  }
-};
-
-export const DeleteTag = {
-  mounted() {
-    this.el.addEventListener("click", (_e) => {
-      const tagValue = this.el.dataset.tag;      
-      this.pushEvent("tag_action", { action: "remove", value: tagValue });
-    });
-  }
-};
-
 export const ClearInput = {
   mounted() {
     this.handleEvent("clear_input", () => {

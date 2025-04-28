@@ -31,7 +31,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Lightning.Workflows.WorkflowTemplate
   alias Lightning.WorkflowTemplates
   alias Lightning.WorkOrders
-  alias LightningWeb.TagHelpers
   alias LightningWeb.UiMetrics
   alias LightningWeb.WorkflowLive.Helpers
   alias LightningWeb.WorkflowNewLive.WorkflowParams
@@ -1640,13 +1639,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   @impl true
   def handle_event("validate", %{"workflow_template" => template_params}, socket) do
-    processed_params = TagHelpers.process_tag_params(template_params)
+    tags =
+      template_params["tags"]
+      |> String.split(",", trim: true)
+      |> Enum.map(&String.trim/1)
 
     changeset =
-      processed_params
+      template_params
       |> Map.merge(%{
         "code" => socket.assigns.workflow_code,
-        "workflow_id" => socket.assigns.workflow.id
+        "workflow_id" => socket.assigns.workflow.id,
+        "tags" => tags
       })
       |> then(&WorkflowTemplate.changeset(socket.assigns.workflow_template, &1))
       |> Map.put(:action, :validate)
@@ -1659,11 +1662,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
     %{workflow: workflow, workflow_code: code} = socket.assigns
 
     tags =
-      Ecto.Changeset.get_field(
-        socket.assigns.workflow_template_changeset,
-        :tags,
-        []
-      )
+      template_params["tags"]
+      |> String.split(",", trim: true)
+      |> Enum.map(&String.trim/1)
 
     params =
       Map.merge(template_params, %{
@@ -1991,16 +1992,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   def handle_event("cancel_publish_template", _params, socket) do
     {:noreply, assign(socket, publish_template: false)}
-  end
-
-  def handle_event("tag_action", params, socket) do
-    {:noreply,
-     socket
-     |> TagHelpers.handle_action(
-       params,
-       :workflow_template_changeset,
-       :tags
-     )}
   end
 
   def handle_event(_unhandled_event, _params, socket) do
