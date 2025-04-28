@@ -18,7 +18,7 @@ defmodule LightningWeb.UserRegistrationController do
         conn
         |> put_flash(:info, "User created successfully.")
         |> UserAuth.log_in_user(user)
-        |> UserAuth.redirect_with_return_to()
+        |> redirect_user(user)
 
       {:error, %Ecto.Changeset{} = changeset} ->
         render(conn, "new.html", changeset: changeset)
@@ -34,6 +34,18 @@ defmodule LightningWeb.UserRegistrationController do
         project_name,
         [%{user_id: user.id, role: :owner}]
       )
+    end
+  end
+
+  defp redirect_user(conn, user) do
+    user = Lightning.Repo.preload(user, :projects)
+
+    case user.projects do
+      [project | _] ->
+        redirect(conn, to: ~p"/projects/#{project.id}/w/new")
+
+      [] ->
+        UserAuth.redirect_with_return_to(conn)
     end
   end
 end

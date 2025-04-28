@@ -132,11 +132,15 @@ const calculateLayout = async (
   } else {
     update(newModel);
 
-    // Force a fit in (ugly but fine for testing purposes)
-    if (options.forceFit)
+    // Force a fit with animation
+    if (options.forceFit) {
       setTimeout(() => {
-        flow.fitView();
+        flow.fitView({
+          duration: typeof duration === 'number' ? duration : 500,
+          padding: FIT_PADDING,
+        });
       }, 20);
+    }
   }
 
   return finalPositions;

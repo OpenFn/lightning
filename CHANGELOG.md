@@ -24,10 +24,16 @@ and this project adheres to
 - Make Collections delete_all idempotent.
   [#3143](https://github.com/OpenFn/lightning/issues/3143)
 
-## [v2.11.3-pre.1] - 2025-04-16
+## [v2.12.0] - 2025-04-25
 
 ### Added
 
+- Create workflows from base templates
+  [#3018](https://github.com/OpenFn/lightning/issues/3018),
+  [#3031](https://github.com/OpenFn/lightning/issues/3031)
+  [#3080](https://github.com/OpenFn/lightning/issues/3080)
+- Custom metrics to track lost runs
+  [#3070](https://github.com/OpenFn/lightning/issues/3070)
 - AI Assistant: add metadata column to chat sessions
   [#3054](https://github.com/OpenFn/lightning/issues/3054)
 - Added a message to explain to the user why they're waiting for a run
@@ -36,11 +42,6 @@ and this project adheres to
   [#3110](https://github.com/OpenFn/lightning/issues/3110)
 - Simplified adding credentials to projects
   [#3034](https://github.com/OpenFn/lightning/issues/3034)
-
-## [v2.11.3-pre.0] - 2025-04-16
-
-### Added
-
 - Enabled displaying full workflow name when hovering workflow name in the
   workflows list page [#2894](https://github.com/OpenFn/lightning/issues/2894)
 - Enabled clickable rows in the workflows list page
@@ -64,11 +65,18 @@ and this project adheres to
 - When claiming a run, a worker name can optionally be provided to the adaptor
   that is responsible for claiming runs.
   [#3079](https://github.com/OpenFn/lightning/issues/3079)
-- Persist worker name provided by worker when claiming a run.
+- Persist worker name provided by worker when claiming a run. NOTE: This
+  requires version `1.13.2` of the worker.
   [#3079](https://github.com/OpenFn/lightning/issues/3079)
 
 ### Changed
 
+- Add project name to failure email subject
+  [#2974](https://github.com/OpenFn/lightning/issues/2974)
+- Large refactor of the inspector and React components
+  [#3043](https://github.com/OpenFn/lightning/pull/3043)
+- The AI Assistant now has access to docs.openfn.org to better inform its
+  responses [apollo#209](https://github.com/OpenFn/apollo/pull/209)
 - Adjusted flash messages
 - Updated dependencies [#3086](https://github.com/OpenFn/lightning/pull/3086):
   - `phoenix` from 1.7.20 to 1.7.21

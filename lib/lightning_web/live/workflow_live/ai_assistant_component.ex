@@ -507,7 +507,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             How it works
           </h2>
           <p>
-            The Assistant uses Claude Sonnet 3.5, by <a
+            The Assistant uses Claude Sonnet 3.7, by <a
               href="https://www.anthropic.com/"
               target="_blank"
               class="text-primary-600"
@@ -521,6 +521,11 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
             We include your step code in all queries sent to Claude, including some basic documentation,
             ensuring the model is well informed and can see what you can see.
             We do not send your input data, output data or logs to Anthropic.
+          </p>
+          <p>
+            The Assistant uses a mixture of hand-written prompts and information
+            from <a href="https://docs.openfn.org" target="none">docs.openfn.org</a>
+            to inform its responses.
           </p>
           <h2 class="font-bold">Responsible AI Policy</h2>
           <p>

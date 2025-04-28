@@ -3,45 +3,31 @@ import type { WorkflowState } from './types';
 import { convertWorkflowStateToSpec } from './util';
 import YAML from 'yaml';
 
+interface WorkflowResponse {
+  workflow_params: WorkflowState;
+}
+
 const WorkflowToYAML = {
   mounted() {
-    this.getState();
-  },
-  updated() {
-    this.getState();
-  },
-  getState() {
-    const viewerId = this.el.dataset.viewerEl;
-    const loadingId = this.el.dataset.loadingEl;
-
-    if (!viewerId || !loadingId) {
-      throw new Error('Viewer or loading element data attributes are not set');
-    }
-
-    const viewerEl = document.getElementById(viewerId);
-    const loadingEl = document.getElementById(loadingId);
-
-    if (!viewerEl || !loadingEl) {
-      throw new Error('Viewer or loading element not found');
-    }
-
-    this.pushEvent('get-current-state', {}, response => {
-      const workflowState = response['workflow_params'] as WorkflowState;
-
-      const workflowSpec = convertWorkflowStateToSpec(workflowState);
-      const result = YAML.stringify(workflowSpec);
-
-      viewerEl.classList.remove('hidden');
-      loadingEl.classList.add('hidden');
-
-      viewerEl.value = result;
-
-      this.workflowState = workflowState;
+    this.generateWorkflowCode();
+    
+    this.handleEvent('generate_workflow_code', () => {
+      this.generateWorkflowCode();
     });
   },
+  
+  generateWorkflowCode() {
+    this.pushEvent('get-current-state', {}, (response: WorkflowResponse) => {
+      const workflowState = response.workflow_params;
+      
+      const workflowSpec = convertWorkflowStateToSpec(workflowState);
+      const yaml = YAML.stringify(workflowSpec);
+      
+      this.pushEvent('workflow_code_generated', { code: yaml });
+    });
+  }
 } as PhoenixHook<{
-  getState: () => void;
-  workflowState: undefined | WorkflowState;
+  generateWorkflowCode(): void;
 }>;
 
 export default WorkflowToYAML;

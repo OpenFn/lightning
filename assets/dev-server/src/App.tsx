@@ -8,7 +8,7 @@ import {
 
 import WorkflowDiagram from '../../js/workflow-diagram/WorkflowDiagram';
 // import useStore from './store'
-import { createWorkflowStore } from '../../js/workflow-editor/store';
+import { createWorkflowStore } from '../../js/workflow-store/store';
 import { randomUUID } from '../../js/common';
 import workflows from './workflows';
 import './main.css';
@@ -56,7 +56,7 @@ export default () => {
     setHistory(h => [evt, ...h]);
   };
 
-  const [store, setStore] = useState(() => createWorkflowStore({}, () => {}));
+  const [store, setStore] = useState(() => createWorkflowStore({}, () => { }));
 
   const [selectedId, setSelectedId] = useState<string>();
   const ref = useRef(null);

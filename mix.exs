@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.11.3",
+      version: "2.12.0",
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -120,7 +120,7 @@ defmodule Lightning.MixProject do
       {:rambo, "~> 0.3.4"},
       {:retry, "~> 0.18"},
       {:scrivener, "~> 2.7"},
-      {:sentry, "~> 10.8.1"},
+      {:sentry, "~> 10.9.0"},
       {:sobelow, "~> 0.13.0", only: [:test, :dev]},
       {:sweet_xml, "~> 0.7.1", only: [:test]},
       {:swoosh, "~> 1.17"},
