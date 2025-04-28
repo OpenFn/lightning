@@ -421,8 +421,9 @@ defmodule LightningWeb.Components.NewInputs do
       <div class="relative">
         <input
           type="text"
-          id={"#{@id}_input"}
+          id={"#{@id}_raw"}
           placeholder={@placeholder}
+          name={"#{@name}_raw"}
           class={[
             "focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
             "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500",

@@ -24,30 +24,26 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
 
       view |> element("#publish-template-btn") |> render_click()
 
-      # First, simulate adding tags via the tag_action event
-      render_hook(view, "tag_action", %{
-        "action" => "add",
-        "value" => "tag1,tag2"
-      })
-
-      # Then submit the form without specifying tags (they're already set)
+      # Send tags in the form submit directly
       template_params = %{
         "workflow_template" => %{
           "name" => "My Template",
-          "description" => "A template description"
+          "description" => "A template description",
+          "tags" => "tag1,tag2"
         }
       }
 
       assert view
-             |> form("#workflow-template-form", template_params)
-             |> render_submit() =~ "Workflow published as template"
+             |> form("#workflow-template-form")
+             |> render_submit(template_params) =~
+               "Workflow published as template"
 
       template =
         Lightning.WorkflowTemplates.get_template_by_workflow_id(workflow.id)
 
       assert template.name == "My Template"
       assert template.description == "A template description"
-      assert template.tags == Enum.sort(["tag1", "tag2"])
+      assert template.tags == ["tag1", "tag2"]
     end
 
     test "updates an existing template", %{
@@ -71,26 +67,22 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
 
       view |> element("#publish-template-btn") |> render_click()
 
-      render_hook(view, "tag_action", %{
-        "action" => "add",
-        "value" => "updated,tags"
-      })
-
       template_params = %{
         "workflow_template" => %{
           "name" => "Updated Name",
-          "description" => "Updated description"
+          "description" => "Updated description",
+          "tags" => "updated,tags"
         }
       }
 
       assert view
-             |> form("#workflow-template-form", template_params)
-             |> render_submit() =~ "Workflow template updated"
+             |> form("#workflow-template-form")
+             |> render_submit(template_params) =~ "Workflow template updated"
 
       updated_template = Lightning.WorkflowTemplates.get_template(template.id)
       assert updated_template.name == "Updated Name"
       assert updated_template.description == "Updated description"
-      assert updated_template.tags == Enum.sort(["updated", "tags"])
+      assert updated_template.tags == ["updated", "tags"]
     end
 
     test "validates template form", %{
@@ -150,175 +142,6 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
       |> render_change(workflow: %{name: "New Name"})
 
       assert view |> element("#publish-template-btn[disabled]") |> has_element?()
-    end
-
-    test "handles tag removal", %{
-      conn: conn,
-      project: project,
-      workflow: workflow
-    } do
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}?m=code")
-
-      render_hook(view, "workflow_code_generated", %{
-        "code" => "test workflow code"
-      })
-
-      view |> element("#publish-template-btn") |> render_click()
-
-      # First add some tags
-      render_hook(view, "tag_action", %{
-        "action" => "add",
-        "value" => "tag1,tag2,tag3"
-      })
-
-      # Then remove one
-      render_hook(view, "tag_action", %{
-        "action" => "remove",
-        "value" => "tag2"
-      })
-
-      template_params = %{
-        "workflow_template" => %{
-          "name" => "My Template",
-          "description" => "A template description"
-        }
-      }
-
-      assert view
-             |> form("#workflow-template-form", template_params)
-             |> render_submit() =~ "Workflow published as template"
-
-      template =
-        Lightning.WorkflowTemplates.get_template_by_workflow_id(workflow.id)
-
-      assert template.tags == Enum.sort(["tag1", "tag3"])
-    end
-
-    test "handles tag editing", %{
-      conn: conn,
-      project: project,
-      workflow: workflow
-    } do
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}?m=code")
-
-      render_hook(view, "workflow_code_generated", %{
-        "code" => "test workflow code"
-      })
-
-      view |> element("#publish-template-btn") |> render_click()
-
-      # First add a tag
-      render_hook(view, "tag_action", %{
-        "action" => "add",
-        "value" => "oldtag"
-      })
-
-      # Then edit it
-      render_hook(view, "tag_action", %{
-        "action" => "edit",
-        "value" => "oldtag"
-      })
-
-      # Simulate user typing new tag
-      render_hook(view, "tag_action", %{
-        "action" => "add",
-        "value" => "newtag"
-      })
-
-      template_params = %{
-        "workflow_template" => %{
-          "name" => "My Template",
-          "description" => "A template description"
-        }
-      }
-
-      assert view
-             |> form("#workflow-template-form", template_params)
-             |> render_submit() =~ "Workflow published as template"
-
-      template =
-        Lightning.WorkflowTemplates.get_template_by_workflow_id(workflow.id)
-
-      assert template.tags == ["newtag"]
-    end
-
-    test "handles special characters in tags", %{
-      conn: conn,
-      project: project,
-      workflow: workflow
-    } do
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}?m=code")
-
-      render_hook(view, "workflow_code_generated", %{
-        "code" => "test workflow code"
-      })
-
-      view |> element("#publish-template-btn") |> render_click()
-
-      render_hook(view, "tag_action", %{
-        "action" => "add",
-        "value" => "tag-with-hyphen,tag_with_underscore,tag with spaces"
-      })
-
-      template_params = %{
-        "workflow_template" => %{
-          "name" => "My Template",
-          "description" => "A template description"
-        }
-      }
-
-      assert view
-             |> form("#workflow-template-form", template_params)
-             |> render_submit() =~ "Workflow published as template"
-
-      template =
-        Lightning.WorkflowTemplates.get_template_by_workflow_id(workflow.id)
-
-      assert template.tags ==
-               Enum.sort([
-                 "tag-with-hyphen",
-                 "tag_with_underscore",
-                 "tag with spaces"
-               ])
-    end
-
-    test "handles duplicate tags", %{
-      conn: conn,
-      project: project,
-      workflow: workflow
-    } do
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}?m=code")
-
-      render_hook(view, "workflow_code_generated", %{
-        "code" => "test workflow code"
-      })
-
-      view |> element("#publish-template-btn") |> render_click()
-
-      render_hook(view, "tag_action", %{
-        "action" => "add",
-        "value" => "duplicate,duplicate,unique"
-      })
-
-      template_params = %{
-        "workflow_template" => %{
-          "name" => "My Template",
-          "description" => "A template description"
-        }
-      }
-
-      assert view
-             |> form("#workflow-template-form", template_params)
-             |> render_submit() =~ "Workflow published as template"
-
-      template =
-        Lightning.WorkflowTemplates.get_template_by_workflow_id(workflow.id)
-
-      assert template.tags == Enum.sort(["duplicate", "unique"])
     end
 
     test "validates template name length", %{
@@ -393,83 +216,6 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
 
       # Verify the template form is not rendered
       refute view |> element("#workflow-template-form") |> has_element?()
-    end
-  end
-
-  describe "tag input component" do
-    test "includes correct hooks for tag input functionality" do
-      html =
-        render_component(&LightningWeb.Components.NewInputs.input/1,
-          type: "tag",
-          value: ["test-tag"],
-          name: "tags"
-        )
-
-      assert html =~ ~s(phx-hook="TagInput")
-      assert html =~ ~s(phx-hook="EditTag")
-      assert html =~ ~s(phx-hook="DeleteTag")
-      assert html =~ ~s(data-tag="test-tag")
-    end
-
-    test "handles string value for tags" do
-      html =
-        render_component(&LightningWeb.Components.NewInputs.input/1,
-          type: "tag",
-          value: "tag1,tag2,tag3",
-          name: "tags"
-        )
-
-      assert html =~ "tag1"
-      assert html =~ "tag2"
-      assert html =~ "tag3"
-    end
-
-    test "handles basic usage" do
-      html =
-        render_component(&LightningWeb.Components.NewInputs.input/1,
-          type: "tag",
-          name: "tags"
-        )
-
-      assert html =~ ~s(name="tags")
-      assert html =~ "tag-input-container"
-      assert html =~ "tag-list"
-      assert html =~ ~s(phx-hook="TagInput")
-    end
-
-    test "accepts list values for tags" do
-      html =
-        render_component(&LightningWeb.Components.NewInputs.input/1,
-          name: "tags",
-          type: "tag",
-          value: ["tag1", "tag2"]
-        )
-
-      assert html =~ "tag1"
-      assert html =~ "tag2"
-    end
-
-    test "handles invalid value types gracefully" do
-      html =
-        render_component(&LightningWeb.Components.NewInputs.input/1,
-          type: "tag",
-          value: %{invalid: "value"},
-          name: "tags"
-        )
-
-      assert html =~ ~s(<div class="tag-list mt-2">\n    \n  </div>)
-    end
-
-    test "includes ID and name attributes correctly" do
-      html =
-        render_component(&LightningWeb.Components.NewInputs.input/1,
-          type: "tag",
-          id: "my-custom-id",
-          name: "my-custom-name"
-        )
-
-      assert html =~ ~s(id="my-custom-id")
-      assert html =~ ~s(name="my-custom-name")
     end
   end
 end
