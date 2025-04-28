@@ -21,6 +21,9 @@ and this project adheres to
 
 ### Fixed
 
+- Make Collections delete_all idempotent.
+  [#3143](https://github.com/OpenFn/lightning/issues/3143)
+
 ## [v2.12.0] - 2025-04-25
 
 ### Added

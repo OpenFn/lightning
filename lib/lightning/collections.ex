@@ -270,7 +270,7 @@ defmodule Lightning.Collections do
 
   @spec delete_all(Collection.t(), String.t() | nil) :: {:ok, non_neg_integer()}
   def delete_all(collection, key_pattern \\ nil) do
-    query =
+    items_query =
       from(i in Item, where: i.collection_id == ^collection.id)
       |> then(fn query ->
         case key_pattern do
@@ -283,34 +283,38 @@ defmodule Lightning.Collections do
     |> Multi.one(
       :items_used_mem,
       select(
-        query,
+        items_query,
         [i],
         fragment("sum(octet_length(key) + octet_length(value))::bigint")
       )
     )
-    |> Multi.run(:hook, fn _repo, %{items_used_mem: items_used_mem} ->
-      handle_delete_items(collection, items_used_mem)
-    end)
-    |> Multi.delete_all(:delete, query)
-    |> Multi.update_all(
-      :update_collection,
-      fn %{items_used_mem: items_used_mem} ->
-        if key_pattern do
-          increment = [byte_size_sum: -items_used_mem]
+    |> Multi.merge(fn
+      %{items_used_mem: nil} ->
+        Multi.put(Multi.new(), :delete, {0, nil})
 
-          from(c in Collection,
-            where: c.id == ^collection.id,
-            update: [inc: ^increment]
-          )
-        else
-          from(c in Collection,
-            where: c.id == ^collection.id,
-            update: [set: [byte_size_sum: 0]]
-          )
-        end
-      end,
-      []
-    )
+      %{items_used_mem: items_used_mem} ->
+        update_count_query =
+          if key_pattern && items_used_mem do
+            increment = [byte_size_sum: -items_used_mem]
+
+            from(c in Collection,
+              where: c.id == ^collection.id,
+              update: [inc: ^increment]
+            )
+          else
+            from(c in Collection,
+              where: c.id == ^collection.id,
+              update: [set: [byte_size_sum: 0]]
+            )
+          end
+
+        Multi.new()
+        |> Multi.run(:hook, fn _repo, _changes ->
+          handle_delete_items(collection, items_used_mem)
+        end)
+        |> Multi.delete_all(:delete, items_query)
+        |> Multi.update_all(:update_collection, update_count_query, [])
+    end)
     |> Repo.transaction()
     |> case do
       {:ok, %{delete: {count, nil}}} -> {:ok, count}
