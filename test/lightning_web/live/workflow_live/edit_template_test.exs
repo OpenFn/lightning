@@ -218,4 +218,165 @@ defmodule LightningWeb.WorkflowLive.EditTemplateTest do
       refute view |> element("#workflow-template-form") |> has_element?()
     end
   end
+
+  describe "tag input component" do
+    test "renders with empty tags" do
+      html =
+        render_component(&LightningWeb.Components.NewInputs.input/1, %{
+          type: "tag",
+          id: "test-tags",
+          name: "test_tags",
+          value: []
+        })
+
+      assert html =~ ~s{id="test-tags-container"}
+      assert html =~ ~s{id="test-tags_raw"}
+      assert html =~ ~s{id="test-tags"}
+      assert html =~ ~s{value=""}
+      assert html =~ ~s{<div class="tag-list mt-2">}
+      refute html =~ ~s{<span id="tag-}
+    end
+
+    test "renders with list of tags" do
+      html =
+        render_component(&LightningWeb.Components.NewInputs.input/1, %{
+          type: "tag",
+          id: "test-tags",
+          name: "test_tags",
+          value: ["tag1", "tag2", "tag3"]
+        })
+
+      assert html =~ ~s{id="test-tags-container"}
+      assert html =~ ~s{id="test-tags_raw"}
+      assert html =~ ~s{id="test-tags"}
+      assert html =~ ~s{value="tag1,tag2,tag3"}
+      assert html =~ ~s{<div class="tag-list mt-2">}
+
+      assert html =~
+               ~s{<span id="tag-tag1" class="inline-flex items-center rounded-md bg-blue-50 p-2 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 mr-1 my-1" data-tag="tag1">}
+
+      assert html =~
+               ~s{<span id="tag-tag2" class="inline-flex items-center rounded-md bg-blue-50 p-2 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 mr-1 my-1" data-tag="tag2">}
+
+      assert html =~
+               ~s{<span id="tag-tag3" class="inline-flex items-center rounded-md bg-blue-50 p-2 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 mr-1 my-1" data-tag="tag3">}
+    end
+
+    test "renders with comma-separated string of tags" do
+      html =
+        render_component(&LightningWeb.Components.NewInputs.input/1, %{
+          type: "tag",
+          id: "test-tags",
+          name: "test_tags",
+          value: "tag1,tag2,tag3"
+        })
+
+      assert html =~ ~s{id="test-tags-container"}
+      assert html =~ ~s{id="test-tags_raw"}
+      assert html =~ ~s{id="test-tags"}
+      assert html =~ ~s{value="tag1,tag2,tag3"}
+      assert html =~ ~s{<div class="tag-list mt-2">}
+
+      assert html =~
+               ~s{<span id="tag-tag1" class="inline-flex items-center rounded-md bg-blue-50 p-2 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 mr-1 my-1" data-tag="tag1">}
+
+      assert html =~
+               ~s{<span id="tag-tag2" class="inline-flex items-center rounded-md bg-blue-50 p-2 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 mr-1 my-1" data-tag="tag2">}
+
+      assert html =~
+               ~s{<span id="tag-tag3" class="inline-flex items-center rounded-md bg-blue-50 p-2 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 mr-1 my-1" data-tag="tag3">}
+    end
+
+    test "renders with trimmed tags" do
+      html =
+        render_component(&LightningWeb.Components.NewInputs.input/1, %{
+          type: "tag",
+          id: "test-tags",
+          name: "test_tags",
+          value: " tag1 , tag2 , tag3 "
+        })
+
+      assert html =~ ~s{id="test-tags-container"}
+      assert html =~ ~s{id="test-tags_raw"}
+      assert html =~ ~s{id="test-tags"}
+      assert html =~ ~s{value="tag1,tag2,tag3"}
+      assert html =~ ~s{<div class="tag-list mt-2">}
+
+      assert html =~
+               ~s{<span id="tag-tag1" class="inline-flex items-center rounded-md bg-blue-50 p-2 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 mr-1 my-1" data-tag="tag1">}
+
+      assert html =~
+               ~s{<span id="tag-tag2" class="inline-flex items-center rounded-md bg-blue-50 p-2 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 mr-1 my-1" data-tag="tag2">}
+
+      assert html =~
+               ~s{<span id="tag-tag3" class="inline-flex items-center rounded-md bg-blue-50 p-2 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 mr-1 my-1" data-tag="tag3">}
+    end
+
+    test "renders with label and required indicator" do
+      html =
+        render_component(&LightningWeb.Components.NewInputs.input/1, %{
+          type: "tag",
+          id: "test-tags",
+          name: "test_tags",
+          label: "Tags",
+          required: true
+        })
+
+      assert html =~ ~s{<label for="test-tags"}
+      assert html =~ ~s{Tags}
+      assert html =~ ~s{<span class="text-red-500"> *</span>}
+    end
+
+    test "renders with sublabel" do
+      html =
+        render_component(&LightningWeb.Components.NewInputs.input/1, %{
+          type: "tag",
+          id: "test-tags",
+          name: "test_tags",
+          sublabel: "Add tags separated by commas"
+        })
+
+      assert html =~ ~s{<small class="mb-2 block text-xs text-gray-600">}
+      assert html =~ ~s{Add tags separated by commas}
+    end
+
+    test "renders with placeholder" do
+      html =
+        render_component(&LightningWeb.Components.NewInputs.input/1, %{
+          type: "tag",
+          id: "test-tags",
+          name: "test_tags",
+          placeholder: "Enter tags..."
+        })
+
+      assert html =~ ~s{placeholder="Enter tags..."}
+    end
+
+    test "renders with errors" do
+      html =
+        render_component(&LightningWeb.Components.NewInputs.input/1, %{
+          type: "tag",
+          id: "test-tags",
+          name: "test_tags",
+          errors: ["Tags are required"]
+        })
+
+      assert html =~
+               ~s{border-danger-400 focus:border-danger-400 focus:outline-danger-400}
+
+      assert html =~ ~s{Tags are required}
+    end
+
+    test "renders with standalone mode" do
+      html =
+        render_component(&LightningWeb.Components.NewInputs.input/1, %{
+          type: "tag",
+          id: "test-tags",
+          name: "test_tags",
+          standalone: true
+        })
+
+      assert html =~ ~s{data-standalone-mode}
+    end
+  end
 end
