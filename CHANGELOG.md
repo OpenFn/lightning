@@ -19,6 +19,12 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v2.12.1] - 2025-04-29
+
+### Changed
+
 - Sort logs in failure notification emails by timestamp, ascending
   [#2347](https://github.com/OpenFn/lightning/issues/2347)
 - Rename webhook auth method button and title
