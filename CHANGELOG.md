@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Rename webhook auth method button and title.
+  [#3165](https://github.com/OpenFn/lightning/issues/3165)
+
 ### Fixed
 
 - Make Collections delete_all idempotent.
