@@ -14,11 +14,6 @@ config :lightning, Lightning.Repo,
   types: Lightning.PostgrexTypes,
   log: :debug
 
-config :hammer,
-  backend:
-    {Hammer.Backend.Mnesia,
-     [expiry_ms: 60_000 * 60 * 4, cleanup_interval_ms: 60_000 * 10]}
-
 # Configures the endpoint
 config :lightning, LightningWeb.Endpoint,
   url: [host: "localhost"],

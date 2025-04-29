@@ -46,31 +46,14 @@ defmodule Lightning.FailureAlerter do
         "run_logs" => run_logs,
         "recipient" => recipient
       }) do
-    [time_scale: time_scale, rate_limit: rate_limit] =
-      Application.fetch_env!(:lightning, __MODULE__)
-
-    run_url =
-      url(
-        LightningWeb.Endpoint,
-        ~p"/projects/#{project_id}/runs/#{run_id}"
-      )
+    run_url = ~p"/projects/#{project_id}/runs/#{run_id}"
 
     work_order_url =
-      url(
-        LightningWeb.Endpoint,
-        ~p"/projects/#{project_id}/history?filters[workorder_id]=#{work_order_id}"
-      )
+      ~p"/projects/#{project_id}/history?filters[workorder_id]=#{work_order_id}"
 
-    # rate limiting per workflow AND user
-    bucket_key = "#{workflow_id}::#{recipient.id}"
-
-    Hammer.check_rate(
-      bucket_key,
-      time_scale,
-      rate_limit
-    )
+    Lightning.RateLimiters.hit({:failure_email, workflow_id, recipient.id})
     |> case do
-      {:allow, count} ->
+      {:allow, %{count: count, time_scale: time_scale, rate_limit: rate_limit}} ->
         Lightning.FailureEmail.deliver_failure_email(recipient.email, %{
           work_order_id: work_order_id,
           work_order_url: work_order_url,
@@ -85,28 +68,9 @@ defmodule Lightning.FailureAlerter do
           workflow_id: workflow_id,
           recipient: recipient
         })
-        |> case do
-          {:ok, _metadata} ->
-            nil
-
-          # :ok
-
-          _ ->
-            # decrement the counter when email is not delivered
-            Hammer.check_rate_inc(
-              bucket_key,
-              time_scale,
-              rate_limit,
-              -1
-            )
-
-            nil
-            # {:cancel, "Failure email was not sent"} or Logger
-        end
 
       {:deny, _} ->
         nil
-        # {:cancel, "Failure notification rate limit is reached"} or Logger
     end
   end
 end

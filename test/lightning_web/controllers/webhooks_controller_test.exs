@@ -2,6 +2,7 @@ defmodule LightningWeb.WebhooksControllerTest do
   use LightningWeb.ConnCase, async: false
 
   import Lightning.Factories
+  import Mox
 
   alias Lightning.Extensions.MockRateLimiter
   alias Lightning.Extensions.StubRateLimiter
@@ -11,6 +12,8 @@ defmodule LightningWeb.WebhooksControllerTest do
   alias Lightning.Repo
   alias Lightning.Runs
   alias Lightning.WorkOrders
+
+  setup :set_mox_from_context
 
   describe "a POST request to '/i'" do
     setup [:stub_rate_limiter_ok, :stub_usage_limiter_ok]
@@ -56,7 +59,9 @@ defmodule LightningWeb.WebhooksControllerTest do
         |> Repo.preload(:triggers)
         |> with_snapshot()
 
-      Application.put_env(:lightning, :max_dataclip_size_bytes, 1_000_000)
+      Mox.stub(Lightning.MockConfig, :max_dataclip_size_bytes, fn ->
+        1_000_000
+      end)
 
       smaller_body =
         %{"data" => %{a: String.duplicate("a", 500_000)}}
