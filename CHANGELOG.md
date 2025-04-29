@@ -20,7 +20,7 @@ and this project adheres to
 ### Changed
 
 - Tweak language on webhook auth method modal and list action
-  [#????](https://github.com/OpenFn/lightning/pulls/????)
+  [#3166](https://github.com/OpenFn/lightning/pull/3166)
 
 ### Fixed
 
