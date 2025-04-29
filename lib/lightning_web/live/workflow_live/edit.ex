@@ -673,7 +673,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             />
             <.form
               :let={f}
-              :if={@publish_template && @workflow_code}
+              :if={@workflow_code && @publish_template}
               for={@workflow_template_changeset}
               id="workflow-template-form"
               phx-change="validate"
@@ -692,23 +692,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   type="textarea"
                   field={f[:description]}
                   label="Description"
+                  rows="6"
                   class="bg-white text-slate-900"
                   placeholder="A detailed description of what this template does"
                 />
 
                 <div class="space-y-4">
                   <.input
-                    id="workflow-template-tags"
-                    type="text"
-                    field={f[:raw_tags]}
+                    type="tag"
+                    field={f[:tags]}
                     label="Tags"
-                    phx-hook="ClearInput"
                     placeholder="Separate tags with commas (,)"
                   />
-                  <.input type="hidden" field={f[:tags]} />
-                  <.tag_list tags={
-                    get_tags_from_changeset(@workflow_template_changeset)
-                  } />
                 </div>
               </div>
             </.form>
@@ -734,6 +729,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   Copy Code
                 </.button>
                 <.button
+                  :if={@current_user.support_user}
                   variant="primary"
                   id="publish-template-btn"
                   phx-click="publish_template"
@@ -1642,87 +1638,34 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, socket}
   end
 
-  def handle_event(
-        "validate",
-        %{
-          "_target" => ["workflow_template", "raw_tags"],
-          "workflow_template" => template_params
-        },
-        socket
-      ) do
-    with true <- String.match?(template_params["raw_tags"], ~r/[,]+/),
-         new_tags <- parse_tag_input(template_params["raw_tags"]),
-         current_tags <-
-           get_tags_from_changeset(socket.assigns.workflow_template_changeset),
-         updated_tags <- (new_tags ++ current_tags) |> Enum.uniq() |> Enum.sort() do
-      updated_changeset =
-        socket.assigns.workflow_template
-        |> create_updated_changeset(
-          template_params,
-          socket.assigns,
-          updated_tags
-        )
-        |> Map.put(:action, :validate)
-
-      {:noreply,
-       socket
-       |> push_event("clear_input", %{})
-       |> assign(workflow_template_changeset: updated_changeset)}
-    else
-      _ -> {:noreply, socket}
-    end
-  end
-
   @impl true
   def handle_event("validate", %{"workflow_template" => template_params}, socket) do
-    tags = get_tags_from_changeset(socket.assigns.workflow_template_changeset)
+    tags =
+      template_params["tags"]
+      |> String.split(",", trim: true)
+      |> Enum.map(&String.trim/1)
 
     changeset =
-      socket.assigns.workflow_template
-      |> create_updated_changeset(template_params, socket.assigns, tags)
+      template_params
+      |> Map.merge(%{
+        "code" => socket.assigns.workflow_code,
+        "workflow_id" => socket.assigns.workflow.id,
+        "tags" => tags
+      })
+      |> then(&WorkflowTemplate.changeset(socket.assigns.workflow_template, &1))
       |> Map.put(:action, :validate)
 
     {:noreply, assign(socket, :workflow_template_changeset, changeset)}
   end
 
   @impl true
-  def handle_event("remove_tag", %{"tag" => tag}, socket) do
-    current_tags =
-      get_tags_from_changeset(socket.assigns.workflow_template_changeset)
-
-    updated_tags = Enum.reject(current_tags, &(&1 == tag))
-
-    updated_changeset =
-      socket.assigns.workflow_template_changeset
-      |> Ecto.Changeset.put_change(:tags, updated_tags)
-
-    {:noreply, assign(socket, workflow_template_changeset: updated_changeset)}
-  end
-
-  @impl true
-  def handle_event("edit_tag", %{"scope" => tag_value}, socket) do
-    current_tags =
-      get_tags_from_changeset(socket.assigns.workflow_template_changeset)
-
-    new_tags = Enum.reject(current_tags, &(&1 == tag_value))
-
-    new_changeset =
-      Ecto.Changeset.put_change(
-        socket.assigns.workflow_template_changeset,
-        :tags,
-        new_tags
-      )
-
-    {:noreply,
-     socket
-     |> assign(current_tag: tag_value)
-     |> assign(workflow_template_changeset: new_changeset)}
-  end
-
-  @impl true
   def handle_event("save", %{"workflow_template" => template_params}, socket) do
     %{workflow: workflow, workflow_code: code} = socket.assigns
-    tags = get_tags_from_changeset(socket.assigns.workflow_template_changeset)
+
+    tags =
+      template_params["tags"]
+      |> String.split(",", trim: true)
+      |> Enum.map(&String.trim/1)
 
     params =
       Map.merge(template_params, %{
@@ -2029,16 +1972,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("publish_template", _params, socket) do
-    {:noreply,
-     socket
-     |> push_event("generate_workflow_code", %{})
-     |> assign(publish_template: true)}
+    {:noreply, assign(socket, publish_template: true)}
   end
 
   def handle_event("workflow_code_generated", %{"code" => code}, socket) do
+    %{
+      workflow: workflow,
+      workflow_template: workflow_template
+    } = socket.assigns
+
     changeset =
-      WorkflowTemplate.changeset(socket.assigns.workflow_template, %{
-        name: socket.assigns.workflow.name,
+      WorkflowTemplate.changeset(workflow_template, %{
+        name: workflow_template.name || workflow.name,
         code: code
       })
 
@@ -3019,18 +2964,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  defp prepare_workflow_template(socket) do
+  defp prepare_workflow_template(
+         %{assigns: %{workflow: workflow, workflow_code: workflow_code}} = socket
+       ) do
     template =
-      WorkflowTemplates.get_template_by_workflow_id(socket.assigns.workflow.id) ||
+      WorkflowTemplates.get_template_by_workflow_id(workflow.id) ||
         %WorkflowTemplate{
-          workflow_id: socket.assigns.workflow.id,
+          workflow_id: workflow.id,
           tags: []
         }
 
     changeset =
       WorkflowTemplate.changeset(template, %{
-        name: socket.assigns.workflow.name,
-        code: socket.assigns.workflow_code
+        name: template.name || workflow.name,
+        code: workflow_code
       })
 
     socket
@@ -3040,58 +2987,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
       current_template_tag: nil,
       has_workflow_template?: template.id != nil
     )
-  end
-
-  defp get_tags_from_changeset(changeset) do
-    Ecto.Changeset.get_field(changeset, :tags, [])
-  end
-
-  defp parse_tag_input(input) do
-    input
-    |> String.split(~r/[,]+/, trim: true)
-    |> Enum.reject(&(&1 == ""))
-    |> Enum.sort()
-  end
-
-  defp create_updated_changeset(template, params, assigns, tags) do
-    Map.merge(params, %{
-      "code" => assigns.workflow_code,
-      "workflow_id" => assigns.workflow.id,
-      "tags" => tags
-    })
-    |> then(&WorkflowTemplate.changeset(template, &1))
-  end
-
-  defp tag_list(assigns) do
-    ~H"""
-    <div>
-      <span
-        :for={tag <- @tags}
-        id={"tag-#{tag}"}
-        phx-hook="EditScope"
-        data-scope={tag}
-        data-event-type="edit_tag"
-        class="inline-flex items-center rounded-md bg-blue-50 p-2 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 mr-1 my-1"
-      >
-        {tag}
-        <button
-          type="button"
-          phx-click="remove_tag"
-          phx-value-tag={tag}
-          class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-gray-500/20"
-        >
-          <span class="sr-only">Remove</span>
-          <svg
-            viewBox="0 0 14 14"
-            class="h-3.5 w-3.5 stroke-gray-600/50 group-hover:stroke-gray-600/75"
-          >
-            <path d="M4 4l6 6m0-6l-6 6" />
-          </svg>
-          <span class="absolute -inset-1"></span>
-        </button>
-      </span>
-    </div>
-    """
   end
 
   defp workflow_settings_errors?(changeset) do

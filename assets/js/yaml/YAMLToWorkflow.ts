@@ -80,7 +80,7 @@ const YAMLToWorkflow = {
 
       this.pushEventTo(
         this.el,
-        'validate-parsed-workflow',
+        'workflow-parsed',
         { workflow: this.workflowState },
         response => {
           if (response['errors']) {
@@ -97,7 +97,7 @@ const YAMLToWorkflow = {
       this.errorEl.classList.remove('hidden');
 
       // dummy invalidate the server parsed worklow
-      this.pushEventTo(this.el, 'validate-parsed-workflow', { workflow: {} });
+      this.pushEventTo(this.el, 'workflow-parsed', { workflow: {} });
     }
   },
 } as PhoenixHook<{
