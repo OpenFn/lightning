@@ -268,7 +268,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
                       Create an "API token" method
                   <% end %>
                 <% :edit -> %>
-                  Edit webhook auth method
+                  Rename webhook auth method
                 <% :display_triggers -> %>
                   Associated Workflow Triggers
                 <% :delete -> %>
