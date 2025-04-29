@@ -2,13 +2,14 @@ import { MonacoEditor } from "#/monaco";
 import { DataclipViewer } from "#/react/components/DataclipViewer";
 import type { WithActionProps } from "#/react/lib/with-props";
 import { DocumentArrowUpIcon, DocumentIcon, DocumentTextIcon, InformationCircleIcon, MagnifyingGlassIcon, PencilSquareIcon } from "@heroicons/react/24/outline";
-import { CloudArrowUpIcon } from "@heroicons/react/24/solid";
+import { CloudArrowUpIcon, XCircleIcon } from "@heroicons/react/24/solid";
 import React from "react";
 interface ManualRunnerProps {
   job_id: string
 }
 
 const iconStyle = 'h-4 w-4 text-grey-400 mr-1';
+const closeStyle = 'h-4 w-4 text-red-400 mr-1';
 
 enum SeletableOptions {
   NONE,
@@ -129,13 +130,16 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
       <div className="font-bold flex justify-center">Select Input</div>
       <div className="flex gap-4 justify-center">
         <button type="button" onClick={selectOptionHandler(SeletableOptions.EMPTY)} className={"border rounded-md px-3 py-1 flex justify-center items-center gap-1 text-sm hover:bg-slate-100 hover:border-primary-300 group" + getActive(SeletableOptions.EMPTY)}>
-          <DocumentIcon className={`${iconStyle} transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} /> Empty
+          {selectedOption === SeletableOptions.EMPTY ? <XCircleIcon className={closeStyle} /> : <DocumentIcon className={`${iconStyle} transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} />}
+          Empty
         </button>
         <button type="button" onClick={selectOptionHandler(SeletableOptions.CUSTOM)} className={"border rounded-md px-3 py-1 flex justify-center items-center gap-1 text-sm hover:bg-slate-100 hover:border-primary-300 group" + getActive(SeletableOptions.CUSTOM)}>
-          <PencilSquareIcon className={`${iconStyle} transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} /> Custom
+          {selectedOption === SeletableOptions.CUSTOM ? <XCircleIcon className={closeStyle} /> : <PencilSquareIcon className={`${iconStyle} transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} />}
+          Custom
         </button>
         <button type="button" onClick={selectOptionHandler(SeletableOptions.IMPORT)} className={"border rounded-md px-3 py-1 flex justify-center items-center gap-1 text-sm hover:bg-slate-100 hover:border-primary-300 group" + getActive(SeletableOptions.IMPORT)}>
-          <DocumentArrowUpIcon className={`${iconStyle} transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} /> Import
+          {selectedOption === SeletableOptions.IMPORT ? <XCircleIcon className={closeStyle} /> : <DocumentArrowUpIcon className={`${iconStyle} transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} />}
+          Import
         </button>
       </div>
       {innerView}
