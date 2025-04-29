@@ -21,6 +21,12 @@ and this project adheres to
 
 ### Fixed
 
+- Importer not updating canvas properly
+  [#3156](https://github.com/OpenFn/lightning/issues/3156)
+- Template name overwritten by workflow name when updating an existing template
+  [#3157](https://github.com/OpenFn/lightning/issues/3157)
+- Route not found after pressing Enter to create a workflow
+  [#3142](https://github.com/OpenFn/lightning/issues/3142)
 - Make Collections delete_all idempotent.
   [#3143](https://github.com/OpenFn/lightning/issues/3143)
 
