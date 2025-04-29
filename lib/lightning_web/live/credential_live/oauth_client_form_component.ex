@@ -568,6 +568,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
     ~H"""
     <div id={"generic-oauth-scopes-#{@id}"} class="space-y-2 mt-5">
       <NewInputs.input
+        id={@id}
         type="text"
         label={@label}
         field={@field}

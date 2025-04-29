@@ -45,7 +45,10 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
 
   def handle_event("toggle-2fa", _params, %{assigns: assigns} = socket) do
     {:noreply,
-     assign(socket, show_2fa_options: !assigns.show_2fa_options, error_msg: nil)}
+     assign(socket,
+       show_2fa_options: dbg(!assigns.show_2fa_options),
+       error_msg: nil
+     )}
   end
 
   def handle_event("reauthenticate-user", %{"user" => params}, socket) do
@@ -270,157 +273,163 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
     """
   end
 
-  def render(%{action: :edit, show_2fa_options: true} = assigns) do
+  def render(assigns) do
     ~H"""
-    <div>
-      <.form
-        :let={f}
-        for={%{}}
-        action="#"
-        phx-submit="reauthenticate-user"
-        as={:user}
-        phx-target={@myself}
-        class="mt-2"
-        id="reauthentication-form"
-      >
-        <div class="space-y-4 ml-[24px] mr-[24px]">
-          <p class="font-normal text-sm whitespace-normal">
-            You're required to reauthenticate yourself before viewing the webhook
-            <%= if @webhook_auth_method.auth_type == :basic do %>
-              Password
-            <% else %>
-              API Key
-            <% end %>
-          </p>
-          <%= if @error_msg do %>
-            <div class="alert alert-danger" role="alert">
-              {@error_msg}
-            </div>
-          <% end %>
-
-          <.input type="password" field={f[:password]} label="Password" />
-          <div class="relative">
-            <div class="absolute inset-0 flex items-center" aria-hidden="true">
-              <div class="w-full border-t border-gray-300"></div>
-            </div>
-            <div class="relative flex justify-center">
-              <span class="bg-white px-2 text-sm text-gray-500">OR</span>
-            </div>
-          </div>
-          <.input type="text" field={f[:code]} label="2FA Code" inputmode="numeric" />
-        </div>
-        <.modal_footer class="mx-6 mt-6">
-          <div class="sm:flex sm:flex-row-reverse">
-            <button
-              type="submit"
-              class="inline-flex w-full justify-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 sm:ml-3 sm:w-auto"
-            >
-              Done
-            </button>
-            <button
-              type="button"
-              phx-click="toggle-2fa"
-              phx-target={@myself}
-              class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
-            >
-              Cancel
-            </button>
-          </div>
-        </.modal_footer>
-      </.form>
+    <div id={"write_webhook_auth_method_#{@id}"}>
+      <%= if @action == :edit and @show_2fa_options do %>
+        <.authenticate_user_form {assigns} />
+      <% else %>
+        <.webhook_auth_method_form {assigns} />
+      <% end %>
     </div>
     """
   end
 
-  def render(assigns) do
+  defp authenticate_user_form(assigns) do
     ~H"""
-    <div id={"write_webhook_auth_method_#{@id}"}>
-      <%!-- <%= if @webhook_auth_method.auth_type do %> --%>
-      <.form
-        :let={f}
-        id={"form_#{@id}"}
-        for={@changeset}
-        phx-submit="save"
-        phx-change="validate"
-        phx-target={@myself}
-      >
-        <div class="ml-[24px] mr-[24px]">
-          <%= case @webhook_auth_method.auth_type do %>
-            <% :basic -> %>
-              <.label for={:name}>Auth method name</.label>
-              <.input type="text" field={f[:name]} required="true" />
-
-              <div class="hidden sm:block" aria-hidden="true">
-                <div class="py-1"></div>
-              </div>
-
-              <.label for={:username}>Username</.label>
-              <.input
-                type="text"
-                field={f[:username]}
-                required="true"
-                disabled={@action == :edit}
-              />
-
-              <div class="hidden sm:block" aria-hidden="true">
-                <div class="py-1"></div>
-              </div>
-
-              <%= if @action == :edit do %>
-                <div class="mb-3">
-                  <label class="block text-sm font-semibold leading-6 text-slate-800">
-                    Password
-                  </label>
-                  <.maybe_mask_password_field
-                    field={f[:password]}
-                    sudo_mode?={@sudo_mode?}
-                    phx_target={@myself}
-                  />
-                </div>
-              <% else %>
-                <.label for={:password}>Password</.label>
-                <.input type="password" field={f[:password]} required="true" />
-
-                <div class="hidden sm:block" aria-hidden="true">
-                  <div class="py-1"></div>
-                </div>
-              <% end %>
-            <% :api -> %>
-              <.label for={:name}>Auth method name</.label>
-              <.input type="text" field={f[:name]} required="true" />
-
-              <div class="hidden sm:block" aria-hidden="true">
-                <div class="py-1"></div>
-              </div>
-
-              <.label for={:api_key}>API Key</.label>
-              <.maybe_mask_api_key_field
-                action={@action}
-                field={f[:api_key]}
-                sudo_mode?={@sudo_mode?}
-                phx_target={@myself}
-              />
+    <.form
+      :let={f}
+      for={%{}}
+      action="#"
+      phx-submit="reauthenticate-user"
+      as={:user}
+      phx-target={@myself}
+      class="mt-2"
+      id="reauthentication-form"
+    >
+      <div class="space-y-4 ml-[24px] mr-[24px]">
+        <p class="font-normal text-sm whitespace-normal">
+          You're required to reauthenticate yourself before viewing the webhook
+          <%= if @webhook_auth_method.auth_type == :basic do %>
+            Password
+          <% else %>
+            API Key
           <% end %>
-        </div>
-        <.modal_footer class="mx-6 mt-6">
-          <div class="sm:flex sm:flex-row-reverse">
-            <button
-              type="submit"
-              disabled={!@changeset.valid?}
-              class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 sm:ml-3 sm:w-auto"
-            >
-              <%= if @action == :new do %>
-                Create auth method
-              <% else %>
-                Save changes
-              <% end %>
-            </button>
-            <.cancel_button return_to={@return_to} />
+        </p>
+        <%= if @error_msg do %>
+          <div class="alert alert-danger" role="alert">
+            {@error_msg}
           </div>
-        </.modal_footer>
-      </.form>
-      <%!-- <% end %> --%>
-    </div>
+        <% end %>
+
+        <.input type="password" field={f[:password]} label="Password" />
+        <div class="relative">
+          <div class="absolute inset-0 flex items-center" aria-hidden="true">
+            <div class="w-full border-t border-gray-300"></div>
+          </div>
+          <div class="relative flex justify-center">
+            <span class="bg-white px-2 text-sm text-gray-500">OR</span>
+          </div>
+        </div>
+        <.input type="text" field={f[:code]} label="2FA Code" inputmode="numeric" />
+      </div>
+      <.modal_footer class="mx-6 mt-6">
+        <div class="sm:flex sm:flex-row-reverse">
+          <button
+            type="submit"
+            class="inline-flex w-full justify-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 sm:ml-3 sm:w-auto"
+          >
+            Done
+          </button>
+          <button
+            type="button"
+            phx-click="toggle-2fa"
+            phx-target={@myself}
+            class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+          >
+            Cancel
+          </button>
+        </div>
+      </.modal_footer>
+    </.form>
+    """
+  end
+
+  defp webhook_auth_method_form(assigns) do
+    ~H"""
+    <.form
+      :let={f}
+      id={"form_#{@id}"}
+      for={@changeset}
+      phx-submit="save"
+      phx-change="validate"
+      phx-target={@myself}
+    >
+      <div class="ml-[24px] mr-[24px]">
+        <%= case @webhook_auth_method.auth_type do %>
+          <% :basic -> %>
+            <.label for={:name}>Auth method name</.label>
+            <.input type="text" field={f[:name]} required="true" />
+
+            <div class="hidden sm:block" aria-hidden="true">
+              <div class="py-1"></div>
+            </div>
+
+            <.label for={:username}>Username</.label>
+            <.input
+              type="text"
+              field={f[:username]}
+              required="true"
+              disabled={@action == :edit}
+            />
+
+            <div class="hidden sm:block" aria-hidden="true">
+              <div class="py-1"></div>
+            </div>
+
+            <%= if @action == :edit do %>
+              <div class="mb-3">
+                <label class="block text-sm font-semibold leading-6 text-slate-800">
+                  Password
+                </label>
+                <.maybe_mask_password_field
+                  field={f[:password]}
+                  sudo_mode?={@sudo_mode?}
+                  phx_target={@myself}
+                />
+              </div>
+            <% else %>
+              <.label for={:password}>Password</.label>
+              <.input type="password" field={f[:password]} required="true" />
+
+              <div class="hidden sm:block" aria-hidden="true">
+                <div class="py-1"></div>
+              </div>
+            <% end %>
+          <% :api -> %>
+            <.label for={:name}>Auth method name</.label>
+            <.input type="text" field={f[:name]} required="true" />
+
+            <div class="hidden sm:block" aria-hidden="true">
+              <div class="py-1"></div>
+            </div>
+
+            <.label for={:api_key}>API Key</.label>
+            <.maybe_mask_api_key_field
+              action={@action}
+              field={f[:api_key]}
+              sudo_mode?={@sudo_mode?}
+              phx_target={@myself}
+            />
+        <% end %>
+      </div>
+      <.modal_footer class="mx-6 mt-6">
+        <div class="sm:flex sm:flex-row-reverse">
+          <button
+            type="submit"
+            disabled={!@changeset.valid?}
+            class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 sm:ml-3 sm:w-auto"
+          >
+            <%= if @action == :new do %>
+              Create auth method
+            <% else %>
+              Save changes
+            <% end %>
+          </button>
+          <.cancel_button return_to={@return_to} />
+        </div>
+      </.modal_footer>
+    </.form>
     """
   end
 
