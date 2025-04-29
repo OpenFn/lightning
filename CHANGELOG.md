@@ -21,13 +21,21 @@ and this project adheres to
 
 - Sort logs in failure notification emails by timestamp, ascending
   [#2347](https://github.com/OpenFn/lightning/issues/2347)
+- Rename webhook auth method button and title
+  [#3165](https://github.com/OpenFn/lightning/issues/3165)
 
 ### Fixed
 
-## [v2.11.3-pre.1] - 2025-04-16
-
+- Importer not updating canvas properly
+  [#3156](https://github.com/OpenFn/lightning/issues/3156)
+- Template name overwritten by workflow name when updating an existing template
+  [#3157](https://github.com/OpenFn/lightning/issues/3157)
+- Route not found after pressing Enter to create a workflow
+  [#3142](https://github.com/OpenFn/lightning/issues/3142)
 - Make Collections delete_all idempotent
   [#3143](https://github.com/OpenFn/lightning/issues/3143)
+- Blank modal showing when you click to show webhook auth method password
+  [#3154](https://github.com/OpenFn/lightning/issues/3154)
 
 ## [v2.12.0] - 2025-04-25
 

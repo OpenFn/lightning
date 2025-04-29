@@ -1544,6 +1544,10 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert view |> element("##{modal_id}") |> has_element?()
 
+      # this is to check that the root tag for the live component is mantained
+      root_div = "write_webhook_auth_method_#{modal_id}_#{auth_method.id}"
+      assert has_element?(view, "##{root_div}")
+
       form_id = "form_#{modal_id}_#{auth_method.id}"
 
       assert view |> has_element?("##{form_id}_password_action_button", "Show")
@@ -1556,6 +1560,9 @@ defmodule LightningWeb.ProjectLiveTest do
       view |> element("##{form_id}_password_action_button") |> render_click()
 
       assert view |> has_element?("#reauthentication-form")
+
+      # root html tag in livecomponent is mantained
+      assert has_element?(view, "##{root_div}")
 
       # test wrong password
       refute render(view) =~ "Invalid! Please try again"
