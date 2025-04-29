@@ -1,7 +1,7 @@
 import { MonacoEditor } from "#/monaco";
 import { DataclipViewer } from "#/react/components/DataclipViewer";
 import type { WithActionProps } from "#/react/lib/with-props";
-import { DocumentIcon, PencilSquareIcon, DocumentArrowUpIcon, MagnifyingGlassIcon, DocumentTextIcon, InformationCircleIcon } from "@heroicons/react/24/outline"
+import { DocumentArrowUpIcon, DocumentIcon, DocumentTextIcon, InformationCircleIcon, MagnifyingGlassIcon, PencilSquareIcon } from "@heroicons/react/24/outline";
 import { CloudArrowUpIcon } from "@heroicons/react/24/solid";
 import React from "react";
 interface ManualRunnerProps {
@@ -45,8 +45,11 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
   const [selectedOption, setSelectedOption] = React.useState<SeletableOptions>(SeletableOptions.NONE);
   const [recentclips, setRecentClips] = React.useState<Dataclip[]>([]);
   const [query, setQuery] = React.useState("");
-  const [results, setResults] = React.useState<Dataclip[]>([]);
   const [selectedclip, setSelectedclip] = React.useState<Dataclip | null>(null);
+
+  const parsedQuery = React.useMemo(() => {
+    return parseFilter(query);
+  }, [query])
 
   React.useEffect(() => {
     pushEvent("get-selectable-dataclips", { job_id: job_id, limit: 5 }, (response) => {
@@ -57,16 +60,19 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
 
   React.useEffect(() => {
     // FIXME: search currently errors on phx side
-    pushEvent("search-selectable-dataclips", { job_id: job_id, search_text: query, limit: 5 }, (response) => {
-      // const dataclips = response.dataclips as Dataclip[];
-      // setResults(dataclips);
+    const q = constructQuery(parsedQuery);
+    pushEvent("search-selectable-dataclips", { job_id: job_id, search_text: q, limit: 5 }, (response) => {
+      const dataclips = (response.dataclips || []) as Dataclip[];
+      console.log("farhan", dataclips)
+      setRecentClips(dataclips);
     })
-  }, [pushEvent, query, job_id])
+  }, [pushEvent, job_id, parsedQuery])
+
 
   const innerView = React.useMemo(() => {
     switch (selectedOption) {
       case SeletableOptions.NONE:
-        return <NoneView dataclips={recentclips} setQuery={setQuery} setSelected={setSelectedclip} />
+        return <NoneView query={query} filters={parsedQuery.filters} dataclips={recentclips} setQuery={setQuery} setSelected={setSelectedclip} />
       case SeletableOptions.IMPORT:
         return <ImportView />
       case SeletableOptions.CUSTOM:
@@ -76,7 +82,7 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
       default:
         return <></>
     }
-  }, [selectedOption, recentclips])
+  }, [selectedOption, query, recentclips, parsedQuery.filters])
 
   const getActive = (v: SeletableOptions) => {
     if (selectedOption === v)
@@ -137,22 +143,61 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
   </div>
 }
 
-const NoneView: React.FC<{ dataclips: Dataclip[], setQuery: (v: string) => void, setSelected: (v: Dataclip) => void }> = ({ dataclips, setQuery, setSelected }) => {
+function truncateUid(id: string) {
+  return id.split('-')[0];
+}
+
+function constructQuery(payload: { query: string, filters: Record<string, string> }) {
+  let output = payload.query;
+  Object.entries(payload.filters).forEach(([key, value]) => output += ` ${key}:${value}`);
+  return output;
+}
+function parseFilter(input: string) {
+  const pattern = /\w+:\s*(\w+(-\w+)*)/g;
+  const matches: string[] = [];
+  let match;
+
+  // Find all matches for the pattern in the line
+  while ((match = pattern.exec(input)) !== null) {
+    matches.push(match[0]); // Capture the full match
+  }
+
+  // Find the rest of the line (remove the matched parts)
+  let rest = input;
+  const filters: Record<string, string> = {};
+  matches.forEach(m => {
+    rest = rest.replace(m, '').trim();
+    const [key, value] = m.split(/:\s*/);
+    if (key && value) filters[key] = value;
+  });
+
+  return { query: rest, filters }
+}
+
+const NoneView: React.FC<{ dataclips: Dataclip[], query: string, setQuery: (v: string) => void, setSelected: (v: Dataclip) => void, filters: Record<string, string> }> = ({ dataclips, query, setQuery, setSelected, filters }) => {
+
+  const pills = Object.entries(filters).map(([key, value]) => <div className="inline-flex text-xs px-1 bg-blue-200 border border-blue-400 text-blue-500 rounded-md">{key}: {value}</div>)
   return <>
     <hr className="my-3" />
     <div className="flex flex-col gap-3">
-      <div className="relative">
-        <input onChange={e => { setQuery(e.target.value) }} type="email" className="w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md pr-3 pl-10 py-2 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-300 shadow-sm focus:shadow" placeholder="Search field" />
-        <div className="absolute left-1 top-1 rounded p-1.5 border border-transparent text-center text-sm">
-          <MagnifyingGlassIcon className={iconStyle} />
+      <div>
+        <div className="relative">
+          <input value={query} onChange={e => { setQuery(e.target.value) }} type="email" className="w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md pr-3 pl-10 py-2 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-300 shadow-sm focus:shadow" placeholder="Search field" />
+          <div className="absolute left-1 top-1 rounded p-1.5 border border-transparent text-center text-sm">
+            <MagnifyingGlassIcon className={iconStyle} />
+          </div>
+        </div>
+        <div className="flex gap-1 mt-2">
+          {pills}
         </div>
       </div>
-      {dataclips.map(clip => {
+      {dataclips.length ? dataclips.map(clip => {
         return <div onClick={() => { setSelected(clip); }} className="flex items-center justify-between border rounded px-3 py-1 cursor-pointer hover:bg-slate-100 hover:border-primary-600 group">
-          <div className="flex gap-1 items-center text-sm"> <DocumentTextIcon className={`${iconStyle} transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} /> {clip.id} </div>
+          <div className="flex gap-1 items-center text-sm"> <DocumentTextIcon className={`${iconStyle} transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} /> {truncateUid(clip.id)} </div>
           <div className="text-xs">{clip.updated_at}</div>
         </div>
-      })}
+      }) :
+        <div className="text-center text-sm">No dataclips found. pick an option above</div>}
     </div>
   </>
 }
