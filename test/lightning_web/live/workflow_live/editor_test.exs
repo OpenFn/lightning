@@ -69,27 +69,26 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         ~p"/projects/#{project}/w/#{workflow}?#{[s: job, m: "expand", v: workflow.lock_version]}"
       )
 
-    actual_attrs =
+    {actual_attrs, inner_json} =
       view
-      |> element("div[phx-hook='JobEditor']")
-      |> render()
-      |> Floki.parse_fragment!()
-      |> Enum.at(0)
-      |> then(fn {_, attrs, _} ->
-        Map.new(attrs)
+      |> job_editor()
+      |> get_attrs_and_inner_html()
+      |> then(fn {attrs, inner_html} ->
+        {attrs, inner_html |> Jason.decode!()}
       end)
 
     # The JobEditor component should be mounted with a resolved version number
     assert job.adaptor == "@openfn/language-common@latest"
-    assert {"data-adaptor", "@openfn/language-common@1.6.2"} in actual_attrs
 
-    assert {"data-change-event", "job_body_changed"} in actual_attrs
-    assert {"data-disabled", "false"} in actual_attrs
-    assert {"data-source", job.body} in actual_attrs
-    assert {"id", "job-editor-#{job.id}"} in actual_attrs
-    assert {"phx-hook", "JobEditor"} in actual_attrs
-    assert {"phx-update", "ignore"} in actual_attrs
-    assert Map.has_key?(actual_attrs, "phx-target")
+    assert {"type", "application/json"} in actual_attrs
+    assert {"id", "JobEditor-1"} in actual_attrs
+    assert {"phx-hook", "ReactComponent"} in actual_attrs
+    assert {"data-react-name", "JobEditor"} in actual_attrs
+
+    assert inner_json["adaptor"] == "@openfn/language-common@1.6.2"
+    assert inner_json["source"] == job.body
+    assert inner_json["job_id"] == job.id
+    assert inner_json["disabled"] == "false"
 
     # try changing the assigned credential
 
@@ -99,17 +98,14 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
     assert credential_block =~ "No Credential"
     refute credential_block =~ project_credential.credential.name
 
+    # This is a hack to change the project_credential_id while the inspector
+    # is open. (The workflow-form is not rendered when the inspector is open)
     view
-    |> form("#workflow-form",
+    |> render_hook("validate", %{
       workflow: %{
-        jobs: %{
-          "0" => %{
-            "project_credential_id" => project_credential.id
-          }
-        }
+        jobs: %{"0" => %{"project_credential_id" => project_credential.id}}
       }
-    )
-    |> render_change()
+    })
 
     credential_block =
       element(view, "#modal-header-credential-block") |> render()
@@ -404,10 +400,9 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       new_dataclip = Lightning.Repo.one(dataclip_query)
 
-      assert has_element?(
-               view,
-               "#manual-job-#{job.id} form [phx-hook='DataclipViewer'][data-id='#{new_dataclip.id}']"
-             )
+      assert view
+             |> dataclip_viewer("selected-dataclip-#{new_dataclip.id}")
+             |> has_element?()
 
       element =
         view
@@ -508,12 +503,12 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
           on_error: :raise
         )
 
-      view
-      |> form("#new-workflow-name-form")
-      |> render_change(workflow: %{name: workflow_name})
-
       # click continue
       view |> element("button#toggle_new_workflow_panel_btn") |> render_click()
+
+      view
+      |> form("#workflow-form")
+      |> render_change(workflow: %{name: workflow_name})
 
       # add a job to the workflow
       %{"value" => %{"id" => job_id}} = job_patch = add_job_patch(job_name)
@@ -789,10 +784,9 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       refute run.dataclip_id == output_dataclip.id
 
       # the form has the dataclips body
-      assert has_element?(
-               view,
-               "#manual-job-#{job_2.id} form [phx-hook='DataclipViewer'][data-id='#{output_dataclip.id}']"
-             )
+      assert view
+             |> dataclip_viewer("selected-dataclip-#{output_dataclip.id}")
+             |> has_element?()
 
       # the step dataclip is selected
       element =
@@ -974,13 +968,12 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       # the body is rendered correctly
       form = "#manual-job-#{job_2.id} form"
 
-      assert has_element?(
-               view,
-               "#{form} [phx-hook='DataclipViewer'][data-id='#{output_dataclip.id}']"
-             )
-
       refute view |> element(form) |> render() =~
                "Input data for this step has not been retained"
+
+      assert view
+             |> dataclip_viewer("selected-dataclip-#{output_dataclip.id}")
+             |> has_element?()
 
       # Wait out all the async renders on RunViewerLive, avoiding Postgrex client
       # disconnection warnings.
@@ -1453,11 +1446,9 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
         )
 
       # dataclip body is displayed
-      assert has_element?(
-               view,
-               "#manual-job-#{job_1.id} [phx-hook='DataclipViewer'][data-id='#{input_dataclip.id}']"
-             ),
-             "dataclip body is present"
+      assert view
+             |> dataclip_viewer("selected-dataclip-#{input_dataclip.id}")
+             |> has_element?()
 
       html = view |> element("#manual-job-#{job_1.id}") |> render()
       refute html =~ "data for this step has not been retained"
@@ -1477,11 +1468,9 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       }
 
       # dataclip body is still present
-      assert has_element?(
-               view,
-               "#manual-job-#{job_1.id} [phx-hook='DataclipViewer'][data-id='#{input_dataclip.id}']"
-             ),
-             "dataclip body is present when the step starts"
+      assert view
+             |> dataclip_viewer("selected-dataclip-#{input_dataclip.id}")
+             |> has_element?()
 
       # lets wipe the dataclip
       Lightning.Runs.wipe_dataclips(run)
@@ -1495,11 +1484,10 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       # make sure that the event is processed by liveview
       render(view)
 
-      # dataclip body is no longer present
-      refute has_element?(
-               view,
-               "#manual-job-#{job_1.id} [phx-hook='DataclipViewer'][data-id='#{input_dataclip.id}']"
-             ),
+      # dataclip body is nolonger present
+      refute view
+             |> dataclip_viewer("selected-dataclip-#{input_dataclip.id}")
+             |> has_element?(),
              "dataclip body has been removed"
 
       html = view |> element("#manual-job-#{job_1.id}") |> render()
@@ -1750,7 +1738,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       assert_push_event(view, "metadata_ready", %{"error" => "no_credential"})
 
       view
-      |> form("#workflow-form",
+      |> trigger_save(%{
         workflow: %{
           jobs: %{
             "0" => %{
@@ -1758,8 +1746,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
             }
           }
         }
-      )
-      |> render_change()
+      })
 
       assert view
              |> with_target("#job-editor-pane-#{job.id}")
@@ -1904,17 +1891,19 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
                )
 
         # input panel shows correct information
-
-        assert has_element?(
-                 run_view,
-                 "div#input-panel [phx-hook='DataclipViewer'][data-id='#{input_dataclip.id}']"
-               )
+        assert view
+               |> dataclip_viewer("selected-dataclip-#{input_dataclip.id}")
+               |> has_element?()
 
         # output panel shows correct information
-        assert has_element?(
-                 run_view,
-                 "div#output-panel [phx-hook='DataclipViewer'][data-id='#{output_dataclip.id}']"
-               )
+        output_dataclip_viewer_json =
+          view
+          |> dataclip_viewer("step-output-dataclip-viewer")
+          |> get_attrs_and_inner_html()
+          |> decode_inner_json()
+          |> elem(1)
+
+        assert output_dataclip_viewer_json["dataclipId"] == output_dataclip.id
       end
     end
   end

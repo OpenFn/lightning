@@ -146,6 +146,8 @@ defmodule LightningWeb.Components.NewInputs do
 
     * `type="checkbox"` is used exclusively to render boolean values
 
+    * `type="tag"` renders a tag input with comma-separated values
+
     * For live file uploads, see `Phoenix.Component.live_file_input/1`
 
   See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input
@@ -155,6 +157,7 @@ defmodule LightningWeb.Components.NewInputs do
 
       <.input field={@form[:email]} type="email" />
       <.input name="my-input" errors={["oh no!"]} />
+      <.input field={@form[:tags]} type="tag" />
   """
   attr :id, :any, default: nil
   attr :name, :any
@@ -166,7 +169,7 @@ defmodule LightningWeb.Components.NewInputs do
     default: "text",
     values:
       ~w(checkbox color date datetime-local email file hidden month number password
-               range radio search select tel text textarea time url week toggle integer-toggle)
+               range radio search select tag tel text textarea time url week toggle integer-toggle)
 
   attr :field, Phoenix.HTML.FormField,
     doc:
@@ -200,6 +203,8 @@ defmodule LightningWeb.Components.NewInputs do
 
   attr :button_placement, :string, default: nil
 
+  attr :placeholder, :string, default: "Enter tags, separate with commas"
+
   attr :rest, :global,
     include:
       ~w(accept autocomplete capture cols disabled form list max maxlength min minlength
@@ -218,6 +223,11 @@ defmodule LightningWeb.Components.NewInputs do
   attr :on_click, :string, default: nil
 
   attr :value_key, :any, default: nil
+
+  attr :standalone, :boolean,
+    default: false,
+    doc:
+      "indicates if the tag input operates independently of a form's validation flow"
 
   slot :inner_block
 
@@ -291,7 +301,14 @@ defmodule LightningWeb.Components.NewInputs do
       <.label :if={@label} for={@id}>
         {@label}<span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
       </.label>
-      <.textarea_element id={@id} name={@name} class={@class} value={@value} {@rest} />
+      <.textarea_element
+        id={@id}
+        name={@name}
+        class={@class}
+        value={@value}
+        placeholder={@placeholder}
+        {@rest}
+      />
       <.error :for={msg <- @errors} :if={@display_errors}>{msg}</.error>
     </div>
     """
@@ -364,6 +381,90 @@ defmodule LightningWeb.Components.NewInputs do
       ]}
       {@rest}
     />
+    """
+  end
+
+  def input(%{type: "tag"} = assigns) do
+    assigns =
+      assigns
+      |> assign_new(:tags, fn ->
+        case assigns[:value] do
+          tags when is_list(tags) ->
+            tags
+
+          value when is_binary(value) ->
+            value
+            |> String.split(",", trim: true)
+            |> Enum.map(&String.trim/1)
+
+          _ ->
+            []
+        end
+      end)
+      |> assign(:id, assigns.id || assigns.name)
+
+    ~H"""
+    <div
+      id={"#{@id}-container"}
+      class="tag-input-container"
+      phx-hook="TagInput"
+      phx-feedback-for={@name}
+      data-standalone-mode={@standalone}
+      data-text-el={"#{@id}_raw"}
+      data-hidden-el={@id}
+      data-tag-list={"#{@id}-container-tag-list"}
+    >
+      <.label :if={@label} for={@id} class="mb-2">
+        {@label}<span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
+        <.tooltip_for_label :if={@tooltip} id={"#{@id}-tooltip"} tooltip={@tooltip} />
+      </.label>
+
+      <small :if={@sublabel} class="mb-2 block text-xs text-gray-600">
+        {@sublabel}
+      </small>
+
+      <div class="relative">
+        <input
+          id={"#{@id}_raw"}
+          type="text"
+          name={"#{@name}_raw"}
+          placeholder={@placeholder}
+          class={[
+            "focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
+            "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500",
+            @errors == [] &&
+              "border-slate-300 focus:border-slate-400 focus:outline-indigo-600",
+            @errors != [] &&
+              "border-danger-400 focus:border-danger-400 focus:outline-danger-400",
+            @class
+          ]}
+          {@rest}
+        />
+        <input type="hidden" name={@name} id={@id} value={Enum.join(@tags, ",")} />
+      </div>
+      <.error :for={msg <- @errors} :if={@display_errors}>{msg}</.error>
+
+      <div id={"#{@id}-container-tag-list"} class="tag-list mt-2">
+        <span
+          :for={tag <- @tags}
+          id={"tag-#{String.replace(tag, " ", "-")}"}
+          class="inline-flex items-center rounded-md bg-blue-50 p-2 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 mr-1 my-1"
+          data-tag={tag}
+        >
+          {tag}
+          <button
+            type="button"
+            class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-gray-500/20"
+          >
+            <span class="sr-only">Remove</span>
+            <.icon
+              name="hero-x-mark"
+              class="h-3 w-3 stroke-gray-600/50 group-hover:stroke-gray-600/75"
+            />
+          </button>
+        </span>
+      </div>
+    </div>
     """
   end
 
@@ -629,7 +730,7 @@ defmodule LightningWeb.Components.NewInputs do
       name={@name}
       class={[
         "focus:outline focus:outline-2 focus:outline-offset-1 rounded-md shadow-xs text-sm",
-        "mt-2 block w-full focus:ring-0",
+        "block w-full focus:ring-0",
         "sm:text-sm sm:leading-6",
         "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 overflow-y-auto",
         @errors == [] &&

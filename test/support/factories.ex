@@ -358,6 +358,19 @@ defmodule Lightning.Factories do
     }
   end
 
+  def workflow_template_factory do
+    workflow = build(:workflow)
+
+    %Lightning.Workflows.WorkflowTemplate{
+      name: sequence(:template_name, &"template-#{&1}"),
+      code: "workflow code",
+      workflow_id: workflow.id,
+      workflow: workflow,
+      tags: ["tag1", "tag2"],
+      description: "A sample workflow template"
+    }
+  end
+
   # ----------------------------------------------------------------------------
   # Helpers
   # ----------------------------------------------------------------------------

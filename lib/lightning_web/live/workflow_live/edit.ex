@@ -5,6 +5,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   import LightningWeb.Components.NewInputs
   import LightningWeb.Components.Icons
   import LightningWeb.WorkflowLive.Components
+  import React
 
   alias Lightning.AiAssistant
   alias Lightning.Extensions.UsageLimiting.Action
@@ -27,6 +28,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.WorkflowTemplate
+  alias Lightning.WorkflowTemplates
   alias Lightning.WorkOrders
   alias LightningWeb.UiMetrics
   alias LightningWeb.WorkflowLive.Helpers
@@ -36,6 +39,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
   require Lightning.Run
 
   on_mount {LightningWeb.Hooks, :project_scope}
+
+  jsx("assets/js/workflow-editor/WorkflowEditor.tsx")
+  jsx("assets/js/workflow-store/WorkflowStore.tsx")
 
   attr :changeset, :map, required: true
   attr :project_user, :map, required: true
@@ -145,17 +151,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   on_click="toggle_workflow_state"
                 />
                 <div>
-                  <.link
-                    patch={
-                      if @selection_mode == "settings",
-                        do: @base_url,
-                        else: "#{@base_url}?m=settings"
-                    }
-                    class="w-5 h-5 place-self-center text-slate-500 hover:text-slate-400 cursor-pointer"
-                    id="toggle-settings"
-                  >
-                    <.icon name="hero-adjustments-vertical" />
-                  </.link>
+                  <div>
+                    <.settings_icon
+                      changeset={@changeset}
+                      selection_mode={@selection_mode}
+                      base_url={@base_url}
+                    />
+                  </div>
                 </div>
                 <.offline_indicator />
               </div>
@@ -172,13 +174,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
           </.with_changes_indicator>
         </LayoutComponents.header>
       </:header>
+      <.WorkflowStore react-id="workflow-mount" />
       <div class="h-full flex">
         <.live_component
           :if={@show_new_workflow_panel}
           id="new-workflow-panel"
           module={LightningWeb.WorkflowLive.NewWorkflowComponent}
           workflow={@workflow}
-          project_id={@project.id}
+          project={@project}
         />
         <div class="relative h-full flex grow" id={"workflow-edit-#{@workflow.id}"}>
           <div class="flex-none" id="job-editor-pane">
@@ -353,23 +356,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             </div>
           </div>
 
-          <div
-            phx-hook="WorkflowEditor"
-            class="grow"
-            id={"editor-#{@workflow.id}"}
-            phx-update="ignore"
-          >
-            <%!-- Before Editor component has mounted --%>
-            <div class="flex place-content-center h-full cursor-wait">
-              <span class="inline-block top-[50%] relative">
-                <div class="flex items-center justify-center">
-                  <.button_loader>
-                    Loading workflow
-                  </.button_loader>
-                </div>
-              </span>
-            </div>
-          </div>
+          <.WorkflowEditor react-portal-target="workflow-mount" />
           <.live_component
             :if={@selected_job}
             id="new-credential-modal"
@@ -421,20 +408,21 @@ defmodule LightningWeb.WorkflowLive.Edit do
             icon
             centered
           />
+          <.live_component
+            :if={@project_repo_connection && @show_github_sync_modal}
+            id="github-sync-modal"
+            module={LightningWeb.WorkflowLive.GithubSyncModal}
+            current_user={@current_user}
+            project_repo_connection={@project_repo_connection}
+          />
           <.form
+            :if={@selection_mode !== "expand"}
             id="workflow-form"
             for={@workflow_form}
             phx-submit="save"
             phx-hook="SaveViaCtrlS"
             phx-change="validate"
           >
-            <.live_component
-              :if={@project_repo_connection && @show_github_sync_modal}
-              id="github-sync-modal"
-              module={LightningWeb.WorkflowLive.GithubSyncModal}
-              current_user={@current_user}
-              project_repo_connection={@project_repo_connection}
-            />
             <input type="hidden" name="_ignore_me" />
             <.panel
               :if={@selection_mode == "settings"}
@@ -653,17 +641,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
           <.panel
             :if={@selection_mode == "code"}
-            title="Workflow as Code"
+            title={
+              if @publish_template,
+                do: "Publish Workflow as Template",
+                else: "Workflow as Code"
+            }
             id={"workflow-code-#{@workflow.id}"}
             class="hidden min-w-lg"
             phx-mounted={fade_in()}
             phx-remove={fade_out()}
             cancel_url={@base_url}
             phx-hook="WorkflowToYAML"
-            data-loading-el="workflow-code-loader"
-            data-viewer-el="workflow-code-viewer"
           >
             <div
+              :if={!@workflow_code && !@publish_template}
               id="workflow-code-loader"
               class="relative text-xs @md:text-base p-12 text-center bg-slate-700 font-mono text-slate-200"
             >
@@ -672,15 +663,52 @@ defmodule LightningWeb.WorkflowLive.Edit do
               </.text_ping_loader>
             </div>
             <.textarea_element
+              :if={@workflow_code && !@publish_template}
               id="workflow-code-viewer"
               name="workflow-code"
-              value=""
+              value={@workflow_code}
               rows="18"
               disabled={true}
-              class="hidden font-mono proportional-nums text-slate-200 bg-slate-700 resize-none text-nowrap overflow-x-auto"
+              class="font-mono proportional-nums text-slate-200 bg-slate-700 resize-none text-nowrap overflow-x-auto"
             />
+            <.form
+              :let={f}
+              :if={@workflow_code && @publish_template}
+              for={@workflow_template_changeset}
+              id="workflow-template-form"
+              phx-change="validate"
+              phx-submit="save"
+            >
+              <div class="container mx-auto space-y-4 bg-white">
+                <.input
+                  type="text"
+                  field={f[:name]}
+                  label="Name"
+                  required={true}
+                  placeholder="A descriptive name for your template"
+                />
+
+                <.input
+                  type="textarea"
+                  field={f[:description]}
+                  label="Description"
+                  rows="6"
+                  class="bg-white text-slate-900"
+                  placeholder="A detailed description of what this template does"
+                />
+
+                <div class="space-y-4">
+                  <.input
+                    type="tag"
+                    field={f[:tags]}
+                    label="Tags"
+                    placeholder="Separate tags with commas (,)"
+                  />
+                </div>
+              </div>
+            </.form>
             <:footer>
-              <div class="flex flex-row justify-end gap-2">
+              <div :if={!@publish_template} class="flex flex-row justify-end gap-2">
                 <.button
                   variant="secondary"
                   id="download-workflow-code-btn"
@@ -700,6 +728,44 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 >
                   Copy Code
                 </.button>
+                <.button
+                  :if={@current_user.support_user}
+                  variant="primary"
+                  id="publish-template-btn"
+                  phx-click="publish_template"
+                  class="min-w-[8rem]"
+                  disabled={@changeset.changes |> Enum.any?()}
+                  tooltip={
+                    if @changeset.changes |> Enum.any?(),
+                      do:
+                        "You must save your workflow first before #{if @has_workflow_template?, do: "updating", else: "publishing"} a template.",
+                      else: nil
+                  }
+                >
+                  {if @has_workflow_template?,
+                    do: "Update Template",
+                    else: "Publish Template"}
+                </.button>
+              </div>
+              <div :if={@publish_template} class="sm:flex sm:flex-row-reverse">
+                <button
+                  type="submit"
+                  form="workflow-template-form"
+                  disabled={!@workflow_template_changeset.valid?}
+                  class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 sm:ml-3 sm:w-auto"
+                >
+                  {if @has_workflow_template?,
+                    do: "Update Template",
+                    else: "Publish Template"}
+                </button>
+                <button
+                  id="cancel-template-publish"
+                  type="button"
+                  phx-click="cancel_publish_template"
+                  class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+                >
+                  Back
+                </button>
               </div>
             </:footer>
           </.panel>
@@ -1225,6 +1291,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
        show_new_workflow_panel: assigns.live_action == :new,
        admin_contacts: Projects.list_project_admin_emails(assigns.project.id),
        show_github_sync_modal: false,
+       publish_template: false,
+       workflow_code: nil,
        project_repo_connection:
          VersionControl.get_repo_connection_for_project(assigns.project.id),
        max_concurrency: assigns.project.concurrency
@@ -1238,6 +1306,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
      apply_action(socket, socket.assigns.live_action, params)
      |> track_user_presence()
      |> apply_query_params(params)
+     |> prepare_workflow_template()
      |> maybe_show_manual_run()
      |> tap(fn socket ->
        if connected?(socket) do
@@ -1569,6 +1638,62 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, socket}
   end
 
+  @impl true
+  def handle_event("validate", %{"workflow_template" => template_params}, socket) do
+    tags =
+      template_params["tags"]
+      |> String.split(",", trim: true)
+      |> Enum.map(&String.trim/1)
+
+    changeset =
+      template_params
+      |> Map.merge(%{
+        "code" => socket.assigns.workflow_code,
+        "workflow_id" => socket.assigns.workflow.id,
+        "tags" => tags
+      })
+      |> then(&WorkflowTemplate.changeset(socket.assigns.workflow_template, &1))
+      |> Map.put(:action, :validate)
+
+    {:noreply, assign(socket, :workflow_template_changeset, changeset)}
+  end
+
+  @impl true
+  def handle_event("save", %{"workflow_template" => template_params}, socket) do
+    %{workflow: workflow, workflow_code: code} = socket.assigns
+
+    tags =
+      template_params["tags"]
+      |> String.split(",", trim: true)
+      |> Enum.map(&String.trim/1)
+
+    params =
+      Map.merge(template_params, %{
+        "code" => code,
+        "workflow_id" => workflow.id,
+        "tags" => tags
+      })
+
+    case WorkflowTemplates.create_template(params) do
+      {:ok, _template} ->
+        flash_msg =
+          if socket.assigns.has_workflow_template?,
+            do: "Workflow template updated.",
+            else: "Workflow published as template."
+
+        {:noreply,
+         socket
+         |> put_flash(:info, flash_msg)
+         |> push_patch(
+           to:
+             ~p"/projects/#{socket.assigns.project}/w/#{socket.assigns.workflow}?m=code"
+         )}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, assign(socket, :workflow_template_changeset, changeset)}
+    end
+  end
+
   def handle_event("save", submitted_params, socket) do
     %{
       project: project,
@@ -1846,6 +1971,30 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> handle_new_params(params, :workflow)}
   end
 
+  def handle_event("publish_template", _params, socket) do
+    {:noreply, assign(socket, publish_template: true)}
+  end
+
+  def handle_event("workflow_code_generated", %{"code" => code}, socket) do
+    %{
+      workflow: workflow,
+      workflow_template: workflow_template
+    } = socket.assigns
+
+    changeset =
+      WorkflowTemplate.changeset(workflow_template, %{
+        name: workflow_template.name || workflow.name,
+        code: code
+      })
+
+    {:noreply,
+     assign(socket, workflow_code: code, workflow_template_changeset: changeset)}
+  end
+
+  def handle_event("cancel_publish_template", _params, socket) do
+    {:noreply, assign(socket, publish_template: false)}
+  end
+
   def handle_event(_unhandled_event, _params, socket) do
     # TODO: add a warning and/or log for unhandled events
     {:noreply, socket}
@@ -1885,12 +2034,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  def handle_info({"form_changed", %{"workflow" => params}}, socket) do
-    {:noreply, handle_new_params(socket, params, :workflow)}
+  def handle_info({"form_changed", %{"workflow" => params} = payload}, socket) do
+    {:noreply,
+     handle_new_params(socket, params, :workflow, Map.get(payload, "opts", []))}
   end
 
-  def handle_info({"form_changed", %{"snapshot" => params}}, socket) do
-    {:noreply, handle_new_params(socket, params, :snapshot)}
+  def handle_info({"form_changed", %{"snapshot" => params} = payload}, socket) do
+    {:noreply,
+     handle_new_params(socket, params, :snapshot, Map.get(payload, "opts", []))}
   end
 
   def handle_info({:forward, mod, opts}, socket) do
@@ -2279,7 +2430,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> Enum.filter(filter_func)
   end
 
-  defp handle_new_params(socket, params, type) do
+  defp handle_new_params(socket, params, type, opts \\ []) do
     %{workflow_params: initial_params, can_edit_workflow: can_edit_workflow} =
       socket.assigns
 
@@ -2290,10 +2441,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
       socket
       |> apply_params(next_params, type)
       |> mark_validated()
-      |> push_patches_applied(initial_params)
+      |> maybe_push_patches_applied(initial_params, opts)
     else
       socket
       |> put_flash(:error, "You are not authorized to perform this action.")
+    end
+  end
+
+  defp maybe_push_patches_applied(socket, initial_params, opts) do
+    if Keyword.get(opts, :push_patches, true) do
+      push_patches_applied(socket, initial_params)
+    else
+      socket
     end
   end
 
@@ -2380,7 +2539,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
         socket |> unselect_all() |> set_mode("settings")
 
       %{"m" => "code", "s" => nil, "a" => nil} ->
-        socket |> unselect_all() |> set_mode("code")
+        socket
+        |> unselect_all()
+        |> set_mode("code")
+        |> assign(publish_template: false)
 
       # Nothing is selected
       %{"s" => nil} ->
@@ -2667,7 +2829,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           {true, "You do not have permission to edit this workflow"}
 
         %{changeset: %{valid?: false}} ->
-          {true, "You have some unresolved errors in your workflow"}
+          {true, "You have unresolved errors in your workflow"}
 
         %{snapshot_version_tag: tag} when tag != "latest" ->
           {true, "You cannot edit an old snapshot of a workflow"}
@@ -2678,28 +2840,23 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     assigns =
       assigns
-      |> assign(
-        disabled: disabled,
-        tooltip: tooltip
-      )
+      |> assign(disabled: disabled, tooltip: tooltip)
 
     ~H"""
     <div class="inline-flex rounded-md shadow-xs z-5">
       <.button
         id={@id}
-        phx-disable-with="Saving..."
+        phx-disable-with
         disabled={@disabled}
-        type="submit"
-        form="workflow-form"
+        phx-hook="InspectorSaveViaCtrlS"
+        phx-click={JS.push("save")}
         phx-disconnected={JS.set_attribute({"disabled", ""})}
         tooltip={@tooltip}
         class={
           ["focus:ring-transparent"] ++
             if @project_repo_connection, do: ["rounded-r-none"], else: []
         }
-        phx-connected={
-          !@disabled && !@has_presence_priority && JS.remove_attribute("disabled")
-        }
+        phx-connected={!@disabled && JS.remove_attribute("disabled")}
       >
         Save
       </.button>
@@ -2713,9 +2870,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           disabled={@disabled}
           phx-click={show_dropdown("#{@id}-save-and-sync")}
           phx-disconnected={JS.set_attribute({"disabled", ""})}
-          phx-connected={
-            !@disabled && !@has_presence_priority && JS.remove_attribute("disabled")
-          }
+          phx-connected={!@disabled && JS.remove_attribute("disabled")}
         >
           <span class="sr-only">Open options</span>
           <.icon name="hero-chevron-down" class="w-4 h-4" />
@@ -2807,5 +2962,62 @@ defmodule LightningWeb.WorkflowLive.Edit do
       _ ->
         "Unknown Trigger"
     end
+  end
+
+  defp prepare_workflow_template(
+         %{assigns: %{workflow: workflow, workflow_code: workflow_code}} = socket
+       ) do
+    template =
+      WorkflowTemplates.get_template_by_workflow_id(workflow.id) ||
+        %WorkflowTemplate{
+          workflow_id: workflow.id,
+          tags: []
+        }
+
+    changeset =
+      WorkflowTemplate.changeset(template, %{
+        name: template.name || workflow.name,
+        code: workflow_code
+      })
+
+    socket
+    |> assign(
+      workflow_template: template,
+      workflow_template_changeset: changeset,
+      current_template_tag: nil,
+      has_workflow_template?: template.id != nil
+    )
+  end
+
+  defp workflow_settings_errors?(changeset) do
+    errors_keys = Keyword.keys(changeset.errors)
+    Enum.any?([:name, :concurrency], &(&1 in errors_keys))
+  end
+
+  defp settings_icon(assigns) do
+    base_icon_class = "w-5 h-5 place-self-center cursor-pointer"
+
+    class =
+      if workflow_settings_errors?(assigns.changeset) do
+        base_icon_class <> " text-danger-500 hover:text-danger-400"
+      else
+        base_icon_class <> " text-slate-500 hover:text-slate-400"
+      end
+
+    assigns = assign(assigns, :class, class)
+
+    ~H"""
+    <.link
+      patch={
+        if @selection_mode == "settings",
+          do: @base_url,
+          else: "#{@base_url}?m=settings"
+      }
+      class={@class}
+      id="toggle-settings"
+    >
+      <.icon name="hero-adjustments-vertical" />
+    </.link>
+    """
   end
 end

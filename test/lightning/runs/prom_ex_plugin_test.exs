@@ -14,10 +14,71 @@ defmodule Lightning.Runs.PromExPluginText do
   @run_performance_age_seconds 4
   @stalled_run_threshold_seconds 333
 
-  test "event_metrics returns a Promex Event" do
-    event = PromExPlugin.event_metrics(plugin_config())
+  describe "event_metrics/1" do
+    test "returns a single event group" do
+      assert [
+               %PromEx.MetricTypes.Event{
+                 group_name: :lightning_run_event_metrics
+               }
+             ] = PromExPlugin.event_metrics(plugin_config())
+    end
 
-    assert event.group_name == :rory_test
+    test "returns a distribution metric for run queue delay" do
+      [%{metrics: metrics}] = PromExPlugin.event_metrics(plugin_config())
+
+      metric =
+        metrics
+        |> find_event_metric([:lightning, :run, :queue, :delay, :milliseconds])
+
+      assert metric.event_name == [:domain, :run, :queue]
+      assert metric.measurement == :delay
+
+      assert metric.reporter_options == [
+               buckets: [
+                 100,
+                 200,
+                 400,
+                 800,
+                 1_500,
+                 5_000,
+                 15_000,
+                 30_000,
+                 50_000,
+                 100_000
+               ]
+             ]
+
+      assert metric.tags == []
+      assert metric.unit == :millisecond
+    end
+
+    test "returns a counter metric to track lost runs" do
+      [%{metrics: metrics}] = PromExPlugin.event_metrics(plugin_config())
+
+      metric =
+        metrics
+        |> find_event_metric([:lightning, :run, :lost, :count])
+
+      assert metric.description == "A counter of lost runs."
+      assert metric.event_name == [:lightning, :run, :lost]
+      assert metric.tags == [:seed_event, :state, :worker_name]
+    end
+
+    def find_event_metric(metrics, metric_name) do
+      assert [candidate] =
+               metrics
+               |> Enum.filter(fn metric ->
+                 metric.name == metric_name
+               end)
+
+      candidate
+    end
+  end
+
+  test "event_metrics returns a Promex Event" do
+    [event] = PromExPlugin.event_metrics(plugin_config())
+
+    assert event.group_name == :lightning_run_event_metrics
 
     [metric | _] = event.metrics
 
@@ -499,6 +560,140 @@ defmodule Lightning.Runs.PromExPluginText do
       assert(
         PromExPlugin.count_finalised_runs(threshold_time) == finalised_count
       )
+    end
+  end
+
+  describe "seed_event_metrics/0" do
+    test "seeds the lost runs counter" do
+      event = [:lightning, :run, :lost]
+
+      ref = :telemetry_test.attach_event_handlers(self(), [event])
+
+      Lightning.Runs.PromExPlugin.seed_event_metrics()
+
+      assert_received {
+        ^event,
+        ^ref,
+        %{count: 1},
+        %{seed_event: true, state: "n/a", worker_name: "n/a"}
+      }
+    end
+  end
+
+  describe "fire_lost_run_event" do
+    setup do
+      event = [:lightning, :run, :lost]
+
+      ref = :telemetry_test.attach_event_handlers(self(), [event])
+
+      %{
+        event: event,
+        ref: ref,
+        state: :claimed,
+        state_as_string: "claimed",
+        worker_name: "worker_1"
+      }
+    end
+
+    test "defaults to a non-seed event", %{
+      event: event,
+      ref: ref,
+      state: state,
+      state_as_string: state_as_string,
+      worker_name: worker_name
+    } do
+      Lightning.Runs.PromExPlugin.fire_lost_run_event(worker_name, state)
+
+      assert_received {
+        ^event,
+        ^ref,
+        %{count: 1},
+        %{seed_event: false, state: ^state_as_string, worker_name: ^worker_name}
+      }
+    end
+
+    test "can set a seed event", %{
+      event: event,
+      ref: ref,
+      state: state,
+      state_as_string: state_as_string,
+      worker_name: worker_name
+    } do
+      Lightning.Runs.PromExPlugin.fire_lost_run_event(worker_name, state, true)
+
+      assert_received {
+        ^event,
+        ^ref,
+        %{count: 1},
+        %{seed_event: true, state: ^state_as_string, worker_name: ^worker_name}
+      }
+    end
+
+    test "can set a non-seed event", %{
+      event: event,
+      ref: ref,
+      state: state,
+      state_as_string: state_as_string,
+      worker_name: worker_name
+    } do
+      Lightning.Runs.PromExPlugin.fire_lost_run_event(worker_name, state, false)
+
+      assert_received {
+        ^event,
+        ^ref,
+        %{count: 1},
+        %{seed_event: false, state: ^state_as_string, worker_name: ^worker_name}
+      }
+    end
+
+    test "converts a nil worker name", %{
+      event: event,
+      ref: ref,
+      state: state,
+      state_as_string: state_as_string
+    } do
+      Lightning.Runs.PromExPlugin.fire_lost_run_event(nil, state)
+
+      assert_received {
+        ^event,
+        ^ref,
+        %{count: 1},
+        %{seed_event: false, state: ^state_as_string, worker_name: "n/a"}
+      }
+    end
+
+    test "converts a nil state", %{
+      event: event,
+      ref: ref,
+      worker_name: worker_name
+    } do
+      Lightning.Runs.PromExPlugin.fire_lost_run_event(worker_name, nil)
+
+      assert_received {
+        ^event,
+        ^ref,
+        %{count: 1},
+        %{seed_event: false, state: "n/a", worker_name: ^worker_name}
+      }
+    end
+
+    test "accepts a state that is a string", %{
+      event: event,
+      ref: ref,
+      state_as_string: state_as_string,
+      worker_name: worker_name
+    } do
+      Lightning.Runs.PromExPlugin.fire_lost_run_event(
+        worker_name,
+        state_as_string
+      )
+
+      assert_received {
+        ^event,
+        ^ref,
+        %{count: 1},
+        %{seed_event: false, state: ^state_as_string, worker_name: ^worker_name}
+      }
     end
   end
 

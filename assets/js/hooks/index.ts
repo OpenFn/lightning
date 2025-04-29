@@ -17,6 +17,7 @@ import {
 
 import {
   SaveViaCtrlS,
+  InspectorSaveViaCtrlS,
   OpenSyncModalViaCtrlShiftS,
   SendMessageViaCtrlEnter,
   DefaultRunViaCtrlEnter,
@@ -37,6 +38,7 @@ export {
   TabbedSelector,
   TabbedPanels,
   SaveViaCtrlS,
+  InspectorSaveViaCtrlS,
   OpenSyncModalViaCtrlShiftS,
   SendMessageViaCtrlEnter,
   DefaultRunViaCtrlEnter,
@@ -382,23 +384,132 @@ export const OpenAuthorizeUrl = {
   },
 } as PhoenixHook;
 
-export const EditScope = {
+export const TagInput = {
   mounted() {
-    this.el.addEventListener('dblclick', _e => {
-      const scopeValue = this.el.dataset.scope;
-      const eventType = this.el.dataset.eventType;
-      this.pushEventTo(this.el, eventType, { scope: scopeValue });
+    this.container = this.el;
+    this.textInput = document.getElementById(this.el.dataset.textEl);
+    this.hiddenInput = document.getElementById(this.el.dataset.hiddenEl);
+    this.tagList = document.getElementById(this.el.dataset.tagList);
+
+    if (!this.textInput) {
+      console.error("TagInput: textInput element not found.", { textInput: this.textInput });
+      return;
+    }
+    if (!this.hiddenInput) {
+      console.error("TagInput: hiddenInput element not found.", { hiddenInput: this.hiddenInput });
+      return;
+    }
+    if (!this.tagList) {
+      console.error("TagInput: tagList element not found.", { tagList: this.tagList });
+      return;
+    }
+
+    this.isInForm = !!this.el.closest("form[phx-change]");
+
+    this.setupTextInputEvents();
+    this.setupTagListEvents();
+  },
+  
+  setupTextInputEvents() {
+    this.textInput.addEventListener("keydown", (e) => {
+      if (e.key === "," || e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        this.addTag();
+      }
+    });
+    
+    this.textInput.addEventListener("blur", () => {
+      this.addTag();
     });
   },
-} as PhoenixHook<{}, { scope: string; eventType: string }>;
+  
+  setupTagListEvents() {
+    this.tagList.addEventListener("click", (e) => {
+      const button = e.target.closest('button');
+      if (!button) return;
+      
+      const tagSpan = button.closest('span[data-tag]');
+      if (!tagSpan) return;
+      
+      const tagToRemove = tagSpan.dataset.tag;
+      this.removeTag(tagToRemove);
+    });
+    
+    this.tagList.addEventListener("dblclick", (e) => {
+      const tagSpan = e.target.closest('span[data-tag]');
+      if (!tagSpan) return;
+      
+      const tagToEdit = tagSpan.dataset.tag;
+      this.editTag(tagToEdit);
+    });
+  },
+  
+  addTag() {
+    const value = this.textInput.value.trim();
+    if (!value) return;
+    
+    const cleanValue = value.replace(/,+$/, "");
+    if (!cleanValue) return;
+    
+    let currentTags = this.getCurrentTags();
+    
+    const newTags = cleanValue
+      .split(",")
+      .map(tag => tag.trim())
+      .filter(tag => tag !== "");
+    
+    for (const tag of newTags) {
+      if (!currentTags.includes(tag)) {
+        currentTags.push(tag);
+      }
+    }
+    
+    currentTags.sort();
+    this.updateTags(currentTags);
+    this.textInput.value = "";
+  },
+  
+  removeTag(tagToRemove) {
+    let currentTags = this.getCurrentTags();
+    const updatedTags = currentTags.filter(tag => tag !== tagToRemove);
+    this.updateTags(updatedTags);
+  },
+  
+  editTag(tagToEdit) {
+    let currentTags = this.getCurrentTags();
+    const updatedTags = currentTags.filter(tag => tag !== tagToEdit);
+    
+    this.updateTags(updatedTags);
+    
+    this.textInput.focus();
+    this.textInput.value = tagToEdit;
+  },
+  
+  getCurrentTags() {
+    const value = this.hiddenInput.value.trim();
+    return value
+      ? value.split(",").map(tag => tag.trim()).filter(tag => tag !== "")
+      : [];
+  },
+  
+  updateTags(tags) {
+    this.hiddenInput.value = tags.join(",");
+    
+    this.hiddenInput.dispatchEvent(new Event("input", { bubbles: true }));
+    
+    if (!this.isInForm || this.el.dataset.standaloneMode === "true") {
+      this.pushEvent("tags_updated", { tags: tags });
+    }
+  }
+};
 
 export const ClearInput = {
   mounted() {
-    this.handleEvent('clear_input', () => {
-      this.el.value = '';
+    this.handleEvent("clear_input", () => {
+      this.el.value = "";
     });
-  },
-} as PhoenixHook<{}, {}, HTMLInputElement>;
+  }
+};
 
 export const ModalHook = {
   mounted() {

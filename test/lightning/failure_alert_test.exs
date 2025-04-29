@@ -124,7 +124,8 @@ defmodule Lightning.FailureAlertTest do
          %{
            period: period,
            workorders: [workorder, _, _],
-           runs: [run, _, _]
+           runs: [run, _, _],
+           project: project
          } do
       FailureAlerter.alert_on_failure(run)
       FailureAlerter.alert_on_failure(run)
@@ -137,9 +138,11 @@ defmodule Lightning.FailureAlertTest do
       # TODO: remove this with https://github.com/OpenFn/Lightning/issues/693
       Process.sleep(250)
 
+      s1 = "\"workflow-a\" (#{project.name}) failed"
+
       assert_receive {:email,
                       %Swoosh.Email{
-                        subject: "\"workflow-a\" failed.",
+                        subject: ^s1,
                         html_body: html_body
                       }},
                      1000
@@ -150,20 +153,27 @@ defmodule Lightning.FailureAlertTest do
       assert html_body =~
                "A \"#{workorder.workflow.name}\" run just failed in \"#{workorder.workflow.project.name}\""
 
-      s2 = "\"workflow-a\" has failed 2 times in the last #{period}."
+      s2 =
+        "\"workflow-a\" (#{project.name}) failed 2 times in the last #{period}"
+
       assert_receive {:email, %Swoosh.Email{subject: ^s2}}, 1500
 
-      s3 = "\"workflow-a\" has failed 3 times in the last #{period}."
+      s3 =
+        "\"workflow-a\" (#{project.name}) failed 3 times in the last #{period}"
+
       assert_receive {:email, %Swoosh.Email{subject: ^s3}}, 1500
 
-      s4 = "\"workflow-a\" has failed 4 times in the last #{period}."
+      s4 =
+        "\"workflow-a\" (#{project.name}) failed 4 times in the last #{period}"
+
       refute_receive {:email, %Swoosh.Email{subject: ^s4}}, 250
     end
 
     test "sends a failure alert email for a workflow even if another workflow has been rate limited.",
          %{
            period: period,
-           runs: [run_1, run_2, _]
+           runs: [run_1, run_2, _],
+           project: project
          } do
       FailureAlerter.alert_on_failure(run_1)
       FailureAlerter.alert_on_failure(run_1)
@@ -176,34 +186,43 @@ defmodule Lightning.FailureAlertTest do
       # TODO: remove this with https://github.com/OpenFn/Lightning/issues/693
       Process.sleep(250)
 
-      assert_receive {:email, %Swoosh.Email{subject: "\"workflow-a\" failed."}},
-                     1000
+      s1 = "\"workflow-a\" (#{project.name}) failed"
 
-      s2 = "\"workflow-a\" has failed 2 times in the last #{period}."
+      assert_receive {:email, %Swoosh.Email{subject: ^s1}}, 1000
+
+      s2 =
+        "\"workflow-a\" (#{project.name}) failed 2 times in the last #{period}"
+
       assert_receive {:email, %Swoosh.Email{subject: ^s2}}, 1500
 
-      s3 = "\"workflow-a\" has failed 3 times in the last #{period}."
+      s3 =
+        "\"workflow-a\" (#{project.name}) failed 3 times in the last #{period}"
+
       assert_receive {:email, %Swoosh.Email{subject: ^s3}}, 1500
 
-      assert_receive {:email, %Swoosh.Email{subject: "\"workflow-b\" failed."}},
-                     1500
+      s4 = "\"workflow-b\" (#{project.name}) failed"
+
+      assert_receive {:email, %Swoosh.Email{subject: ^s4}}, 1500
     end
 
     test "does not send failure emails to users who have unsubscribed", %{
-      runs: [run_1, _, run_3]
+      runs: [run_1, _, run_3],
+      project: project
     } do
       FailureAlerter.alert_on_failure(run_1)
 
-      assert_email_sent(subject: "\"workflow-a\" failed.")
+      s1 = "\"workflow-a\" (#{project.name}) failed"
+      assert_receive {:email, %Swoosh.Email{subject: ^s1}}, 1500
 
       FailureAlerter.alert_on_failure(run_3)
 
-      refute_email_sent(subject: "\"workflow-a\" failed.")
+      s3 = "\"workflow-a\" (#{project.name}) failed"
+      refute_email_sent(subject: ^s3)
     end
 
     test "does not send failure emails if the usage limiter returns an error", %{
       runs: [run_1 | _rest],
-      project: %{id: project_id}
+      project: %{id: project_id, name: project_name}
     } do
       Mox.expect(
         Lightning.Extensions.MockUsageLimiter,
@@ -215,7 +234,7 @@ defmodule Lightning.FailureAlertTest do
 
       FailureAlerter.alert_on_failure(run_1)
 
-      assert_email_sent(subject: "\"workflow-a\" failed.")
+      assert_email_sent(subject: "\"workflow-a\" (#{project_name}) failed")
 
       Mox.expect(
         Lightning.Extensions.MockUsageLimiter,
@@ -227,11 +246,12 @@ defmodule Lightning.FailureAlertTest do
 
       FailureAlerter.alert_on_failure(run_1)
 
-      refute_email_sent(subject: "\"workflow-a\" failed.")
+      s1 = "\"workflow-a\" (#{project_name}) failed"
+      refute_email_sent(subject: ^s1)
     end
 
     test "does not increment the rate-limiter counter when an email is not delivered.",
-         %{runs: [run, _, _], workorders: [workorder, _, _]} do
+         %{runs: [run, _, _], workorders: [workorder, _, _], project: project} do
       [time_scale: time_scale, rate_limit: rate_limit] =
         Application.fetch_env!(:lightning, Lightning.FailureAlerter)
 
@@ -240,7 +260,7 @@ defmodule Lightning.FailureAlertTest do
       {:ok, {0, ^rate_limit, _, _, _}} =
         Hammer.inspect_bucket(workorder.workflow_id, time_scale, rate_limit)
 
-      assert_email_sent(subject: "\"workflow-a\" failed.")
+      assert_email_sent(subject: "\"workflow-a\" (#{project.name}) failed")
 
       Mimic.stub(Lightning.FailureEmail, :deliver_failure_email, fn _, _ ->
         {:error}
@@ -248,7 +268,8 @@ defmodule Lightning.FailureAlertTest do
 
       FailureAlerter.alert_on_failure(run)
 
-      refute_email_sent(subject: "\"workflow-a\" failed.")
+      subject = "\"workflow-a\" (#{project.name}) failed"
+      refute_email_sent(subject: ^subject)
 
       # nothing changed
       {:ok, {0, ^rate_limit, _, _, _}} =
@@ -256,7 +277,8 @@ defmodule Lightning.FailureAlertTest do
     end
 
     test "failure alert is sent on run complete", %{
-      runs: [run, _, _]
+      runs: [run, _, _],
+      project: project
     } do
       Lightning.Stub.reset_time()
 
@@ -292,7 +314,9 @@ defmodule Lightning.FailureAlertTest do
           "error_message" => nil
         })
 
-      assert_receive {:email, %Swoosh.Email{subject: "\"workflow-a\" failed."}},
+      subject = "\"workflow-a\" (#{project.name}) failed"
+
+      assert_receive {:email, %Swoosh.Email{subject: ^subject}},
                      1_000
     end
   end

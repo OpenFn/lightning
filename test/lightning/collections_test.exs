@@ -497,6 +497,14 @@ defmodule Lightning.CollectionsTest do
   end
 
   describe "delete_all/2" do
+    test "does nothing on an empty collection" do
+      collection = insert(:collection)
+
+      assert %{byte_size_sum: 0} = Repo.get!(Collection, collection.id)
+
+      assert {:ok, 0} = Collections.delete_all(collection, "*")
+    end
+
     test "deletes all items of the given collection" do
       collection = insert(:collection)
 
@@ -554,6 +562,28 @@ defmodule Lightning.CollectionsTest do
       assert Collections.get(collection, "foo:222:bär2")
 
       assert {:ok, 2} = Collections.delete_all(collection, "foo:*:bär*")
+
+      refute Collections.get(collection, "foo:111:bär1")
+      refute Collections.get(collection, "foo:222:bär2")
+
+      assert %{byte_size_sum: 0} = Repo.get!(Collection, collection.id)
+    end
+
+    test "deletes matching all items on the given collection" do
+      collection = insert(:collection)
+
+      :ok = Collections.put(collection, "foo:111:bär1", "12345")
+      :ok = Collections.put(collection, "foo:222:bär2", "12345")
+
+      collection_size = 2 * (byte_size("foo:nnn:bärn") + byte_size("12345"))
+
+      assert %{byte_size_sum: ^collection_size} =
+               Repo.get!(Collection, collection.id)
+
+      assert Collections.get(collection, "foo:111:bär1")
+      assert Collections.get(collection, "foo:222:bär2")
+
+      assert {:ok, 2} = Collections.delete_all(collection, "*")
 
       refute Collections.get(collection, "foo:111:bär1")
       refute Collections.get(collection, "foo:222:bär2")

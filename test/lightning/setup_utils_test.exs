@@ -161,7 +161,8 @@ defmodule Lightning.SetupUtilsTest do
             %{user_id: admin.id, role: :admin},
             %{user_id: editor.id, role: :editor},
             %{user_id: viewer.id, role: :viewer}
-          ]
+          ],
+          with_workflow: true
         )
 
       workflow =

@@ -101,7 +101,9 @@ defmodule Lightning.JanitorTest do
       reloaded_lost_long_run = Repo.get(Run, lost_long_run.id)
       assert reloaded_lost_long_run.state == :lost
 
-      assert_receive {:email, %Swoosh.Email{subject: "\"pain perdu\" failed."}},
+      subject = "\"pain perdu\" (#{project.name}) failed"
+
+      assert_receive {:email, %Swoosh.Email{subject: ^subject}},
                      1000
     end
 
