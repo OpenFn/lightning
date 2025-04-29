@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Tweak language on webhook auth method modal and list action
+  [#????](https://github.com/OpenFn/lightning/pulls/????)
+
 ### Fixed
 
 ## [v2.12.1] - 2025-04-29
