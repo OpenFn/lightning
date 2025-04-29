@@ -353,62 +353,17 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
       phx-target={@myself}
     >
       <div class="ml-[24px] mr-[24px]">
-        <%= case @webhook_auth_method.auth_type do %>
-          <% :basic -> %>
-            <.label for={:name}>Auth method name</.label>
-            <.input type="text" field={f[:name]} required="true" />
+        <.basic_auth_type_form_fields
+          :if={@webhook_auth_method.auth_type == :basic}
+          form={f}
+          {assigns}
+        />
 
-            <div class="hidden sm:block" aria-hidden="true">
-              <div class="py-1"></div>
-            </div>
-
-            <.label for={:username}>Username</.label>
-            <.input
-              type="text"
-              field={f[:username]}
-              required="true"
-              disabled={@action == :edit}
-            />
-
-            <div class="hidden sm:block" aria-hidden="true">
-              <div class="py-1"></div>
-            </div>
-
-            <%= if @action == :edit do %>
-              <div class="mb-3">
-                <label class="block text-sm font-semibold leading-6 text-slate-800">
-                  Password
-                </label>
-                <.maybe_mask_password_field
-                  field={f[:password]}
-                  sudo_mode?={@sudo_mode?}
-                  phx_target={@myself}
-                />
-              </div>
-            <% else %>
-              <.label for={:password}>Password</.label>
-              <.input type="password" field={f[:password]} required="true" />
-
-              <div class="hidden sm:block" aria-hidden="true">
-                <div class="py-1"></div>
-              </div>
-            <% end %>
-          <% :api -> %>
-            <.label for={:name}>Auth method name</.label>
-            <.input type="text" field={f[:name]} required="true" />
-
-            <div class="hidden sm:block" aria-hidden="true">
-              <div class="py-1"></div>
-            </div>
-
-            <.label for={:api_key}>API Key</.label>
-            <.maybe_mask_api_key_field
-              action={@action}
-              field={f[:api_key]}
-              sudo_mode?={@sudo_mode?}
-              phx_target={@myself}
-            />
-        <% end %>
+        <.api_auth_type_form_fields
+          :if={@webhook_auth_method.auth_type == :api}
+          form={f}
+          {assigns}
+        />
       </div>
       <.modal_footer class="mx-6 mt-6">
         <div class="sm:flex sm:flex-row-reverse">
@@ -458,6 +413,72 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
       </button>
       """
     end
+  end
+
+  attr :form, Phoenix.HTML.Form, required: true
+
+  defp basic_auth_type_form_fields(assigns) do
+    ~H"""
+    <.label for={:name}>Auth method name</.label>
+    <.input type="text" field={@form[:name]} required="true" />
+
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-1"></div>
+    </div>
+
+    <.label for={:username}>Username</.label>
+    <.input
+      type="text"
+      field={@form[:username]}
+      required="true"
+      disabled={@action == :edit}
+    />
+
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-1"></div>
+    </div>
+
+    <%= if @action == :edit do %>
+      <div class="mb-3">
+        <label class="block text-sm font-semibold leading-6 text-slate-800">
+          Password
+        </label>
+        <.maybe_mask_password_field
+          field={@form[:password]}
+          sudo_mode?={@sudo_mode?}
+          phx_target={@myself}
+        />
+      </div>
+    <% else %>
+      <.label for={:password}>Password</.label>
+      <.input type="password" field={@form[:password]} required="true" />
+
+      <div class="hidden sm:block" aria-hidden="true">
+        <div class="py-1"></div>
+      </div>
+    <% end %>
+    """
+  end
+
+  attr :form, Phoenix.HTML.Form, required: true
+
+  defp api_auth_type_form_fields(assigns) do
+    ~H"""
+    <.label for={:name}>Auth method name</.label>
+    <.input type="text" field={@form[:name]} required="true" />
+
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-1"></div>
+    </div>
+
+    <.label for={:api_key}>API Key</.label>
+    <.maybe_mask_api_key_field
+      action={@action}
+      field={@form[:api_key]}
+      sudo_mode?={@sudo_mode?}
+      phx_target={@myself}
+    />
+    """
   end
 
   attr :field, :map, required: true
