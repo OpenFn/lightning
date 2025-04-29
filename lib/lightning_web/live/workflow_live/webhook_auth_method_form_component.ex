@@ -45,10 +45,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
 
   def handle_event("toggle-2fa", _params, %{assigns: assigns} = socket) do
     {:noreply,
-     assign(socket,
-       show_2fa_options: dbg(!assigns.show_2fa_options),
-       error_msg: nil
-     )}
+     assign(socket, show_2fa_options: !assigns.show_2fa_options, error_msg: nil)}
   end
 
   def handle_event("reauthenticate-user", %{"user" => params}, socket) do
