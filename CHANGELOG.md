@@ -29,6 +29,8 @@ and this project adheres to
   [#3142](https://github.com/OpenFn/lightning/issues/3142)
 - Make Collections delete_all idempotent.
   [#3143](https://github.com/OpenFn/lightning/issues/3143)
+- Blank modal showing when you click to show webhook auth method password
+  [#3154](https://github.com/OpenFn/lightning/issues/3154)
 
 ## [v2.12.0] - 2025-04-25
 
