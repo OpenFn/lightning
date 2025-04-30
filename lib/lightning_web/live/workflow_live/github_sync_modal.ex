@@ -25,7 +25,7 @@ defmodule LightningWeb.WorkflowLive.GithubSyncModal do
   @impl true
   def render(assigns) do
     ~H"""
-    <div>
+    <form id={@id <> "-form"} phx-submit="save">
       <.modal
         id={@id}
         show={true}
@@ -160,7 +160,6 @@ defmodule LightningWeb.WorkflowLive.GithubSyncModal do
             <.button
               id={"submit-btn-#{@id}"}
               type="submit"
-              form="workflow-form"
               disabled={!@verify_connection.ok?}
             >
               Save and sync
@@ -175,7 +174,7 @@ defmodule LightningWeb.WorkflowLive.GithubSyncModal do
           </div>
         </:footer>
       </.modal>
-    </div>
+    </form>
     """
   end
 end
