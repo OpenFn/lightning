@@ -122,8 +122,8 @@ defmodule ReplicatedRateLimiter do
     end
 
     def allow?(config, bucket, capacity, refill, cost) do
-      ets_table = Keyword.get(config, :ets_table)
-      crdt_name = Keyword.get(config, :crdt_name)
+      ets_table = Keyword.fetch!(config, :ets_table)
+      crdt_name = Keyword.fetch!(config, :crdt_name)
 
       now = System.system_time(:second)
 
@@ -183,8 +183,8 @@ defmodule ReplicatedRateLimiter do
     def apply_diffs(config, diffs) when is_list(diffs) do
       Logger.debug("Applying diffs: #{inspect(diffs)}")
 
-      ets_table = Keyword.get(config, :ets_table)
-      crdt_name = Keyword.get(config, :crdt_name)
+      ets_table = Keyword.fetch!(config, :ets_table)
+      crdt_name = Keyword.fetch!(config, :crdt_name)
 
       Task.start(fn ->
         changed_buckets =
