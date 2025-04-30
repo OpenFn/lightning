@@ -1,7 +1,7 @@
 import { MonacoEditor } from "#/monaco";
 import { DataclipViewer } from "#/react/components/DataclipViewer";
 import type { WithActionProps } from "#/react/lib/with-props";
-import { CheckIcon, DocumentArrowUpIcon, DocumentIcon, DocumentTextIcon, InformationCircleIcon, MagnifyingGlassIcon, PencilSquareIcon, Squares2X2Icon, XMarkIcon } from "@heroicons/react/24/outline";
+import { CalendarIcon, CheckIcon, DocumentArrowUpIcon, DocumentIcon, DocumentTextIcon, InformationCircleIcon, MagnifyingGlassIcon, PencilSquareIcon, Squares2X2Icon, XMarkIcon } from "@heroicons/react/24/outline";
 import { CloudArrowUpIcon, XCircleIcon } from "@heroicons/react/24/solid";
 import React from "react";
 interface ManualRunnerProps {
@@ -43,8 +43,15 @@ interface Dataclip {
 
 const DataclipTypes = ["http_request", "global", "step_result", "saved_input", "kafka"]
 enum FilterTypes {
-  DATACLIP_TYPE = "type"
+  DATACLIP_TYPE = "type",
+  BEFORE_DATE = "before",
+  AFTER_DATE = "after"
 }
+
+type SetDates = React.Dispatch<React.SetStateAction<{
+  before: string;
+  after: string;
+}>>
 
 export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
   const { pushEvent, job_id } = props;
@@ -53,22 +60,35 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
   const [query, setQuery] = React.useState("");
   const [selectedclip, setSelectedclip] = React.useState<Dataclip | null>(null);
   const [selectedcliptype, setSelectedClipType] = React.useState<string>("");
+  const [selectedDates, setSelectedDates] = React.useState({ before: "", after: "" })
 
   const parsedQuery = React.useMemo(() => {
     const a = parseFilter(query);
     if (selectedcliptype)
       a.filters["type"] = selectedcliptype
+    if (selectedDates.before)
+      a.filters["before"] = selectedDates.before
+    if (selectedDates.after)
+      a.filters["after"] = selectedDates.after
     return a;
-  }, [query, selectedcliptype])
+  }, [query, selectedcliptype, selectedDates.before, selectedDates.after])
 
-  const clearFilter = (type: FilterTypes) => {
+  const clearFilter = React.useCallback((type: FilterTypes) => {
+    console.log("clearning:", type)
+    delete parsedQuery.filters[type]
+    setQuery(constructQuery(parsedQuery))
     switch (type) {
       case FilterTypes.DATACLIP_TYPE:
         setSelectedClipType("")
-        delete parsedQuery.filters[FilterTypes.DATACLIP_TYPE]
-        setQuery(constructQuery(parsedQuery))
+        break;
+      case FilterTypes.BEFORE_DATE:
+        setSelectedDates(p => ({ before: "", after: p.after }))
+        break;
+      case FilterTypes.AFTER_DATE:
+        setSelectedDates(p => ({ before: p.before, after: "" }))
+        break;
     }
-  }
+  }, [parsedQuery])
 
   React.useEffect(() => {
     pushEvent("get-selectable-dataclips", { job_id: job_id, limit: 5 }, (response) => {
@@ -99,7 +119,9 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
           setSelected={setSelectedclip}
           selectedcliptype={selectedcliptype}
           setSelectedclipType={setSelectedClipType}
-          clearFilter={clearFilter} />
+          clearFilter={clearFilter}
+          selectedDates={selectedDates}
+          setSelectedDates={setSelectedDates} />
       case SeletableOptions.IMPORT:
         return <ImportView />
       case SeletableOptions.CUSTOM:
@@ -109,7 +131,7 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
       default:
         return <></>
     }
-  }, [selectedOption, query, recentclips, parsedQuery.filters, selectedcliptype, setSelectedClipType, clearFilter])
+  }, [selectedOption, query, recentclips, parsedQuery.filters, selectedcliptype, selectedDates, setSelectedDates, setSelectedClipType, clearFilter])
 
   const getActive = (v: SeletableOptions) => {
     if (selectedOption === v)
@@ -213,11 +235,14 @@ const NoneView: React.FC<{
   filters: Record<string, string>
   selectedcliptype: string,
   setSelectedclipType: (v: string) => void,
-  clearFilter: (v: FilterTypes) => void
-}> = ({ dataclips, query, setQuery, setSelected, filters, selectedcliptype, setSelectedclipType, clearFilter }) => {
+  clearFilter: (v: FilterTypes) => void,
+  selectedDates: { before: string, after: string },
+  setSelectedDates: SetDates
+}> = ({ dataclips, query, setQuery, setSelected, filters, selectedcliptype, setSelectedclipType, clearFilter, selectedDates, setSelectedDates }) => {
   const [typesOpen, setTypesOpen] = React.useState(false);
+  const [dateOpen, setDateOpen] = React.useState(false);
 
-  const pills = Object.entries(filters).map(([key, value]) => <div className="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">{key}: {value} <button onClick={() => clearFilter(FilterTypes.DATACLIP_TYPE)} className="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"><XMarkIcon /> </button></div>)
+  const pills = Object.entries(filters).map(([key, value]) => <div className="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">{key}: {value} <button onClick={() => { clearFilter(key as FilterTypes) }} className="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"><XMarkIcon /> </button></div>)
   return <>
     <hr className="my-3" />
     <div className="flex flex-col gap-3">
@@ -228,10 +253,42 @@ const NoneView: React.FC<{
             <MagnifyingGlassIcon className={iconStyle} />
           </div>
           <div className="relative inline-block">
-            <button onClick={() => { setTypesOpen(p => !p) }} className="border rounded-md px-3 py-1 h-full flex justify-center items-center hover:bg-slate-100 hover:border-primary-300">
+            <button onClick={() => { setDateOpen(p => !p) }} className="border rounded-md px-3 py-1 h-full flex justify-center items-center hover:bg-slate-100 hover:border-slate-300">
+              <CalendarIcon className="w-6 h-6 text-slate-700" />
+            </button>
+            <div className={`absolute z-10 mt-1 p-2 bg-white rounded-md shadow-lg ring-1 ring-black/5 focus:outline-none w-auto right-0 ${dateOpen ? "" : "hidden"} `}>
+              <div className="py-3" role="none">
+                <div className="px-4 py-1 text-gray-500 text-sm">
+                  Filter by Last Date
+                </div>
+                <div className="px-4 py-1 text-gray-700 text-sm">
+                  <label htmlFor="date-after">Date After</label>
+                  <input
+                    value={selectedDates.after}
+                    id="date-after"
+                    onChange={(e) => { setSelectedDates((p) => ({ after: e.target.value, before: p.before })) }}
+                    className="focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6"
+                    type="date"
+                  />
+                </div>
+                <div className="px-4 py-1 text-gray-700 text-sm">
+                  <label htmlFor="date-before">Date Before</label>
+                  <input
+                    value={selectedDates.before}
+                    id="date-before"
+                    onChange={(e) => { setSelectedDates((p) => ({ after: p.after, before: e.target.value })) }}
+                    className="focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6"
+                    type="date"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="relative inline-block">
+            <button onClick={() => { setTypesOpen(p => !p) }} className="border rounded-md px-3 py-1 h-full flex justify-center items-center hover:bg-slate-100 hover:border-slate-300">
               <Squares2X2Icon className="w-6 h-6 text-slate-700" />
             </button>
-            <ul className={`absolute z-10 mt-1 bg-white border border-gray-300 rounded-md shadow-lg w-auto right-0 ${typesOpen ? "" : "hidden"} `}>
+            <ul className={`absolute z-10 mt-1 bg-white ring-1 ring-black/5 focus:outline-none rounded-md shadow-lg right-0 w-auto ${typesOpen ? "" : "hidden"} `}>
               {DataclipTypes.map(type => <li key={type} onClick={() => { setSelectedclipType(type === selectedcliptype ? "" : type) }} className={`px-4 py-2 hover:bg-blue-100 cursor-pointer text-nowrap flex items-center gap-2 text-base text-slate-700 ${type === selectedcliptype ? "bg-blue-200 text-blue-700 font-semibold" : ""}`}> {type} {selectedcliptype === type ? <CheckIcon className={iconStyle} /> : null} </li>)}
             </ul>
           </div>
@@ -241,8 +298,8 @@ const NoneView: React.FC<{
         </div>
       </div>
       {dataclips.length ? dataclips.map(clip => {
-        return <div onClick={() => { setSelected(clip); }} className="flex items-center justify-between border rounded px-3 py-1 cursor-pointer hover:bg-slate-100 hover:border-primary-600 group">
-          <div className="flex gap-1 items-center text-sm"> <DocumentTextIcon className={`${iconStyle} transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} /> {truncateUid(clip.id)} </div>
+        return <div onClick={() => { setSelected(clip); }} className="flex items-center justify-between border rounded px-3 py-2 cursor-pointer hover:bg-slate-100 hover:border-primary-600 group">
+          <div className="flex gap-1 items-center text-base"> <DocumentTextIcon className={`${iconStyle} transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} /> {truncateUid(clip.id)} </div>
           <div className="text-xs">{clip.updated_at}</div>
         </div>
       }) :
