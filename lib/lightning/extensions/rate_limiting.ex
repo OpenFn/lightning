@@ -8,16 +8,9 @@ defmodule Lightning.Extensions.RateLimiting do
   @type message :: Lightning.Extensions.Message.t()
 
   defmodule Context do
-    @moduledoc """
-    Which user is making the request for a certain project.
-    """
+    @type t :: %Context{project_id: Ecto.UUID.t()}
 
-    @type t :: %Context{
-            project_id: Ecto.UUID.t(),
-            user_id: Ecto.UUID.t() | nil
-          }
-
-    defstruct [:project_id, :user_id]
+    defstruct [:project_id]
   end
 
   @callback limit_request(
