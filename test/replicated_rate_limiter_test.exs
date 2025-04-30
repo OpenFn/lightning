@@ -4,8 +4,8 @@ defmodule ReplicatedRateLimiterTest do
 
   defmodule CrdtEts do
     use ReplicatedRateLimiter,
-      default_capacity: 1_000,
-      default_refill: 200
+      default_capacity: 10,
+      default_refill: 2
   end
 
   defmodule AnotherRateLimiter do
@@ -17,50 +17,56 @@ defmodule ReplicatedRateLimiterTest do
 
     config = CrdtEts.config() |> Map.new()
 
-    # Test using the main module's allow? function
-    result = CrdtEts.allow?("test_key")
-    assert match?({:allow, 999}, result)
+    # Check one time (default cost is 1)
+    assert match?({:allow, 9}, CrdtEts.allow?("project1"))
 
     before = System.system_time(:second)
 
-    # Make several calls to hit the limit
-    Enum.each(1..10, fn _ -> CrdtEts.allow?("test_key_2", 5, 1) end)
+    # Make several calls to hit the limit (default capacity is 10)
+    Enum.each(1..9, fn _ -> CrdtEts.allow?("project2") end)
+
+    assert_eventually(
+      DeltaCrdt.get(config.crdt_name, {"project2", "#{Node.self()}"}) |> dbg |> elem(0) == 0,
+      1_000
+    )
 
     assert {0, last_updated} =
-             DeltaCrdt.get(config.crdt_name, {"test_key_2", "#{Node.self()}"}),
-           "CRDT should have 0 tokens"
-
-    assert {0, ^last_updated} =
-             CrdtEts.to_list("test_key_2"),
+             CrdtEts.to_list("project2"),
            "ETS should be the same as CRDT"
 
     assert before <= last_updated
 
     # This should be denied since we consumed all tokens
-    assert {:deny, 1000} = CrdtEts.allow?("test_key_2", 5, 1)
+    assert {:deny, 1000} = CrdtEts.allow?("project2", 10, 2)
 
-    # Another node enters the dungeon
+    # Node2 enters the dungeon
     {:ok, test_crdt} =
       DeltaCrdt.start_link(DeltaCrdt.AWLWWMap)
 
     DeltaCrdt.set_neighbours(config.crdt_name, [test_crdt])
     DeltaCrdt.set_neighbours(test_crdt, [config.crdt_name])
 
-    # and updates the bucket
+    # a time has passed and the bucket is refilled by Node2
     DeltaCrdt.put(
       test_crdt,
-      {"test_key_2", "another_node"},
-      {10, System.system_time(:second) + 1}
+      {"project2", "another_node"},
+      {10, System.system_time(:second)}
     )
+
+    # Node2 consumes all the credits except one
+    Enum.each(1..9, fn i ->
+      DeltaCrdt.put(
+        test_crdt,
+        {"project2", "another_node"},
+        {10-i, System.system_time(:second)})
+    end)
 
     # Wait for the bucket to be updated
     assert_eventually(
-      CrdtEts.to_list("test_key_2")
-      |> Tuple.to_list()
-      |> List.first() == 10
+      CrdtEts.to_list("project2") |> elem(0) == 1
     )
 
-    assert {:allow, 4} = CrdtEts.allow?("test_key_2", 5, 1)
+    assert {:allow, 4} = CrdtEts.allow?("project2", 10, 2)
   end
 
   test "can start multiple rate limiters" do

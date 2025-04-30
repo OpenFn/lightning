@@ -25,11 +25,9 @@ defmodule Lightning.RateLimiters do
   defmodule Webhook do
     @moduledoc false
 
-    # Use ReplicatedRateLimiter instead
-    use Hammer,
-      backend: Hammer.ETS,
-      algorithm: :leaky_bucket,
-      table: :webhook_limiter
+    use ReplicatedRateLimiter,
+      default_capacity: 10,
+      default_refill: 2
   end
 
   @spec hit({:failure_email, String.t(), String.t()}) :: Mail.hit_result()
@@ -51,7 +49,9 @@ defmodule Lightning.RateLimiters do
     # 10 requests for a second, then 2 requests per second
     # Over a long enough period of time, this will allow 2 requests per second.
     # allow?("webhook_#{project_id}", 10, 2)
-    Webhook.hit(project_id, 2, 10)
+    # capacity and refill is by design a module attribute
+    # TODO: passing it here might eliminate the need for macro for easier maintainance
+    Webhook.allow?("webhook_#{project_id}")
   end
 
   def child_spec(opts) do
