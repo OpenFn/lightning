@@ -26,7 +26,9 @@ defmodule ReplicatedRateLimiterTest do
     Enum.each(1..9, fn _ -> CrdtEts.allow?("project2") end)
 
     assert_eventually(
-      DeltaCrdt.get(config.crdt_name, {"project2", "#{Node.self()}"}) |> dbg |> elem(0) == 0,
+      DeltaCrdt.get(config.crdt_name, {"project2", "#{Node.self()}"})
+      |> dbg
+      |> elem(0) == 0,
       1_000
     )
 
@@ -58,13 +60,12 @@ defmodule ReplicatedRateLimiterTest do
       DeltaCrdt.put(
         test_crdt,
         {"project2", "another_node"},
-        {10-i, System.system_time(:second)})
+        {10 - i, System.system_time(:second)}
+      )
     end)
 
     # Wait for the bucket to be updated
-    assert_eventually(
-      CrdtEts.to_list("project2") |> elem(0) == 1
-    )
+    assert_eventually(CrdtEts.to_list("project2") |> elem(0) == 1)
 
     assert {:allow, 4} = CrdtEts.allow?("project2", 10, 2)
   end

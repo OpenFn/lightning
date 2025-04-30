@@ -22,14 +22,6 @@ defmodule Lightning.RateLimiters do
             | {:deny, non_neg_integer()}
   end
 
-  defmodule Webhook do
-    @moduledoc false
-
-    use ReplicatedRateLimiter,
-      default_capacity: 10,
-      default_refill: 2
-  end
-
   @spec hit({:failure_email, String.t(), String.t()}) :: Mail.hit_result()
   def hit({:failure_email, workflow_id, user_id}) do
     [time_scale: time_scale, rate_limit: rate_limit] =
@@ -45,15 +37,6 @@ defmodule Lightning.RateLimiters do
     end
   end
 
-  def hit({:webhook, project_id}) do
-    # 10 requests for a second, then 2 requests per second
-    # Over a long enough period of time, this will allow 2 requests per second.
-    # allow?("webhook_#{project_id}", 10, 2)
-    # capacity and refill is by design a module attribute
-    # TODO: passing it here might eliminate the need for macro for easier maintainance
-    Webhook.allow?("webhook_#{project_id}")
-  end
-
   def child_spec(opts) do
     %{
       id: __MODULE__,
@@ -63,7 +46,7 @@ defmodule Lightning.RateLimiters do
   end
 
   def start_link(opts) do
-    children = [{Mail, opts}, {Webhook, opts}]
+    children = [{Mail, opts}]
     Supervisor.start_link(children, strategy: :one_for_one)
   end
 end
