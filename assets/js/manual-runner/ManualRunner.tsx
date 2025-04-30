@@ -1,15 +1,15 @@
 import { MonacoEditor } from "#/monaco";
 import { DataclipViewer } from "#/react/components/DataclipViewer";
 import type { WithActionProps } from "#/react/lib/with-props";
-import { DocumentArrowUpIcon, DocumentIcon, DocumentTextIcon, InformationCircleIcon, MagnifyingGlassIcon, PencilSquareIcon } from "@heroicons/react/24/outline";
+import { CheckIcon, DocumentArrowUpIcon, DocumentIcon, DocumentTextIcon, InformationCircleIcon, MagnifyingGlassIcon, PencilSquareIcon, Squares2X2Icon, XMarkIcon } from "@heroicons/react/24/outline";
 import { CloudArrowUpIcon, XCircleIcon } from "@heroicons/react/24/solid";
 import React from "react";
 interface ManualRunnerProps {
   job_id: string
 }
 
-const iconStyle = 'h-4 w-4 text-grey-400 mr-1';
-const closeStyle = 'h-4 w-4 text-red-400 mr-1';
+const iconStyle = 'h-4 w-4 text-grey-400';
+const closeStyle = 'h-4 w-4 text-red-400';
 
 enum SeletableOptions {
   NONE,
@@ -41,16 +41,34 @@ interface Dataclip {
   updated_at: string;
 }
 
+const DataclipTypes = ["http_request", "global", "step_result", "saved_input", "kafka"]
+enum FilterTypes {
+  DATACLIP_TYPE = "type"
+}
+
 export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
   const { pushEvent, job_id } = props;
   const [selectedOption, setSelectedOption] = React.useState<SeletableOptions>(SeletableOptions.NONE);
   const [recentclips, setRecentClips] = React.useState<Dataclip[]>([]);
   const [query, setQuery] = React.useState("");
   const [selectedclip, setSelectedclip] = React.useState<Dataclip | null>(null);
+  const [selectedcliptype, setSelectedClipType] = React.useState<string>("");
 
   const parsedQuery = React.useMemo(() => {
-    return parseFilter(query);
-  }, [query])
+    const a = parseFilter(query);
+    if (selectedcliptype)
+      a.filters["type"] = selectedcliptype
+    return a;
+  }, [query, selectedcliptype])
+
+  const clearFilter = (type: FilterTypes) => {
+    switch (type) {
+      case FilterTypes.DATACLIP_TYPE:
+        setSelectedClipType("")
+        delete parsedQuery.filters[FilterTypes.DATACLIP_TYPE]
+        setQuery(constructQuery(parsedQuery))
+    }
+  }
 
   React.useEffect(() => {
     pushEvent("get-selectable-dataclips", { job_id: job_id, limit: 5 }, (response) => {
@@ -73,7 +91,15 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
   const innerView = React.useMemo(() => {
     switch (selectedOption) {
       case SeletableOptions.NONE:
-        return <NoneView query={query} filters={parsedQuery.filters} dataclips={recentclips} setQuery={setQuery} setSelected={setSelectedclip} />
+        return <NoneView
+          query={query}
+          filters={parsedQuery.filters}
+          dataclips={recentclips}
+          setQuery={setQuery}
+          setSelected={setSelectedclip}
+          selectedcliptype={selectedcliptype}
+          setSelectedclipType={setSelectedClipType}
+          clearFilter={clearFilter} />
       case SeletableOptions.IMPORT:
         return <ImportView />
       case SeletableOptions.CUSTOM:
@@ -83,7 +109,7 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
       default:
         return <></>
     }
-  }, [selectedOption, query, recentclips, parsedQuery.filters])
+  }, [selectedOption, query, recentclips, parsedQuery.filters, selectedcliptype, setSelectedClipType, clearFilter])
 
   const getActive = (v: SeletableOptions) => {
     if (selectedOption === v)
@@ -169,26 +195,45 @@ function parseFilter(input: string) {
   // Find the rest of the line (remove the matched parts)
   let rest = input;
   const filters: Record<string, string> = {};
+  const allowedKeys = Object.values(FilterTypes);
   matches.forEach(m => {
     rest = rest.replace(m, '').trim();
     const [key, value] = m.split(/:\s*/);
-    if (key && value) filters[key] = value;
+    if (key && value && allowedKeys.includes(key)) filters[key] = value;
   });
 
   return { query: rest, filters }
 }
 
-const NoneView: React.FC<{ dataclips: Dataclip[], query: string, setQuery: (v: string) => void, setSelected: (v: Dataclip) => void, filters: Record<string, string> }> = ({ dataclips, query, setQuery, setSelected, filters }) => {
+const NoneView: React.FC<{
+  dataclips: Dataclip[],
+  query: string,
+  setQuery: (v: string) => void,
+  setSelected: (v: Dataclip) => void,
+  filters: Record<string, string>
+  selectedcliptype: string,
+  setSelectedclipType: (v: string) => void,
+  clearFilter: (v: FilterTypes) => void
+}> = ({ dataclips, query, setQuery, setSelected, filters, selectedcliptype, setSelectedclipType, clearFilter }) => {
+  const [typesOpen, setTypesOpen] = React.useState(false);
 
-  const pills = Object.entries(filters).map(([key, value]) => <div className="inline-flex text-xs px-1 bg-blue-200 border border-blue-400 text-blue-500 rounded-md">{key}: {value}</div>)
+  const pills = Object.entries(filters).map(([key, value]) => <div className="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">{key}: {value} <button onClick={() => clearFilter(FilterTypes.DATACLIP_TYPE)} className="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"><XMarkIcon /> </button></div>)
   return <>
     <hr className="my-3" />
     <div className="flex flex-col gap-3">
       <div>
-        <div className="relative">
+        <div className="relative flex gap-2">
           <input value={query} onChange={e => { setQuery(e.target.value) }} type="email" className="w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md pr-3 pl-10 py-2 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-300 shadow-sm focus:shadow" placeholder="Search field" />
           <div className="absolute left-1 top-1 rounded p-1.5 border border-transparent text-center text-sm">
             <MagnifyingGlassIcon className={iconStyle} />
+          </div>
+          <div className="relative inline-block">
+            <button onClick={() => { setTypesOpen(p => !p) }} className="border rounded-md px-3 py-1 h-full flex justify-center items-center hover:bg-slate-100 hover:border-primary-300">
+              <Squares2X2Icon className="w-6 h-6 text-slate-700" />
+            </button>
+            <ul className={`absolute z-10 mt-1 bg-white border border-gray-300 rounded-md shadow-lg w-auto right-0 ${typesOpen ? "" : "hidden"} `}>
+              {DataclipTypes.map(type => <li key={type} onClick={() => { setSelectedclipType(type === selectedcliptype ? "" : type) }} className={`px-4 py-2 hover:bg-blue-100 cursor-pointer text-nowrap flex items-center gap-2 text-base text-slate-700 ${type === selectedcliptype ? "bg-blue-200 text-blue-700 font-semibold" : ""}`}> {type} {selectedcliptype === type ? <CheckIcon className={iconStyle} /> : null} </li>)}
+            </ul>
           </div>
         </div>
         <div className="flex gap-1 mt-2">
