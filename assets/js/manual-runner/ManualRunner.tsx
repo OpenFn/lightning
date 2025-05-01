@@ -4,6 +4,7 @@ import type { WithActionProps } from "#/react/lib/with-props";
 import { CalendarDaysIcon, CheckCircleIcon, CheckIcon, DocumentArrowUpIcon, DocumentIcon, DocumentTextIcon, InformationCircleIcon, MagnifyingGlassIcon, PencilSquareIcon, RectangleGroupIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { CloudArrowUpIcon, XCircleIcon } from "@heroicons/react/24/solid";
 import React from "react";
+import FileUploader, { type UploadedFile } from "./FileUploader";
 interface ManualRunnerProps {
   job_id: string
 }
@@ -145,6 +146,7 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
         break;
       case SeletableOptions.CUSTOM:
       case SeletableOptions.NONE:
+      case SeletableOptions.IMPORT:
         pushEvent("manual_run_change", {
           manual: {
             body: null,
@@ -224,8 +226,8 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
         <DataclipViewer dataclipId={selectedclip.id} />
       </>
       :
-      <div className="px-4 py-6">
-        <div className="flex flex-col gap-3">
+      <div className="px-4 py-6 grow">
+        <div className="flex flex-col gap-3 h-full">
           <div className="font-bold flex justify-center">Select Input</div>
           <div className="flex gap-4 justify-center flex-wrap">
             <button type="button" onClick={selectOptionHandler(SeletableOptions.EMPTY)} className={"border min-w-[147px] text-base rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group" + getActive(SeletableOptions.EMPTY)}>
@@ -364,45 +366,22 @@ const NoneView: React.FC<{
 }
 
 const ImportView: React.FC<{ pushEvent: (event: string, data: any) => void }> = ({ pushEvent }) => {
-  return <>
-    <div className="col-span-full">
-      <div className="mt-2 flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-10">
-        <div className="text-center">
-          <CloudArrowUpIcon className="mx-auto size-12 text-gray-300" />
-          <div className="mt-4 flex text-sm/6 text-gray-600">
-            <label htmlFor="file-upload" className="relative cursor-pointer rounded-md bg-white font-semibold text-indigo-600 focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-2 focus-within:outline-hidden hover:text-indigo-500">
-              <span>Upload a file</span>
-              <input
-                id="file-upload"
-                name="file-upload"
-                type="file"
-                className="sr-only"
-                accept=".json"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                      const content = event.target?.result;
-                      pushEvent("manual_run_change", {
-                        manual: {
-                          body: content,
-                          dataclip_id: null
-                        }
-                      });
-                    };
-                    reader.readAsText(file);
-                  }
-                }}
-              />
-            </label>
-            <p className="pl-1">or drag and drop</p>
-          </div>
-          <p className="text-xs/5 text-gray-600">JSON up to 3MB</p>
-        </div>
-      </div>
-    </div>
-  </>
+  const [importedFiles, setImportedFiles] = React.useState<UploadedFile[]>([]);
+
+  function uploadFiles(f: UploadedFile[]) {
+    setImportedFiles([...importedFiles, ...f]);
+  }
+
+  function deleteFile(indexImg: number) {
+    setImportedFiles(prev => prev.filter((_, index) => index !== indexImg));
+  }
+
+  return <FileUploader
+    currFiles={importedFiles}
+    onUpload={uploadFiles}
+    onDelete={deleteFile}
+    count={1}
+    formats={["json"]} />
 }
 
 const EmptyView: React.FC<{ pushEvent: (event: string, data: any) => void }> = ({ pushEvent }) => {
