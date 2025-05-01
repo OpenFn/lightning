@@ -1,7 +1,7 @@
 import { MonacoEditor } from "#/monaco";
 import { DataclipViewer } from "#/react/components/DataclipViewer";
 import type { WithActionProps } from "#/react/lib/with-props";
-import { CalendarDaysIcon, CheckIcon, DocumentArrowUpIcon, DocumentIcon, DocumentTextIcon, InformationCircleIcon, MagnifyingGlassIcon, PencilSquareIcon, RectangleGroupIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { CalendarDaysIcon, CheckCircleIcon, CheckIcon, DocumentArrowUpIcon, DocumentIcon, DocumentTextIcon, InformationCircleIcon, MagnifyingGlassIcon, PencilSquareIcon, RectangleGroupIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { CloudArrowUpIcon, XCircleIcon } from "@heroicons/react/24/solid";
 import React from "react";
 interface ManualRunnerProps {
@@ -427,6 +427,7 @@ const EmptyView: React.FC<{ pushEvent: (event: string, data: any) => void }> = (
 const CustomView: React.FC<{ pushEvent: (event: string, data: any) => void }> = ({ pushEvent }) => {
   const [editorValue, setEditorValue] = React.useState("");
 
+  const isEmpty = React.useMemo(() => !editorValue.trim(), [editorValue])
   const isValidJson = React.useMemo(() => {
     try {
       JSON.parse(editorValue);
@@ -449,7 +450,12 @@ const CustomView: React.FC<{ pushEvent: (event: string, data: any) => void }> = 
 
   return <div className='relative h-[420px]'>
     <div className="font-semibold mb-3 text-gray-600">Create a new input</div>
-    {!isValidJson ? <div className="text-red-400">Invalid JSON</div> : null}
+    {
+      (isEmpty || !isValidJson) ?
+        <div className="text-red-700 text-sm flex gap-1 mb-1 items-center"><InformationCircleIcon className={iconStyle} /> {isEmpty ? "Custom input can't be empty" : "Invalid JSON format"}</div>
+        :
+        <div className="text-green-700 text-sm flex gap-1 mb-1 items-center"><CheckCircleIcon className={iconStyle} />Correct JSON format</div>
+    }
     <MonacoEditor
       defaultLanguage="json"
       theme="default"
