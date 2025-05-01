@@ -21,7 +21,7 @@ and this project adheres to
 
 - Tweak language on webhook auth method modal and list action
   [#3166](https://github.com/OpenFn/lightning/pull/3166)
-- Stagger nightly data retention purge to reduce acute stress on db
+- Re-order nightly cron jobs to reduce acute stress on db
   [3179](https://github.com/OpenFn/lightning/pull/3179)
 
 ### Fixed
