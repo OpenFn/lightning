@@ -24,6 +24,20 @@ const FileUploader: React.FC<FileUploader> = ({
   const timeout = React.useRef<ReturnType<typeof setTimeout> | null>(null)
 
 
+  const deleteHandler = React.useCallback((index: number) => {
+    const dt = new DataTransfer();
+    const files = fileRef.current?.files || [];
+
+    Array.from(files).forEach((file, i) => {
+      if (i !== index) dt.items.add(file);
+    });
+
+    if (fileRef.current) {
+      fileRef.current.files = dt.files;
+      onDelete(index);
+    }
+  }, [onDelete]);
+
   const setVanishingIssue = (issue: string) => {
     setIssue(issue);
     if (timeout.current) clearTimeout(timeout.current);
@@ -90,11 +104,11 @@ const FileUploader: React.FC<FileUploader> = ({
         node.removeEventListener("dragleave", handleDragLeave);
       }
     };
-  }, [currFiles, handleDrop]);
+  }, [handleDrop]);
 
   return (
     <>
-      {issue ? <div className="text-red-700 bg-red-200 px-2 py-1 rounded-lg text-sm flex gap-1 mb-1 items-center justify-between items-center">
+      {issue ? <div className="text-red-700 bg-red-200 px-2 py-1 rounded-lg text-sm flex gap-1 mb-1 justify-between items-center">
         <div className="flex gap-1 items-center"><InformationCircleIcon className="size-4" />{issue}</div>
         <XMarkIcon onClick={() => { setIssue("") }} className="size-4 hover:bg-red-700 hover:text-red-50 rounded cursor-pointer" />
       </div> : null}
@@ -113,7 +127,7 @@ const FileUploader: React.FC<FileUploader> = ({
                 </div>
                 <button
                   className="text-sm text-red-500"
-                  onClick={() => { onDelete(index) }}
+                  onClick={() => { deleteHandler(index) }}
                 >
                   ✕
                 </button>
