@@ -163,7 +163,12 @@ defmodule Lightning.Projects do
     jobs =
       list_projects_having_history_retention()
       |> Enum.map(fn project ->
-        new(%{project_id: project.id, type: "data_retention"}, max_attempts: 3)
+        delay = :rand.uniform(7_200) - 1
+
+        new(%{project_id: project.id, type: "data_retention"},
+          max_attempts: 3,
+          schedule_in: delay
+        )
       end)
 
     Oban.insert_all(Lightning.Oban, jobs)
