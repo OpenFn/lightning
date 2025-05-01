@@ -7,6 +7,11 @@ defmodule Lightning.Application do
 
   require Logger
 
+  @rate_limiter_opts Application.compile_env!(
+                       :lightning,
+                       Lightning.WebhookRateLimiter
+                     )
+
   @impl true
   def start(_type, _args) do
     # Initialize ETS table for adapter lookup
@@ -181,10 +186,12 @@ defmodule Lightning.Application do
   end
 
   def start_phase(:init_rate_limiter, :normal, _args) do
-    Horde.DynamicSupervisor.start_child(
-      Lightning.DistributedSupervisor,
-      Lightning.WebhookRateLimiter
-    )
+    if @rate_limiter_opts[:start] do
+      Horde.DynamicSupervisor.start_child(
+        Lightning.DistributedSupervisor,
+        {Lightning.WebhookRateLimiter, @rate_limiter_opts}
+      )
+    end
 
     :ok
   end
