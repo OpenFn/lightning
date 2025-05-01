@@ -2,15 +2,9 @@ import { InformationCircleIcon } from "@heroicons/react/24/outline";
 import { CloudArrowUpIcon, XMarkIcon } from "@heroicons/react/24/solid";
 import React, { type ChangeEvent } from "react";
 
-export interface UploadedFile {
-  name: string;
-  type: string;
-  size: number;
-}
-
 interface FileUploader {
-  currFiles: UploadedFile[];
-  onUpload: (files: UploadedFile[]) => void;
+  currFiles: File[];
+  onUpload: (files: File[]) => void;
   onDelete: (index: number) => void;
   count: number;
   formats: string[];

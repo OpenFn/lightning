@@ -2,9 +2,9 @@ import { MonacoEditor } from "#/monaco";
 import { DataclipViewer } from "#/react/components/DataclipViewer";
 import type { WithActionProps } from "#/react/lib/with-props";
 import { CalendarDaysIcon, CheckCircleIcon, CheckIcon, DocumentArrowUpIcon, DocumentIcon, DocumentTextIcon, InformationCircleIcon, MagnifyingGlassIcon, PencilSquareIcon, RectangleGroupIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { CloudArrowUpIcon, XCircleIcon } from "@heroicons/react/24/solid";
+import { XCircleIcon } from "@heroicons/react/24/solid";
 import React from "react";
-import FileUploader, { type UploadedFile } from "./FileUploader";
+import FileUploader from "./FileUploader";
 interface ManualRunnerProps {
   job_id: string
 }
@@ -172,11 +172,11 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
           selectedDates={selectedDates}
           setSelectedDates={setSelectedDates} />
       case SeletableOptions.IMPORT:
-        return <ImportView pushEvent={pushEvent} />
+        return <ImportView />
       case SeletableOptions.CUSTOM:
         return <CustomView pushEvent={pushEvent} />
       case SeletableOptions.EMPTY:
-        return <EmptyView pushEvent={pushEvent} />
+        return <EmptyView />
       default:
         return <></>
     }
@@ -365,10 +365,10 @@ const NoneView: React.FC<{
   </>
 }
 
-const ImportView: React.FC<{ pushEvent: (event: string, data: any) => void }> = ({ pushEvent }) => {
-  const [importedFiles, setImportedFiles] = React.useState<UploadedFile[]>([]);
+const ImportView: React.FC = () => {
+  const [importedFiles, setImportedFiles] = React.useState<File[]>([]);
 
-  function uploadFiles(f: UploadedFile[]) {
+  function uploadFiles(f: File[]) {
     setImportedFiles([...importedFiles, ...f]);
   }
 
@@ -384,15 +384,7 @@ const ImportView: React.FC<{ pushEvent: (event: string, data: any) => void }> = 
     formats={["json"]} />
 }
 
-const EmptyView: React.FC<{ pushEvent: (event: string, data: any) => void }> = ({ pushEvent }) => {
-  React.useEffect(() => {
-    pushEvent("manual_run_change", {
-      manual: {
-        body: "{}",
-        dataclip_id: null
-      }
-    });
-  }, [pushEvent]);
+const EmptyView: React.FC = () => {
 
   return <div className="flex flex-col items-center gap-2 text-xs py-5">
     <div className="flex gap-1">
