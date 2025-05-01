@@ -24,6 +24,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix save and sync not working in the workflow editor
+  [#3177](https://github.com/OpenFn/lightning/issues/3177)
+
 ## [v2.12.1] - 2025-04-29
 
 ### Changed

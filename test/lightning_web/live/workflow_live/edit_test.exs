@@ -2569,6 +2569,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       refute has_element?(view, "#github-sync-modal")
       render_hook(view, "toggle_github_sync_modal")
       assert has_element?(view, "#github-sync-modal")
+      # modal form exists
+      assert view |> has_element?("form#github-sync-modal-form")
       assert render_async(view) =~ "Save and sync changes to GitHub"
 
       expect_create_installation_token(repo_connection.github_installation_id)
@@ -2577,7 +2579,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       # submit form
       view
-      |> render_hook("save", %{
+      |> form("#github-sync-modal-form")
+      |> render_submit(%{
         "github_sync" => %{"commit_message" => "some message"}
       })
 
@@ -2665,7 +2668,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       # submit form
       view
-      |> form("#workflow-form")
+      |> form("#github-sync-modal-form")
       |> render_submit(%{"github_sync" => %{"commit_message" => "some message"}})
 
       assert_patched(

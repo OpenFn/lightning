@@ -1694,79 +1694,48 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  def handle_event("save", submitted_params, socket) do
-    %{
-      project: project,
-      workflow_params: initial_params,
-      current_user: current_user
-    } = socket.assigns
+  def handle_event("save", params, socket) do
+    with {:ok, %{assigns: assigns} = socket} <- save_workflow(socket, params) do
+      query_params =
+        socket.assigns.query_params
+        |> Map.reject(fn {_key, value} -> is_nil(value) end)
+        |> Map.drop(["v"])
 
-    with :ok <- check_user_can_save_workflow(socket) do
-      next_params =
-        case submitted_params do
-          %{"workflow" => params} ->
-            WorkflowParams.apply_form_params(
-              initial_params,
-              params
-            )
+      flash_msg =
+        "Workflow saved successfully." <>
+          if assigns.live_action == :new and
+               not Helpers.workflow_enabled?(assigns.workflow) do
+            " Remember to enable your workflow to run it automatically."
+          else
+            ""
+          end
 
-          %{} ->
-            initial_params
-        end
+      {:noreply,
+       socket
+       |> put_flash(:info, flash_msg)
+       |> push_patch(
+         to:
+           ~p"/projects/#{assigns.project.id}/w/#{assigns.workflow.id}?#{query_params}",
+         replace: true
+       )}
+    end
+  end
 
-      %{assigns: %{changeset: changeset}} =
-        socket = socket |> apply_params(next_params, :workflow)
+  def handle_event("save-and-sync", %{"github_sync" => _} = params, socket) do
+    with {:ok, %{assigns: assigns} = socket} <- save_workflow(socket, params) do
+      query_params =
+        assigns.query_params
+        |> Map.reject(fn {_key, value} -> is_nil(value) end)
+        |> Map.drop(["v"])
 
-      case Helpers.save_workflow(changeset, current_user) do
-        {:ok, workflow} ->
-          snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
-
-          query_params =
-            socket.assigns.query_params
-            |> Map.reject(fn {_key, value} -> is_nil(value) end)
-            |> Map.drop(["v"])
-
-          flash_msg =
-            "Workflow saved successfully." <>
-              if not loaded?(changeset.data) and
-                   not Helpers.workflow_enabled?(workflow) do
-                " Remember to enable your workflow to run it automatically."
-              else
-                ""
-              end
-
-          {:noreply,
-           socket
-           |> assign(page_title: workflow.name)
-           |> assign_workflow(workflow, snapshot)
-           |> put_flash(:info, flash_msg)
-           |> push_patches_applied(initial_params)
-           |> maybe_push_workflow_created(workflow)
-           |> maybe_sync_to_github(submitted_params)
-           |> push_patch(
-             to: ~p"/projects/#{project.id}/w/#{workflow.id}?#{query_params}",
-             replace: true
-           )}
-
-        {:error, %{text: message}} ->
-          {:noreply, put_flash(socket, :error, message)}
-
-        {:error, :workflow_deleted} ->
-          {:noreply,
-           put_flash(
-             socket,
-             :error,
-             "Oops! You cannot modify a deleted workflow"
-           )}
-
-        {:error, %Ecto.Changeset{} = changeset} ->
-          {:noreply,
-           socket
-           |> assign_changeset(changeset)
-           |> mark_validated()
-           |> put_flash(:error, "Workflow could not be saved")
-           |> push_patches_applied(initial_params)}
-      end
+      {:noreply,
+       socket
+       |> sync_to_github(params)
+       |> push_patch(
+         to:
+           ~p"/projects/#{assigns.project.id}/w/#{assigns.workflow.id}?#{query_params}",
+         replace: true
+       )}
     end
   end
 
@@ -2091,6 +2060,63 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, socket}
   end
 
+  defp save_workflow(socket, submitted_params) do
+    %{
+      workflow_params: initial_params,
+      current_user: current_user
+    } = socket.assigns
+
+    with :ok <- check_user_can_save_workflow(socket) do
+      next_params =
+        case submitted_params do
+          %{"workflow" => params} ->
+            WorkflowParams.apply_form_params(
+              initial_params,
+              params
+            )
+
+          %{} ->
+            initial_params
+        end
+
+      %{assigns: %{changeset: changeset}} =
+        socket = socket |> apply_params(next_params, :workflow)
+
+      case Helpers.save_workflow(changeset, current_user) do
+        {:ok, workflow} ->
+          snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
+
+          {
+            :ok,
+            socket
+            |> assign(page_title: workflow.name)
+            |> assign_workflow(workflow, snapshot)
+            |> push_patches_applied(initial_params)
+            |> maybe_push_workflow_created(workflow)
+          }
+
+        {:error, %{text: message}} ->
+          {:noreply, put_flash(socket, :error, message)}
+
+        {:error, :workflow_deleted} ->
+          {:noreply,
+           put_flash(
+             socket,
+             :error,
+             "Oops! You cannot modify a deleted workflow"
+           )}
+
+        {:error, %Ecto.Changeset{} = changeset} ->
+          {:noreply,
+           socket
+           |> assign_changeset(changeset)
+           |> mark_validated()
+           |> put_flash(:error, "Workflow could not be saved")
+           |> push_patches_applied(initial_params)}
+      end
+    end
+  end
+
   defp check_user_can_manual_run_workflow(socket) do
     case socket.assigns do
       %{
@@ -2149,7 +2175,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
-  defp maybe_sync_to_github(socket, %{
+  defp sync_to_github(socket, %{
          "github_sync" => %{"commit_message" => commit_message}
        }) do
     case VersionControl.initiate_sync(
@@ -2179,8 +2205,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
         )
     end
   end
-
-  defp maybe_sync_to_github(socket, _params), do: socket
 
   defp maybe_disable_canvas(socket) do
     %{
@@ -2942,8 +2966,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
        |> push_event("push-hash", %{"hash" => "log"})}
     end
   end
-
-  defp loaded?(%Workflow{} = workflow), do: workflow.__meta__.state == :loaded
 
   defp render_trigger_title(trigger_type) do
     case trigger_type do
