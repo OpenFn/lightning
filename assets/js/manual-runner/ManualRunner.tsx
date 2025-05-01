@@ -61,6 +61,20 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
   const [selectedclip, setSelectedclip] = React.useState<Dataclip | null>(null);
   const [selectedcliptype, setSelectedClipType] = React.useState<string>("");
   const [selectedDates, setSelectedDates] = React.useState({ before: "", after: "" })
+  const formRef = React.useRef<HTMLFormElement>(null)
+
+  // handling of form submit
+  React.useEffect(() => {
+    function handleSubmit(e: Event) {
+      e.preventDefault();
+      pushEvent("manual_run_submit", {});
+    }
+    const form = formRef.current;
+    if (form) {
+      form.addEventListener("submit", handleSubmit);
+      return () => { form.removeEventListener("submit", handleSubmit); }
+    }
+  }, [pushEvent]);
 
   const parsedQuery = React.useMemo(() => {
     const a = parseFilter(query);
@@ -107,6 +121,39 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
     })
   }, [pushEvent, job_id, parsedQuery])
 
+  // Add effect to handle dataclip selection changes
+  React.useEffect(() => {
+    if (selectedclip) {
+      pushEvent("manual_run_change", {
+        manual: {
+          dataclip_id: selectedclip.id,
+          body: selectedclip.body
+        }
+      });
+    }
+  }, [selectedclip, pushEvent]);
+
+  React.useEffect(() => {
+    switch (selectedOption) {
+      case SeletableOptions.EMPTY:
+        pushEvent("manual_run_change", {
+          manual: {
+            body: "{}",
+            dataclip_id: null
+          }
+        })
+        break;
+      case SeletableOptions.CUSTOM:
+      case SeletableOptions.NONE:
+        pushEvent("manual_run_change", {
+          manual: {
+            body: null,
+            dataclip_id: null
+          }
+        });
+        break;
+    }
+  }, [selectedOption, pushEvent])
 
   const innerView = React.useMemo(() => {
     switch (selectedOption) {
@@ -123,15 +170,15 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
           selectedDates={selectedDates}
           setSelectedDates={setSelectedDates} />
       case SeletableOptions.IMPORT:
-        return <ImportView />
+        return <ImportView pushEvent={pushEvent} />
       case SeletableOptions.CUSTOM:
-        return <CustomView />
+        return <CustomView pushEvent={pushEvent} />
       case SeletableOptions.EMPTY:
-        return <EmptyView />
+        return <EmptyView pushEvent={pushEvent} />
       default:
         return <></>
     }
-  }, [selectedOption, query, recentclips, parsedQuery.filters, selectedcliptype, selectedDates, setSelectedDates, setSelectedClipType, clearFilter])
+  }, [selectedOption, query, recentclips, parsedQuery.filters, selectedcliptype, selectedDates, setSelectedDates, setSelectedClipType, clearFilter, pushEvent])
 
   const getActive = (v: SeletableOptions) => {
     if (selectedOption === v)
@@ -143,56 +190,62 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
     setSelectedOption(p => p === option ? SeletableOptions.NONE : option);
   }
 
-  if (selectedclip)
-    return <>
-      <div className="flex-0">
-        <div className="my-2" onClick={() => { setSelectedclip(null) }}>
-          <button className="flex w-full items-center justify-between px-4 py-2 bg-[#dbe9fe] text-[#3562dd] rounded-md hover:bg-[#b7d3fd]">
-            <span>{selectedclip.id}</span>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+
+  return <>
+    <form ref={formRef} id="manual_run_form"></form>
+    {selectedclip ?
+      <>
+        <div className="flex-0">
+          <div className="my-2" onClick={() => { setSelectedclip(null) }}>
+            <button className="flex w-full items-center justify-between px-4 py-2 bg-[#dbe9fe] text-[#3562dd] rounded-md hover:bg-[#b7d3fd]">
+              <span>{selectedclip.id}</span>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="flex flex-row">
+            <div className="basis-1/2 font-semibold text-secondary-700 text-xs xl:text-base">
+              Type
+            </div>
+            <div className="basis-1/2 text-right">
+              <DataClipTypePill type={selectedclip.type} />
+            </div>
+          </div>
+          <div className="flex flex-row mt-4">
+            <div className="basis-1/2 font-semibold text-secondary-700 text-xs xl:text-base">
+              Created at
+            </div>
+            <div className="basis-1/2 text-right">
+              {formatDate(new Date(selectedclip.inserted_at))}
+            </div>
+          </div>
         </div>
-        <div className="flex flex-row">
-          <div className="basis-1/2 font-semibold text-secondary-700 text-xs xl:text-base">
-            Type
+        <DataclipViewer dataclipId={selectedclip.id} />
+      </>
+      :
+      <div className="px-4 py-6">
+        <div className="flex flex-col gap-3">
+          <div className="font-bold flex justify-center">Select Input</div>
+          <div className="flex gap-4 justify-center">
+            <button type="button" onClick={selectOptionHandler(SeletableOptions.EMPTY)} className={"border rounded-md px-3 py-1 flex justify-center items-center gap-1 text-sm hover:bg-slate-100 hover:border-primary-300 group" + getActive(SeletableOptions.EMPTY)}>
+              {selectedOption === SeletableOptions.EMPTY ? <XCircleIcon className={closeStyle} /> : <DocumentIcon className={`${iconStyle} transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} />}
+              Empty
+            </button>
+            <button type="button" onClick={selectOptionHandler(SeletableOptions.CUSTOM)} className={"border rounded-md px-3 py-1 flex justify-center items-center gap-1 text-sm hover:bg-slate-100 hover:border-primary-300 group" + getActive(SeletableOptions.CUSTOM)}>
+              {selectedOption === SeletableOptions.CUSTOM ? <XCircleIcon className={closeStyle} /> : <PencilSquareIcon className={`${iconStyle} transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} />}
+              Custom
+            </button>
+            <button type="button" onClick={selectOptionHandler(SeletableOptions.IMPORT)} className={"border rounded-md px-3 py-1 flex justify-center items-center gap-1 text-sm hover:bg-slate-100 hover:border-primary-300 group" + getActive(SeletableOptions.IMPORT)}>
+              {selectedOption === SeletableOptions.IMPORT ? <XCircleIcon className={closeStyle} /> : <DocumentArrowUpIcon className={`${iconStyle} transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} />}
+              Import
+            </button>
           </div>
-          <div className="basis-1/2 text-right">
-            <DataClipTypePill type={selectedclip.type} />
-          </div>
-        </div>
-        <div className="flex flex-row mt-4">
-          <div className="basis-1/2 font-semibold text-secondary-700 text-xs xl:text-base">
-            Created at
-          </div>
-          <div className="basis-1/2 text-right">
-            {formatDate(new Date(selectedclip.inserted_at))}
-          </div>
+          {innerView}
         </div>
       </div>
-      <DataclipViewer dataclipId={selectedclip.id} />
-    </>
-  return <div className="px-4 py-6">
-    <div className="flex flex-col gap-3">
-      <div className="font-bold flex justify-center">Select Input</div>
-      <div className="flex gap-4 justify-center">
-        <button type="button" onClick={selectOptionHandler(SeletableOptions.EMPTY)} className={"border rounded-md px-3 py-1 flex justify-center items-center gap-1 text-sm hover:bg-slate-100 hover:border-primary-300 group" + getActive(SeletableOptions.EMPTY)}>
-          {selectedOption === SeletableOptions.EMPTY ? <XCircleIcon className={closeStyle} /> : <DocumentIcon className={`${iconStyle} transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} />}
-          Empty
-        </button>
-        <button type="button" onClick={selectOptionHandler(SeletableOptions.CUSTOM)} className={"border rounded-md px-3 py-1 flex justify-center items-center gap-1 text-sm hover:bg-slate-100 hover:border-primary-300 group" + getActive(SeletableOptions.CUSTOM)}>
-          {selectedOption === SeletableOptions.CUSTOM ? <XCircleIcon className={closeStyle} /> : <PencilSquareIcon className={`${iconStyle} transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} />}
-          Custom
-        </button>
-        <button type="button" onClick={selectOptionHandler(SeletableOptions.IMPORT)} className={"border rounded-md px-3 py-1 flex justify-center items-center gap-1 text-sm hover:bg-slate-100 hover:border-primary-300 group" + getActive(SeletableOptions.IMPORT)}>
-          {selectedOption === SeletableOptions.IMPORT ? <XCircleIcon className={closeStyle} /> : <DocumentArrowUpIcon className={`${iconStyle} transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} />}
-          Import
-        </button>
-      </div>
-      {innerView}
-    </div>
-  </div>
+    }
+  </>
 }
 
 function truncateUid(id: string) {
@@ -308,7 +361,7 @@ const NoneView: React.FC<{
   </>
 }
 
-const ImportView = () => {
+const ImportView: React.FC<{ pushEvent: (event: string, data: any) => void }> = ({ pushEvent }) => {
   return <>
     <div className="col-span-full">
       <div className="mt-2 flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-10">
@@ -317,7 +370,29 @@ const ImportView = () => {
           <div className="mt-4 flex text-sm/6 text-gray-600">
             <label htmlFor="file-upload" className="relative cursor-pointer rounded-md bg-white font-semibold text-indigo-600 focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-2 focus-within:outline-hidden hover:text-indigo-500">
               <span>Upload a file</span>
-              <input id="file-upload" name="file-upload" type="file" className="sr-only" />
+              <input
+                id="file-upload"
+                name="file-upload"
+                type="file"
+                className="sr-only"
+                accept=".json"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      const content = event.target?.result;
+                      pushEvent("manual_run_change", {
+                        manual: {
+                          body: content,
+                          dataclip_id: null
+                        }
+                      });
+                    };
+                    reader.readAsText(file);
+                  }
+                }}
+              />
             </label>
             <p className="pl-1">or drag and drop</p>
           </div>
@@ -328,7 +403,16 @@ const ImportView = () => {
   </>
 }
 
-const EmptyView = () => {
+const EmptyView: React.FC<{ pushEvent: (event: string, data: any) => void }> = ({ pushEvent }) => {
+  React.useEffect(() => {
+    pushEvent("manual_run_change", {
+      manual: {
+        body: "{}",
+        dataclip_id: null
+      }
+    });
+  }, [pushEvent]);
+
   return <div className="flex flex-col items-center gap-2 text-xs py-5">
     <div className="flex gap-1">
       <InformationCircleIcon className={`${iconStyle} text-yellow-700`} />
@@ -340,13 +424,37 @@ const EmptyView = () => {
   </div>
 }
 
-const CustomView = () => {
+const CustomView: React.FC<{ pushEvent: (event: string, data: any) => void }> = ({ pushEvent }) => {
+  const [editorValue, setEditorValue] = React.useState("");
+
+  const isValidJson = React.useMemo(() => {
+    try {
+      JSON.parse(editorValue);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }, [editorValue])
+
+  const handleEditorChange = React.useCallback((value: string) => {
+    setEditorValue(value);
+    if (isValidJson)
+      pushEvent("manual_run_change", {
+        manual: {
+          body: value,
+          dataclip_id: null
+        }
+      });
+  }, [isValidJson, pushEvent]);
+
   return <div className='relative h-[420px]'>
     <div className="font-semibold mb-3 text-gray-600">Create a new input</div>
+    {!isValidJson ? <div className="text-red-400">Invalid JSON</div> : null}
     <MonacoEditor
       defaultLanguage="json"
       theme="default"
-      value=""
+      value={editorValue}
+      onChange={handleEditorChange}
       loading={<div>Loading...</div>}
       options={{
         readOnly: false,
