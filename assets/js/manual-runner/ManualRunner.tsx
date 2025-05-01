@@ -295,6 +295,8 @@ const NoneView: React.FC<{
 }> = ({ dataclips, query, setQuery, setSelected, filters, selectedcliptype, setSelectedclipType, clearFilter, selectedDates, setSelectedDates }) => {
   const [typesOpen, setTypesOpen] = React.useState(false);
   const [dateOpen, setDateOpen] = React.useState(false);
+  const calendarRef = useOutsideClick<HTMLDivElement>(() => { setDateOpen(false) });
+  const typesRef = useOutsideClick<HTMLUListElement>(() => { setTypesOpen(false) });
 
   const pills = Object.entries(filters).map(([key, value]) => <div className="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">{key}: {value} <button onClick={() => { clearFilter(key as FilterTypes) }} className="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"><XMarkIcon /> </button></div>)
   return <>
@@ -309,7 +311,7 @@ const NoneView: React.FC<{
             <button onClick={() => { setDateOpen(p => !p) }} className="border rounded-md px-3 py-1 h-full flex justify-center items-center hover:bg-slate-100 hover:border-slate-300">
               <CalendarDaysIcon className="w-6 h-6 text-slate-700" />
             </button>
-            <div className={`absolute z-10 mt-1 p-2 bg-white rounded-md shadow-lg ring-1 ring-black/5 focus:outline-none w-auto right-0 ${dateOpen ? "" : "hidden"} `}>
+            <div ref={calendarRef} className={`absolute z-10 mt-1 p-2 bg-white rounded-md shadow-lg ring-1 ring-black/5 focus:outline-none w-auto right-0 ${dateOpen ? "" : "hidden"} `}>
               <div className="py-3" role="none">
                 <div className="px-4 py-1 text-gray-500 text-sm">
                   Filter by Last Date
@@ -341,8 +343,8 @@ const NoneView: React.FC<{
             <button onClick={() => { setTypesOpen(p => !p) }} className="border rounded-md px-3 py-1 h-full flex justify-center items-center hover:bg-slate-100 hover:border-slate-300">
               <RectangleGroupIcon className="w-6 h-6 text-slate-700" />
             </button>
-            <ul className={`absolute z-10 mt-1 bg-white ring-1 ring-black/5 focus:outline-none rounded-md shadow-lg right-0 w-auto ${typesOpen ? "" : "hidden"} `}>
-              {DataclipTypes.map(type => { return <li key={type} onClick={() => { setSelectedclipType(type === selectedcliptype ? "" : type) }} className={`px-4 py-2 hover:bg-blue-100 cursor-pointer text-nowrap flex items-center gap-2 text-base text-slate-700 ${type === selectedcliptype ? "bg-blue-200 text-blue-700 font-semibold" : ""}`}> {type} {selectedcliptype === type ? <CheckIcon className={iconStyle} /> : null} </li> })}
+            <ul ref={typesRef} className={`absolute z-10 mt-1 bg-white ring-1 ring-black/5 focus:outline-none rounded-md shadow-lg right-0 w-auto ${typesOpen ? "" : "hidden"} `}>
+              {DataclipTypes.map(type => { return <li key={type} onClick={() => { setSelectedclipType(type === selectedcliptype ? "" : type) }} className={`px-4 py-2 hover:bg-slate-100 cursor-pointer text-nowrap flex items-center gap-2 text-base text-slate-700 ${type === selectedcliptype ? "bg-blue-200 text-blue-700" : ""}`}> {type} <CheckIcon strokeWidth={3} className={`${iconStyle} ${type !== selectedcliptype ? "invisible" : ""}`} /> </li> })}
             </ul>
           </div>
         </div>
@@ -515,4 +517,23 @@ function formatDate(date: Date, locale: string = 'en-US'): string {
     second: '2-digit',
     hour12: false,
   }).format(date).replace(/\//g, "-");
+}
+
+function useOutsideClick<T extends HTMLElement>(callback: () => void) {
+  const ref = React.useRef<T>(null);
+
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (ref.current && !ref.current.contains(event.target as Node)) {
+        callback();
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [callback]);
+
+  return ref;
 }
