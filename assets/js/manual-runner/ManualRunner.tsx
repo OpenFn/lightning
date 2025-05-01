@@ -1,7 +1,7 @@
 import { MonacoEditor } from "#/monaco";
 import { DataclipViewer } from "#/react/components/DataclipViewer";
 import type { WithActionProps } from "#/react/lib/with-props";
-import { CalendarIcon, CheckIcon, DocumentArrowUpIcon, DocumentIcon, DocumentTextIcon, InformationCircleIcon, MagnifyingGlassIcon, PencilSquareIcon, Squares2X2Icon, XMarkIcon } from "@heroicons/react/24/outline";
+import { CalendarDaysIcon, CheckIcon, DocumentArrowUpIcon, DocumentIcon, DocumentTextIcon, InformationCircleIcon, MagnifyingGlassIcon, PencilSquareIcon, RectangleGroupIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { CloudArrowUpIcon, XCircleIcon } from "@heroicons/react/24/solid";
 import React from "react";
 interface ManualRunnerProps {
@@ -182,7 +182,7 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
 
   const getActive = (v: SeletableOptions) => {
     if (selectedOption === v)
-      return " border-primary-600 text-primary-600 font-bold bg-slate-100"
+      return " border-primary-600 text-primary-600 bg-slate-100"
     return ""
   }
 
@@ -198,7 +198,7 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
         <div className="flex-0">
           <div className="my-2" onClick={() => { setSelectedclip(null) }}>
             <button className="flex w-full items-center justify-between px-4 py-2 bg-[#dbe9fe] text-[#3562dd] rounded-md hover:bg-[#b7d3fd]">
-              <span>{selectedclip.id}</span>
+              <div className="truncate">{selectedclip.id}</div>
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -227,20 +227,21 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
       <div className="px-4 py-6">
         <div className="flex flex-col gap-3">
           <div className="font-bold flex justify-center">Select Input</div>
-          <div className="flex gap-4 justify-center">
-            <button type="button" onClick={selectOptionHandler(SeletableOptions.EMPTY)} className={"border rounded-md px-3 py-1 flex justify-center items-center gap-1 text-sm hover:bg-slate-100 hover:border-primary-300 group" + getActive(SeletableOptions.EMPTY)}>
-              {selectedOption === SeletableOptions.EMPTY ? <XCircleIcon className={closeStyle} /> : <DocumentIcon className={`${iconStyle} transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} />}
+          <div className="flex gap-4 justify-center flex-wrap">
+            <button type="button" onClick={selectOptionHandler(SeletableOptions.EMPTY)} className={"border min-w-[147px] text-base rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group" + getActive(SeletableOptions.EMPTY)}>
+              {selectedOption === SeletableOptions.EMPTY ? <XCircleIcon className={closeStyle} /> : <DocumentIcon className={`text-gray-600 w-4 h-4 transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} />}
               Empty
             </button>
-            <button type="button" onClick={selectOptionHandler(SeletableOptions.CUSTOM)} className={"border rounded-md px-3 py-1 flex justify-center items-center gap-1 text-sm hover:bg-slate-100 hover:border-primary-300 group" + getActive(SeletableOptions.CUSTOM)}>
-              {selectedOption === SeletableOptions.CUSTOM ? <XCircleIcon className={closeStyle} /> : <PencilSquareIcon className={`${iconStyle} transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} />}
+            <button type="button" onClick={selectOptionHandler(SeletableOptions.CUSTOM)} className={"border min-w-[147px] text-base rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group" + getActive(SeletableOptions.CUSTOM)}>
+              {selectedOption === SeletableOptions.CUSTOM ? <XCircleIcon className={closeStyle} /> : <PencilSquareIcon className={`text-gray-600 w-4 h-4 transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} />}
               Custom
             </button>
-            <button type="button" onClick={selectOptionHandler(SeletableOptions.IMPORT)} className={"border rounded-md px-3 py-1 flex justify-center items-center gap-1 text-sm hover:bg-slate-100 hover:border-primary-300 group" + getActive(SeletableOptions.IMPORT)}>
-              {selectedOption === SeletableOptions.IMPORT ? <XCircleIcon className={closeStyle} /> : <DocumentArrowUpIcon className={`${iconStyle} transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} />}
+            <button type="button" onClick={selectOptionHandler(SeletableOptions.IMPORT)} className={"border min-w-[147px] text-base rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group" + getActive(SeletableOptions.IMPORT)}>
+              {selectedOption === SeletableOptions.IMPORT ? <XCircleIcon className={closeStyle} /> : <DocumentArrowUpIcon className={`text-gray-600 w-4 h-4 transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} />}
               Import
             </button>
           </div>
+          <hr className="my-3" />
           {innerView}
         </div>
       </div>
@@ -297,7 +298,6 @@ const NoneView: React.FC<{
 
   const pills = Object.entries(filters).map(([key, value]) => <div className="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">{key}: {value} <button onClick={() => { clearFilter(key as FilterTypes) }} className="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"><XMarkIcon /> </button></div>)
   return <>
-    <hr className="my-3" />
     <div className="flex flex-col gap-3">
       <div>
         <div className="relative flex gap-2">
@@ -307,7 +307,7 @@ const NoneView: React.FC<{
           </div>
           <div className="relative inline-block">
             <button onClick={() => { setDateOpen(p => !p) }} className="border rounded-md px-3 py-1 h-full flex justify-center items-center hover:bg-slate-100 hover:border-slate-300">
-              <CalendarIcon className="w-6 h-6 text-slate-700" />
+              <CalendarDaysIcon className="w-6 h-6 text-slate-700" />
             </button>
             <div className={`absolute z-10 mt-1 p-2 bg-white rounded-md shadow-lg ring-1 ring-black/5 focus:outline-none w-auto right-0 ${dateOpen ? "" : "hidden"} `}>
               <div className="py-3" role="none">
@@ -339,10 +339,10 @@ const NoneView: React.FC<{
           </div>
           <div className="relative inline-block">
             <button onClick={() => { setTypesOpen(p => !p) }} className="border rounded-md px-3 py-1 h-full flex justify-center items-center hover:bg-slate-100 hover:border-slate-300">
-              <Squares2X2Icon className="w-6 h-6 text-slate-700" />
+              <RectangleGroupIcon className="w-6 h-6 text-slate-700" />
             </button>
             <ul className={`absolute z-10 mt-1 bg-white ring-1 ring-black/5 focus:outline-none rounded-md shadow-lg right-0 w-auto ${typesOpen ? "" : "hidden"} `}>
-              {DataclipTypes.map(type => <li key={type} onClick={() => { setSelectedclipType(type === selectedcliptype ? "" : type) }} className={`px-4 py-2 hover:bg-blue-100 cursor-pointer text-nowrap flex items-center gap-2 text-base text-slate-700 ${type === selectedcliptype ? "bg-blue-200 text-blue-700 font-semibold" : ""}`}> {type} {selectedcliptype === type ? <CheckIcon className={iconStyle} /> : null} </li>)}
+              {DataclipTypes.map(type => { return <li key={type} onClick={() => { setSelectedclipType(type === selectedcliptype ? "" : type) }} className={`px-4 py-2 hover:bg-blue-100 cursor-pointer text-nowrap flex items-center gap-2 text-base text-slate-700 ${type === selectedcliptype ? "bg-blue-200 text-blue-700 font-semibold" : ""}`}> {type} {selectedcliptype === type ? <CheckIcon className={iconStyle} /> : null} </li> })}
             </ul>
           </div>
         </div>
@@ -351,9 +351,9 @@ const NoneView: React.FC<{
         </div>
       </div>
       {dataclips.length ? dataclips.map(clip => {
-        return <div onClick={() => { setSelected(clip); }} className="flex items-center justify-between border rounded px-3 py-2 cursor-pointer hover:bg-slate-100 hover:border-primary-600 group">
+        return <div onClick={() => { setSelected(clip); }} className="flex items-center justify-between border rounded-md px-3 py-2 cursor-pointer hover:bg-slate-100 hover:border-primary-600 group">
           <div className="flex gap-1 items-center text-base"> <DocumentTextIcon className={`${iconStyle} transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} /> {truncateUid(clip.id)} </div>
-          <div className="text-xs">{clip.updated_at}</div>
+          <div className="text-xs truncate ml-2">{formatDate(new Date(clip.updated_at))}</div>
         </div>
       }) :
         <div className="text-center text-sm">No dataclips found. pick an option above</div>}
@@ -508,5 +508,5 @@ function formatDate(date: Date, locale: string = 'en-US'): string {
     minute: '2-digit',
     second: '2-digit',
     hour12: false,
-  }).format(date);
+  }).format(date).replace(/\//g, "-");
 }
