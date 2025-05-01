@@ -19,6 +19,12 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v2.12.2] - 2025-04-29
+
+### Changed
+
 - Tweak language on webhook auth method modal and list action
   [#3166](https://github.com/OpenFn/lightning/pull/3166)
 - Re-order nightly cron jobs to reduce acute stress on db
