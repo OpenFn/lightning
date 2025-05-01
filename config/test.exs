@@ -53,6 +53,8 @@ config :lightning, LightningWeb.Endpoint,
     "/8zedVJLxvmGGFoRExE3e870g7CGZZQ1Vq11A5MbQGPKOpK57MahVsPW6Wkkv61n",
   server: true
 
+config :lightning, Lightning.WebhookRateLimiter, start: true
+
 config :lightning, Lightning.Runtime.RuntimeManager,
   ws_url: "ws://localhost:4002/worker"
 

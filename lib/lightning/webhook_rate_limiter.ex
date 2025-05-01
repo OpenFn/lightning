@@ -2,9 +2,6 @@ defmodule Lightning.WebhookRateLimiter do
   @moduledoc false
   use GenServer
 
-  @capacity 10
-  @refill_per_sec 2
-
   require Logger
 
   def child_spec(opts) do
@@ -17,31 +14,36 @@ defmodule Lightning.WebhookRateLimiter do
 
     %{
       id: id,
-      start: {__MODULE__, :start_link, [name]},
+      start: {__MODULE__, :start_link, [Keyword.put(opts, :name, name)]},
       shutdown: 10_000,
       restart: :transient
     }
   end
 
-  def start_link(name) do
+  def start_link(opts) do
+    name = Keyword.fetch!(opts, :name)
+
     with {:error, {:already_started, pid}} <-
-           GenServer.start_link(__MODULE__, [], name: via_tuple(name)) do
+           GenServer.start_link(__MODULE__, opts, name: via_tuple(name)) do
       Logger.info("already started at #{inspect(pid)}, returning :ignore")
       :ignore
     end
   end
 
   @impl true
-  def init([]) do
+  def init(opts) do
     Process.flag(:trap_exit, true)
 
-    {:ok, %{table: :ets.new(:table, [:set])}}
+    capacity = Keyword.fetch!(opts, :capacity)
+    refill = Keyword.fetch!(opts, :refill_per_second)
+
+    {:ok, %{table: :ets.new(:table, [:set]), capacity: capacity, refill_per_second: refill}}
   end
 
-  def check_rate(bucket, cost \\ 1, name \\ __MODULE__) do
+  def check_rate(bucket, capacity \\ nil, refill \\ nil, name \\ __MODULE__) do
     name
     |> via_tuple()
-    |> GenServer.call({:check_rate, bucket, cost})
+    |> GenServer.call({:check_rate, bucket, capacity, refill})
   end
 
   def inspect_table(name \\ __MODULE__) do
@@ -51,8 +53,8 @@ defmodule Lightning.WebhookRateLimiter do
   end
 
   @impl true
-  def handle_call({:check_rate, bucket, cost}, _from, %{table: table} = state) do
-    {:reply, do_check_rate(table, bucket, cost), state}
+  def handle_call({:check_rate, bucket, capacity, refill}, _from, state) do
+    {:reply, do_check_rate(state, bucket, capacity, refill), state}
   end
 
   @impl true
@@ -72,17 +74,24 @@ defmodule Lightning.WebhookRateLimiter do
     {:stop, :normal, state}
   end
 
-  def do_check_rate(table, bucket, cost) do
+  def do_check_rate(
+        %{table: table} = config,
+        bucket,
+        capacity,
+        refill_per_sec
+      ) do
     now = System.monotonic_time(:millisecond)
+    capacity = capacity || config[:capacity]
+    refill_per_sec = refill_per_sec || config[:refill_per_second]
 
-    :ets.insert_new(table, {bucket, {@capacity, now}})
+    :ets.insert_new(table, {bucket, {capacity, now}})
     [{^bucket, {level, updated}}] = :ets.lookup(table, bucket)
 
-    refilled = div(now - updated, 1_000) * @refill_per_sec
-    current = min(@capacity, level + refilled)
+    refilled = div(now - updated, 1_000) * refill_per_sec
+    current = min(capacity, level + refilled)
 
-    if current >= cost do
-      level = current - cost
+    if current >= 1 do
+      level = current - 1
       :ets.insert(table, {bucket, {level, now}})
 
       {:allow, level}
@@ -91,9 +100,6 @@ defmodule Lightning.WebhookRateLimiter do
       {:deny, 1}
     end
   end
-
-  def capacity, do: @capacity
-  def refill_per_second, do: @refill_per_sec
 
   def via_tuple(name),
     do: {:via, Horde.Registry, {Lightning.HordeRegistry, name}}
