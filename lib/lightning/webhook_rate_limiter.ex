@@ -37,13 +37,20 @@ defmodule Lightning.WebhookRateLimiter do
     capacity = Keyword.fetch!(opts, :capacity)
     refill = Keyword.fetch!(opts, :refill_per_second)
 
-    {:ok, %{table: :ets.new(:table, [:set]), capacity: capacity, refill: refill}}
+    {:ok,
+     %{
+       table: :ets.new(:table, [:set]),
+       capacity: capacity,
+       refill_per_second: refill
+     }}
   end
 
-  def check_rate(bucket, cost \\ 1, name \\ __MODULE__) do
+  def check_rate(bucket, opts \\ []) do
+    name = Keyword.get(opts, :name, __MODULE__)
+
     name
     |> via_tuple()
-    |> GenServer.call({:check_rate, bucket, cost})
+    |> GenServer.call({:check_rate, bucket, opts})
   end
 
   def inspect_table(name \\ __MODULE__) do
@@ -53,8 +60,8 @@ defmodule Lightning.WebhookRateLimiter do
   end
 
   @impl true
-  def handle_call({:check_rate, bucket, cost}, _from, state) do
-    {:reply, do_check_rate(state, bucket, cost), state}
+  def handle_call({:check_rate, bucket, opts}, _from, state) do
+    {:reply, do_check_rate(state, bucket, opts), state}
   end
 
   @impl true
@@ -74,12 +81,10 @@ defmodule Lightning.WebhookRateLimiter do
     {:stop, :normal, state}
   end
 
-  def do_check_rate(
-        %{table: table, capacity: capacity, refill: refill_per_sec},
-        bucket,
-        cost
-      ) do
+  def do_check_rate(%{table: table} = config, bucket, opts) do
     now = System.monotonic_time(:millisecond)
+    capacity = opts[:capacity] || config[:capacity]
+    refill_per_sec = opts[:refill_per_second] || config[:refill_per_second]
 
     :ets.insert_new(table, {bucket, {capacity, now}})
     [{^bucket, {level, updated}}] = :ets.lookup(table, bucket)
@@ -87,8 +92,8 @@ defmodule Lightning.WebhookRateLimiter do
     refilled = div(now - updated, 1_000) * refill_per_sec
     current = min(capacity, level + refilled)
 
-    if current >= cost do
-      level = current - cost
+    if current >= 1 do
+      level = current - 1
       :ets.insert(table, {bucket, {level, now}})
 
       {:allow, level}
