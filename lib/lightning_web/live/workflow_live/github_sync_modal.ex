@@ -25,7 +25,7 @@ defmodule LightningWeb.WorkflowLive.GithubSyncModal do
   @impl true
   def render(assigns) do
     ~H"""
-    <form id={@id <> "-form"} phx-submit="save">
+    <form id={@id <> "-form"} phx-submit="save-and-sync">
       <.modal
         id={@id}
         show={true}

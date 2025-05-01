@@ -2579,7 +2579,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       # submit form
       view
-      |> render_hook("save", %{
+      |> form("#github-sync-modal-form")
+      |> render_submit(%{
         "github_sync" => %{"commit_message" => "some message"}
       })
 
@@ -2667,7 +2668,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       # submit form
       view
-      |> form("#workflow-form")
+      |> form("#github-sync-modal-form")
       |> render_submit(%{"github_sync" => %{"commit_message" => "some message"}})
 
       assert_patched(
