@@ -1,4 +1,4 @@
-defmodule Lightning.WebhookRateLimiter do
+defmodule Lightning.DistributedRateLimiter do
   @moduledoc false
   use GenServer
 
@@ -98,8 +98,8 @@ defmodule Lightning.WebhookRateLimiter do
 
       {:allow, level}
     else
-      # can retry after 1 second
-      {:deny, 1}
+      wait_ms = 1_000 - (now - updated)
+      {:deny, wait_ms}
     end
   end
 

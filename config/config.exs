@@ -25,7 +25,7 @@ config :lightning, LightningWeb.Endpoint,
   pubsub_server: Lightning.PubSub,
   live_view: [signing_salt: "EfrmuOUr"]
 
-config :lightning, Lightning.WebhookRateLimiter,
+config :lightning, Lightning.DistributedRateLimiter,
   start: false,
   capacity: 10,
   refill_per_second: 2
