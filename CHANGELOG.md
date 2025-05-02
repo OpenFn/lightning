@@ -17,6 +17,8 @@ and this project adheres to
 
 ### Added
 
+- Support a rate-limiter on the /i endpoint
+  [#3185](https://github.com/OpenFn/lightning/issues/3185)
 - Added a custom metric to track projects that could benefit from additional
   worker pods.
   [#3189](https://github.com/OpenFn/lightning/issues/3189)
