@@ -935,40 +935,40 @@ defmodule Lightning.Projects do
         project_workorders_query
       end
 
-    # Optimize the workorders query by using a more efficient join strategy
-    workorders_delete_query =
-      WorkOrder
-      |> with_cte("workorders_to_delete",
-        as: ^limit(workorders_query, ^batch_size)
-      )
-      |> join(:inner, [wo], wtd in "workorders_to_delete", on: wo.id == wtd.id)
-      |> select([wo], wo.id)
-
-    # Optimize the steps query by using a more efficient join strategy and only selecting IDs
-    steps_delete_query =
-      Step
-      |> join(:inner, [s], r in assoc(s, :runs), as: :runs)
-      |> with_cte("workorders_to_delete",
-        as: ^limit(workorders_query, ^batch_size)
-      )
-      |> join(:inner, [runs: r], wtd in "workorders_to_delete",
-        on: r.work_order_id == wtd.id
-      )
-      |> select([s], s.id)
-
     workorders_count = Repo.aggregate(workorders_query, :count)
 
     for _i <- 1..ceil(workorders_count / batch_size) do
-      Repo.transaction(
-        fn ->
-          # Delete steps first since they reference workorders
-          {_count, _} = Repo.delete_all(steps_delete_query, returning: false)
+      # First get the workorder IDs for this batch
+      workorder_ids =
+        workorders_query
+        |> limit(^batch_size)
+        |> select([wo], wo.id)
+        |> Repo.all()
 
-          # Then delete workorders
-          {_count, _} = Repo.delete_all(workorders_delete_query, returning: false)
-        end,
-        timeout: Config.default_ecto_database_timeout() * 3
-      )
+      if length(workorder_ids) > 0 do
+        Repo.transaction(
+          fn ->
+            # Delete steps associated with these workorders
+            {_count, _} =
+              from(s in Step,
+                join: rs in RunStep,
+                on: rs.step_id == s.id,
+                join: r in Run,
+                on: r.id == rs.run_id,
+                where: r.work_order_id in ^workorder_ids
+              )
+              |> Repo.delete_all(returning: false)
+
+            # Then delete the workorders
+            {_count, _} =
+              from(wo in WorkOrder,
+                where: wo.id in ^workorder_ids
+              )
+              |> Repo.delete_all(returning: false)
+          end,
+          timeout: Config.default_ecto_database_timeout() * 3
+        )
+      end
     end
 
     # If it's on a retention cleanup, it also deletes unused snapshots after the workorders deletion.
