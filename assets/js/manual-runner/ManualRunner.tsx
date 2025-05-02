@@ -64,6 +64,13 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
   const [selectedDates, setSelectedDates] = React.useState({ before: "", after: "" })
   const formRef = React.useRef<HTMLFormElement>(null)
 
+
+  React.useEffect(() => {
+    props.handleEvent("manual_run_created", payload => {
+      if (payload.dataclip)
+        setSelectedclip(payload.dataclip);
+    })
+  }, [props])
   // handling of form submit
   React.useEffect(() => {
     function handleSubmit(e: Event) {

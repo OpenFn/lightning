@@ -1817,11 +1817,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
           snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
 
+          # Get the dataclip for the run
+          dataclip = Invocation.get_dataclip_for_run(run.id)
+
           {:noreply,
            socket
            |> assign_workflow(workflow, snapshot)
            |> follow_run(run)
-           |> push_event("push-hash", %{"hash" => "log"})}
+           |> push_event("push-hash", %{"hash" => "log"})
+           |> push_event("manual_run_created", %{dataclip: dataclip})}
 
         {:error, %Ecto.Changeset{data: %WorkOrders.Manual{}} = changeset} ->
           {:noreply,
