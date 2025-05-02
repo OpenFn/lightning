@@ -72,7 +72,7 @@ const FileUploader: React.FC<FileUploader> = ({
       setVanishingIssue(`Only ${count} files can be uploaded`)
       return;
     } else {
-      onUpload(files.map(file => ({ name: file.name, type: file.type, size: file.size })));
+      onUpload(files);
     }
 
   }, [count, currFiles.length, formats, onUpload])

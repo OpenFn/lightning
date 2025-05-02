@@ -172,7 +172,7 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
           selectedDates={selectedDates}
           setSelectedDates={setSelectedDates} />
       case SeletableOptions.IMPORT:
-        return <ImportView />
+        return <ImportView pushEvent={pushEvent} />
       case SeletableOptions.CUSTOM:
         return <CustomView pushEvent={pushEvent} />
       case SeletableOptions.EMPTY:
@@ -365,8 +365,22 @@ const NoneView: React.FC<{
   </>
 }
 
-const ImportView: React.FC = () => {
+
+async function readFileContent(file: File): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => { resolve(reader.result as string); }
+    reader.onerror = () => { reject(reader.error); }
+
+    reader.readAsText(file);
+  });
+}
+
+
+const ImportView: React.FC<{ pushEvent: (event: string, data: any) => void }> = ({ pushEvent }) => {
   const [importedFiles, setImportedFiles] = React.useState<File[]>([]);
+  const [isValidJSON, setIsValidJSON] = React.useState(true);
 
   function uploadFiles(f: File[]) {
     setImportedFiles([...importedFiles, ...f]);
@@ -376,12 +390,51 @@ const ImportView: React.FC = () => {
     setImportedFiles(prev => prev.filter((_, index) => index !== indexImg));
   }
 
-  return <FileUploader
-    currFiles={importedFiles}
-    onUpload={uploadFiles}
-    onDelete={deleteFile}
-    count={1}
-    formats={["json"]} />
+  React.useEffect(() => {
+    if (importedFiles.length === 1) {
+      const file = importedFiles[0];
+      if (!file) return;
+      void readFileContent(file).then(content => {
+        // check whether JSON is valid
+        try {
+          JSON.parse(content);
+          setIsValidJSON(true);
+          pushEvent("manual_run_change", {
+            manual: {
+              body: content,
+              dataclip_id: null
+            }
+          });
+        } catch (e: any) {
+          setIsValidJSON(false)
+        }
+        return;
+      })
+    } else {
+      setIsValidJSON(true)
+      pushEvent("manual_run_change", {
+        manual: {
+          body: null,
+          dataclip_id: null
+        }
+      });
+    }
+  }, [importedFiles, importedFiles.length, pushEvent])
+
+  return <>
+    {
+      !isValidJSON ?
+        <div className="text-red-700 text-sm flex gap-1 mb-1 items-center"><InformationCircleIcon className={iconStyle} /> File has invalid JSON content</div>
+        :
+        null
+    }
+    <FileUploader
+      currFiles={importedFiles}
+      onUpload={uploadFiles}
+      onDelete={deleteFile}
+      count={1}
+      formats={["json"]} />
+  </>
 }
 
 const EmptyView: React.FC = () => {
