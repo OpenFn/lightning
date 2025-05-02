@@ -887,7 +887,7 @@ defmodule Lightning.Projects do
     :ok =
       project
       |> project_workorders_query()
-      |> delete_workorders_history(1000, period_days)
+      |> delete_workorders_history(500, period_days)
 
     dataclips_query =
       from d in Dataclip,
