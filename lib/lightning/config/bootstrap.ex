@@ -229,7 +229,8 @@ defmodule Lightning.Config.Bootstrap do
        args: %{"type" => "weekly_project_digest"}},
       {"0 10 1 * *", Lightning.DigestEmailWorker,
        args: %{"type" => "monthly_project_digest"}},
-      {"*/15 * * * *", Lightning.Projects, args: %{"type" => "data_retention"}},
+      #  TODO - move this into an ENV?
+      {"17 */2 * * *", Lightning.Projects, args: %{"type" => "data_retention"}},
       {"*/10 * * * *", Lightning.KafkaTriggers.DuplicateTrackingCleanupWorker}
     ]
 
