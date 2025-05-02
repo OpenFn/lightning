@@ -9,7 +9,7 @@ defmodule Lightning.Application do
 
   @rate_limiter_opts Application.compile_env!(
                        :lightning,
-                       Lightning.WebhookRateLimiter
+                       Lightning.DistributedRateLimiter
                      )
 
   @impl true
@@ -189,7 +189,7 @@ defmodule Lightning.Application do
     if @rate_limiter_opts[:start] do
       Horde.DynamicSupervisor.start_child(
         Lightning.DistributedSupervisor,
-        {Lightning.WebhookRateLimiter, @rate_limiter_opts}
+        {Lightning.DistributedRateLimiter, @rate_limiter_opts}
       )
     end
 

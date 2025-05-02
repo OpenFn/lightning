@@ -8,6 +8,9 @@ defmodule Lightning.Extensions.RateLimiting do
   @type message :: Lightning.Extensions.Message.t()
 
   defmodule Context do
+    @moduledoc """
+    Context for the object (bucket) under rate limiting.
+    """
     @type t :: %Context{project_id: Ecto.UUID.t()}
 
     defstruct [:project_id]

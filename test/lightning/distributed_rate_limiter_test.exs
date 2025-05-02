@@ -1,8 +1,8 @@
-defmodule Lightning.WebhookRateLimiterTest do
+defmodule Lightning.DistributedRateLimiterTest do
   @moduledoc false
   use ExUnit.Case
 
-  alias Lightning.WebhookRateLimiter
+  alias Lightning.DistributedRateLimiter
 
   @default_capacity 10
 
@@ -14,8 +14,16 @@ defmodule Lightning.WebhookRateLimiterTest do
 
       Enum.each(1..initial_capacity, fn i ->
         level = initial_capacity - i
-        assert match?({:allow, ^level}, WebhookRateLimiter.check_rate(bucket1))
-        assert match?({:allow, ^level}, WebhookRateLimiter.check_rate(bucket2))
+
+        assert match?(
+                 {:allow, ^level},
+                 DistributedRateLimiter.check_rate(bucket1)
+               )
+
+        assert match?(
+                 {:allow, ^level},
+                 DistributedRateLimiter.check_rate(bucket2)
+               )
       end)
     end
 
@@ -25,15 +33,15 @@ defmodule Lightning.WebhookRateLimiterTest do
       bucket2 = "project#{System.unique_integer()}"
 
       Enum.each(1..initial_capacity, fn i ->
-        assert {:allow, level} = WebhookRateLimiter.check_rate(bucket1)
+        assert {:allow, level} = DistributedRateLimiter.check_rate(bucket1)
         assert level == initial_capacity - i
       end)
 
-      assert {:allow, level} = WebhookRateLimiter.check_rate(bucket2)
+      assert {:allow, level} = DistributedRateLimiter.check_rate(bucket2)
       assert level == initial_capacity - 1
 
-      assert {:deny, wait_ms} = WebhookRateLimiter.check_rate(bucket1)
-      assert 0 < wait_ms and wait_ms < 1_000
+      assert {:deny, wait_ms} = DistributedRateLimiter.check_rate(bucket1) |> dbg
+      assert 500 < wait_ms and wait_ms <= 1_000
     end
 
     # Synthetic cluster not working.
@@ -41,7 +49,7 @@ defmodule Lightning.WebhookRateLimiterTest do
     # 0. Disable Endpoint server
     # 1. Run node1 on one terminal: iex --sname node1@localhost --cookie hordecookie -S mix phx.server
     # 2. Run node2 on another terminal: iex --sname node2@localhost --cookie hordecookie -S mix phx.server
-    # 3. Call Lightning.WebhookRateLimiter.inspect_table() on both iex and they show the same ets table process and node.
+    # 3. Call Lightning.DistributedRateLimiter.inspect_table() on both iex and they show the same ets table process and node.
     @tag skip: true
     test "consumes the bucket remotely" do
       {:ok, peer, _node1, node2} = start_nodes(:node1, :node2, ~c"localhost")
@@ -60,17 +68,17 @@ defmodule Lightning.WebhookRateLimiterTest do
       # initial_capacity = @default_capacity
       bucket = "project#{System.unique_integer()}"
 
-      dbg(WebhookRateLimiter.check_rate(bucket))
+      dbg(DistributedRateLimiter.check_rate(bucket))
 
-      # dbg :rpc.block_call(node1, WebhookRateLimiter, :inspect, [WebhookRateLimiter])
-      # dbg :rpc.block_call(node2, WebhookRateLimiter, :inspect, [WebhookRateLimiter])
+      # dbg :rpc.block_call(node1, DistributedRateLimiter, :inspect, [DistributedRateLimiter])
+      # dbg :rpc.block_call(node2, DistributedRateLimiter, :inspect, [DistributedRateLimiter])
 
       # Enum.each(1..initial_capacity-1, fn i ->
-      #   assert {:allow, level} = :rpc.call(node2, WebhookRateLimiter, :check_rate, [bucket, 1])
+      #   assert {:allow, level} = :rpc.call(node2, DistributedRateLimiter, :check_rate, [bucket, 1])
       #   assert level == initial_capacity - i - 1
       # end)
 
-      # assert {:deny, wait_ms} = WebhookRateLimiter.check_rate(bucket)
+      # assert {:deny, wait_ms} = DistributedRateLimiter.check_rate(bucket)
       # assert 0 < wait_ms and wait_ms < 1_000
 
       :peer.stop(peer)
