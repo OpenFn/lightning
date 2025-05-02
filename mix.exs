@@ -134,7 +134,7 @@ defmodule Lightning.MixProject do
       {:timex, "~> 3.7"},
       {:replug, "~> 0.1.0"},
       {:phoenix_swoosh, "~> 1.2.1"},
-      {:hammer_backend_mnesia, "~> 0.6"},
+      {:hammer_backend_mnesia, "~> 0.6.0"},
       {:hammer, "~> 6.0"},
       {:dotenvy, "~> 0.8.0"},
       {:goth, "~> 1.3"},
