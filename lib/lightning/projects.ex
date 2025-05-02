@@ -13,6 +13,7 @@ defmodule Lightning.Projects do
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserNotifier
   alias Lightning.Accounts.UserToken
+  alias Lightning.Config
   alias Lightning.ExportUtils
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
@@ -887,7 +888,10 @@ defmodule Lightning.Projects do
     :ok =
       project
       |> project_workorders_query()
-      |> delete_workorders_history(1000, period_days)
+      |> delete_workorders_history(
+        Config.activity_cleanup_chunk_size(),
+        period_days
+      )
 
     dataclips_query =
       from d in Dataclip,
@@ -903,7 +907,10 @@ defmodule Lightning.Projects do
         where: is_nil(wo.id) and is_nil(r.id) and is_nil(s.id),
         select: d.id
 
-    delete_dataclips(dataclips_query, 1000)
+    delete_dataclips(
+      dataclips_query,
+      Config.activity_cleanup_chunk_size()
+    )
 
     :ok
   end
@@ -955,7 +962,7 @@ defmodule Lightning.Projects do
           {_count, _} =
             Repo.delete_all(workorders_delete_query, returning: false)
         end,
-        timeout: 50_000
+        timeout: Config.default_ecto_database_timeout() * 3
       )
     end
 
@@ -1019,7 +1026,7 @@ defmodule Lightning.Projects do
       {_count, _dataclips} =
         Repo.delete_all(dataclips_delete_query,
           returning: false,
-          timeout: 20_000
+          timeout: Config.default_ecto_database_timeout() * 2
         )
     end
 

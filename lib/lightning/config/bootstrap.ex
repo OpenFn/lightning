@@ -211,6 +211,14 @@ defmodule Lightning.Config.Bootstrap do
              Utils.get_env([:lightning, :purge_deleted_after_days], 7)
            )
 
+    config :lightning,
+           :activity_cleanup_chunk_size,
+           env!(
+             "ACTIVITY_CLEANUP_CHUNK_SIZE",
+             :integer,
+             Utils.get_env([:lightning, :activity_cleanup_chunk_size], 500)
+           )
+
     base_cron = [
       {"* * * * *", Lightning.Workflows.Scheduler},
       {"* * * * *", ObanPruner},
@@ -221,7 +229,7 @@ defmodule Lightning.Config.Bootstrap do
        args: %{"type" => "weekly_project_digest"}},
       {"0 10 1 * *", Lightning.DigestEmailWorker,
        args: %{"type" => "monthly_project_digest"}},
-      {"30 1 * * *", Lightning.Projects, args: %{"type" => "data_retention"}},
+      {"*/15 * * * *", Lightning.Projects, args: %{"type" => "data_retention"}},
       {"*/10 * * * *", Lightning.KafkaTriggers.DuplicateTrackingCleanupWorker}
     ]
 
