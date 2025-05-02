@@ -966,7 +966,7 @@ defmodule Lightning.Projects do
               )
               |> Repo.delete_all(returning: false)
           end,
-          timeout: Config.default_ecto_database_timeout() * 3
+          timeout: Config.default_ecto_database_timeout() * 10
         )
       end
     end
@@ -1031,7 +1031,7 @@ defmodule Lightning.Projects do
       {_count, _dataclips} =
         Repo.delete_all(dataclips_delete_query,
           returning: false,
-          timeout: Config.default_ecto_database_timeout() * 2
+          timeout: Config.default_ecto_database_timeout() * 10
         )
     end
 
