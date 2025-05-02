@@ -8,10 +8,7 @@ defmodule Lightning.Extensions.RateLimiterTest do
     Enum.each(1..100, fn _i ->
       assert RateLimiter.limit_request(
                conn,
-               %Context{
-                 project_id: Ecto.UUID.generate(),
-                 user_id: Ecto.UUID.generate()
-               },
+               %Context{project_id: Ecto.UUID.generate()},
                []
              ) == :ok
     end)
