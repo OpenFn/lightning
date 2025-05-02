@@ -935,32 +935,37 @@ defmodule Lightning.Projects do
         project_workorders_query
       end
 
+    # Optimize the workorders query by using a more efficient join strategy
     workorders_delete_query =
       WorkOrder
       |> with_cte("workorders_to_delete",
         as: ^limit(workorders_query, ^batch_size)
       )
       |> join(:inner, [wo], wtd in "workorders_to_delete", on: wo.id == wtd.id)
+      |> select([wo], wo.id)
 
+    # Optimize the steps query by using a more efficient join strategy and only selecting IDs
     steps_delete_query =
       Step
-      |> join(:inner, [s], assoc(s, :runs), as: :runs)
+      |> join(:inner, [s], r in assoc(s, :runs), as: :runs)
       |> with_cte("workorders_to_delete",
         as: ^limit(workorders_query, ^batch_size)
       )
       |> join(:inner, [runs: r], wtd in "workorders_to_delete",
         on: r.work_order_id == wtd.id
       )
+      |> select([s], s.id)
 
     workorders_count = Repo.aggregate(workorders_query, :count)
 
     for _i <- 1..ceil(workorders_count / batch_size) do
       Repo.transaction(
         fn ->
+          # Delete steps first since they reference workorders
           {_count, _} = Repo.delete_all(steps_delete_query, returning: false)
 
-          {_count, _} =
-            Repo.delete_all(workorders_delete_query, returning: false)
+          # Then delete workorders
+          {_count, _} = Repo.delete_all(workorders_delete_query, returning: false)
         end,
         timeout: Config.default_ecto_database_timeout() * 3
       )
