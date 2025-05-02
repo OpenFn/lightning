@@ -6,6 +6,20 @@ defmodule Lightning.DistributedRateLimiterTest do
 
   @default_capacity 10
 
+  describe "inspect_table/0" do
+    test "shows the process info of the ets" do
+      %{table: table} =
+        Horde.DynamicSupervisor.which_children(Lightning.DistributedSupervisor)
+        |> then(fn [{:undefined, pid, :worker, _name}] ->
+          :sys.get_state(pid)
+        end)
+
+      ets_info = :ets.info(table)
+      assert ^ets_info = DistributedRateLimiter.inspect_table()
+      assert Keyword.has_key?(ets_info, :node)
+    end
+  end
+
   describe "check_rate/2" do
     test "allows up to the capacity and refills on multiple buckets" do
       initial_capacity = @default_capacity
