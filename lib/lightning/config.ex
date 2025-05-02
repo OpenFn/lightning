@@ -425,6 +425,14 @@ defmodule Lightning.Config do
     impl().purge_deleted_after_days()
   end
 
+  def activity_cleanup_chunk_size do
+    impl().activity_cleanup_chunk_size()
+  end
+
+  def default_ecto_database_timeout do
+    impl().default_ecto_database_timeout()
+  end
+
   def check_flag?(flag) do
     impl().check_flag?(flag)
   end

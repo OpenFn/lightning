@@ -889,7 +889,7 @@ defmodule Lightning.Projects do
       project
       |> project_workorders_query()
       |> delete_workorders_history(
-        Lightning.Config.activity_cleanup_chunk_size(),
+        Config.activity_cleanup_chunk_size(),
         period_days
       )
 
@@ -909,7 +909,7 @@ defmodule Lightning.Projects do
 
     delete_dataclips(
       dataclips_query,
-      Lightning.Config.activity_cleanup_chunk_size()
+      Config.activity_cleanup_chunk_size()
     )
 
     :ok
