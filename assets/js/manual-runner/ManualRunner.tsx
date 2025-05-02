@@ -316,7 +316,7 @@ const NoneView: React.FC<{
             <div ref={calendarRef} className={`absolute z-10 mt-1 p-2 bg-white rounded-md shadow-lg ring-1 ring-black/5 focus:outline-none w-auto right-0 ${dateOpen ? "" : "hidden"} `}>
               <div className="py-3" role="none">
                 <div className="px-4 py-1 text-gray-500 text-sm">
-                  Filter by Last Date
+                  Filter by Date
                 </div>
                 <div className="px-4 py-1 text-gray-700 text-sm">
                   <label htmlFor="date-after">Date After</label>
