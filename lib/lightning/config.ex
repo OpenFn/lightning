@@ -93,6 +93,11 @@ defmodule Lightning.Config do
     end
 
     @impl true
+    def activity_cleanup_chunk_size do
+      Application.get_env(:lightning, :activity_cleanup_chunk_size)
+    end
+
+    @impl true
     def get_extension_mod(key) do
       AdapterHelper.adapter(key)
     end
@@ -324,6 +329,7 @@ defmodule Lightning.Config do
   @callback promex_metrics_endpoint_scheme() :: String.t()
   @callback promex_metrics_endpoint_token() :: String.t()
   @callback purge_deleted_after_days() :: integer()
+  @callback activity_cleanup_chunk_size() :: integer()
   @callback repo_connection_token_signer() :: Joken.Signer.t()
   @callback reset_password_token_validity_in_days() :: integer()
   @callback run_token_signer() :: Joken.Signer.t()
