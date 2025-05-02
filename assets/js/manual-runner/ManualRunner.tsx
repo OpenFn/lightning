@@ -67,8 +67,10 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
 
   React.useEffect(() => {
     props.handleEvent("manual_run_created", payload => {
-      if (payload.dataclip)
+      if (payload.dataclip) {
         setSelectedclip(payload.dataclip);
+        setSelectedOption(SeletableOptions.NONE)
+      }
     })
   }, [props])
   // handling of form submit
@@ -135,7 +137,13 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
       pushEvent("manual_run_change", {
         manual: {
           dataclip_id: selectedclip.id,
-          body: selectedclip.body
+        }
+      });
+    } else {
+      pushEvent("manual_run_change", {
+        manual: {
+          dataclip_id: null,
+          body: null
         }
       });
     }
