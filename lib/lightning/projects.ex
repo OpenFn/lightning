@@ -952,17 +952,27 @@ defmodule Lightning.Projects do
         on: r.work_order_id == wtd.id
       )
 
-    workorders_count = Repo.aggregate(workorders_query, :count)
+    workorders_count =
+      Repo.aggregate(workorders_query, :count,
+        timeout: Config.default_ecto_database_timeout() * 10
+      )
 
     for _i <- 1..ceil(workorders_count / batch_size) do
       Repo.transaction(
         fn ->
-          {_count, _} = Repo.delete_all(steps_delete_query, returning: false)
+          {_count, _} =
+            Repo.delete_all(steps_delete_query,
+              returning: false,
+              timeout: Config.default_ecto_database_timeout() * 10
+            )
 
           {_count, _} =
-            Repo.delete_all(workorders_delete_query, returning: false)
+            Repo.delete_all(workorders_delete_query,
+              returning: false,
+              timeout: Config.default_ecto_database_timeout() * 10
+            )
         end,
-        timeout: Config.default_ecto_database_timeout() * 10
+        timeout: Config.default_ecto_database_timeout() * 20
       )
     end
 
