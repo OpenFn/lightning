@@ -935,7 +935,10 @@ defmodule Lightning.Projects do
         project_workorders_query
       end
 
-    workorders_count = Repo.aggregate(workorders_query, :count)
+    workorders_count =
+      Repo.aggregate(workorders_query, :count,
+        timeout: Config.default_ecto_database_timeout() * 10
+      )
 
     for _i <- 1..ceil(workorders_count / batch_size) do
       # First get the workorder IDs for this batch
@@ -943,7 +946,7 @@ defmodule Lightning.Projects do
         workorders_query
         |> limit(^batch_size)
         |> select([wo], wo.id)
-        |> Repo.all()
+        |> Repo.all(timeout: Config.default_ecto_database_timeout() * 10)
 
       if length(workorder_ids) > 0 do
         Repo.transaction(
@@ -957,16 +960,22 @@ defmodule Lightning.Projects do
                 on: r.id == rs.run_id,
                 where: r.work_order_id in ^workorder_ids
               )
-              |> Repo.delete_all(returning: false)
+              |> Repo.delete_all(
+                returning: false,
+                timeout: Config.default_ecto_database_timeout() * 10
+              )
 
             # Then delete the workorders
             {_count, _} =
               from(wo in WorkOrder,
                 where: wo.id in ^workorder_ids
               )
-              |> Repo.delete_all(returning: false)
+              |> Repo.delete_all(
+                returning: false,
+                timeout: Config.default_ecto_database_timeout() * 10
+              )
           end,
-          timeout: Config.default_ecto_database_timeout() * 10
+          timeout: Config.default_ecto_database_timeout() * 20
         )
       end
     end
