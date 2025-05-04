@@ -1,7 +1,7 @@
 defmodule LightningWeb.DashboardLive.Components do
   use LightningWeb, :component
 
-  import PetalComponents.Table
+  import LightningWeb.Components.Table
 
   alias LightningWeb.Components.Common
   alias Phoenix.LiveView.JS
@@ -147,76 +147,78 @@ defmodule LightningWeb.DashboardLive.Components do
           {render_slot(@create_project_button)}
         </div>
       </div>
-      <div id="projects-table">
-        <.table>
-          <.tr>
-            <.th>
-              <.sortable_table_header
-                target_sort_key="name"
-                current_sort_key={@sort_key}
-                current_sort_direction={@sort_direction}
-                target={@target}
+      <div>
+        <.table id="projects-table">
+          <:header>
+            <.tr>
+              <.th
+                sortable={true}
+                sort_by="name"
+                active={@sort_key == "name"}
+                sort_direction={@sort_direction}
+                phx_target={@target}
               >
                 Name
-              </.sortable_table_header>
-            </.th>
-            <.th>Role</.th>
-            <.th>Workflows</.th>
-            <.th>Collaborators</.th>
-            <.th>
-              <.sortable_table_header
-                target_sort_key="last_updated_at"
-                current_sort_key={@sort_key}
-                current_sort_direction={@sort_direction}
-                target={@target}
+              </.th>
+              <.th>Role</.th>
+              <.th>Workflows</.th>
+              <.th>Collaborators</.th>
+              <.th
+                sortable={true}
+                sort_by="last_updated_at"
+                active={@sort_key == "last_updated_at"}
+                sort_direction={@sort_direction}
+                phx_target={@target}
               >
                 Last Updated
-              </.sortable_table_header>
-            </.th>
-            <.th></.th>
-          </.tr>
-
-          <.tr
-            :for={project <- @projects}
-            id={"projects-table-row-#{project.id}"}
-            class="hover:bg-gray-100 transition-colors duration-200 cursor-pointer"
-            phx-click={JS.navigate(~p"/projects/#{project.id}/w")}
-          >
-            <.td>
-              {project.name}
-            </.td>
-            <.td class="break-words max-w-[25rem]">
-              {String.capitalize(to_string(project.role))}
-            </.td>
-            <.td class="break-words max-w-[10rem]">
-              {project.workflows_count}
-            </.td>
-            <.td class="break-words max-w-[5rem]">
-              <.link
-                class="link"
-                href={~p"/projects/#{project.id}/settings#collaboration"}
-                onclick="event.stopPropagation()"
+              </.th>
+              <.th></.th>
+            </.tr>
+          </:header>
+          <:body>
+            <%= for project <- @projects do %>
+              <.tr
+                id={"projects-table-row-#{project.id}"}
+                class="hover:bg-gray-100 transition-colors duration-200"
+                onclick={JS.navigate(~p"/projects/#{project.id}/w")}
               >
-                {project.collaborators_count}
-              </.link>
-            </.td>
-            <.td>
-              <%= if project.last_updated_at do %>
-                {Lightning.Helpers.format_date(project.last_updated_at)}
-              <% else %>
-                N/A
-              <% end %>
-            </.td>
-            <.td class="text-right">
-              <.link
-                class="table-action"
-                navigate={~p"/projects/#{project.id}/history"}
-                onclick="event.stopPropagation()"
-              >
-                History
-              </.link>
-            </.td>
-          </.tr>
+                <.td>
+                  {project.name}
+                </.td>
+                <.td class="break-words max-w-[25rem]">
+                  {String.capitalize(to_string(project.role))}
+                </.td>
+                <.td class="break-words max-w-[10rem]">
+                  {project.workflows_count}
+                </.td>
+                <.td class="break-words max-w-[5rem]">
+                  <.link
+                    class="link"
+                    href={~p"/projects/#{project.id}/settings#collaboration"}
+                    onclick="event.stopPropagation()"
+                  >
+                    {project.collaborators_count}
+                  </.link>
+                </.td>
+                <.td>
+                  <%= if project.last_updated_at do %>
+                    {Lightning.Helpers.format_date(project.last_updated_at)}
+                  <% else %>
+                    N/A
+                  <% end %>
+                </.td>
+                <.td class="text-right">
+                  <.link
+                    class="table-action"
+                    navigate={~p"/projects/#{project.id}/history"}
+                    onclick="event.stopPropagation()"
+                  >
+                    History
+                  </.link>
+                </.td>
+              </.tr>
+            <% end %>
+          </:body>
         </.table>
       </div>
     <% end %>

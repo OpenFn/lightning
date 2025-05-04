@@ -5,7 +5,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   use LightningWeb, :live_view
 
   import LightningWeb.CredentialLive.Helpers, only: [can_edit?: 2]
-  import PetalComponents.Table
+  import LightningWeb.Components.Table
 
   alias Lightning.Accounts.User
   alias Lightning.Collections

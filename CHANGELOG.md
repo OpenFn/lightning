@@ -19,6 +19,8 @@ and this project adheres to
 
 ### Changed
 
+- Standardized table components across the application
+  [#2905](https://github.com/OpenFn/lightning/issues/2905)
 - Make the chunk size for deleting expired activty configurable via ENV
   [#3181](https://github.com/OpenFn/lightning/pull/3181)
 
@@ -3345,7 +3347,7 @@ credential schemas like "oauth" or "basic auth" which define attributes for
 
 - Register, log in and log out of an account
 - Allow superusers and admin users to create projects
-- Allow admin users to create or disable a user’s account
+- Allow admin users to create or disable a user's account
 - Allow superusers for local deployments to create users and give them access to
   project spaces
 

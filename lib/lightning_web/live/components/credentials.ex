@@ -2,7 +2,7 @@ defmodule LightningWeb.Components.Credentials do
   @moduledoc false
   use LightningWeb, :component
 
-  import PetalComponents.Table
+  import LightningWeb.Components.Table
 
   alias Lightning.Credentials.Credential
   alias LightningWeb.CredentialLive.JsonSchemaBodyComponent
@@ -348,64 +348,69 @@ defmodule LightningWeb.Components.Credentials do
         {render_slot(@empty_state)}
       <% else %>
         <.table id={"#{@id}-table"}>
-          <.tr>
-            <.th>Name</.th>
-            <.th>Type</.th>
-            <.th :if={@show_owner}>Owner</.th>
-            <.th>Projects with access</.th>
-            <.th>Production</.th>
-            <.th>
-              <span class="sr-only">Actions</span>
-            </.th>
-          </.tr>
-
-          <.tr
-            :for={credential <- @credentials}
-            id={"#{@id}-#{credential.id}"}
-            class="hover:bg-gray-100 transition-colors duration-200"
-          >
-            <.td class="break-words max-w-[15rem]">
-              <div class="flex-auto items-center">
-                {credential.name}
-                <%= if missing_oauth_client?(credential) do %>
-                  <span
-                    id={"#{credential.id}-client-not-found-tooltip"}
-                    phx-hook="Tooltip"
-                    aria-label="OAuth client not found"
-                    data-allow-html="true"
-                  >
-                    <.icon name="hero-exclamation-triangle" class="h-5 w-5 ml-2" />
-                  </span>
-                <% end %>
-              </div>
-            </.td>
-            <.td class="break-words max-w-[10rem] border-">
-              {credential_type(credential)}
-            </.td>
-            <.td :if={@show_owner} class="break-words max-w-[15rem]">
-              <div class="flex-auto items-center">
-                {credential.user.email}
-              </div>
-            </.td>
-            <.td class="break-words max-w-[25rem]">
-              <%= for project_name <- credential.project_names do %>
-                <span class="inline-flex items-center rounded-md bg-primary-50 p-1 my-0.5 text-xs font-medium ring-1 ring-inset ring-gray-500/10">
-                  {project_name}
-                </span>
-              <% end %>
-            </.td>
-            <.td class="break-words max-w-[5rem]">
-              <%= if credential.production do %>
-                <div class="flex">
-                  <Heroicons.exclamation_triangle class="w-5 h-5 text-secondary-500" />
-                  &nbsp;Production
-                </div>
-              <% end %>
-            </.td>
-            <.td class="text-right py-0.5">
-              {render_slot(@actions, credential)}
-            </.td>
-          </.tr>
+          <:header>
+            <.tr>
+              <.th>Name</.th>
+              <.th>Type</.th>
+              <.th :if={@show_owner}>
+                Owner
+              </.th>
+              <.th>
+                Projects with access
+              </.th>
+              <.th>Production</.th>
+              <.th>
+                <span class="sr-only">Actions</span>
+              </.th>
+            </.tr>
+          </:header>
+          <:body>
+            <%= for credential <- @credentials do %>
+              <.tr id={"#{@id}-#{credential.id}"}>
+                <.td class="break-words max-w-[15rem]">
+                  <div class="flex-auto items-center">
+                    {credential.name}
+                    <%= if missing_oauth_client?(credential) do %>
+                      <span
+                        id={"#{credential.id}-client-not-found-tooltip"}
+                        phx-hook="Tooltip"
+                        aria-label="OAuth client not found"
+                        data-allow-html="true"
+                      >
+                        <.icon name="hero-exclamation-triangle" class="h-5 w-5 ml-2" />
+                      </span>
+                    <% end %>
+                  </div>
+                </.td>
+                <.td class="break-words max-w-[10rem] border-">
+                  {credential_type(credential)}
+                </.td>
+                <.td :if={@show_owner} class="break-words max-w-[15rem]">
+                  <div class="flex-auto items-center">
+                    {credential.user.email}
+                  </div>
+                </.td>
+                <.td class="break-words max-w-[25rem]">
+                  <%= for project_name <- credential.project_names do %>
+                    <span class="inline-flex items-center rounded-md bg-primary-50 p-1 my-0.5 text-xs font-medium ring-1 ring-inset ring-gray-500/10">
+                      {project_name}
+                    </span>
+                  <% end %>
+                </.td>
+                <.td class="break-words max-w-[5rem]">
+                  <%= if credential.production do %>
+                    <div class="flex">
+                      <Heroicons.exclamation_triangle class="w-5 h-5 text-secondary-500" />
+                      &nbsp;Production
+                    </div>
+                  <% end %>
+                </.td>
+                <.td class="text-right py-0.5">
+                  {render_slot(@actions, credential)}
+                </.td>
+              </.tr>
+            <% end %>
+          </:body>
         </.table>
       <% end %>
     </div>
@@ -433,37 +438,46 @@ defmodule LightningWeb.Components.Credentials do
         {render_slot(@empty_state)}
       <% else %>
         <.table id={"#{@id}-table"}>
-          <.tr>
-            <.th>Name</.th>
-            <.th :if={@show_owner}>Owner</.th>
-            <.th>Projects With Access</.th>
-            <.th>Authorization URL</.th>
-            <.th><span class="sr-only">Actions</span></.th>
-          </.tr>
-
-          <.tr
-            :for={client <- @clients}
-            id={"#{@id}-#{client.id}"}
-            class="hover:bg-gray-100 transition-colors duration-200"
-          >
-            <.td class="break-words max-w-[15rem]">{client.name}</.td>
-            <.td :if={@show_owner} class="break-words max-w-[15rem]">
-              {if client.global, do: "GLOBAL", else: client.user.email}
-            </.td>
-            <.td class="break-words max-w-[20rem]">
-              <%= for project_name <- client.project_names do %>
-                <span class="inline-flex items-center rounded-md bg-primary-50 p-1 my-0.5 text-xs font-medium ring-1 ring-inset ring-gray-500/10">
-                  {project_name}
-                </span>
-              <% end %>
-            </.td>
-            <.td class="break-words max-w-[21rem]">
-              {client.authorization_endpoint}
-            </.td>
-            <.td class="text-right py-0.5">
-              {render_slot(@actions, client)}
-            </.td>
-          </.tr>
+          <:header>
+            <.tr>
+              <.th>Name</.th>
+              <.th :if={@show_owner}>
+                Owner
+              </.th>
+              <.th>
+                Projects With Access
+              </.th>
+              <.th>Authorization URL</.th>
+              <.th>
+                <span class="sr-only">Actions</span>
+              </.th>
+            </.tr>
+          </:header>
+          <:body>
+            <%= for client <- @clients do %>
+              <.tr id={"#{@id}-#{client.id}"}>
+                <.td class="break-words max-w-[15rem]">
+                  {client.name}
+                </.td>
+                <.td :if={@show_owner} class="break-words max-w-[15rem]">
+                  {if client.global, do: "GLOBAL", else: client.user.email}
+                </.td>
+                <.td class="break-words max-w-[20rem]">
+                  <%= for project_name <- client.project_names do %>
+                    <span class="inline-flex items-center rounded-md bg-primary-50 p-1 my-0.5 text-xs font-medium ring-1 ring-inset ring-gray-500/10">
+                      {project_name}
+                    </span>
+                  <% end %>
+                </.td>
+                <.td class="break-words max-w-[21rem]">
+                  {client.authorization_endpoint}
+                </.td>
+                <.td class="text-right py-0.5">
+                  {render_slot(@actions, client)}
+                </.td>
+              </.tr>
+            <% end %>
+          </:body>
         </.table>
       <% end %>
     </div>

@@ -4,7 +4,7 @@ defmodule LightningWeb.ProjectLive.Index do
   """
   use LightningWeb, :live_view
 
-  import PetalComponents.Table
+  import LightningWeb.Components.Table
 
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.Users

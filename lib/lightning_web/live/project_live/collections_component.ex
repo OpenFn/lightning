@@ -2,7 +2,8 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
   @moduledoc false
 
   use LightningWeb, :live_component
-  import PetalComponents.Table
+
+  import LightningWeb.Components.Table
 
   alias Lightning.Collections
   alias Lightning.Collections.Collection
@@ -210,50 +211,57 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
         myself={@myself}
       />
 
-      <.table id="collections-table" rows={@collections}>
-        <.tr>
-          <.th>Name</.th>
-          <.th>Used Storage (MB)</.th>
-          <.th><span class="sr-only">Actions</span></.th>
-        </.tr>
-
-        <%= for collection <- @collections do %>
-          <.tr id={"collection-row-#{collection.id}"}>
-            <.td>
-              {collection.name}
-            </.td>
-            <.td>
-              {div(collection.byte_size_sum, 1_000_000)}
-            </.td>
-            <.td>
-              <div class="text-right">
-                <.button
-                  id={"edit-collection-#{collection.id}-button"}
-                  phx-click="toggle_action"
-                  phx-value-action="edit"
-                  phx-value-collection={collection.name}
-                  phx-target={@myself}
-                  theme="secondary"
-                  disabled={!@can_create_collection}
-                >
-                  Edit
-                </.button>
-
-                <.button
-                  id={"delete-collection-#{collection.id}-button"}
-                  phx-click="toggle_action"
-                  phx-value-action="delete"
-                  phx-value-collection={collection.name}
-                  phx-target={@myself}
-                  theme="secondary"
-                  disabled={!@can_create_collection}
-                >
-                  Delete
-                </.button>
-              </div>
-            </.td>
+      <.table id="collections-table">
+        <:header>
+          <.tr>
+            <.th>Name</.th>
+            <.th>Used Storage (MB)</.th>
+            <.th>
+              <span class="sr-only">Actions</span>
+            </.th>
           </.tr>
-        <% end %>
+        </:header>
+        <:body>
+          <%= for collection <- @collections do %>
+            <.tr id={"collection-row-#{collection.id}"}>
+              <.td>
+                {collection.name}
+              </.td>
+              <.td>
+                {div(collection.byte_size_sum, 1_000_000)}
+              </.td>
+              <.td>
+                <div class="text-right">
+                  <.button
+                    id={"edit-collection-#{collection.id}-button"}
+                    phx-click="toggle_action"
+                    phx-value-action="edit"
+                    phx-value-collection={collection.name}
+                    phx-target={@myself}
+                    class="shadow-xs ring-1 ring-inset ring-gray-300 disabled:cursor-not-allowed"
+                    color_class="bg-white text-gray-900 hover:bg-gray-50 disabled:bg-gray-100"
+                    disabled={!@can_create_collection}
+                  >
+                    Edit
+                  </.button>
+
+                  <.button
+                    id={"delete-collection-#{collection.id}-button"}
+                    phx-click="toggle_action"
+                    phx-value-action="delete"
+                    phx-value-collection={collection.name}
+                    phx-target={@myself}
+                    class="shadow-xs ring-1 ring-inset ring-gray-300 disabled:cursor-not-allowed"
+                    color_class="bg-white text-gray-900 hover:bg-gray-50 disabled:bg-gray-100"
+                    disabled={!@can_create_collection}
+                  >
+                    Delete
+                  </.button>
+                </div>
+              </.td>
+            </.tr>
+          <% end %>
+        </:body>
       </.table>
     </div>
     """

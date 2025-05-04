@@ -1,7 +1,7 @@
 defmodule LightningWeb.UserLive.Components do
   use LightningWeb, :component
 
-  import PetalComponents.Table
+  import LightningWeb.Components.Table
 
   attr :socket, :map, required: true
   attr :users, :list, required: true
@@ -24,51 +24,55 @@ defmodule LightningWeb.UserLive.Components do
       return_to={Routes.user_index_path(@socket, :index)}
     />
     <.table>
-      <.tr>
-        <.th>First name</.th>
-        <.th>Last name</.th>
-        <.th>Email</.th>
-        <.th>Role*</.th>
-        <.th>Enabled?</.th>
-        <.th>Support?</.th>
-        <.th>Scheduled Deletion</.th>
-        <.th>Actions</.th>
-      </.tr>
-      <%= for user <- @users do %>
-        <.tr id={"user-#{user.id}"}>
-          <.td>{user.first_name}</.td>
-          <.td>{user.last_name}</.td>
-          <.td>{user.email}</.td>
-          <.td>{user.role}</.td>
-          <.td>
-            <%= if !user.disabled do %>
-              <Heroicons.check_circle solid class="w-6 h-6 text-gray-500" />
-            <% end %>
-          </.td>
-          <.td>
-            <%= if user.support_user do %>
-              <div class="content-center">
-                <Heroicons.check_circle solid class="w-6 h-6 text-gray-500" />
-              </div>
-            <% end %>
-          </.td>
-          <.td>{user.scheduled_deletion}</.td>
-          <.td class="py-0.5">
-            <span>
-              <.link
-                class="table-action"
-                navigate={Routes.user_edit_path(@socket, :edit, user)}
-              >
-                Edit
-              </.link>
-            </span>
-            <.delete_action
-              user={user}
-              delete_url={Routes.user_index_path(@socket, :delete, user)}
-            />
-          </.td>
+      <:header>
+        <.tr>
+          <.th>First name</.th>
+          <.th>Last name</.th>
+          <.th>Email</.th>
+          <.th>Role*</.th>
+          <.th>Enabled?</.th>
+          <.th>Support?</.th>
+          <.th>Scheduled Deletion</.th>
+          <.th>Actions</.th>
         </.tr>
-      <% end %>
+      </:header>
+      <:body>
+        <%= for user <- @users do %>
+          <.tr id={"user-#{user.id}"}>
+            <.td>{user.first_name}</.td>
+            <.td>{user.last_name}</.td>
+            <.td>{user.email}</.td>
+            <.td>{user.role}</.td>
+            <.td>
+              <%= if !user.disabled do %>
+                <Heroicons.check_circle solid class="w-6 h-6 text-gray-500" />
+              <% end %>
+            </.td>
+            <.td>
+              <%= if user.support_user do %>
+                <div class="content-center">
+                  <Heroicons.check_circle solid class="w-6 h-6 text-gray-500" />
+                </div>
+              <% end %>
+            </.td>
+            <.td>{user.scheduled_deletion}</.td>
+            <.td class="py-0.5">
+              <span>
+                <.link
+                  class="table-action"
+                  navigate={Routes.user_edit_path(@socket, :edit, user)}
+                >
+                  Edit
+                </.link>
+              </span>
+              <.delete_action
+                user={user}
+                delete_url={Routes.user_index_path(@socket, :delete, user)}
+              />
+            </.td>
+          </.tr>
+        <% end %>
+      </:body>
     </.table>
     <br />
     <.p>

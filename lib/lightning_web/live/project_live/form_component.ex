@@ -14,6 +14,7 @@ defmodule LightningWeb.ProjectLive.FormComponent do
 
   import Ecto.Changeset, only: [fetch_field!: 2]
   import LightningWeb.Components.Form
+  import LightningWeb.Components.Table
 
   alias Lightning.Helpers
   alias Lightning.Projects

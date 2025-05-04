@@ -60,41 +60,54 @@
         </div>
       </div>
     </div>
-    <.table id="tokens" rows={@tokens}>
-      <:col :let={token} label="Token">
-        <code class="my-auto whitespace-nowrap align-baseline leading-none">
-          <span>
-            {mask_token(token)}
-          </span>
-        </code>
-      </:col>
-      <:col :let={token} label="Created on">
-        <span class="my-auto whitespace-nowrap text-center align-baseline font-medium leading-none">
-          {Lightning.Helpers.format_date_long(token.inserted_at)}
-        </span>
-      </:col>
-      <:col :let={token} label="Last Used at">
-        <div class="flex content-center justify-between">
-          <span class="my-auto whitespace-nowrap text-center align-baseline font-medium leading-none">
-            <%= if token.last_used_at do %>
-              {Timex.Format.DateTime.Formatters.Relative.format!(
-                token.last_used_at,
-                "{relative}"
-              )}
-            <% else %>
-              Never used
-            <% end %>
-          </span>
+    <.table id="tokens">
+      <:header>
+        <.tr>
+          <.th>Token</.th>
+          <.th>Created on</.th>
+          <.th>Last Used at</.th>
+        </.tr>
+      </:header>
+      <:body>
+        <%= for token <- @tokens do %>
+          <.tr id={"tokens-#{token.id}"}>
+            <.td>
+              <code class="my-auto whitespace-nowrap align-baseline leading-none">
+                <span>
+                  {mask_token(token)}
+                </span>
+              </code>
+            </.td>
+            <.td>
+              <span class="my-auto whitespace-nowrap text-center align-baseline font-medium leading-none">
+                {Lightning.Helpers.format_date_long(token.inserted_at)}
+              </span>
+            </.td>
+            <.td>
+              <div class="flex content-center justify-between">
+                <span class="my-auto whitespace-nowrap text-center align-baseline font-medium leading-none">
+                  <%= if token.last_used_at do %>
+                    {Timex.Format.DateTime.Formatters.Relative.format!(
+                      token.last_used_at,
+                      "{relative}"
+                    )}
+                  <% else %>
+                    Never used
+                  <% end %>
+                </span>
 
-          <.link
-            id={"delete-token-#{token.id}"}
-            patch={~p"/profile/tokens/#{token.id}/delete"}
-            class="text-red-600"
-          >
-            <.icon name="hero-trash" class="w-5 h-5" />
-          </.link>
-        </div>
-      </:col>
+                <.link
+                  id={"delete-token-#{token.id}"}
+                  patch={~p"/profile/tokens/#{token.id}/delete"}
+                  class="text-red-600"
+                >
+                  <.icon name="hero-trash" class="w-5 h-5" />
+                </.link>
+              </div>
+            </.td>
+          </.tr>
+        <% end %>
+      </:body>
     </.table>
     <div :if={Enum.empty?(@tokens)} class="flex justify-between items-center">
       <div class="flex content-center gap-2">
