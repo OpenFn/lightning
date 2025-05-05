@@ -2,8 +2,6 @@ defmodule LightningWeb.WorkflowLive.Components do
   @moduledoc false
   use LightningWeb, :component
 
-  import LightningWeb.Components.Table
-
   alias Phoenix.LiveView.JS
 
   attr :socket, :map, required: true

@@ -1,8 +1,6 @@
 defmodule LightningWeb.UserLive.Components do
   use LightningWeb, :component
 
-  import LightningWeb.Components.Table
-
   attr :socket, :map, required: true
   attr :users, :list, required: true
   attr :live_action, :atom, required: true

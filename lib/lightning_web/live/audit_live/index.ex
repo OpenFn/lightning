@@ -4,7 +4,6 @@ defmodule LightningWeb.AuditLive.Index do
   """
   use LightningWeb, :live_view
 
-  import LightningWeb.Components.Table
   import PetalComponents.Badge
 
   alias Lightning.Auditing

@@ -1,8 +1,6 @@
 defmodule LightningWeb.DashboardLive.Components do
   use LightningWeb, :component
 
-  import LightningWeb.Components.Table
-
   alias LightningWeb.Components.Common
   alias Phoenix.LiveView.JS
 

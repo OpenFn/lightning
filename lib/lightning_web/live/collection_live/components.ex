@@ -1,8 +1,6 @@
 defmodule LightningWeb.CollectionLive.Components do
   use LightningWeb, :component
 
-  import LightningWeb.Components.Table
-
   defp confirm_collection_deletion_modal(assigns) do
     ~H"""
     <.modal id={@id} width="max-w-md">

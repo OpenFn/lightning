@@ -3,8 +3,6 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
 
   use LightningWeb, :live_component
 
-  import LightningWeb.Components.Table
-
   alias Lightning.Collections
   alias Lightning.Collections.Collection
   alias Lightning.Helpers
