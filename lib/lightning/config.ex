@@ -93,6 +93,16 @@ defmodule Lightning.Config do
     end
 
     @impl true
+    def activity_cleanup_chunk_size do
+      Application.get_env(:lightning, :activity_cleanup_chunk_size)
+    end
+
+    @impl true
+    def default_ecto_database_timeout do
+      Application.get_env(:lightning, Lightning.Repo) |> Keyword.get(:timeout)
+    end
+
+    @impl true
     def get_extension_mod(key) do
       AdapterHelper.adapter(key)
     end
@@ -324,6 +334,8 @@ defmodule Lightning.Config do
   @callback promex_metrics_endpoint_scheme() :: String.t()
   @callback promex_metrics_endpoint_token() :: String.t()
   @callback purge_deleted_after_days() :: integer()
+  @callback activity_cleanup_chunk_size() :: integer()
+  @callback default_ecto_database_timeout() :: integer()
   @callback repo_connection_token_signer() :: Joken.Signer.t()
   @callback reset_password_token_validity_in_days() :: integer()
   @callback run_token_signer() :: Joken.Signer.t()
@@ -411,6 +423,14 @@ defmodule Lightning.Config do
 
   def purge_deleted_after_days do
     impl().purge_deleted_after_days()
+  end
+
+  def activity_cleanup_chunk_size do
+    impl().activity_cleanup_chunk_size()
+  end
+
+  def default_ecto_database_timeout do
+    impl().default_ecto_database_timeout()
   end
 
   def check_flag?(flag) do

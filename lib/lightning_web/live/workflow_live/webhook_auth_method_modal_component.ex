@@ -268,7 +268,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
                       Create an "API token" method
                   <% end %>
                 <% :edit -> %>
-                  Edit webhook auth method
+                  Webhook Authentication Method
                 <% :display_triggers -> %>
                   Associated Workflow Triggers
                 <% :delete -> %>
@@ -447,7 +447,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
             phx-value-id={auth_method.id}
             phx-target={@myself}
           >
-            Edit<span class="sr-only">, <%= auth_method.name %></span>
+            View<span class="sr-only">, <%= auth_method.name %></span>
           </a>
         </:action>
       </LightningWeb.WorkflowLive.Components.webhook_auth_methods_table>

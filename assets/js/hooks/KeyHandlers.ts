@@ -290,7 +290,8 @@ export const InspectorSaveViaCtrlS = createKeyCombinationHook(
  */
 export const OpenSyncModalViaCtrlShiftS = createKeyCombinationHook(
   isCtrlOrMetaShiftS,
-  clickAction
+  clickAction,
+  PRIORITY.HIGH
 );
 
 /**

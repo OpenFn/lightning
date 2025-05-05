@@ -292,7 +292,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
         |> element("#edit_auth_method_link_#{auth_method.id}")
         |> render_click()
 
-      assert html =~ "Edit webhook auth method"
+      assert html =~ "Webhook Authentication Method"
 
       new_auth_method_name = Name.generate()
 
