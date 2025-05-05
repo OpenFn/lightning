@@ -27,8 +27,9 @@ ARG NODE_VERSION
 RUN apt-get update -y && apt-get install -y \
   build-essential curl git inotify-tools libsodium-dev
 
-COPY bin/install_node bin/install_node
-RUN bin/install_node ${NODE_VERSION}
+# Install Node.js from NodeSource
+RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION%%.*}.x | bash - && \
+  apt-get install -y nodejs=${NODE_VERSION}-1nodesource1
 
 RUN apt-get clean && rm -f /var/lib/apt/lists/*_*
 
@@ -103,9 +104,9 @@ ENV LC_ALL=en_US.UTF-8
 
 WORKDIR "/app"
 
-COPY bin/install_node tmp/install_node
-RUN tmp/install_node ${NODE_VERSION}
-
+# Install Node.js from NodeSource
+RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION%%.*}.x | bash - && \
+  apt-get install -y nodejs=${NODE_VERSION}-1nodesource1
 
 RUN useradd --uid 1000 --home /app lightning
 RUN chown lightning /app
