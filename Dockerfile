@@ -14,7 +14,7 @@
 #
 ARG ELIXIR_VERSION=1.18.3
 ARG OTP_VERSION=27.3.3
-ARG DEBIAN_VERSION=bookworm-20240513
+ARG DEBIAN_VERSION=bookworm-20250428
 ARG NODE_VERSION=22.12.0
 
 ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
@@ -24,8 +24,9 @@ FROM ${BUILDER_IMAGE} AS builder
 ARG NODE_VERSION
 
 # install build and dev dependencies
-RUN apt-get update -y && apt-get install -y \
-  build-essential curl git inotify-tools libsodium-dev
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
+  build-essential curl git inotify-tools openssl ca-certificates \
+  libsodium-dev
 
 # Install Node.js from NodeSource
 RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION%%.*}.x | bash - && \
@@ -37,15 +38,13 @@ RUN apt-get clean && rm -f /var/lib/apt/lists/*_*
 WORKDIR /app
 
 # install hex + rebar
-RUN mix local.hex --force && \
-  mix local.rebar --force
+RUN mix local.hex --force && mix local.rebar --force
 
 # set build ENV
 ENV MIX_ENV="prod"
 
-COPY mix.* ./
+COPY mix.exs mix.lock ./
 RUN mix deps.get --only $MIX_ENV
-
 RUN mkdir config
 
 # copy compile-time config files before we compile dependencies
@@ -53,17 +52,15 @@ RUN mkdir config
 # to be re-compiled.
 COPY config/config.exs config/${MIX_ENV}.exs config/
 RUN mix deps.compile
+RUN mix assets.setup
 
 COPY priv priv
 COPY lib lib
 COPY assets assets
 
 RUN mix lightning.install_runtime
-
 RUN mix lightning.install_adaptor_icons
-
 RUN mix lightning.install_schemas
-
 RUN npm install --prefix assets
 
 # compile assets
@@ -90,8 +87,9 @@ ARG IMAGE_TAG=""
 LABEL branch=${BRANCH}
 LABEL commit=${COMMIT}
 
-RUN apt-get update -y && apt-get install -y libstdc++6 openssl libncurses5 \
-  locales curl gpg libsodium-dev
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
+  libstdc++6 openssl libncurses5 locales ca-certificates \
+  curl libsodium-dev
 
 RUN apt-get clean && rm -f /var/lib/apt/lists/*_**
 
