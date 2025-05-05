@@ -101,14 +101,14 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
         </div>
         <div class="flex-grow bg-gray-100 h-0.5 my-[16px]"></div>
         <div class="flex flex-row-reverse gap-4">
-          <button
+          <.button
             type="button"
             phx-click="close_modal"
             phx-target={@myself}
-            class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+            theme="secondary"
           >
             Ok, understood
-          </button>
+          </.button>
         </div>
       </.modal>
     </div>
@@ -161,19 +161,19 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
             phx-click="delete"
             phx-value-id={@credential.id}
             phx-target={@myself}
-            color_class="bg-red-600 hover:bg-red-700 text-white"
+            theme="danger"
             phx-disable-with="Deleting..."
           >
             Delete credential
           </.button>
-          <button
+          <.button
             type="button"
             phx-click="close_modal"
             phx-target={@myself}
-            class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+            theme="secondary"
           >
             Cancel
-          </button>
+          </.button>
         </div>
       </.modal>
     </div>

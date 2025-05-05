@@ -22,31 +22,34 @@ defmodule LightningWeb.Components.NewInputs do
   attr :type, :string, default: "button", values: ["button", "submit"]
   attr :class, :any, default: ""
 
-  attr :variant, :string, default: "primary", values: ["primary", "secondary"]
+  attr :theme, :string,
+    default: "primary",
+    values: ["primary", "secondary", "danger", "success", "warning", "custom"]
 
-  attr :color_class, :any,
-    default:
-      "bg-primary-600 hover:bg-primary-700 text-white focus:ring-primary-500 disabled:bg-primary-300"
-
-  attr :rest, :global, include: ~w(disabled form name value)
+  attr :size, :string, default: "md", values: ["sm", "md", "lg"]
   attr :tooltip, :any, default: nil
+  attr :rest, :global, include: ~w(disabled form name value)
 
   slot :inner_block, required: true
 
-  def button(%{variant: "primary"} = assigns) do
+  def button(assigns) do
     ~H"""
     <.simple_button_with_tooltip
       id={@id}
       tooltip={@tooltip}
       type={@type}
-      class={[
-        "inline-flex justify-center items-center py-2 px-4 border border-transparent",
-        "shadow-xs text-sm font-medium rounded-md focus:outline-none",
-        "focus:ring-2 focus:ring-offset-2",
-        "phx-submit-loading:opacity-75",
-        @color_class,
-        @class
-      ]}
+      class={
+        [
+          # Base classes
+          button_base_classes() <> " cursor-pointer disabled:cursor-auto",
+          # size variants
+          button_size_classes(@size),
+          # theme variants
+          button_theme_classes(@theme),
+          # other classes to override
+          @class
+        ]
+      }
       {@rest}
     >
       {render_slot(@inner_block)}
@@ -54,23 +57,76 @@ defmodule LightningWeb.Components.NewInputs do
     """
   end
 
-  def button(%{variant: "secondary"} = assigns) do
+  @doc """
+  Renders a link, styled like a button.
+
+  For available options, see `Phoenix.Component.link/1`.
+  """
+  attr :class, :any, default: ""
+
+  attr :theme, :string,
+    default: "primary",
+    values: ["primary", "secondary", "danger", "success", "warning", "custom"]
+
+  attr :size, :string, default: "md", values: ["sm", "md", "lg"]
+
+  attr :rest, :global,
+    include:
+      ~w(id href patch navigate replace method csrf_token download hreflang referrerpolicy rel target type)
+
+  slot :inner_block, required: true
+
+  def button_link(assigns) do
     ~H"""
-    <.simple_button_with_tooltip
-      id={@id}
-      tooltip={@tooltip}
-      type={@type}
-      class={[
-        "rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 ring-1 shadow-xs ring-gray-300 ring-inset",
-        "hover:bg-gray-50 disabled:bg-gray-50",
-        @class
-      ]}
+    <.link
+      class={
+        [
+          # Base classes
+          button_base_classes(),
+          # size variants
+          button_size_classes(@size),
+          # theme variants
+          button_theme_classes(@theme),
+          # other classes to override
+          @class
+        ]
+      }
       {@rest}
     >
       {render_slot(@inner_block)}
-    </.simple_button_with_tooltip>
+    </.link>
     """
   end
+
+  defp button_base_classes do
+    "rounded-md text-sm font-semibold shadow-xs phx-submit-loading:opacity-75"
+  end
+
+  defp button_theme_classes(theme) do
+    case theme do
+      "primary" ->
+        "bg-primary-600 hover:bg-primary-500 text-white disabled:bg-primary-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+
+      "secondary" ->
+        "bg-white hover:bg-gray-50 text-gray-900 disabled:bg-gray-50 ring-1 ring-gray-300 ring-inset"
+
+      "danger" ->
+        "bg-red-600 hover:bg-red-500 text-white disabled:bg-red-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
+
+      "success" ->
+        "bg-green-600 hover:bg-green-500 text-white disabled:bg-green-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600"
+
+      "warning" ->
+        "bg-yellow-600 hover:bg-yellow-500 text-white disabled:bg-yellow-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-600"
+
+      "custom" ->
+        ""
+    end
+  end
+
+  defp button_size_classes("sm"), do: "px-2.5 py-1.5"
+  defp button_size_classes("md"), do: "px-3 py-2"
+  defp button_size_classes("lg"), do: "px-3.5 py-2.5"
 
   attr :id, :string, default: ""
   attr :tooltip, :any, default: nil

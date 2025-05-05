@@ -77,20 +77,10 @@
           >
             <div class="sm:flex sm:items-start">
               <div class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                <svg
+                <.icon
+                  name="hero-exclamation-triangle"
                   class="h-6 w-6 text-red-600"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="1.5"
-                  stroke="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
-                  />
-                </svg>
+                />
               </div>
               <div
                 id="disable-mfa-modal-content"
@@ -110,24 +100,24 @@
                 </div>
               </div>
             </div>
-            <div class="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
-              <button
+            <div class="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse gap-3">
+              <.button
                 id="disable_mfa_button"
                 type="button"
                 phx-click="disable_mfa"
                 phx-target={@myself}
-                phx_disable_with="Disabling..."
-                class="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-red-500 sm:ml-3 sm:w-auto"
+                phx-disable-with="Disabling..."
+                theme="danger"
               >
                 Disable
-              </button>
-              <button
+              </.button>
+              <.button
                 phx-click={hide_modal("disable-mfa-modal")}
                 type="button"
-                class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+                theme="secondary"
               >
                 Cancel
-              </button>
+              </.button>
             </div>
           </.focus_wrap>
         </div>
@@ -182,13 +172,13 @@
 
             <div class="col-span-6">
               <span>
-                <.link
+                <.button
+                  theme="secondary"
                   phx-click="hide-mfa-options"
                   phx-target={@myself}
-                  class="inline-flex justify-center py-2 px-4 border border-transparent shadow-xs text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500"
                 >
                   Cancel
-                </.link>
+                </.button>
               </span>
               <span>
                 <.button type="submit">
@@ -283,12 +273,11 @@
           Recovery codes can be used to access your account in the event you lose access to your device and cannot receive two-factor authentication codes.
         </p>
       </div>
-      <a
-        href={~p"/profile/auth/backup_codes"}
-        class="rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 ml-5"
-      >
-        View
-      </a>
+      <.button theme="secondary" class="ml-5">
+        <a href={~p"/profile/auth/backup_codes"} class="w-full">
+          View
+        </a>
+      </.button>
     </div>
   </div>
 </div>

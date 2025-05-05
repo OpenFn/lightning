@@ -87,16 +87,17 @@
                 name={"#{f.name}[collaborators_sort][]"}
                 value={cf.index}
               />
-              <button
+              <.button
                 :if={Enum.count(f[:collaborators].value) > 1}
                 type="button"
                 name={"#{f.name}[collaborators_drop][]"}
                 value={cf.index}
                 phx-click={JS.dispatch("change")}
-                class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                theme="secondary"
+                class="inline-flex items-center"
               >
-                <Heroicons.minus_circle class="w-5 h-5" />
-              </button>
+                <.icon name="hero-minus-circle" class="w-5 h-5" />
+              </.button>
             </div>
           </div>
           <.error_field field={cf[:email]} />
@@ -104,15 +105,17 @@
 
         <div class="mt-5 flex justify-start">
           <input type="hidden" name={"#{f.name}[collaborators_drop][]"} />
-          <button
+          <.button
             type="button"
             name={"#{f.name}[collaborators_sort][]"}
             value="new"
             phx-click={JS.dispatch("change")}
-            class="inline-flex items-center gap-x-2 rounded-md bg-white px-3.5 py-2.5 text-sm text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+            theme="secondary"
+            class="inline-flex items-center gap-x-2"
           >
-            <Heroicons.plus_circle class="w-5 h-5" /> Add Additional Collaborator
-          </button>
+            <.icon name="hero-plus-circle" class="w-5 h-5" />
+            Add Additional Collaborator
+          </.button>
         </div>
       </div>
       <.modal_footer class="mx-6 mt-6">
@@ -127,13 +130,13 @@
               do: "s"
             )}
           </.button>
-          <button
+          <.button
             type="button"
             phx-click="toggle_collaborators_modal"
-            class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+            theme="secondary"
           >
             Cancel
-          </button>
+          </.button>
         </div>
       </.modal_footer>
     </.form>

@@ -17,17 +17,14 @@ defmodule LightningWeb.WorkflowLive.Components do
       <div class="text-sm font-semibold text-gray-500 pb-4">
         Create your first job to get started.
       </div>
-      <LightningWeb.Components.Common.button
-        phx-click="create_job"
-        disabled={@disabled}
-      >
+      <.button phx-click="create_job" disabled={@disabled}>
         <div class="h-full">
           <span class="inline-block mr-1">
             Create job
           </span>
           <Icon.plus_circle />
         </div>
-      </LightningWeb.Components.Common.button>
+      </.button>
     </div>
     """
   end

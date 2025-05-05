@@ -365,7 +365,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
         phx-click={
           if !@disabled, do: JS.navigate(~p"/projects/#{@project_id}/w/new")
         }
-        class="col-span-1 w-full rounded-md"
+        class="col-span-1 w-full"
         role="button"
         id="new-workflow-button"
       >

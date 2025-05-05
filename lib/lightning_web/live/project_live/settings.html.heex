@@ -233,13 +233,12 @@
             <div class="hidden sm:block" aria-hidden="true">
               <div class="py-2"></div>
             </div>
-            <a
+            <.button_link
               href={~p"/download/yaml?id=#{@project.id}"}
               target="_blank"
-              class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-xs text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 "
             >
               Export project
-            </a>
+            </.button_link>
           </div>
         </div>
         <%= if @can_delete_project do %>
@@ -255,20 +254,18 @@
               <div class="hidden sm:block" aria-hidden="true">
                 <div class="py-2"></div>
               </div>
-              <.link navigate={
-                Routes.project_project_settings_path(
-                  @socket,
-                  :delete,
-                  @project.id
-                )
-              }>
-                <button
-                  type="button"
-                  class="inline-flex justify-center py-2 px-4 border border-transparent shadow-xs text-sm font-medium rounded-md text-white bg-danger-500 hover:bg-danger-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger-500"
-                >
-                  Delete project
-                </button>
-              </.link>
+              <.button_link
+                theme="danger"
+                navigate={
+                  Routes.project_project_settings_path(
+                    @socket,
+                    :delete,
+                    @project.id
+                  )
+                }
+              >
+                Delete project
+              </.button_link>
             </div>
           </div>
         <% end %>
@@ -788,8 +785,8 @@
                       id={"remove_project_user_#{project_user.id}_button"}
                       type="button"
                       phx-click={show_modal("remove_#{project_user.id}_modal")}
-                      color_class="bg-white text-gray-900 hover:bg-gray-50 disabled:bg-gray-100"
-                      class="gap-x-2 rounded-md px-3.5 py-2.5 text-sm shadow-xs ring-1 ring-inset ring-gray-300 disabled:cursor-not-allowed"
+                      theme="secondary"
+                      class="gap-x-2 disabled:cursor-not-allowed"
                       tooltip={
                         remove_user_tooltip(
                           project_user,
@@ -1181,14 +1178,15 @@
                 </div>
               </div>
               <div class="mt-4">
-                <button
+                <.button
                   type="button"
                   disabled={!@can_edit_data_retention}
-                  class="mt-3 mr-1 inline-flex w-full justify-center rounded-md px-3 py-2 text-sm font-semibold shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto bg-white text-gray-900"
+                  theme="secondary"
+                  class="mr-1"
                   phx-click="cancel-retention-change"
                 >
                   Cancel
-                </button>
+                </.button>
                 <.button
                   id="input-output-retention-period-submit-btn"
                   type="submit"
@@ -1269,9 +1267,8 @@
                 <.button
                   id={"download-export-file-#{file.id}-button"}
                   disabled={true}
-                  class="table-action"
+                  class="table-action disabled:bg-gray-50"
                   tooltip="Export is not yet ready for download"
-                  color_class="disabled:bg-gray-50"
                 >
                   Download
                 </.button>

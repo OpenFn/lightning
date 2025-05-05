@@ -10,12 +10,12 @@
     <LayoutComponents.header current_user={@current_user}>
       <:title>{@page_title}</:title>
 
-      <Common.button phx-click="generate_new_token">
+      <.button phx-click="generate_new_token">
         <div class="h-full">
           <Icon.plus class="h-4 w-4 inline-block" />
           <span class="inline-block align-middle">Generate New Token</span>
         </div>
-      </Common.button>
+      </.button>
     </LayoutComponents.header>
   </:header>
   <LayoutComponents.centered>

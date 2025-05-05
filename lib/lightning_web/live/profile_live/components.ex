@@ -84,14 +84,9 @@ defmodule LightningWeb.ProfileLive.Components do
       <div class="px-4 py-6 sm:p-8">
         <span class="text-xl">Delete account</span>
         <span class="float-right">
-          <.link navigate={@url}>
-            <button
-              type="button"
-              class="inline-flex justify-center py-2 px-4 border border-transparent shadow-xs text-sm font-medium rounded-md text-white bg-danger-500 hover:bg-danger-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger-500"
-            >
-              Delete my account
-            </button>
-          </.link>
+          <.button_link theme="danger" navigate={@url}>
+            Delete my account
+          </.button_link>
         </span>
       </div>
     </div>

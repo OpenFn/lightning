@@ -262,7 +262,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
             :if={@selected_method == "import"}
             id="move-back-to-templates-btn"
             type="button"
-            variant="secondary"
+            theme="secondary"
             phx-click="choose-another-method"
             phx-value-method="template"
             phx-target={@myself}

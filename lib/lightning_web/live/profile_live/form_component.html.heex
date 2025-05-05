@@ -41,16 +41,15 @@
     <div class="hidden sm:block" aria-hidden="true">
       <div class="py-4"></div>
     </div>
-    <button
+    <.button
       type="submit"
       disabled={
         !@user_info_changeset.valid? ||
           Enum.empty?(@user_info_changeset.changes)
       }
-      class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 sm:w-auto"
     >
       Save
-    </button>
+    </.button>
   </.form>
   <.form
     :let={f}
@@ -86,14 +85,13 @@
     <div class="hidden sm:block" aria-hidden="true">
       <div class="py-4"></div>
     </div>
-    <button
+    <.button
       type="submit"
       disabled={!@email_changeset.valid?}
       phx-disable-with="Sending confirmation email..."
-      class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 sm:w-auto"
     >
       Update email
-    </button>
+    </.button>
   </.form>
 
   <.form
@@ -135,13 +133,12 @@
     <div class="hidden sm:block" aria-hidden="true">
       <div class="py-4"></div>
     </div>
-    <button
+    <.button
       type="submit"
       disabled={!@password_changeset.valid?}
       phx-disable-with="Saving..."
-      class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 sm:w-auto"
     >
       Update password
-    </button>
+    </.button>
   </.form>
 </div>

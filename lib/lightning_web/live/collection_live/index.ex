@@ -109,7 +109,7 @@ defmodule LightningWeb.CollectionLive.Index do
                 role="button"
                 id="open-create-collection-modal-button"
                 phx-click={show_modal("create-collection-modal")}
-                class="col-span-1 w-full rounded-md"
+                class="col-span-1 w-full"
               >
                 Create collection
               </.button>

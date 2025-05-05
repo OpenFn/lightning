@@ -42,18 +42,14 @@ defmodule LightningWeb.Components.Credentials do
           type="button"
           phx-value-credential_id={@credential.id}
           phx-click="delete_credential"
-          color_class="bg-red-600 hover:bg-red-700 text-white"
           phx-disable-with="Deleting..."
+          theme="danger"
         >
           Delete
         </.button>
-        <button
-          type="button"
-          phx-click={hide_modal(@id)}
-          class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-        >
+        <.button type="button" phx-click={hide_modal(@id)} theme="secondary">
           Cancel
-        </button>
+        </.button>
       </div>
     </.modal>
     """
@@ -92,18 +88,14 @@ defmodule LightningWeb.Components.Credentials do
           type="button"
           phx-value-oauth_client_id={@client.id}
           phx-click="delete_oauth_client"
-          color_class="bg-red-600 hover:bg-red-700 text-white"
           phx-disable-with="Deleting..."
+          theme="danger"
         >
           Delete
         </.button>
-        <button
-          type="button"
-          phx-click={hide_modal(@id)}
-          class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-        >
+        <.button type="button" phx-click={hide_modal(@id)} theme="secondary">
           Cancel
-        </button>
+        </.button>
       </div>
     </.modal>
     """
@@ -298,7 +290,7 @@ defmodule LightningWeb.Components.Credentials do
         disabled={@disabled}
       >
         {render_slot(@inner_block)}
-        <Heroicons.chevron_down class="ml-1 h-5 w-5" />
+        <.icon name="hero-chevron-down" class="ml-1 h-5 w-5" />
       </.button>
       <div class="relative -ml-px block">
         <div

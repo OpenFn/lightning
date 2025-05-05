@@ -27,8 +27,8 @@
           <.button
             id="refresh-installation-button"
             type="button"
-            class="rounded-l-none my-px h-9"
-            color_class="text-gray-900 ring-1 ring-gray-300 hover:bg-gray-100"
+            theme="custom"
+            class="rounded-l-none my-px h-9 text-gray-900 ring-1 ring-gray-300 hover:bg-gray-100"
             disabled={
               @actions_disabled ||
                 if(@installations.loading, do: true, else: false)
@@ -36,8 +36,8 @@
             phx-click="refresh-installations"
             phx-target={@myself}
           >
-            <Heroicons.arrow_path
-              mini
+            <.icon
+              name="hero-arrow-path-mini"
               class={"-ml-0.5 h-5 w-5 #{if(@installations.loading, do: "animate-spin")}"}
             />
           </.button>
@@ -84,15 +84,15 @@
           <.button
             id="refresh-branches-button"
             type="button"
-            class="rounded-l-none my-px h-9"
-            color_class="text-gray-900 ring-1 ring-gray-300 hover:bg-gray-100"
+            theme="custom"
+            class="rounded-l-none my-px h-9 text-gray-900 ring-1 ring-gray-300 hover:bg-gray-100"
             disabled={if(@branches.loading, do: true, else: false)}
             phx-click="refresh-branches"
             phx-target={@myself}
           >
-            <Heroicons.arrow_path
-              mini
-              class={"-ml-0.5 h-5 w-5 #{if(@branches.loading, do: "animate-spin")}"}
+            <.icon
+              name="hero-arrow-path-mini"
+              class={"-ml-0.5 h-5 w-5 #{if(@installations.loading, do: "animate-spin")}"}
             />
           </.button>
         </.input>
@@ -200,7 +200,6 @@
             phx-click="initiate-sync"
             phx-disable-with="Syncing.."
             phx-target={@myself}
-            class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-xs text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
           >
             Initiate Sync to Branch
           </.button>
