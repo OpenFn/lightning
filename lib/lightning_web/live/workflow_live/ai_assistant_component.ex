@@ -280,6 +280,7 @@ defmodule LightningWeb.WorkflowLive.AiAssistantComponent do
         </p>
 
         <.button
+          theme="primary"
           id="get-started-with-ai-btn"
           phx-click="mark_disclaimer_read"
           phx-target={@myself}

@@ -149,6 +149,7 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
               <.button
                 id="rerun-selected-from-job-trigger"
                 type="button"
+                theme="primary"
                 phx-click="bulk-rerun"
                 phx-value-type="selected"
                 phx-value-job={@selected_job.id}
@@ -163,6 +164,7 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
               <.button
                 id="rerun-all-from-job-trigger"
                 type="button"
+                theme="primary"
                 phx-click="bulk-rerun"
                 phx-value-type="all"
                 phx-value-job={@selected_job.id}
@@ -197,6 +199,7 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
               <.button
                 id="rerun-selected-from-job-trigger"
                 type="button"
+                theme="primary"
                 phx-click="bulk-rerun"
                 phx-value-type="selected"
                 phx-value-job={@selected_job.id}

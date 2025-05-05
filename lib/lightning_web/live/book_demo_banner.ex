@@ -170,7 +170,7 @@ defmodule LightningWeb.BookDemoBanner do
             />
             <div class="mt-6">
               <div class="sm:flex sm:flex-row-reverse gap-3">
-                <.button type="submit" disabled={!@changeset.valid?}>
+                <.button type="submit" theme="primary" disabled={!@changeset.valid?}>
                   Schedule a call
                 </.button>
                 <.button

@@ -655,6 +655,7 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
                   "save-credential-button-#{@credential.id || "new"}"
                 }
                   type="submit"
+                  theme="primary"
                   disabled={!@changeset.valid? || @scopes_changed}
                 >
                   Save

@@ -160,6 +160,7 @@ defmodule LightningWeb.WorkflowLive.GithubSyncModal do
             <.button
               id={"submit-btn-#{@id}"}
               type="submit"
+              theme="primary"
               disabled={!@verify_connection.ok?}
             >
               Save and sync

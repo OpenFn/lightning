@@ -187,6 +187,7 @@ defmodule LightningWeb.AuthProvidersLive.FormComponent do
                     phx-disable-with="Saving"
                     disabled={!@changeset.valid?}
                     type="submit"
+                    theme="primary"
                   >
                     Save
                   </.button>

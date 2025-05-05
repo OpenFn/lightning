@@ -165,6 +165,7 @@ defmodule LightningWeb.CollectionLive.CollectionCreationModal do
               <.button
                 id={"save-collection-#{@collection.id || "new"}"}
                 type="submit"
+                theme="primary"
                 disabled={!@changeset.valid?}
                 phx-target={@myself}
               >

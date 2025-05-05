@@ -90,6 +90,7 @@ defmodule LightningWeb.AccountConfirmationModal do
             <.button
               id="resend-confirmation-email-button"
               type="button"
+              theme="primary"
               phx-click="resend-confirmation-email"
               phx-target={@myself}
               disabled={@email_sent}

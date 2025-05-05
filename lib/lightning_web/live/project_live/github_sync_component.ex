@@ -623,6 +623,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
           <.button
             id="reconnect-project-button"
             type="submit"
+            theme="primary"
             phx-disable-with="Connecting..."
           >
             Reconnect

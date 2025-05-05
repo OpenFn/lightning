@@ -7,7 +7,6 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
   alias Lightning.OauthClients
   alias LightningWeb.Components.NewInputs
   alias LightningWeb.CredentialLive.Helpers
-  alias Phoenix.LiveView.JS
 
   @valid_assigns [
     :id,
@@ -512,7 +511,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
           </div>
           <.modal_footer class="mt-6 mx-6">
             <div class="sm:flex sm:flex-row-reverse gap-3">
-              <.button type="submit" disabled={!@changeset.valid?}>
+              <.button type="submit" theme="primary" disabled={!@changeset.valid?}>
                 <%= case @action do %>
                   <% :edit -> %>
                     Save Changes
@@ -520,13 +519,9 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
                     Add OAuth Client
                 <% end %>
               </.button>
-              <.button
-                type="button"
-                phx-click={JS.navigate(@return_to)}
-                theme="secondary"
-              >
+              <.button_link type="button" navigate={@return_to} theme="secondary">
                 Cancel
-              </.button>
+              </.button_link>
             </div>
           </.modal_footer>
         </.form>

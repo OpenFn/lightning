@@ -127,6 +127,7 @@ defmodule LightningWeb.DashboardLive.ProjectCreationModal do
             <div class="sm:flex sm:flex-row-reverse gap-3">
               <.button
                 type="submit"
+                theme="primary"
                 disabled={!@changeset.valid?}
                 phx-target={@myself}
               >

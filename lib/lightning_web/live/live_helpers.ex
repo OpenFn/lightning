@@ -133,7 +133,7 @@ defmodule LightningWeb.LiveHelpers do
             class="bg-secondary-50 px-4 py-3 sm:px-6 sm:flex"
           >
             <a href="javascript:history.back()">
-              <NewInputs.button>
+              <NewInputs.button theme="primary">
                 <div class="h-full">
                   <Icon.left class="h-4 w-4 inline-block" />
                   <span class="inline-block align-middle">Back</span>

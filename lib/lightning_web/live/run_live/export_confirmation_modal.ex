@@ -32,7 +32,12 @@ defmodule LightningWeb.RunLive.ExportConfirmationModal do
         </div>
         <.modal_footer class="mt-6 mx-6">
           <div class="sm:flex sm:flex-row-reverse gap-3">
-            <.button id="confirm-export" type="button" phx-click="confirm-export">
+            <.button
+              id="confirm-export"
+              type="button"
+              theme="primary"
+              phx-click="confirm-export"
+            >
               Export history
             </.button>
             <.button

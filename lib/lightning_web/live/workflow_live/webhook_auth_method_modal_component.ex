@@ -468,6 +468,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
           <.button
             id="update_trigger_auth_methods_button"
             type="button"
+            theme="primary"
             phx-click="save"
             phx-target={@myself}
           >
@@ -550,6 +551,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
       </div>
       <.modal_footer class="mx-6 mt-6">
         <.button
+          theme="primary"
           type="submit"
           disabled={f[:auth_type].value != :api and f[:auth_type].value != :basic}
         >

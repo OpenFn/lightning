@@ -42,6 +42,7 @@
       <div class="py-4"></div>
     </div>
     <.button
+      theme="primary"
       type="submit"
       disabled={
         !@user_info_changeset.valid? ||
@@ -87,6 +88,7 @@
     </div>
     <.button
       type="submit"
+      theme="primary"
       disabled={!@email_changeset.valid?}
       phx-disable-with="Sending confirmation email..."
     >
@@ -135,6 +137,7 @@
     </div>
     <.button
       type="submit"
+      theme="primary"
       disabled={!@password_changeset.valid?}
       phx-disable-with="Saving..."
     >

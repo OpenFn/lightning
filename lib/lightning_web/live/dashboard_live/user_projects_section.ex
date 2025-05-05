@@ -77,6 +77,7 @@ defmodule LightningWeb.DashboardLive.UserProjectsSection do
             id="open-create-project-modal-button"
             phx-click={show_modal("create-project-modal")}
             class="w-full"
+            theme="primary"
           >
             Create project
           </.button>

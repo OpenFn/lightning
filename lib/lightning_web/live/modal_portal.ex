@@ -17,7 +17,7 @@ defmodule LightningWeb.ModalPortal do
       >
         <.live_component module={@show.module} {@show}>
           <:cancel>
-            <.button phx-click="close_modal" phx-target={@myself}>
+            <.button phx-click="close_modal" theme="primary" phx-target={@myself}>
               Cancel
             </.button>
           </:cancel>

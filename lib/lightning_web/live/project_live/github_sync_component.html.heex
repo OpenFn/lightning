@@ -125,6 +125,7 @@
         <.button
           id="connect-and-sync-button"
           type="submit"
+          theme="primary"
           phx-disable-with="Connecting..."
           disabled={@actions_disabled || !@changeset.valid?}
           tooltip={@actions_disabled && @actions_disabled_tooltip}
@@ -192,6 +193,7 @@
                 !@verify_connection.ok?
             }
             type="button"
+            theme="primary"
             tooltip={
               (@actions_disabled && @actions_disabled_tooltip) ||
                 (!@can_initiate_github_sync &&

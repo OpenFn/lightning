@@ -3,6 +3,7 @@
     <LayoutComponents.header current_user={@current_user}>
       <:title>Users</:title>
       <.button_link
+        theme="primary"
         navigate={Routes.user_edit_path(@socket, :new)}
         class="inline-flex items-center gap-x-1.5"
       >

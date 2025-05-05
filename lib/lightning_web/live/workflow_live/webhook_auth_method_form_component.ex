@@ -322,7 +322,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
       </div>
       <.modal_footer class="mx-6 mt-6">
         <div class="sm:flex sm:flex-row-reverse gap-3">
-          <.button type="submit">
+          <.button type="submit" theme="primary">
             Done
           </.button>
           <.button
@@ -364,7 +364,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
       </div>
       <.modal_footer class="mx-6 mt-6">
         <div class="sm:flex sm:flex-row-reverse gap-3">
-          <.button type="submit" disabled={!@changeset.valid?}>
+          <.button type="submit" disabled={!@changeset.valid?} theme="primary">
             <%= if @action == :new do %>
               Create auth method
             <% else %>

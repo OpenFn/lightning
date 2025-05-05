@@ -122,6 +122,7 @@
                 <.button
                   id="project-identity-submit-btn"
                   type="submit"
+                  theme="primary"
                   disabled={!(@project_changeset.valid? and @can_edit_project)}
                 >
                   Save
@@ -210,6 +211,7 @@
                 <.button
                   id="project-concurrency-submit-btn"
                   type="submit"
+                  theme="primary"
                   disabled={
                     !(Enum.any?(@project_changeset.changes) and @can_edit_project)
                   }
@@ -234,6 +236,7 @@
               <div class="py-2"></div>
             </div>
             <.button_link
+              theme="primary"
               href={~p"/download/yaml?id=#{@project.id}"}
               target="_blank"
             >
@@ -536,6 +539,7 @@
             <.button
               id="add_new_auth_method"
               type="button"
+              theme="primary"
               phx-click={show_modal("new_auth_method_modal")}
               {if !@can_write_webhook_auth_method, do: [disabled: "disabled"], else: []}
             >
@@ -712,6 +716,7 @@
               <.button
                 id="show_collaborators_modal_button"
                 type="button"
+                theme="primary"
                 phx-click="toggle_collaborators_modal"
                 disabled={
                   !@can_add_project_user ||
@@ -1190,6 +1195,7 @@
                 <.button
                   id="input-output-retention-period-submit-btn"
                   type="submit"
+                  theme="primary"
                   disabled={
                     not @project_changeset.valid? or
                       not @can_edit_data_retention
@@ -1269,6 +1275,7 @@
                   disabled={true}
                   class="table-action disabled:bg-gray-50"
                   tooltip="Export is not yet ready for download"
+                  theme="primary"
                 >
                   Download
                 </.button>

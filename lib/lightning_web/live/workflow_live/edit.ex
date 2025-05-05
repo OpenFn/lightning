@@ -124,6 +124,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             :if={@snapshot_version_tag != "latest"}
             id={"version-switcher-button-#{@workflow.id}"}
             type="button"
+            theme="primary"
             phx-click="switch-version"
             phx-value-type="commit"
           >
@@ -749,6 +750,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               <div :if={@publish_template} class="sm:flex sm:flex-row-reverse gap-3">
                 <.button
                   type="submit"
+                  theme="primary"
                   form="workflow-template-form"
                   disabled={!@workflow_template_changeset.valid?}
                 >
@@ -805,6 +807,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     ~H"""
     <.button
       id="save-and-run"
+      theme="primary"
       phx-hook="DefaultRunViaCtrlEnter"
       {save_and_run_attributes(assigns)}
       class={save_and_run_classes(assigns)}
@@ -859,6 +862,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     <div class="relative -ml-px block">
       <.button
         type="button"
+        theme="primary"
         class="h-full rounded-l-none pr-1 pl-1"
         id="option-menu-button"
         aria-expanded="true"
@@ -2876,6 +2880,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             if @project_repo_connection, do: ["rounded-r-none"], else: []
         }
         phx-connected={!@disabled && JS.remove_attribute("disabled")}
+        theme="primary"
       >
         Save
       </.button>
@@ -2890,6 +2895,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           phx-click={show_dropdown("#{@id}-save-and-sync")}
           phx-disconnected={JS.set_attribute({"disabled", ""})}
           phx-connected={!@disabled && JS.remove_attribute("disabled")}
+          theme="primary"
         >
           <span class="sr-only">Open options</span>
           <.icon name="hero-chevron-down" class="w-4 h-4" />

@@ -177,6 +177,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
         <div class="sm:block">
           <.button
             role="button"
+            theme="primary"
             id="open-create-collection-modal-button"
             phx-click="toggle_action"
             phx-value-action="new"
@@ -308,6 +309,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
             <.button
               id={"submit-btn-#{@id}"}
               type="submit"
+              theme="primary"
               disabled={!@changeset.valid?}
             >
               Save

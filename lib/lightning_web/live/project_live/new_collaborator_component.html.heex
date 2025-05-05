@@ -123,6 +123,7 @@
           <.button
             id="save_collaborators_button"
             type="submit"
+            theme="primary"
             phx-disable-with="Adding..."
             disabled={!@changeset.valid? || !is_nil(@error)}
           >

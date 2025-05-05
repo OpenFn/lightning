@@ -220,6 +220,7 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
       <.button
         id={"#{@id}-revoke-button"}
         type="button"
+        theme="primary"
         phx-click="revoke-transfer"
         phx-target={@myself}
         phx-disable-with="Revoking..."
@@ -245,6 +246,7 @@ defmodule LightningWeb.CredentialLive.TransferCredentialModal do
       <.button
         id={"#{@id}-submit-button"}
         type="submit"
+        theme="primary"
         phx-disable-with="Transferring..."
         disabled={!@changeset.valid?}
       >

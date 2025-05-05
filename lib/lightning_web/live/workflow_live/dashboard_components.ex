@@ -368,6 +368,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
         class="col-span-1 w-full"
         role="button"
         id="new-workflow-button"
+        theme="primary"
       >
         Create new workflow
       </.button>

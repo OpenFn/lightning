@@ -283,6 +283,7 @@ defmodule LightningWeb.Components.Credentials do
     <div id={@id} class="inline-flex rounded-md shadow-xs">
       <.button
         type="button"
+        theme="primary"
         phx-click={show_dropdown("menu")}
         class="relative inline-flex items-center"
         aria-expanded="true"

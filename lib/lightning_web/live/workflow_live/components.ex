@@ -17,7 +17,7 @@ defmodule LightningWeb.WorkflowLive.Components do
       <div class="text-sm font-semibold text-gray-500 pb-4">
         Create your first job to get started.
       </div>
-      <.button phx-click="create_job" disabled={@disabled}>
+      <.button theme="primary" phx-click="create_job" disabled={@disabled}>
         <div class="h-full">
           <span class="inline-block mr-1">
             Create job

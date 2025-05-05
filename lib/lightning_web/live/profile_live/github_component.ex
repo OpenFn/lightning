@@ -70,7 +70,8 @@ defmodule LightningWeb.ProfileLive.GithubComponent do
             <.button
               id="github-oauth-not-enabled"
               type="button"
-              disabled
+              theme="primary"
+              disabled={true}
               tooltip="Github OAuth has not been enabled for this instance."
             >
               Connect your GitHub account

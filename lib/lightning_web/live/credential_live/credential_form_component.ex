@@ -297,6 +297,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
           <div class="sm:flex sm:flex-row-reverse gap-3">
             <.button
               type="submit"
+              theme="primary"
               disabled={!@schema}
               phx-click="change_page"
               phx-target={@myself}
@@ -489,6 +490,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
               <.button
                 id={"save-credential-button-#{@credential.id || "new"}"}
                 type="submit"
+                theme="primary"
                 disabled={!@changeset.valid? or @scopes_changed or @sandbox_changed}
               >
                 Save
