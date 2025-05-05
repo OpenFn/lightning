@@ -7,9 +7,8 @@ defmodule LightningWeb.LiveHelpers do
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Services.UsageLimiter
 
-  # alias LightningWeb.Components.Common
-  alias LightningWeb.Components.NewInputs
   alias LightningWeb.Components.Icon
+  alias LightningWeb.Components.NewInputs
 
   alias Phoenix.LiveView.JS
 
