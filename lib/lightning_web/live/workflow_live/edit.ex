@@ -729,7 +729,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     <div id="run-buttons" class="inline-flex rounded-md shadow-xs">
       <.save_and_run_button {assigns} />
       <.create_new_work_order_dropdown
-        :if={step_retryable?(@step, @manual_run_form, @selectable_dataclips)}
+        :if={step_retryable?(assigns)}
         {assigns}
       />
     </div>
@@ -744,19 +744,19 @@ defmodule LightningWeb.WorkflowLive.Edit do
       {save_and_run_attributes(assigns)}
       class={save_and_run_classes(assigns)}
       disabled={
-        assigns.save_and_run_disabled ||
-          processing(assigns.follow_run) ||
+        @save_and_run_disabled ||
+          processing(@follow_run) ||
           selected_dataclip_wiped?(
-            assigns.manual_run_form,
-            assigns.selectable_dataclips
+            @manual_run_form,
+            @selectable_dataclips
           ) ||
-          assigns.snapshot_version_tag != "latest"
+          @snapshot_version_tag != "latest"
       }
     >
       <%= if processing(@follow_run) do %>
         <.icon name="hero-arrow-path" class="w-4 h-4 animate-spin mr-1" /> Processing
       <% else %>
-        <%= if step_retryable?(@step, @manual_run_form, @selectable_dataclips) do %>
+        <%= if step_retryable?(assigns) do %>
           <.icon name="hero-play-mini" class="w-4 h-4 mr-1" /> Retry from here
         <% else %>
           <.icon name="hero-play-mini" class="w-4 h-4 mr-1" /> Create New Work Order
@@ -1812,18 +1812,19 @@ defmodule LightningWeb.WorkflowLive.Edit do
            ) do
         {:ok, %{workorder: workorder, workflow: workflow}} ->
           %{runs: [run]} = workorder
-
           Runs.subscribe(run)
 
           snapshot = snapshot_by_version(workflow.id, workflow.lock_version)
 
           # Get the dataclip for the run
           dataclip = Invocation.get_dataclip_for_run(run.id)
+          changeset = Ecto.Changeset.put_change(workflow_or_changeset, :dataclip_id, dataclip.id)
 
           {:noreply,
            socket
            |> assign_workflow(workflow, snapshot)
            |> follow_run(run)
+           |> assign_manual_run_form(changeset)
            |> push_event("push-hash", %{"hash" => "log"})
            |> push_event("manual_run_created", %{dataclip: dataclip})}
 
