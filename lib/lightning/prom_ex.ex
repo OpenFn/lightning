@@ -54,25 +54,11 @@ defmodule Lightning.PromEx do
 
   use PromEx, otp_app: :lightning
 
+  alias Lightning.Config
   alias PromEx.Plugins
 
   @impl true
   def plugins do
-    stalled_run_threshold_seconds =
-      Application.get_env(:lightning, :metrics)[
-        :stalled_run_threshold_seconds
-      ]
-
-    run_performance_age_seconds =
-      Application.get_env(:lightning, :metrics)[
-        :run_performance_age_seconds
-      ]
-
-    run_queue_metrics_period_seconds =
-      Application.get_env(:lightning, :metrics)[
-        :run_queue_metrics_period_seconds
-      ]
-
     external_plugins = Lightning.Config.external_metrics_module().plugins()
 
     [
@@ -87,9 +73,11 @@ defmodule Lightning.PromEx do
       # Add your own PromEx metrics plugins
       {
         Lightning.Runs.PromExPlugin,
-        run_queue_metrics_period_seconds: run_queue_metrics_period_seconds,
-        run_performance_age_seconds: run_performance_age_seconds,
-        stalled_run_threshold_seconds: stalled_run_threshold_seconds
+        run_queue_metrics_period_seconds:
+          Config.metrics_run_queue_metrics_period_seconds(),
+        run_performance_age_seconds: Config.metrics_run_performance_age_seconds(),
+        stalled_run_threshold_seconds:
+          Config.metrics_stalled_run_threshold_seconds()
       }
     ] ++ external_plugins
   end

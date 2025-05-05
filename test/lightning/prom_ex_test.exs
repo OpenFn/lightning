@@ -27,20 +27,23 @@ defmodule Lightning.PromExTest do
       Lightning.PromExTest.ExternalMetrics
     end)
 
-    stalled_run_threshold_seconds =
-      Application.get_env(:lightning, :metrics)[
-        :stalled_run_threshold_seconds
-      ]
+    Mox.stub(
+      Lightning.MockConfig,
+      :metrics_run_performance_age_seconds,
+      fn -> 10 end
+    )
 
-    performance_age_seconds =
-      Application.get_env(:lightning, :metrics)[
-        :run_performance_age_seconds
-      ]
+    Mox.stub(
+      Lightning.MockConfig,
+      :metrics_run_queue_metrics_period_seconds,
+      fn -> 20 end
+    )
 
-    run_metrics_period =
-      Application.get_env(:lightning, :metrics)[
-        :run_queue_metrics_period_seconds
-      ]
+    Mox.stub(
+      Lightning.MockConfig,
+      :metrics_stalled_run_threshold_seconds,
+      fn -> 30 end
+    )
 
     expected = [
       PromEx.Plugins.Application,
@@ -52,9 +55,9 @@ defmodule Lightning.PromExTest do
       PromEx.Plugins.PhoenixLiveView,
       {
         Lightning.Runs.PromExPlugin,
-        run_queue_metrics_period_seconds: run_metrics_period,
-        run_performance_age_seconds: performance_age_seconds,
-        stalled_run_threshold_seconds: stalled_run_threshold_seconds
+        run_queue_metrics_period_seconds: 20,
+        run_performance_age_seconds: 10,
+        stalled_run_threshold_seconds: 30
       },
       FooPlugin,
       BarPlugin

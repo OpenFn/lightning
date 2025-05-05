@@ -590,7 +590,7 @@ defmodule Lightning.Config do
   end
 
   def metrics_run_performance_age_seconds do
-    impl().metrics_stalled_run_threshold_seconds()
+    impl().metrics_run_performance_age_seconds()
   end
 
   def metrics_run_queue_metrics_period_seconds do
