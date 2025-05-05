@@ -77,7 +77,9 @@ defmodule Lightning.PromEx do
           Config.metrics_run_queue_metrics_period_seconds(),
         run_performance_age_seconds: Config.metrics_run_performance_age_seconds(),
         stalled_run_threshold_seconds:
-          Config.metrics_stalled_run_threshold_seconds()
+          Config.metrics_stalled_run_threshold_seconds(),
+        unclaimed_run_threshold_seconds:
+          Config.metrics_unclaimed_run_threshold_seconds()
       }
     ] ++ external_plugins
   end

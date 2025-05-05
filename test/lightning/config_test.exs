@@ -89,6 +89,18 @@ defmodule Lightning.Configtest do
 
       assert expected == actual
     end
+
+    test "returns the number of seconds before a run is 'unclaimed'" do
+      expected =
+        extract_from_config(
+          :metrics,
+          :unclaimed_run_threshold_seconds
+        )
+
+      actual = API.metrics_unclaimed_run_threshold_seconds()
+
+      assert expected == actual
+    end
   end
 
   defp extract_from_config(config, key) do

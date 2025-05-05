@@ -45,6 +45,12 @@ defmodule Lightning.PromExTest do
       fn -> 30 end
     )
 
+    Mox.stub(
+      Lightning.MockConfig,
+      :metrics_unclaimed_run_threshold_seconds,
+      fn -> 40 end
+    )
+
     expected = [
       PromEx.Plugins.Application,
       PromEx.Plugins.Beam,
@@ -57,7 +63,8 @@ defmodule Lightning.PromExTest do
         Lightning.Runs.PromExPlugin,
         run_queue_metrics_period_seconds: 20,
         run_performance_age_seconds: 10,
-        stalled_run_threshold_seconds: 30
+        stalled_run_threshold_seconds: 30,
+        unclaimed_run_threshold_seconds: 40
       },
       FooPlugin,
       BarPlugin
