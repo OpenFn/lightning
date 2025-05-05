@@ -53,6 +53,42 @@ defmodule Lightning.Configtest do
 
       assert expected == actual
     end
+
+    test "returns number of seconds that constitutes stalled run threshold" do
+      expected =
+        extract_from_config(
+          :metrics,
+          :stalled_run_threshold_seconds
+        )
+
+      actual = API.metrics_stalled_run_threshold_seconds()
+
+      assert expected == actual
+    end
+
+    test "returns max allowable age of a run when considering run performance" do
+      expected =
+        extract_from_config(
+          :metrics,
+          :run_performance_age_seconds
+        )
+
+      actual = API.metrics_run_performance_age_seconds()
+
+      assert expected == actual
+    end
+
+    test "returns the polling period in seconds for run queue metrics" do
+      expected =
+        extract_from_config(
+          :metrics,
+          :run_queue_metrics_period_seconds
+        )
+
+      actual = API.metrics_run_queue_metrics_period_seconds()
+
+      assert expected == actual
+    end
   end
 
   defp extract_from_config(config, key) do
