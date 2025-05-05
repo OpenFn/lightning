@@ -1,0 +1,35 @@
+#! /usr/bin/env bash
+
+set -euo pipefail
+
+NO_CACHE=""
+PROGRESS=""
+
+for arg in "$@"; do
+  case $arg in
+    --no-cache)
+      echo "[INFO] Forcing a clean build: removing .docker-cache and using --no-cache."
+      rm -rf .docker-cache
+      NO_CACHE="--no-cache"
+      ;;
+    --serial)
+      export BUILDKIT_MAX_PARALLELISM=1
+      PROGRESS="--progress=plain"
+      ;;
+  esac
+done
+
+# Ensure a buildx builder exists and is using the docker-container driver
+if ! docker buildx inspect lightning-builder >/dev/null 2>&1; then
+  docker buildx create --name lightning-builder --driver docker-container --use
+else
+  docker buildx use lightning-builder
+fi
+
+docker buildx build \
+  --platform=linux/amd64 \
+  $NO_CACHE \
+  --load \
+  -t openfn/lightning:latest \
+  $PROGRESS \
+  .
