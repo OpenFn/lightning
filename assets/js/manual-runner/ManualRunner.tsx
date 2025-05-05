@@ -480,14 +480,13 @@ const CustomView: React.FC<{ pushEvent: (event: string, data: any) => void }> = 
 
   const handleEditorChange = React.useCallback((value: string) => {
     setEditorValue(value);
-    if (isValidJson)
-      pushEvent("manual_run_change", {
-        manual: {
-          body: value,
-          dataclip_id: null
-        }
-      });
-  }, [isValidJson, pushEvent]);
+    pushEvent("manual_run_change", {
+      manual: {
+        body: value,
+        dataclip_id: null
+      }
+    });
+  }, [pushEvent]);
 
   return <div className='relative h-[420px]'>
     <div className="font-semibold mb-3 text-gray-600">Create a new input</div>
