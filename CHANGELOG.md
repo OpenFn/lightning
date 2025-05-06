@@ -19,8 +19,19 @@ and this project adheres to
 
 ### Changed
 
+- Make the chunk size for deleting expired activty configurable via ENV
+  [#3181](https://github.com/OpenFn/lightning/pull/3181)
+
+### Fixed
+
+## [v2.12.2] - 2025-05-01
+
+### Changed
+
 - Tweak language on webhook auth method modal and list action
   [#3166](https://github.com/OpenFn/lightning/pull/3166)
+- Re-order nightly cron jobs to reduce acute stress on db
+  [#3179](https://github.com/OpenFn/lightning/pull/3179)
 - Standardize buttons
   [#3093](https://github.com/OpenFn/lightning/issues/3093)
 
