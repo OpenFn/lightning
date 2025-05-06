@@ -183,12 +183,14 @@ defmodule LightningWeb.AuthProvidersLive.FormComponent do
             <div class="mt-4">
               <div class="flex">
                 <div class="flex-none">
-                  <.submit_button
+                  <.button
                     phx-disable-with="Saving"
                     disabled={!@changeset.valid?}
+                    type="submit"
+                    theme="primary"
                   >
                     Save
-                  </.submit_button>
+                  </.button>
                 </div>
                 <div class="grow"></div>
                 <div class="flex-none">
@@ -268,12 +270,12 @@ defmodule LightningWeb.AuthProvidersLive.FormComponent do
                     external authentication for Lightning.
                   </p>
 
-                  <Common.button color="red" phx-click="disable" phx-target={@myself}>
+                  <.button theme="danger" phx-click="disable" phx-target={@myself}>
                     <div class="h-full">
-                      <Heroicons.trash class="h-4 w-4 inline-block" />
+                      <.icon name="hero-trash" class="h-4 w-4 inline-block" />
                       <span class="inline-block align-middle">Remove</span>
                     </div>
-                  </Common.button>
+                  </.button>
                 </div>
               <% end %>
             </div>
@@ -290,26 +292,31 @@ defmodule LightningWeb.AuthProvidersLive.FormComponent do
     ~H"""
     <%= case @state do %>
       <% :failed -> %>
-        <Common.button color="red" id="test-button">
+        <.button theme="danger" id="test-button">
           <div class="h-full -ml-1">
-            <Heroicons.x_mark solid class="h-4 w-4 inline-block" />
+            <.icon name="hero-x-mark-solid" class="h-4 w-4 inline-block" />
             <span class="inline-block align-middle">Failed</span>
           </div>
-        </Common.button>
+        </.button>
       <% :success -> %>
-        <Common.button color="green" id="test-button">
+        <.button theme="success" id="test-button">
           <div class="h-full -ml-1">
-            <Heroicons.check solid class="h-4 w-4 inline-block" />
+            <.icon name="hero-check-solid" class="h-4 w-4 inline-block" />
             <span class="inline-block align-middle">Success</span>
           </div>
-        </Common.button>
+        </.button>
       <% :unknown -> %>
-        <Common.button_white phx-click="test" phx-target={@myself} id="test-button">
+        <.button
+          theme="secondary"
+          phx-click="test"
+          phx-target={@myself}
+          id="test-button"
+        >
           <div class="h-full -ml-1">
-            <Heroicons.beaker solid class="h-4 w-4 inline-block" />
+            <.icon name="hero-beaker-solid" class="h-4 w-4 inline-block" />
             <span class="inline-block align-middle">Test</span>
           </div>
-        </Common.button_white>
+        </.button>
       <% _ -> %>
     <% end %>
     """

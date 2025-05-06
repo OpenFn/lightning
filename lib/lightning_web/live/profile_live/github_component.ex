@@ -52,7 +52,7 @@ defmodule LightningWeb.ProfileLive.GithubComponent do
                 id="disconnect-github-button"
                 type="button"
                 phx-click={show_modal("disconnect_github_modal")}
-                color_class="text-white bg-danger-500 hover:bg-danger-700"
+                theme="danger"
               >
                 Disconnect from GitHub
               </.button>
@@ -70,7 +70,8 @@ defmodule LightningWeb.ProfileLive.GithubComponent do
             <.button
               id="github-oauth-not-enabled"
               type="button"
-              disabled
+              theme="primary"
+              disabled={true}
               tooltip="Github OAuth has not been enabled for this instance."
             >
               Connect your GitHub account
@@ -109,30 +110,24 @@ defmodule LightningWeb.ProfileLive.GithubComponent do
           </button>
         </div>
       </:title>
-      <div class="px-6">
-        <p class="text-sm text-gray-500">
-          You are about to disconnect your OpenFn account from GitHub.
-          Until you reconnect, you will not be able to set up or modify version control for your projects.
-        </p>
-      </div>
+      <p class="text-sm text-gray-500">
+        You are about to disconnect your OpenFn account from GitHub.
+        Until you reconnect, you will not be able to set up or modify version control for your projects.
+      </p>
       <div class="flex flex-row-reverse gap-4 mx-6 mt-2">
         <.button
           id={"#{@id}_confirm_button"}
           type="button"
-          color_class="bg-red-600 hover:bg-red-700 text-white"
+          theme="danger"
           phx-disable-with="Disconnecting..."
           phx-click="disconnect-github"
           phx-target={@myself}
         >
           Disconnect
         </.button>
-        <button
-          type="button"
-          phx-click={hide_modal(@id)}
-          class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-        >
+        <.button type="button" phx-click={hide_modal(@id)} theme="secondary">
           Cancel
-        </button>
+        </.button>
       </div>
     </.modal>
     """

@@ -131,18 +131,19 @@
       <.button
         id="save-user"
         type="submit"
+        theme="primary"
         disabled={!@changeset.valid?}
         tooltip="All fields are required"
       >
         Save
       </.button>
       <span>
-        <.link
+        <.button_link
           navigate={Routes.user_index_path(@socket, :index)}
-          class="inline-flex justify-center py-2 px-4 border border-transparent shadow-xs text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500"
+          theme="secondary"
         >
           Cancel
-        </.link>
+        </.button_link>
       </span>
     </div>
   </.form>

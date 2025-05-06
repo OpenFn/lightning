@@ -44,23 +44,26 @@
                   Keep me logged in for 60 days
                 </span>
               </.check_box>
-              <.submit_button>
+              <.button type="submit" theme="primary">
                 Log in
-              </.submit_button>
+              </.button>
               <%= if @auth_handler_url do %>
                 <div class="text-xs text-secondary-700 border-b text-center leading-[0]">
                   <span class="px-2 bg-white">or</span>
                 </div>
-                <Common.button_white>
+                <.button theme="secondary">
                   <a href={@auth_handler_url} class="w-full">
-                    <div class="h-full -ml-1">
-                      <Heroicons.identification class="h-4 w-4 inline-block" />
-                      <span class="inline-block align-middle">
+                    <div class="-ml-1 inline-flex items-center">
+                      <.icon
+                        name="hero-identification"
+                        class="h-4 w-4 inline-block"
+                      />
+                      <span class="ml-1 inline-block align-middle">
                         via external provider
                       </span>
                     </div>
                   </a>
-                </Common.button_white>
+                </.button>
               <% end %>
             </div>
             <div class="hidden sm:block" aria-hidden="true">
