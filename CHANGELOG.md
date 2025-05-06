@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- Added a custom metric to track projects that could benefit from additional
+  worker pods.
+  [#3189](https://github.com/OpenFn/lightning/issues/3189)
+
 ### Changed
 
 - Make the chunk size for deleting expired activty configurable via ENV
