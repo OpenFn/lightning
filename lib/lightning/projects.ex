@@ -988,38 +988,31 @@ defmodule Lightning.Projects do
     :ok
   end
 
-  defp delete_unused_snapshots(project_query) do
-    # Find all snapshots for workflows in this project
-    snapshots_query =
-      from(s in Snapshot,
-        join: w in assoc(s, :workflow),
-        join: wo in subquery(project_query),
-        on: wo.workflow_id == w.id
-      )
-
-    # Find snapshots that are current versions of workflows
-    current_snapshots =
-      from(s in snapshots_query,
-        join: w in assoc(s, :workflow),
-        where: s.lock_version == w.lock_version
-      )
-
-    # Find snapshots still referenced by workorders
-    referenced_snapshots =
-      from(s in snapshots_query,
-        join: wo in WorkOrder,
-        on: wo.snapshot_id == s.id
-      )
-
-    # Delete snapshots that aren't current and aren't referenced
-    delete_query =
-      from(s in snapshots_query,
+  defp delete_unused_snapshots(workorders_query) do
+    unused_snapshots_query =
+      from(ws in Snapshot,
+        as: :snapshot,
+        join: w in assoc(ws, :workflow),
+        join: wo in subquery(workorders_query),
+        on: wo.workflow_id == w.id,
         where:
-          s.id not in subquery(current_snapshots |> select([s], s.id)) and
-            s.id not in subquery(referenced_snapshots |> select([s], s.id))
+          not exists(
+            from w2 in Workflow,
+              where:
+                w2.id == parent_as(:snapshot).workflow_id and
+                  parent_as(:snapshot).lock_version == w2.lock_version,
+              select: 1
+          ),
+        where:
+          not exists(
+            from wo in WorkOrder,
+              where: wo.snapshot_id == parent_as(:snapshot).id,
+              select: 1
+          ),
+        select: ws.id
       )
 
-    Repo.delete_all(delete_query,
+    Repo.delete_all(unused_snapshots_query,
       returning: false,
       timeout: Config.default_ecto_database_timeout() * 3
     )
