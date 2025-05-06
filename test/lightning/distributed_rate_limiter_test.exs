@@ -58,11 +58,12 @@ defmodule Lightning.DistributedRateLimiterTest do
       assert 500 < wait_ms and wait_ms <= 1_000
     end
 
-    # For testing the replication use manual procedure or use this test case isolated to avoid interfering the tests above:
-    # 0. Disable Endpoint server
-    # 1. Run node1 on one terminal: iex --sname node1@localhost --cookie hordecookie -S mix phx.server
-    # 2. Run node2 on another terminal: iex --sname node2@localhost --cookie hordecookie -S mix phx.server
-    # 3. Call Lightning.DistributedRateLimiter.inspect_table() on both iex and they show the same ets table process and node.
+    # Run this distributed integration test case separately to avoid interfering with the tests above.
+    # For testing the replication use `bin/local_cluster` on the shell:
+    # 1. In one shell run `./bin/local_cluster`
+    # 2. On another shell run `./bin/local_cluster connect 2`
+    # 3. Type `Lightning.DistributedRateLimiter.inspect_table()` to see that the ETS table is distributed
+    # (on node1 or vice-versa if it was spawned on node2 when you connect to node 1).
     @tag :dist_integration
     test "works on top of a single worker of a distributed dynamic supervisor" do
       {:ok, peer, _node1, node2} = start_nodes(:node1, :node2, ~c"localhost")
