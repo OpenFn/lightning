@@ -21,6 +21,8 @@ and this project adheres to
 
 - Tweak language on webhook auth method modal and list action
   [#3166](https://github.com/OpenFn/lightning/pull/3166)
+- Standardize buttons
+  [#3093](https://github.com/OpenFn/lightning/issues/3093)
 
 ### Fixed
 

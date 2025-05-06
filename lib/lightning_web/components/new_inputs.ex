@@ -39,7 +39,7 @@ defmodule LightningWeb.Components.NewInputs do
       * `"warning"`
       * `"custom"`
 
-    * `:size` - The size of the button. Defaults to `"md"`. Acceptable values are:
+    * `:size` - The padding size of the button. Defaults to `"md"`. Acceptable values are:
       * `"sm"` - Small
       * `"md"` - Medium
       * `"lg"` - Large
