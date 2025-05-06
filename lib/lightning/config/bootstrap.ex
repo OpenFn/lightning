@@ -114,7 +114,8 @@ defmodule Lightning.Config.Bootstrap do
           "RTM",
           &Utils.ensure_boolean/1,
           Utils.get_env([:lightning, Lightning.Runtime.RuntimeManager, :start])
-        )
+        ),
+      port: env!("RTM_PORT", :integer, 2222)
 
     config :lightning, :workers,
       private_key:
@@ -408,6 +409,10 @@ defmodule Lightning.Config.Bootstrap do
       config :logger, :level, log_level
     end
 
+    if log_level == :debug do
+      config :libcluster, debug: true
+    end
+
     database_url = env!("DATABASE_URL", :string, nil)
 
     config :lightning, Lightning.Repo,
@@ -418,7 +423,6 @@ defmodule Lightning.Config.Bootstrap do
       queue_interval: env!("DATABASE_QUEUE_INTERVAL", :integer, 1000)
 
     host = env!("URL_HOST", :string, "example.com")
-    port = env!("PORT", :integer, 4000)
     url_port = env!("URL_PORT", :integer, 443)
 
     config :lightning,
@@ -464,18 +468,6 @@ defmodule Lightning.Config.Bootstrap do
           You can generate one by calling: mix phx.gen.secret
           """
 
-      listen_address =
-        env!(
-          "LISTEN_ADDRESS",
-          fn address ->
-            address
-            |> String.split(".")
-            |> Enum.map(&String.to_integer/1)
-            |> List.to_tuple()
-          end,
-          {127, 0, 0, 1}
-        )
-
       origins =
         env!(
           "ORIGINS",
@@ -490,40 +482,10 @@ defmodule Lightning.Config.Bootstrap do
 
       url_scheme = env!("URL_SCHEME", :string, "https")
 
-      idle_timeout =
-        env!(
-          "IDLE_TIMEOUT",
-          fn str ->
-            case Integer.parse(str) do
-              :error -> 60_000
-              {val, _} -> val * 1_000
-            end
-          end,
-          60_000
-        )
-
       config :lightning, LightningWeb.Endpoint,
         url: [host: host, port: url_port, scheme: url_scheme],
         secret_key_base: secret_key_base,
         check_origin: origins,
-        http: [
-          ip: listen_address,
-          port: port,
-          compress: true,
-          protocol_options: [
-            # Note that if a request is more than 10x the max dataclip size, we cut
-            # the connection immediately to prevent memory issues via the
-            # :max_skip_body_length setting.
-            max_skip_body_length:
-              Application.get_env(
-                :lightning,
-                :max_dataclip_size_bytes,
-                10_000_000
-              ) *
-                10,
-            idle_timeout: idle_timeout
-          ]
-        ],
         server: true
     end
 
@@ -538,6 +500,8 @@ defmodule Lightning.Config.Bootstrap do
       config :ex_unit,
         assert_receive_timeout: env!("ASSERT_RECEIVE_TIMEOUT", :integer, 1000)
     end
+
+    config :lightning, LightningWeb.Endpoint, http: http_config(config_env())
 
     config :sentry,
       dsn: env!("SENTRY_DSN", :string, nil),
@@ -813,5 +777,70 @@ defmodule Lightning.Config.Bootstrap do
       nil -> Application.get_all_env(app) |> get_in(keys)
       value -> value
     end
+  end
+
+  defp http_config(env, opts \\ [])
+  # Production environment configuration
+  defp http_config(:prod, opts) do
+    port = Keyword.get(opts, :port) || env!("PORT", :integer, 4000)
+
+    listen_address =
+      env!(
+        "LISTEN_ADDRESS",
+        fn address ->
+          address
+          |> String.split(".")
+          |> Enum.map(&String.to_integer/1)
+          |> List.to_tuple()
+        end,
+        {127, 0, 0, 1}
+      )
+
+    idle_timeout =
+      env!(
+        "IDLE_TIMEOUT",
+        fn str ->
+          case Integer.parse(str) do
+            :error -> 60_000
+            {val, _} -> val * 1_000
+          end
+        end,
+        60_000
+      )
+
+    [
+      ip: listen_address,
+      port: port,
+      compress: true,
+      protocol_options: [
+        # Note that if a request is more than 10x the max dataclip size, we cut
+        # the connection immediately to prevent memory issues via the
+        # :max_skip_body_length setting.
+        max_skip_body_length:
+          Application.get_env(
+            :lightning,
+            :max_dataclip_size_bytes,
+            10_000_000
+          ) * 10,
+        idle_timeout: idle_timeout
+      ]
+    ]
+  end
+
+  # Default configuration for non-production environments
+  defp http_config(_env, opts) do
+    port =
+      Keyword.get(opts, :port) ||
+        env!(
+          "PORT",
+          :integer,
+          get_env(:lightning, [LightningWeb.Endpoint, :http, :port])
+        )
+
+    [
+      ip: {0, 0, 0, 0},
+      port: port,
+      compress: true
+    ]
   end
 end
