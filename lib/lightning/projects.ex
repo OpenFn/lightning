@@ -954,7 +954,7 @@ defmodule Lightning.Projects do
 
     workorders_count =
       Repo.aggregate(workorders_query, :count,
-        timeout: Config.default_ecto_database_timeout() * 10
+        timeout: Config.default_ecto_database_timeout() * 3
       )
 
     for _i <- 1..ceil(workorders_count / batch_size) do
@@ -963,16 +963,16 @@ defmodule Lightning.Projects do
           {_count, _} =
             Repo.delete_all(steps_delete_query,
               returning: false,
-              timeout: Config.default_ecto_database_timeout() * 10
+              timeout: Config.default_ecto_database_timeout() * 3
             )
 
           {_count, _} =
             Repo.delete_all(workorders_delete_query,
               returning: false,
-              timeout: Config.default_ecto_database_timeout() * 10
+              timeout: Config.default_ecto_database_timeout() * 3
             )
         end,
-        timeout: Config.default_ecto_database_timeout() * 20
+        timeout: Config.default_ecto_database_timeout() * 6
       )
     end
 
@@ -1019,7 +1019,10 @@ defmodule Lightning.Projects do
             s.id not in subquery(referenced_snapshots |> select([s], s.id))
       )
 
-    Repo.delete_all(delete_query, returning: false)
+    Repo.delete_all(delete_query,
+      returning: false,
+      timeout: Config.default_ecto_database_timeout() * 3
+    )
   end
 
   defp delete_dataclips(dataclips_query, batch_size) do
