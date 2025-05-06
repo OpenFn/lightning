@@ -1,10 +1,11 @@
 import { MonacoEditor } from "#/monaco";
 import { DataclipViewer } from "#/react/components/DataclipViewer";
 import type { WithActionProps } from "#/react/lib/with-props";
-import { CalendarDaysIcon, CheckCircleIcon, CheckIcon, DocumentArrowUpIcon, DocumentIcon, DocumentTextIcon, InformationCircleIcon, MagnifyingGlassIcon, PencilSquareIcon, RectangleGroupIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { CalendarDaysIcon, CheckCircleIcon, CheckIcon, DocumentArrowUpIcon, DocumentIcon, DocumentTextIcon, InformationCircleIcon, MagnifyingGlassIcon, PencilSquareIcon, QueueListIcon, RectangleGroupIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { XCircleIcon } from "@heroicons/react/24/solid";
 import React from "react";
 import FileUploader from "./FileUploader";
+
 interface ManualRunnerProps {
   job_id: string
 }
@@ -14,6 +15,7 @@ const closeStyle = 'h-4 w-4 text-red-400';
 
 enum SeletableOptions {
   NONE,
+  LIST,
   EMPTY,
   CUSTOM,
   IMPORT
@@ -73,6 +75,7 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
       }
     })
   }, [props])
+  
   // handling of form submit
   React.useEffect(() => {
     function handleSubmit(e: Event) {
@@ -159,6 +162,7 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
           }
         })
         break;
+      case SeletableOptions.LIST:
       case SeletableOptions.CUSTOM:
       case SeletableOptions.NONE:
       case SeletableOptions.IMPORT:
@@ -175,6 +179,7 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
   const innerView = React.useMemo(() => {
     switch (selectedOption) {
       case SeletableOptions.NONE:
+      case SeletableOptions.LIST:
         return <NoneView
           query={query}
           filters={parsedQuery.filters}
@@ -241,19 +246,23 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
         <DataclipViewer dataclipId={selectedclip.id} />
       </>
       :
-      <div className="px-4 py-6 grow">
-        <div className="flex flex-col gap-3 h-full">
+      <div className="px-2 py-6 grow">
+        <div className="flex flex-col gap-2 h-full">
           <div className="font-bold flex justify-center">Select Input</div>
-          <div className="flex gap-4 justify-center flex-wrap">
-            <button type="button" onClick={selectOptionHandler(SeletableOptions.EMPTY)} className={"border min-w-[147px] text-base rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group" + getActive(SeletableOptions.EMPTY)}>
+          <div className="flex gap-2 justify-center flex-wrap">
+            <button type="button" onClick={selectOptionHandler(SeletableOptions.LIST)} className={"border min-w-[140px] text-base rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group" + getActive(SeletableOptions.LIST)}>
+              {selectedOption === SeletableOptions.LIST ? <XCircleIcon className={closeStyle} /> : <QueueListIcon className={`text-gray-600 w-4 h-4 transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} />}
+              List
+            </button>
+            <button type="button" onClick={selectOptionHandler(SeletableOptions.EMPTY)} className={"border min-w-[140px] text-base rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group" + getActive(SeletableOptions.EMPTY)}>
               {selectedOption === SeletableOptions.EMPTY ? <XCircleIcon className={closeStyle} /> : <DocumentIcon className={`text-gray-600 w-4 h-4 transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} />}
               Empty
             </button>
-            <button type="button" onClick={selectOptionHandler(SeletableOptions.CUSTOM)} className={"border min-w-[147px] text-base rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group" + getActive(SeletableOptions.CUSTOM)}>
+            <button type="button" onClick={selectOptionHandler(SeletableOptions.CUSTOM)} className={"border min-w-[140px] text-base rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group" + getActive(SeletableOptions.CUSTOM)}>
               {selectedOption === SeletableOptions.CUSTOM ? <XCircleIcon className={closeStyle} /> : <PencilSquareIcon className={`text-gray-600 w-4 h-4 transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} />}
               Custom
             </button>
-            <button type="button" onClick={selectOptionHandler(SeletableOptions.IMPORT)} className={"border min-w-[147px] text-base rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group" + getActive(SeletableOptions.IMPORT)}>
+            <button type="button" onClick={selectOptionHandler(SeletableOptions.IMPORT)} className={"border min-w-[140px] text-base rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group" + getActive(SeletableOptions.IMPORT)}>
               {selectedOption === SeletableOptions.IMPORT ? <XCircleIcon className={closeStyle} /> : <DocumentArrowUpIcon className={`text-gray-600 w-4 h-4 transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`} />}
               Import
             </button>
@@ -275,6 +284,7 @@ function constructQuery(payload: { query: string, filters: Record<string, string
   Object.entries(payload.filters).forEach(([key, value]) => output += ` ${key}:${value}`);
   return output;
 }
+
 function parseFilter(input: string) {
   const pattern = /\w+:\s*(\w+(-\w+)*)/g;
   const matches: string[] = [];
