@@ -7,7 +7,7 @@ defmodule Lightning.Services.RateLimiter do
   import Lightning.Services.AdapterHelper
 
   @impl true
-  def limit_request(conn, context, opts) do
+  def limit_request(conn, context, opts \\ []) do
     adapter().limit_request(conn, context, opts)
   end
 

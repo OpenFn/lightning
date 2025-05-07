@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Support a rate-limiter on the /i endpoint
+  [#3185](https://github.com/OpenFn/lightning/issues/3185)
+
 ### Changed
 
 - Standardized table components across the application

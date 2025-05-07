@@ -1,7 +1,6 @@
 defmodule LightningWeb.WebhooksController do
   use LightningWeb, :controller
 
-  alias Lightning.Extensions.RateLimiting
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Services.RateLimiter
@@ -10,6 +9,7 @@ defmodule LightningWeb.WebhooksController do
   alias Lightning.WorkOrders
 
   plug :reject_unfetched when action in [:create]
+  plug :check_rate when action in [:create]
 
   # Reject requests with unfetched body params, as they are not supported
   # See Plug.Parsers in Endpoint for more information.
@@ -27,7 +27,38 @@ defmodule LightningWeb.WebhooksController do
     end
   end
 
-  @spec create(Plug.Conn.t(), %{path: binary()}) :: Plug.Conn.t()
+  # Note: Plug.Parsers is called before the Router.
+  def check_rate(conn, _opts) do
+    with %Workflows.Trigger{enabled: true, workflow: %{project_id: project_id}} <-
+           conn.assigns.trigger,
+         :ok <- RateLimiter.limit_request(conn, %Context{project_id: project_id}) do
+      conn
+    else
+      %Workflows.Trigger{enabled: false} ->
+        conn
+        |> put_status(:forbidden)
+        |> json(%{
+          message:
+            "Unable to process request, trigger is disabled. Enable it on OpenFn to allow requests to this endpoint."
+        })
+        |> halt()
+
+      {:error, :too_many_requests, %{text: message}} ->
+        conn
+        |> put_status(:too_many_requests)
+        |> put_resp_header("retry-after", "1")
+        |> json(%{"error" => message})
+        |> halt()
+
+      _no_trigger_or_workflow ->
+        conn
+        |> put_status(:not_found)
+        |> json(%{"error" => "Webhook not found"})
+        |> halt()
+    end
+  end
+
+  @spec check(Plug.Conn.t(), %{path: binary()}) :: Plug.Conn.t()
   def check(conn, _params) do
     put_status(conn, :ok)
     |> json(%{
@@ -37,30 +68,25 @@ defmodule LightningWeb.WebhooksController do
   end
 
   @spec create(Plug.Conn.t(), %{path: binary()}) :: Plug.Conn.t()
-  def create(conn, _params) do
-    with %Workflows.Trigger{enabled: true, workflow: %{project_id: project_id}} =
-           trigger <- conn.assigns.trigger,
-         {:ok, without_run?} <- check_skip_run_creation(project_id),
-         :ok <-
-           RateLimiter.limit_request(
-             conn,
-             %RateLimiting.Context{project_id: project_id},
-             []
-           ) do
-      {:ok, work_order} =
-        WorkOrders.create_for(trigger,
-          workflow: trigger.workflow,
-          dataclip: %{
-            body: conn.body_params,
-            request: build_request(conn),
-            type: :http_request,
-            project_id: project_id
-          },
-          without_run: without_run?
-        )
+  def create(%{assigns: %{trigger: trigger}} = conn, _params) do
+    %Workflows.Trigger{workflow: workflow} = trigger
 
-      conn |> json(%{work_order_id: work_order.id})
-    else
+    case check_skip_run_creation(workflow.project_id) do
+      {:ok, without_run?} ->
+        {:ok, work_order} =
+          WorkOrders.create_for(trigger,
+            workflow: workflow,
+            dataclip: %{
+              body: conn.body_params,
+              request: build_request(conn),
+              type: :http_request,
+              project_id: workflow.project_id
+            },
+            without_run: without_run?
+          )
+
+        json(conn, %{work_order_id: work_order.id})
+
       {:error, reason, %{text: message}} ->
         status =
           if reason == :too_many_requests,
@@ -69,19 +95,7 @@ defmodule LightningWeb.WebhooksController do
 
         conn
         |> put_status(status)
-        |> json(%{"error" => message})
-
-      nil ->
-        conn
-        |> put_status(:not_found)
-        |> json(%{"error" => "Webhook not found"})
-
-      _disabled ->
-        put_status(conn, :forbidden)
-        |> json(%{
-          message:
-            "Unable to process request, trigger is disabled. Enable it on OpenFn to allow requests to this endpoint."
-        })
+        |> json(%{error: message})
     end
   end
 

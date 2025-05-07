@@ -54,5 +54,12 @@ Application.put_env(:lightning, Lightning.Extensions,
   external_metrics: Lightning.Extensions.ExternalMetrics
 )
 
+epmd_path = System.find_executable("epmd")
+port = Port.open({:spawn_executable, epmd_path}, [])
+os_pid = Keyword.get(Port.info(port), :os_pid)
+
+# Configuring a "shutdown hook" to stop epmd after everything is done.
+System.at_exit(fn _ -> System.shell("kill -TERM #{os_pid}") end)
+
 ExUnit.start()
 Ecto.Adapters.SQL.Sandbox.mode(Lightning.Repo, :manual)
