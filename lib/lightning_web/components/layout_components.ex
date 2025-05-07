@@ -279,6 +279,7 @@ defmodule LightningWeb.LayoutComponents do
   attr :action_button_disabled, :boolean, default: false
   attr :action_button_tooltip, :string, default: nil
   attr :action_button_id, :string, default: nil
+  attr :options, :list, default: nil
   attr :role, :string, default: nil
 
   def section_header(assigns) do
@@ -293,22 +294,32 @@ defmodule LightningWeb.LayoutComponents do
           <.permissions_message section={@permissions_message} />
         <% end %>
       </div>
-      <%= if @action_button_text do %>
+      <%= if @action_button_text || @options do %>
         <div class="sm:block" aria-hidden="true">
-          <.button
-            :if={@action_button_id}
-            id={@action_button_id}
-            type="button"
-            theme="primary"
-            size="lg"
-            phx-click={@action_button_click}
-            phx-value-action={@action_button_value_action}
-            phx-target={@action_button_target}
-            disabled={@action_button_disabled}
-            tooltip={@action_button_tooltip}
-          >
-            {@action_button_text}
-          </.button>
+          <%= if @options do %>
+            <LightningWeb.Components.Credentials.options_menu_button
+              id={@action_button_id}
+              options={@options}
+              disabled={@action_button_disabled}
+            >
+              {@action_button_text || "Add new"}
+            </LightningWeb.Components.Credentials.options_menu_button>
+          <% else %>
+            <.button
+              :if={@action_button_id}
+              id={@action_button_id}
+              type="button"
+              theme="primary"
+              size="lg"
+              phx-click={@action_button_click}
+              phx-value-action={@action_button_value_action}
+              phx-target={@action_button_target}
+              disabled={@action_button_disabled}
+              tooltip={@action_button_tooltip}
+            >
+              {@action_button_text}
+            </.button>
+          <% end %>
         </div>
       <% end %>
     </div>
