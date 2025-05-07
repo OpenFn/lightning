@@ -243,6 +243,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
             :if={@selected_method != "import"}
             id="import-workflow-btn"
             type="button"
+            theme="primary"
             class="inline-flex gap-x-1.5"
             phx-click="choose-another-method"
             phx-value-method="import"
@@ -254,6 +255,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
             :if={@selected_method != "import"}
             id="toggle_new_workflow_panel_btn"
             type="button"
+            theme="primary"
             phx-click="toggle_new_workflow_panel"
           >
             Get started
@@ -262,7 +264,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
             :if={@selected_method == "import"}
             id="move-back-to-templates-btn"
             type="button"
-            variant="secondary"
+            theme="secondary"
             phx-click="choose-another-method"
             phx-value-method="template"
             phx-target={@myself}
@@ -275,6 +277,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
             type="button"
             phx-click="toggle_new_workflow_panel"
             disabled={!@changeset.valid?}
+            theme="primary"
           >
             Get started
           </.button>

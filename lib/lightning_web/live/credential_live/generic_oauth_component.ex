@@ -649,24 +649,24 @@ defmodule LightningWeb.CredentialLive.GenericOauthComponent do
         <.modal_footer class="mt-6 mx-4">
           <div class="flex justify-between items-center">
             <div class="flex-1 w-1/2">
-              <div class="sm:flex sm:flex-row-reverse">
-                <button
+              <div class="sm:flex sm:flex-row-reverse gap-3">
+                <.button
                   id={
                   "save-credential-button-#{@credential.id || "new"}"
                 }
                   type="submit"
+                  theme="primary"
                   disabled={!@changeset.valid? || @scopes_changed}
-                  class="inline-flex justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 sm:ml-3"
                 >
                   Save
-                </button>
-                <button
+                </.button>
+                <.button
                   type="button"
                   phx-click={JS.navigate(@return_to)}
-                  class="inline-flex justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                  theme="secondary"
                 >
                   Cancel
-                </button>
+                </.button>
               </div>
             </div>
           </div>

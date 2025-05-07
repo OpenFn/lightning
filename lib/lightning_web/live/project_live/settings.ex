@@ -738,18 +738,14 @@ defmodule LightningWeb.ProjectLive.Settings do
           type="button"
           phx-value-project_user_id={@project_user.id}
           phx-click="remove_project_user"
-          color_class="bg-red-600 hover:bg-red-700 text-white"
+          theme="danger"
           phx-disable-with="Removing..."
         >
           Confirm
         </.button>
-        <button
-          type="button"
-          phx-click={hide_modal(@id)}
-          class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-        >
+        <.button type="button" phx-click={hide_modal(@id)} theme="secondary">
           Cancel
-        </button>
+        </.button>
       </div>
     </.modal>
     """

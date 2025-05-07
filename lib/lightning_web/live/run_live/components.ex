@@ -666,27 +666,29 @@ defmodule LightningWeb.RunLive.Components do
               :if={@all_selected? and @total_entries > 1 and @pages > 1}
               class="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3"
             >
-              <button
+              <.button
                 type="button"
+                theme="primary"
                 phx-click="bulk-rerun"
                 phx-value-type="selected"
                 phx-disable-with="Running..."
-                class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-1"
+                class="sm:col-start-1"
               >
                 Rerun {@selected_count} selected work order{if @selected_count >
                                                                  1,
                                                                do: "s",
                                                                else: ""} from start
-              </button>
-              <button
+              </.button>
+              <.button
                 type="button"
+                theme="primary"
                 phx-click="bulk-rerun"
                 phx-value-type="all"
                 phx-disable-with="Running..."
-                class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2"
+                class="w-full sm:col-start-2"
               >
                 Rerun all {@total_entries} matching work orders from start
-              </button>
+              </.button>
               <div class="relative col-start-1 col-end-3">
                 <div class="absolute inset-0 flex items-center" aria-hidden="true">
                   <div class="w-full border-t border-gray-300"></div>
@@ -697,20 +699,22 @@ defmodule LightningWeb.RunLive.Components do
                   </span>
                 </div>
               </div>
-              <button
+              <.button
                 type="button"
-                class="mt-3 inline-flex w-full justify-center items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:col-end-3 sm:mt-0"
+                theme="secondary"
+                class="w-full sm:col-start-1 sm:col-end-3"
                 phx-click={hide_modal(@id)}
               >
                 Cancel
-              </button>
+              </.button>
             </div>
             <div
               :if={!@all_selected? or @total_entries == 1 or @pages == 1}
               class="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3"
             >
-              <button
+              <.button
                 type="button"
+                theme="primary"
                 phx-click="bulk-rerun"
                 phx-value-type="selected"
                 phx-disable-with="Running..."
@@ -720,14 +724,15 @@ defmodule LightningWeb.RunLive.Components do
                                                                  1,
                                                                do: "s",
                                                                else: ""} from start
-              </button>
-              <button
+              </.button>
+              <.button
                 type="button"
-                class="mt-3 inline-flex w-full justify-center items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:mt-0"
+                theme="secondary"
+                class="w-full sm:col-start-1"
                 phx-click={hide_modal(@id)}
               >
                 Cancel
-              </button>
+              </.button>
             </div>
           </.focus_wrap>
         </div>

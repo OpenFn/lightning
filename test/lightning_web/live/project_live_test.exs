@@ -175,7 +175,7 @@ defmodule LightningWeb.ProjectLiveTest do
       {:ok, index_live, html} = live(conn, ~p"/projects/#{project.id}/settings")
 
       assert html =~ "Deleting your project is irreversible"
-      assert index_live |> element("button", "Delete project") |> has_element?()
+      assert index_live |> element("a", "Delete project") |> has_element?()
 
       {:ok, delete_project_modal, html} =
         live(conn, ~p"/projects/#{project.id}/settings/delete")

@@ -478,12 +478,12 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
                 <div class="mt-4">
                   <div class="-mx-2 -my-1.5 flex">
                     <%= if @can_reconnect do %>
-                      <button
-                        class="rounded-md bg-yellow-50 px-2 py-1.5 text-sm font-medium text-yellow-800 hover:bg-yellow-100 focus:outline-none focus:ring-2 focus:ring-yellow-600 focus:ring-offset-2 focus:ring-offset-yellow-50"
+                      <.button
+                        theme="warning"
                         phx-click={show_modal("reconnect_modal")}
                       >
                         Click here to reconnect
-                      </button>
+                      </.button>
                       <.reconnect_modal
                         id="reconnect_modal"
                         changeset={@changeset}
@@ -510,14 +510,14 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
             </div>
             <div class="ml-auto pl-3">
               <div class="-mx-1.5 -my-1.5">
-                <button
+                <.button
                   phx-click={JS.hide(to: "##{@id}")}
                   type="button"
-                  class="inline-flex rounded-md bg-green-50 p-1.5 text-green-500 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 focus:ring-offset-green-50"
+                  theme="success"
                 >
                   <span class="sr-only">Dismiss</span>
-                  <Heroicons.x_mark class="h-5 w-5" />
-                </button>
+                  <.icon name="hero-x-mark" class="h-5 w-5" />
+                </.button>
               </div>
             </div>
           </div>
@@ -556,20 +556,16 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         <.button
           id={"#{@id}_confirm_button"}
           type="button"
-          color_class="bg-red-600 hover:bg-red-700 text-white"
+          theme="danger"
           phx-disable-with="Removing..."
           phx-click="delete-connection"
           phx-target={@myself}
         >
           Disconnect
         </.button>
-        <button
-          type="button"
-          phx-click={hide_modal(@id)}
-          class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-        >
+        <.button type="button" phx-click={hide_modal(@id)} theme="secondary">
           Cancel
-        </button>
+        </.button>
       </div>
     </.modal>
     """
@@ -627,6 +623,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
           <.button
             id="reconnect-project-button"
             type="submit"
+            theme="primary"
             phx-disable-with="Connecting..."
           >
             Reconnect
