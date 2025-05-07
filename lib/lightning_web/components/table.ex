@@ -207,7 +207,6 @@ defmodule LightningWeb.Components.Table do
       scope={@scope}
       class={[
         "text-sm text-left font-semibold text-gray-900 select-none whitespace-nowrap",
-        @sortable && "cursor-pointer",
         @class
       ]}
     >

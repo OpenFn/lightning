@@ -506,7 +506,7 @@ defmodule LightningWeb.Components.Common do
 
   def sortable_table_header(assigns) do
     ~H"""
-    <.link class="group inline-flex" {@rest}>
+    <.link class="group inline-flex cursor-pointer" {@rest}>
       {render_slot(@inner_block)}
       <span class={[
         "ml-2 flex-none rounded",
