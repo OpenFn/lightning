@@ -156,6 +156,7 @@ defmodule Lightning.Projects do
     project = get_project!(project_id)
     delete_history_for(project)
     wipe_dataclips_for(project)
+    remove_expired_files_for(project)
 
     :ok
   end
@@ -877,6 +878,22 @@ defmodule Lightning.Projects do
 
   defp wipe_dataclips_for(_project) do
     {:error, :missing_dataclip_retention_period}
+  end
+
+  defp remove_expired_files_for(%Project{
+         id: project_id,
+         history_retention_period: period
+       }) do
+    if not is_nil(period) do
+      delete_query =
+        from f in File,
+          where: f.project_id == ^project_id,
+          where: f.inserted_at < ago(^period, "day")
+
+      {_count, nil} = Repo.delete_all(delete_query, returning: false)
+    end
+
+    :ok
   end
 
   defp delete_history_for(

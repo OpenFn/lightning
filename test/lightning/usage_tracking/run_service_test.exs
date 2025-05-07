@@ -1,10 +1,7 @@
 defmodule Lightning.UsageTracking.RunServiceTest do
   use Lightning.DataCase, async: true
 
-  alias Lightning.Run
   alias Lightning.UsageTracking.RunService
-
-  require Run
 
   @date ~D[2024-02-05]
   @finished_at ~U[2024-02-05 12:11:10Z]
