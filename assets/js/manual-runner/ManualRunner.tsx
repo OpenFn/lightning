@@ -68,11 +68,11 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
   React.useEffect(() => {
     props.handleEvent("manual_run_created", payload => {
       if (payload.dataclip) {
-        setSelectedclip(payload.dataclip);
         setSelectedOption(SeletableOptions.NONE)
+        setTimeout(() => { setSelectedclip(payload.dataclip) }, 0)
       }
     })
-  }, [props])
+  }, [props, pushEvent])
   // handling of form submit
   React.useEffect(() => {
     function handleSubmit(e: Event) {
