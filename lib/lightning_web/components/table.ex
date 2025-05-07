@@ -139,7 +139,9 @@ defmodule LightningWeb.Components.Table do
       id={@id}
       phx-click={@onclick}
       class={[
-        "hover:bg-gray-50 transition-colors duration-150 cursor-pointer",
+        "transition-colors duration-150",
+        "has-[td]:hover:bg-gray-50",
+        @onclick && "cursor-pointer",
         "[&>td:first-child]:py-4 [&>td:first-child]:pr-3 [&>td:first-child]:pl-4 [&>td:first-child]:sm:pl-6",
         "[&>th:first-child]:py-3.5 [&>th:first-child]:pr-3 [&>th:first-child]:pl-4 [&>th:first-child]:sm:pl-6",
         "[&>td:not(:first-child):not(:last-child)]:px-3 [&>td:not(:first-child):not(:last-child)]:py-4",
@@ -205,6 +207,7 @@ defmodule LightningWeb.Components.Table do
       scope={@scope}
       class={[
         "text-sm text-left font-semibold text-gray-900 select-none whitespace-nowrap",
+        @sortable && "cursor-pointer",
         @class
       ]}
     >
