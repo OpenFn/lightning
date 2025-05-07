@@ -16,12 +16,14 @@ ARG ELIXIR_VERSION=1.18.3
 ARG OTP_VERSION=27.3.3
 ARG DEBIAN_VERSION=bookworm-20250428
 ARG NODE_VERSION=22.12.0
+ARG ERL_FLAGS
 
 ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
 ARG RUNNER_IMAGE="debian:${DEBIAN_VERSION}"
 
 FROM ${BUILDER_IMAGE} AS builder
 ARG NODE_VERSION
+ARG ERL_FLAGS
 
 # install build and dev dependencies
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
@@ -42,6 +44,7 @@ RUN mix local.hex --force && mix local.rebar --force
 
 # set build ENV
 ENV MIX_ENV="prod"
+ENV ERL_FLAGS=${ERL_FLAGS}
 
 COPY mix.exs mix.lock ./
 RUN mix deps.get --only $MIX_ENV
@@ -80,6 +83,7 @@ RUN mix release
 # the compiled release and other runtime necessities
 FROM ${RUNNER_IMAGE}
 ARG NODE_VERSION
+ARG ERL_FLAGS
 
 ARG BRANCH=""
 ARG COMMIT=""
@@ -111,6 +115,7 @@ RUN chown lightning /app
 
 # set runner ENV
 ENV MIX_ENV="prod"
+ENV ERL_FLAGS=${ERL_FLAGS}
 ENV ADAPTORS_PATH=/app/priv/openfn
 
 # Only copy the final release and the adaptor directory from the build stage
