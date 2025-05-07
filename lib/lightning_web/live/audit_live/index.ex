@@ -72,7 +72,7 @@ defmodule LightningWeb.AuditLive.Index do
     assigns = assign(assigns, changes: changes)
 
     ~H"""
-    <.td colspan={4} class="font-mono text-xs break-all">
+    <.td colspan={4} class="!p-4 font-mono text-xs break-all">
       <ul class="p-2 bg-gray-50 rounded-md ring ring-gray-100">
         <%= for {field, old, new} <- @changes do %>
           <li class="mb-2 last:mb-0">
@@ -88,9 +88,9 @@ defmodule LightningWeb.AuditLive.Index do
 
   defp no_changes(assigns) do
     ~H"""
-    <div class="col-span-4 font-mono text-xs bg-gray-50 p-4 border-t border-gray-200">
+    <.td colspan={4} class="!p-6 font-mono text-xs break-all">
       No changes
-    </div>
+    </.td>
     """
   end
 end

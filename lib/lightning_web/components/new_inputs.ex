@@ -348,7 +348,7 @@ defmodule LightningWeb.Components.NewInputs do
 
   attr :button_placement, :string, default: nil
 
-  attr :placeholder, :string, default: "Enter tags, separate with commas"
+  attr :placeholder, :string, default: ""
 
   attr :rest, :global,
     include:

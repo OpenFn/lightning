@@ -88,13 +88,19 @@ defmodule LightningWeb.Components.Table do
   attr :page, :map, default: nil
   attr :url, :any, default: nil
   attr :id, :string, default: nil
+  attr :divide, :boolean, default: true
 
   def table(assigns) do
     ~H"""
     <div id={@id} class="overflow-hidden shadow ring-1 ring-black/5 sm:rounded-lg">
-      <table class="min-w-full divide-y divide-gray-300">
+      <table class="min-w-full">
         <thead>{render_slot(@header)}</thead>
-        <tbody class="bg-white">{render_slot(@body)}</tbody>
+        <tbody class={[
+          "bg-white",
+          @divide && "divide-y divide-gray-200"
+        ]}>
+          {render_slot(@body)}
+        </tbody>
         <tfoot>{render_slot(@footer)}</tfoot>
       </table>
       <%= if @page && @url do %>
