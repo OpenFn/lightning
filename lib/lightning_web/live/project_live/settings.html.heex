@@ -204,22 +204,17 @@
             <p class="block my-1 text-xs text-gray-600">
               Export your project as code, to save this version or edit your project locally.
             </p>
-            <div>
-              <a
+            <div class="my-2">
+              <.button_link
+                theme="primary"
                 href={~p"/download/yaml?id=#{@project.id}"}
                 target="_blank"
-                class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-xs text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 "
               >
                 Export project
-              </a>
+              </.button_link>
             </div>
-            <.button_link
-              theme="primary"
-              href={~p"/download/yaml?id=#{@project.id}"}
-              target="_blank"
-            >
-              Export project
-            </.button_link>
+
+            <%!--  --%>
           </div>
         </div>
         <%= if @can_delete_project do %>
@@ -671,7 +666,6 @@
                 id={"remove_project_user_#{project_user.id}_button"}
                 type="button"
                 phx-click={show_modal("remove_#{project_user.id}_modal")}
-                color_class="bg-white text-gray-900 hover:bg-gray-50 disabled:bg-gray-100"
                 class="gap-x-2 rounded-md px-3.5 py-2.5 text-sm shadow-xs ring-1 ring-inset ring-gray-300 disabled:cursor-not-allowed"
                 tooltip={
                   remove_user_tooltip(
@@ -1097,9 +1091,8 @@
               <.button
                 id={"download-export-file-#{file.id}-button"}
                 disabled={true}
-                class="table-action"
+                class="table-action disabled:bg-gray-50"
                 tooltip="Export is not yet ready for download"
-                color_class="disabled:bg-gray-50"
               >
                 Download
               </.button>

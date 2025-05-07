@@ -211,8 +211,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
               phx-value-action="edit"
               phx-value-collection={collection.name}
               phx-target={@myself}
-              class="shadow-xs ring-1 ring-inset ring-gray-300 disabled:cursor-not-allowed"
-              color_class="bg-white text-gray-900 hover:bg-gray-50 disabled:bg-gray-100"
+              class="table-action"
               disabled={!@can_create_collection}
             >
               Edit
@@ -223,8 +222,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
               phx-value-action="delete"
               phx-value-collection={collection.name}
               phx-target={@myself}
-              class="shadow-xs ring-1 ring-inset ring-gray-300 disabled:cursor-not-allowed"
-              color_class="bg-white text-gray-900 hover:bg-gray-50 disabled:bg-gray-100"
+              class="table-action"
               disabled={!@can_create_collection}
             >
               Delete

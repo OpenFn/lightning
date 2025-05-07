@@ -299,6 +299,8 @@ defmodule LightningWeb.LayoutComponents do
             :if={@action_button_id}
             id={@action_button_id}
             type="button"
+            theme="primary"
+            size="lg"
             phx-click={@action_button_click}
             phx-value-action={@action_button_value_action}
             phx-target={@action_button_target}
