@@ -92,17 +92,14 @@ defmodule LightningWeb.CollectionLive.Index do
             name_direction={@name_sort_direction}
           >
             <:empty_state>
-              <button
-                type="button"
-                id="open-create-collection-modal-big-buttton"
-                phx-click={show_modal("create-collection-modal")}
-                class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-4 text-center hover:border-gray-400 focus:outline-none"
-              >
-                <Heroicons.plus_circle class="mx-auto w-12 h-12 text-secondary-400" />
-                <span class="mt-2 block text-xs font-semibold text-secondary-600">
-                  No collection found. Create a new one.
-                </span>
-              </button>
+              <.empty_state
+                icon="hero-plus-circle"
+                message="No collection found."
+                button_text="Create a new one."
+                button_id="open-create-collection-modal-big-buttton"
+                button_click={show_modal("create-collection-modal")}
+                button_disabled={false}
+              />
             </:empty_state>
             <:create_collection_button>
               <.button

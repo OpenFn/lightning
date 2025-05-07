@@ -2,8 +2,6 @@ defmodule LightningWeb.WorkflowLive.Components do
   @moduledoc false
   use LightningWeb, :component
 
-  import PetalComponents.Table
-
   alias Phoenix.LiveView.JS
 
   attr :socket, :map, required: true
@@ -671,6 +669,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :return_to, :string
   slot :action, doc: "the slot for showing user actions in the last table column"
   slot :linked_triggers, doc: "the slot for showing the linked triggers modal"
+  slot :empty_state, doc: "the slot for showing an empty state"
 
   def webhook_auth_methods_table(assigns) do
     assigns =
@@ -680,62 +679,66 @@ defmodule LightningWeb.WorkflowLive.Components do
       )
 
     ~H"""
-    <.table class={@class}>
-      <.tr class="sm:px-6 lg:px-8">
-        <.th :if={@on_row_select} class="relative px-7 sm:w-12 sm:px-6">
-          <span class="sr-only">Select</span>
-        </.th>
-        <.th class={"min-w-[10rem] py-2.5 text-left text-sm font-normal
-        text-gray-900 #{!@on_row_select && "pl-4"}"}>
-          Name
-        </.th>
-        <.th class="min-w-[7rem] py-2.5 text-left text-sm font-normal text-gray-900">
-          Type
-        </.th>
-        <.th class="min-w-[10rem] py-2.5 text-left text-sm font-normal text-gray-900">
-          Linked Triggers
-        </.th>
-        <.th class="min-w-[4rem] py-2.5 text-right text-sm font-normal text-gray-900">
-        </.th>
-      </.tr>
-
-      <.tr
-        :for={auth_method <- @auth_methods}
-        class="hover:bg-[#F2EEFD] transition-colors duration-200"
-        id={auth_method.id}
-        phx-hook="ShowActionsOnRowHover"
-      >
-        <.td :if={@on_row_select} class="relative sm:w-12 sm:px-6">
-          <input
-            id={"select_#{auth_method.id}"}
-            phx-value-selection={to_string(!@row_selected?.(auth_method))}
-            type="checkbox"
-            class="absolute left-4 top-1/2 -mt-2 h-4 w-4 rounded border-gray-300 text-[#1992CC] focus:ring-indigo-600"
-            phx-click={@on_row_select.(auth_method)}
-            checked={@row_selected?.(auth_method)}
-          />
-        </.td>
-        <.td class={
-          "whitespace-nowrap py-2.5 text-sm text-gray-900 text-ellipsis
-          overflow-hidden max-w-[15rem] pr-5 #{!@on_row_select && "pl-4"}"}>
-          {auth_method.name}
-        </.td>
-        <.td class="whitespace-nowrap text-sm text-gray-900">
-          <span>{humanized_auth_method_type(auth_method)}</span>
-        </.td>
-        <.td class="whitespace-nowrap text-sm text-gray-900">
-          {render_slot(@linked_triggers, auth_method)}
-        </.td>
-        <.td
-          :if={@action != []}
-          class="text-right px-4 hover-content font-normal opacity-0 transition-opacity duration-300 whitespace-nowrap py-0.5"
-        >
-          <div :for={action <- @action} class="flex items-center inline-flex gap-x-2">
-            {render_slot(action, auth_method)}
-          </div>
-        </.td>
-      </.tr>
-    </.table>
+    <%= if Enum.empty?(@auth_methods) do %>
+      {render_slot(@empty_state)}
+    <% else %>
+      <.table class={@class}>
+        <:header>
+          <.tr>
+            <.th :if={@on_row_select} class="relative px-7 sm:w-12 sm:px-6">
+              <span class="sr-only">Select</span>
+            </.th>
+            <.th class={"min-w-[10rem] py-2.5 text-left text-sm font-normal text-gray-900 #{!@on_row_select && "pl-4"}"}>
+              Name
+            </.th>
+            <.th class="min-w-[7rem] py-2.5 text-left text-sm font-normal text-gray-900">
+              Type
+            </.th>
+            <.th class="min-w-[10rem] py-2.5 text-left text-sm font-normal text-gray-900">
+              Linked Triggers
+            </.th>
+            <.th class="min-w-[4rem] py-2.5 text-right text-sm font-normal text-gray-900">
+            </.th>
+          </.tr>
+        </:header>
+        <:body>
+          <%= for auth_method <- @auth_methods do %>
+            <.tr id={auth_method.id}>
+              <.td :if={@on_row_select} class="relative sm:w-12 sm:px-6">
+                <input
+                  id={"select_#{auth_method.id}"}
+                  phx-value-selection={to_string(!@row_selected?.(auth_method))}
+                  type="checkbox"
+                  class="absolute left-4 top-1/2 -mt-2 h-4 w-4 rounded border-gray-300 text-[#1992CC] focus:ring-indigo-600"
+                  phx-click={@on_row_select.(auth_method)}
+                  checked={@row_selected?.(auth_method)}
+                />
+              </.td>
+              <.td class={"whitespace-nowrap py-2.5 text-sm text-gray-900 text-ellipsis overflow-hidden max-w-[15rem] pr-5 #{!@on_row_select && "pl-4"}"}>
+                {auth_method.name}
+              </.td>
+              <.td class="whitespace-nowrap text-sm text-gray-900">
+                <span>{humanized_auth_method_type(auth_method)}</span>
+              </.td>
+              <.td class="whitespace-nowrap text-sm text-gray-900">
+                {render_slot(@linked_triggers, auth_method)}
+              </.td>
+              <.td
+                :if={@action != []}
+                class="text-right px-4 hover-content font-normal whitespace-nowrap py-0.5"
+              >
+                <div
+                  :for={action <- @action}
+                  class="flex items-center inline-flex gap-x-2"
+                >
+                  {render_slot(action, auth_method)}
+                </div>
+              </.td>
+            </.tr>
+          <% end %>
+        </:body>
+      </.table>
+    <% end %>
     """
   end
 

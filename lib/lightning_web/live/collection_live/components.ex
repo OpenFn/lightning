@@ -1,8 +1,6 @@
 defmodule LightningWeb.CollectionLive.Components do
   use LightningWeb, :component
 
-  import PetalComponents.Table
-
   defp confirm_collection_deletion_modal(assigns) do
     ~H"""
     <.modal id={@id} width="max-w-md">
@@ -80,68 +78,71 @@ defmodule LightningWeb.CollectionLive.Components do
           {render_slot(@create_collection_button)}
         </div>
       </div>
-      <div id="collections-table">
-        <.table>
-          <.tr>
-            <.th>
-              <Common.sortable_table_header
-                phx-click="sort"
-                phx-value-by="name"
+      <div>
+        <.table id="collections-table">
+          <:header>
+            <.tr>
+              <.th
+                sortable={true}
+                sort_by="name"
                 active={true}
                 sort_direction={to_string(@name_direction)}
               >
                 Name
-              </Common.sortable_table_header>
-            </.th>
-            <.th>Project</.th>
-            <.th>Used Storage (MB)</.th>
-            <.th></.th>
-          </.tr>
-
-          <.tr
-            :for={collection <- @collections}
-            id={"collections-table-row-#{collection.id}"}
-            class="hover:bg-gray-100 transition-colors duration-200"
-          >
-            <.td class="break-words max-w-[15rem] text-gray-800">
-              {collection.name}
-            </.td>
-            <.td class="break-words max-w-[25rem]">
-              {collection.project.name}
-            </.td>
-            <.td class="break-words max-w-[25rem]">
-              {div(collection.byte_size_sum, 1_000_000)}
-            </.td>
-            <.td>
-              <div class="text-right">
-                <button
-                  id={"edit-collection-#{collection.id}-button"}
-                  phx-click={show_modal("update-collection-#{collection.id}-modal")}
-                  class="table-action"
-                >
-                  Edit
-                </button>
-                <button
-                  id={"delete-collection-#{collection.id}-button"}
-                  phx-click={show_modal("delete-collection-#{collection.id}-modal")}
-                  class="table-action"
-                >
-                  Delete
-                </button>
-              </div>
-              <.live_component
-                id={"update-collection-#{collection.id}-modal"}
-                module={LightningWeb.CollectionLive.CollectionCreationModal}
-                collection={collection}
-                mode={:update}
-                return_to={~p"/settings/collections"}
-              />
-              <.confirm_collection_deletion_modal
-                id={"delete-collection-#{collection.id}-modal"}
-                collection={collection}
-              />
-            </.td>
-          </.tr>
+              </.th>
+              <.th>Project</.th>
+              <.th>Used Storage (MB)</.th>
+              <.th></.th>
+            </.tr>
+          </:header>
+          <:body>
+            <%= for collection <- @collections do %>
+              <.tr id={"collections-table-row-#{collection.id}"}>
+                <.td class="break-words max-w-[15rem] text-gray-800">
+                  {collection.name}
+                </.td>
+                <.td class="break-words max-w-[25rem]">
+                  {collection.project.name}
+                </.td>
+                <.td class="break-words max-w-[25rem]">
+                  {div(collection.byte_size_sum, 1_000_000)}
+                </.td>
+                <.td>
+                  <div class="text-right">
+                    <button
+                      id={"edit-collection-#{collection.id}-button"}
+                      phx-click={
+                        show_modal("update-collection-#{collection.id}-modal")
+                      }
+                      class="table-action"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      id={"delete-collection-#{collection.id}-button"}
+                      phx-click={
+                        show_modal("delete-collection-#{collection.id}-modal")
+                      }
+                      class="table-action"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                  <.live_component
+                    id={"update-collection-#{collection.id}-modal"}
+                    module={LightningWeb.CollectionLive.CollectionCreationModal}
+                    collection={collection}
+                    mode={:update}
+                    return_to={~p"/settings/collections"}
+                  />
+                  <.confirm_collection_deletion_modal
+                    id={"delete-collection-#{collection.id}-modal"}
+                    collection={collection}
+                  />
+                </.td>
+              </.tr>
+            <% end %>
+          </:body>
         </.table>
       </div>
     <% end %>

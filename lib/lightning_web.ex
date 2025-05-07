@@ -40,6 +40,7 @@ defmodule LightningWeb do
       import LightningWeb.Gettext
       import LightningWeb.UserAuth, only: [fetch_current_user: 2]
       import LightningWeb.Components.NewInputs
+      import LightningWeb.Components.Table
       alias LightningWeb.Router.Helpers, as: Routes
 
       unquote(verified_routes())
@@ -70,6 +71,7 @@ defmodule LightningWeb do
             )
       use Phoenix.LiveView, @opts
       import LightningWeb.Components.NewInputs
+      import LightningWeb.Components.Table
 
       unquote(html_helpers())
       on_mount Sentry.LiveViewHook
@@ -80,6 +82,7 @@ defmodule LightningWeb do
     quote do
       use Phoenix.LiveComponent
       import LightningWeb.Components.NewInputs
+      import LightningWeb.Components.Table
 
       unquote(html_helpers())
     end
@@ -89,6 +92,7 @@ defmodule LightningWeb do
     quote do
       use Phoenix.Component
       import LightningWeb.Components.NewInputs
+      import LightningWeb.Components.Table
 
       unquote(html_helpers())
     end
@@ -149,6 +153,7 @@ defmodule LightningWeb do
         only: [get_csrf_token: 0, view_module: 1, view_template: 1]
 
       import LightningWeb.Components.NewInputs
+      import LightningWeb.Components.Table
 
       # Include general helpers for rendering HTML
       unquote(html_helpers())

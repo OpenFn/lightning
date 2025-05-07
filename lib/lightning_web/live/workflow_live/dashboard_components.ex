@@ -2,8 +2,6 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   @moduledoc false
   use LightningWeb, :component
 
-  import PetalComponents.Table
-
   alias Lightning.DashboardStats.ProjectMetrics
   alias Lightning.Projects.Project
   alias Lightning.WorkOrders.SearchParams
@@ -117,158 +115,165 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
     <%= if @empty? do %>
       {render_slot(@empty_state)}
     <% else %>
-      <div id={@id}>
-        <.table>
-          <.tr>
-            <.th>
-              <.sortable_table_header
-                target_sort_key="name"
-                current_sort_key={@sort_key}
-                current_sort_direction={@sort_direction}
+      <div>
+        <.table id={@id}>
+          <:header>
+            <.tr>
+              <.th
+                sortable={true}
+                sort_by="name"
+                active={@sort_key == "name"}
+                sort_direction={@sort_direction}
               >
                 Name
-              </.sortable_table_header>
-            </.th>
-            <.th>
-              <.sortable_table_header
-                target_sort_key="last_workorder_updated_at"
-                current_sort_key={@sort_key}
-                current_sort_direction={@sort_direction}
+              </.th>
+              <.th
+                sortable={true}
+                sort_by="last_workorder_updated_at"
+                active={@sort_key == "last_workorder_updated_at"}
+                sort_direction={@sort_direction}
               >
                 Latest Work Order
-              </.sortable_table_header>
-            </.th>
-            <.th>
-              <.sortable_table_header
-                target_sort_key="workorders_count"
-                current_sort_key={@sort_key}
-                current_sort_direction={@sort_direction}
+              </.th>
+              <.th
+                sortable={true}
+                sort_by="workorders_count"
+                active={@sort_key == "workorders_count"}
+                sort_direction={@sort_direction}
               >
                 Work Orders
-              </.sortable_table_header>
-            </.th>
-            <.th>
-              <.sortable_table_header
-                target_sort_key="failed_workorders_count"
-                current_sort_key={@sort_key}
-                current_sort_direction={@sort_direction}
+              </.th>
+              <.th
+                sortable={true}
+                sort_by="failed_workorders_count"
+                active={@sort_key == "failed_workorders_count"}
+                sort_direction={@sort_direction}
               >
                 Work Orders in a failed state
-              </.sortable_table_header>
-            </.th>
-            <.th>
-              <.sortable_table_header
-                target_sort_key="enabled"
-                current_sort_key={@sort_key}
-                current_sort_direction={@sort_direction}
+              </.th>
+              <.th
+                sortable={true}
+                sort_by="enabled"
+                active={@sort_key == "enabled"}
+                sort_direction={@sort_direction}
               >
                 Enabled
-              </.sortable_table_header>
-            </.th>
-            <.th>
-              <span class="sr-only">Actions</span>
-            </.th>
-          </.tr>
-          <.tr
-            :for={workflow <- @workflows}
-            id={"workflow-#{workflow.id}"}
-            class="hover:bg-gray-100 transition-colors duration-200 cursor-pointer"
-            phx-click={JS.navigate(~p"/projects/#{@project.id}/w/#{workflow.id}")}
-          >
-            <.td class="break-words max-w-[15rem]">
-              <.workflow_card
-                workflow={workflow}
-                project={@project}
-                trigger_enabled={Enum.any?(workflow.triggers, & &1.enabled)}
-              />
-            </.td>
-            <.td class="break-words max-w-[15rem]">
-              <.state_card
-                state={workflow.last_workorder.state}
-                timestamp={workflow.last_workorder.updated_at}
-                period={@period}
-              />
-            </.td>
-            <.td class="break-words max-w-[10rem]">
-              <div>
-                <%= if workflow.workorders_count > 0 do %>
-                  <div class="text-indigo-700 text-lg">
+              </.th>
+              <.th>
+                <span class="sr-only">Actions</span>
+              </.th>
+            </.tr>
+          </:header>
+          <:body>
+            <%= for workflow <- @workflows do %>
+              <.tr
+                id={"workflow-#{workflow.id}"}
+                class="hover:bg-gray-100 transition-colors duration-200"
+                onclick={JS.navigate(~p"/projects/#{@project.id}/w/#{workflow.id}")}
+              >
+                <.td class="break-words max-w-[15rem]">
+                  <div
+                    phx-click={
+                      JS.navigate(~p"/projects/#{@project.id}/w/#{workflow.id}")
+                    }
+                    class="cursor-pointer"
+                  >
+                    <.workflow_card
+                      workflow={workflow}
+                      project={@project}
+                      trigger_enabled={Enum.any?(workflow.triggers, & &1.enabled)}
+                    />
+                  </div>
+                </.td>
+                <.td class="break-words max-w-[15rem]">
+                  <.state_card
+                    state={workflow.last_workorder.state}
+                    timestamp={workflow.last_workorder.updated_at}
+                    period={@period}
+                  />
+                </.td>
+                <.td class="break-words max-w-[10rem]">
+                  <div>
+                    <%= if workflow.workorders_count > 0 do %>
+                      <div class="text-indigo-700 text-lg">
+                        <.link
+                          class="hover:underline"
+                          navigate={
+                            ~p"/projects/#{@project.id}/history?#{%{filters: Map.merge(@wo_filters, %{workflow_id: workflow.id})}}"
+                          }
+                          onclick="event.stopPropagation()"
+                        >
+                          {workflow.workorders_count}
+                        </.link>
+                      </div>
+                      <div class="text-gray-500 text-xs">
+                        ({workflow.step_count} steps, <span>{workflow.step_success_rate}% success</span>)
+                      </div>
+                    <% else %>
+                      <div class="text-gray-400 text-lg">
+                        <span>0</span>
+                      </div>
+                      <div class="text-xs">
+                        <span>N/A</span>
+                      </div>
+                    <% end %>
+                  </div>
+                </.td>
+                <.td class="break-words max-w-[15rem]">
+                  <div>
+                    <%= if workflow.failed_workorders_count > 0 do %>
+                      <div class="text-indigo-700 text-lg">
+                        <.link
+                          class="hover:underline"
+                          navigate={
+                            ~p"/projects/#{@project.id}/history?#{%{filters: Map.merge(@failed_wo_filters, %{workflow_id: workflow.id})}}"
+                          }
+                          onclick="event.stopPropagation()"
+                        >
+                          {workflow.failed_workorders_count}
+                        </.link>
+                      </div>
+                      <div class="text-gray-500 text-xs">
+                        Latest failure {workflow.last_failed_workorder.updated_at
+                        |> Relative.format!("{relative}")}
+                      </div>
+                    <% else %>
+                      <div class="text-gray-400 text-lg">
+                        <span>0</span>
+                      </div>
+                      <div class="text-xs mt-1">
+                        <span>N/A</span>
+                      </div>
+                    <% end %>
+                  </div>
+                </.td>
+                <.td>
+                  <.input
+                    id={workflow.id}
+                    type="toggle"
+                    name="workflow_state"
+                    value={Helpers.workflow_enabled?(workflow)}
+                    tooltip={Helpers.workflow_state_tooltip(workflow)}
+                    on_click="toggle_workflow_state"
+                    value_key={workflow.id}
+                  />
+                </.td>
+                <.td class="text-right">
+                  <%= if @can_delete_workflow do %>
                     <.link
-                      class="hover:underline"
-                      navigate={
-                        ~p"/projects/#{@project.id}/history?#{%{filters: Map.merge(@wo_filters, %{workflow_id: workflow.id})}}"
-                      }
-                      onclick="event.stopPropagation()"
+                      href="#"
+                      class="table-action"
+                      phx-click="delete_workflow"
+                      phx-value-id={workflow.id}
+                      data-confirm="Are you sure you'd like to delete this workflow?"
                     >
-                      {workflow.workorders_count}
+                      Delete
                     </.link>
-                  </div>
-                  <div class="text-gray-500 text-xs">
-                    ({workflow.step_count} steps, <span>{workflow.step_success_rate}% success</span>)
-                  </div>
-                <% else %>
-                  <div class="text-gray-400 text-lg">
-                    <span>0</span>
-                  </div>
-                  <div class="text-xs">
-                    <span>N/A</span>
-                  </div>
-                <% end %>
-              </div>
-            </.td>
-            <.td class="break-words max-w-[15rem]">
-              <div>
-                <%= if workflow.failed_workorders_count > 0 do %>
-                  <div class="text-indigo-700 text-lg">
-                    <.link
-                      class="hover:underline"
-                      navigate={
-                        ~p"/projects/#{@project.id}/history?#{%{filters: Map.merge(@failed_wo_filters, %{workflow_id: workflow.id})}}"
-                      }
-                      onclick="event.stopPropagation()"
-                    >
-                      {workflow.failed_workorders_count}
-                    </.link>
-                  </div>
-                  <div class="text-gray-500 text-xs">
-                    Latest failure {workflow.last_failed_workorder.updated_at
-                    |> Relative.format!("{relative}")}
-                  </div>
-                <% else %>
-                  <div class="text-gray-400 text-lg">
-                    <span>0</span>
-                  </div>
-                  <div class="text-xs mt-1">
-                    <span>N/A</span>
-                  </div>
-                <% end %>
-              </div>
-            </.td>
-            <.td>
-              <.input
-                id={workflow.id}
-                type="toggle"
-                name="workflow_state"
-                value={Helpers.workflow_enabled?(workflow)}
-                tooltip={Helpers.workflow_state_tooltip(workflow)}
-                on_click="toggle_workflow_state"
-                value_key={workflow.id}
-              />
-            </.td>
-            <.td class="text-right">
-              <%= if @can_delete_workflow do %>
-                <.link
-                  href="#"
-                  class="table-action"
-                  phx-click="delete_workflow"
-                  phx-value-id={workflow.id}
-                  data-confirm="Are you sure you'd like to delete this workflow?"
-                >
-                  Delete
-                </.link>
-              <% end %>
-            </.td>
-          </.tr>
+                  <% end %>
+                </.td>
+              </.tr>
+            <% end %>
+          </:body>
         </.table>
       </div>
     <% end %>

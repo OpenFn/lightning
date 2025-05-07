@@ -2,7 +2,8 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
   @moduledoc false
 
   use LightningWeb, :live_component
-  import PetalComponents.Table
+
+  import LightningWeb.LayoutComponents
 
   alias Lightning.Collections
   alias Lightning.Collections.Collection
@@ -163,31 +164,18 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
   def render(assigns) do
     ~H"""
     <div id={@id}>
-      <div class="flex justify-between content-center pb-2">
-        <div class="leading-loose">
-          <h6 class="font-medium text-black">Project collections</h6>
-          <small class="block text-xs text-gray-600">
-            Manage collections for this project.
-          </small>
-          <LightningWeb.ProjectLive.Settings.permissions_message
-            :if={!@can_create_collection}
-            section="available collections."
-          />
-        </div>
-        <div class="sm:block">
-          <.button
-            role="button"
-            theme="primary"
-            id="open-create-collection-modal-button"
-            phx-click="toggle_action"
-            phx-value-action="new"
-            phx-target={@myself}
-            disabled={!@can_create_collection}
-          >
-            Create collection
-          </.button>
-        </div>
-      </div>
+      <.section_header
+        title="Project collections"
+        subtitle="Manage collections for this project."
+        permissions_message="available collections."
+        can_perform_action={@can_create_collection}
+        action_button_text="Create collection"
+        action_button_click="toggle_action"
+        action_button_value_action="new"
+        action_button_target={@myself}
+        action_button_disabled={!@can_create_collection}
+        action_button_id="open-create-collection-modal-button"
+      />
 
       <.form_modal_component
         :if={@action == :new}
@@ -210,51 +198,50 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
         myself={@myself}
       />
 
-      <.table id="collections-table" rows={@collections}>
-        <.tr>
-          <.th>Name</.th>
-          <.th>Used Storage (MB)</.th>
-          <.th><span class="sr-only">Actions</span></.th>
-        </.tr>
-
-        <%= for collection <- @collections do %>
-          <.tr id={"collection-row-#{collection.id}"}>
-            <.td>
-              {collection.name}
-            </.td>
-            <.td>
-              {div(collection.byte_size_sum, 1_000_000)}
-            </.td>
-            <.td>
-              <div class="text-right">
-                <.button
-                  id={"edit-collection-#{collection.id}-button"}
-                  phx-click="toggle_action"
-                  phx-value-action="edit"
-                  phx-value-collection={collection.name}
-                  phx-target={@myself}
-                  theme="secondary"
-                  disabled={!@can_create_collection}
-                >
-                  Edit
-                </.button>
-
-                <.button
-                  id={"delete-collection-#{collection.id}-button"}
-                  phx-click="toggle_action"
-                  phx-value-action="delete"
-                  phx-value-collection={collection.name}
-                  phx-target={@myself}
-                  theme="secondary"
-                  disabled={!@can_create_collection}
-                >
-                  Delete
-                </.button>
-              </div>
-            </.td>
-          </.tr>
-        <% end %>
-      </.table>
+      <LightningWeb.Components.DataTables.collections_table
+        id="collections-table"
+        collections={@collections}
+        can_create_collection={@can_create_collection}
+      >
+        <:actions :let={collection}>
+          <div class="text-right">
+            <.button
+              id={"edit-collection-#{collection.id}-button"}
+              phx-click="toggle_action"
+              phx-value-action="edit"
+              phx-value-collection={collection.name}
+              phx-target={@myself}
+              class="table-action"
+              disabled={!@can_create_collection}
+            >
+              Edit
+            </.button>
+            <.button
+              id={"delete-collection-#{collection.id}-button"}
+              phx-click="toggle_action"
+              phx-value-action="delete"
+              phx-value-collection={collection.name}
+              phx-target={@myself}
+              class="table-action"
+              disabled={!@can_create_collection}
+            >
+              Delete
+            </.button>
+          </div>
+        </:actions>
+        <:empty_state>
+          <.empty_state
+            icon="hero-plus-circle"
+            message="No collections found."
+            button_text="Create a new collection"
+            button_id="open-create-collection-modal"
+            button_click="toggle_action"
+            button_target={@myself}
+            button_action_value="new"
+            button_disabled={!@can_create_collection}
+          />
+        </:empty_state>
+      </LightningWeb.Components.DataTables.collections_table>
     </div>
     """
   end

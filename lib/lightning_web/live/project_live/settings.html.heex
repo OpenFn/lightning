@@ -55,19 +55,12 @@
         <span class="inline-block align-middle">History Exports</span>
       </:tab>
       <:panel hash="project" class="">
-        <div>
-          <h6 class="font-medium text-black">Project setup</h6>
-          <small class="block my-1 text-xs text-gray-600">
-            Projects are isolated workspaces that contain workflows, accessible to certain users.
-          </small>
-          <.permissions_message
-            :if={!@can_edit_project}
-            section="basic settings, but you can export a copy."
-          />
-        </div>
-        <div class="hidden sm:block" aria-hidden="true">
-          <div class="py-2"></div>
-        </div>
+        <.section_header
+          title="Project setup"
+          subtitle="Projects are isolated workspaces that contain workflows, accessible to certain users."
+          permissions_message="basic settings, but you can export a copy."
+          can_perform_action={@can_edit_project}
+        />
         <div class="bg-white p-4 rounded-md">
           <div>
             <h6 class="font-medium text-black">
@@ -84,9 +77,6 @@
             phx-change="validate"
             phx-submit="save"
           >
-            <div class="hidden sm:block" aria-hidden="true">
-              <div class="py-2"></div>
-            </div>
             <div class="grid grid-cols gap-6">
               <div class="md:col-span-2">
                 <.input
@@ -96,9 +86,6 @@
                   label="Project name"
                 />
               </div>
-            </div>
-            <div class="hidden sm:block" aria-hidden="true">
-              <div class="py-3"></div>
             </div>
             <div class="grid grid-cols gap-6">
               <div class="md:col-span-2">
@@ -114,9 +101,6 @@
                 </small>
               </div>
             </div>
-            <div class="hidden sm:block" aria-hidden="true">
-              <div class="py-2"></div>
-            </div>
             <div class="grid grid-cols gap-6">
               <div class="md:col-span-2">
                 <.button
@@ -130,9 +114,6 @@
               </div>
             </div>
           </.form>
-        </div>
-        <div class="hidden sm:block" aria-hidden="true">
-          <div class="py-2"></div>
         </div>
         <div class="bg-white p-4 rounded-md">
           <div>
@@ -169,9 +150,6 @@
                 <.input type="hidden" field={f[:description]} />
               </div>
             </div>
-            <div class="hidden sm:block" aria-hidden="true">
-              <div class="py-2"></div>
-            </div>
             <div class="grid grid-cols md:col-span-2">
               <div class="flex items-center gap-x-4 justify-between">
                 <.live_component
@@ -203,9 +181,6 @@
                 </:message>
               </Common.alert>
             </div>
-            <div class="hidden sm:block" aria-hidden="true">
-              <div class="py-2"></div>
-            </div>
             <div class="grid grid-cols gap-6">
               <div class="md:col-span-2">
                 <.button
@@ -223,31 +198,26 @@
           </.form>
         </div>
 
-        <div class="hidden sm:block" aria-hidden="true">
-          <div class="py-2"></div>
-        </div>
         <div class="bg-white p-4 rounded-md">
           <div>
             <h6 class="font-medium text-black">Export your Project</h6>
             <p class="block my-1 text-xs text-gray-600">
               Export your project as code, to save this version or edit your project locally.
             </p>
-            <div class="hidden sm:block" aria-hidden="true">
-              <div class="py-2"></div>
+            <div class="my-2">
+              <.button_link
+                theme="primary"
+                href={~p"/download/yaml?id=#{@project.id}"}
+                target="_blank"
+              >
+                Export project
+              </.button_link>
             </div>
-            <.button_link
-              theme="primary"
-              href={~p"/download/yaml?id=#{@project.id}"}
-              target="_blank"
-            >
-              Export project
-            </.button_link>
+
+            <%!--  --%>
           </div>
         </div>
         <%= if @can_delete_project do %>
-          <div class="hidden sm:block" aria-hidden="true">
-            <div class="py-2"></div>
-          </div>
           <div class="bg-white p-4 rounded-md">
             <div>
               <h6 class="font-medium text-black">The danger zone</h6>
@@ -284,59 +254,43 @@
         <% end %>
       </:panel>
       <:panel hash="credentials">
-        <div class="flex justify-between content-center pb-2">
-          <div class="leading-loose">
-            <h6 class="font-medium text-black">Project credentials</h6>
-            <small class="block text-xs text-gray-600">
-              Manage OAuth 2.0 Clients and Credentials accessible to this project.
-            </small>
-            <.permissions_message
-              :if={!@can_create_project_credential}
-              section="available credentials."
-            />
-          </div>
-          <div class="sm:block" aria-hidden="true">
-            <LightningWeb.Components.Credentials.options_menu_button
-              id="options-menu-button"
-              options={[
-                %{
-                  name: "Credential",
-                  id: "option-menu-item-1",
-                  target: "new-credential-modal"
-                },
-                %{
-                  name: "OAuth client",
-                  id: "option-menu-item-0",
-                  target: "new-oauth-client-modal",
-                  badge: "Advanced"
-                }
-              ]}
-              disabled={!@can_create_project_credential}
-            >
-              New credential
-            </LightningWeb.Components.Credentials.options_menu_button>
-          </div>
-        </div>
-
-        <LightningWeb.Components.Credentials.oauth_clients_table
+        <.section_header
+          title="Project credentials"
+          subtitle="Manage OAuth 2.0 Clients and Credentials accessible to this project."
+          permissions_message="available credentials."
+          can_perform_action={@can_create_project_credential}
+          action_button_text="Add new"
+          action_button_id="options-menu-button"
+          action_button_disabled={!@can_create_project_credential}
+          options={[
+            %{
+              name: "Credential",
+              id: "option-menu-item-1",
+              target: "new-credential-modal"
+            },
+            %{
+              name: "OAuth client",
+              id: "option-menu-item-0",
+              target: "new-oauth-client-modal",
+              badge: "Advanced"
+            }
+          ]}
+        />
+        <LightningWeb.Components.DataTables.oauth_clients_table
           id="oauth-clients"
           title="OAuth Clients"
           clients={@oauth_clients}
           show_owner={true}
         >
           <:empty_state>
-            <button
-              type="button"
-              id="open-create-oauth-client-modal-big-buttton"
-              phx-click={show_modal("new-oauth-client-modal")}
-              class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-4 text-center hover:border-gray-400 disabled:hover:border-gray-300 focus:outline-none"
-              disabled={!@can_create_project_credential}
-            >
-              <Heroicons.plus_circle class="mx-auto w-12 h-12 text-secondary-400" />
-              <span class="mt-2 block text-xs font-semibold text-secondary-600">
-                Create a new OAuth client
-              </span>
-            </button>
+            <.empty_state
+              icon="hero-plus-circle"
+              message="No OAuth clients found."
+              button_text="Create a new OAuth client"
+              button_id="open-create-oauth-client-modal-big-buttton"
+              button_click={show_modal("new-oauth-client-modal")}
+              button_disabled={!@can_create_project_credential}
+            />
           </:empty_state>
           <:actions :let={client}>
             <div :if={can_edit?(client, @current_user)}>
@@ -377,27 +331,23 @@
               client={client}
             />
           </:actions>
-        </LightningWeb.Components.Credentials.oauth_clients_table>
+        </LightningWeb.Components.DataTables.oauth_clients_table>
 
-        <LightningWeb.Components.Credentials.credentials_table
+        <LightningWeb.Components.DataTables.credentials_table
           id="credentials"
           title="Credentials"
           credentials={@credentials}
           show_owner={true}
         >
           <:empty_state>
-            <button
-              type="button"
-              id="open-create-credential-modal-big-buttton"
-              phx-click={show_modal("new-credential-modal")}
-              class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-4 text-center hover:border-gray-400 disabled:hover:border-gray-300 focus:outline-none"
-              disabled={!@can_create_project_credential}
-            >
-              <Heroicons.plus_circle class="mx-auto w-12 h-12 text-secondary-400" />
-              <span class="mt-2 block text-xs font-semibold text-secondary-600">
-                Create a new Credential
-              </span>
-            </button>
+            <.empty_state
+              icon="hero-plus-circle"
+              message="No credentials found."
+              button_text="Create a new Credential"
+              button_id="open-create-credential-modal-big-buttton"
+              button_click={show_modal("new-credential-modal")}
+              button_disabled={!@can_create_project_credential}
+            />
           </:empty_state>
           <:actions :let={credential}>
             <div :if={can_edit?(credential, @current_user)}>
@@ -467,7 +417,7 @@
               />
             </div>
           </:actions>
-        </LightningWeb.Components.Credentials.credentials_table>
+        </LightningWeb.Components.DataTables.credentials_table>
 
         <.live_component
           id="new-credential-modal"
@@ -524,49 +474,45 @@
         />
       </:panel>
       <:panel hash="webhook_security">
-        <div class="flex justify-between content-center">
-          <div class="leading-loose">
-            <h6 class="font-medium text-black">Webhook Security</h6>
-            <small class="block text-xs text-gray-600">
-              Webhook authentication methods that are used with the starting trigger in workflows.
-            </small>
-            <.permissions_message
-              :if={!@can_write_webhook_auth_method}
-              section="webhook auth methods."
-            />
-          </div>
-          <div class="sm:block" aria-hidden="true">
-            <.button
-              id="add_new_auth_method"
-              type="button"
-              theme="primary"
-              phx-click={show_modal("new_auth_method_modal")}
-              {if !@can_write_webhook_auth_method, do: [disabled: "disabled"], else: []}
-            >
-              New auth method
-            </.button>
-            <.live_component
-              :if={@can_write_webhook_auth_method}
-              module={LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent}
-              id="new_auth_method_modal"
-              action={:new}
-              project={@project}
-              current_user={@current_user}
-              webhook_auth_method={%WebhookAuthMethod{project_id: @project.id}}
-              return_to={~p"/projects/#{@project.id}/settings#webhook_security"}
-              trigger={nil}
-            />
-          </div>
-        </div>
-        <div class="hidden sm:block" aria-hidden="true">
-          <div class="py-2"></div>
-        </div>
+        <.section_header
+          title="Webhook security"
+          subtitle="Webhook authentication methods that are used with the starting trigger in workflows."
+          permissions_message="webhook auth methods."
+          can_perform_action={@can_write_webhook_auth_method}
+          action_button_text="New auth method"
+          action_button_click={show_modal("new_auth_method_modal")}
+          action_button_disabled={!@can_write_webhook_auth_method}
+          action_button_id="add_new_auth_method"
+        />
+        <.live_component
+          :if={@can_write_webhook_auth_method}
+          module={LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent}
+          id="new_auth_method_modal"
+          action={:new}
+          project={@project}
+          current_user={@current_user}
+          webhook_auth_method={
+            %Lightning.Workflows.WebhookAuthMethod{project_id: @project.id}
+          }
+          return_to={~p"/projects/#{@project.id}/settings#webhook_security"}
+          trigger={nil}
+        />
         <LightningWeb.WorkflowLive.Components.webhook_auth_methods_table
           auth_methods={@webhook_auth_methods}
           current_user={@current_user}
           return_to={~p"/projects/#{@project.id}/settings#webhook_security"}
           class="p-2"
         >
+          <:empty_state>
+            <.empty_state
+              icon="hero-plus-circle"
+              message="No auth methods found."
+              button_text="Create a new auth method"
+              button_id="open-create-auth-method-modal"
+              button_click={show_modal("new_auth_method_modal")}
+              button_disabled={!@can_write_webhook_auth_method}
+            />
+          </:empty_state>
           <:linked_triggers :let={auth_method}>
             <span class="relative font-normal">
               <a
@@ -680,168 +626,109 @@
         </LightningWeb.WorkflowLive.Components.webhook_auth_methods_table>
       </:panel>
       <:panel hash="collaboration">
-        <div class="flex flex-col">
-          <div>
-            <h6 class="font-medium text-black">Project collaboration</h6>
-            <small class="block my-1 text-xs text-gray-600">
-              View collaborators and manage alert settings for this project.
-            </small>
-            <.permissions_message
-              :if={!@can_edit_project}
-              section="collaboration settings, but you can change your notification preferences."
-            />
-          </div>
-          <div class="flex flex-row items-center mt-4 mb-8">
-            <div :if={@can_edit_project} class="flex flex-row">
-              <div>
-                <.input
-                  type="toggle"
-                  id="toggle-support-access"
-                  name="allow_support_access"
-                  checked={@project.allow_support_access}
-                  phx-click="toggle_support_access"
-                  label="Grant support access"
-                />
-              </div>
-              <div>
-                <Common.tooltip
-                  id="toggle-support-tooltip"
-                  title="Granting support access will allow all designated support users for this Lightning instance to access this project with editor permissions."
-                  class="inline-block"
-                />
-              </div>
-            </div>
-            <div class="flex flex-row flex-grow"></div>
-            <div class="sm:ml-16 sm:mt-0">
+        <.section_header
+          title="Project collaboration"
+          subtitle="View collaborators and manage alert settings for this project."
+          permissions_message="collaboration settings, but you can change your notification preferences."
+          can_perform_action={@can_edit_project}
+          action_button_text="Add Collaborator(s)"
+          action_button_click="toggle_collaborators_modal"
+          action_button_disabled={
+            !@can_add_project_user ||
+              is_binary(get_collaborator_limit_error(@project))
+          }
+          action_button_tooltip={
+            if(@can_add_project_user,
+              do: get_collaborator_limit_error(@project),
+              else: "You are not authorized to perform this action"
+            )
+          }
+          action_button_id="show_collaborators_modal_button"
+        />
+        <.support_access_toggle
+          can_edit_project={@can_edit_project}
+          project={@project}
+        />
+        <.live_component
+          :if={@can_add_project_user && @show_collaborators_modal}
+          module={LightningWeb.ProjectLive.NewCollaboratorComponent}
+          id="add_collaborators_modal"
+          project={@project}
+          project_users={@project_users}
+        />
+        <.live_component
+          :if={@can_add_project_user && @show_invite_collaborators_modal}
+          module={LightningWeb.ProjectLive.InviteCollaboratorComponent}
+          id="invite_collaborators_modal"
+          project={@project}
+          project_users={@project_users}
+          collaborators={@collaborators_to_invite}
+          current_user={@current_user}
+        />
+        <LightningWeb.Components.DataTables.collaborators_table
+          id="collaborators"
+          project_users={@project_users}
+          current_user={@current_user}
+          can_remove_project_user={@can_remove_project_user}
+          can_receive_failure_alerts={@can_receive_failure_alerts}
+        >
+          <:actions :let={project_user}>
+            <div class="text-right">
               <.button
-                id="show_collaborators_modal_button"
+                id={"remove_project_user_#{project_user.id}_button"}
                 type="button"
-                theme="primary"
-                phx-click="toggle_collaborators_modal"
-                disabled={
-                  !@can_add_project_user ||
-                    is_binary(get_collaborator_limit_error(@project))
-                }
+                phx-click={show_modal("remove_#{project_user.id}_modal")}
+                class="gap-x-2 rounded-md px-3.5 py-2.5 text-sm shadow-xs ring-1 ring-inset ring-gray-300 disabled:cursor-not-allowed"
                 tooltip={
-                  if(@can_add_project_user,
-                    do: get_collaborator_limit_error(@project),
-                    else: "You are not authorized to perform this action"
+                  remove_user_tooltip(
+                    project_user,
+                    @current_user,
+                    @can_remove_project_user
+                  )
+                }
+                disabled={
+                  !user_removable?(
+                    project_user,
+                    @current_user,
+                    @can_remove_project_user
                   )
                 }
               >
-                Add Collaborator(s)
+                <.icon name="hero-minus-circle" class="w-5 h-5" />
+                Remove Collaborator
               </.button>
-              <.live_component
-                :if={@can_add_project_user && @show_collaborators_modal}
-                module={LightningWeb.ProjectLive.NewCollaboratorComponent}
-                id="add_collaborators_modal"
-                project={@project}
-                project_users={@project_users}
-              />
-              <.live_component
-                :if={@can_add_project_user && @show_invite_collaborators_modal}
-                module={LightningWeb.ProjectLive.InviteCollaboratorComponent}
-                id="invite_collaborators_modal"
-                project={@project}
-                project_users={@project_users}
-                collaborators={@collaborators_to_invite}
-                current_user={@current_user}
-              />
             </div>
-          </div>
-          <.table id="collaborators">
-            <.tr>
-              <.th>Collaborator</.th>
-              <.th>Role</.th>
-              <.th>Failure Alert</.th>
-              <.th>Digest</.th>
-              <.th><span class="sr-only">Actions</span></.th>
-            </.tr>
-
-            <%= for project_user <- @project_users do %>
-              <.tr id={"project_user-#{project_user.id}"}>
-                <.td>
-                  <.user project_user={project_user} />
-                  <div :if={project_user.user.email == @current_user.email}>
-                    <small class="text-gray-400">
-                      <em>Well hello, you!</em>
-                    </small>
-                  </div>
-                </.td>
-                <.td>
-                  <.role project_user={project_user} />
-                </.td>
-                <.td>
-                  <.failure_alert
-                    current_user={@current_user}
-                    project_user={project_user}
-                    can_receive_failure_alerts={@can_receive_failure_alerts}
-                  />
-                </.td>
-                <.td>
-                  <.digest
-                    current_user={@current_user}
-                    project_user={project_user}
-                  />
-                </.td>
-                <.td>
-                  <div class="text-right">
-                    <.button
-                      id={"remove_project_user_#{project_user.id}_button"}
-                      type="button"
-                      phx-click={show_modal("remove_#{project_user.id}_modal")}
-                      theme="secondary"
-                      class="gap-x-2 disabled:cursor-not-allowed"
-                      tooltip={
-                        remove_user_tooltip(
-                          project_user,
-                          @current_user,
-                          @can_remove_project_user
-                        )
-                      }
-                      disabled={
-                        !user_removable?(
-                          project_user,
-                          @current_user,
-                          @can_remove_project_user
-                        )
-                      }
-                    >
-                      <.icon name="hero-minus-circle" class="w-5 h-5" />
-                      Remove Collaborator
-                    </.button>
-                  </div>
-                  <.confirm_user_removal_modal
-                    :if={
-                      user_removable?(
-                        project_user,
-                        @current_user,
-                        @can_remove_project_user
-                      )
-                    }
-                    id={"remove_#{project_user.id}_modal"}
-                    project_user={project_user}
-                  />
-                </.td>
-              </.tr>
-            <% end %>
-          </.table>
-        </div>
+            <.confirm_user_removal_modal
+              :if={
+                user_removable?(
+                  project_user,
+                  @current_user,
+                  @can_remove_project_user
+                )
+              }
+              id={"remove_#{project_user.id}_modal"}
+              project_user={project_user}
+            />
+          </:actions>
+          <:empty_state>
+            <.empty_state
+              icon="hero-plus-circle"
+              message="No collaborators found."
+              button_text="Add a collaborator"
+              button_id="open-add-collaborator-modal"
+              button_click="toggle_collaborators_modal"
+              button_disabled={!@can_edit_project}
+            />
+          </:empty_state>
+        </LightningWeb.Components.DataTables.collaborators_table>
       </:panel>
       <:panel hash="security">
-        <div>
-          <h6 class="font-medium text-black">Project Security</h6>
-          <small class="block my-1 text-xs text-gray-600">
-            View and manage security settings for this project.
-          </small>
-          <.permissions_message
-            :if={!@can_edit_project}
-            section="multi-factor authentication settings."
-          />
-        </div>
-        <div class="hidden sm:block" aria-hidden="true">
-          <div class="py-2"></div>
-        </div>
+        <.section_header
+          title="Project security"
+          subtitle="View and manage security settings for this project."
+          permissions_message="multi-factor authentication settings."
+          can_perform_action={@can_edit_project}
+        />
         <div>
           <%= if assigns[:mfa_banner] do %>
             {Phoenix.LiveView.TagEngine.component(
@@ -871,9 +758,6 @@
           <div>
             <h6 class="font-medium text-black"></h6>
             <p class="block my-1 text-xs text-gray-600"></p>
-            <div class="hidden sm:block" aria-hidden="true">
-              <div class="py-2"></div>
-            </div>
             <div class="flex items-center">
               <button
                 id="toggle-mfa-switch"
@@ -908,19 +792,12 @@
         </div>
       </:panel>
       <:panel hash="vcs">
-        <div>
-          <h6 class="font-medium text-black">Version Control</h6>
-          <small class="block my-1 text-xs text-gray-600">
-            View or modify external version control settings for this project.
-          </small>
-          <.permissions_message
-            :if={!@can_install_github}
-            section={"version control configuration#{@can_initiate_github_sync && " but you can initiate a sync." || "."}"}
-          />
-        </div>
-        <div class="hidden sm:block" aria-hidden="true">
-          <div class="py-2"></div>
-        </div>
+        <.section_header
+          title="Version control"
+          subtitle="View or modify external version control settings for this project."
+          permissions_message={"version control configuration#{@can_initiate_github_sync && " but you can initiate a sync." || "."}"}
+          can_perform_action={@can_install_github}
+        />
         <div>
           <%= if assigns[:github_banner] do %>
             {Phoenix.LiveView.TagEngine.component(
@@ -1014,20 +891,12 @@
         </div>
       </:panel>
       <:panel hash="data-storage">
-        <div>
-          <h6 class="font-medium text-black">Data Storage</h6>
-          <small class="block my-1 text-xs text-gray-600">
-            View or modify data storage settings for this project.
-          </small>
-          <.permissions_message
-            :if={!@can_edit_data_retention}
-            role={@current_user.role}
-            section="data storage settings."
-          />
-        </div>
-        <div class="hidden sm:block" aria-hidden="true">
-          <div class="py-2"></div>
-        </div>
+        <.section_header
+          title="Data storage"
+          subtitle="View or modify data storage settings for this project."
+          permissions_message="data storage settings."
+          can_perform_action={@can_edit_data_retention}
+        />
         <div class="bg-white p-4 rounded-md">
           <.form
             :let={f}
@@ -1210,79 +1079,45 @@
         </div>
       </:panel>
       <:panel hash="history-exports">
-        <div class="flex justify-between content-center pb-2">
-          <div class="leading-loose">
-            <h6 class="font-medium text-black">
-              History Exports
-            </h6>
-            <small class="block text-xs text-gray-600">
-              View export status and download work order history for this project.
-            </small>
-          </div>
-        </div>
-        <div class="my-6">
-          <LightningWeb.Components.Table.table
-            id="project_users_table"
-            rows={@project_files}
-            row_class="group hover:bg-indigo-50 hover:border-l-indigo-500"
-          >
-            <:col
-              :let={file}
-              label_class="text-gray-700 uppercase"
-              label="Export Date"
-            >
-              {file.inserted_at
-              |> Lightning.Helpers.format_date()}
-            </:col>
-            <:col
-              :let={file}
-              label_class="text-gray-700 uppercase"
-              label="Filename"
-            >
-              <%= if file.path do %>
-                {Path.basename(file.path)}
-              <% else %>
-                <em>Pending</em>
-              <% end %>
-            </:col>
-            <:col
-              :let={file}
-              label_class="text-gray-700 uppercase"
-              label="Export Requested By"
-            >
-              {file.created_by.first_name <> " " <> file.created_by.last_name}
-            </:col>
-            <:col
-              :let={file}
-              label_class="text-gray-700 uppercase"
-              label="Status"
-            >
-              {format_export_status(file.status)}
-            </:col>
-            <:col :let={file}>
-              <%= if file.status == :completed do %>
-                <.link
-                  id={"download-export-file-#{file.id}-button"}
-                  href={~p"/project_files/#{file.id}/download"}
-                  target="_blank"
-                  class="table-action py-2 px-4"
-                >
-                  Download
-                </.link>
-              <% else %>
-                <.button
-                  id={"download-export-file-#{file.id}-button"}
-                  disabled={true}
-                  class="table-action disabled:bg-gray-50"
-                  tooltip="Export is not yet ready for download"
-                  theme="primary"
-                >
-                  Download
-                </.button>
-              <% end %>
-            </:col>
-          </LightningWeb.Components.Table.table>
-        </div>
+        <.section_header
+          title="History exports"
+          subtitle="View export status and download work order history for this project."
+          permissions_message="history exports."
+          can_perform_action={true}
+        />
+        <LightningWeb.Components.DataTables.history_exports_table
+          id="project_users_table"
+          project_files={@project_files}
+        >
+          <:actions :let={file}>
+            <%= if file.status == :completed do %>
+              <.link
+                id={"download-export-file-#{file.id}-button"}
+                href={~p"/project_files/#{file.id}/download"}
+                target="_blank"
+                class="table-action py-2 px-4"
+              >
+                Download
+              </.link>
+            <% else %>
+              <.button
+                id={"download-export-file-#{file.id}-button"}
+                disabled={true}
+                class="table-action disabled:bg-gray-50"
+                tooltip="Export is not yet ready for download"
+              >
+                Download
+              </.button>
+            <% end %>
+          </:actions>
+          <:empty_state>
+            <.empty_state
+              icon="hero-folder-arrow-down"
+              message="No history exports found for this project."
+              interactive={false}
+            />
+          </:empty_state>
+        </LightningWeb.Components.DataTables.history_exports_table>
       </:panel>
     </LightningWeb.Components.Tabbed.container>
   </LayoutComponents.centered>

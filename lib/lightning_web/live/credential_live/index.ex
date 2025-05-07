@@ -5,6 +5,7 @@ defmodule LightningWeb.CredentialLive.Index do
   use LightningWeb, :live_view
 
   import LightningWeb.CredentialLive.Helpers, only: [can_edit?: 2]
+
   alias Lightning.Credentials
   alias Lightning.OauthClients
 

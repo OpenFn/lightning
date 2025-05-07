@@ -17,7 +17,8 @@ defmodule LightningWeb.DashboardLiveTest do
     } do
       {:ok, _view, html} = live(conn, ~p"/projects")
 
-      assert html =~ "No projects found. Create a new one."
+      assert html =~ "No projects found."
+      assert html =~ "Create a new one"
 
       assert html =~ "User Profile"
       assert html =~ "Credentials"

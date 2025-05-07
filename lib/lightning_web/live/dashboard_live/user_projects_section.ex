@@ -60,17 +60,14 @@ defmodule LightningWeb.DashboardLive.UserProjectsSection do
         sort_direction={@sort_direction}
       >
         <:empty_state>
-          <button
-            type="button"
-            id="open-create-project-modal-big-button"
-            phx-click={show_modal("create-project-modal")}
-            class="relative block w-full rounded-lg border-2 border-dashed p-4 text-center hover:border-gray-400"
-          >
-            <Heroicons.plus_circle class="mx-auto w-12 h-12 text-secondary-400" />
-            <span class="mt-2 block text-xs font-semibold text-secondary-600">
-              No projects found. Create a new one.
-            </span>
-          </button>
+          <.empty_state
+            icon="hero-plus-circle"
+            message="No projects found."
+            button_text="Create a new one."
+            button_id="open-create-project-modal-big-button"
+            button_click={show_modal("create-project-modal")}
+            button_disabled={false}
+          />
         </:empty_state>
         <:create_project_button>
           <.button

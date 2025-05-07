@@ -5,7 +5,8 @@ defmodule LightningWeb.ProjectLive.Settings do
   use LightningWeb, :live_view
 
   import LightningWeb.CredentialLive.Helpers, only: [can_edit?: 2]
-  import PetalComponents.Table
+
+  import LightningWeb.LayoutComponents
 
   alias Lightning.Accounts.User
   alias Lightning.Collections
@@ -19,7 +20,6 @@ defmodule LightningWeb.ProjectLive.Settings do
   alias Lightning.Projects.ProjectUser
   alias Lightning.VersionControl
   alias Lightning.WebhookAuthMethods
-  alias Lightning.Workflows.WebhookAuthMethod
   alias LightningWeb.Components.GithubComponents
   alias LightningWeb.LiveHelpers
 
@@ -190,22 +190,6 @@ defmodule LightningWeb.ProjectLive.Settings do
       Map.put(c, :project_names, project_names)
     end)
   end
-
-  defp can_edit_digest_alert(
-         %User{} = current_user,
-         %ProjectUser{} = project_user
-       ),
-       do:
-         ProjectUsers
-         |> Permissions.can?(:edit_digest_alerts, current_user, project_user)
-
-  defp can_edit_failure_alert(
-         %User{} = current_user,
-         %ProjectUser{} = project_user
-       ),
-       do:
-         ProjectUsers
-         |> Permissions.can?(:edit_failure_alerts, current_user, project_user)
 
   @impl true
   def handle_params(params, _url, socket) do
@@ -553,102 +537,6 @@ defmodule LightningWeb.ProjectLive.Settings do
     end
   end
 
-  defp failure_alert(assigns) do
-    assigns =
-      assigns
-      |> assign(
-        can_edit_failure_alert:
-          can_edit_failure_alert(assigns.current_user, assigns.project_user)
-      )
-
-    ~H"""
-    <%= cond do %>
-      <% @can_receive_failure_alerts && @can_edit_failure_alert -> %>
-        <.form
-          :let={form}
-          for={%{"failure_alert" => @project_user.failure_alert}}
-          phx-change="set_failure_alert"
-          id={"failure-alert-#{@project_user.id}"}
-        >
-          <.input
-            type="hidden"
-            field={form[:project_user_id]}
-            value={@project_user.id}
-          />
-          <.input
-            type="select"
-            field={form[:failure_alert]}
-            options={[Disabled: false, Enabled: true]}
-          />
-        </.form>
-      <% @can_receive_failure_alerts -> %>
-        <span id={"failure-alert-status-#{@project_user.id}"}>
-          {if @project_user.failure_alert,
-            do: "Enabled",
-            else: "Disabled"}
-        </span>
-      <% true -> %>
-        <span id={"failure-alert-status-#{@project_user.id}"}>Unavailable</span>
-    <% end %>
-    """
-  end
-
-  def digest(assigns) do
-    assigns =
-      assigns
-      |> assign(
-        can_edit_digest_alert:
-          can_edit_digest_alert(assigns.current_user, assigns.project_user)
-      )
-
-    ~H"""
-    <%= if @can_edit_digest_alert do %>
-      <.form
-        :let={form}
-        for={%{"digest" => @project_user.digest}}
-        phx-change="set_digest"
-        id={"digest-#{@project_user.id}"}
-      >
-        <.input
-          type="hidden"
-          field={form[:project_user_id]}
-          value={@project_user.id}
-        />
-
-        <.input
-          type="select"
-          field={form[:digest]}
-          options={[
-            Never: "never",
-            Daily: "daily",
-            Weekly: "weekly",
-            Monthly: "monthly"
-          ]}
-        />
-      </.form>
-    <% else %>
-      {@project_user.digest
-      |> Atom.to_string()
-      |> String.capitalize()}
-    <% end %>
-    """
-  end
-
-  def role(assigns) do
-    ~H"""
-    {@project_user.role |> Atom.to_string() |> String.capitalize()}
-    """
-  end
-
-  def user(assigns) do
-    ~H"""
-    <div>
-      {@project_user.user.first_name} {@project_user.user.last_name}
-    </div>
-    <span class="text-xs">{@project_user.user.email}</span>
-    """
-  end
-
   defp checked?(changeset, input_id) do
     Ecto.Changeset.fetch_field!(changeset, :retention_policy) == input_id
   end
@@ -671,14 +559,6 @@ defmodule LightningWeb.ProjectLive.Settings do
          socket
          |> put_flash(:error, "Changes couldn't be saved, please try again")}
     end
-  end
-
-  def permissions_message(assigns) do
-    ~H"""
-    <small class="mt-2 text-red-700">
-      Role based permissions: You cannot modify this project's {@section}
-    </small>
-    """
   end
 
   defp confirm_user_removal_modal(assigns) do
@@ -786,17 +666,39 @@ defmodule LightningWeb.ProjectLive.Settings do
     end
   end
 
-  defp format_export_status(status) do
-    status
-    |> Atom.to_string()
-    |> String.replace("_", " ")
-    |> String.capitalize()
-  end
-
   defp get_user_credentials_in_project(
          %User{} = user,
          %Projects.Project{} = project
        ) do
     Credentials.list_user_credentials_in_project(user, project)
+  end
+
+  attr :can_edit_project, :boolean, required: true
+  attr :project, :any, required: true
+
+  def support_access_toggle(assigns) do
+    ~H"""
+    <div class="flex flex-row items-center mb-4">
+      <div :if={@can_edit_project} class="flex flex-row">
+        <div>
+          <.input
+            type="toggle"
+            id="toggle-support-access"
+            name="allow_support_access"
+            checked={@project.allow_support_access}
+            phx-click="toggle_support_access"
+            label="Grant support access"
+          />
+        </div>
+        <div>
+          <Common.tooltip
+            id="toggle-support-tooltip"
+            title="Granting support access will allow all designated support users for this Lightning instance to access this project with editor permissions."
+            class="inline-block"
+          />
+        </div>
+      </div>
+    </div>
+    """
   end
 end

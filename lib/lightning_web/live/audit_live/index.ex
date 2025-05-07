@@ -4,7 +4,6 @@ defmodule LightningWeb.AuditLive.Index do
   """
   use LightningWeb, :live_view
 
-  import PetalComponents.Table
   import PetalComponents.Badge
 
   alias Lightning.Auditing
@@ -73,19 +72,23 @@ defmodule LightningWeb.AuditLive.Index do
     assigns = assign(assigns, changes: changes)
 
     ~H"""
-    <.td colspan="4" class="font-mono text-xs break-all">
-      <%= for {field, old, new} <- @changes do %>
-        <li>{field}&nbsp; {old}
-          <.icon name="hero-arrow-right" class="h-5 w-5 inline-block mr-2" />
-          {new}</li>
-      <% end %>
+    <.td colspan={4} class="!p-4 font-mono text-xs break-all">
+      <ul class="p-2 bg-gray-50 rounded-md ring ring-gray-100">
+        <%= for {field, old, new} <- @changes do %>
+          <li class="mb-2 last:mb-0">
+            <span class="font-semibold">{field}</span>&nbsp; {old}
+            <.icon name="hero-arrow-right" class="h-4 w-4 inline-block mx-2" />
+            {new}
+          </li>
+        <% end %>
+      </ul>
     </.td>
     """
   end
 
   defp no_changes(assigns) do
     ~H"""
-    <.td colspan="4" class="font-mono text-xs">
+    <.td colspan={4} class="!p-6 font-mono text-xs break-all">
       No changes
     </.td>
     """

@@ -51,62 +51,72 @@
     <div class="mt-2 flow-root">
       <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
         <div class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-          <LightningWeb.Components.Table.table
-            id="project_users_table"
-            rows={
-              Phoenix.HTML.FormData.to_form(
-                f.source,
-                f,
-                :project_users,
-                f.options
-              )
-            }
-          >
-            <:col :let={form} label="NAME">
-              {@users
-              |> find_user_by_id(form[:user_id].value)
-              |> full_user_name()}
-              <.input :if={form.data.id} type="hidden" field={form[:id]} />
-              <.input type="hidden" field={form[:user_id]} />
-              <input
-                type="hidden"
-                name={"#{f.name}[users_sort][]"}
-                value={form.index}
-              />
-            </:col>
-            <:col :let={form} label="EMAIL">
-              {find_user_by_id(@users, form[:user_id].value).email}
-            </:col>
-            <:col :let={form} label="NO ACCESS" label_class="text-center">
-              <div class="text-center">
-                <.input
-                  id={form[:role].id <> "_no_access"}
-                  type="radio"
-                  field={form[:role]}
-                  class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
-                  checked={to_string(form[:role].value) == ""}
-                  value=""
-                />
-              </div>
-            </:col>
-            <:col
-              :let={form}
-              :for={role <- ["owner", "admin", "editor", "viewer"]}
-              label={String.upcase(role)}
-              label_class="text-center"
-            >
-              <div class="text-center">
-                <.input
-                  id={form[:role].id <> "_" <> role}
-                  type="radio"
-                  field={form[:role]}
-                  class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
-                  checked={to_string(form[:role].value) == role}
-                  value={role}
-                />
-              </div>
-            </:col>
-          </LightningWeb.Components.Table.table>
+          <.table id="project_users_table">
+            <:header>
+              <.tr>
+                <.th>NAME</.th>
+                <.th>EMAIL</.th>
+                <.th class="!text-center">
+                  NO ACCESS
+                </.th>
+                <.th class="!text-center">
+                  OWNER
+                </.th>
+                <.th class="!text-center">
+                  ADMIN
+                </.th>
+                <.th class="!text-center">
+                  EDITOR
+                </.th>
+                <.th class="!text-center">
+                  VIEWER
+                </.th>
+              </.tr>
+            </:header>
+            <:body>
+              <%= for form <- Phoenix.HTML.FormData.to_form(f.source, f, :project_users, f.options) do %>
+                <.tr>
+                  <.td>
+                    {@users
+                    |> find_user_by_id(form[:user_id].value)
+                    |> full_user_name()}
+                    <.input :if={form.data.id} type="hidden" field={form[:id]} />
+                    <.input type="hidden" field={form[:user_id]} />
+                    <input
+                      type="hidden"
+                      name={"#{f.name}[users_sort][]"}
+                      value={form.index}
+                    />
+                  </.td>
+                  <.td>
+                    {find_user_by_id(@users, form[:user_id].value).email}
+                  </.td>
+                  <.td class="text-center">
+                    <.input
+                      id={form[:role].id <> "_no_access"}
+                      type="radio"
+                      field={form[:role]}
+                      class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                      checked={to_string(form[:role].value) == ""}
+                      value=""
+                    />
+                  </.td>
+                  <%= for role <- ["owner", "admin", "editor", "viewer"] do %>
+                    <.td class="text-center">
+                      <.input
+                        id={form[:role].id <> "_" <> role}
+                        type="radio"
+                        field={form[:role]}
+                        class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                        checked={to_string(form[:role].value) == role}
+                        value={role}
+                      />
+                    </.td>
+                  <% end %>
+                </.tr>
+              <% end %>
+            </:body>
+          </.table>
         </div>
       </div>
     </div>

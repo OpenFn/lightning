@@ -521,20 +521,6 @@ export const ModalHook = {
   },
 } as PhoenixHook;
 
-export const ShowActionsOnRowHover = {
-  mounted() {
-    this.el.addEventListener('mouseenter', e => {
-      let target = this.el.querySelector<HTMLElement>('.hover-content');
-      if (target) target.style.opacity = '1';
-    });
-
-    this.el.addEventListener('mouseleave', e => {
-      let target = this.el.querySelector<HTMLElement>('.hover-content');
-      if (target) target.style.opacity = '0';
-    });
-  },
-} as PhoenixHook;
-
 export const Flash = {
   mounted() {
     let hide = () => {
