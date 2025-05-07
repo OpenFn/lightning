@@ -38,8 +38,10 @@ defmodule LightningWeb.Components.Table do
   </.table>
   ```
   """
-
   use Phoenix.Component
+
+  import LightningWeb.Components.Icons
+
   alias LightningWeb.Components.Common
 
   @doc """
@@ -138,6 +140,12 @@ defmodule LightningWeb.Components.Table do
       phx-click={@onclick}
       class={[
         "hover:bg-gray-50 transition-colors duration-150 cursor-pointer",
+        "[&>td:first-child]:py-4 [&>td:first-child]:pr-3 [&>td:first-child]:pl-4 [&>td:first-child]:sm:pl-6",
+        "[&>th:first-child]:py-3.5 [&>th:first-child]:pr-3 [&>th:first-child]:pl-4 [&>th:first-child]:sm:pl-6",
+        "[&>td:not(:first-child):not(:last-child)]:px-3 [&>td:not(:first-child):not(:last-child)]:py-4",
+        "[&>th:not(:first-child):not(:last-child)]:px-3 [&>th:not(:first-child):not(:last-child)]:py-3.5",
+        "[&>td:last-child]:relative [&>td:last-child]:py-4 [&>td:last-child]:pr-4 [&>td:last-child]:pl-3 [&>td:last-child]:sm:pr-6",
+        "[&>th:last-child]:relative [&>th:last-child]:py-3.5 [&>th:last-child]:pr-4 [&>th:last-child]:pl-3 [&>th:last-child]:sm:pr-6",
         @class
       ]}
     >
@@ -196,7 +204,7 @@ defmodule LightningWeb.Components.Table do
       id={@id}
       scope={@scope}
       class={[
-        "px-3 py-3.5 text-left text-sm font-semibold text-gray-900 select-none",
+        "text-sm text-left font-semibold text-gray-900 select-none whitespace-nowrap",
         @class
       ]}
     >
@@ -251,10 +259,51 @@ defmodule LightningWeb.Components.Table do
       id={@id}
       colspan={@colspan}
       rowspan={@rowspan}
-      class={["px-3 py-4 text-sm text-gray-500", @class]}
+      class={["text-sm text-gray-500 whitespace-nowrap", @class]}
     >
       {render_slot(@inner_block)}
     </td>
+    """
+  end
+
+  attr :icon, :string, default: "hero-plus-circle"
+  attr :message, :string, required: true
+  attr :button_text, :string, default: nil
+  attr :button_id, :string, default: nil
+  attr :button_click, :any, default: nil
+  attr :button_disabled, :boolean, default: false
+  attr :button_target, :any, default: nil
+  attr :button_action_value, :any, default: nil
+  attr :interactive, :boolean, default: true
+
+  def empty_state(assigns) do
+    ~H"""
+    <%= if @interactive do %>
+      <button
+        type="button"
+        id={@button_id}
+        phx-click={@button_click}
+        phx-target={@button_target}
+        phx-value-action={@button_action_value}
+        class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-4 text-center hover:border-gray-400 disabled:hover:border-gray-300 focus:outline-none"
+        disabled={@button_disabled}
+      >
+        <.icon name={@icon} class="mx-auto w-12 h-12 text-secondary-400" />
+        <span class="mt-2 block text-xs font-semibold text-secondary-600">
+          {@button_text}
+        </span>
+        <div class="mt-2 text-xs text-gray-500">
+          {@message}
+        </div>
+      </button>
+    <% else %>
+      <div class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-4 text-center">
+        <.icon name={@icon} class="mx-auto w-12 h-12 text-secondary-400" />
+        <div class="mt-2 text-xs text-gray-500">
+          {@message}
+        </div>
+      </div>
+    <% end %>
     """
   end
 end

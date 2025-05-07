@@ -23,7 +23,8 @@ defmodule LightningWeb.CollectionLiveTest do
       {:ok, _view, html} = live(conn, ~p"/settings/collections")
 
       assert html =~ "Collections"
-      assert html =~ "No collection found. Create a new one."
+      assert html =~ "No collection found."
+      assert html =~ "Create a new one"
     end
 
     test "Collections are listed for superuser", %{conn: conn} do

@@ -267,4 +267,59 @@ defmodule LightningWeb.LayoutComponents do
     </li>
     """
   end
+
+  attr :title, :string, required: true
+  attr :subtitle, :string, required: true
+  attr :permissions_message, :string, required: true
+  attr :can_perform_action, :boolean, default: true
+  attr :action_button_text, :string, default: nil
+  attr :action_button_click, :any, default: nil
+  attr :action_button_value_action, :string, default: nil
+  attr :action_button_target, :any, default: nil
+  attr :action_button_disabled, :boolean, default: false
+  attr :action_button_tooltip, :string, default: nil
+  attr :action_button_id, :string, default: nil
+  attr :role, :string, default: nil
+
+  def section_header(assigns) do
+    ~H"""
+    <div class="flex justify-between content-center pb-4">
+      <div class="leading-loose">
+        <h6 class="font-medium text-black">{@title}</h6>
+        <small class="block text-xs text-gray-600">
+          {@subtitle}
+        </small>
+        <%= if !@can_perform_action do %>
+          <.permissions_message section={@permissions_message} />
+        <% end %>
+      </div>
+      <%= if @action_button_text do %>
+        <div class="sm:block" aria-hidden="true">
+          <.button
+            :if={@action_button_id}
+            id={@action_button_id}
+            type="button"
+            phx-click={@action_button_click}
+            phx-value-action={@action_button_value_action}
+            phx-target={@action_button_target}
+            disabled={@action_button_disabled}
+            tooltip={@action_button_tooltip}
+          >
+            {@action_button_text}
+          </.button>
+        </div>
+      <% end %>
+    </div>
+    """
+  end
+
+  attr :section, :string, required: true
+
+  defp permissions_message(assigns) do
+    ~H"""
+    <small class="mt-2 text-red-700">
+      Role based permissions: You cannot modify this project's {@section}
+    </small>
+    """
+  end
 end

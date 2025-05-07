@@ -30,23 +30,20 @@
     </LayoutComponents.header>
   </:header>
   <LayoutComponents.centered>
-    <LightningWeb.Components.Credentials.oauth_clients_table
+    <LightningWeb.Components.DataTables.oauth_clients_table
       id="oauth-clients"
       title="OAuth Clients"
       clients={@oauth_clients}
     >
       <:empty_state>
-        <button
-          type="button"
-          id="open-create-oauth-client-modal-big-buttton"
-          phx-click={show_modal("new-oauth-client-modal")}
-          class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-4 text-center hover:border-gray-400 focus:outline-none"
-        >
-          <Heroicons.plus_circle class="mx-auto w-12 h-12 text-secondary-400" />
-          <span class="mt-2 block text-xs font-semibold text-secondary-600">
-            Create a new OAuth client
-          </span>
-        </button>
+        <.empty_state
+          icon="hero-plus-circle"
+          message="No OAuth clients found."
+          button_text="Create a new OAuth client"
+          button_id="open-create-oauth-client-modal-big-buttton"
+          button_click={show_modal("new-oauth-client-modal")}
+          button_disabled={false}
+        />
       </:empty_state>
       <:actions :let={client}>
         <div :if={can_edit?(client, @current_user)}>
@@ -86,24 +83,21 @@
           />
         </div>
       </:actions>
-    </LightningWeb.Components.Credentials.oauth_clients_table>
-    <LightningWeb.Components.Credentials.credentials_table
+    </LightningWeb.Components.DataTables.oauth_clients_table>
+    <LightningWeb.Components.DataTables.credentials_table
       id="credentials"
       title="Credentials"
       credentials={@credentials}
     >
       <:empty_state>
-        <button
-          type="button"
-          id="open-create-credential-modal-big-buttton"
-          phx-click={show_modal("new-credential-modal")}
-          class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-4 text-center hover:border-gray-400 focus:outline-none"
-        >
-          <Heroicons.plus_circle class="mx-auto w-12 h-12 text-secondary-400" />
-          <span class="mt-2 block text-xs font-semibold text-secondary-600">
-            Create a new Credential
-          </span>
-        </button>
+        <.empty_state
+          icon="hero-plus-circle"
+          message="No credentials found."
+          button_text="Create a new Credential"
+          button_id="open-create-credential-modal-big-buttton"
+          button_click={show_modal("new-credential-modal")}
+          button_disabled={false}
+        />
       </:empty_state>
       <:actions :let={credential}>
         <div :if={can_edit?(credential, @current_user)}>
@@ -158,7 +152,7 @@
           />
         </div>
       </:actions>
-    </LightningWeb.Components.Credentials.credentials_table>
+    </LightningWeb.Components.DataTables.credentials_table>
     <.live_component
       id="new-oauth-client-modal"
       module={LightningWeb.CredentialLive.OauthClientFormComponent}
