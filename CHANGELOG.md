@@ -32,6 +32,8 @@ and this project adheres to
   [#3166](https://github.com/OpenFn/lightning/pull/3166)
 - Re-order nightly cron jobs to reduce acute stress on db
   [#3179](https://github.com/OpenFn/lightning/pull/3179)
+- Standardize buttons
+  [#3093](https://github.com/OpenFn/lightning/issues/3093)
 
 ### Fixed
 

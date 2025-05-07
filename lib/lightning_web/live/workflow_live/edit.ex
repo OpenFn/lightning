@@ -124,9 +124,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
             :if={@snapshot_version_tag != "latest"}
             id={"version-switcher-button-#{@workflow.id}"}
             type="button"
+            theme="primary"
             phx-click="switch-version"
             phx-value-type="commit"
-            color_class="text-white bg-primary-600 hover:bg-primary-700 disabled:bg-primary-300"
           >
             Switch to latest version
           </.button>
@@ -493,7 +493,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           id="delete-job-button"
                           phx-click="delete_node"
                           phx-value-id={@selected_job.id}
-                          class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
+                          theme="danger"
                           disabled={
                             (!is_nil(@workflow.deleted_at) or !@can_edit_workflow or
                                @has_child_edges or @is_first_job or
@@ -617,7 +617,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         <%= unless ef[:source_trigger_id].value do %>
                           <.button
                             id="delete-edge-button"
-                            class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
+                            theme="danger"
                             data-confirm="Are you sure you want to delete this path?"
                             phx-click="delete_edge"
                             phx-value-id={ef[:id].value}
@@ -710,7 +710,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             <:footer>
               <div :if={!@publish_template} class="flex flex-row justify-end gap-2">
                 <.button
-                  variant="secondary"
+                  theme="secondary"
                   id="download-workflow-code-btn"
                   data-target="#workflow-code-viewer"
                   data-content-type="text/yaml"
@@ -720,7 +720,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   Download
                 </.button>
                 <.button
-                  variant="secondary"
+                  theme="secondary"
                   id="copy-workflow-code-btn"
                   data-to="#workflow-code-viewer"
                   phx-hook="Copy"
@@ -730,7 +730,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 </.button>
                 <.button
                   :if={@current_user.support_user}
-                  variant="primary"
+                  theme="primary"
                   id="publish-template-btn"
                   phx-click="publish_template"
                   class="min-w-[8rem]"
@@ -747,25 +747,25 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     else: "Publish Template"}
                 </.button>
               </div>
-              <div :if={@publish_template} class="sm:flex sm:flex-row-reverse">
-                <button
+              <div :if={@publish_template} class="sm:flex sm:flex-row-reverse gap-3">
+                <.button
                   type="submit"
+                  theme="primary"
                   form="workflow-template-form"
                   disabled={!@workflow_template_changeset.valid?}
-                  class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 sm:ml-3 sm:w-auto"
                 >
                   {if @has_workflow_template?,
                     do: "Update Template",
                     else: "Publish Template"}
-                </button>
-                <button
+                </.button>
+                <.button
                   id="cancel-template-publish"
                   type="button"
                   phx-click="cancel_publish_template"
-                  class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+                  theme="secondary"
                 >
                   Back
-                </button>
+                </.button>
               </div>
             </:footer>
           </.panel>
@@ -807,6 +807,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     ~H"""
     <.button
       id="save-and-run"
+      theme="primary"
       phx-hook="DefaultRunViaCtrlEnter"
       {save_and_run_attributes(assigns)}
       class={save_and_run_classes(assigns)}
@@ -861,7 +862,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
     <div class="relative -ml-px block">
       <.button
         type="button"
-        class="h-full rounded-l-none pr-1 pl-1 focus:ring-inset"
+        theme="primary"
+        class="h-full rounded-l-none pr-1 pl-1"
         id="option-menu-button"
         aria-expanded="true"
         aria-haspopup="true"
@@ -877,21 +879,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
         aria-labelledby="option-menu-button"
         tabindex="-1"
       >
-        <button
+        <.button
           phx-click-away={hide_dropdown("create-new-work-order")}
           phx-hook="AltRunViaCtrlShiftEnter"
           id="create-new-work-order"
           type="submit"
           form={@manual_run_form.id}
-          class={[
-            "hidden absolute right-0 bottom-9 z-10 mb-2 w-max",
-            "rounded-md bg-white px-4 py-2 text-sm font-semibold",
-            "text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-          ]}
+          theme="secondary"
+          class="hidden absolute right-0 bottom-9 z-10 mb-2 w-max"
           disabled={@save_and_run_disabled || @snapshot_version_tag != "latest"}
         >
           <.icon name="hero-play-solid" class="w-4 h-4 mr-1" /> Create New Work Order
-        </button>
+        </.button>
       </div>
     </div>
     """
@@ -2881,13 +2880,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
             if @project_repo_connection, do: ["rounded-r-none"], else: []
         }
         phx-connected={!@disabled && JS.remove_attribute("disabled")}
+        theme="primary"
       >
         Save
       </.button>
       <div :if={@project_repo_connection} class="relative -ml-px block">
         <.button
           type="button"
-          class="h-full rounded-l-none pr-1 pl-1 focus:ring-inset"
+          class="h-full rounded-l-none pr-1 pl-1"
           id={"#{@id}-save-and-sync-option-menu-button"}
           aria-expanded="true"
           aria-haspopup="true"
@@ -2895,6 +2895,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           phx-click={show_dropdown("#{@id}-save-and-sync")}
           phx-disconnected={JS.set_attribute({"disabled", ""})}
           phx-connected={!@disabled && JS.remove_attribute("disabled")}
+          theme="primary"
         >
           <span class="sr-only">Open options</span>
           <.icon name="hero-chevron-down" class="w-4 h-4" />
@@ -2905,23 +2906,22 @@ defmodule LightningWeb.WorkflowLive.Edit do
           aria-labelledby={"#{@id}-save-and-sync-option-menu-button"}
           tabindex="-1"
         >
-          <button
+          <.button
             phx-click-away={hide_dropdown("#{@id}-save-and-sync")}
             id={"#{@id}-save-and-sync"}
             type="button"
             phx-click="toggle_github_sync_modal"
+            theme="secondary"
             class={[
               "hidden absolute right-0 z-10 w-max",
               if(@dropdown_position == :top, do: "bottom-9 mb-2"),
-              if(@dropdown_position == :bottom, do: "top-9 mt-2"),
-              "rounded-md bg-white px-4 py-2 text-sm font-semibold",
-              "text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+              if(@dropdown_position == :bottom, do: "top-9 mt-2")
             ]}
             disabled={@disabled}
             phx-hook="OpenSyncModalViaCtrlShiftS"
           >
             Save & Sync
-          </button>
+          </.button>
         </div>
       </div>
     </div>

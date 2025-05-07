@@ -38,9 +38,10 @@
 
                 <div class="relative inline-block text-left w-60">
                   <div>
-                    <button
+                    <.button
                       type="button"
-                      class="inline-flex w-full justify-between gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                      theme="secondary"
+                      class="inline-flex w-full justify-between gap-x-1.5"
                       aria-expanded="true"
                       aria-haspopup="true"
                       phx-click={show_dropdown("workflow_filter_dropdown")}
@@ -52,19 +53,11 @@
                           Any
                         <% end %>
                       </span>
-                      <svg
+                      <.icon
+                        name="hero-chevron-down"
                         class="-mr-1 h-5 w-5 text-gray-400"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                        aria-hidden="true"
-                      >
-                        <path
-                          fill-rule="evenodd"
-                          d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-                          clip-rule="evenodd"
-                        />
-                      </svg>
-                    </button>
+                      />
+                    </.button>
                   </div>
 
                   <div
@@ -103,9 +96,10 @@
                 </div>
                 <div class="relative inline-block text-left w-44">
                   <div>
-                    <button
+                    <.button
                       type="button"
-                      class="inline-flex w-full justify-between gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                      class="inline-flex w-full justify-between gap-x-1.5"
+                      theme="secondary"
                       aria-expanded="true"
                       aria-haspopup="true"
                       phx-click={show_dropdown("status_filter_dropdown")}
@@ -119,19 +113,11 @@
                           Any
                         <% end %>
                       </span>
-                      <svg
+                      <.icon
+                        name="hero-chevron-down"
                         class="-mr-1 h-5 w-5 text-gray-400"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                        aria-hidden="true"
-                      >
-                        <path
-                          fill-rule="evenodd"
-                          d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-                          clip-rule="evenodd"
-                        />
-                      </svg>
-                    </button>
+                      />
+                    </.button>
                   </div>
 
                   <div
@@ -164,9 +150,10 @@
                 </div>
                 <div class="relative inline-block text-left w-44">
                   <div>
-                    <button
+                    <.button
                       type="button"
-                      class="inline-flex w-full justify-between gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                      class="inline-flex w-full justify-between gap-x-1.5"
+                      theme="secondary"
                       aria-expanded="true"
                       aria-haspopup="true"
                       phx-click={show_dropdown("time_filter_dropdown")}
@@ -185,19 +172,11 @@
                       <% else %>
                         <span>Any</span>
                       <% end %>
-                      <svg
+                      <.icon
+                        name="hero-chevron-down"
                         class="-mr-1 h-5 w-5 text-gray-400"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                        aria-hidden="true"
-                      >
-                        <path
-                          fill-rule="evenodd"
-                          d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-                          clip-rule="evenodd"
-                        />
-                      </svg>
-                    </button>
+                      />
+                    </.button>
                   </div>
 
                   <div
@@ -558,16 +537,14 @@
                         </.label>
                       <% end %>
                     </.form>
-                    <button
+                    <.button
                       type="submit"
+                      theme="primary"
                       form="run-search-form"
-                      class="rounded-md bg-indigo-600 px-5 py-2 text-sm font-semibold
-                      text-white shadow-xs hover:bg-indigo-500
-                      focus-visible:outline-2 focus-visible:outline-offset-2
-                      focus-visible:outline-indigo-600 truncate"
+                      class="truncate"
                     >
                       Search
-                    </button>
+                    </.button>
                   </div>
                 </div>
               </div>
@@ -627,9 +604,9 @@
                             </span>
                           </div>
                         <% else %>
-                          <button
+                          <.button
                             type="button"
-                            class="rounded bg-white px-2 py-1 text-xs font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                            theme="secondary"
                             phx-click={
                               with :ok <-
                                      validate_bulk_rerun(
@@ -640,15 +617,15 @@
                             }
                           >
                             Retry
-                          </button>
-                          <button
+                          </.button>
+                          <.button
                             :if={
                               selected_workflow_count(@selected_work_orders) ==
                                 1
                             }
                             id="bulk-rerun-from-job-modal-trigger"
                             type="button"
-                            class="rounded bg-white px-2 py-1 text-xs font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                            theme="secondary"
                             phx-click={
                               with :ok <-
                                      validate_bulk_rerun(
@@ -659,7 +636,7 @@
                             }
                           >
                             Retry from step
-                          </button>
+                          </.button>
                         <% end %>
                       </div>
                     </div>

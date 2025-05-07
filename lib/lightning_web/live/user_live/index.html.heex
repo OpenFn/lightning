@@ -2,14 +2,14 @@
   <:header>
     <LayoutComponents.header current_user={@current_user}>
       <:title>Users</:title>
-      <.link navigate={Routes.user_edit_path(@socket, :new)}>
-        <Common.button>
-          <div class="h-full">
-            <Heroicons.plus solid class="h-4 w-4 inline-block" />
-            <span class="inline-block align-middle">New User</span>
-          </div>
-        </Common.button>
-      </.link>
+      <.button_link
+        theme="primary"
+        navigate={Routes.user_edit_path(@socket, :new)}
+        class="inline-flex items-center gap-x-1.5"
+      >
+        <.icon name="hero-plus-solid" class="h-4 w-4" />
+        <span class="align-middle">New User</span>
+      </.button_link>
     </LayoutComponents.header>
   </:header>
   <LayoutComponents.centered>

@@ -86,23 +86,20 @@ defmodule LightningWeb.AccountConfirmationModal do
           </Common.alert>
         </div>
         <.modal_footer class="mt-6 mx-6">
-          <div class="sm:flex sm:flex-row-reverse">
-            <button
+          <div class="sm:flex sm:flex-row-reverse gap-3">
+            <.button
               id="resend-confirmation-email-button"
               type="button"
+              theme="primary"
               phx-click="resend-confirmation-email"
               phx-target={@myself}
               disabled={@email_sent}
-              class="ml-3 inline-flex justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 sm:w-auto"
             >
               Resend confirmation email
-            </button>
-            <.link
-              href={~p"/profile"}
-              class="inline-flex justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:w-auto"
-            >
+            </.button>
+            <.button_link href={~p"/profile"} theme="secondary">
               Update email address
-            </.link>
+            </.button_link>
           </div>
         </.modal_footer>
       </.modal>

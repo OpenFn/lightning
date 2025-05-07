@@ -136,20 +136,20 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
             <.button
               id={"project-#{@id}_confirm_button"}
               type="submit"
-              color_class="bg-red-600 hover:bg-red-700 text-white"
+              theme="danger"
               phx-disable-with="Deleting..."
               disabled={!@deletion_changeset.valid?}
             >
               Delete project
             </.button>
-            <button
+            <.button
               type="button"
               phx-click="close_modal"
               phx-target={@myself}
-              class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+              theme="secondary"
             >
               Cancel
-            </button>
+            </.button>
           </div>
         </.form>
       </.modal>
