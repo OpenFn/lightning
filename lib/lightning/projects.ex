@@ -952,17 +952,27 @@ defmodule Lightning.Projects do
         on: r.work_order_id == wtd.id
       )
 
-    workorders_count = Repo.aggregate(workorders_query, :count)
+    workorders_count =
+      Repo.aggregate(workorders_query, :count,
+        timeout: Config.default_ecto_database_timeout() * 3
+      )
 
     for _i <- 1..ceil(workorders_count / batch_size) do
       Repo.transaction(
         fn ->
-          {_count, _} = Repo.delete_all(steps_delete_query, returning: false)
+          {_count, _} =
+            Repo.delete_all(steps_delete_query,
+              returning: false,
+              timeout: Config.default_ecto_database_timeout() * 3
+            )
 
           {_count, _} =
-            Repo.delete_all(workorders_delete_query, returning: false)
+            Repo.delete_all(workorders_delete_query,
+              returning: false,
+              timeout: Config.default_ecto_database_timeout() * 3
+            )
         end,
-        timeout: Config.default_ecto_database_timeout() * 3
+        timeout: Config.default_ecto_database_timeout() * 6
       )
     end
 
@@ -978,38 +988,51 @@ defmodule Lightning.Projects do
     :ok
   end
 
-  defp delete_unused_snapshots(project_query) do
-    # Find all snapshots for workflows in this project
-    snapshots_query =
-      from(s in Snapshot,
-        join: w in assoc(s, :workflow),
-        join: wo in subquery(project_query),
-        on: wo.workflow_id == w.id
-      )
+  defp delete_unused_snapshots(workorders_query) do
+    batch_size = 100
 
-    # Find snapshots that are current versions of workflows
-    current_snapshots =
-      from(s in snapshots_query,
-        join: w in assoc(s, :workflow),
-        where: s.lock_version == w.lock_version
-      )
-
-    # Find snapshots still referenced by workorders
-    referenced_snapshots =
-      from(s in snapshots_query,
-        join: wo in WorkOrder,
-        on: wo.snapshot_id == s.id
-      )
-
-    # Delete snapshots that aren't current and aren't referenced
-    delete_query =
-      from(s in snapshots_query,
+    unused_snapshots_query =
+      from(ws in Snapshot,
+        as: :snapshot,
+        join: w in assoc(ws, :workflow),
+        join: wo in subquery(workorders_query),
+        on: wo.workflow_id == w.id,
         where:
-          s.id not in subquery(current_snapshots |> select([s], s.id)) and
-            s.id not in subquery(referenced_snapshots |> select([s], s.id))
+          not exists(
+            from(w2 in Workflow,
+              where:
+                w2.id == parent_as(:snapshot).workflow_id and
+                  parent_as(:snapshot).lock_version == w2.lock_version,
+              select: 1
+            )
+          ),
+        where:
+          not exists(
+            from(wo2 in WorkOrder,
+              where: wo2.snapshot_id == parent_as(:snapshot).id,
+              select: 1
+            )
+          ),
+        select: ws.id
       )
 
-    Repo.delete_all(delete_query, returning: false)
+    total_deleted =
+      Stream.repeatedly(fn ->
+        unused_ids =
+          unused_snapshots_query |> limit(^batch_size) |> Repo.all()
+
+        if unused_ids == [], do: nil, else: unused_ids
+      end)
+      |> Stream.take_while(& &1)
+      |> Enum.reduce(0, fn ids, acc ->
+        {count, _} =
+          from(s in Snapshot, where: s.id in ^ids)
+          |> Repo.delete_all(returning: false)
+
+        acc + count
+      end)
+
+    {total_deleted, nil}
   end
 
   defp delete_dataclips(dataclips_query, batch_size) do
@@ -1026,7 +1049,7 @@ defmodule Lightning.Projects do
       {_count, _dataclips} =
         Repo.delete_all(dataclips_delete_query,
           returning: false,
-          timeout: Config.default_ecto_database_timeout() * 2
+          timeout: Config.default_ecto_database_timeout() * 10
         )
     end
 
