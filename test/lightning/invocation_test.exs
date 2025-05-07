@@ -314,6 +314,28 @@ defmodule Lightning.InvocationTest do
                |> Enum.map(&Map.delete(&1, :project))
     end
 
+    test "returns latest dataclips for a job filtering by id" do
+      %{jobs: [job1 | _rest]} = insert(:complex_workflow)
+
+      [%{id: dataclip_id} | _ignored] =
+        Enum.map(1..10, fn _i ->
+          insert(:dataclip) |> tap(&insert(:step, input_dataclip: &1, job: job1))
+        end)
+
+      Enum.each(1..8, fn i ->
+        prefix = String.slice(dataclip_id, 0, i)
+
+        dataclips =
+          Invocation.list_dataclips_for_job(
+            job1,
+            %{id_prefix: prefix},
+            10
+          )
+
+        assert Enum.any?(dataclips, &(&1.id == dataclip_id))
+      end)
+    end
+
     test "filters out wiped dataclips" do
       %{jobs: [job1 | _rest]} = insert(:simple_workflow)
 
