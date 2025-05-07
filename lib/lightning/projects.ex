@@ -990,6 +990,7 @@ defmodule Lightning.Projects do
 
   defp delete_unused_snapshots(workorders_query) do
     batch_size = 100
+
     unused_snapshots_query =
       from(ws in Snapshot,
         as: :snapshot,
@@ -1019,6 +1020,7 @@ defmodule Lightning.Projects do
       Stream.repeatedly(fn ->
         unused_ids =
           unused_snapshots_query |> limit(^batch_size) |> Repo.all()
+
         if unused_ids == [], do: nil, else: unused_ids
       end)
       |> Stream.take_while(& &1)
@@ -1026,6 +1028,7 @@ defmodule Lightning.Projects do
         {count, _} =
           from(s in Snapshot, where: s.id in ^ids)
           |> Repo.delete_all(returning: false)
+
         acc + count
       end)
 
