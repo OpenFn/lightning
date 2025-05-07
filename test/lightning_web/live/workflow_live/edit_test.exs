@@ -4489,7 +4489,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         "search-selectable-dataclips",
         %{
           "job_id" => job.id,
-          "search_text" => "id: #{String.slice(dataclip.id, 0..1)} type: step_result",
+          "search_text" =>
+            "id: #{String.slice(dataclip.id, 0..1)} type: step_result",
           "limit" => 5
         }
       )
