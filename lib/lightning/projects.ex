@@ -989,6 +989,7 @@ defmodule Lightning.Projects do
   end
 
   defp delete_unused_snapshots(workorders_query) do
+    batch_size = 100
     unused_snapshots_query =
       from(ws in Snapshot,
         as: :snapshot,
@@ -997,25 +998,38 @@ defmodule Lightning.Projects do
         on: wo.workflow_id == w.id,
         where:
           not exists(
-            from w2 in Workflow,
+            from(w2 in Workflow,
               where:
                 w2.id == parent_as(:snapshot).workflow_id and
                   parent_as(:snapshot).lock_version == w2.lock_version,
               select: 1
+            )
           ),
         where:
           not exists(
-            from wo in WorkOrder,
-              where: wo.snapshot_id == parent_as(:snapshot).id,
+            from(wo2 in WorkOrder,
+              where: wo2.snapshot_id == parent_as(:snapshot).id,
               select: 1
+            )
           ),
         select: ws.id
       )
 
-    Repo.delete_all(unused_snapshots_query,
-      returning: false,
-      timeout: Config.default_ecto_database_timeout() * 3
-    )
+    total_deleted =
+      Stream.repeatedly(fn ->
+        unused_ids =
+          unused_snapshots_query |> limit(^batch_size) |> Repo.all()
+        if unused_ids == [], do: nil, else: unused_ids
+      end)
+      |> Stream.take_while(& &1)
+      |> Enum.reduce(0, fn ids, acc ->
+        {count, _} =
+          from(s in Snapshot, where: s.id in ^ids)
+          |> Repo.delete_all(returning: false)
+        acc + count
+      end)
+
+    {total_deleted, nil}
   end
 
   defp delete_dataclips(dataclips_query, batch_size) do
