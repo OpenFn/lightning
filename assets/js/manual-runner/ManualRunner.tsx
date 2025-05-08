@@ -305,15 +305,14 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = props => {
           <DataclipViewer dataclipId={selectedclip.id} />
         </>
       ) : (
-        <div className="px-4 py-6 grow">
+        <div className="px-4 grow">
           <div className="flex flex-col gap-3 h-full">
-            <div className="font-bold flex justify-center">Select Input</div>
             <div className="flex gap-4 justify-center flex-wrap">
               <button
                 type="button"
                 onClick={selectOptionHandler(SeletableOptions.EMPTY)}
                 className={
-                  'border min-w-[147px] text-base rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group' +
+                  'border min-w-[147px] text-sm rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group' +
                   getActive(SeletableOptions.EMPTY)
                 }
               >
@@ -330,7 +329,7 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = props => {
                 type="button"
                 onClick={selectOptionHandler(SeletableOptions.CUSTOM)}
                 className={
-                  'border min-w-[147px] text-base rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group' +
+                  'border min-w-[147px] text-sm rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group' +
                   getActive(SeletableOptions.CUSTOM)
                 }
               >
@@ -347,7 +346,7 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = props => {
                 type="button"
                 onClick={selectOptionHandler(SeletableOptions.IMPORT)}
                 className={
-                  'border min-w-[147px] text-base rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group' +
+                  'border min-w-[147px] text-sm rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group' +
                   getActive(SeletableOptions.IMPORT)
                 }
               >
@@ -361,7 +360,7 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = props => {
                 Import
               </button>
             </div>
-            <hr className="my-3" />
+            <hr className="my-2" />
             {innerView}
           </div>
         </div>
@@ -576,7 +575,7 @@ const NoneView: React.FC<{
                 }}
                 className="flex items-center justify-between border rounded-md px-3 py-2 cursor-pointer hover:bg-slate-100 hover:border-primary-600 group"
               >
-                <div className="flex gap-1 items-center text-base">
+                <div className="flex gap-1 items-center text-sm">
                   {' '}
                   <DocumentTextIcon
                     className={`${iconStyle} transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`}
