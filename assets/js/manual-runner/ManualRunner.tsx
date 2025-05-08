@@ -590,7 +590,7 @@ const NoneView: React.FC<{
           })
         ) : (
           <div className="text-center text-sm">
-            No dataclips found. pick an option above
+            No dataclips match the filter.
           </div>
         )}
       </div>
@@ -679,19 +679,9 @@ const ImportView: React.FC<{
 
 const EmptyView: React.FC = () => {
   return (
-    <div className="flex flex-col items-center gap-2 text-xs py-5">
-      <div className="flex gap-1">
-        <InformationCircleIcon className={`${iconStyle} text-yellow-700`} />
-        An empty input data would be used for this run
-      </div>
-      <div>
-        <div>
-          i.e{' '}
-          <span className="bg-slate-700 text-white font-mono p-1 rounded">
-            &#123;&#125;
-          </span>
-        </div>
-      </div>
+    <div className="flex justify-center gap-1 text-sm py-5">
+      <InformationCircleIcon className={`h-5 w-5 text-yellow-600 pb-[1px]`} />
+      An empty object will be used as input to this run.
     </div>
   );
 };
