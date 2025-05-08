@@ -251,7 +251,7 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = props => {
   };
 
   const selectOptionHandler = (option: SeletableOptions) => () => {
-    setSelectedOption(p => (p === option ? SeletableOptions.EXISTING : option));
+    setSelectedOption(option);
   };
 
   return (
@@ -260,29 +260,20 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = props => {
       {selectedclip ? (
         <>
           <div className="flex flex-col flex-0 px-4 gap-2">
-            <div
-              onClick={() => {
-                setSelectedclip(null);
-              }}
-            >
-              <button className="flex w-full items-center justify-between px-4 py-2 bg-[#dbe9fe] text-[#3562dd] rounded-md hover:bg-[#b7d3fd]">
-                <div className="truncate">{selectedclip.id}</div>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4 ml-2"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
+            <Pill onClose={() => { setSelectedclip(null) }}>
+              <div className='flex px-2 py-1 grow items-center justify-between'>
+                <div className="flex gap-1 items-center text-sm">
+                  {' '}
+                  <DocumentTextIcon
+                    className={`${iconStyle} group-hover:scale-110 group-hover:text-primary-600`}
+                  />{' '}
+                  {truncateUid(selectedclip.id)}{' '}
+                </div>
+                <div className="text-xs truncate ml-2">
+                  {formatDate(new Date(selectedclip.updated_at))}
+                </div>
+              </div>
+            </Pill>
             <div className="flex flex-row">
               <div className="basis-1/2 font-medium text-secondary-700 text-sm">
                 Type
@@ -297,6 +288,14 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = props => {
               </div>
               <div className="basis-1/2 text-right text-sm">
                 {formatDate(new Date(selectedclip.inserted_at))}
+              </div>
+            </div>
+            <div className="flex flex-row">
+              <div className="basis-1/2 font-medium text-secondary-700 text-sm">
+                UUID:
+              </div>
+              <div className="basis-1/2 text-right text-sm">
+                {selectedclip.id}
               </div>
             </div>
           </div>
@@ -438,18 +437,11 @@ const NoneView: React.FC<{
     });
 
     const pills = Object.entries(filters).map(([key, value]) => (
-      <div className="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
+      <Pill onClose={() => { clearFilter(key as FilterTypes) }}>
         {key}: {value}{' '}
-        <button
-          onClick={() => {
-            clearFilter(key as FilterTypes);
-          }}
-          className="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"
-        >
-          <XMarkIcon />{' '}
-        </button>
-      </div>
+      </Pill>
     ));
+
     return (
       <>
         <div className="flex flex-col gap-3">
@@ -803,4 +795,19 @@ function useOutsideClick<T extends HTMLElement>(callback: () => void) {
   }, [callback]);
 
   return ref;
+}
+
+interface PillProps {
+  onClose: () => void;
+}
+const Pill: React.FC<React.PropsWithChildren<PillProps>> = ({ children, onClose }) => {
+  return <div className="inline-flex justify-between items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
+    {children}
+    <button
+      onClick={onClose}
+      className="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"
+    >
+      <XMarkIcon />{' '}
+    </button>
+  </div>
 }
