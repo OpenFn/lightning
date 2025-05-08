@@ -98,7 +98,6 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
   }, [query, selectedcliptype, selectedDates.before, selectedDates.after])
 
   const clearFilter = React.useCallback((type: FilterTypes) => {
-    console.log("clearning:", type)
     delete parsedQuery.filters[type]
     setQuery(constructQuery(parsedQuery))
     switch (type) {
@@ -126,7 +125,6 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = (props) => {
     const q = constructQuery(parsedQuery);
     pushEvent("search-selectable-dataclips", { job_id: job_id, search_text: q, limit: 5 }, (response) => {
       const dataclips = (response.dataclips || []) as Dataclip[];
-      console.log("farhan", dataclips)
       setRecentClips(dataclips);
     })
   }, [pushEvent, job_id, parsedQuery])
