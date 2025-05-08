@@ -885,12 +885,16 @@ defmodule Lightning.Projects do
          history_retention_period: period
        }) do
     if not is_nil(period) do
-      delete_query =
-        from f in File,
-          where: f.project_id == ^project_id,
-          where: f.inserted_at < ago(^period, "day")
-
-      {_count, nil} = Repo.delete_all(delete_query, returning: false)
+      from(f in File,
+        where:
+          f.project_id == ^project_id and f.inserted_at < ago(^period, "day")
+      )
+      |> Repo.all()
+      |> Enum.each(fn %{path: object_path} = project_file ->
+        with {:ok, _res} <- Lightning.Storage.delete(object_path) do
+          Repo.delete(project_file)
+        end
+      end)
     end
 
     :ok

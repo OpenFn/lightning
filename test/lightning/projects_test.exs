@@ -1477,9 +1477,16 @@ defmodule Lightning.ProjectsTest do
 
       more_days_ago = Date.utc_today() |> Date.add(-8)
 
+      File.write!("ficheiro", "some-content")
+      on_exit(fn -> File.rm!("ficheiro") end)
+
+      {:ok, path} =
+        Lightning.Storage.store("ficheiro", "/bucket_subdir/ficheiro")
+
       project_file1 =
         insert(:project_file,
           project: project,
+          path: path,
           inserted_at: DateTime.new!(more_days_ago, ~T[00:00:00])
         )
 
