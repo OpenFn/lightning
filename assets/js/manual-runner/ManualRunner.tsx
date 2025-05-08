@@ -14,7 +14,6 @@ import {
   RectangleGroupIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
-import { XCircleIcon } from '@heroicons/react/24/solid';
 import React from 'react';
 import FileUploader from './FileUploader';
 interface ManualRunnerProps {
@@ -22,7 +21,6 @@ interface ManualRunnerProps {
 }
 
 const iconStyle = 'h-4 w-4 text-grey-400';
-const closeStyle = 'h-4 w-4 text-red-400';
 
 enum SeletableOptions {
   NONE,
@@ -315,13 +313,9 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = props => {
                   getActive(SeletableOptions.EMPTY)
                 }
               >
-                {selectedOption === SeletableOptions.EMPTY ? (
-                  <XCircleIcon className={closeStyle} />
-                ) : (
-                  <DocumentIcon
-                    className={`text-gray-600 w-4 h-4 group-hover:scale-110 group-hover:text-primary-600`}
-                  />
-                )}
+                <DocumentIcon
+                  className={`text-gray-600 w-4 h-4 group-hover:scale-110 group-hover:text-primary-600`}
+                />
                 Empty
               </button>
               <button
@@ -332,13 +326,9 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = props => {
                   getActive(SeletableOptions.CUSTOM)
                 }
               >
-                {selectedOption === SeletableOptions.CUSTOM ? (
-                  <XCircleIcon className={closeStyle} />
-                ) : (
-                  <PencilSquareIcon
-                    className={`text-gray-600 w-4 h-4 group-hover:scale-110 group-hover:text-primary-600`}
-                  />
-                )}
+                <PencilSquareIcon
+                  className={`text-gray-600 w-4 h-4 group-hover:scale-110 group-hover:text-primary-600`}
+                />
                 Custom
               </button>
               <button
@@ -349,13 +339,9 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = props => {
                   getActive(SeletableOptions.IMPORT)
                 }
               >
-                {selectedOption === SeletableOptions.IMPORT ? (
-                  <XCircleIcon className={closeStyle} />
-                ) : (
-                  <DocumentArrowUpIcon
-                    className={`text-gray-600 w-4 h-4 group-hover:scale-110 group-hover:text-primary-600`}
-                  />
-                )}
+                <DocumentArrowUpIcon
+                  className={`text-gray-600 w-4 h-4 group-hover:scale-110 group-hover:text-primary-600`}
+                />
                 Import
               </button>
             </div>
@@ -478,8 +464,7 @@ const NoneView: React.FC<{
               </button>
               <div
                 ref={calendarRef}
-                className={`absolute z-10 mt-1 p-2 bg-white rounded-md shadow-lg ring-1 ring-black/5 focus:outline-none w-auto right-0 ${
-                  dateOpen ? '' : 'hidden'
+                className={`absolute z-10 mt-1 p-2 bg-white rounded-md shadow-lg ring-1 ring-black/5 focus:outline-none w-auto right-0 ${dateOpen ? '' : 'hidden'
                 } `}
               >
                 <div className="py-3" role="none">
@@ -530,9 +515,8 @@ const NoneView: React.FC<{
               </button>
               <ul
                 ref={typesRef}
-                className={`absolute z-10 mt-1 bg-white ring-1 ring-black/5 focus:outline-none rounded-md shadow-lg right-0 w-auto ${
-                  typesOpen ? '' : 'hidden'
-                } `}
+                className={`absolute z-10 mt-1 bg-white ring-1 ring-black/5 focus:outline-none rounded-md shadow-lg right-0 w-auto ${typesOpen ? '' : 'hidden'
+                  } `}
               >
                 {DataclipTypes.map(type => {
                   return (
@@ -543,19 +527,17 @@ const NoneView: React.FC<{
                           type === selectedcliptype ? '' : type
                         );
                       }}
-                      className={`px-4 py-2 hover:bg-slate-100 cursor-pointer text-nowrap flex items-center gap-2 text-base text-slate-700 ${
-                        type === selectedcliptype
-                          ? 'bg-blue-200 text-blue-700'
-                          : ''
-                      }`}
+                      className={`px-4 py-2 hover:bg-slate-100 cursor-pointer text-nowrap flex items-center gap-2 text-base text-slate-700 ${type === selectedcliptype
+                        ? 'bg-blue-200 text-blue-700'
+                        : ''
+                        }`}
                     >
                       {' '}
                       {type}{' '}
                       <CheckIcon
                         strokeWidth={3}
-                        className={`${iconStyle} ${
-                          type !== selectedcliptype ? 'invisible' : ''
-                        }`}
+                        className={`${iconStyle} ${type !== selectedcliptype ? 'invisible' : ''
+                          }`}
                       />{' '}
                     </li>
                   );
