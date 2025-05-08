@@ -34,7 +34,10 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
 
   def handle_event("search-templates", %{"search" => search_term}, socket) do
     filtered_templates =
-      filter_templates(socket.assigns.users_templates, search_term)
+      filter_templates(
+        socket.assigns.base_templates ++ socket.assigns.users_templates,
+        search_term
+      )
 
     {:noreply,
      socket
@@ -45,6 +48,22 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
   def handle_event(
         "select-template",
         %{"template_id" => template_id} = _params,
+        socket
+      ) do
+    template =
+      Enum.find(socket.assigns.all_templates, fn template ->
+        template.id == template_id
+      end)
+
+    {:noreply,
+     socket
+     |> assign(selected_template: template)
+     |> push_selected_template_code()}
+  end
+
+  def handle_event(
+        "select-template",
+        %{"_target" => ["template_id"], "template_id" => template_id},
         socket
       ) do
     template =
@@ -138,31 +157,90 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
 
   defp filter_templates(templates, search_term)
        when is_binary(search_term) and search_term != "" do
-    search_term = String.downcase(search_term)
+    # Separate user and base templates
+    {user_templates, base_templates} =
+      Enum.split_with(templates, fn t ->
+        not String.starts_with?(t.id, "base-")
+      end)
 
-    matches_search_term = fn template ->
-      name_match =
-        template.name &&
-          String.contains?(String.downcase(template.name), search_term)
+    # Clean and split search terms
+    search_terms =
+      search_term
+      |> String.replace(~r/[^a-zA-Z0-9\s]/, " ")
+      |> String.downcase()
+      |> String.split(~r/\s+/, trim: true)
 
-      description_match =
-        template.description &&
-          String.contains?(String.downcase(template.description), search_term)
+    # Filter user templates that match ALL search terms
+    filtered_user_templates =
+      user_templates
+      |> Enum.filter(fn template ->
+        stems = template_stems(template)
+        # All search terms must match
+        Enum.all?(search_terms, fn term ->
+          # Try exact match first
+          MapSet.member?(stems.name_words, term) or
+            (Enum.any?(MapSet.to_list(stems.name_words), fn word ->
+               String.contains?(word, term)
+             end) or
+               Enum.any?(MapSet.to_list(stems.stems), fn word ->
+                 String.contains?(word, term)
+               end))
+        end)
+      end)
+      |> Enum.sort_by(fn template -> String.downcase(template.name) end)
 
-      tags_match =
-        template.tags &&
-          Enum.any?(
-            template.tags,
-            &String.contains?(String.downcase(&1), search_term)
-          )
+    # Always append base templates, sorted alphabetically
+    sorted_base_templates =
+      base_templates
+      |> Enum.sort_by(fn template -> String.downcase(template.name) end)
 
-      name_match || description_match || tags_match
-    end
-
-    Enum.filter(templates, matches_search_term)
+    filtered_user_templates ++ sorted_base_templates
   end
 
   defp filter_templates(templates, _), do: templates
+
+  # extract & stem *all* words from a template
+  defp template_stems(%{name: name, description: desc, tags: tags}) do
+    # Get all words from name and description
+    name_desc_tag_words =
+      [
+        name || "",
+        desc || "",
+        tags || ""
+      ]
+      |> Enum.join(" ")
+      |> String.downcase()
+      |> String.replace(~r/[^a-zA-Z0-9\s]/, " ")
+      |> String.split(~r/\s+/, trim: true)
+
+    # Create searchable words set
+    searchable_words = MapSet.new(name_desc_tag_words)
+
+    # Create stems and substrings for partial matching
+    stems =
+      name_desc_tag_words
+      |> Enum.flat_map(fn word ->
+        # Include original word
+        # Include stems
+        # Include substrings (min 3 chars)
+        [word] ++
+          [Stemmer.stem(word)] ++
+          if String.length(word) >= 3 do
+            for i <- 0..(String.length(word) - 3),
+                j <- (i + 3)..String.length(word),
+                j > i,
+                do: String.slice(word, i, j - i)
+          else
+            []
+          end
+      end)
+      |> MapSet.new()
+
+    %{
+      name_words: searchable_words,
+      stems: stems
+    }
+  end
 
   defp apply_selected_method(socket) do
     case socket.assigns.selected_method do
@@ -177,7 +255,8 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
           selected_template: default_template,
           base_templates: base_templates,
           users_templates: users_templates,
-          filtered_templates: users_templates,
+          filtered_templates:
+            Enum.sort_by(all_templates, &String.downcase(&1.name)),
           all_templates: all_templates
         )
         |> push_selected_template_code()
@@ -213,11 +292,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponent do
   def render(assigns) do
     assigns =
       assign(assigns,
-        templates:
-          Enum.sort_by(
-            assigns.base_templates ++ assigns.filtered_templates,
-            & &1.name
-          )
+        templates: assigns.filtered_templates
       )
 
     ~H"""
