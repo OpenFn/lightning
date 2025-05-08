@@ -50,7 +50,7 @@ const SelectedClipView: React.FC<SelectedClipViewProps> = ({ dataclip, onUnselec
         <div className="basis-1/2 font-medium text-secondary-700 text-sm">
           UUID:
         </div>
-        <div className="basis-1/2 text-right text-sm">
+        <div className="basis-1/2 text-right text-sm text-nowrap">
           {dataclip.id}
         </div>
       </div>
