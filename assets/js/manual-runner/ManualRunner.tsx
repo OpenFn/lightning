@@ -320,7 +320,7 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = props => {
                   <XCircleIcon className={closeStyle} />
                 ) : (
                   <DocumentIcon
-                    className={`text-gray-600 w-4 h-4 transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`}
+                    className={`text-gray-600 w-4 h-4 group-hover:scale-110 group-hover:text-primary-600`}
                   />
                 )}
                 Empty
@@ -337,7 +337,7 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = props => {
                   <XCircleIcon className={closeStyle} />
                 ) : (
                   <PencilSquareIcon
-                    className={`text-gray-600 w-4 h-4 transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`}
+                    className={`text-gray-600 w-4 h-4 group-hover:scale-110 group-hover:text-primary-600`}
                   />
                 )}
                 Custom
@@ -354,7 +354,7 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = props => {
                   <XCircleIcon className={closeStyle} />
                 ) : (
                   <DocumentArrowUpIcon
-                    className={`text-gray-600 w-4 h-4 transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`}
+                    className={`text-gray-600 w-4 h-4 group-hover:scale-110 group-hover:text-primary-600`}
                   />
                 )}
                 Import
@@ -578,7 +578,7 @@ const NoneView: React.FC<{
                 <div className="flex gap-1 items-center text-sm">
                   {' '}
                   <DocumentTextIcon
-                    className={`${iconStyle} transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-600`}
+                    className={`${iconStyle} group-hover:scale-110 group-hover:text-primary-600`}
                   />{' '}
                   {truncateUid(clip.id)}{' '}
                 </div>
