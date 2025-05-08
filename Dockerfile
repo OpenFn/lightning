@@ -12,23 +12,27 @@
 #   - https://pkgs.org/ - resource for finding needed packages
 #   - Ex: hexpm/elixir:1.16.2-erlang-26.2.5-debian-bookworm-20240513
 #
-ARG ELIXIR_VERSION=1.16.2
-ARG OTP_VERSION=26.2.5
-ARG DEBIAN_VERSION=bookworm-20240513
+ARG ELIXIR_VERSION=1.18.3
+ARG OTP_VERSION=27.3.3
+ARG DEBIAN_VERSION=bookworm-20250428
 ARG NODE_VERSION=22.12.0
+ARG ERL_FLAGS
 
 ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
 ARG RUNNER_IMAGE="debian:${DEBIAN_VERSION}"
 
 FROM ${BUILDER_IMAGE} AS builder
 ARG NODE_VERSION
+ARG ERL_FLAGS
 
 # install build and dev dependencies
-RUN apt-get update -y && apt-get install -y \
-  build-essential curl git inotify-tools libsodium-dev
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
+  build-essential curl git inotify-tools openssl ca-certificates \
+  libsodium-dev
 
-COPY bin/install_node bin/install_node
-RUN bin/install_node ${NODE_VERSION}
+# Install Node.js from NodeSource
+RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION%%.*}.x | bash - && \
+  apt-get install -y nodejs=${NODE_VERSION}-1nodesource1
 
 RUN apt-get clean && rm -f /var/lib/apt/lists/*_*
 
@@ -36,15 +40,14 @@ RUN apt-get clean && rm -f /var/lib/apt/lists/*_*
 WORKDIR /app
 
 # install hex + rebar
-RUN mix local.hex --force && \
-  mix local.rebar --force
+RUN mix local.hex --force && mix local.rebar --force
 
 # set build ENV
 ENV MIX_ENV="prod"
+ENV ERL_FLAGS=${ERL_FLAGS}
 
-COPY mix.* ./
+COPY mix.exs mix.lock ./
 RUN mix deps.get --only $MIX_ENV
-
 RUN mkdir config
 
 # copy compile-time config files before we compile dependencies
@@ -52,17 +55,15 @@ RUN mkdir config
 # to be re-compiled.
 COPY config/config.exs config/${MIX_ENV}.exs config/
 RUN mix deps.compile
+RUN mix assets.setup
 
 COPY priv priv
 COPY lib lib
 COPY assets assets
 
 RUN mix lightning.install_runtime
-
 RUN mix lightning.install_adaptor_icons
-
 RUN mix lightning.install_schemas
-
 RUN npm install --prefix assets
 
 # compile assets
@@ -82,6 +83,7 @@ RUN mix release
 # the compiled release and other runtime necessities
 FROM ${RUNNER_IMAGE}
 ARG NODE_VERSION
+ARG ERL_FLAGS
 
 ARG BRANCH=""
 ARG COMMIT=""
@@ -89,8 +91,9 @@ ARG IMAGE_TAG=""
 LABEL branch=${BRANCH}
 LABEL commit=${COMMIT}
 
-RUN apt-get update -y && apt-get install -y libstdc++6 openssl libncurses5 \
-  locales curl gpg libsodium-dev
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
+  libstdc++6 openssl libncurses5 locales ca-certificates \
+  curl libsodium-dev
 
 RUN apt-get clean && rm -f /var/lib/apt/lists/*_**
 
@@ -103,15 +106,16 @@ ENV LC_ALL=en_US.UTF-8
 
 WORKDIR "/app"
 
-COPY bin/install_node tmp/install_node
-RUN tmp/install_node ${NODE_VERSION}
-
+# Install Node.js from NodeSource
+RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION%%.*}.x | bash - && \
+  apt-get install -y nodejs=${NODE_VERSION}-1nodesource1
 
 RUN useradd --uid 1000 --home /app lightning
 RUN chown lightning /app
 
 # set runner ENV
 ENV MIX_ENV="prod"
+ENV ERL_FLAGS=${ERL_FLAGS}
 ENV ADAPTORS_PATH=/app/priv/openfn
 
 # Only copy the final release and the adaptor directory from the build stage

@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+#
+# Purpose: Run and retry Elixir tests with coverage and generate JUnit XML
+# reports for CI environments.
+#
+# Rationale:
+#
+# This script runs the main test suite and generates a JUnit XML report for
+# CI systems to consume.
+# If the test run fails with exit code 2 (indicating some tests failed), it
+# reruns only the failed tests and generates a separate JUnit XML report for
+# those.
+# The script renames the reports to -all.xml (for the main run) and -failed.xml
+# (for the failed tests rerun) to avoid overwriting and to make CI artifacts
+# clear.
+# We use 'set +e' and 'set -e' around the test command to capture its exit
+# code without the script exiting immediately, so we can handle retries and
+# reporting logic robustly.
+# Coverage from the first coveralls run is merged into the second (using
+# --import-cover), so that the final coverage report reflects both the main
+# and failed test runs.
+# This approach ensures that CI systems get both a full and a failed-only
+# test report, and that the script exits with the correct status for
+# downstream steps.
+#
+set -euo pipefail
+
+set +e
+mix coveralls.json test/lightning/projects_test.exs --export-coverage coverage -o test/reports
+EXIT_CODE=$?
+set -e
+
+# Rename the main test report if it exists
+if [ -f "test/reports/lightning-elixir_test_report.xml" ]; then
+  mv "test/reports/lightning-elixir_test_report.xml" "test/reports/lightning-elixir_test_report-all.xml"
+  echo "Renamed test report to lightning-elixir_test_report-all.xml"
+fi
+
+# Only retry if exit code is exactly 2
+if [ $EXIT_CODE -eq 2 ]; then
+  set +e
+  mix coveralls.json --import-cover coverage --failed -o test/reports
+  EXIT_CODE=$? # Overwrite with the second run's exit code
+  set -e
+  # Rename the failed test report if it exists
+  if [ -f "test/reports/lightning-elixir_test_report.xml" ]; then
+    mv "test/reports/lightning-elixir_test_report.xml" "test/reports/lightning-elixir_test_report-failed.xml"
+    echo "Renamed failed test report to lightning-elixir_test_report-failed.xml"
+  fi
+fi
+
+exit $EXIT_CODE

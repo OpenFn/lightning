@@ -54,9 +54,9 @@ fi
 
 npm install --prefix assets
 
-mix do esbuild.install, tailwind.install
+mix assets.setup
 
-mix do ecto.create, ecto.migrate
+mix "do" ecto.create, ecto.migrate
 
 mix lightning.install_runtime
 mix lightning.install_schemas

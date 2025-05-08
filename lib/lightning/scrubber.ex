@@ -103,7 +103,9 @@ defmodule Lightning.Scrubber do
     stringified_samples =
       samples
       |> Enum.reject(fn x -> is_boolean(x) or x == "" end)
-      |> Enum.map(fn x -> if is_integer(x), do: Integer.to_string(x), else: x end)
+      |> Enum.map(fn x ->
+        if is_integer(x), do: Integer.to_string(x), else: x
+      end)
 
     base64_secrets =
       stringified_samples
