@@ -11,6 +11,7 @@ import {
   InformationCircleIcon,
   MagnifyingGlassIcon,
   PencilSquareIcon,
+  QueueListIcon,
   RectangleGroupIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
@@ -23,7 +24,7 @@ interface ManualRunnerProps {
 const iconStyle = 'h-4 w-4 text-grey-400';
 
 enum SeletableOptions {
-  NONE,
+  EXISTING,
   EMPTY,
   CUSTOM,
   IMPORT,
@@ -75,7 +76,7 @@ type SetDates = React.Dispatch<
 export const ManualRunner: WithActionProps<ManualRunnerProps> = props => {
   const { pushEvent, job_id } = props;
   const [selectedOption, setSelectedOption] = React.useState<SeletableOptions>(
-    SeletableOptions.NONE
+    SeletableOptions.EXISTING
   );
   const [recentclips, setRecentClips] = React.useState<Dataclip[]>([]);
   const [query, setQuery] = React.useState('');
@@ -90,7 +91,7 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = props => {
   React.useEffect(() => {
     props.handleEvent('manual_run_created', payload => {
       if (payload.dataclip) {
-        setSelectedOption(SeletableOptions.NONE);
+        setSelectedOption(SeletableOptions.EXISTING);
         setTimeout(() => {
           setSelectedclip(payload.dataclip);
         }, 0);
@@ -192,7 +193,7 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = props => {
         });
         break;
       case SeletableOptions.CUSTOM:
-      case SeletableOptions.NONE:
+      case SeletableOptions.EXISTING:
       case SeletableOptions.IMPORT:
         pushEvent('manual_run_change', {
           manual: {
@@ -206,7 +207,7 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = props => {
 
   const innerView = React.useMemo(() => {
     switch (selectedOption) {
-      case SeletableOptions.NONE:
+      case SeletableOptions.EXISTING:
         return (
           <NoneView
             query={query}
@@ -250,7 +251,7 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = props => {
   };
 
   const selectOptionHandler = (option: SeletableOptions) => () => {
-    setSelectedOption(p => (p === option ? SeletableOptions.NONE : option));
+    setSelectedOption(p => (p === option ? SeletableOptions.EXISTING : option));
   };
 
   return (
@@ -307,9 +308,22 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = props => {
             <div className="flex gap-4 justify-center flex-wrap">
               <button
                 type="button"
+                onClick={selectOptionHandler(SeletableOptions.EXISTING)}
+                className={
+                  'border min-w-[110px] text-sm rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group' +
+                  getActive(SeletableOptions.EXISTING)
+                }
+              >
+                <QueueListIcon
+                  className={`text-gray-600 w-4 h-4 group-hover:scale-110 group-hover:text-primary-600`}
+                />
+                Existing
+              </button>
+              <button
+                type="button"
                 onClick={selectOptionHandler(SeletableOptions.EMPTY)}
                 className={
-                  'border min-w-[147px] text-sm rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group' +
+                  'border min-w-[110px] text-sm rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group' +
                   getActive(SeletableOptions.EMPTY)
                 }
               >
@@ -322,7 +336,7 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = props => {
                 type="button"
                 onClick={selectOptionHandler(SeletableOptions.CUSTOM)}
                 className={
-                  'border min-w-[147px] text-sm rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group' +
+                  'border min-w-[110px] text-sm rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group' +
                   getActive(SeletableOptions.CUSTOM)
                 }
               >
@@ -335,7 +349,7 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = props => {
                 type="button"
                 onClick={selectOptionHandler(SeletableOptions.IMPORT)}
                 className={
-                  'border min-w-[147px] text-sm rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group' +
+                  'border min-w-[110px] text-sm rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group' +
                   getActive(SeletableOptions.IMPORT)
                 }
               >
@@ -414,170 +428,170 @@ const NoneView: React.FC<{
   selectedDates,
   setSelectedDates,
 }) => {
-  const [typesOpen, setTypesOpen] = React.useState(false);
-  const [dateOpen, setDateOpen] = React.useState(false);
-  const calendarRef = useOutsideClick<HTMLDivElement>(() => {
-    setDateOpen(false);
-  });
-  const typesRef = useOutsideClick<HTMLUListElement>(() => {
-    setTypesOpen(false);
-  });
+    const [typesOpen, setTypesOpen] = React.useState(false);
+    const [dateOpen, setDateOpen] = React.useState(false);
+    const calendarRef = useOutsideClick<HTMLDivElement>(() => {
+      setDateOpen(false);
+    });
+    const typesRef = useOutsideClick<HTMLUListElement>(() => {
+      setTypesOpen(false);
+    });
 
-  const pills = Object.entries(filters).map(([key, value]) => (
-    <div className="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
-      {key}: {value}{' '}
-      <button
-        onClick={() => {
-          clearFilter(key as FilterTypes);
-        }}
-        className="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"
-      >
-        <XMarkIcon />{' '}
-      </button>
-    </div>
-  ));
-  return (
-    <>
-      <div className="flex flex-col gap-3">
-        <div>
-          <div className="relative flex gap-2">
-            <input
-              value={query}
-              onChange={e => {
-                setQuery(e.target.value);
-              }}
-              type="search"
-              className="w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md pr-3 pl-10 py-2 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-300"
-              placeholder="Filter inputs"
-            />
-            <div className="absolute left-1 top-1 rounded p-1.5 border border-transparent text-center text-sm">
-              <MagnifyingGlassIcon className={iconStyle} />
-            </div>
-            <div className="relative inline-block">
-              <button
-                onClick={() => {
-                  setDateOpen(p => !p);
-                }}
-                className="border rounded-md px-3 py-1 h-full flex justify-center items-center hover:bg-slate-100 hover:border-slate-300"
-              >
-                <CalendarDaysIcon className="w-6 h-6 text-slate-700" />
-              </button>
-              <div
-                ref={calendarRef}
-                className={`absolute z-10 mt-1 p-2 bg-white rounded-md shadow-lg ring-1 ring-black/5 focus:outline-none w-auto right-0 ${dateOpen ? '' : 'hidden'
-                } `}
-              >
-                <div className="py-3" role="none">
-                  <div className="px-4 py-1 text-gray-500 text-sm">
-                    Filter by Date
-                  </div>
-                  <div className="px-4 py-1 text-gray-700 text-sm">
-                    <label htmlFor="date-after">Date After</label>
-                    <input
-                      value={selectedDates.after}
-                      id="date-after"
-                      onChange={e => {
-                        setSelectedDates(p => ({
-                          after: e.target.value,
-                          before: p.before,
-                        }));
-                      }}
-                      className="focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6"
-                      type="date"
-                    />
-                  </div>
-                  <div className="px-4 py-1 text-gray-700 text-sm">
-                    <label htmlFor="date-before">Date Before</label>
-                    <input
-                      value={selectedDates.before}
-                      id="date-before"
-                      onChange={e => {
-                        setSelectedDates(p => ({
-                          after: p.after,
-                          before: e.target.value,
-                        }));
-                      }}
-                      className="focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6"
-                      type="date"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="relative inline-block">
-              <button
-                onClick={() => {
-                  setTypesOpen(p => !p);
-                }}
-                className="border rounded-md px-3 py-1 h-full flex justify-center items-center hover:bg-slate-100 hover:border-slate-300"
-              >
-                <RectangleGroupIcon className="w-6 h-6 text-slate-700" />
-              </button>
-              <ul
-                ref={typesRef}
-                className={`absolute z-10 mt-1 bg-white ring-1 ring-black/5 focus:outline-none rounded-md shadow-lg right-0 w-auto ${typesOpen ? '' : 'hidden'
-                  } `}
-              >
-                {DataclipTypes.map(type => {
-                  return (
-                    <li
-                      key={type}
-                      onClick={() => {
-                        setSelectedclipType(
-                          type === selectedcliptype ? '' : type
-                        );
-                      }}
-                      className={`px-4 py-2 hover:bg-slate-100 cursor-pointer text-nowrap flex items-center gap-2 text-base text-slate-700 ${type === selectedcliptype
-                        ? 'bg-blue-200 text-blue-700'
-                        : ''
-                        }`}
-                    >
-                      {' '}
-                      {type}{' '}
-                      <CheckIcon
-                        strokeWidth={3}
-                        className={`${iconStyle} ${type !== selectedcliptype ? 'invisible' : ''
-                          }`}
-                      />{' '}
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          </div>
-          <div className="flex gap-1 mt-2">{pills}</div>
-        </div>
-        {dataclips.length ? (
-          dataclips.map(clip => {
-            return (
-              <div
-                onClick={() => {
-                  setSelected(clip);
-                }}
-                className="flex items-center justify-between border rounded-md px-3 py-2 cursor-pointer hover:bg-slate-100 hover:border-primary-600 group"
-              >
-                <div className="flex gap-1 items-center text-sm">
-                  {' '}
-                  <DocumentTextIcon
-                    className={`${iconStyle} group-hover:scale-110 group-hover:text-primary-600`}
-                  />{' '}
-                  {truncateUid(clip.id)}{' '}
-                </div>
-                <div className="text-xs truncate ml-2">
-                  {formatDate(new Date(clip.updated_at))}
-                </div>
-              </div>
-            );
-          })
-        ) : (
-          <div className="text-center text-sm">
-            No dataclips match the filter.
-          </div>
-        )}
+    const pills = Object.entries(filters).map(([key, value]) => (
+      <div className="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
+        {key}: {value}{' '}
+        <button
+          onClick={() => {
+            clearFilter(key as FilterTypes);
+          }}
+          className="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-blue-600/20"
+        >
+          <XMarkIcon />{' '}
+        </button>
       </div>
-    </>
-  );
-};
+    ));
+    return (
+      <>
+        <div className="flex flex-col gap-3">
+          <div>
+            <div className="relative flex gap-2">
+              <input
+                value={query}
+                onChange={e => {
+                  setQuery(e.target.value);
+                }}
+                type="search"
+                className="w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md pr-3 pl-10 py-2 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-300"
+                placeholder="Filter inputs"
+              />
+              <div className="absolute left-1 top-1 rounded p-1.5 border border-transparent text-center text-sm">
+                <MagnifyingGlassIcon className={iconStyle} />
+              </div>
+              <div className="relative inline-block">
+                <button
+                  onClick={() => {
+                    setDateOpen(p => !p);
+                  }}
+                  className="border rounded-md px-3 py-1 h-full flex justify-center items-center hover:bg-slate-100 hover:border-slate-300"
+                >
+                  <CalendarDaysIcon className="w-6 h-6 text-slate-700" />
+                </button>
+                <div
+                  ref={calendarRef}
+                  className={`absolute z-10 mt-1 p-2 bg-white rounded-md shadow-lg ring-1 ring-black/5 focus:outline-none w-auto right-0 ${dateOpen ? '' : 'hidden'
+                    } `}
+                >
+                  <div className="py-3" role="none">
+                    <div className="px-4 py-1 text-gray-500 text-sm">
+                      Filter by Date
+                    </div>
+                    <div className="px-4 py-1 text-gray-700 text-sm">
+                      <label htmlFor="date-after">Date After</label>
+                      <input
+                        value={selectedDates.after}
+                        id="date-after"
+                        onChange={e => {
+                          setSelectedDates(p => ({
+                            after: e.target.value,
+                            before: p.before,
+                          }));
+                        }}
+                        className="focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6"
+                        type="date"
+                      />
+                    </div>
+                    <div className="px-4 py-1 text-gray-700 text-sm">
+                      <label htmlFor="date-before">Date Before</label>
+                      <input
+                        value={selectedDates.before}
+                        id="date-before"
+                        onChange={e => {
+                          setSelectedDates(p => ({
+                            after: p.after,
+                            before: e.target.value,
+                          }));
+                        }}
+                        className="focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6"
+                        type="date"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="relative inline-block">
+                <button
+                  onClick={() => {
+                    setTypesOpen(p => !p);
+                  }}
+                  className="border rounded-md px-3 py-1 h-full flex justify-center items-center hover:bg-slate-100 hover:border-slate-300"
+                >
+                  <RectangleGroupIcon className="w-6 h-6 text-slate-700" />
+                </button>
+                <ul
+                  ref={typesRef}
+                  className={`absolute z-10 mt-1 bg-white ring-1 ring-black/5 focus:outline-none rounded-md shadow-lg right-0 w-auto ${typesOpen ? '' : 'hidden'
+                    } `}
+                >
+                  {DataclipTypes.map(type => {
+                    return (
+                      <li
+                        key={type}
+                        onClick={() => {
+                          setSelectedclipType(
+                            type === selectedcliptype ? '' : type
+                          );
+                        }}
+                        className={`px-4 py-2 hover:bg-slate-100 cursor-pointer text-nowrap flex items-center gap-2 text-base text-slate-700 ${type === selectedcliptype
+                          ? 'bg-blue-200 text-blue-700'
+                          : ''
+                          }`}
+                      >
+                        {' '}
+                        {type}{' '}
+                        <CheckIcon
+                          strokeWidth={3}
+                          className={`${iconStyle} ${type !== selectedcliptype ? 'invisible' : ''
+                            }`}
+                        />{' '}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </div>
+            <div className="flex gap-1 mt-2">{pills}</div>
+          </div>
+          {dataclips.length ? (
+            dataclips.map(clip => {
+              return (
+                <div
+                  onClick={() => {
+                    setSelected(clip);
+                  }}
+                  className="flex items-center justify-between border rounded-md px-3 py-2 cursor-pointer hover:bg-slate-100 hover:border-primary-600 group"
+                >
+                  <div className="flex gap-1 items-center text-sm">
+                    {' '}
+                    <DocumentTextIcon
+                      className={`${iconStyle} group-hover:scale-110 group-hover:text-primary-600`}
+                    />{' '}
+                    {truncateUid(clip.id)}{' '}
+                  </div>
+                  <div className="text-xs truncate ml-2">
+                    {formatDate(new Date(clip.updated_at))}
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="text-center text-sm">
+              No dataclips match the filter.
+            </div>
+          )}
+        </div>
+      </>
+    );
+  };
 
 async function readFileContent(file: File): Promise<string> {
   return new Promise<string>((resolve, reject) => {
