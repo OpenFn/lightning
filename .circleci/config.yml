@@ -131,13 +131,11 @@ workflows:
           execute:
             - run: sudo -u lightning mix do ecto.create, ecto.migrate
             - run:
-                command: |
-                  sudo -u lightning mix coveralls.json --export-coverage coverage || \
-                  sudo -u lightning mix coveralls.json --import-cover cover --failed
+                command: sudo -u lightning ./bin/ci_tests
             - codecov/upload:
-                file: cover/excoveralls.json
+                file: test/reports/excoveralls.json
             - store_test_results:
-                path: cover/
+                path: test/reports/
       - build:
           name: "Check Javascript tests"
           execute:
