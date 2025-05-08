@@ -45,7 +45,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   jsx("assets/js/workflow-store/WorkflowStore.tsx")
 
   attr :job_id, :string
-  jsx("assets/js/manual-runner/ManualRunner.tsx")
+  jsx("assets/js/manual-run-panel/ManualRunPanel.tsx")
 
   attr :changeset, :map, required: true
   attr :project_user, :map, required: true
@@ -239,7 +239,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   >
                     <:panel hash="manual" class="overflow-auto h-full">
                       <div class="grow flex flex-col gap-4 p-2 min-h-0 h-full">
-                        <.ManualRunner :if={@selection_mode === "expand"} job_id={@selected_job.id} />
+                        <.ManualRunPanel :if={@selection_mode === "expand"} job_id={@selected_job.id} />
                         <%!-- <LightningWeb.WorkflowLive.ManualWorkorder.component
                           id={"manual-job-#{@selected_job.id}"}
                           form={@manual_run_form}

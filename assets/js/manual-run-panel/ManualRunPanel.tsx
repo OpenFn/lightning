@@ -17,7 +17,7 @@ import {
 } from '@heroicons/react/24/outline';
 import React from 'react';
 import FileUploader from './FileUploader';
-interface ManualRunnerProps {
+interface ManualRunPanelProps {
   job_id: string;
 }
 
@@ -73,7 +73,7 @@ type SetDates = React.Dispatch<
   }>
 >;
 
-export const ManualRunner: WithActionProps<ManualRunnerProps> = props => {
+export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
   const { pushEvent, job_id } = props;
   const [selectedOption, setSelectedOption] = React.useState<SeletableOptions>(
     SeletableOptions.EXISTING
