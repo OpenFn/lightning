@@ -23,6 +23,7 @@ defmodule Lightning.MixProject do
         "coveralls.detail": :test,
         "coveralls.html": :test,
         "coveralls.post": :test,
+        "coveralls.json": :test,
         "test.watch": :test,
         coveralls: :test,
         verify: :test
