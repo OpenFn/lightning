@@ -11,9 +11,9 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
     # Create 5 distinct templates using factories
     templates = [
       insert(:workflow_template, %{
-        name: "Webhook Data Sync",
-        description: "Sync data from webhook to database",
-        tags: ["webhook", "sync", "database"],
+        name: "Nightly Financial Sync",
+        description: "Sync data from one financial system to another",
+        tags: ["Nightly", "sync", "database", "finance"],
         workflow: build(:workflow, project: project)
       }),
       insert(:workflow_template, %{
@@ -23,9 +23,9 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
         workflow: build(:workflow, project: project)
       }),
       insert(:workflow_template, %{
-        name: "API Data Processor",
-        description: "Process data from external APIs",
-        tags: ["api", "data", "processing"],
+        name: "CommCare to FHIR converter",
+        description: "Process data from CommCare and convert to FHIR",
+        tags: ["api", "data", "processing", "commcare", "fhir"],
         workflow: build(:workflow, project: project)
       }),
       insert(:workflow_template, %{
@@ -35,7 +35,7 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
         workflow: build(:workflow, project: project)
       }),
       insert(:workflow_template, %{
-        name: "Notification System",
+        name: "Notification flow",
         description: "Send notifications via email and SMS",
         tags: ["notifications", "email", "sms"],
         workflow: build(:workflow, project: project)
@@ -197,13 +197,13 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
 
       # Test searching by specific tags
       view
-      |> form("#search-templates-form", %{"search" => "webhook"})
+      |> form("#search-templates-form", %{"search" => "finance"})
       |> render_change()
 
-      # Should show webhook template
+      # Should show financial template
       assert view
              |> element(
-               "#template-input-#{Enum.find(templates, &(&1.name == "Webhook Data Sync")).id}"
+               "#template-input-#{Enum.find(templates, &(&1.name == "Nightly Financial Sync")).id}"
              )
              |> has_element?()
 
@@ -218,13 +218,13 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
 
       # Test another tag
       view
-      |> form("#search-templates-form", %{"search" => "cron"})
+      |> form("#search-templates-form", %{"search" => "commcare"})
       |> render_change()
 
-      # Should show cron template
+      # Should show commcare template
       assert view
              |> element(
-               "#template-input-#{Enum.find(templates, &(&1.name == "Scheduled Report Generator")).id}"
+               "#template-input-#{Enum.find(templates, &(&1.name == "CommCare to FHIR converter")).id}"
              )
              |> has_element?()
 
@@ -316,6 +316,222 @@ defmodule LightningWeb.WorkflowLive.NewWorkflowComponentTest do
 
         assert view
                |> element("#template-input-base-cron-template")
+               |> has_element?()
+      end
+    end
+
+    test "comprehensive partial word matching", %{
+      conn: conn,
+      project: project,
+      templates: templates
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+
+      # Test various partial word matches
+      test_cases = [
+        # Start of word
+        {"nigh", "Nightly Financial Sync"},
+        {"sch", "Scheduled Report Generator"},
+        {"comm", "CommCare to FHIR converter"},
+        {"fil", "File Upload Handler"},
+        {"not", "Notification flow"}
+      ]
+
+      for {search_term, expected_name} <- test_cases do
+        view
+        |> form("#search-templates-form", %{"search" => search_term})
+        |> render_change()
+
+        # Should find the template with partial match
+        assert view
+               |> element(
+                 "#template-input-#{Enum.find(templates, &(&1.name == expected_name)).id}"
+               )
+               |> has_element?()
+      end
+    end
+
+    test "partial string matching within words", %{
+      conn: conn,
+      project: project,
+      templates: templates
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+
+      # Test partial string matches within words
+      test_cases = [
+        # Partial matches in names (2+ chars)
+        {"night", "Nightly Financial Sync"},
+        {"sched", "Scheduled Report Generator"},
+        {"commc", "CommCare to FHIR converter"},
+        {"uploa", "File Upload Handler"},
+        {"notif", "Notification flow"}
+      ]
+
+      for {search_term, expected_name} <- test_cases do
+        view
+        |> form("#search-templates-form", %{"search" => search_term})
+        |> render_change()
+
+        # Should find the template with partial string match
+        assert view
+               |> element(
+                 "#template-input-#{Enum.find(templates, &(&1.name == expected_name)).id}"
+               )
+               |> has_element?()
+      end
+    end
+
+    test "search results require all terms to match (with fuzzy/partial support)",
+         %{
+           conn: conn,
+           project: project,
+           templates: templates
+         } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+
+      test_cases = [
+        # Single word, exact
+        {"nightly", ["Nightly Financial Sync"]},
+        {"scheduled", ["Scheduled Report Generator"]},
+        {"commcare", ["CommCare to FHIR converter"]},
+        {"file", ["File Upload Handler"]},
+        {"notification", ["Notification flow"]},
+        # Single word, partial
+        {"night", ["Nightly Financial Sync"]},
+        {"sched", ["Scheduled Report Generator"]},
+        {"commc", ["CommCare to FHIR converter"]},
+        {"uploa", ["File Upload Handler"]},
+        {"notif", ["Notification flow"]},
+        # Multi-word, all terms must match (exact or partial)
+        {"nightly sync", ["Nightly Financial Sync"]},
+        {"sched report", ["Scheduled Report Generator"]},
+        {"commcare fhir", ["CommCare to FHIR converter"]},
+        {"file handl", ["File Upload Handler"]},
+        {"notific sms", ["Notification flow"]},
+        # Multi-word, one term does not match (should not show)
+        {"nightly banana", []},
+        {"commcare scheduled", []},
+        {"upload banana", []},
+        {"notification xyz", []},
+        # No match (should only show base templates)
+        {"notarealword", []}
+      ]
+
+      for {search_term, expected_names} <- test_cases do
+        view
+        |> form("#search-templates-form", %{"search" => search_term})
+        |> render_change()
+
+        for template <- templates do
+          if template.name in expected_names do
+            assert view
+                   |> element("#template-input-#{template.id}")
+                   |> has_element?()
+          else
+            refute view
+                   |> element("#template-input-#{template.id}")
+                   |> has_element?()
+          end
+        end
+
+        # Should always show base templates
+        assert view
+               |> element("#template-input-base-webhook-template")
+               |> has_element?()
+
+        assert view
+               |> element("#template-input-base-cron-template")
+               |> has_element?()
+      end
+    end
+
+    test "word order independence", %{
+      conn: conn,
+      project: project,
+      templates: templates
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+
+      # Test different word orders
+      test_cases = [
+        {"financial nightly", "Nightly Financial Sync"},
+        {"generator report scheduled", "Scheduled Report Generator"},
+        {"fhir commcare", "CommCare to FHIR converter"},
+        {"handler upload file", "File Upload Handler"},
+        {"flow notification", "Notification flow"}
+      ]
+
+      for {search_terms, expected_name} <- test_cases do
+        view
+        |> form("#search-templates-form", %{"search" => search_terms})
+        |> render_change()
+
+        # Should find the template regardless of word order
+        assert view
+               |> element(
+                 "#template-input-#{Enum.find(templates, &(&1.name == expected_name)).id}"
+               )
+               |> has_element?()
+      end
+    end
+
+    test "multiple word matching", %{
+      conn: conn,
+      project: project,
+      templates: templates
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+
+      # Test searching with multiple words
+      test_cases = [
+        {"nightly financial", "Nightly Financial Sync"},
+        {"report scheduled", "Scheduled Report Generator"},
+        {"commcare fhir", "CommCare to FHIR converter"},
+        {"file handler", "File Upload Handler"},
+        {"notification email", "Notification flow"}
+      ]
+
+      for {search_terms, expected_name} <- test_cases do
+        view
+        |> form("#search-templates-form", %{"search" => search_terms})
+        |> render_change()
+
+        # Should find templates matching all words
+        assert view
+               |> element(
+                 "#template-input-#{Enum.find(templates, &(&1.name == expected_name)).id}"
+               )
+               |> has_element?()
+      end
+    end
+
+    test "special character handling", %{
+      conn: conn,
+      project: project,
+      templates: templates
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+
+      # Test with special characters
+      test_cases = [
+        {"nightly-financial", "Nightly Financial Sync"},
+        {"report.generator", "Scheduled Report Generator"},
+        {"commcare_fhir", "CommCare to FHIR converter"},
+        {"file/upload", "File Upload Handler"},
+        {"notification@flow", "Notification flow"}
+      ]
+
+      for {search_terms, expected_name} <- test_cases do
+        view
+        |> form("#search-templates-form", %{"search" => search_terms})
+        |> render_change()
+
+        # Should find templates despite special characters
+        assert view
+               |> element(
+                 "#template-input-#{Enum.find(templates, &(&1.name == expected_name)).id}"
+               )
                |> has_element?()
       end
     end
