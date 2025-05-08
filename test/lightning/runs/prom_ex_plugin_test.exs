@@ -13,6 +13,7 @@ defmodule Lightning.Runs.PromExPluginText do
   @poll_rate @queue_metrics_period_seconds * 1000
   @run_performance_age_seconds 4
   @stalled_run_threshold_seconds 333
+  @unclaimed_run_threshold_seconds 777
 
   describe "event_metrics/1" do
     test "returns a single event group" do
@@ -223,6 +224,32 @@ defmodule Lightning.Runs.PromExPluginText do
           measurement: :count
         } = metric
       )
+    end
+
+    test "returns a polling group to count impeded projects" do
+      expected_mfa =
+        {
+          Lightning.Runs.PromExPlugin,
+          :project_metrics,
+          [@unclaimed_run_threshold_seconds]
+        }
+
+      project_polling_group =
+        plugin_config() |> find_metric_group(:lightning_run_project_metrics)
+
+      assert %PromEx.MetricTypes.Polling{
+               poll_rate: @poll_rate,
+               measurements_mfa:
+                 {PromEx.MetricTypes.Polling, :safe_polling_runner,
+                  [^expected_mfa]},
+               metrics: [metric]
+             } = project_polling_group
+
+      assert %Telemetry.Metrics.LastValue{
+               name: [:lightning, :run, :project, :impeded, :count],
+               description:
+                 "The count of projects impeded due to lack of worker capacity"
+             } = metric
     end
 
     defp find_metric_group(plugin_config, group_name) do
@@ -697,6 +724,249 @@ defmodule Lightning.Runs.PromExPluginText do
     end
   end
 
+  describe "project_metrics/1" do
+    setup do
+      now = Lightning.current_time()
+
+      unclaimed_run_threshold_seconds = 10
+
+      after_threshold =
+        DateTime.add(now, -unclaimed_run_threshold_seconds + 1)
+
+      on_threshold =
+        DateTime.add(now, -unclaimed_run_threshold_seconds)
+
+      impeded_projects = insert_list(3, :project, concurrency: 1)
+
+      impeded_projects
+      |> Enum.each(fn project ->
+        setup_available_run_for(project, on_threshold)
+      end)
+
+      [unimpeded_project_1, unimpeded_project_2] =
+        insert_list(2, :project, concurrency: 1)
+
+      setup_available_run_for(unimpeded_project_1, after_threshold)
+      setup_available_run_and_claimed_run_for(unimpeded_project_2, on_threshold)
+
+      Lightning.Stub.freeze_time(now)
+
+      %{
+        event: [:lightning, :run, :project, :impeded],
+        unclaimed_run_threshold_seconds: unclaimed_run_threshold_seconds
+      }
+    end
+
+    test "fires a metric to count the number of impeded runs", %{
+      event: event,
+      unclaimed_run_threshold_seconds: unclaimed_run_threshold_seconds
+    } do
+      ref =
+        :telemetry_test.attach_event_handlers(
+          self(),
+          [event]
+        )
+
+      PromExPlugin.project_metrics(unclaimed_run_threshold_seconds)
+
+      assert_received {
+        ^event,
+        ^ref,
+        %{count: 3},
+        %{}
+      }
+    end
+
+    test "does not fire metric if Repo is unavailable at time of call", %{
+      event: event,
+      unclaimed_run_threshold_seconds: unclaimed_run_threshold_seconds
+    } do
+      # This scenario occurs during server startup
+      ref = :telemetry_test.attach_event_handlers(self(), [event])
+
+      with_mock(
+        Process,
+        [:passthrough],
+        whereis: fn _name -> nil end
+      ) do
+        PromExPlugin.project_metrics(unclaimed_run_threshold_seconds)
+      end
+
+      refute_received {
+        ^event,
+        ^ref,
+        %{count: _count},
+        %{}
+      }
+    end
+
+    defp setup_available_run_for(project, run_inserted_at) do
+      setup_run(project, run_inserted_at, :available)
+    end
+
+    defp setup_available_run_and_claimed_run_for(project, run_inserted_at) do
+      setup_run(project, run_inserted_at, :available)
+      setup_run(project, run_inserted_at, :claimed)
+    end
+  end
+
+  describe "projects_with_available_runs_older_than" do
+    setup do
+      threshold = Lightning.current_time()
+
+      _no_runs_project = insert(:project)
+
+      _no_available_runs_project =
+        insert(:project)
+        |> setup_runs(threshold, [{0, :claimed}, {-1, :started}])
+
+      _available_run_within_threshold_project =
+        insert(:project)
+        |> setup_runs(threshold, [{1, :available}, {2, :available}])
+
+      eligible_project_1 =
+        insert(:project, name: "A", concurrency: 10)
+        |> setup_runs(threshold, [{0, :available}, {-1, :started}])
+
+      eligible_project_2 =
+        insert(:project, name: "B", concurrency: 20)
+        |> setup_runs(
+          threshold,
+          [{-1, :available}, {-2, :started}, {-3, :available}]
+        )
+
+      %{
+        eligible_project_1: eligible_project_1,
+        eligible_project_2: eligible_project_2,
+        threshold: threshold
+      }
+    end
+
+    test "returns projects with available runs older than the threshold",
+         %{
+           eligible_project_1: eligible_project_1,
+           eligible_project_2: eligible_project_2,
+           threshold: threshold
+         } do
+      projects =
+        PromExPlugin.projects_with_available_runs_older_than(threshold)
+
+      assert Enum.count(projects) == 2
+
+      assert Enum.any?(
+               projects,
+               fn [project_id, concurrency] ->
+                 project_id == eligible_project_1.id && concurrency == 10
+               end
+             )
+
+      assert Enum.any?(
+               projects,
+               fn [project_id, concurrency] ->
+                 project_id == eligible_project_2.id && concurrency == 20
+               end
+             )
+    end
+  end
+
+  describe "projects_with_spare_capacity/1" do
+    setup do
+      equal_to_concurrency_claimed_project =
+        insert(:project, concurrency: 5)
+        |> setup_runs([:claimed, :claimed, :claimed, :claimed, :claimed])
+
+      equal_to_concurrency_started_project =
+        insert(:project, concurrency: 4)
+        |> setup_runs([:started, :started, :started, :started])
+
+      less_than_concurrency_project =
+        insert(:project, concurrency: 3)
+        |> setup_runs([:available, :claimed, :started])
+
+      no_runs_in_progress_project =
+        insert(:project, concurrency: 3)
+        |> setup_runs([:available, :success, :lost])
+
+      %{
+        equal_to_concurrency_claimed_project:
+          equal_to_concurrency_claimed_project,
+        equal_to_concurrency_started_project:
+          equal_to_concurrency_started_project,
+        less_than_concurrency_project: less_than_concurrency_project,
+        no_runs_in_progress_project: no_runs_in_progress_project
+      }
+    end
+
+    test "returns ids that have fewer runs in progress than concurrency", %{
+      equal_to_concurrency_claimed_project: equal_to_concurrency_claimed_project,
+      equal_to_concurrency_started_project: equal_to_concurrency_started_project,
+      less_than_concurrency_project: less_than_concurrency_project,
+      no_runs_in_progress_project: no_runs_in_progress_project
+    } do
+      less_than_id = less_than_concurrency_project.id
+      no_runs_id = no_runs_in_progress_project.id
+
+      projects = [
+        [
+          equal_to_concurrency_claimed_project.id,
+          equal_to_concurrency_claimed_project.concurrency
+        ],
+        [
+          less_than_concurrency_project.id,
+          less_than_concurrency_project.concurrency
+        ],
+        [
+          equal_to_concurrency_started_project.id,
+          equal_to_concurrency_started_project.concurrency
+        ],
+        [
+          no_runs_in_progress_project.id,
+          no_runs_in_progress_project.concurrency
+        ]
+      ]
+
+      assert [
+               ^less_than_id,
+               ^no_runs_id
+             ] = PromExPlugin.projects_with_spare_capacity(projects)
+    end
+  end
+
+  defp setup_runs(project, states) do
+    states
+    |> Enum.each(fn state ->
+      setup_run(project, Lightning.current_time(), state)
+    end)
+
+    project
+  end
+
+  defp setup_runs(project, threshold, attributes) do
+    attributes
+    |> Enum.each(fn {time_shift, state} ->
+      inserted_at = DateTime.add(threshold, time_shift)
+
+      setup_run(project, inserted_at, state)
+    end)
+
+    project
+  end
+
+  defp setup_run(project, run_inserted_at, state) do
+    workflow = insert(:workflow, project: project)
+    work_order = insert(:workorder, workflow: workflow)
+
+    with_run(
+      work_order,
+      %{
+        inserted_at: run_inserted_at,
+        state: state,
+        dataclip: build(:dataclip),
+        starting_job: build(:job)
+      }
+    )
+  end
+
   defp available_run(now, time_offset) do
     insert(
       :run,
@@ -742,7 +1012,8 @@ defmodule Lightning.Runs.PromExPluginText do
     [
       {:run_performance_age_seconds, @run_performance_age_seconds},
       {:run_queue_metrics_period_seconds, @queue_metrics_period_seconds},
-      {:stalled_run_threshold_seconds, @stalled_run_threshold_seconds}
+      {:stalled_run_threshold_seconds, @stalled_run_threshold_seconds},
+      {:unclaimed_run_threshold_seconds, @unclaimed_run_threshold_seconds}
     ]
   end
 end
