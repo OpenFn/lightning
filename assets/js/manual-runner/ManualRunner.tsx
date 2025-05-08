@@ -260,9 +260,8 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = props => {
       <form ref={formRef} id="manual_run_form"></form>
       {selectedclip ? (
         <>
-          <div className="flex-0">
+          <div className="flex flex-col flex-0 px-4 gap-2">
             <div
-              className="my-2"
               onClick={() => {
                 setSelectedclip(null);
               }}
@@ -286,18 +285,18 @@ export const ManualRunner: WithActionProps<ManualRunnerProps> = props => {
               </button>
             </div>
             <div className="flex flex-row">
-              <div className="basis-1/2 font-semibold text-secondary-700 text-xs xl:text-base">
+              <div className="basis-1/2 font-medium text-secondary-700 text-sm">
                 Type
               </div>
               <div className="basis-1/2 text-right">
                 <DataClipTypePill type={selectedclip.type} />
               </div>
             </div>
-            <div className="flex flex-row mt-4">
-              <div className="basis-1/2 font-semibold text-secondary-700 text-xs xl:text-base">
+            <div className="flex flex-row">
+              <div className="basis-1/2 font-medium text-secondary-700 text-sm">
                 Created at
               </div>
-              <div className="basis-1/2 text-right">
+              <div className="basis-1/2 text-right text-sm">
                 {formatDate(new Date(selectedclip.inserted_at))}
               </div>
             </div>
