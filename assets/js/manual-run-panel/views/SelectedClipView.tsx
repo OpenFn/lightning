@@ -15,7 +15,7 @@ interface SelectedClipViewProps {
 
 const SelectedClipView: React.FC<SelectedClipViewProps> = ({ dataclip, onUnselect }) => {
   return <>
-    <div className="flex flex-col flex-0 px-4 gap-2">
+    <div className="flex flex-col flex-0 gap-2">
       <Pill onClose={onUnselect}>
         <div className='flex px-2 py-1 grow items-center justify-between'>
           <div className="flex gap-1 items-center text-sm">
@@ -30,7 +30,7 @@ const SelectedClipView: React.FC<SelectedClipViewProps> = ({ dataclip, onUnselec
           </div>
         </div>
       </Pill>
-      <div className="flex flex-row">
+      <div className="flex flex-row min-h-[28px] items-center">
         <div className="basis-1/2 font-medium text-secondary-700 text-sm">
           Type
         </div>
@@ -38,17 +38,17 @@ const SelectedClipView: React.FC<SelectedClipViewProps> = ({ dataclip, onUnselec
           <DataclipTypePill type={dataclip.type} />
         </div>
       </div>
-      <div className="flex flex-row">
+      <div className="flex flex-row min-h-[28px] items-center">
         <div className="basis-1/2 font-medium text-secondary-700 text-sm">
           Created at
         </div>
-        <div className="basis-1/2 text-right text-sm">
+        <div className="basis-1/2 text-right text-sm text-nowrap">
           {formatDate(new Date(dataclip.inserted_at))}
         </div>
       </div>
-      <div className="flex flex-row">
+      <div className="flex flex-row min-h-[28px] items-center">
         <div className="basis-1/2 font-medium text-secondary-700 text-sm">
-          UUID:
+          UUID
         </div>
         <div className="basis-1/2 text-right text-sm text-nowrap">
           {dataclip.id}
