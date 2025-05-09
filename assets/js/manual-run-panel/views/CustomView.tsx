@@ -34,7 +34,7 @@ const CustomView: React.FC<{
   );
 
   return (
-    <div className="relative h-[420px]">
+    <div className="relative h-full flex flex-col">
       <div className="font-semibold mb-3 text-gray-600">Create a new input</div>
       {isEmpty || !jsonParseResult.success ? (
         <div className="text-red-700 text-sm flex gap-1 mb-1 items-center">
@@ -47,28 +47,30 @@ const CustomView: React.FC<{
           Valid JSON
         </div>
       )}
-      <MonacoEditor
-        defaultLanguage="json"
-        theme="default"
-        value={editorValue}
-        onChange={handleEditorChange}
-        loading={<div>Loading...</div>}
-        options={{
-          readOnly: false,
-          lineNumbersMinChars: 3,
-          tabSize: 2,
-          scrollBeyondLastLine: false,
-          overviewRulerLanes: 0,
-          overviewRulerBorder: false,
-          fontFamily: 'Fira Code VF',
-          fontSize: 14,
-          fontLigatures: true,
-          minimap: {
-            enabled: false,
-          },
-          wordWrap: 'on',
-        }}
-      />
+      <div className="grow">
+        <MonacoEditor
+          defaultLanguage="json"
+          theme="default"
+          value={editorValue}
+          onChange={handleEditorChange}
+          loading={<div>Loading...</div>}
+          options={{
+            readOnly: false,
+            lineNumbersMinChars: 3,
+            tabSize: 2,
+            scrollBeyondLastLine: false,
+            overviewRulerLanes: 0,
+            overviewRulerBorder: false,
+            fontFamily: 'Fira Code VF',
+            fontSize: 14,
+            fontLigatures: true,
+            minimap: {
+              enabled: false,
+            },
+            wordWrap: 'on',
+          }}
+        />
+      </div>
     </div>
   );
 };
