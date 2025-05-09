@@ -121,6 +121,7 @@ defmodule Lightning.Application do
         auth_providers_cache_childspec,
         # Start the Endpoint (http/https)
         LightningWeb.Endpoint,
+        LightningWeb.WorkAvailable,
         Lightning.Workflows.Presence,
         adaptor_registry_childspec,
         adaptor_service_childspec,
