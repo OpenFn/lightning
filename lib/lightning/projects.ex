@@ -17,9 +17,9 @@ defmodule Lightning.Projects do
   alias Lightning.ExportUtils
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
+  alias Lightning.Projects
   alias Lightning.Projects.Audit
   alias Lightning.Projects.Events
-  alias Lightning.Projects.File
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Projects.ProjectUser
@@ -885,7 +885,7 @@ defmodule Lightning.Projects do
          history_retention_period: period
        }) do
     if not is_nil(period) do
-      from(f in File,
+      from(f in Projects.File,
         where:
           f.project_id == ^project_id and f.inserted_at < ago(^period, "day")
       )
@@ -1194,7 +1194,7 @@ defmodule Lightning.Projects do
   def list_project_files(%Project{id: project_id}, opts \\ []) do
     sort_order = Keyword.get(opts, :sort, :desc)
 
-    from(pf in File,
+    from(pf in Projects.File,
       where: pf.project_id == ^project_id,
       order_by: [{^sort_order, pf.inserted_at}],
       preload: [:created_by]
