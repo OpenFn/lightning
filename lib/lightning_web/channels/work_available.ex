@@ -3,15 +3,15 @@ defmodule LightningWeb.WorkAvailable do
   Updates workers in the `worker:queue` channnel when there are runs to be executed
   """
 
-  defmodule State do
-    @moduledoc false
-    defstruct [:debounce_time_ms, :debounce_timer_ref]
-  end
-
   use GenServer
 
   alias Lightning.Projects
   alias Lightning.WorkOrders
+
+  defmodule State do
+    @moduledoc false
+    defstruct [:debounce_time_ms, :debounce_timer_ref]
+  end
 
   @debounce_time_ms 500
 
