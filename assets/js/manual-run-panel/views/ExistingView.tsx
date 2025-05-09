@@ -1,5 +1,5 @@
 import React from "react";
-import { DataclipTypes, type Dataclip, type FilterTypes, type SetDates } from "../types";
+import { DataclipTypeNames, DataclipTypes, FilterTypes, type Dataclip, type SetDates } from "../types";
 import useOutsideClick from "#/hooks/useOutsideClick";
 import Pill from "../Pill";
 import { CalendarDaysIcon, CheckIcon, DocumentTextIcon, MagnifyingGlassIcon, RectangleGroupIcon } from "@heroicons/react/24/outline";
@@ -42,11 +42,12 @@ const ExistingView: React.FC<ExistingViewProps> = ({
     setTypesOpen(false);
   });
 
-  const pills = Object.entries(filters).filter(([_, value]) => !!value.trim()).map(([key, value]) => (
-    <Pill onClose={() => { clearFilter(key as FilterTypes) }}>
-      {key}: {value}{' '}
-    </Pill>
-  ));
+  const pills = Object.entries(filters)
+    .map(([key, value]) => (
+      <Pill onClose={() => { clearFilter(key as FilterTypes) }}>
+        {key}: {(key as FilterTypes) === FilterTypes.DATACLIP_TYPE ? DataclipTypeNames[value] : value}{' '}
+      </Pill>
+    ));
 
   return (
     <>
@@ -145,7 +146,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                         }`}
                     >
                       {' '}
-                      {type}{' '}
+                      {DataclipTypeNames[type]}{' '}
                       <CheckIcon
                         strokeWidth={3}
                         className={`${iconStyle} ${type !== selectedcliptype ? 'invisible' : ''

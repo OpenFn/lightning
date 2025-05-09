@@ -36,6 +36,14 @@ export const DataclipTypes = [
   'kafka',
 ];
 
+export const DataclipTypeNames: Record<string, string> = {
+  http_request: 'http request',
+  global: 'global',
+  step_result: 'step result',
+  saved_input: 'saved input',
+  kafka: 'kafka message',
+};
+
 export enum FilterTypes {
   DATACLIP_TYPE = 'type',
   BEFORE_DATE = 'before',
