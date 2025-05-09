@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Added
 
+- Broadcast work-available to worker when runs are enqueued
+  [#2934](https://github.com/OpenFn/lightning/issues/2934)
+
 ### Changed
 
 - Update Elixir to 1.18.3 [#2748](https://github.com/OpenFn/lightning/pull/2748)
