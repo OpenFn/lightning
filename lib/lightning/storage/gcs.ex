@@ -41,6 +41,15 @@ defmodule Lightning.Storage.GCS do
   end
 
   @impl true
+  def delete(object_path) do
+    Objects.storage_objects_delete(
+      conn(),
+      bucket!(),
+      object_path
+    )
+  end
+
+  @impl true
   def get_url(path) do
     client =
       Lightning.Config.google(:credentials)

@@ -6,7 +6,6 @@ defmodule Lightning.WebAndWorkerTest do
   import Lightning.Factories
   import Mox
 
-  alias Lightning.Run
   alias Lightning.Runs
   alias Lightning.Runs.Events
   alias Lightning.Invocation
@@ -14,8 +13,6 @@ defmodule Lightning.WebAndWorkerTest do
   alias Lightning.Runtime.RuntimeManager
   alias Lightning.WorkOrders
   alias Lightning.Workflows.Snapshot
-
-  require Run
 
   setup :set_mox_from_context
   setup :verify_on_exit!

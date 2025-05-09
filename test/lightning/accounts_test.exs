@@ -724,6 +724,31 @@ defmodule Lightning.AccountsTest do
       refute user.id in Enum.map(users_deleted, & &1.id)
     end
 
+    test "doesn't delete users that have a project file" do
+      project = insert(:project)
+
+      %{user: user1} =
+        insert(:project_user,
+          project: project,
+          user: build(:user, scheduled_deletion: DateTime.utc_now())
+        )
+
+      %{user: user2} =
+        insert(:project_user,
+          project: project,
+          user: build(:user, scheduled_deletion: DateTime.utc_now())
+        )
+
+      _project_file1 =
+        insert(:project_file, project: project, created_by: user1)
+
+      {:ok, %{users_deleted: users_deleted}} =
+        Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+
+      refute Enum.any?(users_deleted, &(&1.id == user1.id))
+      assert Enum.any?(users_deleted, &(&1.id == user2.id))
+    end
+
     test "removes all users past deletion date when called with type 'purge_deleted'" do
       %{id: id_of_deleted} =
         user_fixture(

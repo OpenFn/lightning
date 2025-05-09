@@ -4,5 +4,8 @@ defmodule Lightning.Storage.Backend do
   """
   @callback store(source :: String.t(), dest :: String.t()) ::
               {:ok, any()} | {:error, any()}
+
+  @callback delete(object_path :: String.t()) :: {:ok, any()} | {:error, any()}
+
   @callback get_url(String.t()) :: {:ok, String.t()} | {:error, any()}
 end
