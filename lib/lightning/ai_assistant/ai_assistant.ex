@@ -5,7 +5,6 @@ defmodule Lightning.AiAssistant do
 
   import Ecto.Query
 
-  alias Lightning.Projects.Project
   alias Ecto.Changeset
   alias Ecto.Multi
   alias Lightning.Accounts
@@ -13,9 +12,11 @@ defmodule Lightning.AiAssistant do
   alias Lightning.AiAssistant.ChatMessage
   alias Lightning.AiAssistant.ChatSession
   alias Lightning.ApolloClient
+  alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Services.UsageLimiter
   alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Workflow
 
   require Logger
 
