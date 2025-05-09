@@ -202,12 +202,12 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
       ) : (
         <div className="grow">
           <div className="flex flex-col gap-3 h-full">
-            <div className="flex gap-4 justify-center flex-wrap">
+            <div className="flex md:gap-2 sm:gap-1 gap-4 justify-center flex-wrap">
               <button
                 type="button"
                 onClick={selectOptionHandler(SeletableOptions.EXISTING)}
                 className={
-                  'border min-w-[110px] text-sm rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group' +
+                  'border text-sm rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group' +
                   getActive(SeletableOptions.EXISTING)
                 }
               >
@@ -220,7 +220,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
                 type="button"
                 onClick={selectOptionHandler(SeletableOptions.EMPTY)}
                 className={
-                  'border min-w-[110px] text-sm rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group' +
+                  'border text-sm rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group' +
                   getActive(SeletableOptions.EMPTY)
                 }
               >
@@ -233,7 +233,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
                 type="button"
                 onClick={selectOptionHandler(SeletableOptions.CUSTOM)}
                 className={
-                  'border min-w-[110px] text-sm rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group' +
+                  'border text-sm rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group' +
                   getActive(SeletableOptions.CUSTOM)
                 }
               >
@@ -246,7 +246,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
                 type="button"
                 onClick={selectOptionHandler(SeletableOptions.IMPORT)}
                 className={
-                  'border min-w-[110px] text-sm rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group' +
+                  'border text-sm rounded-md px-3 py-1 flex justify-center items-center gap-1 hover:bg-slate-100 hover:border-primary-300 group' +
                   getActive(SeletableOptions.IMPORT)
                 }
               >
