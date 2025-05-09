@@ -13,8 +13,6 @@ defmodule Lightning.Runs.PromExPlugin do
   alias Lightning.Run
   alias Telemetry.Metrics
 
-  require Run
-
   @available_count_event [:lightning, :run, :queue, :available]
   @average_claim_event [:lightning, :run, :queue, :claim]
   @lost_run_event [:lightning, :run, :lost]
