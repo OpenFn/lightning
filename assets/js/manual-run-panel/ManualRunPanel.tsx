@@ -200,7 +200,7 @@ export const ManualRunPanel: WithActionProps<ManualRunPanelProps> = props => {
       {selectedclip ? (
         <SelectedClipView dataclip={selectedclip} onUnselect={() => { setSelectedclip(null) }} />
       ) : (
-        <div className="px-4 grow">
+        <div className="grow">
           <div className="flex flex-col gap-3 h-full">
             <div className="flex gap-4 justify-center flex-wrap">
               <button

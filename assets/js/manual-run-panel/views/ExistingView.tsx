@@ -77,40 +77,40 @@ const ExistingView: React.FC<ExistingViewProps> = ({
               </button>
               <div
                 ref={calendarRef}
-                className={`absolute z-10 mt-1 p-2 bg-white rounded-md shadow-lg ring-1 ring-black/5 focus:outline-none w-auto right-0 ${dateOpen ? '' : 'hidden'
+                className={`absolute right-0 ml-1.5 z-10 mt-2 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none min-w-[260px] ${dateOpen ? '' : 'hidden'
                   } `}
               >
                 <div className="py-3" role="none">
                   <div className="px-4 py-1 text-gray-500 text-sm">
-                    Filter by Date
+                    Filter by Date Created
                   </div>
                   <div className="px-4 py-1 text-gray-700 text-sm">
-                    <label htmlFor="date-after">Date After</label>
+                    <label htmlFor="created-after">Created After</label>
                     <input
                       value={selectedDates.after}
-                      id="date-after"
+                      id="created-after"
                       onChange={e => {
                         setSelectedDates(p => ({
                           after: e.target.value,
                           before: p.before,
                         }));
                       }}
-                      className="focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6"
+                      className="focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg border-slate-300 text-slate-900 focus:ring-0 sm:text-sm sm:leading-6"
                       type="date"
                     />
                   </div>
                   <div className="px-4 py-1 text-gray-700 text-sm">
-                    <label htmlFor="date-before">Date Before</label>
+                    <label htmlFor="created-before">Created Before</label>
                     <input
                       value={selectedDates.before}
-                      id="date-before"
+                      id="created-before"
                       onChange={e => {
                         setSelectedDates(p => ({
                           after: p.after,
                           before: e.target.value,
                         }));
                       }}
-                      className="focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6"
+                      className="focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg border-slate-300 text-slate-900 focus:ring-0 sm:text-sm sm:leading-6"
                       type="date"
                     />
                   </div>
@@ -128,7 +128,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
               </button>
               <ul
                 ref={typesRef}
-                className={`absolute z-10 mt-1 bg-white ring-1 ring-black/5 focus:outline-none rounded-md shadow-lg right-0 w-auto ${typesOpen ? '' : 'hidden'
+                className={`absolute z-10 mt-2 bg-white ring-1 ring-black/5 focus:outline-none rounded-md shadow-lg right-0 w-auto ${typesOpen ? '' : 'hidden'
                   } `}
               >
                 {DataclipTypes.map(type => {
