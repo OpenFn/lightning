@@ -128,7 +128,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
               </button>
               <ul
                 ref={typesRef}
-                className={`absolute z-10 mt-2 bg-white ring-1 ring-black/5 focus:outline-none rounded-md shadow-lg right-0 w-auto ${typesOpen ? '' : 'hidden'
+                className={`absolute z-10 mt-2 bg-white ring-1 ring-black/5 focus:outline-none rounded-md shadow-lg right-0 w-auto overflow-hidden ${typesOpen ? '' : 'hidden'
                   } `}
               >
                 {DataclipTypes.map(type => {
