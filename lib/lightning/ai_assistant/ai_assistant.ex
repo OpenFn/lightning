@@ -5,6 +5,7 @@ defmodule Lightning.AiAssistant do
 
   import Ecto.Query
 
+  alias Lightning.Projects.Project
   alias Ecto.Changeset
   alias Ecto.Multi
   alias Lightning.Accounts
@@ -282,5 +283,135 @@ defmodule Lightning.AiAssistant do
 
   defp maybe_increment_ai_usage(_user_role) do
     Multi.new()
+  end
+
+  @doc """
+  Lists all workflow template sessions for a project.
+  """
+  @spec list_workflow_sessions_for_project(
+          Project.t() | Ecto.UUID.t(),
+          :asc | :desc
+        ) ::
+          [ChatSession.t()] | []
+  def list_workflow_sessions_for_project(project, sort_direction \\ :desc)
+
+  def list_workflow_sessions_for_project(
+        %Project{id: project_id},
+        sort_direction
+      ) do
+    list_workflow_sessions_for_project(project_id, sort_direction)
+  end
+
+  def list_workflow_sessions_for_project(project_id, sort_direction)
+      when is_binary(project_id) do
+    Repo.all(
+      from s in ChatSession,
+        where:
+          s.project_id == ^project_id and s.session_type == "workflow_template",
+        order_by: [{^sort_direction, :updated_at}],
+        preload: [:user]
+    )
+  end
+
+  @doc """
+  Creates a new workflow template session.
+  """
+  @spec create_workflow_session(Project.t(), User.t(), String.t()) ::
+          {:ok, ChatSession.t()} | {:error, Ecto.Changeset.t()}
+  def create_workflow_session(project, user, content) do
+    %ChatSession{
+      id: Ecto.UUID.generate(),
+      project_id: project.id,
+      session_type: "workflow_template",
+      user_id: user.id,
+      title: create_title(content),
+      meta: %{},
+      messages: []
+    }
+    |> save_message(%{role: :user, content: content, user: user})
+  end
+
+  @doc """
+  Associates a workflow with a chat session.
+  """
+  @spec associate_workflow(ChatSession.t(), Workflow.t()) ::
+          {:ok, ChatSession.t()} | {:error, Ecto.Changeset.t()}
+  def associate_workflow(session, workflow) do
+    session
+    |> ChatSession.changeset(%{workflow_id: workflow.id})
+    |> Repo.update()
+  end
+
+  @doc """
+  Queries the workflow_chat service with the given content.
+
+  Returns `{:ok, session}` if the query was successful, otherwise `{:error, reason}`.
+  """
+  @spec query_workflow(ChatSession.t(), String.t(), String.t() | nil) ::
+          {:ok, ChatSession.t()}
+          | {:error, String.t() | Ecto.Changeset.t()}
+  def query_workflow(session, content, errors \\ nil) do
+    # Find the latest YAML from previous messages
+    latest_yaml =
+      session.messages
+      |> Enum.reverse()
+      |> Enum.find_value(nil, fn
+        %{role: :assistant, yaml: yaml} when not is_nil(yaml) -> yaml
+        _ -> nil
+      end)
+
+    ApolloClient.workflow_chat(
+      content,
+      latest_yaml,
+      errors,
+      build_history(session),
+      session.meta || %{}
+    )
+    |> handle_workflow_response(session)
+  end
+
+  defp handle_workflow_response(
+         {:ok, %Tesla.Env{status: status, body: body}},
+         session
+       )
+       when status in 200..299 do
+    response_text = body["response"]
+    response_yaml = body["response_yaml"]
+    usage = body["usage"] || %{}
+
+    save_message(
+      session,
+      %{role: :assistant, content: response_text, yaml: response_yaml},
+      usage
+    )
+  end
+
+  defp handle_workflow_response(
+         {:ok, %Tesla.Env{status: status, body: body}},
+         session
+       )
+       when status not in 200..299 do
+    error_message = body["message"]
+
+    Logger.error(
+      "Workflow AI query failed for session #{session.id}: #{error_message}"
+    )
+
+    {:error, error_message}
+  end
+
+  defp handle_workflow_response({:error, reason}, session) do
+    Logger.error(
+      "Workflow AI query failed for session #{session.id}: #{inspect(reason)}"
+    )
+
+    error_message =
+      case reason do
+        :timeout -> "Request timed out. Please try again."
+        :econnrefused -> "Unable to reach the AI server. Please try again later."
+        _ -> "Oops! Something went wrong. Please try again."
+      end
+
+    {:error, error_message}
   end
 end

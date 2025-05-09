@@ -11,6 +11,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
   @type t() :: %__MODULE__{
           id: Ecto.UUID.t(),
           content: String.t() | nil,
+          workflow_code: String.t() | nil,
           role: role(),
           status: status(),
           is_deleted: boolean(),
@@ -19,6 +20,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
 
   schema "ai_chat_messages" do
     field :content, :string
+    field :workflow_code, :string
     field :role, Ecto.Enum, values: [:user, :assistant]
 
     field :status, Ecto.Enum,
@@ -38,6 +40,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
     chat_message
     |> cast(attrs, [
       :content,
+      :workflow_code,
       :role,
       :status,
       :is_deleted,
