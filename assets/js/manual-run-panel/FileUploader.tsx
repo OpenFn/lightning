@@ -1,5 +1,4 @@
-import { InformationCircleIcon } from "@heroicons/react/24/outline";
-import { CloudArrowUpIcon, XMarkIcon } from "@heroicons/react/24/solid";
+import { CloudArrowUpIcon, InformationCircleIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import React, { type ChangeEvent } from "react";
 
 interface FileUploader {
@@ -108,6 +107,35 @@ const FileUploader: React.FC<FileUploader> = ({
 
   return (
     <>
+      <div
+        ref={dropContainer}
+        className={`${dragging ? "border border-blue-400 bg-blue-100" : "border-dashed border-gray-300"
+          } mt-2 flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-10 transition-colors duration-200 ease-in-out`}
+      >
+        <div className="flex flex-col items-center">
+          <CloudArrowUpIcon className="mx-auto size-10 text-gray-300" />
+          <div className="mt-4 flex text-sm/6 text-gray-600">
+            <label
+              htmlFor="uploader"
+              className="relative cursor-pointer rounded-md font-semibold text-indigo-600 focus-within:outline-none focus-within:ring-offset-2 hover:text-indigo-500"
+            >
+              <input
+                id="uploader"
+                ref={fileRef}
+                type="file"
+                multiple
+                accept={formats.map(f => `.${f}`).join(",")}
+                className="opacity-0 hidden"
+                onChange={(e) => { handleDrop("inputFile")(e) }}
+              />
+              <span>Upload a file</span>
+            </label>
+            <p className="pl-1">or drag and drop</p>
+          </div>
+          <p className="text-xs/5 text-gray-600">{formats.join(", ").toUpperCase()}, up to 8MB</p>
+        </div>
+      </div>
+
       {issue ? <div className="text-red-700 bg-red-200 px-2 py-1 rounded-lg text-sm flex gap-1 mb-1 justify-between items-center">
         <div className="flex gap-1 items-center"><InformationCircleIcon className="size-4" />{issue}</div>
         <XMarkIcon onClick={() => { setIssue("") }} className="size-4 hover:bg-red-700 hover:text-red-50 rounded cursor-pointer" />
@@ -122,7 +150,7 @@ const FileUploader: React.FC<FileUploader> = ({
             >
               <div className="flex justify-between items-center">
                 <div className="w-[70%] cursor-pointer">
-                  <div className="text-sm font-medium text-gray-700">{file.name}</div>
+                  <div className="text-sm font-medium text-gray-700 truncate">{file.name}</div>
                   <div className="text-xs text-gray-500">{Math.floor(file.size / 1024)} KB</div>
                 </div>
                 <button
@@ -136,35 +164,6 @@ const FileUploader: React.FC<FileUploader> = ({
           ))}
         </div>
       )}
-      <div
-        ref={dropContainer}
-        className={`${dragging ? "border border-blue-400 bg-blue-100" : "border-dashed border-gray-300"
-          } grow flex items-center justify-center text-center border-2 rounded-md mt-4 py-5`}
-      >
-        <div className="flex flex-col items-center">
-          <CloudArrowUpIcon className="size-16 text-[#9CA3AF]" />
-          <div className=" text-gray-500">
-            <input
-              ref={fileRef}
-              type="file"
-              multiple
-              accept={formats.map(f => `.${f}`).join(",")}
-              className="opacity-0 hidden"
-              onChange={(e) => { handleDrop("inputFile")(e) }}
-            />
-            <span
-              className="font-semibold text-[#6466E9] cursor-pointer"
-              onClick={() => fileRef.current?.click()}
-            >
-              Click to upload
-            </span>{" "}
-            or drag and drop
-          </div>
-          <div className="text-xs text-gray-500 mt-1">
-            Max {count} file(s): {formats.join(", ").toUpperCase()}
-          </div>
-        </div>
-      </div>
     </>
   );
 }
