@@ -10,12 +10,13 @@ const CustomView: React.FC<{
   const [editorValue, setEditorValue] = React.useState('');
 
   const isEmpty = React.useMemo(() => !editorValue.trim(), [editorValue]);
-  const isValidJson = React.useMemo(() => {
+  const jsonParseResult = React.useMemo(() => {
     try {
-      JSON.parse(editorValue);
-      return true;
+      const parsed = JSON.parse(editorValue);
+      if (Array.isArray(parsed)) return { success: false, message: "Must be an object" }
+      return { success: true }
     } catch (e) {
-      return false;
+      return { success: false, message: "Invalid JSON format" }
     }
   }, [editorValue]);
 
@@ -35,15 +36,15 @@ const CustomView: React.FC<{
   return (
     <div className="relative h-[420px]">
       <div className="font-semibold mb-3 text-gray-600">Create a new input</div>
-      {isEmpty || !isValidJson ? (
+      {isEmpty || !jsonParseResult.success ? (
         <div className="text-red-700 text-sm flex gap-1 mb-1 items-center">
           <InformationCircleIcon className={iconStyle} />{' '}
-          {isEmpty ? "Custom input can't be empty" : 'Invalid JSON format'}
+          {isEmpty ? "Enter a valid JSON object" : jsonParseResult.message}
         </div>
       ) : (
-        <div className="text-green-700 text-sm flex gap-1 mb-1 items-center">
+        <div className="text-gray-700 text-sm flex gap-1 mb-1 items-center">
           <CheckCircleIcon className={iconStyle} />
-          Correct JSON format
+          Valid JSON
         </div>
       )}
       <MonacoEditor
