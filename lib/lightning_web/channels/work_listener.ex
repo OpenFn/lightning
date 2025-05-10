@@ -1,29 +1,28 @@
-defmodule LightningWeb.WorkAvailable do
+defmodule LightningWeb.WorkListener do
   @moduledoc """
-  Updates workers in the `worker:queue` channnel when there are runs to be executed
+  Updates workers when there are runs to be executed
   """
 
   use GenServer
 
-  alias Lightning.Projects
   alias Lightning.WorkOrders
 
   defmodule State do
     @moduledoc false
-    defstruct [:debounce_time_ms, :debounce_timer_ref]
+    @enforce_keys [:parent_pid]
+    defstruct [:debounce_time_ms, :debounce_timer_ref, :parent_pid]
   end
 
   @debounce_time_ms 500
 
   def start_link(opts) do
-    {name, _rest} = Keyword.pop(opts, :name, __MODULE__)
+    # debounce_time can be passed as nil
+    debounce_time_ms = opts[:debounce_time_ms] || @debounce_time_ms
+    parent_pid = Keyword.fetch!(opts, :parent_pid)
 
-    {debounce_time_ms, _rest} =
-      Keyword.pop(opts, :debounce_time_ms, @debounce_time_ms)
+    state = %State{debounce_time_ms: debounce_time_ms, parent_pid: parent_pid}
 
-    state = %State{debounce_time_ms: debounce_time_ms}
-
-    GenServer.start_link(__MODULE__, state, name: name)
+    GenServer.start_link(__MODULE__, state)
   end
 
   @impl true
@@ -34,26 +33,16 @@ defmodule LightningWeb.WorkAvailable do
   @impl true
   def handle_continue(:subscribe, state) do
     # subscribe to run created events
-    Projects.list_projects()
-    |> Enum.each(fn project -> WorkOrders.subscribe(project.id) end)
-
-    # subscribe to project created events
-    Projects.subscribe()
+    WorkOrders.subscribe()
 
     {:noreply, state}
   end
 
   @impl true
   def handle_info(:notify_work_available, %State{} = state) do
-    LightningWeb.Endpoint.broadcast("worker:queue", "work-available", %{})
+    send(state.parent_pid, :work_available)
 
     {:noreply, %{state | debounce_timer_ref: nil}}
-  end
-
-  def handle_info(%Projects.Events.ProjectCreated{project: project}, state) do
-    WorkOrders.subscribe(project.id)
-
-    {:noreply, state}
   end
 
   def handle_info(%WorkOrders.Events.RunCreated{}, %State{} = state) do
