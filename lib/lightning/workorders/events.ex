@@ -36,10 +36,9 @@ defmodule Lightning.WorkOrders.Events do
   end
 
   def run_created(project_id, run) do
-    Lightning.broadcast(
-      topic(project_id),
-      %RunCreated{run: run, project_id: project_id}
-    )
+    event = %RunCreated{run: run, project_id: project_id}
+    Lightning.broadcast(topic(project_id), event)
+    Lightning.broadcast(topic(), event)
   end
 
   def run_updated(project_id, run) do
@@ -49,9 +48,14 @@ defmodule Lightning.WorkOrders.Events do
     )
   end
 
+  def subscribe do
+    topic() |> Lightning.subscribe()
+  end
+
   def subscribe(project_id) do
     Lightning.subscribe(topic(project_id))
   end
 
+  defp topic, do: "all_events"
   defp topic(project_id), do: "project:#{project_id}"
 end

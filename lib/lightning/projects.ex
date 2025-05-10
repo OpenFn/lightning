@@ -50,6 +50,8 @@ defmodule Lightning.Projects do
     ]
   end
 
+  defdelegate subscribe, to: Events
+
   def get_projects_overview(user, opts \\ [])
 
   def get_projects_overview(%User{id: user_id, support_user: true}, opts) do

@@ -66,6 +66,7 @@ defmodule Lightning.WorkOrders do
 
   @retry_many_chunk_size 100
 
+  defdelegate subscribe, to: Events
   defdelegate subscribe(project_id), to: Events
 
   @doc """

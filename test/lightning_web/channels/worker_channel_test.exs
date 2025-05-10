@@ -1,11 +1,14 @@
 defmodule LightningWeb.WorkerChannelTest do
-  use LightningWeb.ChannelCase, async: true
+  use LightningWeb.ChannelCase, async: false
 
   alias Lightning.Repo
   alias Lightning.WorkOrders
   alias Lightning.Workers
 
   import Lightning.Factories
+
+  # this ensures the WorkAvailable server inherits the mox stubs
+  setup :set_mox_from_context
 
   describe "joining" do
     test "with an invalid claim" do
