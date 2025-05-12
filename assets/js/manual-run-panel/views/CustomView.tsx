@@ -56,19 +56,13 @@ const CustomView: React.FC<{
     </div>
     <div className="relative h-full flex flex-col">
       {
-        !isEmpty ?
-          !jsonParseResult.success ? (
+        !isEmpty && !jsonParseResult.success ?
+          (
             <div className="text-red-700 text-sm flex gap-1 mb-1 items-center">
               <InformationCircleIcon className={iconStyle} />{' '}
               {jsonParseResult.message}
             </div>
-          ) : (
-            <div className="text-gray-700 text-sm flex gap-1 mb-1 items-center">
-              <CheckCircleIcon className={iconStyle} />
-              Valid JSON
-            </div>
-          )
-          : null
+          ) : null
       }
       <div className="grow">
         <MonacoEditor
