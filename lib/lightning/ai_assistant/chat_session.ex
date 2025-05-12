@@ -10,8 +10,8 @@ defmodule Lightning.AiAssistant.ChatSession do
 
   alias Lightning.Accounts.User
   alias Lightning.AiAssistant.ChatMessage
-  alias Lightning.Workflows.Job
   alias Lightning.Projects.Project
+  alias Lightning.Workflows.Job
   alias Lightning.Workflows.Workflow
 
   @type t() :: %__MODULE__{
