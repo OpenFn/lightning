@@ -18,7 +18,7 @@ defmodule Lightning.Accounts do
   alias Lightning.Accounts.UserToken
   alias Lightning.Accounts.UserTOTP
   alias Lightning.Credentials
-  alias Lightning.Projects.File
+  alias Lightning.Projects
   alias Lightning.Repo
   alias Lightning.Services.AccountHook
 
@@ -69,28 +69,24 @@ defmodule Lightning.Accounts do
   """
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"type" => "purge_deleted"}}) do
-    users_with_activities =
-      from(run in Lightning.Run,
-        join: user in User,
-        on: run.created_by_id == user.id,
-        select: user.id,
-        distinct: true
-      )
-
-    users_with_files =
-      from(file in File,
-        join: user in User,
-        on: file.created_by_id == user.id,
-        select: user.id,
-        distinct: true
-      )
-
     users_to_delete =
       from(u in User,
+        as: :user,
+        where: u.scheduled_deletion <= ago(0, "second"),
         where:
-          u.scheduled_deletion <= ago(0, "second") and
-            u.id not in subquery(users_with_activities) and
-            u.id not in subquery(users_with_files)
+          not exists(
+            from(r in Lightning.Run,
+              where: parent_as(:user).id == r.created_by_id,
+              select: 1
+            )
+          ),
+        where:
+          not exists(
+            from(f in Projects.File,
+              where: parent_as(:user).id == f.created_by_id,
+              select: 1
+            )
+          )
       )
       |> Repo.all()
 
