@@ -893,7 +893,8 @@ defmodule Lightning.Projects do
       |> Enum.each(fn %{path: object_path} = project_file ->
         result = Lightning.Storage.delete(object_path)
 
-        if match?({:ok, _res}, result) or match?({:error, %{status: 404}}, result) do
+        if match?({:ok, _res}, result) or
+             match?({:error, %{status: 404}}, result) do
           Repo.delete(project_file)
         end
       end)
