@@ -107,7 +107,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                         }));
                       }}
                       className="focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg border-slate-300 text-slate-900 focus:ring-0 sm:text-sm sm:leading-6"
-                      type="date"
+                      type="datetime-local"
                     />
                   </div>
                   <div className="px-4 py-1 text-gray-700 text-sm">
@@ -122,7 +122,7 @@ const ExistingView: React.FC<ExistingViewProps> = ({
                         }));
                       }}
                       className="focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg border-slate-300 text-slate-900 focus:ring-0 sm:text-sm sm:leading-6"
-                      type="date"
+                      type="datetime-local"
                     />
                   </div>
                 </div>
