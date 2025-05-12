@@ -1,6 +1,6 @@
-import { MonacoEditor } from "../../monaco";
-import { CheckCircleIcon, InformationCircleIcon } from "@heroicons/react/24/outline";
+import { InformationCircleIcon } from "@heroicons/react/24/outline";
 import React from "react";
+import { MonacoEditor } from "../../monaco";
 import FileUploader from "../FileUploader";
 
 const iconStyle = 'h-4 w-4 text-grey-400';
@@ -15,7 +15,11 @@ const CustomView: React.FC<{
       const file = f[0];
       if (file) {
         const content = await readFileContent(file);
-        handleEditorChange(content);
+        try {
+          handleEditorChange(JSON.stringify(JSON.parse(content), undefined, 2));
+        } catch (e: any) {
+          handleEditorChange(content);
+        }
       }
     }
   }
