@@ -59,7 +59,9 @@ defmodule Lightning.TokensTest do
       Lightning.Stub.freeze_time(~U[2024-01-01 00:00:00Z])
 
       token =
-        Lightning.Workers.generate_run_token(%{id: run_id = Ecto.UUID.generate()})
+        Lightning.Workers.generate_run_token(%{
+          id: run_id = Ecto.UUID.generate()
+        })
 
       assert {:ok, claims} = Tokens.verify(token)
 

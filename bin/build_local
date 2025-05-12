@@ -1,0 +1,68 @@
+#! /usr/bin/env bash
+
+set -euo pipefail
+
+NO_CACHE=""
+PROGRESS=""
+BUILD_ARGS=()
+PLATFORM=""
+
+LOCAL_ARCH=$(uname -m)
+case $LOCAL_ARCH in
+x86_64) LOCAL_PLATFORM="linux/amd64" ;;
+arm64 | aarch64) LOCAL_PLATFORM="linux/arm64" ;;
+*) LOCAL_PLATFORM="unknown" ;;
+esac
+
+for arg in "$@"; do
+  case $arg in
+  --help | -h)
+    cat <<EOF
+Usage: $0 [OPTIONS]
+
+Builds the Lightning Docker image using Docker Buildx.
+
+Options:
+  --no-cache        Build the image without using Docker cache.
+  --serial          Limit build parallelism (for debugging).
+  --platform=PLAT   Specify target platform (e.g., linux/amd64, linux/arm64).
+                    If cross-building for OTP/Elixir, a warning is shown due to JIT/QEMU limitations.
+  --help, -h        Show this help message and exit.
+
+Environment variables:
+  ERL_FLAGS         Pass custom Erlang VM flags to the build (e.g., +S 2:2).
+
+The script will use the local architecture by default, unless --platform is specified.
+EOF
+    exit 0
+    ;;
+  --no-cache)
+    NO_CACHE="--no-cache"
+    ;;
+  --serial)
+    export BUILDKIT_MAX_PARALLELISM=1
+    PROGRESS="--progress=plain"
+    ;;
+  --platform=*)
+    PLATFORM="${arg#--platform=}"
+    if [[ "$PLATFORM" != "$LOCAL_PLATFORM" ]]; then
+      echo "[WARNING] Cross/multiplatform images of OTP languages is unsupported since the introduction of the JIT compiler in OTP24."
+      echo "Docker uses QEMU for that under the hood, which doesn't support some of the memory magic that happens for JIT."
+      echo "You may encounter build or runtime errors."
+    fi
+    ;;
+  esac
+done
+
+if [[ -n "${ERL_FLAGS:-}" ]]; then
+  BUILD_ARGS+=(--build-arg "ERL_FLAGS=$ERL_FLAGS")
+fi
+
+docker buildx build \
+  ${PLATFORM:+--platform=$PLATFORM} \
+  $NO_CACHE \
+  --load \
+  -t openfn/lightning:latest \
+  $PROGRESS \
+  "${BUILD_ARGS[@]}" \
+  .

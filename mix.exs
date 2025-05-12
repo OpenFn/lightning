@@ -5,7 +5,7 @@ defmodule Lightning.MixProject do
     [
       app: :lightning,
       version: "2.12.2",
-      elixir: "~> 1.15",
+      elixir: "~> 1.17",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
         warnings_as_errors: true
@@ -23,6 +23,7 @@ defmodule Lightning.MixProject do
         "coveralls.detail": :test,
         "coveralls.html": :test,
         "coveralls.post": :test,
+        "coveralls.json": :test,
         "test.watch": :test,
         coveralls: :test,
         verify: :test
@@ -78,7 +79,7 @@ defmodule Lightning.MixProject do
       {:cloak_ecto, "~> 1.3.0"},
       {:credo, "~> 1.7.3", only: [:test, :dev]},
       {:crontab, "~> 1.1"},
-      {:dialyxir, "~> 1.4.2", only: [:test, :dev], runtime: false},
+      {:dialyxir, "~> 1.4.5", only: [:test, :dev], runtime: false},
       {:ecto_enum, "~> 1.4"},
       {:ecto_psql_extras, "~> 0.8.2"},
       {:ecto_sql, "~> 3.11"},
@@ -170,6 +171,10 @@ defmodule Lightning.MixProject do
       "ecto.setup": ["ecto.create", "ecto.migrate"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
+      "assets.setup": [
+        "tailwind.install --if-missing",
+        "esbuild.install --if-missing"
+      ],
       "assets.deploy": [
         "tailwind default --minify",
         "esbuild default --minify",

@@ -16,7 +16,7 @@ defmodule Lightning.ModelHelpers do
 
   def unload_relation(model, field) when is_atom(field) do
     model
-    |> Map.replace(field, model.__struct__.__struct__ |> Map.get(field))
+    |> Map.replace(field, model.__struct__ |> struct |> Map.get(field))
   end
 
   @doc """

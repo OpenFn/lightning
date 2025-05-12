@@ -52,7 +52,9 @@ defmodule Lightning.Credentials.SensitiveValues do
         ]
   def secret_values(map) do
     flatten_map(map)
-    |> Enum.reject(fn {k, v} -> String.downcase(k) in @safe_keys || is_nil(v) end)
+    |> Enum.reject(fn {k, v} ->
+      String.downcase(k) in @safe_keys || is_nil(v)
+    end)
     |> Enum.map(fn {_k, v} -> v end)
   end
 end

@@ -36,8 +36,8 @@ defmodule Lightning.CliDeployTest do
     :ok
   end
 
-  @tag :integration
   describe "The openfn CLI can be used to" do
+    @describetag :integration
     setup %{tmp_dir: tmp_dir} do
       url = LightningWeb.Endpoint.url()
       user = insert(:user, role: :superuser)

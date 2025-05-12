@@ -1119,7 +1119,10 @@ defmodule LightningWeb.CredentialLiveTest do
              %Tesla.Env{
                status: 200,
                body:
-                 Jason.encode!(%{"picture" => "image.png", "name" => "Test User"})
+                 Jason.encode!(%{
+                   "picture" => "image.png",
+                   "name" => "Test User"
+                 })
              }}
         end
       end)
@@ -1228,7 +1231,10 @@ defmodule LightningWeb.CredentialLiveTest do
              %Tesla.Env{
                status: 200,
                body:
-                 Jason.encode!(%{"picture" => "image.png", "name" => "Test User"})
+                 Jason.encode!(%{
+                   "picture" => "image.png",
+                   "name" => "Test User"
+                 })
              }}
         end
       end)
@@ -1883,7 +1889,10 @@ defmodule LightningWeb.CredentialLiveTest do
              %Tesla.Env{
                status: 200,
                body:
-                 Jason.encode!(%{"picture" => "image.png", "name" => "Test User"})
+                 Jason.encode!(%{
+                   "picture" => "image.png",
+                   "name" => "Test User"
+                 })
              }}
         end
       end)

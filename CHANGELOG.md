@@ -19,6 +19,7 @@ and this project adheres to
 
 ### Changed
 
+- Update Elixir to 1.18.3 [#2748](https://github.com/OpenFn/lightning/pull/2748)
 - Standardized table components across the application
   [#2905](https://github.com/OpenFn/lightning/issues/2905)
 - Make the chunk size for deleting expired activty configurable via ENV
@@ -37,8 +38,7 @@ and this project adheres to
   [#3166](https://github.com/OpenFn/lightning/pull/3166)
 - Re-order nightly cron jobs to reduce acute stress on db
   [#3179](https://github.com/OpenFn/lightning/pull/3179)
-- Standardize buttons
-  [#3093](https://github.com/OpenFn/lightning/issues/3093)
+- Standardize buttons [#3093](https://github.com/OpenFn/lightning/issues/3093)
 
 ### Fixed
 
