@@ -11,22 +11,16 @@ defmodule Lightning.AiAssistant.ChatSession do
   alias Lightning.Accounts.User
   alias Lightning.AiAssistant.ChatMessage
   alias Lightning.Workflows.Job
-  # Add Project import
   alias Lightning.Projects.Project
-  # Add Workflow import
   alias Lightning.Workflows.Workflow
 
   @type t() :: %__MODULE__{
           id: Ecto.UUID.t(),
-          # Make nullable
           job_id: Ecto.UUID.t() | nil,
-          # Add project_id
           project_id: Ecto.UUID.t() | nil,
-          # Add workflow_id
           workflow_id: Ecto.UUID.t() | nil,
           user_id: Ecto.UUID.t(),
           title: String.t(),
-          # Add session_type
           session_type: String.t(),
           expression: String.t() | nil,
           adaptor: String.t() | nil,
@@ -40,16 +34,12 @@ defmodule Lightning.AiAssistant.ChatSession do
     field :expression, :string, virtual: true
     field :adaptor, :string, virtual: true
     field :title, :string
-    # Add session_type field
     field :session_type, :string, default: "job_code"
     field :meta, :map
     field :is_public, :boolean, default: false
     field :is_deleted, :boolean, default: false
-    # Now nullable
     belongs_to :job, Job
-    # Add project relationship
     belongs_to :project, Project
-    # Add workflow relationship
     belongs_to :workflow, Workflow
     belongs_to :user, User
 
@@ -65,17 +55,13 @@ defmodule Lightning.AiAssistant.ChatSession do
       :is_public,
       :is_deleted,
       :job_id,
-      # Add project_id
       :project_id,
-      # Add workflow_id
       :workflow_id,
-      # Add session_type
       :session_type,
       :user_id,
       :meta
     ])
     |> validate_required([:title, :user_id])
-    # Add custom validation
     |> validate_session_type_requirements()
     |> cast_assoc(:messages)
   end
